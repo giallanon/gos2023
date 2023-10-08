@@ -10,7 +10,6 @@ VulkanExample1::VulkanExample1()
     vkInstance = VK_NULL_HANDLE;
     vkSurface = VK_NULL_HANDLE;
     vkDebugMessenger = VK_NULL_HANDLE;
-    vkCommandBuffer = VK_NULL_HANDLE;
 }
 
 //************************************
@@ -140,9 +139,6 @@ bool VulkanExample1::init()
     gos::logger::log("\n");
 
 
-    //commnad buffer
-    vulkanCreateCommandBuffer (vulkan, &this->vkCommandBuffer);
-    
     return true;
 }    
 
@@ -904,8 +900,8 @@ bool VulkanExample1::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKH
     VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
     if (listOfPresentMode.exists(VK_PRESENT_MODE_MAILBOX_KHR))
         presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-    else if (listOfPresentMode.exists(VK_PRESENT_MODE_FIFO_KHR))
-        presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    else if (listOfPresentMode.exists(VK_PRESENT_MODE_FIFO_RELAXED_KHR))
+        presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
 
     VkSwapchainCreateInfoKHR createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -1030,14 +1026,14 @@ void VulkanExample1::vulkanDestroyFence  (sVkDevice &vulkan, VkFence &in)
 }
 
 //************************************
-bool VulkanExample1::recordCommandBuffer(u32 imageIndex)
+bool VulkanExample1::recordCommandBuffer (u32 imageIndex, VkCommandBuffer &in_out_commandBuffer)
 {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = 0; // Optional
     beginInfo.pInheritanceInfo = nullptr; // Optional
 
-    VkResult result = vkBeginCommandBuffer(this->vkCommandBuffer, &beginInfo);
+    VkResult result = vkBeginCommandBuffer(in_out_commandBuffer, &beginInfo);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("recordCommandBuffer() => vkBeginCommandBuffer() => %s\n", string_VkResult(result));
@@ -1056,8 +1052,8 @@ bool VulkanExample1::recordCommandBuffer(u32 imageIndex)
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;    
 
-    vkCmdBeginRenderPass(this->vkCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(this->vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipe1.pipe);
+    vkCmdBeginRenderPass(in_out_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBindPipeline(in_out_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipe1.pipe);
 
 
     VkViewport viewport{};
@@ -1067,19 +1063,19 @@ bool VulkanExample1::recordCommandBuffer(u32 imageIndex)
     viewport.height = static_cast<float>(vulkan.swapChainInfo.imageExtent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(this->vkCommandBuffer, 0, 1, &viewport);
+    vkCmdSetViewport(in_out_commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
     scissor.extent = vulkan.swapChainInfo.imageExtent;
-    vkCmdSetScissor(this->vkCommandBuffer, 0, 1, &scissor);
+    vkCmdSetScissor(in_out_commandBuffer, 0, 1, &scissor);
 
 
-    vkCmdDraw(this->vkCommandBuffer, 3, 1, 0, 0);
+    vkCmdDraw(in_out_commandBuffer, 3, 1, 0, 0);
 
-    vkCmdEndRenderPass (this->vkCommandBuffer);
+    vkCmdEndRenderPass (in_out_commandBuffer);
 
-    result = vkEndCommandBuffer (this->vkCommandBuffer);
+    result = vkEndCommandBuffer (in_out_commandBuffer);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("recordCommandBuffer() => vkEndCommandBuffer() => %s\n", string_VkResult(result));
@@ -1095,34 +1091,48 @@ bool VulkanExample1::recordCommandBuffer(u32 imageIndex)
  */
 void VulkanExample1::mainLoop_waitEveryFrame()
 {
-    VkSemaphore imageAvailableSemaphore;
-    VkSemaphore renderFinishedSemaphore;
-    VkFence inFlightFence;
-    VkResult    result;
-    gos::TimerFPS  fpsTimer;
-
+    VkCommandBuffer     vkCommandBuffer;
+    VkSemaphore         imageAvailableSemaphore;
+    VkSemaphore         renderFinishedSemaphore;
+    VkFence             inFlightFence;
+    vulkanCreateCommandBuffer (vulkan, &vkCommandBuffer);
     vulkanCreateSemaphore (vulkan, &imageAvailableSemaphore);
     vulkanCreateSemaphore (vulkan, &renderFinishedSemaphore);
-    vulkanCreateFence (vulkan, false, &inFlightFence);
+    vulkanCreateFence (vulkan, true, &inFlightFence);
 
+    VkResult            result;
+    gos::TimerFPS       fpsTimer;
+    gos::Timer          cpuWaitTimer;
+    gos::Timer          frameTimer;
+    gos::Timer          acquireImageTimer;
     while (!glfwWindowShouldClose (window)) 
     {
+//printf ("frame begin\n");
+        frameTimer.start();
+        fpsTimer.onFrameBegin();
+
         glfwPollEvents();
 
         //draw frames
+        cpuWaitTimer.start();
+            vkWaitForFences (vulkan.dev, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
+            vkResetFences (vulkan.dev, 1, &inFlightFence);
+//printf ("  CPU waited GPU fence for %ld us\n", cpuWaitTimer.elapsed_usec());
 
         //recupero una immagine dalla swap chain, attendo per sempre e indico [imageAvailableSemaphore] come
         //semafro che GPU deve segnalare quando questa operazione e' ok
-        u32 imageIndex;
-        result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);        
-        if (VK_SUCCESS != result)
-        {
-            gos::logger::err ("vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
-            continue;
-        }
-
+        acquireImageTimer.start();
+            u32 imageIndex;
+            result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);        
+            if (VK_SUCCESS != result)
+            {
+                gos::logger::err ("vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
+                continue;
+            }
+//printf ("  CPU waited vkAcquireNextImageKHR %ld us\n", acquireImageTimer.elapsed_usec());
+        
         //command buffer che opera su [imageIndex]
-        recordCommandBuffer(imageIndex);
+        recordCommandBuffer(imageIndex, vkCommandBuffer);
 
         //submit
         VkSubmitInfo submitInfo{};
@@ -1135,7 +1145,7 @@ void VulkanExample1::mainLoop_waitEveryFrame()
         submitInfo.pWaitDstStageMask = waitStages;
 
         submitInfo.commandBufferCount = 1;        
-        submitInfo.pCommandBuffers = &this->vkCommandBuffer;
+        submitInfo.pCommandBuffers = &vkCommandBuffer;
 
         //semaforo che GPU segnalera' al termine dell'esecuzione del command buffer
         VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
@@ -1161,18 +1171,15 @@ void VulkanExample1::mainLoop_waitEveryFrame()
         
         vkQueuePresentKHR (vulkan.gfxQ, &presentInfo);
 
+//printf ("  total frame time: %ldus\n", frameTimer.elapsed_usec());
 
-        //aspetto che il frame precedente sia stato presentato
-        fpsTimer.onFrameBegin();
-        vkWaitForFences (vulkan.dev, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
+
         if (fpsTimer.onFrameEnd())
         {
             const float usec = fpsTimer.getAvgFrameTime_usec();
             const float msec = usec/ 1000.0f;
-            printf ("Avg frame time: %.2fms [%.2fus]\n", msec, usec);
+            printf ("Avg frame time: %.2fms [%.2fus] [fps: %.01f]\n", msec, usec, fpsTimer.getAvgFPS());
         }
-        vkResetFences (vulkan.dev, 1, &inFlightFence);
-
     }
 
     //aspetto che GPU abbia finito tutto cio' che ha in coda
@@ -1186,60 +1193,87 @@ void VulkanExample1::mainLoop_waitEveryFrame()
 /************************************
  * renderizza inviando command buffer a GPU e poi, mentre GPU renderizza,
  * prepara il frame successivo in parallelo
+ * 
+ * Mah... non mi convince molto questa implementazione
  */
 void VulkanExample1::mainLoop_multiFrame()
 {
     static constexpr u8 MAX_FRAMES_IN_FLIGHT = 2;
 
-    VkSemaphore imageAvailableSemaphore;
-    VkSemaphore renderFinishedSemaphore;
-    VkFence inFlightFence;
-    VkResult    result;
-    gos::TimerFPS  fpsTimer;
-
-    vulkanCreateSemaphore (vulkan, &imageAvailableSemaphore);
-    vulkanCreateSemaphore (vulkan, &renderFinishedSemaphore);
-    vulkanCreateFence (vulkan, false, &inFlightFence);
-
-    while (!glfwWindowShouldClose (window)) 
+    VkCommandBuffer     vkCommandBuffer[MAX_FRAMES_IN_FLIGHT];
+    VkSemaphore         imageAvailableSemaphore[MAX_FRAMES_IN_FLIGHT];
+    VkSemaphore         renderFinishedSemaphore[MAX_FRAMES_IN_FLIGHT];
+    VkFence             inFlightFence[MAX_FRAMES_IN_FLIGHT];
+    for (u8 i=0; i<MAX_FRAMES_IN_FLIGHT; i++)
     {
+        vulkanCreateCommandBuffer (vulkan, &vkCommandBuffer[i]);
+        vulkanCreateSemaphore (vulkan, &imageAvailableSemaphore[i]);
+        vulkanCreateSemaphore (vulkan, &renderFinishedSemaphore[i]);
+        vulkanCreateFence (vulkan, true, &inFlightFence[i]);
+    }
+
+    VkResult            result;
+    gos::TimerFPS       fpsTimer;
+    gos::Timer          cpuWaitTimer;
+    gos::Timer          frameTimer;
+    gos::Timer          acquireImageTimer;
+    u32                 currentFrame = 0;
+
+
+u32 exit=10;
+    while (!glfwWindowShouldClose (window) && exit--) 
+    {
+        printf ("frame begin [%d]\n", currentFrame);
+        frameTimer.start();
+        fpsTimer.onFrameBegin();
+
         glfwPollEvents();
 
         //draw frames
+        printf ("  waiting for fence\n");
+        cpuWaitTimer.start();
+            vkWaitForFences (vulkan.dev, 1, &inFlightFence[currentFrame], VK_TRUE, UINT64_MAX);
+            vkResetFences (vulkan.dev, 1, &inFlightFence[currentFrame]);
+        printf ("  CPU waited GPU fence for %ld us\n", cpuWaitTimer.elapsed_usec());
 
         //recupero una immagine dalla swap chain, attendo per sempre e indico [imageAvailableSemaphore] come
         //semafro che GPU deve segnalare quando questa operazione e' ok
+        acquireImageTimer.start();
         u32 imageIndex;
-        result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);        
-        if (VK_SUCCESS != result)
+        do
         {
-            gos::logger::err ("vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
-            continue;
-        }
+            result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, 1000, imageAvailableSemaphore[currentFrame], VK_NULL_HANDLE, &imageIndex);        
+            /*if (VK_SUCCESS != result)
+            {
+                gos::logger::err ("vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
+            }*/
+        } while (VK_SUCCESS != result);
 
+        printf ("  CPU waited vkAcquireNextImageKHR %ld us, image index is %d\n", acquireImageTimer.elapsed_usec(), imageIndex);
+        
         //command buffer che opera su [imageIndex]
-        recordCommandBuffer(imageIndex);
+        recordCommandBuffer(imageIndex, vkCommandBuffer[currentFrame]);
 
         //submit
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore semaphoresToBeWaitedBeforeStarting[] = { imageAvailableSemaphore };
+        VkSemaphore semaphoresToBeWaitedBeforeStarting[] = { imageAvailableSemaphore[currentFrame] };
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = semaphoresToBeWaitedBeforeStarting;
         submitInfo.pWaitDstStageMask = waitStages;
 
         submitInfo.commandBufferCount = 1;        
-        submitInfo.pCommandBuffers = &this->vkCommandBuffer;
+        submitInfo.pCommandBuffers = &vkCommandBuffer[currentFrame];
 
         //semaforo che GPU segnalera' al termine dell'esecuzione del command buffer
-        VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
+        VkSemaphore signalSemaphores[] = {renderFinishedSemaphore[currentFrame]};
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
         //submitto il batch a GPU e indico che deve segnalare [inFlightFence] quando ha finito 
-        result = vkQueueSubmit (vulkan.gfxQ, 1, &submitInfo, inFlightFence);
+        result = vkQueueSubmit (vulkan.gfxQ, 1, &submitInfo, inFlightFence[currentFrame]);
         if (VK_SUCCESS != result)
         {
             gos::logger::err ("vkQueueSubmit() => %s\n", string_VkResult(result));
@@ -1255,33 +1289,39 @@ void VulkanExample1::mainLoop_multiFrame()
         presentInfo.pSwapchains = &vulkan.swapChainInfo.vkSwapChain;
         presentInfo.pImageIndices = &imageIndex;
         
+        printf ("  present\n");
         vkQueuePresentKHR (vulkan.gfxQ, &presentInfo);
 
+        printf ("  total frame time: %ldus\n", frameTimer.elapsed_usec());
 
-        //aspetto che il frame precedente sia stato presentato
-        fpsTimer.onFrameBegin();
-        vkWaitForFences (vulkan.dev, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
+        //next frame
+        currentFrame++;
+        if (currentFrame >= MAX_FRAMES_IN_FLIGHT)
+            currentFrame = 0;
+
         if (fpsTimer.onFrameEnd())
         {
             const float usec = fpsTimer.getAvgFrameTime_usec();
             const float msec = usec/ 1000.0f;
-            printf ("Avg frame time: %.2fms [%.2fus]\n", msec, usec);
+            printf ("Avg frame time: %.2fms [%.2fus] [fps: %.01f]\n", msec, usec, fpsTimer.getAvgFPS());
         }
-        vkResetFences (vulkan.dev, 1, &inFlightFence);
 
     }
 
     //aspetto che GPU abbia finito tutto cio' che ha in coda
     vkDeviceWaitIdle(vulkan.dev);
 
-    vulkanDestroySemaphore (vulkan, imageAvailableSemaphore);
-    vulkanDestroySemaphore (vulkan, renderFinishedSemaphore);
-    vulkanDestroyFence (vulkan, inFlightFence);
+    for (u8 i=0; i<MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        vulkanDestroySemaphore (vulkan, imageAvailableSemaphore[i]);
+        vulkanDestroySemaphore (vulkan, renderFinishedSemaphore[i]);
+        vulkanDestroyFence (vulkan, inFlightFence[i]);
+    }
 }
 
 //************************************
 void VulkanExample1::mainLoop()
 {
-    //mainLoop_waitEveryFrame();
-    mainLoop_multiFrame();
+    mainLoop_waitEveryFrame();
+    //mainLoop_multiFrame();
 }

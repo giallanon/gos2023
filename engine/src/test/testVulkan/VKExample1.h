@@ -477,7 +477,7 @@ private:
 
 private:
     void                            vulkanAddDebugCallback();
-    bool                            recordCommandBuffer(u32 imageIndex);
+    bool                            recordCommandBuffer(u32 imageIndex, VkCommandBuffer &in_out_commandBuffer);
     void                            mainLoop_waitEveryFrame();
     void                            mainLoop_multiFrame();
 
@@ -489,8 +489,6 @@ private:
     sVkDevice                   vulkan;
     VkSurfaceCapabilitiesKHR    vkSurfCapabilities;
     sVkPipeline                 pipe1;
-    VkCommandBuffer             vkCommandBuffer;
-
 };
 
 

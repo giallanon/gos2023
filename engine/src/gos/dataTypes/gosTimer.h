@@ -34,8 +34,9 @@ namespace gos
                             //ritorna true dopo circa 1 secondo accumulato. Quando ritorna true,
                             //la fn getAvgFrameTime_usec() ritorna il valor medio del frame time accumulato 
 
-        f32             getAvgFrameTime_usec() const { return avgFrameTime_usec; }
-
+        f32             getAvgFrameTime_usec() const                                                { return avgFrameTime_usec; }
+        f32             getAvgFPS() const                                                           { return 1000000.0f / avgFrameTime_usec; }
+        
     private:
         u64             timeBegin_usec;
         u64				timeFrameStarted_usec;
