@@ -10,11 +10,11 @@ namespace gos
     class AllocPolicy_Track_none
     {
     public:
-                    AllocPolicy_Track_none (UNUSED_PARAM(const char *nameIN))		{ }
+                    AllocPolicy_Track_none (UNUSED_PARAM(const char *nameIN))		            { }
 
-        bool		anyMemLeaks()										            { return false; }
-        void		onAlloc (const void *p, size_t size)				            { }
-        void		onDealloc (const void *p, size_t size)				            { }
+        bool		anyMemLeaks()										                        { return false; }
+        void		onAlloc (UNUSED_PARAM(const void *p), UNUSED_PARAM(size_t size))			{ }
+        void		onDealloc (UNUSED_PARAM(const void *p), UNUSED_PARAM(size_t size))			{ }
     };
 
 
@@ -31,7 +31,7 @@ namespace gos
 
         bool			anyMemLeaks()															{ return !(nalloc==0 && curMemalloc==0); }
 
-        void			onAlloc (const void *p, size_t size)
+        void			onAlloc (UNUSED_PARAM(const void *p), size_t size)
                         {
                             ++nalloc;
                             curMemalloc += size;
@@ -39,7 +39,7 @@ namespace gos
                                 maxMemalloc = curMemalloc;
                         }
 
-        void			onDealloc (const void *p, size_t size)
+        void			onDealloc (UNUSED_PARAM(const void *p), size_t size)
                         {
                             assert (nalloc>0 && curMemalloc >= size);
                             --nalloc;

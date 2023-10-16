@@ -7,9 +7,9 @@ using namespace gos::geom;
 /************************************************************************
  * I piani sono definiti in modo da avere le normali che puntano all'interno 
    del frustum*/
-void Frustum3::buildPerspective (const vec3f &o, const vec3f &asseZ, const vec3f &asseY, const vec3f &asseX, f32 nearDistance, f32 farDistance, f32 fovY_rad, f32 aspect)
+void Frustum3::buildPerspective (const vec3f &o, const vec3f &asseZ, const vec3f &asseY, const vec3f &asseX, f32 nearDistance, f32 farDistanceIN, f32 fovY_rad, f32 aspect)
 {
-	this->farDistance = farDistance;
+	farDistance = farDistanceIN;
 	const f32 tanFOV = (f32)tanf (fovY_rad*0.5f);
 	f32		f;
 	vec3f	halfDimX;
@@ -53,9 +53,9 @@ void Frustum3::buildPerspective (const vec3f &o, const vec3f &asseZ, const vec3f
 /************************************************************************
  * I piani sono definiti in modo da avere le normali che puntano all'interno 
    del frustum*/
-void Frustum3::buildOrtho (const vec3f &o, const vec3f &asseZ, const vec3f &asseY, const vec3f &asseX, f32 width, f32 height, f32 nearDistance, f32 farDistance, f32 zoom)
+void Frustum3::buildOrtho (const vec3f &o, const vec3f &asseZ, const vec3f &asseY, const vec3f &asseX, f32 width, f32 height, f32 nearDistance, f32 farDistanceIN, f32 zoom)
 {
-	this->farDistance = farDistance;
+	farDistance = farDistanceIN;
 	assert (zoom > 0);
 	width/=zoom;
 	height/=zoom;

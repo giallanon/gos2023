@@ -5,3 +5,5 @@
 engine/bin/testKernel__linux_Debug
 
 engine/bin/testVulkan__linux_Debug
+engine/.vs/
+*.pdb

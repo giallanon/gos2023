@@ -1,4 +1,4 @@
-#include "gosGeomPos3.h""
+#include "gosGeomPos3.h"
 #include "../gosMath/gosMath.h"
 
 using namespace gos;

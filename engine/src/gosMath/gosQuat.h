@@ -4,8 +4,10 @@
 #include "gosMatrix.h"
 #include "gosVect.h"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
+#ifdef GOS_COMPILER__GCC
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
 namespace gos
 {
 	/*=========================================================================
@@ -66,6 +68,9 @@ namespace gos
 		vec3f				vec3Transform (const vec3f &v) const;
 	};		
 } //namespace gos
+
+#ifdef GOS_COMPILER__GCC
 #pragma GCC diagnostic pop
+#endif
 
 #endif //_gosQuat_h_

@@ -2,8 +2,11 @@
 #define _gosVect_h_
 #include "gosMathEnumAndDefine.h"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
+#ifdef GOS_COMPILER__GCC
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
 namespace gos
 {
 	namespace math
@@ -158,6 +161,9 @@ namespace gos
 	typedef	math::Vec2<u16>	vec2u16;
 	typedef	math::Vec2<i16>	vec2i16;
 } //namespace gos
+
+#ifdef GOS_COMPILER__GCC
 #pragma GCC diagnostic pop
+#endif
 
 #endif //_gosVect_h_

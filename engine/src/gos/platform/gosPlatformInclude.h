@@ -3,7 +3,7 @@
 
 #if defined(GOS_PLATFORM__LINUX)
     #include "linux/linuxOSInclude.h"
-#elif defined(GOS_PLATFORM_WINDOWS)
+#elif defined(GOS_PLATFORM__WINDOWS)
     #include "win/winOSInclude.h"
 #else
     WARNING: no define found for platform definition

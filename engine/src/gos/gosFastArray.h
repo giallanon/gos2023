@@ -6,7 +6,7 @@
 namespace gos
 {
     /*===============================================================================
-     * Funziona come rhea::Array solo che qui non vengono chiamati i costruttori
+     * Funziona come gos::Array solo che qui non vengono chiamati i costruttori
      * e i distruttori delle classi. In pratica è da utilizzare quando si vuole un array
      * di tipi base (int, float..) o puntatori o cmq strutture POD che non necessitano
      * di costruttore/distruttore e che possono essere "spostate" con la semplice memcpy

@@ -3,7 +3,7 @@
 #  PROJECT: testKernel
 #
 =====================================================]]
-cmake_minimum_required(VERSION 3.27.5)
+cmake_minimum_required(VERSION 3.20)
 
 #project name and version
 project(testKernel VERSION 1.0.0 LANGUAGES C CXX)
@@ -50,7 +50,8 @@ message("         compiler flags: ${MAIN_CFLAGS}")
 # additional library to be linked
 set(LIBRARY_LIST "gos;gosMath;gosGeom")
 foreach(libName IN LISTS LIBRARY_LIST)
-    set(finalLibNameAndPath "${PROJECT_SOURCE_DIR}/../../../lib/lib${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.a")
+    makeLibraryName(finalLibNameAndPath ${libName})
+    #set(finalLibNameAndPath "${PROJECT_SOURCE_DIR}/../../../lib/lib${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.a")
     message("         linkling libray [${libName}] => ${finalLibNameAndPath}")
     target_link_libraries(${BINARY_OUTPUT_FILENAME} ${finalLibNameAndPath})
 endforeach()

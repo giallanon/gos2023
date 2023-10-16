@@ -89,6 +89,11 @@ bool platform::FS_fileRename(const u8 *utf8_pathNoSlash, const u8 *utf8_oldFilen
 }
 
 //*****************************************************
+void platform::FS_fileGetLastTimeModified_UTC (const char *filePathAndName, gos::DateTime *out_dt)
+{
+    //NB; linux non ha la nozione di creationTime, quindi ritorno il last modified time
+    FS_fileGetLastTimeModified_UTC (filePathAndName, out_dt);
+}
 void platform::FS_fileGetCreationTime_UTC(const u8 *utf8_filePathAndName, gos::DateTime *out_dt)
 {
     //NB; linux non ha la nozione di creationTime, quindi ritorno il last modified time
@@ -98,11 +103,15 @@ void platform::FS_fileGetCreationTime_UTC(const u8 *utf8_filePathAndName, gos::D
 //*****************************************************
 void platform::FS_fileGetLastTimeModified_UTC(const u8 *utf8_filePathAndName, gos::DateTime *out_dt)
 {
+    platform::FS_fileGetLastTimeModified_UTC (reinterpret_cast<const char*>(utf8_filePathAndName), out_dt);
+}
+void platform::FS_fileGetLastTimeModified_UTC(const char *filePathAndName, gos::DateTime *out_dt)
+{
     assert(NULL != out_dt);
-    assert(NULL != utf8_filePathAndName);
+    assert(NULL != filePathAndName);
     
     struct stat attrib;
-    stat (reinterpret_cast<const char*>(utf8_filePathAndName), &attrib);
+    stat (filePathAndName, &attrib);
 
     struct tm tm;
     gmtime_r(&attrib.st_mtime, &tm);
@@ -113,18 +122,26 @@ void platform::FS_fileGetLastTimeModified_UTC(const u8 *utf8_filePathAndName, go
 //*****************************************************
 void platform::FS_fileGetCreationTime_LocalTime(const u8 *utf8_filePathAndName, gos::DateTime *out_dt)
 {
+    FS_fileGetCreationTime_LocalTime (reinterpret_cast<const char*>(utf8_filePathAndName), out_dt);
+}
+void platform::FS_fileGetCreationTime_LocalTime(const char *filePathAndName, gos::DateTime *out_dt)
+{
     //NB; linux non ha la nozione di creationTime, quindi ritorno il last modified time
-    FS_fileGetLastTimeModified_LocalTime (utf8_filePathAndName, out_dt);
+    FS_fileGetLastTimeModified_LocalTime (filePathAndName, out_dt);
 }
 
 //*****************************************************
 void platform::FS_fileGetLastTimeModified_LocalTime(const u8 *utf8_filePathAndName, gos::DateTime *out_dt)
 {
+    FS_fileGetLastTimeModified_LocalTime (reinterpret_cast<const char*>(utf8_filePathAndName), out_dt);
+}
+void platform::FS_fileGetLastTimeModified_LocalTime(const char *filePathAndName, gos::DateTime *out_dt)
+{
     assert(NULL != out_dt);
-    assert(NULL != utf8_filePathAndName);
+    assert(NULL != filePathAndName);
     
     struct stat attrib;
-    stat (reinterpret_cast<const char*>(utf8_filePathAndName), &attrib);
+    stat (filePathAndName, &attrib);
 
     struct tm tm;
     localtime_r(&attrib.st_mtime, &tm);
@@ -241,7 +258,7 @@ u64 platform::FS_fileTell(OSFile &h)
 }
 
 //*****************************************************
-u32 platform::FS_fileRead (const OSFile &h, void *buffer, u32 numMaxBytesToRead)
+u32 platform::FS_fileRead (OSFile &h, void *buffer, u32 numMaxBytesToRead)
 {
     ssize_t ret = read(h, buffer, numMaxBytesToRead);
     if (ret < 0)
@@ -250,7 +267,7 @@ u32 platform::FS_fileRead (const OSFile &h, void *buffer, u32 numMaxBytesToRead)
 }
 
 //*****************************************************
-u32 platform::FS_fileWrite (const OSFile &h, const void *buffer, u32 numBytesToWrite)
+u32 platform::FS_fileWrite (OSFile &h, const void *buffer, u32 numBytesToWrite)
 {
     ssize_t ret = write(h, buffer, numBytesToWrite);
     if (ret < 0)

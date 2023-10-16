@@ -3,7 +3,7 @@
 #  PROJECT: gos
 #
 =====================================================]]
-cmake_minimum_required(VERSION 3.27.5)
+cmake_minimum_required(VERSION 3.20)
 
 #project name and version
 project(gos VERSION 1.0.0 LANGUAGES C CXX)
@@ -58,6 +58,13 @@ platform/linux/linuxOSFS.cpp
 platform/linux/linuxOSConsole.cpp
 platform/linux/linuxOSInclude.h
 
+platform/win/winOS.cpp
+platform/win/winOS.h
+platform/win/winOSConsole.cpp
+platform/win/winOSConsole.h
+platform/win/winOSFS.cpp
+platform/win/winOSInclude.h
+
 string/gosString.cpp 
 string/gosStringANSI.cpp 
 string/gosStringEnumAndDefine.h
@@ -88,8 +95,10 @@ gosRandom.h
 gosString.h 
 )
 
-set_source_files_properties(memory/Doug_Lea_malloc.c PROPERTIES COMPILE_OPTIONS "-Wno-expansion-to-defined;-Wno-maybe-uninitialized")
-set_source_files_properties(memory/Doug_Lea_malloc.h PROPERTIES COMPILE_OPTIONS "-Wno-expansion-to-defined;-Wno-maybe-uninitialized")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	set_source_files_properties(memory/Doug_Lea_malloc.c PROPERTIES COMPILE_OPTIONS "-Wno-expansion-to-defined;-Wno-maybe-uninitialized")
+	set_source_files_properties(memory/Doug_Lea_malloc.h PROPERTIES COMPILE_OPTIONS "-Wno-expansion-to-defined;-Wno-maybe-uninitialized")
+endif()
 
 
 #====================================================

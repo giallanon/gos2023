@@ -30,7 +30,7 @@ namespace gos
                             //invece con GOSFREE
         static constexpr u8	DEBUG_HEADER_SIZE = 8;
 
-        void*				alloc (size_t sizeInBytes, u8 alignPowerOfTwo, const char *debug_filename, u32 debug_lineNumber, bool debug_bPlacementNew)					
+        void*				alloc (size_t sizeInBytes, u8 alignPowerOfTwo, UNUSED_PARAM(const char *debug_filename), u32 debug_lineNumber, bool debug_bPlacementNew)					
                             { 
                                 assert(GOS_IS_POWER_OF_TWO(alignPowerOfTwo));
                                 sizeInBytes += DEBUG_HEADER_SIZE;

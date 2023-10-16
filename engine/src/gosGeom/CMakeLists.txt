@@ -3,7 +3,7 @@
 #  PROJECT: gosGeom
 #
 =====================================================]]
-cmake_minimum_required(VERSION 3.27.5)
+cmake_minimum_required(VERSION 3.20)
 
 #project name and version
 project(gosGeom VERSION 1.0.0 LANGUAGES C CXX)

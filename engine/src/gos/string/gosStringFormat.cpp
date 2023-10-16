@@ -258,7 +258,7 @@ void string::format::currency (u16 price, u8 numDecimal, char decimalPointCharac
 {
     char s[16];
     if (numDecimal == 0)
-        sprintf (s, "%d", price);
+        sprintf_s (s, sizeof(s), "%d", price);
     else
     {
 		u16 divisore;
@@ -281,24 +281,24 @@ void string::format::currency (u16 price, u8 numDecimal, char decimalPointCharac
 		switch (numDecimal)
 		{
 		case 1:	
-			sprintf(s, "%d%c%d", parteIntera, decimalPointCharacter, parteDecimale);
+			sprintf_s(s, sizeof(s), "%d%c%d", parteIntera, decimalPointCharacter, parteDecimale);
 			break;
 
 		case 2:
-			sprintf(s, "%d%c%02d", parteIntera, decimalPointCharacter, parteDecimale);
+			sprintf_s(s, sizeof(s), "%d%c%02d", parteIntera, decimalPointCharacter, parteDecimale);
 			break;
 
 		case 3:	
-			sprintf(s, "%d%c%03d", parteIntera, decimalPointCharacter, parteDecimale); 
+			sprintf_s(s, sizeof(s), "%d%c%03d", parteIntera, decimalPointCharacter, parteDecimale); 
 			break;
 		
 		default:
 		case 4:
-			sprintf(s, "%d%c%04d", parteIntera, decimalPointCharacter, parteDecimale);
+			sprintf_s(s, sizeof(s), "%d%c%04d", parteIntera, decimalPointCharacter, parteDecimale);
 			break;
 		}
         
     }
 
-    strncpy (out_s, s, sizeOfOut-1);
+    strncpy_s (out_s, sizeOfOut, s, sizeOfOut-1);
 }

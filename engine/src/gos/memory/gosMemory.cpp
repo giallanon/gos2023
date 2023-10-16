@@ -52,7 +52,7 @@ u32 mem::calcAlignAdjustmentWithHeader (const void *mem, u32 alignmentPowerOfTwo
 {
     assert(GOS_IS_POWER_OF_TWO(alignmentPowerOfTwo));
 
-	u8 adjustment = calcAlignAdjustment (mem, alignmentPowerOfTwo);
+	u32 adjustment = calcAlignAdjustment (mem, alignmentPowerOfTwo);
 	while (adjustment < headerSize)
 		adjustment += alignmentPowerOfTwo;
 

@@ -2,8 +2,15 @@
 
 /*------------------------------ internal #includes ---------------------- */
 
+#ifdef GOS_COMPILER__MSVC
+    #pragma warning( push )
+    #pragma warning( disable : 4146 ) /* no "unsigned" warnings */
+    #pragma warning( disable : 4127)
+    #pragma warning( disable : 4702)
+#endif
+
+
 #ifdef _MSC_VER
-#pragma warning( disable : 4146 ) /* no "unsigned" warnings */
 #endif /* _MSC_VER */
 #if !NO_MALLOC_STATS
 #include <stdio.h>       /* for printing in malloc_stats */
@@ -4851,3 +4858,7 @@ History:
          structure of old version,  but most details differ.)
 
 */
+
+#ifdef GOS_COMPILER__MSVC
+    #pragma warning( pop )
+#endif

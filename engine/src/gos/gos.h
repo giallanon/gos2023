@@ -107,9 +107,9 @@ namespace gos
 		inline bool		fileOpenForR (gos::File *out_h, const u8 *utf8_filePathAndName)										{ return fs::fileOpen (out_h, utf8_filePathAndName, eFileMode::readOnly, false, false, true, true); }
 		bool			fileOpenForW (gos::File *out_h, const u8 *utf8_filePathAndName, bool bAutoCreateFolders=false);
 		bool			fileOpenForAppend (gos::File *out_h, const u8 *utf8_filePathAndName, bool bAutoCreateFolders=false);
-		inline u32		fileRead (const gos::File &h, void *buffer, u32 numMaxBytesToRead)									{ return platform::FS_fileRead(h.osFile, buffer, numMaxBytesToRead); }
-		inline u32		fileWrite (const gos::File &h, const void *buffer, u32 numBytesToWrite)								{ return platform::FS_fileWrite(h.osFile, buffer, numBytesToWrite); }
-		void			fpf (const gos::File &h, const char *format, ...);
+		inline u32		fileRead (gos::File &h, void *buffer, u32 numMaxBytesToRead)										{ return platform::FS_fileRead(h.osFile, buffer, numMaxBytesToRead); }
+		inline u32		fileWrite (gos::File &h, const void *buffer, u32 numBytesToWrite)									{ return platform::FS_fileWrite(h.osFile, buffer, numBytesToWrite); }
+		void			fpf (gos::File &h, const char *format, ...);
 		inline void		fileClose (gos::File  &h)																			{ platform::FS_fileClose(h.osFile); }
 		inline void		fileFlush (gos::File &h) 																			{ platform::FS_fileFlush(h.osFile); }
 

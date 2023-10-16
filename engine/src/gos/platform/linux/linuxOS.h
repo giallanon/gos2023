@@ -63,7 +63,10 @@ namespace platform
     bool            event_wait (const OSEvent &ev, size_t timeoutMSec);
     */
 
-                    //====================================== file system
+    /******************************************************
+     * File system
+     * 
+     */
     bool			FS_folderCreate (const u8 *utf8_path);
     bool			FS_folderDelete (const u8 *utf8_path);
     bool			FS_folderExists (const u8 *utf8_path);
@@ -71,16 +74,22 @@ namespace platform
     bool			FS_fileExists(const u8 *utf8_filename);
     bool			FS_fileDelete(const u8 *utf8_filename);
     bool			FS_fileRename(const u8 *utf8_path, const u8 *utf8_oldFilename, const u8 *utf8_newFilename);
+
     void            FS_fileGetCreationTime_UTC (const u8 *utf8_filePathAndName, gos::DateTime *out_dt);
     void            FS_fileGetCreationTime_UTC (const char *filePathAndName, gos::DateTime *out_dt);
+
     void            FS_fileGetLastTimeModified_UTC (const u8 *utf8_filePathAndName, gos::DateTime *out_dt);
-    void            FS_fileGetLastTimeModified_UTC (const u8 *filePathAndName, gos::DateTime *out_dt);
-    void            FS_fileGetCreationTime_LocalTime (const u8 *filePathAndName, gos::DateTime *out_dt);
-    void            FS_fileGetLastTimeModified_LocalTime (const u8 *filePathAndName, gos::DateTime *out_dt);
+    void            FS_fileGetLastTimeModified_UTC (const char *filePathAndName, gos::DateTime *out_dt);
+
+    void            FS_fileGetCreationTime_LocalTime (const u8 *utf8_filePathAndName, gos::DateTime *out_dt);
+    void            FS_fileGetCreationTime_LocalTime (const char *filePathAndName, gos::DateTime *out_dt);
+
+    void            FS_fileGetLastTimeModified_LocalTime (const u8 *utf8_filePathAndName, gos::DateTime *out_dt);
+    void            FS_fileGetLastTimeModified_LocalTime (const char *filePathAndName, gos::DateTime *out_dt);
 
     bool			FS_fileOpen  (OSFile *out_h, const u8 *utf8_filePathAndName, eFileMode mode, bool bCreateIfNotExists, bool bAppend, bool bShareRead, bool bShareWrite);
-    u32				FS_fileRead (const OSFile &h, void *buffer, u32 numMaxBytesToRead);
-    u32				FS_fileWrite (const OSFile &h, const void *buffer, u32 numBytesToWrite);
+    u32				FS_fileRead (OSFile &h, void *buffer, u32 numMaxBytesToRead);
+    u32				FS_fileWrite (OSFile &h, const void *buffer, u32 numBytesToWrite);
     void			FS_fileClose (OSFile &h);
     void            FS_fileFlush (OSFile &h);
 

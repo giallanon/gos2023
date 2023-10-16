@@ -513,7 +513,7 @@ bool fs::fileOpenForAppend (gos::File *out_h, const u8 *utf8_filePathAndName, bo
 }
 
 //**************************************************************************
-void fs::fpf (const gos::File &h, const char *format, ...)
+void fs::fpf (gos::File &h, const char *format, ...)
 {
 	va_list argptr;
 	va_start (argptr, format );
