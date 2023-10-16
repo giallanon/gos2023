@@ -59,8 +59,10 @@ endforeach()
 # GLFW-3.38 library
 set(PATH_TO_GLFW "${PROJECT_SOURCE_DIR}/../../external/glfw-3.3.8")
 include_directories(${PATH_TO_GLFW}/include)
-target_link_libraries(${BINARY_OUTPUT_FILENAME} "${PATH_TO_GLFW}/build/src/libglfw3.a")
-
+if(GOS_PLATFORM__NAME STREQUAL "linux")
+    target_link_libraries(${BINARY_OUTPUT_FILENAME} "${PATH_TO_GLFW}/build/src/libglfw3.a")
+elseif(GOS_PLATFORM__NAME STREQUAL "windows")
+endif()
 
 #===================================
 # vulkan library
@@ -72,8 +74,10 @@ target_link_libraries(${BINARY_OUTPUT_FILENAME} "${Vulkan_LIBRARIES}")
 
 #===================================
 # x11 library
-find_package(X11 REQUIRED)
-if (NOT X11_FOUND)
-    message(FATAL_ERROR "X11 development package not found")
+if(GOS_PLATFORM__NAME STREQUAL "linux")
+    find_package(X11 REQUIRED)
+    if (NOT X11_FOUND)
+        message(FATAL_ERROR "X11 development package not found")
+    endif()
+    target_link_libraries(${BINARY_OUTPUT_FILENAME} "${X11_LIBRARIES}")
 endif()
-target_link_libraries(${BINARY_OUTPUT_FILENAME} "${X11_LIBRARIES}")

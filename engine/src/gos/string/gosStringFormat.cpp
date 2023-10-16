@@ -300,5 +300,5 @@ void string::format::currency (u16 price, u8 numDecimal, char decimalPointCharac
         
     }
 
-    strncpy_s (out_s, sizeOfOut, s, sizeOfOut-1);
+    sprintf_s (out_s, sizeOfOut, "%s", s);
 }

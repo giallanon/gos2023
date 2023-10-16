@@ -89,7 +89,7 @@ bool platform::FS_fileRename(const u8 *utf8_pathNoSlash, const u8 *utf8_oldFilen
 }
 
 //*****************************************************
-void platform::FS_fileGetLastTimeModified_UTC (const char *filePathAndName, gos::DateTime *out_dt)
+void platform::FS_fileGetCreationTime_UTC (const char *filePathAndName, gos::DateTime *out_dt)
 {
     //NB; linux non ha la nozione di creationTime, quindi ritorno il last modified time
     FS_fileGetLastTimeModified_UTC (filePathAndName, out_dt);
