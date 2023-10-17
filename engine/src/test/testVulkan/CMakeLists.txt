@@ -59,10 +59,9 @@ endforeach()
 # GLFW-3.38 library
 set(PATH_TO_GLFW "${PROJECT_SOURCE_DIR}/../../external/glfw-3.3.8")
 include_directories(${PATH_TO_GLFW}/include)
-if(GOS_PLATFORM__NAME STREQUAL "linux")
-    target_link_libraries(${BINARY_OUTPUT_FILENAME} "${PATH_TO_GLFW}/build/src/libglfw3.a")
-elseif(GOS_PLATFORM__NAME STREQUAL "windows")
-endif()
+makeLibraryName(glfwLibraryFilename glfw3)
+target_link_libraries(${BINARY_OUTPUT_FILENAME} "${glfwLibraryFilename}")
+
 
 #===================================
 # vulkan library

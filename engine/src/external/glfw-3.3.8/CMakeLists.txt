@@ -45,7 +45,8 @@ if (BUILD_SHARED_LIBS AND UNIX)
     # On Unix-like systems, shared libraries can use the soname system.
     set(GLFW_LIB_NAME glfw)
 else()
-    set(GLFW_LIB_NAME glfw3)
+    #set(GLFW_LIB_NAME glfw3)
+    set(GLFW_LIB_NAME "glfw3__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}")
 endif()
 
 if (GLFW_VULKAN_STATIC)

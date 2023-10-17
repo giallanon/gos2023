@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.27)
 
+#====================================================
+# path di output di questo progetto
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../../lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../../lib)
+
+
 set(common_HEADERS internal.h mappings.h
                    "${GLFW_BINARY_DIR}/src/glfw_config.h"
                    "${GLFW_SOURCE_DIR}/include/GLFW/glfw3.h"
