@@ -70,7 +70,9 @@ find_package(Vulkan REQUIRED)
 if (NOT Vulkan_FOUND)
     message(FATAL_ERROR "Vulkan development package not found")
 endif()
+target_include_directories(${BINARY_OUTPUT_FILENAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(${BINARY_OUTPUT_FILENAME} "${Vulkan_LIBRARIES}")
+message("Vulkan include path:  ${Vulkan_INCLUDE_DIRS}")
 
 #===================================
 # x11 library

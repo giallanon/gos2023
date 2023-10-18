@@ -4,6 +4,8 @@
 #include <shlobj.h>
 #include "../../gos.h"
 
+#pragma comment(lib, "Ws2_32.lib")
+
 struct	sWin32PlatformData
 {
 	HINSTANCE			hInst;
@@ -125,6 +127,37 @@ void platform::internal_deinit()
 	
 	WSACleanup();
 }
+
+//**********************************************
+u32 platform::systeminfo_getNumOfCPUCore()
+{
+	SYSTEM_INFO si;
+	GetSystemInfo (&si);
+	return si.dwNumberOfProcessors;
+}
+
+//**********************************************
+u32 platform::memory_getPageSizeInByte()
+{
+	SYSTEM_INFO si;
+	GetSystemInfo (&si);
+	return si.dwPageSize;
+}
+
+//**********************************************
+void* platform::memory_alignedAlloc (size_t size, size_t alignmentPowerOfTwo)
+{
+	void *p = _aligned_malloc(size, alignmentPowerOfTwo);
+	assert(NULL != p);
+	return p;
+}
+
+//**********************************************
+void platform::memory_alignedFree (void *p)
+{
+	_aligned_free(p);
+}
+
 
 //**********************************************
 const u8 *platform::getAppPathNoSlash()						{ return win32PlatformData.applicationPathNoSlash; }

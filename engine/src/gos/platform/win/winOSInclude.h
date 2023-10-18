@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <conio.h>
 
 //typedef dei dati di base
 typedef int8_t      i8;         //8 bit signed

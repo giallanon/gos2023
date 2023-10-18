@@ -79,8 +79,9 @@ endfunction()
 
 #====================================================
 # sotto progetti
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/gos)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosMath)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGeom)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/external/glfw-3.3.8)
+#add_subdirectory(${PROJECT_SOURCE_DIR}/src/gos)
+#add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosMath)
+#add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGeom)
+#add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
+#add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)

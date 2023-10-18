@@ -7,3 +7,5 @@ engine/bin/testKernel__linux_Debug
 engine/bin/testVulkan__linux_Debug
 engine/.vs/
 *.pdb
+engine/bin/testKernel__windows_Debug.exe
+*.ilk
