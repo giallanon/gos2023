@@ -53,7 +53,7 @@ if (MSVC)
     add_compile_definitions(_UNICODE)
     add_compile_definitions(GOS_COMPILER__MSVC)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    add_compile_options(-Wall -Wpedantic)
+    add_compile_options(-Wall)
     add_compile_definitions(GOS_COMPILER__GCC)
 endif()
 
@@ -80,8 +80,9 @@ endfunction()
 #====================================================
 # sotto progetti
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/external/glfw-3.3.8)
-#add_subdirectory(${PROJECT_SOURCE_DIR}/src/gos)
-#add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosMath)
-#add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGeom)
-#add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
-#add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/gos)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosMath)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGeom)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
+

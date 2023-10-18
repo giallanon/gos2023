@@ -473,7 +473,7 @@ bool VulkanExample1::vulkanCreateShaderFromMemory (const u8 *buffer, u32 bufferS
 }
 
 //************************************
-static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) 
+static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, UNUSED_PARAM(VkDebugUtilsMessageTypeFlagsEXT messageType), const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, UNUSED_PARAM(void* pUserData)) 
 {
     char prefix[32];
     if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT))
@@ -660,7 +660,7 @@ bool VulkanExample1::vulkanScanAndSelectAPhysicalDevices (VkInstance &vkInstance
         {
             gos::logger::log (eTextColor::red, "this device is not VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n");
             continue;
-        }          
+        }
 
         //feature del device
         //VkPhysicalDeviceFeatures deviceFeatures;

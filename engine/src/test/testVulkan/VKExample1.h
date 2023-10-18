@@ -172,7 +172,7 @@ private:
         void        reset()                                                 { cursor=0; count=0; buffer.zero(); }
         void        add (const char *m)
         {
-            const u32 n = strlen(m) +1;
+            const u32 n = static_cast<u32>(strlen(m)) +1;
             if (n == 1)
                 return;
             if (cursor + n >= buffer.getTotalSizeAllocated())
@@ -195,7 +195,7 @@ private:
             const char *ret = reinterpret_cast<const char*>(buffer._getPointer(offset));
 
             stringNum++;
-            const u32 n = strlen(ret);
+            const u32 n = static_cast<u32>(strlen(ret));
             offset += (n+1);
             (*iter) = offset | (stringNum<<16);
             return ret;
@@ -237,14 +237,14 @@ private:
                 VkInstanceValidationLayersList()         { }
         virtual ~VkInstanceValidationLayersList()        { }
 
-        void    build (gos::Allocator *allocator)
+        void    build (gos::Allocator *allocatorIN)
         {
             this->free();
             u32 nElem;
             vkEnumerateInstanceLayerProperties(&nElem, nullptr);
             if (nElem)
             {
-                this->alloc (allocator, nElem);
+                this->alloc (allocatorIN, nElem);
                 vkEnumerateInstanceLayerProperties(&nElem, this->_getRawBuffer());
             }            
         }
@@ -277,14 +277,14 @@ private:
                 VkInstanceExtensionList()         { }
         virtual ~VkInstanceExtensionList()        { }
 
-        void    build (gos::Allocator *allocator)
+        void    build (gos::Allocator *allocatorIN)
         {
             this->free();
             u32 nElem;
             vkEnumerateInstanceExtensionProperties(nullptr, &nElem, nullptr);
             if (nElem)
             {
-                this->alloc (allocator, nElem);
+                this->alloc (allocatorIN, nElem);
                 vkEnumerateInstanceExtensionProperties(nullptr, &nElem, this->_getRawBuffer());
             }            
         }
@@ -317,14 +317,14 @@ private:
                 VkPhyDeviceExtensionList()         { }
         virtual ~VkPhyDeviceExtensionList()        { }
 
-        void    build (gos::Allocator *allocator, VkPhysicalDevice &phyDevice)
+        void    build (gos::Allocator *allocatorIN, VkPhysicalDevice &phyDevice)
         {
             this->free();
             u32 nElem;
             vkEnumerateDeviceExtensionProperties(phyDevice, nullptr, &nElem, nullptr);
             if (nElem)
             {
-                this->alloc (allocator, nElem);
+                this->alloc (allocatorIN, nElem);
                 vkEnumerateDeviceExtensionProperties(phyDevice, nullptr, &nElem, this->_getRawBuffer());
             }            
         }
@@ -357,14 +357,14 @@ private:
                 VkPhyDeviceQueueList()         { }
         virtual ~VkPhyDeviceQueueList()        { }
 
-        void    build (gos::Allocator *allocator, VkPhysicalDevice &phyDevice)
+        void    build (gos::Allocator *allocatorIN, VkPhysicalDevice &phyDevice)
         {
             this->free();
             u32 nElem;
             vkGetPhysicalDeviceQueueFamilyProperties(phyDevice, &nElem, nullptr);
             if (nElem)
             {
-                this->alloc (allocator, nElem);
+                this->alloc (allocatorIN, nElem);
                 vkGetPhysicalDeviceQueueFamilyProperties(phyDevice, &nElem, this->_getRawBuffer());
             }            
         }
@@ -400,14 +400,14 @@ private:
                 VPhyDevicekSurfaceFormatKHRList()         { }
         virtual ~VPhyDevicekSurfaceFormatKHRList()        { }
 
-        void    build (gos::Allocator *allocator, VkPhysicalDevice &phyDevice, const VkSurfaceKHR &vkSurface)
+        void    build (gos::Allocator *allocatorIN, VkPhysicalDevice &phyDevice, const VkSurfaceKHR &vkSurface)
         {
             this->free();
             u32 nElem;
             vkGetPhysicalDeviceSurfaceFormatsKHR(phyDevice, vkSurface, &nElem, nullptr);
             if (nElem)
             {
-                this->alloc (allocator, nElem);
+                this->alloc (allocatorIN, nElem);
                 vkGetPhysicalDeviceSurfaceFormatsKHR(phyDevice, vkSurface, &nElem, this->_getRawBuffer());
             }            
         }
@@ -430,14 +430,14 @@ private:
                 VPhyDevicekSurfacePresentModesKHRList()         { }
         virtual ~VPhyDevicekSurfacePresentModesKHRList()        { }
 
-        void    build (gos::Allocator *allocator, VkPhysicalDevice &phyDevice, const VkSurfaceKHR &vkSurface)
+        void    build (gos::Allocator *allocatorIN, VkPhysicalDevice &phyDevice, const VkSurfaceKHR &vkSurface)
         {
             this->free();
             u32 nElem;
             vkGetPhysicalDeviceSurfacePresentModesKHR(phyDevice, vkSurface, &nElem, nullptr);
             if (nElem)
             {
-                this->alloc (allocator, nElem);
+                this->alloc (allocatorIN, nElem);
                 vkGetPhysicalDeviceSurfacePresentModesKHR(phyDevice, vkSurface, &nElem, this->_getRawBuffer());
             }            
         }
