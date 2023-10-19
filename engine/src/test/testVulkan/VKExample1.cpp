@@ -655,11 +655,21 @@ bool VulkanExample1::vulkanScanAndSelectAPhysicalDevices (VkInstance &vkInstance
         gos::logger::log ("dev index: %d\n", i);
         gos::logger::log ("dev type: %s\n", string_VkPhysicalDeviceType(deviceProperties.deviceType));
 
-        //deve assolutamente essere una GPU dedicata
-        if (deviceProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+        //deve assolutamente essere una GPU dedicata, a meno che non sia la sola e unica GPU presente
+        if (1 == nDevices)
         {
-            gos::logger::log (eTextColor::red, "this device is not VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n");
-            continue;
+            if (deviceProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+            {
+                gos::logger::log (eTextColor::yellow, "WARN: this device is not VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, but it's the only one available(%s)\n", string_VkPhysicalDeviceType(deviceProperties.deviceType));
+            }
+        }
+        else
+        {
+            if (deviceProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+            {
+                gos::logger::log (eTextColor::red, "this device is not VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n");
+                continue;
+            }
         }
 
         //feature del device
@@ -768,18 +778,23 @@ bool VulkanExample1::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const Str
     //quali e quante queue mi servono?
     float queuePriority = 1.0f;
     VkDeviceQueueCreateInfo queueCreateInfo[2];
+    u8 numOfQueue = 0;
     memset (queueCreateInfo, 0, sizeof(queueCreateInfo));
-    queueCreateInfo[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo[0].queueFamilyIndex = vkPhyDevInfo.gfxQIndex;
-    queueCreateInfo[0].queueCount = 1;
-    queueCreateInfo[0].pQueuePriorities = &queuePriority;
+    queueCreateInfo[numOfQueue].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queueCreateInfo[numOfQueue].queueFamilyIndex = vkPhyDevInfo.gfxQIndex;
+    queueCreateInfo[numOfQueue].queueCount = 1;
+    queueCreateInfo[numOfQueue].pQueuePriorities = &queuePriority;
+    numOfQueue++;
 
-    queueCreateInfo[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo[1].queueFamilyIndex = vkPhyDevInfo.computeQIndex;
-    queueCreateInfo[1].queueCount = 1;
-    queueCreateInfo[1].pQueuePriorities = &queuePriority;
-
-
+    if (vkPhyDevInfo.gfxQIndex != vkPhyDevInfo.computeQIndex)
+    {
+        queueCreateInfo[numOfQueue].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo[numOfQueue].queueFamilyIndex = vkPhyDevInfo.computeQIndex;
+        queueCreateInfo[numOfQueue].queueCount = 1;
+        queueCreateInfo[numOfQueue].pQueuePriorities = &queuePriority;
+        numOfQueue++;
+    }
+    
     //quali feature voglio usare?
     VkPhysicalDeviceFeatures deviceFeatures{};
 
@@ -788,7 +803,7 @@ bool VulkanExample1::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const Str
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.pQueueCreateInfos = queueCreateInfo;
-    createInfo.queueCreateInfoCount = 2;
+    createInfo.queueCreateInfoCount = numOfQueue;
     createInfo.pEnabledFeatures = &deviceFeatures;        
     createInfo.enabledExtensionCount = 0;
     createInfo.ppEnabledExtensionNames = foundExtensions;
@@ -831,6 +846,8 @@ bool VulkanExample1::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const Str
             gos::logger::log (eTextColor::green, "OK\n");
 
             out_vulkan->phyDevInfo = vkPhyDevInfo;
+            if (vkPhyDevInfo.gfxQIndex == vkPhyDevInfo.computeQIndex)
+                vkPhyDevInfo.computeQIndex = vkPhyDevInfo.gfxQIndex;
 
             //recupero l'handle della gfxQ
             vkGetDeviceQueue(out_vulkan->dev, vkPhyDevInfo.gfxQIndex, 0, &out_vulkan->gfxQ);
