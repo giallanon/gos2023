@@ -70,6 +70,11 @@ if (NOT Vulkan_FOUND)
     message(FATAL_ERROR "Vulkan development package not found")
 endif()
 target_link_libraries(${BINARY_OUTPUT_FILENAME} "${Vulkan_LIBRARIES}")
+include_directories(${Vulkan_INCLUDE_DIRS})
+message("         vulkan version: ${Vulkan_VERSION}")
+message("         vulkan found, path is ${Vulkan_LIBRARIES}")
+message("         vulkan include dirs: ${Vulkan_INCLUDE_DIRS}")
+message("         vulkan SPIRV tools found: ${Vulkan_SPIRV-Tools_FOUND}")
 
 #===================================
 # x11 library
