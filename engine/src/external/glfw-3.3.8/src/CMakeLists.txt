@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.27)
+cmake_minimum_required(VERSION 3.20)
 
 #====================================================
 # path di output di questo progetto
@@ -102,6 +102,8 @@ set_target_properties(glfw PROPERTIES
                       SOVERSION ${GLFW_VERSION_MAJOR}
                       POSITION_INDEPENDENT_CODE ON
                       FOLDER "GLFW3")
+
+message("glfw OUTPUT_NAME ${GLFW_LIB_NAME}")
 
 if (CMAKE_VERSION VERSION_EQUAL "3.1.0" OR
     CMAKE_VERSION VERSION_GREATER "3.1.0")

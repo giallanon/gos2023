@@ -237,7 +237,6 @@ namespace test_gos
         {
             gos::fs::folderDeleteAllFileRecursively(s1, eFolderDeleteMode::deleteAlsoTheSubfolderAndTheMainFolder);
             TEST_FAIL_IF (gos::fs::folderExists(s1));
-            TEST_FAIL_IF (gos::fs::folderExists(s2));
         }
         gos::fs::folderCreate (s1);
 

@@ -16,5 +16,11 @@ int main()
     testMath();
 
     gos::deinit();
+
+#ifdef GOS_PLATFORM__WINDOWS
+    printf ("\nPress any key to terminate\n");
+    _getch();
+#endif
+
     return 0;
 }

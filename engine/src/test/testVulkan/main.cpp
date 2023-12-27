@@ -7,17 +7,21 @@ int main()
 {
     gos::sGOSInit init;
     init.setDefaultForGame();
-    if (!gos::init (init, "testVulkan"))
-        return 1;
+    if (gos::init (init, "testVulkan"))
+    {
+        VulkanExample1 app;
+        if (app.init())
+        {
+            app.mainLoop();
+            app.cleanup();
+        }
+        gos::deinit();
+    }
 
+#ifdef GOS_PLATFORM__WINDOWS
+    printf ("\nPress any key to terminate\n");
+    _getch();
+#endif
 
-    VulkanExample1 app;
-    if (!app.init())
-        return 1;
-
-    app.mainLoop();
-    app.cleanup();
-
-    gos::deinit();
     return 0;
 }

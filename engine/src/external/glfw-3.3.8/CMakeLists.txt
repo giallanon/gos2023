@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.27)
+cmake_minimum_required(VERSION 3.20)
 
 project(GLFW VERSION 3.3.8 LANGUAGES C)
 
