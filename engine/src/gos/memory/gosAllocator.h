@@ -24,10 +24,10 @@ namespace gos
         virtual				~Allocator() { }
     
 #ifdef _DEBUG
-                            //[bPlacementNew] e' piu' che altro per questioni di debug e serve ad indicare se la alloc si sta
-                            //utilzzando per instanziare una classe (true) oppure se e' una plain malloc (false).
-                            //Cosi' facendo, durante la dealloc() posso accertarmi che le cose allocate con GOSNEW siano deallocate con GOSDELETE e tutto il resto
-                            //invece con GOSFREE
+        //[bPlacementNew] e' piu' che altro per questioni di debug e serve ad indicare se la alloc si sta
+        //utilzzando per instanziare una classe (true) oppure se e' una plain malloc (false).
+        //Cosi' facendo, durante la dealloc() posso accertarmi che le cose allocate con GOSNEW siano deallocate con GOSDELETE e tutto il resto
+        //invece con GOSFREE
         static constexpr u8	DEBUG_HEADER_SIZE = 8;
 
         void*				alloc (size_t sizeInBytes, u8 alignPowerOfTwo, UNUSED_PARAM(const char *debug_filename), u32 debug_lineNumber, bool debug_bPlacementNew)					

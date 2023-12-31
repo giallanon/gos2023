@@ -84,7 +84,7 @@ bool string::utf8::toUTF32 (const UTF8Char &in, UTF32Char *out)
 }
 
 //**************************************************
-u32 string::utf8::lengthInBytes (const u8 *utf8_str)
+u32 string::utf8::lengthInByte (const u8 *utf8_str)
 {
 	if (NULL == utf8_str)
 		return 0;
@@ -262,7 +262,7 @@ u8* string::utf8::allocStr (Allocator *allocator, const u8 *src, u32 numBytesDaU
 	assert (allocator && src);
 
 	if (u32MAX == numBytesDaUtilizzare)
-        numBytesDaUtilizzare = string::utf8::lengthInBytes (src);
+        numBytesDaUtilizzare = string::utf8::lengthInByte (src);
 	if (0 == numBytesDaUtilizzare)
 		return NULL;
 	
@@ -330,7 +330,7 @@ u32 string::utf8::copyStr (u8 *dst, u32 sizeofDst, const u8 *src, u32 numBytesDa
 	}
 
 	if (u32MAX == numBytesDaUtilizzare)
-		numBytesDaUtilizzare = utf8::lengthInBytes (src);
+		numBytesDaUtilizzare = utf8::lengthInByte (src);
 	
 	if (sizeofDst > numBytesDaUtilizzare)
 	{
@@ -357,7 +357,7 @@ u32 string::utf8::copyStrAsMuchAsYouCan (u8 *dst, u32 sizeOfDest, const u8 *src)
         return 0;
     }
 
-    u32 srcLen = string::utf8::lengthInBytes(src);
+    u32 srcLen = string::utf8::lengthInByte(src);
     if (0 == srcLen)
     {
         dst[0] = 0;
@@ -380,14 +380,14 @@ u32 string::utf8::copyStrAsMuchAsYouCan (u8 *dst, u32 sizeOfDest, const u8 *src)
 //**************************************************
 u32 string::utf8::concatStr (u8 *dst, u32 sizeofDst, const char* src)
 {
-	u32 n = string::utf8::lengthInBytes(dst);
+	u32 n = string::utf8::lengthInByte(dst);
 	return n + utf8::makeStr (&dst[n], sizeofDst - n, src);
 }
 
 //**************************************************
 u32 string::utf8::concat (u8 *dst, u32 sizeofDst, const UTF8Char &c)
 {
-	u32 n = string::utf8::lengthInBytes(dst);
+	u32 n = string::utf8::lengthInByte(dst);
 	if (n + c.length() >= sizeofDst)
 	{
 		DBGBREAK;
@@ -406,8 +406,8 @@ bool string::utf8::areEqual (const u8 *a, const u8 *b, bool bCaseSensitive)
 { 
 	assert (NULL != a && NULL != b);
 	
-	const u32 lenA = string::utf8::lengthInBytes (a);
-	if (lenA != string::utf8::lengthInBytes (b))
+	const u32 lenA = string::utf8::lengthInByte (a);
+	if (lenA != string::utf8::lengthInByte (b))
 		return false;
 	return string::utf8::areEqualWithLen (a, b, bCaseSensitive, lenA);
 }
@@ -533,7 +533,7 @@ bool string::utf8::find (Iter &src, const u8 *whatToFind)
 {
 	if (NULL == whatToFind)
 		return false;
-	const u32 whatToFindLEN = utf8::lengthInBytes(whatToFind);
+	const u32 whatToFindLEN = utf8::lengthInByte(whatToFind);
 	if (0 == whatToFindLEN)
 		return false;
 
@@ -1087,7 +1087,7 @@ u32 string::utf8::decodeURIinPlace (u8 *s)
 //*********************************************************
 void string::utf8::appendUTF8Char (u8 *dst, u32 sizeOfDest, const UTF8Char &ch)
 {
-	u32 currentDSTLen = string::utf8::lengthInBytes(dst);
+	u32 currentDSTLen = string::utf8::lengthInByte(dst);
 	const u32 nBytes = ch.length();
 	if (currentDSTLen + nBytes >= sizeOfDest)
 	{
@@ -1329,7 +1329,7 @@ u32 string::utf8::unescapeInPlace (u8 *src_dst, u32 srcLenInBytes)
 //***************************************************************
 u32 string::utf8::rtrim(u8 *s)
 {
-	u32 n = utf8::lengthInBytes(s);
+	u32 n = utf8::lengthInByte(s);
 	if (n == 0)
 		return 0;
 

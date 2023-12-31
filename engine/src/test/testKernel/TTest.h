@@ -40,7 +40,7 @@ void TEST(const char *testName, Func fn, Args... args)
     {
         gos::console::setBgColor (eBgColor::red);
         gos::console::setTextColor(eTextColor::black);
-        gos::logger::log ("FAILED");
+        gos::logger::log ("FAILED, line %d", errorOnLine);
     }
 
     gos::console::setBgColor (eBgColor::black);

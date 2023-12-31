@@ -1,23 +1,35 @@
+#include "gosGPU.h"
 #include "VKExample1.h"
 
 
+//******************************** 
+void runExample1 (gos::GPU *gpu)
+{
+    VulkanExample1 app;
+    if (app.init(gpu))
+    {
+        app.mainLoop();
+        app.cleanup();
+    }
+}
 
-//********************************+
+
+//******************************** 
 int main()
 {
     gos::sGOSInit init;
     init.setDefaultForGame();
     if (gos::init (init, "testVulkan"))
     {
-        VulkanExample1 app;
-        if (app.init())
+        gos::GPU gpu;
+        if (gpu.init (800, 600, gos::getAppName()))
         {
-            app.mainLoop();
-            app.cleanup();
+            runExample1 (&gpu);
+            gpu.deinit();
         }
+
         gos::deinit();
     }
-
 #ifdef GOS_PLATFORM__WINDOWS
     printf ("\nPress any key to terminate\n");
     _getch();

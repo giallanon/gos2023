@@ -32,7 +32,7 @@ namespace gos
 		typedef HandleT<A, B, C, D> ThisHandle;
 
 	public:
-		static ThisHandle			INVALID()								{ ThisHandle h; h.setInvalid(); return h; }
+		static ThisHandle			INVALID()								{ static ThisHandle hINVALID; hINVALID.setInvalid(); return hINVALID; }
 		static constexpr u8			getNumBitsChunk()						{ return A; }
 		static constexpr u8			getNumBitsUser()						{ return B; }
 		static constexpr u8			getNumBitsIndex()						{ return C; }

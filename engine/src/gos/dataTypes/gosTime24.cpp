@@ -31,7 +31,7 @@ void Time24::setFromHHMMSS (const u8 *hhmmss)
 {
     if (NULL == hhmmss)
         return;
-    if (string::utf8::lengthInBytes(hhmmss) < 6)
+    if (string::utf8::lengthInByte(hhmmss) < 6)
         return;
 
     u8 s[4] = { 0,0,0,0 };

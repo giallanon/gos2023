@@ -24,7 +24,7 @@ void string::utf8::Iter::setup (const u8 *utf8_src, u32 firstByteIN, u32 lenghtI
 
 	utf8_seq = &utf8_src[firstByteIN];
 	if (lenghtInBytesIN == u32MAX)
-		seq_length = string::utf8::lengthInBytes(utf8_seq);
+		seq_length = string::utf8::lengthInByte(utf8_seq);
 	else
 		seq_length = lenghtInBytesIN;
 

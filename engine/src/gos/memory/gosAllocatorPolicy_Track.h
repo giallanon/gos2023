@@ -11,10 +11,9 @@ namespace gos
     {
     public:
                     AllocPolicy_Track_none (UNUSED_PARAM(const char *nameIN))		            { }
-
         bool		anyMemLeaks()										                        { return false; }
-        void		onAlloc (UNUSED_PARAM(const void *p), UNUSED_PARAM(size_t size))			{ }
-        void		onDealloc (UNUSED_PARAM(const void *p), UNUSED_PARAM(size_t size))			{ }
+        void		onAlloc (UNUSED_PARAM(const void *p), UNUSED_PARAM(size_t size), UNUSED_PARAM(const char *allocatorName), UNUSED_PARAM(u32 allocatorID))			{ }
+        void		onDealloc (UNUSED_PARAM(const void *p), UNUSED_PARAM(size_t size), UNUSED_PARAM(const char *allocatorName), UNUSED_PARAM(u32 allocatorID))	    { }
     };
 
 
@@ -31,19 +30,23 @@ namespace gos
 
         bool			anyMemLeaks()															{ return !(nalloc==0 && curMemalloc==0); }
 
-        void			onAlloc (UNUSED_PARAM(const void *p), size_t size)
+        void			onAlloc (UNUSED_PARAM(const void *p), size_t size, const char *allocatorName, UNUSED_PARAM(u32 allocatorID))
                         {
                             ++nalloc;
                             curMemalloc += size;
                             if (curMemalloc >= maxMemalloc)
                                 maxMemalloc = curMemalloc;
+
+                            printf ("PROFILE: Allocator [%s] %lu B, max %lu B\n", allocatorName, curMemalloc, maxMemalloc);
                         }
 
-        void			onDealloc (UNUSED_PARAM(const void *p), size_t size)
+        void			onDealloc (UNUSED_PARAM(const void *p), size_t size, const char *allocatorName, UNUSED_PARAM(u32 allocatorID))
                         {
                             assert (nalloc>0 && curMemalloc >= size);
                             --nalloc;
                             curMemalloc -= size;
+
+                            printf ("PROFILE: Allocator [%s] %lu B, max %lu B\n", allocatorName, curMemalloc, maxMemalloc);
                         }
 
     public:

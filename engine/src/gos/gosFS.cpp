@@ -407,7 +407,7 @@ bool fs::doesFileNameMatchJolly (const u8 *utf8_filename, const u8 *utf8_strJoll
 void fs::findComposeFullFilePathAndName(const gos::FileFind &ff, const u8 *pathNoSlash, u8 *out, u32 sizeofOut)
 {
 	gos::string::utf8::spf (out, sizeofOut, "%s/", pathNoSlash);
-	const u32 n = string::utf8::lengthInBytes(out);
+	const u32 n = string::utf8::lengthInByte(out);
 	fs::findGetFileName(ff, &out[n], sizeofOut - n);
 }
 

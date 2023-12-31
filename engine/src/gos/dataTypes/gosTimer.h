@@ -1,6 +1,7 @@
 #ifndef _gosTimer_h_
 #define _gosTimer_h_
 #include "../gosEnumAndDefine.h"
+#include "../gos.h"
 
 namespace gos
 {

@@ -33,7 +33,6 @@ elseif(GOS_PLATFORM__NAME STREQUAL "windows")
     add_compile_definitions(GOS_PLATFORM__WINDOWS)
 endif()
 
-
 #====================================================
 # determina quale build stiamo compilando
 set(BUILD_IS_DEBUG 0)
@@ -68,12 +67,19 @@ endif()
 #====================================================
 # makeLibraryName
 # fn di comodo che ritorna il nome delle librerie a seconda che siamo in platform linux o windows
+set(ABS_PATH_TO_LIB_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/lib")
 function(makeLibraryName varName libName)
     if(GOS_PLATFORM__NAME STREQUAL "linux")
-        set(${varName} "${PROJECT_SOURCE_DIR}/../../../lib/lib${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.a" PARENT_SCOPE)
+        #set(${varName} "${ABS_PATH_TO_LIB_FOLDER}/lib${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.a" PARENT_SCOPE)
+        set(temp "${ABS_PATH_TO_LIB_FOLDER}/lib${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.a")
     elseif(GOS_PLATFORM__NAME STREQUAL "windows")
-        set(${varName} "${PROJECT_SOURCE_DIR}/../../../lib/${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.lib" PARENT_SCOPE)
+        set(temp "${ABS_PATH_TO_LIB_FOLDER}/${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.lib")
     endif()
+
+    set(${varName} "${temp}" PARENT_SCOPE)
+    if(NOT EXISTS ${temp})
+        message(FATAL_ERROR "Can't find ${temp}")
+    endif()    
 endfunction()
 
 
@@ -83,6 +89,7 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/external/glfw-3.3.8)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gos)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosMath)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGeom)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGPU)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
 

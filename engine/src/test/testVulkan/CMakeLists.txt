@@ -24,6 +24,8 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
     main.cpp
+    Pipeline1.cpp
+    Pipeline1.h
     VKExample1.cpp
     VKExample1.h
 )
@@ -33,6 +35,7 @@ add_executable(${BINARY_OUTPUT_FILENAME}
 include_directories(${PROJECT_SOURCE_DIR}/../../gos)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosMath)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosGeom)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosGPU)
 
 #====================================================
 # info a video
@@ -47,13 +50,13 @@ message("         compiler flags: ${MAIN_CFLAGS}")
 
 #====================================================
 # additional library to be linked
-set(LIBRARY_LIST "gos;gosMath;gosGeom")
+set(LIBRARY_LIST "gosGPU;gosMath;gosGeom;gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
-    #set(finalLibNameAndPath "${PROJECT_SOURCE_DIR}/../../../lib/lib${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.a")
     message("         linkling libray [${libName}] => ${finalLibNameAndPath}")
     target_link_libraries(${BINARY_OUTPUT_FILENAME} ${finalLibNameAndPath})
 endforeach()
+
 
 #===================================
 # GLFW-3.38 library

@@ -42,7 +42,7 @@ void Date::setFromYYYYMMDD (const u8 *yyyymmdd)
 {
     if (NULL == yyyymmdd)
         return;
-    if (string::utf8::lengthInBytes(yyyymmdd) < 8)
+    if (string::utf8::lengthInByte(yyyymmdd) < 8)
         return;
 
     u8 s[8] = { 0,0,0,0,0,0,0,0 };

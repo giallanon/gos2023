@@ -48,7 +48,7 @@ message("         compiler flags: ${MAIN_CFLAGS}")
 
 #====================================================
 # additional library to be linked
-set(LIBRARY_LIST "gos;gosMath;gosGeom")
+set(LIBRARY_LIST "gosMath;gosGeom;gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
     #set(finalLibNameAndPath "${PROJECT_SOURCE_DIR}/../../../lib/lib${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.a")

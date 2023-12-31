@@ -31,22 +31,22 @@ namespace gos
                                 destroy_mspace(ms);
                         }
 
+    /*  Costruisce un heap di dimensioni iniziali = startSizeInBytes.
+        Usa DLmalloc per allocare la memoria inziale ed ulteriori blocchi di memoria in caso di espansione*/
     void				setup (size_t startSizeInBytes)
                         {
-                            /*  Costruisce un heap di dimensioni iniziali = startSizeInBytes.
-                                Usa DLmalloc per allocare la memoria inziale ed ulteriori blocchi di memoria in caso di espansione*/
                             assert (startSizeInBytes > 0);
                             assert (NULL == ms);
                             ms = create_mspace (startSizeInBytes, 0);
                             assert(NULL != ms);
                         }
 
+    /* Memory deve essere una valida zona di memoria, e sizeOfMemory deve essere la sua dimensione
+        Costruisce un heap su "memory". Ulteriori blocchi di memoria vengono allocati alla bisogna via DLmalloc (in caso di espansione).
+        Non fa il free del blocco iniziale "baseMemory".
+        Fa il free di eventuali ulteriori blocchi allocati autonomamente*/
     void				setup (void *baseMemory, size_t sizeOfMemoryInBytes)
                         {
-                            /* Memory deve essere una valida zona di memoria, e sizeOfMemory deve essere la sua dimensione
-                                Costruisce un heap su "memory". Ulteriori blocchi di memoria vengono allocati alla bisogna via DLmalloc (in caso di espansione).
-                                Non fa il free del blocco iniziale "baseMemory".
-                                Fa il free di eventuali ulteriori blocchi allocati autonomamente*/
                             assert (NULL == ms);
                             assert (sizeOfMemoryInBytes>0 && NULL != baseMemory);
                             ms = create_mspace_with_base (baseMemory, sizeOfMemoryInBytes, 0);
@@ -64,7 +64,7 @@ namespace gos
                             thread.lock();
                             void *ret = mspace_memalign (ms, align, sizeInBytes);
                             assert (ret);
-                            track.onAlloc (ret, getAllocatedSize(ret));
+                            track.onAlloc (ret, getAllocatedSize(ret), getName(), getAllocatorID());
                             thread.unlock();
                             return ret;
                         }
@@ -75,11 +75,10 @@ namespace gos
                                 return;
                             assert (NULL!=ms);
                             thread.lock();
-                            track.onDealloc (p, getAllocatedSize(p));
+                            track.onDealloc (p, getAllocatedSize(p), getName(), getAllocatorID());
                             mspace_free (ms, p);
                             thread.unlock();
                         }
-
 
     private:
         mspace			ms;

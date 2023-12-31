@@ -70,6 +70,8 @@ string/gosStringANSI.cpp
 string/gosStringEnumAndDefine.h
 string/gosStringFormat.cpp
 string/gosStringIter.cpp
+string/gosStringList.h
+string/gosStringList.cpp
 string/gosUTF8.cpp 
 string/gosUTF8Char.cpp 
 string/gosUTF16.cpp
@@ -92,7 +94,9 @@ gosFS.cpp
 gosHandle.h
 gosLIFOFixedSize.h
 gosRandom.h
-gosString.h 
+gosString.h
+gosUtils.cpp
+gosUtils.h
 )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

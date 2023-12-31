@@ -82,7 +82,7 @@ void gos::deinit()
 {
 	if (NULL != gosGlobals.logger)
 	{
-		gos::logger::log (eTextColor::white, "shutting down...\n");
+		gos::logger::log (eTextColor::white, "shutting down...\n\n\n\n");
 		delete gosGlobals.logger;
 	}
 

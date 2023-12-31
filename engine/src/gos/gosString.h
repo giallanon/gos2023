@@ -92,7 +92,7 @@ namespace gos
 			extern			const UTF8Char CHAR_ARRAY_b_r_n_t[4];	// è un array di comodo che contiene i Char \b \r \n \t
 			extern			const UTF8Char SECTION_SIGN;	// UTF8 per il carattere § (noto come 'section sign'), ovvero 0xc2 0xa7
 
-			u32				lengthInBytes (const u8 *utf8_str);
+			u32				lengthInByte (const u8 *utf8_str);
 							//equivalente alla strlen
 
 			u32				sanitize (const u8 *utf8IN, u32 numBytesInUT8IN, const UTF8Char &useThisWhenInvalidChar, u8 *out, u32 sizeof_out);
