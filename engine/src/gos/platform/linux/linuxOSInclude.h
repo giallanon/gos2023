@@ -89,7 +89,19 @@ namespace platform
         char            strJolly[64];
     };
 
-    
+    struct OSSocket
+    {
+        u32             readTimeoutMSec;
+        int             socketID;
+    };
+
+    struct OSEvent
+    {
+        epoll_event eventInfo;
+        int         h;
+        int         evfd;
+    };    
+
 } //namespace platform
 
 

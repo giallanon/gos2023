@@ -54,9 +54,13 @@ platform/gosPlatform.h
 platform/gosPlatformInclude.h 
 platform/linux/linuxOS.cpp    
 platform/linux/linuxOS.h
+platform/linux/linuxOSEvent.cpp
 platform/linux/linuxOSFS.cpp
 platform/linux/linuxOSConsole.cpp
 platform/linux/linuxOSInclude.h
+platform/linux/linuxOSSocket.cpp
+platform/linux/linuxOSWaitableGrp.cpp
+platform/linux/linuxOSWaitableGrp.h
 
 platform/win/winOS.cpp
 platform/win/winOS.h
@@ -64,6 +68,7 @@ platform/win/winOSConsole.cpp
 platform/win/winOSConsole.h
 platform/win/winOSFS.cpp
 platform/win/winOSInclude.h
+platform/win/winOSSocket.cpp
 
 string/gosString.cpp 
 string/gosStringANSI.cpp 

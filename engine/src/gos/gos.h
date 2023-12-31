@@ -140,12 +140,20 @@ namespace gos
 	 */
     namespace thread
     {
-        inline void    mutexCreate (gos::Mutex &m)      { platform::mutexCreate(&m.osm); }
-        inline void    mutexDestroy (gos::Mutex &m)     { platform::mutexDestroy(&m.osm); }
-        inline bool    mutexTryLock (gos::Mutex &m)     { return platform::mutexTryLock(&m.osm); }
-        inline bool    mutexLock (gos::Mutex &m)        { return platform::mutexLock(&m.osm); }
-        inline void    mutexUnlock (gos::Mutex &m)      { platform::mutexUnlock(&m.osm); }
+        inline void    mutexCreate (gos::Mutex *m)      										{ platform::mutexCreate (&m->osm); }
+        inline void    mutexDestroy (gos::Mutex &m)     										{ platform::mutexDestroy (&m.osm); }
+        inline bool    mutexTryLock (gos::Mutex &m)     										{ return platform::mutexTryLock (&m.osm); }
+        inline bool    mutexLock (gos::Mutex &m)        										{ return platform::mutexLock (&m.osm); }
+        inline void    mutexUnlock (gos::Mutex &m)      										{ platform::mutexUnlock (&m.osm); }
         
+		inline bool     eventCreate (gos::Event *out_ev)										{ return platform::eventCreate (&out_ev->osEvt); }
+		inline void     eventDestroy (gos::Event &ev)											{ platform::eventDestroy (ev.osEvt); }
+		inline bool		eventCompare (const gos::Event &a, const gos::Event &b)					{ return platform::eventCompare(a.osEvt, b.osEvt); }
+		inline void     eventFire (const gos::Event &ev)										{ platform::eventFire (ev.osEvt); }
+		inline bool     eventWait (const gos::Event &ev, size_t timeoutMSec)					{ return platform::eventWait (ev.osEvt, timeoutMSec); }
+		inline void     eventSetInvalid (gos::Event &ev)										{ platform::eventSetInvalid (ev.osEvt); }
+		inline bool		eventIsInvalid (const gos::Event &ev)									{ return platform::eventIsInvalid (ev.osEvt); }
+
     } // namespace thread
 
 
@@ -180,6 +188,124 @@ namespace gos
 
 	} //namespace console
 
+
+	/************************************************************************************************************
+	 *
+	 * network & socket
+	 *
+	 */
+	namespace netaddr
+	{
+		//alloca un array di [sNetworkAdapterInfo] e lo ritorna.
+		//L'array contiene le info su nome, IP e netmask degli adattatori di rete disponibili al sistema
+		inline  NetworkAdapterInfo*	getListOfAllNerworkAdpaterIPAndNetmask (gos::Allocator *allocator, u32 *out_numFound)		{ return platform::NET_getListOfAllNerworkAdpaterIPAndNetmask(allocator, out_numFound); }
+
+		void				ipstrToIPv4  (const char *ip, IPv4 *out);
+
+		//================================== MAC ADDRESS
+		void				setInvalid (MacAddress &me);
+		bool				isValid (const MacAddress &me);
+		bool				isInvalid (const MacAddress &me);
+
+		//scanna tutte le interfacce di rete esistenti nel PC e ritorna il MAC e l'indirizzo IP dell'interfaccia
+		//in questione. Predilige interfacce LAN rispetto a WIFI (nel caso esistano entrambe)
+		inline bool			findMACAddress (MacAddress *outMAC, IPv4 *outIP)														{ return platform::NET_getMACAddress(outMAC, outIP); }
+
+		//se [bStringHasSeparator]==true, allora [macString] è nel formato AA:BB:CC:DD:EE:FF 
+		//altrimenti è nel formato AABBCCDDEEFF 
+		bool				setFromMACString (MacAddress &me, const char *macString, bool bStringHasSeparator);
+		bool				setFromMACString (MacAddress &me, const u8 *macString, bool bStringHasSeparator);
+
+		//ritorna il MAC address di eth0 se esiste.
+		//[out_macAddress] deve essere di almeno 16 char
+		bool				getMACAddressAsString (const MacAddress &mac, char *out_macAddress, u32 sizeOfMacAddress, char optionalSeparator=0x00);
+
+		i8					compare (const MacAddress &m1, const MacAddress &m2);
+
+		//=============================== NETWORK ADDRESS
+		void				setInvalid (NetAddr &me);
+		bool				isValid (const NetAddr &me);
+		bool				isInvalid (const NetAddr &me);
+		void				setFromSockAddr (NetAddr &me, const sockaddr_in &addrIN);
+		void				setFromAddr (NetAddr &me, const NetAddr &addrIN);
+		void				setIPv4 (NetAddr &me, const char* constip);
+		void				setIPv4 (NetAddr &me, const IPv4 &ip);
+		void				setPort (NetAddr &me, u16 port);
+		
+		bool				compare (const NetAddr &a, const NetAddr &b);
+
+		u8					serializeToBuffer (const NetAddr &me, u8 *dst, u32 sizeof_dst, bool bIncludePort);
+								//se [bIncludePort] == false, serializza solo l'indirizzo IP, altrimenti IP e porta
+		u8					deserializeFromBuffer (NetAddr &me, const u8 *src, u32 sizeof_src, bool bIncludePort);
+		
+		void				getIPv4 (const NetAddr &me, char *out);
+		void				getIPv4 (const NetAddr &me, IPv4 *out);
+		u16					getPort (const NetAddr &me);
+        sockaddr*           getSockAddr (const NetAddr &me);
+		int					getSockAddrLen (const NetAddr &me);
+	} //namespace netaddr
+
+
+	namespace socket
+	{
+		inline void					init (Socket *sok)																		{ platform::socket_init(&sok->osSok); }
+
+		//=============================================== TCP
+		inline eSocketError         openAsTCPServer(Socket *out_sok, int portNumber)										{ return platform::socket_openAsTCPServer(&out_sok->osSok, portNumber); }
+		inline eSocketError         openAsTCPClient(Socket *out_sok, const char* connectToIP, u32 portNumber)				{ return platform::socket_openAsTCPClient(&out_sok->osSok, connectToIP, portNumber); }
+		eSocketError				openAsTCPClient(Socket *out_sok, const NetAddr &ipAndPort);
+
+		inline void                 close(Socket &sok)																		{ platform::socket_close(sok.osSok); }
+
+		/* false se la socket non è open.
+		 * False anche a seguito di una chiamata a close() (in quanto la sok viene chiusa)
+		 */
+		inline bool                 isOpen(const Socket &sok)																{ return platform::socket_isOpen(sok.osSok); }
+
+		/* true se "puntano" alla stessa socket
+		*/
+		inline bool                 compare(const Socket &a, const Socket &b)												{ return platform::socket_compare(a.osSok, b.osSok); }
+
+
+		/* Per specificare un tempo di wait "infinito" (ie: socket sempre bloccante), usare timeoutMSec=u32MAX
+		 * Per indicare il tempo di wait minimo possibile, usare timeoutMSec=0
+		 * Tutti gli altri valori sono comunque validi ma non assumono significati particolari
+		 */
+		inline bool                 setReadTimeoutMSec(Socket &sok, u32 timeoutMSec)										{ return platform::socket_setReadTimeoutMSec(sok.osSok, timeoutMSec); }
+
+		/* Per specificare un tempo di wait "infinito" (ie: socket sempre bloccante), usare timeoutMSec=u32MAX
+		 * Per indicare il tempo di wait minimo possibile, usare timeoutMSec=0
+		 * Tutti gli altri valori sono comunque validi ma non assumono significati particolari
+		 */
+		inline bool                 setWriteTimeoutMSec(Socket &sok, u32 timeoutMSec)										{ return platform::socket_setWriteTimeoutMSec(sok.osSok, timeoutMSec); }
+
+
+		inline bool					listen(const Socket &sok, u16 maxIncomingConnectionQueueLength = u16MAX)				{ return platform::socket_listen(sok.osSok, maxIncomingConnectionQueueLength); }
+		inline bool					accept(const Socket &sok, Socket *out_clientSocket)										{ return platform::socket_accept(sok.osSok, &out_clientSocket->osSok); }
+
+		/* prova a leggere dalla socket. La chiamata è bloccante per un massimo di timeoutMSec.
+		 * Riguardo [timeoutMSec], valgono le stesse considerazioni indicate in setReadTimeoutMSec()
+		 *
+		 * Ritorna:
+		 *      0   se la socket si è disconnessa
+		 *      -1  se la chiamata avrebbe bloccato il processo (quindi devi ripetere la chiamata fra un po')
+		 *      >0  se ha letto qualcosa e ha quindi fillato [buffer] con il num di bytes ritornato
+		 */
+		inline i32					read(Socket &sok, void *buffer, u16 bufferSizeInBytes, u32 timeoutMSec, bool bPeekMsg=false)	{ return platform::socket_read(sok.osSok, buffer, bufferSizeInBytes, timeoutMSec, bPeekMsg); }
+
+		/*	Ritorna il numero di btye scritti sulla socket.
+		 *	Se ritorna 0, vuol dire che la chiamata sarebbe stata bloccante e quindi l'ha evitata
+		 */
+		inline i32                  write (Socket &sok, const void *buffer, u16 nByteToSend)								{ return platform::socket_write(sok.osSok, buffer, nByteToSend); }
+
+		 //=============================================== UDP
+		inline	eSocketError		openAsUDP (Socket *out_sok)																{ return platform::socket_openAsUDP(&out_sok->osSok); }
+		inline	eSocketError		UDPbind (Socket &sok, int portNumber)													{ return platform::socket_UDPbind(sok.osSok, portNumber); }
+		inline	u32					UDPSendTo (Socket &sok, const u8 *buffer, u32 nByteToSend, const NetAddr &addrTo)		{ return platform::socket_UDPSendTo(sok.osSok, buffer, nByteToSend, addrTo); }
+		inline	u32					UDPReceiveFrom (Socket &sok, u8 *buffer, u32 nMaxBytesToRead, NetAddr *out_from)		{ return platform::socket_UDPReceiveFrom(sok.osSok, buffer, nMaxBytesToRead, out_from); }
+		void						UDPSendBroadcast (Socket &sok, const u8 *buffer, u32 nByteToSend, const char *ip, int portNumber, const char *subnetMask);
+	}
+	
 
 } //namespace gos
 

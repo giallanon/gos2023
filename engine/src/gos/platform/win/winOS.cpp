@@ -195,7 +195,187 @@ void platform::getTimeNow(u8 *out_hour, u8 *out_min, u8 *out_sec)
 	(*out_sec) = (u8)s.wSecond;
 }
 
+//*******************************************************************
+#include "Iphlpapi.h"
+#include "ws2tcpip.h"
+#pragma comment(lib, "IPHLPAPI.lib")
+gos::NetworkAdapterInfo* platform::NET_getListOfAllNerworkAdpaterIPAndNetmask (gos::Allocator *allocator, u32 *out_nRecordFound)
+{
+	*out_nRecordFound = 0;
 
+	gos::Allocator *tempAllocator = gos::getScrapAllocator();
+
+	// Before calling AddIPAddress we use GetIpAddrTable to get an adapter to which we can add the IP.
+	DWORD dwTableSize = sizeof(MIB_IPADDRTABLE);
+	PMIB_IPADDRTABLE pIPAddrTable = (MIB_IPADDRTABLE *)RHEAALLOC(tempAllocator,dwTableSize);
+	if (GetIpAddrTable(pIPAddrTable, &dwTableSize, 0) == ERROR_INSUFFICIENT_BUFFER)
+	{
+		RHEAFREE(tempAllocator, pIPAddrTable);
+		pIPAddrTable = (MIB_IPADDRTABLE *)RHEAALLOC(tempAllocator, dwTableSize);
+	}
+
+	// Make a second call to GetIpAddrTable to get the actual data we want
+	DWORD err = GetIpAddrTable(pIPAddrTable, &dwTableSize, 0);
+	if (err != NO_ERROR) 
+	{
+		/*
+		LPVOID lpMsgBuf;
+		if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)& lpMsgBuf, 0, NULL))
+		{
+			printf("\tError: %s", (const char*)lpMsgBuf);
+			LocalFree(lpMsgBuf);
+		}
+		*/
+		return NULL;
+	}
+
+	if (pIPAddrTable->dwNumEntries == 0)
+		return NULL;
+	if (pIPAddrTable->dwNumEntries > 250)
+		*out_nRecordFound = 250;
+	else
+		*out_nRecordFound = (u8)pIPAddrTable->dwNumEntries;
+	
+	gos::NetworkAdapterInfo *ret = (gos::NetworkAdapterInfo*)RHEAALLOC(allocator, sizeof(gos::NetworkAdapterInfo) * (*out_nRecordFound));
+	memset(ret, 0, sizeof(gos::NetworkAdapterInfo) * (*out_nRecordFound));
+	for (u8 i = 0; i < (*out_nRecordFound); i++)
+	{
+		IN_ADDR IPAddr;
+
+		//printf("\n\tInterface Index[%d]:\t%ld\n", i, pIPAddrTable->table[i].dwIndex);
+		sprintf_s (ret[i].name, sizeof(ret->name), "ip%d", i);
+		
+		IPAddr.S_un.S_addr = (u_long)pIPAddrTable->table[i].dwAddr;
+		InetNtopA(AF_INET, &IPAddr, ret[i].ip, sizeof(ret[i].ip));
+		//printf("\tIP Address[%d]:     \t%s\n", i, ret[i].ip);
+		
+		IPAddr.S_un.S_addr = (u_long)pIPAddrTable->table[i].dwMask;
+		InetNtopA(AF_INET, &IPAddr, ret[i].subnetMask, sizeof(ret[i].subnetMask));
+		//printf("\tSubnet Mask[%d]:    \t%s\n", i, ret[i].subnetMask);
+		
+		/*IPAddr.S_un.S_addr = (u_long)pIPAddrTable->table[i].dwBCastAddr;
+		printf("\tBroadCast[%d]:      \t%s (%ld)\n", i, InetNtop(AF_INET, &IPAddr, sAddr, sizeof(sAddr)), pIPAddrTable->table[i].dwBCastAddr);
+		
+		printf("\tReassembly size[%d]:\t%ld\n", i, pIPAddrTable->table[i].dwReasmSize);
+		
+		printf("\tType and State[%d]:", i);
+		if (pIPAddrTable->table[i].wType & MIB_IPADDR_PRIMARY)
+			printf("\tPrimary IP Address");
+		
+		if (pIPAddrTable->table[i].wType & MIB_IPADDR_DYNAMIC)
+			printf("\tDynamic IP Address");
+		
+		if (pIPAddrTable->table[i].wType & MIB_IPADDR_DISCONNECTED)
+			printf("\tAddress is on disconnected interface");
+		
+		if (pIPAddrTable->table[i].wType & MIB_IPADDR_DELETED)
+			printf("\tAddress is being deleted");
+		
+		if (pIPAddrTable->table[i].wType & MIB_IPADDR_TRANSIENT)
+			printf("\tTransient address");*/
+		//printf("\n");
+	}
+
+	if (pIPAddrTable) 
+		RHEAFREE(tempAllocator, pIPAddrTable);
+
+	return ret;
+}
+
+//*******************************************************************
+bool platform::NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP)
+{
+	assert (NULL != outMAC);
+	assert (NULL != outIP);
+	memset (outMAC, 0, sizeof(gos::MacAddress));
+	memset (outIP, 0, sizeof(gos::IPv4));
+
+	gos::Allocator *allocator = gos::getScrapAllocator();
+
+	PIP_ADAPTER_INFO AdapterInfo;
+	AdapterInfo = (IP_ADAPTER_INFO *)RHEAALLOC(allocator, sizeof(IP_ADAPTER_INFO));
+	if (AdapterInfo == NULL)
+	{
+		DBGBREAK;
+		return false;
+	}
+
+	// Make an initial call to GetAdaptersInfo to get the necessary size into the dwBufLen variable
+	DWORD dwBufLen = sizeof(IP_ADAPTER_INFO);
+	if (ERROR_BUFFER_OVERFLOW == GetAdaptersInfo(AdapterInfo, &dwBufLen))
+	{
+		RHEAFREE(allocator, AdapterInfo);
+		AdapterInfo = (IP_ADAPTER_INFO *)RHEAALLOC(allocator, dwBufLen);
+		if (AdapterInfo == NULL)
+		{
+			DBGBREAK;
+			return false;
+		}
+	}
+
+	u32 whichAdapterTypeWasFound = 0;
+	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) == NO_ERROR)
+	{
+		// Contains pointer to current adapter info
+		PIP_ADAPTER_INFO pAdapterInfo = AdapterInfo;
+		while (pAdapterInfo)
+		{
+			if (strcmp(pAdapterInfo->IpAddressList.IpAddress.String, "0.0.0.0") != 0)
+			{
+				if ((pAdapterInfo->Type == 6 || pAdapterInfo->Type == 71) && pAdapterInfo->DhcpEnabled == 1)
+				{
+					if (strcmp(pAdapterInfo->GatewayList.IpAddress.String, "0.0.0.0") != 0)
+					{
+						//sembra un buon candidato.
+						//Se il Type==6 vuol dire che � una interfaccia di rete via cavo, se Type==71 vuol dire che � un wifi
+						//Nel caso io abbia entrambe le connessioni, favorisco quella di rete via cavo
+						bool bUseThis = false;
+						switch (whichAdapterTypeWasFound)
+						{
+						case 0:
+							bUseThis = true;
+							break;
+
+						case 6: //ho gi� trovato un interfaccia di rete via cavo, mi tengo quella
+							bUseThis = false;
+							break;
+
+						case 71: //l'adapter precedente era un wifi, quello nuovo � una LAN, uso il nuovo
+							if (pAdapterInfo->Type == 6)
+								bUseThis = true;
+							break;
+						}
+						
+						if (bUseThis)
+						{
+							whichAdapterTypeWasFound = pAdapterInfo->Type;
+							outMAC->b[0] = pAdapterInfo->Address[0];
+							outMAC->b[1] = pAdapterInfo->Address[1];
+							outMAC->b[2] = pAdapterInfo->Address[2];
+							outMAC->b[3] = pAdapterInfo->Address[3];
+							if (pAdapterInfo->AddressLength == 6)
+							{
+								outMAC->b[4] = pAdapterInfo->Address[4];
+								outMAC->b[5] = pAdapterInfo->Address[5];
+							}
+							else
+							{
+								outMAC->b[4] = 0;
+								outMAC->b[5] = 0;
+							}
+
+							gos::netaddr::ipstrToIPv4 (pAdapterInfo->IpAddressList.IpAddress.String, outIP);
+						}
+					}
+				}
+			}
+
+			pAdapterInfo = pAdapterInfo->Next;
+		}
+	}
+	RHEAFREE(allocator, AdapterInfo);
+	return (whichAdapterTypeWasFound != 0);
+}
 
 #endif //GOS_PLATFORM__WINDOWS
 

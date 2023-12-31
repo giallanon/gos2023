@@ -310,7 +310,7 @@ namespace test_gos
         return 0;
     }
 
-//********************************************
+    //********************************************
     int testBitUtils()
     {
         {
@@ -431,15 +431,70 @@ namespace test_gos
         return 0;
     }    
     
+    //********************************************
+    int testNetAddr_and_MacAdd()
+    {
+        u8  buffer[32];
+
+        //mac address
+        gos::MacAddress mac1;
+        gos::MacAddress mac2;
+        {
+
+            mac1.set (1,2,3,4,5,6);
+            mac2 = mac1;
+            TEST_ASSERT(&mac1!=&mac2);
+            TEST_ASSERT(mac1==mac2);
+            TEST_FAIL_IF(mac1!=mac2);
+
+            mac1.set (89,28,45,27,29,1);
+            TEST_ASSERT(mac1!=mac2);
+            mac1.serializeToBuffer (buffer, sizeof(buffer));
+            mac2.deserializeFromBuffer (buffer, sizeof(buffer));
+            TEST_ASSERT(mac1==mac2);
+        }
+
+        //ip
+        gos::IPv4 ip1;
+        gos::IPv4 ip2;
+        {
+
+            ip1.set (238,128,238,3);
+            ip2 = ip1;
+            TEST_ASSERT(&ip1!=&ip2);
+            TEST_ASSERT(ip1==ip2);
+            TEST_FAIL_IF(ip1!=ip2);
+
+            ip1.set (99, 73, 109, 16);
+            TEST_ASSERT(ip1!=ip2);
+            ip1.serializeToBuffer (buffer, sizeof(buffer));
+            ip2.deserializeFromBuffer (buffer, sizeof(buffer));
+            TEST_ASSERT(ip1==ip2);
+        }
+
+        {
+            char s[32];
+            TEST_ASSERT(gos::netaddr::findMACAddress (&mac1, &ip1));
+            gos::netaddr::getMACAddressAsString (mac1, s, sizeof(s), ':');
+            printf ("macaddress: %s\n", s);
+            printf ("ip: %d.%d.%d.%d\n", ip1.ips[0], ip1.ips[1], ip1.ips[2], ip1.ips[3]);
+
+            gos::netaddr::setFromMACString (mac2, s, true);
+            TEST_ASSERT(mac1==mac2);
+        }
+
+        return 0;
+    }
 } //namespace test_gos
 
 //********************************+
-void testGos()
+void testGos (Tester &tester)
 {
-    TEST("gos::system info", test_gos::test_printSystemInfo);
-    TEST("gos::handle", test_gos::testHandle);
-    TEST("gos::handle array", test_gos::testHandleArray, gos::getSysHeapAllocator());
-    TEST("gos::testFS", test_gos::testFS);
-    TEST("gos::testStringList", test_gos::testStringList);
-    TEST("gos::testBitUtils", test_gos::testBitUtils);
+    tester.run("gos::system info", test_gos::test_printSystemInfo);
+    tester.run("gos::handle", test_gos::testHandle);
+    tester.run("gos::handle array", test_gos::testHandleArray, gos::getSysHeapAllocator());
+    tester.run("gos::testFS", test_gos::testFS);
+    tester.run("gos::testStringList", test_gos::testStringList);
+    tester.run("gos::testBitUtils", test_gos::testBitUtils);
+    tester.run("gos::testNetAddr_and_MacAdd", test_gos::testNetAddr_and_MacAdd);
 }

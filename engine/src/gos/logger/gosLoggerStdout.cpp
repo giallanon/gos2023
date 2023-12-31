@@ -9,7 +9,7 @@ using namespace gos;
 //*************************************************
 LoggerStdout::LoggerStdout()
 {
-    gos::thread::mutexCreate(mutex);
+    gos::thread::mutexCreate(&mutex);
 	indent = 0;
     isANewLine = 1;
     logfile_filename = NULL;

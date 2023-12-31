@@ -2,7 +2,7 @@
 #include "logger/gosLogger.h"
 #include "logger/gosLoggerNull.h"
 #include "logger/gosLoggerStdout.h"
-
+#include "gosUtils.h"
 
 struct sGOSGlobals
 {
@@ -108,3 +108,250 @@ void gos::logger::log (const eTextColor col, const char *format, ...)           
 void gos::logger::logWithPrefix (const char *prefix, const char *format, ...)                           { va_list argptr; va_start (argptr, format); gosGlobals.logger->vlogWithPrefix (prefix, format, argptr); va_end (argptr); }
 void gos::logger::logWithPrefix (const eTextColor col, const char *prefix, const char *format, ...)     { va_list argptr; va_start (argptr, format); gosGlobals.logger->vlogWithPrefix (col, prefix, format, argptr); va_end (argptr); }
 void gos::logger::err (const char *format, ...)															{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlogWithPrefix (eTextColor::red, "ERROR=>", format, argptr); va_end (argptr); }
+
+//***************************************************
+bool gos::netaddr::getMACAddressAsString (const gos::MacAddress &mac, char *out_macAddress, u32 sizeOfMacAddress, char optionalSeparator)
+{
+	assert (NULL != out_macAddress);
+	if (0x00 == optionalSeparator)
+	{
+		if (sizeOfMacAddress < 13)
+		{
+			out_macAddress[0] = 0;
+			return false;
+		}
+		sprintf_s (out_macAddress, sizeOfMacAddress, "%02X%02X%02X%02X%02X%02X", mac.b[0], mac.b[1], mac.b[2], mac.b[3], mac.b[4], mac.b[5]);
+	}
+	else
+	{
+		if (sizeOfMacAddress < 18)
+		{
+			out_macAddress[0] = 0;
+			return false;
+		}
+		sprintf_s (out_macAddress, sizeOfMacAddress, "%02X%c%02X%c%02X%c%02X%c%02X%c%02X", mac.b[0], optionalSeparator, 
+			mac.b[1], optionalSeparator, 
+			mac.b[2], optionalSeparator, 
+			mac.b[3], optionalSeparator, 
+			mac.b[4], optionalSeparator
+			, mac.b[5]);
+	}
+	return true;
+}
+
+//***************************************************
+i8 gos::netaddr::compare (const gos::MacAddress &m1, const gos::MacAddress &m2)
+{
+	for (u8 i = 0; i < 6; i++)
+	{
+		if (m1.b[i] < m2.b[i])
+			return -1;
+		if (m1.b[i] > m2.b[i])
+			return 1;
+	}
+	return 0;
+}
+
+//***************************************************
+void gos::netaddr::ipstrToIPv4  (const char *ip, gos::IPv4 *out)
+{
+	assert (NULL != out);
+	memset (out->ips, 0, 4);
+
+	gos::string::utf8::Iter iter;
+    iter.setup (reinterpret_cast<const u8 *>(ip));
+
+	const UTF8Char chPunto(".");
+	i32 n = 0;
+	if (string::utf8::extractI32 (iter, &n, &chPunto, 1))
+	{
+        out->ips[0] = static_cast<u8>(n);
+		iter.advanceOneChar();
+		if (string::utf8::extractI32 (iter, &n, &chPunto, 1))
+		{
+            out->ips[1] = static_cast<u8>(n);
+			iter.advanceOneChar();
+			if (string::utf8::extractI32 (iter, &n, &chPunto, 1))
+			{
+                out->ips[2] = static_cast<u8>(n);
+				iter.advanceOneChar();
+				if (string::utf8::extractI32 (iter, &n, &chPunto, 1))
+                    out->ips[3] = static_cast<u8>(n);
+			}
+		}
+	}
+}
+
+//***************************************************
+void gos::netaddr::setInvalid (gos::MacAddress &me)															{ memset(me.b, 0, 6); }
+bool gos::netaddr::isInvalid (const gos::MacAddress &me)														{ return (me.b[0]==0 && me.b[1]==0 && me.b[2]==0 && me.b[3]==0 && me.b[4]==0 && me.b[5]==0); }
+bool gos::netaddr::isValid (const gos::MacAddress &me)														{ return !netaddr::isInvalid(me); }
+bool gos::netaddr::setFromMACString (gos::MacAddress &me, const u8 *macString, bool bStringHasSeparator)		{ return netaddr::setFromMACString (me, reinterpret_cast<const char*>(macString), bStringHasSeparator); }
+bool gos::netaddr::setFromMACString (gos::MacAddress &me, const char *macString, bool bStringHasSeparator)
+{
+	if (NULL == macString)
+	{
+		DBGBREAK;
+		netaddr::setInvalid(me);
+		return false;
+	}
+
+	const size_t len = strlen(macString);
+	u8 step = 0;
+	if (bStringHasSeparator)
+	{
+		if (len >= 17)
+			step = 3;
+	}
+	else
+	{
+		if (len >= 12)
+			step = 2;
+	}
+
+	if (0 == step)
+	{
+		//verifica [len], non e' valida!
+		DBGBREAK;
+		netaddr::setInvalid(me);
+		return false;
+	}
+
+	char hex[3];
+	hex[2] = 0x00;
+
+	u32 ct = 0;
+	for (u8 i = 0; i < 6; i++)
+	{
+		hex[0] = macString[ct];
+		hex[1] = macString[ct + 1];
+		u32 num;
+		if (!gos::string::ansi::hexToInt (hex, &num, 2))
+		{
+			DBGBREAK;
+			netaddr::setInvalid(me);
+			return false;
+		}
+		me.b[i] = static_cast<u8>(num);
+		ct += step;
+	}
+	return true;
+}
+bool gos::MacAddress::operator== (const gos::MacAddress &b) const											{ return gos::netaddr::compare (*this, b) == 0; }
+bool gos::MacAddress::operator!= (const gos::MacAddress &b) const											{ return gos::netaddr::compare (*this, b) != 0; }
+
+//***************************************************
+void gos::netaddr::setInvalid (gos::NetAddr &me)											{ setPort(me, 0); }
+bool gos::netaddr::isInvalid (const gos::NetAddr &me)									{ return (getPort(me) == 0); }
+bool gos::netaddr::isValid (const gos::NetAddr &me)										{ return !netaddr::isInvalid(me); }
+void gos::netaddr::setFromSockAddr(gos::NetAddr &me, const sockaddr_in &addrIN)			{ memcpy(&me.addr, &addrIN, sizeof(sockaddr_in)); }
+void gos::netaddr::setFromAddr(gos::NetAddr &me, const gos::NetAddr &addrIN)					{ memcpy(&me.addr, &addrIN.addr, sizeof(sockaddr_in)); }
+void gos::netaddr::setIPv4(gos::NetAddr &me, const char *ip)								{ me.addr.sin_family = AF_INET; me.addr.sin_addr.s_addr = inet_addr(ip); }
+void gos::netaddr::setPort(gos::NetAddr &me, u16 port)									{ me.addr.sin_family = AF_INET; me.addr.sin_port = htons(static_cast<unsigned short>(port)); }
+u16 gos::netaddr::getPort (const gos::NetAddr &me)										{ return static_cast<u16>(ntohs(me.addr.sin_port)); }
+sockaddr* gos::netaddr::getSockAddr(const gos::NetAddr &me)                              { return (sockaddr*)(&me.addr); }
+int gos::netaddr::getSockAddrLen(const gos::NetAddr &me)									{ return sizeof(me.addr); }
+
+u8 gos::netaddr::serializeToBuffer (const gos::NetAddr &me, u8 *dst, u32 sizeof_dst, bool bIncludePort)
+{
+	if ( (sizeof_dst < 4) || (bIncludePort && sizeof_dst < 6))
+	{
+		DBGBREAK;
+		return 0;
+	}
+
+	gos::IPv4 ipv4;
+	netaddr::getIPv4 (me, &ipv4);
+
+	ipv4.serializeToBuffer (dst, sizeof_dst);
+	if (!bIncludePort)
+		return 4;
+	gos::utils::bufferWriteU16 (&dst[4], netaddr::getPort(me));
+	return 6;
+}
+
+u8 gos::netaddr::deserializeFromBuffer (gos::NetAddr &me, const u8 *src, u32 sizeof_src, bool bIncludePort)
+{
+	if ( (sizeof_src < 4) || (bIncludePort && sizeof_src < 6))
+	{
+		DBGBREAK;
+		return 0;
+	}
+
+	gos::IPv4 ipv4;
+	ipv4.deserializeFromBuffer (src, sizeof_src);
+	netaddr::setIPv4 (me, ipv4);
+
+	if (!bIncludePort)
+		return 4;
+	netaddr::setPort (me, gos::utils::bufferReadU16 (&src[4]));
+	return 6;
+}
+
+void gos::netaddr::setIPv4 (gos::NetAddr &me, const gos::IPv4 &ip)
+{
+	char s[32];
+	sprintf_s (s, sizeof(s), "%d.%d.%d.%d", ip.ips[0], ip.ips[1], ip.ips[2], ip.ips[3]);
+	setIPv4 (me, s);
+}
+
+void gos::netaddr::getIPv4 (const gos::NetAddr &me, gos::IPv4 *out)
+{
+	assert (NULL != out);
+	char s[32];
+	getIPv4 (me, s);
+	ipstrToIPv4 (s, out);
+}
+
+void gos::netaddr::getIPv4 (const gos::NetAddr &me, char *out)
+{
+	out[0] = 0x00;
+	const char *ip = inet_ntoa(me.addr.sin_addr);
+	if (NULL != ip && ip[0] != 0x00)
+		strncpy(out, ip, 16);
+}
+
+bool gos::netaddr::compare(const gos::NetAddr &a, const gos::NetAddr &b)
+{
+	if (gos::netaddr::getPort(a) != netaddr::getPort(b))
+		return false;
+	char ipA[32], ipB[32];
+	netaddr::getIPv4(a, ipA);
+	netaddr::getIPv4(b, ipB);
+	if (strcasecmp(ipA, ipB) != 0)
+		return false;
+	return true;
+}
+
+//*************************************************** 
+eSocketError gos::socket::openAsTCPClient (Socket *out_sok, const gos::NetAddr &ipAndPort)
+{
+	char ip[32];
+	gos::netaddr::getIPv4 (ipAndPort, ip);
+	return openAsTCPClient(out_sok, ip, gos::netaddr::getPort(ipAndPort));
+}
+
+//*************************************************** 
+void gos::socket::UDPSendBroadcast(Socket &sok, const u8 *buffer, u32 nByteToSend, const char *ip, int portNumber, const char *subnetMask)
+{
+	// Abilita il broadcast
+	int i = 1;
+    setsockopt(sok.osSok.socketID, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&i), sizeof(i));
+
+	// Broadcasta il messaggio
+	const unsigned long	host_addr = inet_addr(ip);
+	const unsigned long	net_mask = inet_addr(subnetMask);
+	const unsigned long	net_addr = host_addr & net_mask;
+	const unsigned long	dir_bcast_addr = net_addr | (~net_mask);
+
+	sockaddr_in		saAddress;
+	saAddress.sin_family = AF_INET;
+    saAddress.sin_port = static_cast<unsigned short>(htons(static_cast<unsigned short>(portNumber)));
+    saAddress.sin_addr.s_addr = static_cast<unsigned int>(dir_bcast_addr);
+    sendto(sok.osSok.socketID, reinterpret_cast<const char*>(buffer), nByteToSend, 0, reinterpret_cast<sockaddr*>(&saAddress), sizeof(saAddress));
+
+
+	// Disabilita il broadcast
+	i = 0;
+    setsockopt (sok.osSok.socketID, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&i), sizeof(i));
+}

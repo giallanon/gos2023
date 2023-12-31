@@ -44,11 +44,19 @@ namespace platform
      * thread stuff
      * 
      */
-    inline void     mutexCreate (OSMutex *m)                            { ::InitializeCriticalSection(&m->cs); }
-    inline void     mutexDestroy (OSMutex *m)                           { ::DeleteCriticalSection(&m->cs); }
-    inline bool     mutexLock (OSMutex *m)                              { ::EnterCriticalSection(&m->cs); return true; }
-    inline void     mutexUnlock (OSMutex *m)                            { ::LeaveCriticalSection(&m->cs); }
-    inline bool     mutexTryLock (OSMutex *m)                           { return (TryEnterCriticalSection(&m->cs) == TRUE); }
+    inline void     mutexCreate (OSMutex *m)                                            { ::InitializeCriticalSection(&m->cs); }
+    inline void     mutexDestroy (OSMutex *m)                                           { ::DeleteCriticalSection(&m->cs); }
+    inline bool     mutexLock (OSMutex *m)                                              { ::EnterCriticalSection(&m->cs); return true; }
+    inline void     mutexUnlock (OSMutex *m)                                            { ::LeaveCriticalSection(&m->cs); }
+    inline bool     mutexTryLock (OSMutex *m)                                           { return (TryEnterCriticalSection(&m->cs) == TRUE); }
+    
+	inline bool     eventCreate (OSEvent *out_ev)										{ out_ev->h = ::CreateEvent(NULL, false, false, NULL); return true; }
+	inline void     eventDestroy (OSEvent &ev)											{ ::CloseHandle(ev.h); ev.h = INVALID_HANDLE_VALUE; }
+	inline bool		eventCompare(const OSEvent &a, const OSEvent &b)					{ return (a.h == b.h); }
+	inline void     eventFire (const OSEvent &ev)										{ ::SetEvent(ev.h); }
+	inline bool     eventWait (const OSEvent &ev, size_t timeoutMSec)					{ if (WAIT_OBJECT_0 == ::WaitForSingleObject(ev.h, (u32)timeoutMSec)) return true; return false; }
+	inline void     eventSetInvalid(OSEvent &ev)										{ ev.h = INVALID_HANDLE_VALUE; }
+	inline bool		eventIsInvalid(const OSEvent &ev)									{ return (ev.h == INVALID_HANDLE_VALUE);  }
 
 				
     /******************************************************
@@ -93,6 +101,44 @@ namespace platform
     const u8*       FS_findGetFileName(const OSFileFind &ff);
     void            FS_findGetFileName (const OSFileFind &ff, u8 *out, u32 sizeofOut);
 
+
+    /******************************************************
+     * Network & Socket
+     * 
+     */
+    void				socket_init (OSSocket *sok);
+
+	//=============================== TCP
+	eSocketError        socket_openAsTCPServer(OSSocket *out_sok, int portNumber);
+	eSocketError        socket_openAsTCPClient(OSSocket *out_sok, const char *connectToIP, u32 portNumber);
+
+	void                socket_close (OSSocket &sok);
+
+	inline bool			socket_isOpen(const OSSocket &sok)											{ return (sok.socketID != INVALID_SOCKET); }
+
+	inline bool			socket_compare(const OSSocket &a, const OSSocket &b)						{ return (a.socketID == b.socketID); }
+
+	bool                socket_setReadTimeoutMSec(OSSocket &sok, u32 timeoutMSec);
+
+	bool                socket_setWriteTimeoutMSec(OSSocket &sok, u32 timeoutMSec);
+
+
+	bool                socket_listen(const OSSocket &sok, u16 maxIncomingConnectionQueueLength = u16MAX);
+	bool                socket_accept(const OSSocket &sok, OSSocket *out_clientSocket);
+
+	i32                 socket_read (OSSocket &sok, void *buffer, u16 bufferSizeInBytes, u32 timeoutMSec, bool bPeekMSG);
+	i32                 socket_write (OSSocket &sok, const void *buffer, u16 nByteToSend);
+
+
+	//=============================== UDP
+	eSocketError        socket_openAsUDP (OSSocket *out_sok);
+	eSocketError        socket_UDPbind (OSSocket &sok, int portNumber);
+	u32					socket_UDPSendTo (OSSocket &sok, const u8 *buffer, u32 nByteToSend, const OSNetAddr &addrTo);
+	u32					socket_UDPReceiveFrom (OSSocket &sok, u8 *buffer, u32 nMaxBytesToRead, OSNetAddr *out_addrFrom);
+
+    //====================================== networking
+	gos::NetworkAdapterInfo*    NET_getListOfAllNerworkAdpaterIPAndNetmask (gos::Allocator *allocator, u32 *out_numFound);
+    bool					    NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP);    
 }   //namespace platform
 
 

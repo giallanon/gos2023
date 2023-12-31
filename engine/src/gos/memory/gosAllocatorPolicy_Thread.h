@@ -24,7 +24,7 @@ namespace gos
     class AllocPolicy_Thread_Safe
     {
     public:
-                AllocPolicy_Thread_Safe ()						{ gos::thread::mutexCreate(mutex); }
+                AllocPolicy_Thread_Safe ()						{ gos::thread::mutexCreate(&mutex); }
                 ~AllocPolicy_Thread_Safe ()						{ gos::thread::mutexDestroy(mutex); }
 
         void	lock ()	const									{ gos::thread::mutexLock(mutex); }

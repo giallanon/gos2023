@@ -360,9 +360,9 @@ namespace test_math
 
 
 //*************************************
-void testMath()
+void testMath (Tester &tester)
 {
-	TEST("math::matrix1", test_math::matrix1);
-	TEST("math::quaterion", test_math::quaterion);    
-	TEST("math::geompos", test_math::geompos);
+	tester.run("math::matrix1", test_math::matrix1);
+	tester.run("math::quaterion", test_math::quaterion);    
+	tester.run("math::geompos", test_math::geompos);
 }

@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include <sys/reboot.h>
 #include <malloc.h>
+#include <linux/wireless.h>
 #include "../../gosEnumAndDefine.h"
 #include "../../gos.h"
 
@@ -78,7 +79,6 @@ u64 platform::getTimeNow_usec()
     return (now.tv_sec * 1000000 + now.tv_nsec / 1000);
 }
 
-
 //*******************************************************************
 void platform::sleep_msec (size_t msec)
 {
@@ -96,7 +96,6 @@ void platform::sleep_msec (size_t msec)
     }
     nanosleep (&sleepValue, NULL);
 }
-
 
 //*******************************************************************
 void platform::getDateNow (u16 *out_year, u16 *out_month, u16 *out_day)
@@ -120,5 +119,149 @@ void platform::getTimeNow (u8 *out_hour, u8 *out_min, u8 *out_sec)
     *out_sec = tm.tm_sec;
 }
 
+
+//*******************************************************************
+gos::NetworkAdapterInfo* platform::NET_getListOfAllNerworkAdpaterIPAndNetmask (gos::Allocator *allocator, u32 *out_nRecordFound)
+{
+    struct ifaddrs * ifAddrStruct=NULL;
+    struct ifaddrs * ifa=NULL;
+
+    *out_nRecordFound = 0;
+    getifaddrs(&ifAddrStruct);
+    for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next)
+    {
+        if (!ifa->ifa_addr)
+            continue;
+        if (ifa->ifa_addr->sa_family == AF_INET)
+            (*out_nRecordFound)++;
+    }
+
+
+    if (0 == (*out_nRecordFound))
+        return NULL;
+
+    u32 ct = 0;
+	gos::NetworkAdapterInfo *ret = (gos::NetworkAdapterInfo*)GOSALLOC(allocator, sizeof(gos::NetworkAdapterInfo) * (*out_nRecordFound));
+	memset(ret, 0, sizeof(gos::NetworkAdapterInfo) * (*out_nRecordFound));
+
+    for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next)
+    {
+        if (!ifa->ifa_addr)
+            continue;
+
+        if (ifa->ifa_addr->sa_family == AF_INET)
+        {
+            sprintf_s (ret[ct].name, sizeof(ret[ct].name), "%s", ifa->ifa_name);
+            void *tmpAddrPtr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+            inet_ntop(AF_INET, tmpAddrPtr, ret[ct].ip, INET_ADDRSTRLEN);
+
+            tmpAddrPtr = &((struct sockaddr_in *)ifa->ifa_netmask)->sin_addr;
+            inet_ntop(AF_INET, tmpAddrPtr, ret[ct].subnetMask, INET_ADDRSTRLEN);
+
+            //printf("%s IP Address %s %s\n", ifa->ifa_name, ip, netmask);
+            ct++;
+        }
+        /*else if (ifa->ifa_addr->sa_family == AF_INET6)
+        { 	// check it is IP6
+            // is a valid IP6 Address
+            tmpAddrPtr=&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+            char addressBuffer[INET6_ADDRSTRLEN];
+            inet_ntop(AF_INET6, tmpAddrPtr, addressBuffer, INET6_ADDRSTRLEN);
+            printf("%s IP Address %s\n", ifa->ifa_name, addressBuffer);
+        }
+        */
+    }
+    if (ifAddrStruct!=NULL)
+        freeifaddrs(ifAddrStruct);
+    return ret;
+}
+
+//*******************************************************************
+bool linuxPlatorm_check_if_wireless (const char* ifname)
+{
+    struct iwreq pwrq;
+    memset(&pwrq, 0, sizeof(pwrq));
+    strncpy(pwrq.ifr_name, ifname, IFNAMSIZ);
+
+    int sock = -1;
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+        return false;
+
+    if (ioctl(sock, SIOCGIWNAME, &pwrq) != -1) 
+    {
+        close(sock);
+        return true;
+    }
+
+    close (sock);
+    return false;
+}
+
+//*******************************************************************
+bool platform::NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP)
+{
+    //scanno tutte le interfacce di rete disponibili e scelgo preferibilmente quella ethernet rispetto a quella via cavo
+    char  nomeInterfaccia[64];
+    memset (nomeInterfaccia,0, sizeof(nomeInterfaccia));
+
+    struct ifaddrs *addrList;
+    getifaddrs(&addrList);
+    ifaddrs *addr = addrList;
+    while (addr)
+    {
+        if (addr->ifa_addr) 
+        {
+            if (AF_PACKET == addr->ifa_addr->sa_family)
+            {
+                //printf ("found %s [is wifi? %c]\n", addr->ifa_name, bIsWiFi ? 'Y':'N');
+                
+                //skippo loopback
+                if (strcasecmp(addr->ifa_name, "lo") != 0)
+                {
+                    sprintf_s (nomeInterfaccia, sizeof(nomeInterfaccia), "%s", addr->ifa_name);
+                    const bool bIsWiFi = linuxPlatorm_check_if_wireless (addr->ifa_name);
+                    if (!bIsWiFi)
+                        break;
+                }
+            }
+        }
+
+        addr = addr->ifa_next;
+    }
+    freeifaddrs(addrList);
+
+
+    //recpuero info sull'interfaccia selezionata
+    assert (NULL != outMAC);
+    assert (NULL != outIP);
+    memset (outMAC, 0, sizeof(gos::MacAddress));
+    memset (outIP, 0, sizeof(gos::IPv4));
+
+	int fd = socket (PF_INET, SOCK_DGRAM, IPPROTO_IP);
+
+	struct ifreq s;
+    strcpy(s.ifr_name, nomeInterfaccia);
+    if (0 == ioctl(fd, SIOCGIFHWADDR, &s))
+    {
+        outMAC->b[0] = (unsigned char)s.ifr_addr.sa_data[0];
+        outMAC->b[1] = (unsigned char)s.ifr_addr.sa_data[1];
+        outMAC->b[2] = (unsigned char)s.ifr_addr.sa_data[2];
+        outMAC->b[3] = (unsigned char)s.ifr_addr.sa_data[3];
+        outMAC->b[4] = (unsigned char)s.ifr_addr.sa_data[4];
+        outMAC->b[5] = (unsigned char)s.ifr_addr.sa_data[5];
+
+        if (0 == ioctl(fd, SIOCGIFADDR, &s))
+        {
+            sockaddr_in *sin = reinterpret_cast<sockaddr_in*>(&s.ifr_addr);
+
+            char ip[32];
+            inet_ntop(AF_INET, &sin->sin_addr, ip, INET_ADDRSTRLEN);
+
+            gos::netaddr::ipstrToIPv4  (ip, outIP);
+            return true;
+        }
+    }
+	return false;
+}
 
 #endif //GOS_PLATFORM__LINUX

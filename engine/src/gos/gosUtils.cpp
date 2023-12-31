@@ -124,3 +124,107 @@ u8 utils::byteGET (const u32 *dst, u32 pos)
 	return static_cast<u8>( ((*dst) >> shift) & 0x000000FF );
 }
 
+//******************************************************************************
+u8 gos::utils::bufferWriteF32 (u8 *buffer, f32 val)
+{
+    const u8 *p = reinterpret_cast<const u8*>(&val);
+    buffer[0] = p[0];
+    buffer[1] = p[1];
+    buffer[2] = p[2];
+    buffer[3] = p[3];
+    return 4;
+}
+
+//******************************************************************************
+f32 gos::utils::bufferReadF32 (const u8 *buffer)
+{
+    f32 ret = 0;
+    u8 *p = reinterpret_cast<u8*>(&ret);
+    p[0] = buffer[0];
+    p[1] = buffer[1];
+    p[2] = buffer[2];
+    p[3] = buffer[3];
+    return ret;
+}
+
+//******************************************************************************
+u8 gos::utils::bufferWriteU64(u8 *buffer, u64 val)			                
+{ 
+	buffer[0] = (u8)((val & 0xFF00000000000000) >> 56); 
+	buffer[1] = (u8)((val & 0x00FF000000000000) >> 48); 
+	buffer[2] = (u8)((val & 0x0000FF0000000000) >> 40); 
+	buffer[3] = (u8)((val & 0x000000FF00000000) >> 32);  
+	buffer[4] = (u8)((val & 0x00000000FF000000) >> 24); 
+	buffer[5] = (u8)((val & 0x0000000000FF0000) >> 16); 
+	buffer[6] = (u8)((val & 0x000000000000FF00) >> 8); 
+	buffer[7] = (u8) (val & 0x00000000000000FF); 
+    return 8;
+}
+
+//******************************************************************************
+u8 gos::utils::bufferWriteU64_LSB_MSB (u8 *buffer, u64 val)
+{ 
+	buffer[7] = (u8)((val & 0xFF00000000000000) >> 56); 
+	buffer[6] = (u8)((val & 0x00FF000000000000) >> 48); 
+	buffer[5] = (u8)((val & 0x0000FF0000000000) >> 40); 
+	buffer[4] = (u8)((val & 0x000000FF00000000) >> 32);  
+	buffer[3] = (u8)((val & 0x00000000FF000000) >> 24); 
+	buffer[2] = (u8)((val & 0x0000000000FF0000) >> 16); 
+	buffer[1] = (u8)((val & 0x000000000000FF00) >> 8); 
+	buffer[0] = (u8) (val & 0x00000000000000FF); 
+    return 8;
+}
+
+//******************************************************************************
+u64 gos::utils::bufferReadU64(const u8 *buffer)
+{ 
+    return  (((u64)buffer[0]) << 56) | 
+            (((u64)buffer[1]) << 48) | 
+            (((u64)buffer[2]) << 40) | 
+            (((u64)buffer[3]) << 32) | 
+            (((u64)buffer[4]) << 24) | 
+            (((u64)buffer[5]) << 16) | 
+            (((u64)buffer[6]) << 8) | 
+             ((u64)buffer[7]); 
+}
+
+//******************************************************************************
+u64 gos::utils::bufferReadU64_LSB_MSB (const u8 *buffer)
+{
+    return  (((u64)buffer[7]) << 56) | 
+            (((u64)buffer[6]) << 48) | 
+            (((u64)buffer[5]) << 40) | 
+            (((u64)buffer[4]) << 32) | 
+            (((u64)buffer[3]) << 24) | 
+            (((u64)buffer[2]) << 16) | 
+            (((u64)buffer[1]) << 8) | 
+             ((u64)buffer[0]); 
+}
+
+//******************************************************************************
+u8 gos::utils::bufferWriteI64(u8 *buffer, i64 val)			                
+{ 
+	buffer[0] = (u8)((val & 0xFF00000000000000) >> 56); 
+	buffer[1] = (u8)((val & 0x00FF000000000000) >> 48); 
+	buffer[2] = (u8)((val & 0x0000FF0000000000) >> 40); 
+	buffer[3] = (u8)((val & 0x000000FF00000000) >> 32);  
+	buffer[4] = (u8)((val & 0x00000000FF000000) >> 24); 
+	buffer[5] = (u8)((val & 0x0000000000FF0000) >> 16); 
+	buffer[6] = (u8)((val & 0x000000000000FF00) >> 8); 
+	buffer[7] = (u8) (val & 0x00000000000000FF); 
+    return 8;
+}
+
+//******************************************************************************
+u8 gos::utils::bufferWriteI64_LSB_MSB (u8 *buffer, i64 val)
+{ 
+	buffer[7] = (u8)((val & 0xFF00000000000000) >> 56); 
+	buffer[6] = (u8)((val & 0x00FF000000000000) >> 48); 
+	buffer[5] = (u8)((val & 0x0000FF0000000000) >> 40); 
+	buffer[4] = (u8)((val & 0x000000FF00000000) >> 32);  
+	buffer[3] = (u8)((val & 0x00000000FF000000) >> 24); 
+	buffer[2] = (u8)((val & 0x0000000000FF0000) >> 16); 
+	buffer[1] = (u8)((val & 0x000000000000FF00) >> 8); 
+	buffer[0] = (u8) (val & 0x00000000000000FF); 
+    return 8;
+}

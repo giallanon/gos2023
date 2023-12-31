@@ -7,6 +7,7 @@
 namespace gos
 {
     class DateTime; //fwd decl
+    class Allocator;
 }
 
 namespace platform
@@ -44,23 +45,23 @@ namespace platform
      * thread stuff
      * 
      */
-    inline void     mutexCreate (OSMutex *m)                            { pthread_mutex_init (m, NULL); }
-    inline void     mutexDestroy (OSMutex *m)                           { pthread_mutex_destroy(m); }
-    inline bool     mutexLock (OSMutex *m)                              { return (pthread_mutex_lock(m) == 0); }
-    inline void     mutexUnlock (OSMutex *m)                            { pthread_mutex_unlock(m); }
-    inline bool     mutexTryLock (OSMutex *m)                           { return (pthread_mutex_trylock(m) == 0); }
+    inline void     mutexCreate (OSMutex *m)                                            { pthread_mutex_init (m, NULL); }
+    inline void     mutexDestroy (OSMutex *m)                                           { pthread_mutex_destroy(m); }
+    inline bool     mutexLock (OSMutex *m)                                              { return (pthread_mutex_lock(m) == 0); }
+    inline void     mutexUnlock (OSMutex *m)                                            { pthread_mutex_unlock(m); }
+    inline bool     mutexTryLock (OSMutex *m)                                           { return (pthread_mutex_trylock(m) == 0); }
+
+    bool            eventCreate (OSEvent *out_ev);
+    void            eventDestroy (OSEvent &ev);
+    void            eventFire (const OSEvent &ev);
+    bool            eventWait (const OSEvent &ev, size_t timeoutMSec);
+	inline void     eventSetInvalid (OSEvent &ev)										{ ev.evfd = -1; }
+	inline bool		eventIsInvalid (const OSEvent &ev)									{ return (ev.evfd == -1); }
+	inline bool		eventCompare (const OSEvent &a, const OSEvent &b)					{ return (a.evfd == b.evfd); }
 
     /*eThreadError    createThread (OSThread &out_handle, OSThreadFunction threadFunction, size_t stackSizeInKb, void *userParam);
     void            killThread (OSThread &handle);
     void            waitThreadEnd(OSThread &handle);
-
-	inline void     event_setInvalid(OSEvent &ev)													{ ev.evfd = -1; }
-	inline bool		event_isInvalid(const OSEvent &ev)												{ return (ev.evfd == -1); }
-    bool            event_open (OSEvent *out_ev);
-	inline bool		event_compare (const OSEvent &a, const OSEvent &b)								{ return (a.evfd == b.evfd); }
-    void            event_close (OSEvent &ev);
-    void            event_fire (const OSEvent &ev);
-    bool            event_wait (const OSEvent &ev, size_t timeoutMSec);
     */
 
     /******************************************************
@@ -104,26 +105,44 @@ namespace platform
     bool            FS_findIsDirectory(const OSFileFind &ff);
     const u8*       FS_findGetFileName(const OSFileFind &ff);
     void            FS_findGetFileName (const OSFileFind &ff, u8 *out, u32 sizeofOut);
-    /*
-
-    void			FS_fileFlushAll();
 
 
-    bool			FS_findFirst (OSFileFind *h, const u8 *utf8_path, const u8 *utf8_jolly);
-    bool			FS_findNext (OSFileFind &h);
-    bool			FS_findIsDirectory (const OSFileFind &ff);
-    void			FS_findGetFileName (const OSFileFind &ff, u8 *out, u32 sizeofOut);
-    const u8 *		FS_findGetFileName(const OSFileFind &ff);
-    void			FS_findGetCreationTime (const OSFileFind &ff, gos::DateTime *out);
-    void			FS_findGetLastTimeModified (const OSFileFind &ff, gos::DateTime *out);
-    void			FS_findClose(OSFileFind &ff);
+    /******************************************************
+     * Network & Socket
+     * 
+     */
+    void				socket_init (OSSocket *sok);
 
-	bool			FS_findFirstHardDrive(OSDriveEnumerator *h, gosFindHardDriveResult *out);
-	bool			FS_findNextHardDrive(OSDriveEnumerator &h, gosFindHardDriveResult *out);
-	void			FS_findCloseHardDrive(OSDriveEnumerator &h);
+    //=============================== TCP
+    eSocketError        socket_openAsTCPServer (OSSocket *out_sok, int portNumber);
+    eSocketError        socket_openAsTCPClient (OSSocket *out_sok, const char *connectToIP, u32 portNumber);
 
-	bool			FS_getDestkopPath(u8* out_path, u32 sizeof_out_path);
-*/
+    void                socket_close (OSSocket &sok);
+
+    inline bool         socket_isOpen (const OSSocket &sok)                                                   { return (sok.socketID > 0); }
+
+    inline bool         socket_compare (const OSSocket &a, const OSSocket &b)                                 { return (a.socketID == b.socketID); }
+
+    bool                socket_setReadTimeoutMSec  (OSSocket &sok, u32 timeoutMSec);
+
+    bool                socket_setWriteTimeoutMSec (OSSocket &sok, u32 timeoutMSec);
+
+    bool                socket_listen (const OSSocket &sok, u16 maxIncomingConnectionQueueLength = u16MAX);
+    bool                socket_accept (const OSSocket &sok, OSSocket *out_clientSocket);
+
+    i32                 socket_read (OSSocket &sok, void *buffer, u16 bufferSizeInBytes, u32 timeoutMSec, bool bPeekMS);
+
+    i32                 socket_write(OSSocket &sok, const void *buffer, u16 nByteToSend);
+
+    //=============================== UDP
+    eSocketError        socket_openAsUDP (OSSocket *out_sok);
+    eSocketError        socket_UDPbind (OSSocket &sok, int portNumber);
+    u32					socket_UDPSendTo (OSSocket &sok, const u8 *buffer, u32 nByteToSend, const gos::NetAddr &addrTo);
+    u32					socket_UDPReceiveFrom (OSSocket &sok, u8 *buffer, u32 nMaxBytesToRead, gos::NetAddr *out_addrFrom);
+
+    //====================================== networking
+	gos::NetworkAdapterInfo*    NET_getListOfAllNerworkAdpaterIPAndNetmask (gos::Allocator *allocator, u32 *out_numFound);
+    bool					    NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP);
 
 }   //namespace platform
 

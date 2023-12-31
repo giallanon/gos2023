@@ -1,7 +1,8 @@
 #include "gos.h"
+#include "TTest.h"
 
-void testGos();
-void testMath();
+void testGos (Tester &tester);
+void testMath(Tester &tester);
 
 //********************************+
 int main()
@@ -12,8 +13,12 @@ int main()
         return 1;
 
 
-    testGos();
-    testMath();
+    Tester tester;
+    {
+        testGos (tester);
+        testMath(tester);
+    }
+    tester.printReport();
 
     gos::deinit();
 
