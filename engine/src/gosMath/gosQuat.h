@@ -8,6 +8,10 @@
 	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wpedantic"
 #endif
+#ifdef GOS_COMPILER__MSVC
+	#pragma warning(disable:4201)
+#endif
+
 namespace gos
 {
 	/*=========================================================================
@@ -70,7 +74,10 @@ namespace gos
 } //namespace gos
 
 #ifdef GOS_COMPILER__GCC
-#pragma GCC diagnostic pop
+	#pragma GCC diagnostic pop
+#endif
+#ifdef GOS_COMPILER__MSVC
+	#pragma warning(default:4201)
 #endif
 
 #endif //_gosQuat_h_

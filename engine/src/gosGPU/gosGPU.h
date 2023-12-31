@@ -69,7 +69,7 @@ namespace gos
         u32                 swapChain_getWidth() const                      { return vulkan.swapChainInfo.imageExtent.width; }
         u32                 swapChain_getHeight() const                     { return vulkan.swapChainInfo.imageExtent.height; }
         VkFormat            swapChain_getImageFormat() const                { return vulkan.swapChainInfo.imageFormat; }
-        u32                 swapChain_getImageCount() const                 { return vulkan.swapChainInfo.imageCount; }
+        u8                  swapChain_getImageCount() const                 { return static_cast<u8>(vulkan.swapChainInfo.imageCount); }
         VkImageView         swapChain_getImageViewHandle(u8 i) const        { assert(i < swapChain_getImageCount()); return vulkan.swapChainInfo.vkImageView[i]; }
         VkExtent2D          swapChain_getImageExten2D() const               { return vulkan.swapChainInfo.imageExtent; }
         VkResult            swapChain_acquireNextImage (u32 *out_imageIndex, u64 timeout_ns=UINT64_MAX, VkSemaphore semaphore=VK_NULL_HANDLE, VkFence fence=VK_NULL_HANDLE);

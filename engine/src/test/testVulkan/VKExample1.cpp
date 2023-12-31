@@ -5,7 +5,7 @@ using namespace gos;
 
 
 //************************************
-void GLFW_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void GLFW_key_callback (GLFWwindow* window, int key, UNUSED_PARAM(int scancode), int action, int mods)
 {
     VulkanExample1 *app = reinterpret_cast<VulkanExample1*>(glfwGetWindowUserPointer(window));
     if (key == GLFW_KEY_ENTER && action == GLFW_RELEASE)
@@ -78,7 +78,7 @@ bool VulkanExample1::recordCommandBuffer (u32 imageIndex, VkCommandBuffer &in_ou
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = pipe1.getRenderPassHandle();
-    renderPassInfo.framebuffer = pipe1.getFrameBufferHandle(imageIndex);
+    renderPassInfo.framebuffer = pipe1.getFrameBufferHandle((u8)imageIndex);
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = gpu->swapChain_getImageExten2D();
 

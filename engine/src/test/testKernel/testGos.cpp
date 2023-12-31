@@ -405,7 +405,7 @@ namespace test_gos
             
             u8 byteValueList[NUM_BYTE];
             for (u32 i=0; i<NUM_BYTE; i++)
-                byteValueList[i] = 0x32 + i;
+                byteValueList[i] = static_cast<u8>(0x32 + i);
             
             u32 dst;
             dst = 0;

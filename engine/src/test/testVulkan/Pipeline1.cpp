@@ -323,7 +323,7 @@ bool Pipeline1::recreateFrameBuffers(gos::GPU *gpu)
 
     priv_destroyFrameBuffers(gpu);
 
-    for (u32 i = 0; i < gpu->swapChain_getImageCount(); i++) 
+    for (u8 i = 0; i < gpu->swapChain_getImageCount(); i++) 
     {
         VkImageView imageViewList[2] = { gpu->swapChain_getImageViewHandle(i) , 0};
 

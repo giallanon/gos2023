@@ -37,7 +37,7 @@ namespace gos
                             if (curMemalloc >= maxMemalloc)
                                 maxMemalloc = curMemalloc;
 
-                            printf ("PROFILE: Allocator [%s] %lu B, max %lu B\n", allocatorName, curMemalloc, maxMemalloc);
+                            printf ("PROFILE: Allocator [%s] %llu B, max %llu B\n", allocatorName, curMemalloc, maxMemalloc);
                         }
 
         void			onDealloc (UNUSED_PARAM(const void *p), size_t size, const char *allocatorName, UNUSED_PARAM(u32 allocatorID))
@@ -46,7 +46,7 @@ namespace gos
                             --nalloc;
                             curMemalloc -= size;
 
-                            printf ("PROFILE: Allocator [%s] %lu B, max %lu B\n", allocatorName, curMemalloc, maxMemalloc);
+                            printf ("PROFILE: Allocator [%s] %llu B, max %llu B\n", allocatorName, curMemalloc, maxMemalloc);
                         }
 
     public:

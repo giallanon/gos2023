@@ -44,7 +44,7 @@ bool VkPipelineVertexInputStage::build (const GPU *gpu, const GPUVtxDeclHandle h
         return false;
 
     u32 totNumAttributeDescr=0;
-    for (u32 i=0; i<vtxDecl.stream_getNum(); i++)
+    for (u8 i=0; i<vtxDecl.stream_getNum(); i++)
     {        
         vxtBindingDescrList[i].binding = i;
 

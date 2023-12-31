@@ -462,22 +462,22 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
         //creo le image view
         for (u8 i=0; i<out->imageCount; i++)
         {
-            VkImageViewCreateInfo createInfo{};
-            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            createInfo.image = out->vkImage[i];
-            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            createInfo.format = out->imageFormat;
-            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            createInfo.subresourceRange.baseMipLevel = 0;
-            createInfo.subresourceRange.levelCount = 1;
-            createInfo.subresourceRange.baseArrayLayer = 0;
-            createInfo.subresourceRange.layerCount = 1;  
+            VkImageViewCreateInfo imgViewCreateInfo{};
+            imgViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            imgViewCreateInfo.image = out->vkImage[i];
+            imgViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            imgViewCreateInfo.format = out->imageFormat;
+            imgViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            imgViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            imgViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            imgViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            imgViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            imgViewCreateInfo.subresourceRange.baseMipLevel = 0;
+            imgViewCreateInfo.subresourceRange.levelCount = 1;
+            imgViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+            imgViewCreateInfo.subresourceRange.layerCount = 1;  
 
-            result = vkCreateImageView (vulkan.dev, &createInfo, nullptr, &out->vkImageView[i]);
+            result = vkCreateImageView (vulkan.dev, &imgViewCreateInfo, nullptr, &out->vkImageView[i]);
             if (VK_SUCCESS != result)
             {
                 gos::logger::err ("error creating image view for image num %d: %s\n", i, string_VkResult(result));

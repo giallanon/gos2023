@@ -382,10 +382,10 @@ bool GPU::priv_shader_createFromFile (const u8 *filename, eShaderType shaderType
 {
     assert (NULL != out_shaderHandle);
     
-    gos::Allocator *allocator = gos::getScrapAllocator();
+    gos::Allocator *scrapAllocator = gos::getScrapAllocator();
 
     u32 bufferSize;
-    u8 *buffer = gos::fs::fileLoadInMemory (allocator, filename, &bufferSize);
+    u8 *buffer = gos::fs::fileLoadInMemory (scrapAllocator, filename, &bufferSize);
     if (NULL == buffer)
     {
         out_shaderHandle->setInvalid();
@@ -394,7 +394,7 @@ bool GPU::priv_shader_createFromFile (const u8 *filename, eShaderType shaderType
     }    
     
     const bool ret = priv_shader_createFromMemory (buffer, bufferSize, shaderType, mainFnName, out_shaderHandle);
-    GOSFREE(allocator, buffer);
+    GOSFREE(scrapAllocator, buffer);
     return ret;
 }
 
@@ -589,11 +589,11 @@ void GPU::priv_vxtDecl_onBuilderEnds (VtxDeclBuilder *builder)
     //fillo vtxDecl con i dati raccolti dal builder
     vtxDecl->reset();
     vtxDecl->stream_setNum (builder->numStreamIndex);
-    for (u32 i=0; i<builder->numStreamIndex; i++)
+    for (u8 i=0; i<builder->numStreamIndex; i++)
         vtxDecl->stream_setInputRate (i, builder->inputRatePerStream[i]);
 
     vtxDecl->attr_setNum (builder->numAttributeDesc);
-    for (u32 i=0; i<builder->numAttributeDesc; i++)
+    for (u8 i=0; i<builder->numAttributeDesc; i++)
     {
         vtxDecl->attr_setStreamIndex (i, builder->attributeDesc[i].streamIndex);
         vtxDecl->attr_setBindingLocation (i, builder->attributeDesc[i].bindingLocation);
