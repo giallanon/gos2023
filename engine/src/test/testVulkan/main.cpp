@@ -1,7 +1,6 @@
 #include "gosGPU.h"
 #include "VKExample1.h"
 
-
 //******************************** 
 void runExample1 (gos::GPU *gpu)
 {

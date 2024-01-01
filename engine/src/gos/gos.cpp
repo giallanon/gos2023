@@ -3,6 +3,7 @@
 #include "logger/gosLoggerNull.h"
 #include "logger/gosLoggerStdout.h"
 #include "gosUtils.h"
+#include "gosThreadMsgQ.h"
 
 struct sGOSGlobals
 {
@@ -11,6 +12,12 @@ struct sGOSGlobals
 	char				*appName;
 };
 
+struct ThreadInfo
+{
+    platform::OSThread      	osThreadHandle;
+    GOS_ThreadMainFunction     	threadMainFn;
+    void                    	*userParam;
+};
 
 static sGOSGlobals		gosGlobals;
 static gos::Random		gosGlobalsRnd;
@@ -73,6 +80,8 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 		gosGlobalsRnd.seed(s);
 	}
 
+	if (!gos::thread::internal_init())
+		return false;
 
 	return true;
 }
@@ -80,14 +89,15 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 //******************************************
 void gos::deinit()
 {
+
 	if (NULL != gosGlobals.logger)
 	{
 		gos::logger::log (eTextColor::white, "shutting down...\n\n\n\n");
 		delete gosGlobals.logger;
 	}
 
+	thread::internal_deinit();
 	GOSFREE(gos::getSysHeapAllocator(), gosGlobals.appName);
-
 	console::priv_deinit();
 	mem::priv_deinit();
 	platform::internal_deinit();
@@ -303,9 +313,9 @@ void gos::netaddr::getIPv4 (const gos::NetAddr &me, char *out, u32 sizeof_out)
 	//const char *ip = inet_ntoa(me.addr.sin_addr);
 
 	char ip[32];
-	inet_ntop(AF_INET, &me.addr.sin_addr, ip, sizeof(ip));
-
-	if (NULL != ip && ip[0] != 0x00)
+	memset (ip, 0, sizeof(ip));
+	inet_ntop (AF_INET, &me.addr.sin_addr, ip, sizeof(ip));
+	if (ip[0] != 0x00)
 		sprintf_s (out, sizeof_out, "%s", ip);
 }
 
@@ -358,4 +368,57 @@ void gos::socket::UDPSendBroadcast(Socket &sok, const u8 *buffer, u32 nByteToSen
 	// Disabilita il broadcast
 	i = 0;
     setsockopt (sok.osSok.socketID, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&i), sizeof(i));
+}
+
+
+
+
+//************************************************************************
+void* GOS_threadFunctionWrapper (void *userParam)
+{
+    ThreadInfo *th = reinterpret_cast<ThreadInfo*>(userParam);
+    GOS_ThreadMainFunction mainFn = th->threadMainFn;
+
+    //int retCode = (*mainFn)(th->userParam);
+    (*mainFn)(th->userParam);
+
+	platform::destroyThread(th->osThreadHandle);
+	
+	gos::Allocator *allocator = gos::getSysHeapAllocator();
+    GOSFREE(allocator, th);
+    
+    return NULL;
+}
+
+//************************************************************************
+eThreadError gos::thread::create (gos::Thread *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb)
+{
+    out_hThread->p = NULL;
+
+    Allocator *allocator = gos::getSysHeapAllocator();
+    
+    ThreadInfo *th = GOSALLOCSTRUCT(allocator, ThreadInfo);
+    memset (th, 0x00, sizeof(ThreadInfo));
+    th->threadMainFn = threadFunction;
+    th->userParam = userParam;
+
+    eThreadError err = platform::createThread (th->osThreadHandle, GOS_threadFunctionWrapper, stackSizeInKb, th);
+
+    if (eThreadError::none == err)
+        out_hThread->p = th;
+    else
+    {
+        GOSFREE(allocator, th);
+    }
+    return err;
+}
+
+
+//************************************************************************
+void gos::thread::waitEnd (const gos::Thread &hThread)
+{
+    ThreadInfo *th = reinterpret_cast<ThreadInfo*>(hThread.p);
+    if (NULL == th)
+        return;
+    platform::waitThreadEnd(th->osThreadHandle);
 }

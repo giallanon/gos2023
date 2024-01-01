@@ -26,6 +26,7 @@ add_executable(${BINARY_OUTPUT_FILENAME}
     main.cpp
     testGos.cpp
     testMath.cpp
+    testThread.cpp
     TTest.h
 )
 

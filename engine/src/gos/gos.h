@@ -154,6 +154,9 @@ namespace gos
 		inline void     eventSetInvalid (gos::Event &ev)										{ platform::eventSetInvalid (ev.osEvt); }
 		inline bool		eventIsInvalid (const gos::Event &ev)									{ return platform::eventIsInvalid (ev.osEvt); }
 
+        eThreadError    create (gos::Thread *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb=2048);
+        void            waitEnd (const gos::Thread &hThread);
+
     } // namespace thread
 
 
@@ -169,7 +172,7 @@ namespace gos
 		bool			priv_init ();
 		void			priv_deinit ();
 
-		inline void		trap_CTRL_C (ConsoleTrap_CTRL_C trapFn, void *userParam)						{ platform::console_trap_CTRL_C (trapFn, userParam); }
+		inline void		trap_CTRL_C (GOS_ConsoleTrap_CTRL_C trapFn, void *userParam)					{ platform::console_trap_CTRL_C (trapFn, userParam); }
 							//nelle applicazioni console, questo handler viene invocato quando l'utente preme CTRL C
 
 		void			setWH (u16 w, u16 h);	//imposta width e height della finestra. Questa potrebbe non funzionare, il supporto a questa fn dipende dall'OS

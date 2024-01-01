@@ -17,7 +17,11 @@ constexpr inline u32 GOS_ALIGN_NUMBER_TO_POWER_OF_TWO (u32 num, u32 alignPowerOf
 
 
 //================================================================
-typedef void (*ConsoleTrap_CTRL_C)(void *userParam);
+typedef void (*GOS_ConsoleTrap_CTRL_C)(void *userParam);
+
+//================================================================
+//thread thread main-fn prototype
+typedef i16 (*GOS_ThreadMainFunction)(void *userParam);
 
 
 //================================================================
@@ -136,6 +140,15 @@ enum class eSocketError: u8
     unknown = 0xff
 };
 
+enum class eThreadError : u8
+{
+    none = 0,
+    invalidStackSize = 1,
+    tooMany = 2,
+    unknown = 0xff
+};
+
+
 namespace gos
 {
     struct sGOSInit
@@ -182,6 +195,11 @@ namespace gos
     {
         platform::OSEvent osEvt;  //"osEvt" e' dipendente dalla platform, per cui deve essere definito nel codice di platform
     };    
+
+    struct Thread
+    {
+        void *p;
+    };
 
     struct Socket
     {

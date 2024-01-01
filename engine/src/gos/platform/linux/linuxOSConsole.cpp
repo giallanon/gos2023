@@ -4,8 +4,8 @@
 
 struct sLinuxConsoleData
 {
-	ConsoleTrap_CTRL_C	trapFN_CTRL_C;
-	void				*trapFN_CTRL_C_userParam;
+	GOS_ConsoleTrap_CTRL_C	trapFN_CTRL_C;
+	void					*trapFN_CTRL_C_userParam;
 };
 
 static sLinuxConsoleData	linuxConsoleData;
@@ -31,7 +31,7 @@ static void LinuxInternal_consoleHandlerRoutine (sig_atomic_t s)
 }
 
 //*****************************************************
-void platform::console_trap_CTRL_C (ConsoleTrap_CTRL_C trapFn, void *userParam)
+void platform::console_trap_CTRL_C (GOS_ConsoleTrap_CTRL_C trapFn, void *userParam)
 {
 	linuxConsoleData.trapFN_CTRL_C = trapFn;
 	linuxConsoleData.trapFN_CTRL_C_userParam = userParam;

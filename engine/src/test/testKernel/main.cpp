@@ -3,6 +3,7 @@
 
 void testGos (Tester &tester);
 void testMath(Tester &tester);
+void testThread (Tester &tester);
 
 //********************************+
 int main()
@@ -17,6 +18,7 @@ int main()
     {
         testGos (tester);
         testMath(tester);
+        testThread (tester);
     }
     tester.printReport();
 

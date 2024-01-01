@@ -59,6 +59,7 @@ platform/linux/linuxOSFS.cpp
 platform/linux/linuxOSConsole.cpp
 platform/linux/linuxOSInclude.h
 platform/linux/linuxOSSocket.cpp
+platform/linux/linuxOSThread.cpp
 platform/linux/linuxOSWaitableGrp.cpp
 platform/linux/linuxOSWaitableGrp.h
 
@@ -100,6 +101,8 @@ gosHandle.h
 gosLIFOFixedSize.h
 gosRandom.h
 gosString.h
+gosThreadMsgQ.h
+gosThreadMsgQ.cpp
 gosUtils.cpp
 gosUtils.h
 )

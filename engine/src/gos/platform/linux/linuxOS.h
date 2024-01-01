@@ -37,7 +37,7 @@ namespace platform
 	bool            console_internal_init();
 	void			console_internal_deinit();
 
-	void			console_trap_CTRL_C (ConsoleTrap_CTRL_C trapFn, void *userParam);
+	void			console_trap_CTRL_C (GOS_ConsoleTrap_CTRL_C trapFn, void *userParam);
 	void			console_setTitle (const char *title);
 
 
@@ -59,10 +59,10 @@ namespace platform
 	inline bool		eventIsInvalid (const OSEvent &ev)									{ return (ev.evfd == -1); }
 	inline bool		eventCompare (const OSEvent &a, const OSEvent &b)					{ return (a.evfd == b.evfd); }
 
-    /*eThreadError    createThread (OSThread &out_handle, OSThreadFunction threadFunction, size_t stackSizeInKb, void *userParam);
-    void            killThread (OSThread &handle);
-    void            waitThreadEnd(OSThread &handle);
-    */
+    eThreadError    createThread  (OSThread &out_handle, OSThreadFunction threadFunction, u32 stackSizeInKb, void *userParam);
+    void            waitThreadEnd (OSThread &handle);
+    void            destroyThread (OSThread &handle);
+    
 
     /******************************************************
      * File system

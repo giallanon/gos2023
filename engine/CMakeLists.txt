@@ -92,4 +92,3 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGeom)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGPU)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
-

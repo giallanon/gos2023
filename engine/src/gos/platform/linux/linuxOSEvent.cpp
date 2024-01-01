@@ -38,6 +38,7 @@ void platform::eventDestroy (OSEvent &ev)
     ::close(ev.h);
 }
 
+
 //*******************************************************
 void platform::eventFire (const OSEvent &ev)
 {
@@ -55,16 +56,27 @@ void platform::eventFire (const OSEvent &ev)
             printf ("%d\n", myerrno);
         }
         */
-    }
+    }    
 }
 
 //*******************************************************
 bool platform::eventWait (const OSEvent &ev, size_t timeoutMSec)
 {
-    struct epoll_event events;
+    /*struct epoll_event events;
     if (epoll_pwait(ev.h, &events, 1, timeoutMSec, NULL) <= 0)
         return false;
-    return true;
+    return true;*/
+    while(1)
+    {
+        struct epoll_event events;
+        const int ret = epoll_pwait(ev.h, &events, 1, timeoutMSec, NULL);
+        if (ret > 0)
+            return true;
+
+        if (errno == EINTR)
+            continue;
+        return false;
+    }    
 }
 
 

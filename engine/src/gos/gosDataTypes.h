@@ -2,6 +2,7 @@
 #define _gosDataTypes_h_
 #include <stdio.h>
 #include <stdarg.h>
+#include <new>
 #include "platform/gosPlatformInclude.h"
 
 #endif // _gosDataTypes_h_

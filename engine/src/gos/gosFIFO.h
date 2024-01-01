@@ -127,10 +127,10 @@ namespace gos
      *
      */
     template<typename T>
-    class FIFOts : public TemplateFIFO<T,mAllocPolicy_Thread_safe>
+    class FIFOts : public TemplateFIFO<T, AllocPolicy_Thread_Safe>
     {
     public:
-                    FIFOts () : TemplateFIFO<T,AllocPolicy_Thread_safe>()		{ }
+                    FIFOts () : TemplateFIFO<T,AllocPolicy_Thread_Safe>()		{ }
         virtual     ~FIFOts ()                                                  { }
     };
 

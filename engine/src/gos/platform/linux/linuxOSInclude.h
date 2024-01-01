@@ -79,6 +79,8 @@ namespace platform
 {
     typedef int OSFile;
     typedef pthread_mutex_t OSMutex;
+    typedef pthread_t OSThread;
+    typedef void* (*OSThreadFunction)(void *userParam);    
 
     struct OSFileFind
     {
@@ -100,7 +102,10 @@ namespace platform
         epoll_event eventInfo;
         int         h;
         int         evfd;
-    };    
+    };
+    
+
+
 
 } //namespace platform
 
