@@ -1,6 +1,7 @@
 #ifdef GOS_PLATFORM__WINDOWS
 #include "winOS.h"
 #include "../../gosEnumAndDefine.h"
+#include "../../gos.h"
 #include <ws2tcpip.h>
 
 
@@ -24,7 +25,7 @@ void platform::socket_close (OSSocket &sok)
 }
 
 //*************************************************
-bool setBlockingMode (OSSocket &sok, bool bBlocking)
+bool setBlockingMode (platform::OSSocket &sok, bool bBlocking)
 {
 	u_long iMode = 0;
 	if (!bBlocking)
@@ -39,7 +40,7 @@ bool setBlockingMode (OSSocket &sok, bool bBlocking)
 }
 
 //*************************************************
-eSocketError socket_openAsTCP(OSSocket *sok)
+eSocketError socket_openAsTCP(platform::OSSocket *sok)
 {
 	platform::socket_init(sok);
 
@@ -82,7 +83,8 @@ eSocketError platform::socket_openAsTCPClient(OSSocket* sok, const char* connect
 	{
 		sockaddr_in clientService;
 		clientService.sin_family = AF_INET;
-		clientService.sin_addr.s_addr = inet_addr(connectToIP);
+		//clientService.sin_addr.s_addr = inet_addr(connectToIP);
+		inet_pton(AF_INET, connectToIP, &clientService.sin_addr.s_addr);
 		clientService.sin_port = htons(static_cast<USHORT>(portNumber));
 
 		if (0 != connect(sok->socketID, (SOCKADDR*)&clientService, sizeof(clientService)))
@@ -173,13 +175,13 @@ bool platform::socket_setReadTimeoutMSec  (OSSocket &sok, u32 timeoutMSecIN)
 	if (!platform::socket_isOpen(sok))
 		return false;
 
-	DWORD timeoutMSec = timeoutMSecIN;
+	DWORD timeout_msec = timeoutMSecIN;
 	if (timeoutMSecIN == u32MAX)
-		timeoutMSec = 0;    //socket sempre bloccante
-	else if (timeoutMSec == 0)
-		timeoutMSec = 1;    //socket con il minimo possibile tempo di wait
+		timeout_msec = 0;    //socket sempre bloccante
+	else if (timeout_msec == 0)
+		timeout_msec = 1;    //socket con il minimo possibile tempo di wait
 
-	if (0 == setsockopt (sok.socketID, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeoutMSec, sizeof(DWORD)))
+	if (0 == setsockopt (sok.socketID, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout_msec, sizeof(DWORD)))
 	{
 		sok.readTimeoutMSec = timeoutMSecIN;
 		return true;
@@ -207,14 +209,14 @@ bool platform::socket_setWriteTimeoutMSec (OSSocket &sok, u32 timeoutMSecIN)
 	if (!platform::socket_isOpen(sok))
 		return false;
 	
-	DWORD timeoutMSec = (DWORD)timeoutMSecIN;
+	DWORD timeout_msec = (DWORD)timeoutMSecIN;
 	if (timeoutMSecIN == u32MAX)
-		timeoutMSec = 0;    //socket sempre bloccante
-	else if (timeoutMSec == 0)
-		timeoutMSec = 1;    //socket con il minimo possibile tempo di wait
+		timeout_msec = 0;    //socket sempre bloccante
+	else if (timeout_msec == 0)
+		timeout_msec = 1;    //socket con il minimo possibile tempo di wait
 
 	
-	if (0 == setsockopt(sok.socketID, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeoutMSec, sizeof(DWORD)))
+	if (0 == setsockopt(sok.socketID, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout_msec, sizeof(DWORD)))
 		return true;
 
 	/*switch (errno)
@@ -268,19 +270,19 @@ bool platform::socket_accept (const OSSocket &sok, OSSocket *out_clientSocket)
 
 
 //*************************************************
-i32 platform::socket_read(OSSocket &sok, void *buffer, u16 bufferSizeInBytes, u32 timeoutMSec, bool bPeekMSG)
+i32 platform::socket_read (OSSocket &sok, void *buffer, u16 bufferSizeInBytes, u32 timeout_msec, bool bPeekMSG)
 {
 	u32 readFLAG = 0;
 	if (bPeekMSG)
 		readFLAG = MSG_PEEK;
 
-	if (timeoutMSec != sok.readTimeoutMSec)
-		platform::socket_setReadTimeoutMSec(sok, timeoutMSec);
+	if (timeout_msec != sok.readTimeoutMSec)
+		platform::socket_setReadTimeoutMSec(sok, timeout_msec);
 		
 
 	//purtroppo devo pollare.... in teoria socket_setReadTimeoutMSec dovrebbe settare
-	//la socket in modalit� bloccante con il timeout deciso, ma di fatto non funziona quindi mi tocca pollare
-	u64 timeToExitMSec = gos::getTimeNowMSec() + timeoutMSec;
+	//la socket in modalita' bloccante con il timeout deciso, ma di fatto non funziona quindi mi tocca pollare
+	u64 timeToExit_msec = gos::getTimeSinceStart_msec() + timeout_msec;
 	i32 ret = -1;
 	do
 	{
@@ -294,7 +296,7 @@ i32 platform::socket_read(OSSocket &sok, void *buffer, u16 bufferSizeInBytes, u3
 		int myerrno = WSAGetLastError();
 		if (myerrno == WSAEINPROGRESS || myerrno == WSAEWOULDBLOCK || myerrno == WSAETIMEDOUT)
 		{
-			platform::sleepMSec(100);
+			platform::sleep_msec(100);
 			continue;
 		}
 
@@ -333,7 +335,7 @@ i32 platform::socket_read(OSSocket &sok, void *buffer, u16 bufferSizeInBytes, u3
 		case WSAECONNABORTED:
 			return 0;
 		}
-	} while (gos::getTimeNowMSec() < timeToExitMSec);
+	} while (gos::getTimeSinceStart_msec() < timeToExit_msec);
 
 	return -1;  //timeout
 }
@@ -447,7 +449,7 @@ eSocketError platform::socket_UDPbind (OSSocket &sok, int portNumber)
 }
 
 //*************************************************** 
-u32 platform::socket_UDPSendTo (OSSocket &sok, const u8 *buffer, u32 nByteToSend, const OSNetAddr &addrTo)
+u32 platform::socket_UDPSendTo (OSSocket &sok, const u8 *buffer, u32 nByteToSend, const gos::NetAddr &addrTo)
 {
 	int ret = sendto (sok.socketID, (const char*)buffer, nByteToSend, 0, gos::netaddr::getSockAddr(addrTo), gos::netaddr::getSockAddrLen(addrTo));
 	if (SOCKET_ERROR == ret)
@@ -456,7 +458,7 @@ u32 platform::socket_UDPSendTo (OSSocket &sok, const u8 *buffer, u32 nByteToSend
 }
 
 //*************************************************** 
-u32 platform::socket_UDPReceiveFrom (OSSocket &sok, u8 *buffer, u32 nMaxBytesToRead, OSNetAddr *out_addrFrom)
+u32 platform::socket_UDPReceiveFrom (OSSocket &sok, u8 *buffer, u32 nMaxBytesToRead, gos::NetAddr *out_addrFrom)
 {
 	int	addrLen = gos::netaddr::getSockAddrLen(*out_addrFrom);
 	int ret = recvfrom(sok.socketID, (char*)buffer, nMaxBytesToRead, 0, gos::netaddr::getSockAddr(*out_addrFrom), &addrLen);

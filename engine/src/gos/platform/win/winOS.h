@@ -7,6 +7,7 @@
 namespace gos
 {
     class DateTime; //fwd decl
+    class Allocator; //fwd decl
 }
 
 namespace platform
@@ -133,8 +134,8 @@ namespace platform
 	//=============================== UDP
 	eSocketError        socket_openAsUDP (OSSocket *out_sok);
 	eSocketError        socket_UDPbind (OSSocket &sok, int portNumber);
-	u32					socket_UDPSendTo (OSSocket &sok, const u8 *buffer, u32 nByteToSend, const OSNetAddr &addrTo);
-	u32					socket_UDPReceiveFrom (OSSocket &sok, u8 *buffer, u32 nMaxBytesToRead, OSNetAddr *out_addrFrom);
+	u32					socket_UDPSendTo (OSSocket &sok, const u8 *buffer, u32 nByteToSend, const gos::NetAddr &addrTo);
+	u32					socket_UDPReceiveFrom (OSSocket &sok, u8 *buffer, u32 nMaxBytesToRead, gos::NetAddr *out_addrFrom);
 
     //====================================== networking
 	gos::NetworkAdapterInfo*    NET_getListOfAllNerworkAdpaterIPAndNetmask (gos::Allocator *allocator, u32 *out_numFound);

@@ -483,6 +483,22 @@ namespace test_gos
             TEST_ASSERT(mac1==mac2);
         }
 
+        gos::NetAddr naddr1;
+        {
+            gos::netaddr::ipstrToIPv4  ("192.168.10.12", &ip1);
+            ip2.set (192, 168, 10, 12);
+            TEST_ASSERT(ip1 == ip2);
+
+		    gos::netaddr::setIPv4 (naddr1, "192.168.10.12");
+            gos::netaddr::getIPv4(naddr1, &ip2);
+            TEST_ASSERT(ip1 == ip2);
+
+            ip1.set (8, 123, 87, 11);
+		    gos::netaddr::setIPv4 (naddr1, ip1);
+            gos::netaddr::getIPv4(naddr1, &ip2);
+		    TEST_ASSERT(ip1 == ip2);
+        }
+
         return 0;
     }
 } //namespace test_gos

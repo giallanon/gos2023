@@ -11,6 +11,7 @@
 #include <windows.h>
 #include <assert.h>
 #include <Winsock2.h>
+#include <ws2tcpip.h>
 #include <shellapi.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -98,6 +99,17 @@ namespace platform
 
 		sOSDriveEnumerator() { logicalDrives = 0; current = 0; }
 	} OSDriveEnumerator;
+
+	struct OSEvent
+	{
+		HANDLE	h;
+	};
+
+	struct OSSocket
+	{
+		u32             readTimeoutMSec;
+		SOCKET          socketID;
+	};
 
 } //namespace platform
 

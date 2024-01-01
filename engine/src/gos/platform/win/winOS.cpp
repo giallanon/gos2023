@@ -207,11 +207,11 @@ gos::NetworkAdapterInfo* platform::NET_getListOfAllNerworkAdpaterIPAndNetmask (g
 
 	// Before calling AddIPAddress we use GetIpAddrTable to get an adapter to which we can add the IP.
 	DWORD dwTableSize = sizeof(MIB_IPADDRTABLE);
-	PMIB_IPADDRTABLE pIPAddrTable = (MIB_IPADDRTABLE *)RHEAALLOC(tempAllocator,dwTableSize);
+	PMIB_IPADDRTABLE pIPAddrTable = (MIB_IPADDRTABLE *)GOSALLOC(tempAllocator,dwTableSize);
 	if (GetIpAddrTable(pIPAddrTable, &dwTableSize, 0) == ERROR_INSUFFICIENT_BUFFER)
 	{
-		RHEAFREE(tempAllocator, pIPAddrTable);
-		pIPAddrTable = (MIB_IPADDRTABLE *)RHEAALLOC(tempAllocator, dwTableSize);
+		GOSFREE(tempAllocator, pIPAddrTable);
+		pIPAddrTable = (MIB_IPADDRTABLE *)GOSALLOC(tempAllocator, dwTableSize);
 	}
 
 	// Make a second call to GetIpAddrTable to get the actual data we want
@@ -236,7 +236,7 @@ gos::NetworkAdapterInfo* platform::NET_getListOfAllNerworkAdpaterIPAndNetmask (g
 	else
 		*out_nRecordFound = (u8)pIPAddrTable->dwNumEntries;
 	
-	gos::NetworkAdapterInfo *ret = (gos::NetworkAdapterInfo*)RHEAALLOC(allocator, sizeof(gos::NetworkAdapterInfo) * (*out_nRecordFound));
+	gos::NetworkAdapterInfo *ret = (gos::NetworkAdapterInfo*)GOSALLOC(allocator, sizeof(gos::NetworkAdapterInfo) * (*out_nRecordFound));
 	memset(ret, 0, sizeof(gos::NetworkAdapterInfo) * (*out_nRecordFound));
 	for (u8 i = 0; i < (*out_nRecordFound); i++)
 	{
@@ -277,7 +277,7 @@ gos::NetworkAdapterInfo* platform::NET_getListOfAllNerworkAdpaterIPAndNetmask (g
 	}
 
 	if (pIPAddrTable) 
-		RHEAFREE(tempAllocator, pIPAddrTable);
+		GOSFREE(tempAllocator, pIPAddrTable);
 
 	return ret;
 }
@@ -293,7 +293,7 @@ bool platform::NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP)
 	gos::Allocator *allocator = gos::getScrapAllocator();
 
 	PIP_ADAPTER_INFO AdapterInfo;
-	AdapterInfo = (IP_ADAPTER_INFO *)RHEAALLOC(allocator, sizeof(IP_ADAPTER_INFO));
+	AdapterInfo = (IP_ADAPTER_INFO *)GOSALLOC(allocator, sizeof(IP_ADAPTER_INFO));
 	if (AdapterInfo == NULL)
 	{
 		DBGBREAK;
@@ -304,8 +304,8 @@ bool platform::NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP)
 	DWORD dwBufLen = sizeof(IP_ADAPTER_INFO);
 	if (ERROR_BUFFER_OVERFLOW == GetAdaptersInfo(AdapterInfo, &dwBufLen))
 	{
-		RHEAFREE(allocator, AdapterInfo);
-		AdapterInfo = (IP_ADAPTER_INFO *)RHEAALLOC(allocator, dwBufLen);
+		GOSFREE(allocator, AdapterInfo);
+		AdapterInfo = (IP_ADAPTER_INFO *)GOSALLOC(allocator, dwBufLen);
 		if (AdapterInfo == NULL)
 		{
 			DBGBREAK;
@@ -373,7 +373,7 @@ bool platform::NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP)
 			pAdapterInfo = pAdapterInfo->Next;
 		}
 	}
-	RHEAFREE(allocator, AdapterInfo);
+	GOSFREE(allocator, AdapterInfo);
 	return (whichAdapterTypeWasFound != 0);
 }
 

@@ -7,7 +7,7 @@
 namespace gos
 {
     class DateTime; //fwd decl
-    class Allocator;
+    class Allocator; //fwd decl
 }
 
 namespace platform

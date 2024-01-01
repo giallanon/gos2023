@@ -237,19 +237,19 @@ bool gos::netaddr::setFromMACString (gos::MacAddress &me, const char *macString,
 	}
 	return true;
 }
-bool gos::MacAddress::operator== (const gos::MacAddress &b) const											{ return gos::netaddr::compare (*this, b) == 0; }
-bool gos::MacAddress::operator!= (const gos::MacAddress &b) const											{ return gos::netaddr::compare (*this, b) != 0; }
+bool gos::MacAddress::operator== (const gos::MacAddress &z) const											{ return gos::netaddr::compare (*this, z) == 0; }
+bool gos::MacAddress::operator!= (const gos::MacAddress &z) const											{ return gos::netaddr::compare (*this, z) != 0; }
 
 //***************************************************
 void gos::netaddr::setInvalid (gos::NetAddr &me)											{ setPort(me, 0); }
-bool gos::netaddr::isInvalid (const gos::NetAddr &me)									{ return (getPort(me) == 0); }
-bool gos::netaddr::isValid (const gos::NetAddr &me)										{ return !netaddr::isInvalid(me); }
-void gos::netaddr::setFromSockAddr(gos::NetAddr &me, const sockaddr_in &addrIN)			{ memcpy(&me.addr, &addrIN, sizeof(sockaddr_in)); }
-void gos::netaddr::setFromAddr(gos::NetAddr &me, const gos::NetAddr &addrIN)					{ memcpy(&me.addr, &addrIN.addr, sizeof(sockaddr_in)); }
-void gos::netaddr::setIPv4(gos::NetAddr &me, const char *ip)								{ me.addr.sin_family = AF_INET; me.addr.sin_addr.s_addr = inet_addr(ip); }
-void gos::netaddr::setPort(gos::NetAddr &me, u16 port)									{ me.addr.sin_family = AF_INET; me.addr.sin_port = htons(static_cast<unsigned short>(port)); }
-u16 gos::netaddr::getPort (const gos::NetAddr &me)										{ return static_cast<u16>(ntohs(me.addr.sin_port)); }
-sockaddr* gos::netaddr::getSockAddr(const gos::NetAddr &me)                              { return (sockaddr*)(&me.addr); }
+bool gos::netaddr::isInvalid (const gos::NetAddr &me)										{ return (getPort(me) == 0); }
+bool gos::netaddr::isValid (const gos::NetAddr &me)											{ return !netaddr::isInvalid(me); }
+void gos::netaddr::setFromSockAddr(gos::NetAddr &me, const sockaddr_in &addrIN)				{ memcpy(&me.addr, &addrIN, sizeof(sockaddr_in)); }
+void gos::netaddr::setFromAddr(gos::NetAddr &me, const gos::NetAddr &addrIN)				{ memcpy(&me.addr, &addrIN.addr, sizeof(sockaddr_in)); }
+void gos::netaddr::setIPv4(gos::NetAddr &me, const char *ip)								{ me.addr.sin_family = AF_INET; inet_pton (AF_INET, ip, &me.addr.sin_addr.s_addr); }
+void gos::netaddr::setPort(gos::NetAddr &me, u16 port)										{ me.addr.sin_family = AF_INET; me.addr.sin_port = htons(static_cast<unsigned short>(port)); }
+u16 gos::netaddr::getPort (const gos::NetAddr &me)											{ return static_cast<u16>(ntohs(me.addr.sin_port)); }
+sockaddr* gos::netaddr::getSockAddr(const gos::NetAddr &me)									{ return (sockaddr*)(&me.addr); }
 int gos::netaddr::getSockAddrLen(const gos::NetAddr &me)									{ return sizeof(me.addr); }
 
 u8 gos::netaddr::serializeToBuffer (const gos::NetAddr &me, u8 *dst, u32 sizeof_dst, bool bIncludePort)
@@ -295,20 +295,18 @@ void gos::netaddr::setIPv4 (gos::NetAddr &me, const gos::IPv4 &ip)
 	setIPv4 (me, s);
 }
 
-void gos::netaddr::getIPv4 (const gos::NetAddr &me, gos::IPv4 *out)
-{
-	assert (NULL != out);
-	char s[32];
-	getIPv4 (me, s);
-	ipstrToIPv4 (s, out);
-}
+void gos::netaddr::getIPv4 (const gos::NetAddr &me, gos::IPv4 *out)							{ assert (NULL != out); char s[32]; getIPv4 (me, s, sizeof(s)); ipstrToIPv4 (s, out); }
 
-void gos::netaddr::getIPv4 (const gos::NetAddr &me, char *out)
+void gos::netaddr::getIPv4 (const gos::NetAddr &me, char *out, u32 sizeof_out)
 {
 	out[0] = 0x00;
-	const char *ip = inet_ntoa(me.addr.sin_addr);
+	//const char *ip = inet_ntoa(me.addr.sin_addr);
+
+	char ip[32];
+	inet_ntop(AF_INET, &me.addr.sin_addr, ip, sizeof(ip));
+
 	if (NULL != ip && ip[0] != 0x00)
-		strncpy(out, ip, 16);
+		sprintf_s (out, sizeof_out, "%s", ip);
 }
 
 bool gos::netaddr::compare(const gos::NetAddr &a, const gos::NetAddr &b)
@@ -316,8 +314,8 @@ bool gos::netaddr::compare(const gos::NetAddr &a, const gos::NetAddr &b)
 	if (gos::netaddr::getPort(a) != netaddr::getPort(b))
 		return false;
 	char ipA[32], ipB[32];
-	netaddr::getIPv4(a, ipA);
-	netaddr::getIPv4(b, ipB);
+	netaddr::getIPv4(a, ipA, sizeof(ipA));
+	netaddr::getIPv4(b, ipB, sizeof(ipB));
 	if (strcasecmp(ipA, ipB) != 0)
 		return false;
 	return true;
@@ -327,7 +325,7 @@ bool gos::netaddr::compare(const gos::NetAddr &a, const gos::NetAddr &b)
 eSocketError gos::socket::openAsTCPClient (Socket *out_sok, const gos::NetAddr &ipAndPort)
 {
 	char ip[32];
-	gos::netaddr::getIPv4 (ipAndPort, ip);
+	gos::netaddr::getIPv4 (ipAndPort, ip, sizeof(ip));
 	return openAsTCPClient(out_sok, ip, gos::netaddr::getPort(ipAndPort));
 }
 
@@ -339,8 +337,14 @@ void gos::socket::UDPSendBroadcast(Socket &sok, const u8 *buffer, u32 nByteToSen
     setsockopt(sok.osSok.socketID, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&i), sizeof(i));
 
 	// Broadcasta il messaggio
-	const unsigned long	host_addr = inet_addr(ip);
-	const unsigned long	net_mask = inet_addr(subnetMask);
+	//const unsigned long	host_addr = inet_addr(ip);
+	unsigned long	host_addr;
+	inet_pton (AF_INET, ip, &host_addr);
+
+	//const unsigned long	net_mask = inet_addr(subnetMask);
+	unsigned long	net_mask;
+	inet_pton (AF_INET, subnetMask, &net_mask);
+
 	const unsigned long	net_addr = host_addr & net_mask;
 	const unsigned long	dir_bcast_addr = net_addr | (~net_mask);
 

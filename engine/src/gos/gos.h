@@ -238,7 +238,7 @@ namespace gos
 								//se [bIncludePort] == false, serializza solo l'indirizzo IP, altrimenti IP e porta
 		u8					deserializeFromBuffer (NetAddr &me, const u8 *src, u32 sizeof_src, bool bIncludePort);
 		
-		void				getIPv4 (const NetAddr &me, char *out);
+		void				getIPv4 (const NetAddr &me, char *out, u32 sizeof_out);
 		void				getIPv4 (const NetAddr &me, IPv4 *out);
 		u16					getPort (const NetAddr &me);
         sockaddr*           getSockAddr (const NetAddr &me);
