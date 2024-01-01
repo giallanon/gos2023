@@ -1,7 +1,7 @@
-.testKernel/
+testKernel/
 
-./testVulkan/testVulkan__linux_Debug
-./testVulkan/testVulkan__linux_Release
+testVulkan/testVulkan__linux_Debug
+testVulkan/testVulkan__linux_Release
 
-./ProfileServer/ProfileServer__linux_Debug
-./ProfileServer/ProfileServer__linux_Release
+ProfileServer/ProfileServer__linux_Debug
+ProfileServer/ProfileServer__linux_Release
