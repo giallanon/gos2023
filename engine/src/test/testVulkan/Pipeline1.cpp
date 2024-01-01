@@ -58,14 +58,14 @@ bool Pipeline1::create (gos::GPU *gpu, const GPUVtxDeclHandle vtxDeclHandle, eDr
         VkResult result;
 
         //shaders
-        gos::string::utf8::spf (s, sizeof(s), "%s/testVulkan/shader/vert1.spv", gos::getAppPathNoSlash());
+        gos::string::utf8::spf (s, sizeof(s), "%s/shader/vert1.spv", gos::getAppPathNoSlash());
         if (!gpu->vtxshader_createFromFile (s, "main", &vtxShader))
         {
             gos::logger::err ("can't load shader %s\n", s);
             break;
         }    
 
-        gos::string::utf8::spf (s, sizeof(s), "%s/testVulkan/shader/frag1.spv", gos::getAppPathNoSlash());
+        gos::string::utf8::spf (s, sizeof(s), "%s/shader/frag1.spv", gos::getAppPathNoSlash());
         if (!gpu->vtxshader_createFromFile (s, "main", &fragShader))
         {
             gos::logger::err ("can't load shader %s\n", s);

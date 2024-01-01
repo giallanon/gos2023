@@ -32,8 +32,10 @@ dataTypes/gosTime24.h
 dataTypes/gosTimer.cpp
 dataTypes/gosTimer.h
 
+helpers/base64.cpp
 helpers/mtrand.cpp
 helpers/mtrand.h
+helpers/sha1.cpp
 
 logger/gosLogger.h
 logger/gosLoggerNull.h
@@ -74,6 +76,20 @@ platform/win/winOSThread.cpp
 platform/win/winOSWaitableGrp.cpp
 platform/win/winOSWaitableGrp.h
 
+protocol/gosIProtocol.cpp
+protocol/gosIProtocol.h
+protocol/gosIProtocolChannel.cpp
+protocol/gosIProtocolChannel.h
+protocol/gosProtocolBuffer.cpp
+protocol/gosProtocolBuffer.h
+protocol/gosProtocolChSocketTCP.cpp
+protocol/gosProtocolChSocketTCP.h
+protocol/gosProtocolConsole.cpp
+protocol/gosProtocolConsole.h
+protocol/gosProtocolEnumAndDefine.h
+protocol/gosProtocolWebsocket.cpp
+protocol/gosProtocolWebsocket.h
+
 string/gosString.cpp 
 string/gosStringANSI.cpp 
 string/gosStringEnumAndDefine.h
@@ -103,6 +119,8 @@ gosFS.cpp
 gosHandle.h
 gosLIFOFixedSize.h
 gosRandom.h
+gosServerTCP.cpp
+gosServerTCP.h
 gosString.h
 gosThreadMsgQ.h
 gosThreadMsgQ.cpp

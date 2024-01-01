@@ -6,8 +6,32 @@ namespace gos
 {
     namespace utils
     {
-        u8	    getFormatSize (eDataFormat f);
+        const char* enumToString (eSocketError s);
 
+        u8	        getFormatSize (eDataFormat f);
+
+        /* ritorna il numero di bytes necessari a contenere la rappresentazione
+         * in base64 di dei primi [sizeInBytesOfIn] di [in] */
+        size_t      base64_howManyBytesNeededForEncoding (size_t sizeInBytesOfBufferToEncode);
+
+        /* prende i primi [sizeInBytesOfIn] di [in] e li converte nella rappresentazione in base64.
+         * Mette il risultato in out appendendo un 0x00 a fine buffer.
+         *
+         * Ritorna false se [sizeOfOutInBytes] non è suff ad ospitare la conversione */
+        bool        base64_encode (void *out, u32 sizeOfOutInBytes, const void *in, u32 sizeInBytesOfIn);
+
+        int         base64_decode (u8 *binary, u32 *binary_length, const char *base64IN, u32 sizeInBytesOfbase64IN);
+
+
+        u8          simpleChecksum8_calc (const void *bufferIN, u32 lenInBytes);
+
+        u16         simpleChecksum16_calc (const void *bufferIN, u32 lenInBytes);
+
+        /* Dato un buffer [in], mette in [out] un hash di 20 byte secondo l'algoritmo sha1
+         * [out] deve essere di almeno 20 bytes */
+        bool        sha1 (void *out, u32 sizeOfOutInBytes, const void *in, u32 sizeInBytesOfIn);
+
+                    
         /**********************************************************
          * Manipolazione di BIT 
          * 

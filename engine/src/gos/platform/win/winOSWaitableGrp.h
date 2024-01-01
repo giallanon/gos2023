@@ -20,16 +20,16 @@ namespace platform
 
 		bool			cleanAll();
 
-		bool            addSocket(gos::Socket &sok, void *userParam = NULL) { sRecord *s = priv_addSocket(sok); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
-		bool            addSocket(gos::Socket &sok, u32 userParam) { sRecord *s = priv_addSocket(sok); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
-		void            removeSocket(gos::Socket &sok);
+		bool            addSocket (const gos::Socket &sok, void *userParam = NULL) 			{ sRecord *s = priv_addSocket(sok); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
+		bool            addSocket (const gos::Socket &sok, u32 userParam) 						{ sRecord *s = priv_addSocket(sok); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
+		void            removeSocket (const gos::Socket &sok);
 
-		bool            addEvent(const gos::Event &evt, void *userParam = NULL) { sRecord *s = priv_addEvent(evt); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
-		bool            addEvent(const gos::Event &evt, u32 userParam) { sRecord *s = priv_addEvent(evt); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
-		void            removeEvent(const gos::Event &event);
+		bool            addEvent (const gos::Event &evt, void *userParam = NULL) 		{ sRecord *s = priv_addEvent(evt); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
+		bool            addEvent (const gos::Event &evt, u32 userParam) 					{ sRecord *s = priv_addEvent(evt); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
+		void            removeEvent (const gos::Event &event);
 
-		bool            addMsgQ (const HThreadMsgR &hRead, void *userParam = NULL) { sRecord *s = priv_addMsgQ(hRead); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
-		bool            addMsgQ (const HThreadMsgR &hRead, u32 userParam) { sRecord *s = priv_addMsgQ(hRead); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
+		bool            addMsgQ (const HThreadMsgR &hRead, void *userParam = NULL) 		{ sRecord *s = priv_addMsgQ(hRead); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
+		bool            addMsgQ (const HThreadMsgR &hRead, u32 userParam) 				{ sRecord *s = priv_addMsgQ(hRead); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
 		void            removeMsgQ (const HThreadMsgR &hRead);
 
 		u8              wait (u32 timeoutMSec);
@@ -88,7 +88,7 @@ namespace platform
 
 	private:
 		sRecord*        priv_newRecord();
-		sRecord*        priv_addSocket (gos::Socket &sok);
+		sRecord*        priv_addSocket (const gos::Socket &sok);
 		sRecord*        priv_addEvent (const gos::Event &evt);
 		sRecord*        priv_addMsgQ (const HThreadMsgR &hRead);
 		u8              priv_wait (u32 timeoutMSec);

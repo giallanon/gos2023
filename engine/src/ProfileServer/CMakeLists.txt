@@ -1,16 +1,16 @@
 #[[====================================================
 #
-#  PROJECT: testKernel
+#  PROJECT: ProfileServer
 #
 =====================================================]]
 cmake_minimum_required(VERSION 3.20)
 
 #project name and version
-project(testKernel VERSION 1.0.0 LANGUAGES C CXX)
+project(ProfileServer VERSION 1.0.0 LANGUAGES C CXX)
 
 #====================================================
 # path di output di questo progetto
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../../bin/${PROJECT_NAME})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../bin/${PROJECT_NAME})
 
 #====================================================
 # nome del file di output
@@ -21,17 +21,11 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
     main.cpp
-    testGos.cpp
-    testMath.cpp
-    testThread.cpp
-    TTest.h
 )
 
 #====================================================
 # additional include path
-include_directories(${PROJECT_SOURCE_DIR}/../../gos)
-include_directories(${PROJECT_SOURCE_DIR}/../../gosMath)
-include_directories(${PROJECT_SOURCE_DIR}/../../gosGeom)
+include_directories(${PROJECT_SOURCE_DIR}/../gos)
 
 #====================================================
 # info a video
@@ -46,7 +40,7 @@ message("         compiler flags: ${MAIN_CFLAGS}")
 
 #====================================================
 # additional library to be linked
-set(LIBRARY_LIST "gosMath;gosGeom;gos")
+set(LIBRARY_LIST "gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
     #set(finalLibNameAndPath "${PROJECT_SOURCE_DIR}/../../../lib/lib${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.a")

@@ -1,8 +1,9 @@
-#ifdef aaaGOS_PLATFORM__LINUX
+#ifdef GOS_PLATFORM__LINUX
 #include <string.h>
 #include "linuxOSWaitableGrp.h"
 #include "../../gos.h"
 
+using namespace platform;
 
 //***********************************************
 OSWaitableGrp::OSWaitableGrp()
@@ -25,24 +26,25 @@ OSWaitableGrp::~OSWaitableGrp()
 bool OSWaitableGrp::cleanAll()
 {
     bool ret = false;
-    rhea::Allocator *allocator = rhea::getSysHeapAllocator();
+    gos::Allocator *allocator = gos::getSysHeapAllocator();
 
     while (base)
     {
         sRecord *p = base;
         base = base->next;
 
-        allocator->dealloc(p);
+        GOSFREE(allocator, p);
         ret = true;
     }
     ::close(hfd);
     return ret;
 }
+
 //***********************************************
 OSWaitableGrp::sRecord* OSWaitableGrp::priv_newRecord (u32 flags)
 {
-    rhea::Allocator *allocator = rhea::getSysHeapAllocator();
-    sRecord *r = RHEAALLOCSTRUCT(allocator,sRecord);
+    gos::Allocator *allocator = gos::getSysHeapAllocator();
+    sRecord *r = GOSALLOCSTRUCT(allocator,sRecord);
 
     r->next = base;
     r->eventInfo.events = flags;
@@ -57,17 +59,14 @@ int OSWaitableGrp::priv_getFd (const sRecord *s) const
 {
     switch (s->originType)
     {
-    case eEventOrigin::socket:
-        return s->origin.osSocket.socketID;
+    case eWaitEventOrigin::socket:
+        return s->origin.socket.osSok.socketID;
 
-    case eEventOrigin::osevent:
-        return s->origin.osEvent.evfd;
+    case eWaitEventOrigin::osevent:
+        return s->origin.event.osEvt.evfd;
 
-    case eEventOrigin::serialPort:
-        return s->origin.osSerialPort.fd;
-
-    case eEventOrigin::msgQ:
-        return s->origin.ifMsgQ.hEvent.evfd;
+    case eWaitEventOrigin::msgQ:
+        return s->origin.ifMsgQ.event.osEvt.evfd;
 
     default:
         DBGBREAK;
@@ -78,7 +77,7 @@ int OSWaitableGrp::priv_getFd (const sRecord *s) const
 //***********************************************
 void OSWaitableGrp::priv_findAndRemoveRecordByFD (int fd)
 {
-    rhea::Allocator *allocator = rhea::getSysHeapAllocator();
+    gos::Allocator *allocator = gos::getSysHeapAllocator();
 
     sRecord *q = NULL;
     sRecord *p = base;
@@ -89,12 +88,12 @@ void OSWaitableGrp::priv_findAndRemoveRecordByFD (int fd)
             if (q == NULL)
             {
                 base = base->next;
-                allocator->dealloc(p);
+                GOSFREE(allocator, p);
                 return;
             }
 
             q->next = p->next;
-            allocator->dealloc(p);
+            GOSFREE(allocator, p);
             return;
         }
 
@@ -120,13 +119,13 @@ void OSWaitableGrp::priv_onRemove (int fd)
 }
 
 //***********************************************
-OSWaitableGrp::sRecord* OSWaitableGrp::priv_addSocket (const OSSocket &sok)
+OSWaitableGrp::sRecord* OSWaitableGrp::priv_addSocket (const gos::Socket &sok)
 {
     sRecord *s = priv_newRecord (EPOLLIN | EPOLLRDHUP | EPOLLPRI | EPOLLERR | EPOLLHUP);
-    s->originType = eEventOrigin::socket;
-    s->origin.osSocket = sok;
+    s->originType = eWaitEventOrigin::socket;
+    s->origin.socket = sok;
 
-    int fd = sok.socketID;
+    int fd = sok.osSok.socketID;
     int err = epoll_ctl (hfd, EPOLL_CTL_ADD, fd, &s->eventInfo);
     if (err)
     {
@@ -139,13 +138,13 @@ OSWaitableGrp::sRecord* OSWaitableGrp::priv_addSocket (const OSSocket &sok)
 
 
 //***********************************************
-OSWaitableGrp::sRecord* OSWaitableGrp::priv_addEvent (const OSEvent &evt)
+OSWaitableGrp::sRecord* OSWaitableGrp::priv_addEvent (const gos::Event &evt)
 {
     sRecord *s = priv_newRecord (EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP | EPOLLET);
-    s->originType = eEventOrigin::osevent;
-    s->origin.osEvent = evt;
+    s->originType = eWaitEventOrigin::osevent;
+    s->origin.event = evt;
 
-    int fd = evt.evfd;
+    int fd = evt.osEvt.evfd;
     int err = epoll_ctl (hfd, EPOLL_CTL_ADD, fd, &s->eventInfo);
     if (err)
     {
@@ -160,11 +159,11 @@ OSWaitableGrp::sRecord* OSWaitableGrp::priv_addEvent (const OSEvent &evt)
 OSWaitableGrp::sRecord* OSWaitableGrp::priv_addMsgQ (const HThreadMsgR &hRead)
 {
     sRecord *s = priv_newRecord (EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP | EPOLLET);
-    s->originType = eEventOrigin::msgQ;
+    s->originType = eWaitEventOrigin::msgQ;
     s->origin.ifMsgQ.hMsgQRead = hRead;
-    rhea::thread::getMsgQEvent (hRead, &s->origin.ifMsgQ.hEvent);
+    gos::thread::getMsgQEvent (hRead, &s->origin.ifMsgQ.event);
 
-    int fd = s->origin.ifMsgQ.hEvent.evfd;
+    int fd = s->origin.ifMsgQ.event.osEvt.evfd;
     int err = epoll_ctl (hfd, EPOLL_CTL_ADD, fd, &s->eventInfo);
     if (err)
     {
@@ -181,38 +180,17 @@ void OSWaitableGrp::removeMsgQ (const HThreadMsgR &hRead)
     sRecord *p = base;
     while (p)
     {
-        if (p->originType == eEventOrigin::msgQ)
+        if (p->originType == eWaitEventOrigin::msgQ)
         {
             if (p->origin.ifMsgQ.hMsgQRead == hRead)
             {
-                priv_onRemove (p->origin.ifMsgQ.hEvent.evfd);
+                priv_onRemove (p->origin.ifMsgQ.event.osEvt.evfd);
                 return;
             }
         }
         p = p->next;
     }
 }
-
-
-//***********************************************
-OSWaitableGrp::sRecord* OSWaitableGrp::priv_addSerialPort (const OSSerialPort &sp)
-{
-    sRecord *s = priv_newRecord (EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP);
-    s->originType = eEventOrigin::serialPort;
-    s->origin.osSerialPort = sp;
-
-    int fd = sp.fd;
-    int err = epoll_ctl (hfd, EPOLL_CTL_ADD, fd, &s->eventInfo);
-    if (err)
-    {
-        priv_findAndRemoveRecordByFD(fd);
-        return NULL;
-    }
-
-
-    return s;
-}
-
 
 //***********************************************
 u8 OSWaitableGrp::wait(u32 timeoutMSec)
@@ -235,12 +213,12 @@ u8 OSWaitableGrp::wait(u32 timeoutMSec)
 }
 
 //***********************************************
-OSWaitableGrp::eEventOrigin OSWaitableGrp::getEventOrigin (u8 iEvent) const
+eWaitEventOrigin OSWaitableGrp::getEventOrigin (u8 iEvent) const
 {
     assert (iEvent < nEventsReady);
 
     sRecord *s = (sRecord*)events[iEvent].data.ptr;
-    return (eEventOrigin)s->originType;
+    return (eWaitEventOrigin)s->originType;
 }
 
 //***********************************************
@@ -262,36 +240,27 @@ u32 OSWaitableGrp::getEventUserParamAsU32 (u8 iEvent) const
 }
 
 //***********************************************
-OSSocket& OSWaitableGrp::getEventSrcAsOSSocket (u8 iEvent) const
+gos::Socket& OSWaitableGrp::getEventSrcAsSocket (u8 iEvent) const
 {
-    assert (getEventOrigin(iEvent) == eEventOrigin::socket);
+    assert (getEventOrigin(iEvent) == eWaitEventOrigin::socket);
 
     sRecord *s = (sRecord*)events[iEvent].data.ptr;
-    return s->origin.osSocket;
+    return s->origin.socket;
 }
 
 //***********************************************
-OSEvent& OSWaitableGrp::getEventSrcAsOSEvent (u8 iEvent) const
+gos::Event& OSWaitableGrp::getEventSrcAsEvent (u8 iEvent) const
 {
-    assert (getEventOrigin(iEvent) == eEventOrigin::osevent);
+    assert (getEventOrigin(iEvent) == eWaitEventOrigin::osevent);
 
     sRecord *s = (sRecord*)events[iEvent].data.ptr;
-    return s->origin.osEvent;
-}
-
-//***********************************************
-OSSerialPort& OSWaitableGrp::getEventSrcAsOSSerialPort (u8 iEvent) const
-{
-    assert (getEventOrigin(iEvent) == eEventOrigin::serialPort);
-
-    sRecord *s = (sRecord*)events[iEvent].data.ptr;
-    return s->origin.osSerialPort;
+    return s->origin.event;
 }
 
 //***********************************************
 HThreadMsgR& OSWaitableGrp::getEventSrcAsMsgQ(u8 iEvent) const
 {
-    assert (getEventOrigin(iEvent) == eEventOrigin::msgQ);
+    assert (getEventOrigin(iEvent) == eWaitEventOrigin::msgQ);
 
     sRecord *s = (sRecord*)events[iEvent].data.ptr;
     return s->origin.ifMsgQ.hMsgQRead;

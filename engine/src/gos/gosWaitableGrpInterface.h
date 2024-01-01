@@ -12,10 +12,10 @@ namespace gos
 	* e poi attendere che almeno uno di questi venga segnalata (tramite la wait())
 	*
 	* E' un oggetto che accetta altri oggetti (di tipo socket e/o event) e poi espone una funzione
-	* wait() che è in grado di sospendere l'esecuzione fino a che uno (o più) qualunque degli oggetti che gli
+	* wait() che ï¿½ in grado di sospendere l'esecuzione fino a che uno (o piï¿½) qualunque degli oggetti che gli
 	* sono stati "addati" non genera un evento.
 	*
-	* Nel caso degli OSEvent, è sufficiente chiamare il relativo metodo fire() per far scattare l'evento.
+	* Nel caso degli OSEvent, ï¿½ sufficiente chiamare il relativo metodo fire() per far scattare l'evento.
 	* Nel caso di OSSocket, l'evento scatta quando ci sono dei dati pronti per essere read(), o quando la socket viene disconnessa.	* 
 	*
 	*
@@ -33,9 +33,9 @@ namespace gos
 
 		virtual bool			cleanAll() = 0;
 
-		virtual bool            addSocket (gos::Socket &sok, void *userParam = NULL) = 0;
-		virtual bool            addSocket (gos::Socket &sok, u32 userParam)	= 0;
-		virtual void            removeSocket(gos::Socket &sok) = 0;
+		virtual bool            addSocket (const gos::Socket &sok, void *userParam = NULL) = 0;
+		virtual bool            addSocket (const gos::Socket &sok, u32 userParam)	= 0;
+		virtual void            removeSocket(const gos::Socket &sok) = 0;
 
 		virtual bool            addEvent(const gos::Event &evt, void *userParam = NULL)	= 0;
 		virtual bool            addEvent(const gos::Event &evt, u32 userParam) = 0;
@@ -49,12 +49,12 @@ namespace gos
  		 * Per indicare il tempo di wait minimo possibile, usare timeoutMSec=0
 		 * Tutti gli altri valori sono comunque validi ma non assumono significati particolari
 		 *
-		 * La chiamata è bloccante per almeno [timeoutMSec]
-		 * Ritorna il numero di eventi ricevuti oppure 0 se non sono stati ricevuti eventi ed il timeout è scaduto
+		 * La chiamata ï¿½ bloccante per almeno [timeoutMSec]
+		 * Ritorna il numero di eventi ricevuti oppure 0 se non sono stati ricevuti eventi ed il timeout ï¿½ scaduto
 		 * Nel caso di eventi ricevuti, usare getEventOrigin() per conoscere il tipo di oggetto che ha generato
 		 * l'evento i-esimo (es: gos::Socket oppure gos::Event) e usare la getEventSrc() per ottenere il puntatore all'oggetto
 		 *
-		 * Il numero massimo di eventi per chiamata è MAX_EVENTS_PER_CALL
+		 * Il numero massimo di eventi per chiamata ï¿½ MAX_EVENTS_PER_CALL
 		 * Ad ogni chiamata di wait(), eventuali eventi precedentemente ritornati andranno persi
 		 */
 		virtual u8					wait (u32 timeoutMSec) = 0;
@@ -65,7 +65,7 @@ namespace gos
 
 		virtual void*				getEventUserParamAsPtr(u8 iEvent) const = 0;
 
-		/* ritorna lo "userParam" così come definito durante la chiamana addSocket() e/o addEvent() / addSerialPort / addMsgQ */
+		/* ritorna lo "userParam" cosï¿½ come definito durante la chiamana addSocket() e/o addEvent() / addSerialPort / addMsgQ */
 		virtual u32					getEventUserParamAsU32(u8 iEvent) const = 0;
 		
 		/* se getEventOrigin() == eWaitEventOrigin::socket, ritorna la soket che ha scatenato l'evento */

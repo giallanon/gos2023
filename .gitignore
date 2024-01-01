@@ -15,3 +15,7 @@ engine/bin/testKernel__windows_Debug.exe
 *.ilk
 engine/bin/testVulkan__windows_Debug.exe
 .vs/
+
+engine/bin/ProfileServer/ProfileServer__linux_Debug
+
+engine/bin/ProfileServer/ProfileServer__linux_Release

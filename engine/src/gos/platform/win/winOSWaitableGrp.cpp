@@ -52,7 +52,7 @@ OSWaitableGrp::sRecord* OSWaitableGrp::priv_newRecord ()
 }
 
 //***********************************************
-void OSWaitableGrp::removeSocket (gos::Socket &sok)
+void OSWaitableGrp::removeSocket (const gos::Socket &sok)
 { 
 	assert (debug_bWaiting == 0);
 	gos::Allocator *allocator = gos::getSysHeapAllocator();
@@ -97,7 +97,7 @@ void OSWaitableGrp::removeSocket (gos::Socket &sok)
 }
 
 //***********************************************
-OSWaitableGrp::sRecord* OSWaitableGrp::priv_addSocket (gos::Socket &sok)
+OSWaitableGrp::sRecord* OSWaitableGrp::priv_addSocket (const os::Socket &sok)
 {
 	assert(debug_bWaiting == 0);
 

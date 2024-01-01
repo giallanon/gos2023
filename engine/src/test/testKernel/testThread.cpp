@@ -130,8 +130,7 @@ namespace test3
         HThreadMsgR hMsgQRead = param->hMsgQRead;
 
         //questo thread rimane in attesa di ricevere msg
-        //gos::WaitableGrp waitable;
-        platform::OSWaitableGrp  waitable;
+        gos::WaitableGrp waitable;
         TEST_ASSERT(true == waitable.addMsgQ (hMsgQRead, 675));
 
         u8 nEvents = waitable.wait(3000);

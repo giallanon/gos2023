@@ -2,6 +2,36 @@
 
 using namespace gos;
 
+#define ENUM_TO_STRING_CASE(enumClass,enumValue) case enumClass::enumValue: return #enumValue
+
+//*************************************************************************
+const char* utils::enumToString (eSocketError s)
+{
+    switch (s)
+    {
+    default: return "invalid value";
+    ENUM_TO_STRING_CASE(eSocketError, none);
+    ENUM_TO_STRING_CASE(eSocketError, denied);
+    ENUM_TO_STRING_CASE(eSocketError, unsupported);
+    ENUM_TO_STRING_CASE(eSocketError, tooMany);
+    ENUM_TO_STRING_CASE(eSocketError, noMem);
+    ENUM_TO_STRING_CASE(eSocketError, addressInUse);
+    ENUM_TO_STRING_CASE(eSocketError, addressProtected);
+    ENUM_TO_STRING_CASE(eSocketError, alreadyBound);
+    ENUM_TO_STRING_CASE(eSocketError, invalidDescriptor);
+    ENUM_TO_STRING_CASE(eSocketError, errorSettingReadTimeout);
+    ENUM_TO_STRING_CASE(eSocketError, errorSettingWriteTimeout);
+    ENUM_TO_STRING_CASE(eSocketError, errorListening);
+    ENUM_TO_STRING_CASE(eSocketError, no_such_host);
+    ENUM_TO_STRING_CASE(eSocketError, connRefused);
+    ENUM_TO_STRING_CASE(eSocketError, timedOut);
+    ENUM_TO_STRING_CASE(eSocketError, invalidParameter);
+    ENUM_TO_STRING_CASE(eSocketError, unknown);
+    ENUM_TO_STRING_CASE(eSocketError, unable_to_handshake);
+    }
+}
+
+
 //******************************************
 u8	utils::getFormatSize (eDataFormat f)
 {
@@ -227,4 +257,24 @@ u8 gos::utils::bufferWriteI64_LSB_MSB (u8 *buffer, i64 val)
 	buffer[1] = (u8)((val & 0x000000000000FF00) >> 8); 
 	buffer[0] = (u8) (val & 0x00000000000000FF); 
     return 8;
+}
+
+//*************************************************************************
+u8 utils::simpleChecksum8_calc (const void *bufferIN, u32 lenInBytes)
+{
+    const u8 *buffer = (const u8*)bufferIN;
+    u8 ret = 0;
+    for (u32 i=0;i<lenInBytes;i++)
+        ret += buffer[i];
+    return ret;
+}
+
+//*************************************************************************
+u16 utils::simpleChecksum16_calc (const void *bufferIN, u32 lenInBytes)
+{
+    const u8 *buffer = (const u8*)bufferIN;
+    u16 ret = 0;
+    for (u32 i=0;i<lenInBytes;i++)
+        ret += buffer[i];
+    return ret;
 }

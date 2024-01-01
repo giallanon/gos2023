@@ -6,7 +6,7 @@
 	#include "platform/win/winOSWaitableGrp.h"
 #endif
 #ifdef GOS_PLATFORM__LINUX
-	#include "platform/linux/winOSWaitableGrp.h"
+	#include "platform/linux/linuxOSWaitableGrp.h"
 #endif
 
 

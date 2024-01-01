@@ -78,7 +78,7 @@ function(makeLibraryName varName libName)
 
     set(${varName} "${temp}" PARENT_SCOPE)
     if(NOT EXISTS ${temp})
-        message(FATAL_ERROR "Can't find ${temp}")
+        message(WARNING "Can't find ${temp}")
     endif()    
 endfunction()
 
@@ -92,3 +92,4 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGeom)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGPU)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/ProfileServer)
