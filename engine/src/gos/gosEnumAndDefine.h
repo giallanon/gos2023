@@ -148,6 +148,14 @@ enum class eThreadError : u8
     unknown = 0xff
 };
 
+enum class eWaitEventOrigin : u8
+{
+	socket = 1,
+	osevent = 2,
+	serialPort = 3,
+	msgQ = 4,
+	deleted = 5
+};
 
 namespace gos
 {

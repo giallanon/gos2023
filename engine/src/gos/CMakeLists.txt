@@ -70,6 +70,9 @@ platform/win/winOSConsole.h
 platform/win/winOSFS.cpp
 platform/win/winOSInclude.h
 platform/win/winOSSocket.cpp
+platform/win/winOSThread.cpp
+platform/win/winOSWaitableGrp.cpp
+platform/win/winOSWaitableGrp.h
 
 string/gosString.cpp 
 string/gosStringANSI.cpp 
@@ -105,6 +108,8 @@ gosThreadMsgQ.h
 gosThreadMsgQ.cpp
 gosUtils.cpp
 gosUtils.h
+gosWaitableGrpInterface.h
+gosWaitableGrp.h
 )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

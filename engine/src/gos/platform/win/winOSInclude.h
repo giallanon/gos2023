@@ -76,6 +76,8 @@ typedef uintptr_t   uiPtr;      //un "intero" la cui dimensione in byte dipende 
 namespace platform
 {
     typedef HANDLE			OSFile;
+	typedef HANDLE			OSThread;
+	typedef void* (*OSThreadFunction)(void *userParam);
 
 	typedef struct sOSCriticalSection
 	{

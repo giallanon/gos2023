@@ -37,7 +37,7 @@ namespace platform
 	bool            console_internal_init();
 	void			console_internal_deinit();
 
-	void			console_trap_CTRL_C (ConsoleTrap_CTRL_C trapFn, void *userParam);
+	void			console_trap_CTRL_C (GOS_ConsoleTrap_CTRL_C trapFn, void *userParam);
 	void			console_setTitle (const char *title);
 
 
@@ -58,6 +58,11 @@ namespace platform
 	inline bool     eventWait (const OSEvent &ev, size_t timeoutMSec)					{ if (WAIT_OBJECT_0 == ::WaitForSingleObject(ev.h, (u32)timeoutMSec)) return true; return false; }
 	inline void     eventSetInvalid(OSEvent &ev)										{ ev.h = INVALID_HANDLE_VALUE; }
 	inline bool		eventIsInvalid(const OSEvent &ev)									{ return (ev.h == INVALID_HANDLE_VALUE);  }
+
+	eThreadError    createThread(OSThread &out_handle, OSThreadFunction threadFunction, u32 stackSizeInKb, void *userParam);
+	void            waitThreadEnd(OSThread &handle);
+	void            destroyThread (OSThread &handle);
+
 
 				
     /******************************************************

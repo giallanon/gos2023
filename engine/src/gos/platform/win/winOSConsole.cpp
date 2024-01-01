@@ -5,8 +5,8 @@
 
 struct sWin32ConsoleData
 {
-	ConsoleTrap_CTRL_C	trapFN_CTRL_C;
-	void				*trapFN_CTRL_C_userParam;
+	GOS_ConsoleTrap_CTRL_C	trapFN_CTRL_C;
+	void					*trapFN_CTRL_C_userParam;
 };
 
 static sWin32ConsoleData	win32ConsoleData;
@@ -38,7 +38,7 @@ BOOL WINAPI  Win32Internal_consoleHandlerRoutine (DWORD dwCtrlType)
 }
 
 //*****************************************************
-void platform::console_trap_CTRL_C (ConsoleTrap_CTRL_C trapFn, void *userParam)
+void platform::console_trap_CTRL_C (GOS_ConsoleTrap_CTRL_C trapFn, void *userParam)
 {
 	win32ConsoleData.trapFN_CTRL_C = trapFn;
 	win32ConsoleData.trapFN_CTRL_C_userParam = userParam;

@@ -11,11 +11,17 @@ typedef gos::HandleT<6,2,10,14>	HThreadMsgHandle;		//2^10=1024 => num totale di 
 struct HThreadMsgR 
 {
     HThreadMsgHandle    hRead;
+
+    bool    operator== (const HThreadMsgR &b) const                        { return (hRead==b.hRead); }
+    bool    operator!= (const HThreadMsgR &b) const                        { return (hRead!=b.hRead); }
 };
 
 struct HThreadMsgW
 {
     HThreadMsgHandle    hWrite;
+
+    bool    operator== (const HThreadMsgW &b) const                        { return (hWrite==b.hWrite); }
+    bool    operator!= (const HThreadMsgW &b) const                        { return (hWrite!=b.hWrite); }
 };
 
 

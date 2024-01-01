@@ -78,7 +78,7 @@ public:
                      */
 
     OSSocket&       getEventSrcAsOSSocket (u8 iEvent) const;
-                    /* se getEventOrigin() == eEventOrigin::socket, ritorna la soket che ha scatenato l'evento
+                    /* se getEventOrigin() == eWaitEventOrigin::socket, ritorna la soket che ha scatenato l'evento
                      */
 
     OSEvent&        getEventSrcAsOSEvent (u8 iEvent) const;
