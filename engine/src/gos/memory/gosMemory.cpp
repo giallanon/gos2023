@@ -15,10 +15,10 @@ using namespace gos;
 bool mem::priv_init (const gos::sGOSInit &init)
 {
 	systemHeapAllocator = new GOSMemGlobalHeapAllocatorTS("sysHeap");
-	systemHeapAllocator->setup (init._startingSizeOfDefaultHeapAllocator_MB * 1024 * 104);
+	systemHeapAllocator->setup (init._memory.startingSizeOfDefaultHeapAllocator_MB * 1024 * 104);
 
 	systemScrapAllocator = new GOSMemGlobalHeapAllocatorTS("sysScrap");
-	systemScrapAllocator->setup (init._startingSizeOfScrapAllocator_MB * 1024 * 104);
+	systemScrapAllocator->setup (init._memory.startingSizeOfScrapAllocator_MB * 1024 * 104);
 	
 	return true;
 }

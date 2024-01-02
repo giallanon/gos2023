@@ -101,16 +101,12 @@ eBgColor console::setBgColor (const eBgColor c)
 }
 
 //***************************************
-void console::clear()
-{
-    printf (GOS_CONSOLE_ESC "[2J");
-}
-
-//***************************************
-void console::clearLine()
-{
-    printf (GOS_CONSOLE_ESC "[2K");
-}
+void console::clear()               { printf (GOS_CONSOLE_ESC "[2J"); }
+void console::clearLine()           { printf (GOS_CONSOLE_ESC "[2K"); }
+void console::clearEndOfLine()      { printf (GOS_CONSOLE_ESC "[K"); }
+void console::clearStartOfLine()    { printf (GOS_CONSOLE_ESC "[1K"); }
+void console::clearDown()           { printf (GOS_CONSOLE_ESC "[J"); }
+void console::clearUp()             { printf (GOS_CONSOLE_ESC "[1J"); }
 
 //***************************************
 void console::cursorMove (u16 x, u16 y)
@@ -129,4 +125,13 @@ void console::cursorMoveX (u16 x)
 void console::cursorMoveY (u16 y)
 {
     printf (GOS_CONSOLE_ESC "[%dd", y);
+}
+
+//***************************************
+void console::setScrollingArea (u16 rowStart, u16 rowEnd)
+{
+    if (rowStart==0 && rowEnd==0)
+        printf (GOS_CONSOLE_ESC "[r");  //tutto schermo
+    else
+    printf (GOS_CONSOLE_ESC "[%d;%dr", rowStart, rowEnd);
 }

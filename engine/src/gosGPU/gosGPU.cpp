@@ -16,6 +16,7 @@ GPU::GPU()
     vkInstance = VK_NULL_HANDLE;
     vkSurface = VK_NULL_HANDLE;
     vkDebugMessenger = VK_NULL_HANDLE;
+    defaultViewportHandle.setInvalid();
 }
 
 //********************************************************** 
@@ -32,6 +33,8 @@ void GPU::deinit()
 
     gos::logger::log ("GPU::deinit()\n");
     gos::logger::incIndent();
+        viewport_delete(defaultViewportHandle);
+
         priv_deinitandleLists();
         priv_deinitVulkan();
         priv_deinitWindowSystem();
@@ -40,7 +43,6 @@ void GPU::deinit()
     GOSDELETE(gos::getSysHeapAllocator(), allocator);
     allocator = NULL;
 }    
-
 
 //********************************************************** 
 bool GPU::init (u16 width, u16 height, const char *appName)
@@ -68,6 +70,10 @@ bool GPU::init (u16 width, u16 height, const char *appName)
         break;
     }
 
+    //default viewport
+    viewport_create ("0", "0", "0-", "0-", &defaultViewportHandle);
+
+    //fine
     if (bSuccess)
         gos::logger::log (eTextColor::green, "GPU::init => OK\n");
     else
@@ -211,6 +217,8 @@ bool GPU::priv_initHandleLists()
     gos::logger::log ("GPU::priv_initHandleLists()\n");
     shaderList.setup (allocator);
     vtxDeclList.setup (allocator);
+    viewportlList.setup (allocator);
+    viewportHandleList.setup (allocator, 32);   //questa mi serve per tenere traccia di tutti gli handle creati dato che durante il resize della window, devo andare ad aggiustare tutte le viewport
     return true;
 }
 
@@ -218,8 +226,10 @@ bool GPU::priv_initHandleLists()
 void  GPU::priv_deinitandleLists()
 {
     gos::logger::log ("GPU::priv_deinitandleLists()\n");
-    shaderList.unsetup();
+    viewportlList.unsetup();
+    viewportHandleList.unsetup();
     vtxDeclList.unsetup();
+    shaderList.unsetup();
 }
 
 //************************************
@@ -335,6 +345,49 @@ VkResult GPU::swapChain_present (const VkSemaphore *semaphoreHandleList, u32 sem
     presentInfo.pImageIndices = &imageIndex;
     
     return vkQueuePresentKHR (vulkan.gfxQ, &presentInfo);    
+}
+
+//**********************************************************
+bool GPU::swapChain_recreate ()
+{
+    gos::logger::log (eTextColor::green, "GPU::swapChain_recreate()\n");
+    gos::logger::incIndent();
+
+    int width = 0;
+    int height = 0;
+    while (width == 0 || height == 0) 
+    {
+        gos::logger::log ("windows size is weird (w=%d, h=%d), waiting...\n", width, height);
+        glfwGetFramebufferSize(window.win, &width, &height);
+        glfwWaitEvents();
+    }
+
+
+    bool ret = true;
+    vkDeviceWaitIdle (vulkan.dev);
+
+    vulkan.swapChainInfo.destroy(vulkan.dev);
+
+    //ricreazione swap chain
+    if (!vulkanCreateSwapChain (vulkan, this->vkSurface, &vulkan.swapChainInfo))
+    {
+        gos::logger::err ("can't create swap chain\n");
+        ret = false;
+    }
+    
+    //aggiorno tutte le viewport
+    const u32 n = viewportHandleList.getNElem();
+    for (u32 i=0; i<n; i++)
+    {
+        gos::gpu::Viewport *v;
+        if (viewportlList.fromHandleToPointer (viewportHandleList(i), &v))
+            v->resolve ((i16)vulkan.swapChainInfo.imageExtent.width, (i16)vulkan.swapChainInfo.imageExtent.height);
+    }
+
+
+
+    gos::logger::decIndent();
+    return ret;  
 }
 
 //************************************
@@ -486,7 +539,7 @@ void  GPU::toggleFullscreen()
     {
         //andiamo in full
         window.storeCurrentPosAndSize();
-        gos::logger::log ("going full screen, current win pos and size (%d,%d) (%d,%d)\n", window.x, window.y, window.w, window.h);
+        gos::logger::log ("going full screen, current win pos and size (%d,%d) (%d,%d)\n", window.storedX, window.storedY, window.storedW, window.storedH);
 
         monitor = glfwGetPrimaryMonitor();
         const GLFWvidmode *mode = glfwGetVideoMode(monitor);
@@ -495,43 +548,11 @@ void  GPU::toggleFullscreen()
     else
     {
         //torniamo in windowed
-        gos::logger::log ("going in windowed mode, current win pos and size (%d,%d) (%d,%d)\n", window.x, window.y, window.w, window.h);
-        glfwSetWindowMonitor(window.win, NULL, window.x, window.y, window.w, window.h, 0);
+        gos::logger::log ("going in windowed mode, current win pos and size (%d,%d) (%d,%d)\n", window.storedX, window.storedY, window.storedW, window.storedH);
+        glfwSetWindowMonitor(window.win, NULL, window.storedX, window.storedY, window.storedW, window.storedH, 0);
     }
 
     gos::logger::decIndent();
-}
-
-//**********************************************************
-bool GPU::swapChain_recreate ()
-{
-    gos::logger::log (eTextColor::green, "GPU::swapChain_recreate()\n");
-    gos::logger::incIndent();
-
-    int width = 0;
-    int height = 0;
-    while (width == 0 || height == 0) 
-    {
-        gos::logger::log ("windows size is weird (w=%d, h=%d), waiting...\n", width, height);
-        glfwGetFramebufferSize(window.win, &width, &height);
-        glfwWaitEvents();
-    }
-
-
-    bool ret = true;
-    vkDeviceWaitIdle (vulkan.dev);
-
-    vulkan.swapChainInfo.destroy(vulkan.dev);
-
-    //ricreazione swap chain
-    if (!vulkanCreateSwapChain (vulkan, this->vkSurface, &vulkan.swapChainInfo))
-    {
-        gos::logger::err ("can't create swap chain\n");
-        ret = false;
-    }    
-    
-    gos::logger::decIndent();
-    return ret;  
 }
 
 //************************************
@@ -614,3 +635,49 @@ void GPU::vtxDecl_delete (GPUVtxDeclHandle &handle)
     }
 }
 
+//************************************
+bool GPU::viewport_create (const gos::Pos2D &x,const gos::Pos2D &y, const gos::Dim2D &w, const gos::Dim2D &h, GPUViewportHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    gpu::Viewport *v = viewportlList.reserve (out_handle);
+    if (NULL == v)
+    {
+        gos::logger::err ("GPU::viewport_create() => can't reserve a new vport!\n");
+        out_handle->setInvalid();
+        return false;
+    }
+
+    viewportHandleList.append (*out_handle);
+
+    //imposto la viewport
+    v->x = x;
+    v->y = y;
+    v->width = w;
+    v->height = h;
+
+    int width, height;
+    window.getCurrentSize (&width, &height);
+    v->resolve ((i16)width, (i16)height);
+    return true;
+}
+
+//************************************
+const gpu::Viewport* GPU::viewport_get (const GPUViewportHandle &handle) const
+{
+    gos::gpu::Viewport *v;
+    if (!viewportlList.fromHandleToPointer (handle, &v))
+        return NULL;
+    return v;
+}
+
+//************************************
+void GPU::viewport_delete (GPUViewportHandle &handle)
+{
+    gos::gpu::Viewport *v;
+    if (viewportlList.fromHandleToPointer (handle, &v))
+    {
+        viewportlList.release(handle);
+        viewportHandleList.findAndRemove(handle);
+        handle.setInvalid();
+    }
+}

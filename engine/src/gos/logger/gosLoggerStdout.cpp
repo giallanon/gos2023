@@ -10,6 +10,7 @@ using namespace gos;
 LoggerStdout::LoggerStdout()
 {
     gos::thread::mutexCreate(&mutex);
+    bShoudLogToStdout = true;
 	indent = 0;
     isANewLine = 1;
     logfile_filename = NULL;
@@ -34,7 +35,6 @@ LoggerStdout::~LoggerStdout()
             GOSFREE(localAllocator, logfile_filename);
             logfile_filename = NULL;
         }
-
     }
 }
 
@@ -239,6 +239,12 @@ void LoggerStdout::priv_log (const char *prefix, const char *format, va_list arg
     {
         priv_logToFile(buffer);    
     }
+
+    if (!bShoudLogToStdout)
+    {
+        return;
+    }
+
 
 	u32 i = 0;
     if (buffer[0] == '\n')

@@ -17,7 +17,7 @@ void runExample1 (gos::GPU *gpu)
 int main()
 {
     gos::sGOSInit init;
-    init.setDefaultForGame();
+    init.memory_setDefaultForGame();
     if (gos::init (init, "testVulkan"))
     {
         gos::GPU gpu;

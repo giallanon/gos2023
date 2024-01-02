@@ -1,5 +1,5 @@
-#ifndef _gosProtocolServer_h_
-#define _gosProtocolServer_h_
+#ifndef _gosServerTCP_h_
+#define _gosServerTCP_h_
 #include "gos.h"
 #include "gosFastArray.h"
 #include "gosThreadMsgQ.h"
@@ -7,6 +7,7 @@
 #include "logger/gosLoggerNull.h"
 #include "protocol/gosIProtocol.h"
 #include "protocol/gosProtocolChSocketTCP.h"
+#include "protocol/gosProtocolBuffer.h"
 
 //A per "chunk", B per "user", C per "index", D per "counter".
 typedef gos::HandleT<6,2,10,14>	HSokServerClientHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^6=64
@@ -23,12 +24,12 @@ struct HSokServerClient
 namespace gos
 {
     /**************************************************************************
-     * ProtocolSocketServer
+     * ServerTCP
      *
 	 *	Apre una socket in listen sulla porta [portNumber] (vedi start) e attende connessioni.
 	 *	I client che si connettono possono usare uno qualunque dei protocolli che implementano IProtocol
      */
-    class ProtocolSocketServer
+    class ServerTCP
     {
     public:
         enum class eEventType: u8
@@ -50,9 +51,9 @@ namespace gos
         // AllocatorIN è usato internamente da questa classe per allocare tutto quello che le serve (es: i client, i buffer interni e via dicendo).
         // Considerando che questa classe non è thread safe, potrebbe valere la pena utilizzare un allocator non thread safe se si vuole guadagnare qualcosina
         // in termini di performace
-                            ProtocolSocketServer (u8 maxClientAllowed, gos::Allocator *allocatorIN);
+                            ServerTCP (u8 maxClientAllowed, gos::Allocator *allocatorIN);
 
-        virtual             ~ProtocolSocketServer();
+        virtual             ~ServerTCP();
 
         void                useLogger (Logger *loggerIN)                                                                { if (NULL==loggerIN) logger=&nullLogger; else logger=loggerIN; }
 		
@@ -61,8 +62,8 @@ namespace gos
         void                close ();
         
         // aggiunge/rimuove un gos::Event all'elenco degli oggetti osservati dalla wait()
-        bool                addOSEventToWaitList (const gos::Event evt, u32 userParam=0)                                { return waitableGrp.addEvent (evt, userParam); }
-        void                removeOSEventFromWaitList (const gos::Event evt)                                            { waitableGrp.removeEvent (evt); }
+        bool                addEventToWaitList (const gos::Event evt, u32 userParam=0)                                { return waitableGrp.addEvent (evt, userParam); }
+        void                removeEventFromWaitList (const gos::Event evt)                                              { waitableGrp.removeEvent (evt); }
 
         bool                addMsgQToWaitList (const HThreadMsgR &hRead, u32 userParam)                                 { return waitableGrp.addMsgQ (hRead, userParam); }
         void                removeMsgQFromWaitList (const HThreadMsgR &hRead)                                           { waitableGrp.removeMsgQ (hRead); }
@@ -83,8 +84,8 @@ namespace gos
 
         eEventType          getEventType (u8 iEvent) const;
         
-        gos::Event*         getEventSrcAsOSEvent (u8 iEvent) const;
-		u32					getEventSrcAsOSEventUserParam (u8 iEvent) const;
+        gos::Event*         getEventSrcAsEvent (u8 iEvent) const;
+		u32					getEventSrcAsEventUserParam (u8 iEvent) const;
         
         HThreadMsgR         getEventSrcAsMsgQHandle (u8 iEvent) const;
         u32                 getEventSrcAsMsgQUserParam (u8 iEvent) const;
@@ -190,4 +191,4 @@ namespace gos
 } //namespace gos
 
 
-#endif // _gosProtocolServer_h_
+#endif // _gosServerTCP_h_

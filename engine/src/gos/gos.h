@@ -3,6 +3,7 @@
 #include "platform/gosPlatform.h"
 #include "gosEnumAndDefine.h"
 #include "memory/gosMemory.h"
+#include "logger/gosLogger.h"
 #include "gosString.h"
 #include "dataTypes/gosDateTime.h"
 #include "gosRandom.h"
@@ -15,22 +16,23 @@ namespace gos
 	void				deinit();
 
 	const char*			getAppName();
-    inline const u8* 	getAppPathNoSlash ()					{ return platform::getAppPathNoSlash(); }
-						//ritorna il path assoluto dell'applicazione, senza slash finale
 
-    inline const u8*    getPhysicalPathToWritableFolder()		{ return platform::getPhysicalPathToWritableFolder(); }
-						//ritorna il path di una cartella nella quale è sicuramente possibile scrivere
-						//Sui sistemi windows per es, ritorna una cosa del tipo "C:\Users\NOME_UTENTE".
-						//Sui sistemi linux, ritorna generalmente lo stesso path dell'applicazione
+	//ritorna il path assoluto dell'applicazione, senza slash finale
+    inline const u8* 	getAppPathNoSlash ()					{ return platform::getAppPathNoSlash(); }
+
+	//ritorna il path di una cartella nella quale è sicuramente possibile scrivere
+	//Il path creato dipende dalle impostazioni di "writableFolder) dei paraemtri di sGOSInit
+    const u8*    		getPhysicalPathToWritableFolder();
 
     u64        			getTimeSinceStart_msec();
     u64 				getTimeSinceStart_usec();
 	inline void         sleep_msec (size_t msec)				{ return platform::sleep_msec(msec); }
 					
+	//ritorna un num compreso tra 0 e 1 inclusi
 	f32					random01();
-							//ritorna un num compreso tra 0 e 1 inclusi
+							
+	//ritorna un u32 compreso tra 0 e iMax incluso							
 	u32					randomU32(u32 iMax);
-							//ritorna un u32 compreso tra 0 e iMax incluso
 
 	inline Allocator*	getSysHeapAllocator()					{ return mem::getSysHeapAllocator(); }
 	inline Allocator*	getScrapAllocator()						{ return mem::getScrapAllocator(); }
@@ -55,6 +57,7 @@ namespace gos
 	 */
 	namespace logger
 	{
+		Logger*	getSystemLogger();
         void	incIndent();
 		void	decIndent();
 
@@ -184,10 +187,17 @@ namespace gos
 		eBgColor		setBgColor (const eBgColor c);
 
 		void			clear();
-		void			clearLine();			//cancella la riga dove e' attualmente posizionato il cursore
+		void			clearLine();				//cancella la riga dove e' attualmente posizionato il cursore
+		void			clearEndOfLine();			//cancella a partire dall'attuale posizione del cursore fino a fine riga
+		void			clearStartOfLine();			//cancella a partire dall'attuale posizione del cursore fino a inizio riga
+		void			clearDown();				//cancella a partire dall'attuale riga fino a fondo schermo
+		void			clearUp();					//cancella a partire dall'attuale riga fino a inizio schermo
+		
 		void			cursorMove (u16 x, u16 y);
 		void			cursorMoveX (u16 x);
 		void			cursorMoveY (u16 y);
+
+		void 			setScrollingArea (u16 rowStart, u16 rowEnd);
 
 	} //namespace console
 

@@ -37,7 +37,7 @@ bool ProtocolConsole::handshake_clientSend(IProtocolChannel *ch, gos::Logger *lo
 	if (n >= protocol::RES_ERROR)
 	{
 		if (logger)
-			logger->log("error while waiting. Error code is [%d]r\n", n);
+			logger->log("error while waiting. Error code is [0x%08X]\n", n);
 		return false;
 	}
 

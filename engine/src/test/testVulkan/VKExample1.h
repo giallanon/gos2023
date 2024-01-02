@@ -1,7 +1,7 @@
 #ifndef _VKExample1_h_
 #define _VKExample1_h_
 #include "gosGPU.h"
-#include "Pipeline1.h"
+
 
 /************************************
  *  VulkanExample
@@ -18,16 +18,27 @@ public:
 
     void        toggleFullscreen()                          { gpu->toggleFullscreen(); }
 
-    
+
+private:    
+    static bool recordCommandBuffer (gos::GPU *gpu, 
+                                    const VkRenderPass &vkRenderPassHandle, 
+                                    const VkFramebuffer &vkFrameBufferHandle,
+                                    const VkPipeline &vkPipelineHandle,
+                                    VkCommandBuffer *out_commandBuffer);
 
 private:
-    bool                            recordCommandBuffer(u32 imageIndex, VkCommandBuffer &in_out_commandBuffer);
-    void                            mainLoop_waitEveryFrame();
+    bool        priv_createRenderPass (gos::GPU *gpu);
+    bool        priv_recreateFrameBuffers (gos::GPU *gpu, const VkRenderPass vkRenderPassHandle);
+    void        priv_destroyFrameBuffers (gos::GPU *gpu);
+    void        mainLoop_waitEveryFrame ();
 
 private:
-    gos::GPU        *gpu;
-    
-    Pipeline1       pipe1;
+    gos::GPU            *gpu;
+    gos::gpu::Pipeline  pipeline;
+    GPUShaderHandle     vtxShaderHandle;
+    GPUShaderHandle     fragShaderHandle;
+    VkRenderPass        vkRenderPassHandle;
+    VkFramebuffer       frameBufferHandleList[SWAPCHAIN_NUM_MAX_IMAGES];
 };
 
 

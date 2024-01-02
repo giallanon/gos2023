@@ -54,7 +54,7 @@ u32 IProtocolChannel::write (const u8 *bufferToWrite, u32 nBytesToWrite, u32 tim
 	u32 nWrittenSoFar = virt_write (bufferToWrite, nBytesToWrite);
 	
 	//if (nWrittenSoFar >= PROTORES_ERROR) return nWrittenSoFar;
-	if (nWrittenSoFar >= nBytesToWrite) // l'if qui sopra non serve perch� in caso di errore, sicuramente nWrittenSoFar � >= di nBytesToWrite e quindi questa
+	if (nWrittenSoFar >= nBytesToWrite) // l'if qui sopra non serve perche' in caso di errore, sicuramente nWrittenSoFar � >= di nBytesToWrite e quindi questa
 		return nWrittenSoFar;			// condizione da sola le copre entrambe
 
 	do

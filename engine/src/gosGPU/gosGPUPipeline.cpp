@@ -1,4 +1,4 @@
-#include "gosPipeline.h"
+#include "gosGPUPipeline.h"
 #include "../gos/gos.h"
 #include "gosGPU.h"
 #include "vulkan/gosGPUVukanHelpers.h"
@@ -14,8 +14,7 @@ Pipeline::Pipeline()
 
     gpu = NULL;            
     vkPipelineHandle = VK_NULL_HANDLE;
-    vkLayoutHandle = VK_NULL_HANDLE;
-    REMOVE_vkRenderPassHandle = VK_NULL_HANDLE;
+    vkPipeLayoutHandle = VK_NULL_HANDLE;
 
     shaderList.setup (allocator, 8);
 }
@@ -23,20 +22,17 @@ Pipeline::Pipeline()
 //******************************** 
 Pipeline::~Pipeline()
 {
-    priv_deleteVkHandle();
+    cleanUp();
     shaderList.unsetup ();
 }
 
 //******************************** 
-void Pipeline::priv_deleteVkHandle()
+void Pipeline::cleanUp()
 {
-    if (NULL == gpu)
-        return;
-
-    if (VK_NULL_HANDLE != vkLayoutHandle)
+    if (VK_NULL_HANDLE != vkPipeLayoutHandle)
     {
-        vkDestroyPipelineLayout (gpu->REMOVE_getVkDevice(), vkLayoutHandle, nullptr);
-        vkLayoutHandle = VK_NULL_HANDLE;
+        vkDestroyPipelineLayout (gpu->REMOVE_getVkDevice(), vkPipeLayoutHandle, nullptr);
+        vkPipeLayoutHandle = VK_NULL_HANDLE;
     }
 
     if (VK_NULL_HANDLE != vkPipelineHandle)
@@ -44,35 +40,47 @@ void Pipeline::priv_deleteVkHandle()
         vkDestroyPipeline (gpu->REMOVE_getVkDevice(), vkPipelineHandle, nullptr);
         vkPipelineHandle = VK_NULL_HANDLE;
     }
-
-    if (VK_NULL_HANDLE != REMOVE_vkRenderPassHandle)
-    {
-        vkDestroyRenderPass (gpu->REMOVE_getVkDevice(), REMOVE_vkRenderPassHandle, nullptr);
-        REMOVE_vkRenderPassHandle = VK_NULL_HANDLE;
-    }
-
-    gpu = NULL;
 }    
 
 //******************************** 
-void Pipeline::begin(GPU *gpuIN)
+Pipeline& Pipeline::begin(GPU *gpuIN)
 {
-    priv_deleteVkHandle();
+    cleanUp();
     gpu = gpuIN;
 
     shaderList.reset();
     setDrawPrimitive (eDrawPrimitive::trisList);
     vtxDeclHandle.setInvalid();
+
+     return *this;
 }
 
 //******************************** 
-bool Pipeline::end ()
+bool Pipeline::end (VkRenderPass &vkRenderPassHandle)
 {
     assert (VK_NULL_HANDLE == vkPipelineHandle);
-    assert (VK_NULL_HANDLE == vkLayoutHandle);
-    assert (VK_NULL_HANDLE == REMOVE_vkRenderPassHandle);
+    assert (VK_NULL_HANDLE == vkPipeLayoutHandle);
+    assert (VK_NULL_HANDLE != vkRenderPassHandle);
 
     VkResult result;
+
+    
+    //Pipeline layout
+    //Serve ad indicare il numero di "const push" disponibili alla pipe
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 0; // Optional
+    pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
+    pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+
+    result = vkCreatePipelineLayout (gpu->REMOVE_getVkDevice(), &pipelineLayoutInfo, nullptr, &vkPipeLayoutHandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::Pipeline::end() => vkCreatePipelineLayout() => %s\n", string_VkResult(result)); 
+        return false;
+    }
+
 
 
     //shader
@@ -153,10 +161,10 @@ bool Pipeline::end ()
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;      //fill o wirefram
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;        //questa e la successiva in sostanza indicano
+    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;     //il cull mode = ccq
     rasterizer.depthBiasEnable = VK_FALSE;
     rasterizer.depthBiasConstantFactor = 0.0f; // Optional
     rasterizer.depthBiasClamp = 0.0f; // Optional
@@ -209,29 +217,6 @@ bool Pipeline::end ()
     colorBlending.blendConstants[3] = 0.0f; // Optional            
 
 
-    //uniform & pipelinelayput
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0; // Optional
-    pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
-    pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-
-    result = vkCreatePipelineLayout (gpu->REMOVE_getVkDevice(), &pipelineLayoutInfo, nullptr, &vkLayoutHandle);
-    if (VK_SUCCESS != result)
-    {
-        gos::logger::err ("GPU::Pipeline::end() => vkCreatePipelineLayout() => %s\n", string_VkResult(result)); 
-        return false;
-    }
-
-
-
-    //render pass
-    //TODO: non deve stare qui dentro, deve esserci una classe esterna per definire il renderpass
-    REMOVE_priv_createRenderPass();
-
-
-
     //finalmente, creazione della pipe
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -245,8 +230,8 @@ bool Pipeline::end ()
     pipelineInfo.pDepthStencilState = nullptr; // Optional
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = vkLayoutHandle;
-    pipelineInfo.renderPass = REMOVE_vkRenderPassHandle;
+    pipelineInfo.layout = vkPipeLayoutHandle;
+    pipelineInfo.renderPass = vkRenderPassHandle;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
     pipelineInfo.basePipelineIndex = -1; // Optional
@@ -261,57 +246,3 @@ bool Pipeline::end ()
     return true;
 }
 
-
-
-//************************************* 
-bool Pipeline::REMOVE_priv_createRenderPass ()
-{
-    bool ret = false;
-
-    //color buffer attachment
-    VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = gpu->swapChain_getImageFormat();
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;       //pulisci il buffer all'inizio del render pass
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;     //mantiene le info scritte in questo buffer alla fine del pass
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;        //stencil (dont care)
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;              //non mi interessa lo stato del buffer all'inizio, tanto lo pulisco
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;          //il formato finale deve essere prensentabile
-
-    VkAttachmentReference colorAttachmentRef{};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    //in questo esempio, voglio 1 solo "subpass" che opera sul color buffer
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = NULL;
-
-    //dipendenza di questo subpassa da altri subpass (in questo caso non ce ne sono)=
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;    //indica il subpassa before questo
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;    //aspetto che swapchain abbia letto tutto quanto
-    dependency.srcAccessMask = 0;    
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-    //creazione del render pass
-    VkRenderPassCreateInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = &dependency;    
-
-    VkResult result = vkCreateRenderPass (gpu->REMOVE_getVkDevice(), &renderPassInfo, nullptr, &REMOVE_vkRenderPassHandle);
-    if (VK_SUCCESS == result)
-        ret = true;
-        
-    return ret;
-}

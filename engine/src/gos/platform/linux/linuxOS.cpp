@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include <sys/reboot.h>
 #include <malloc.h>
+#include <pwd.h>
 #include <linux/wireless.h>
 #include "../../gosEnumAndDefine.h"
 #include "../../gos.h"
@@ -18,7 +19,7 @@ struct	sLinuxPlatformData
 {
     u32         memory_pageSize;
     u8	        *appPathNoSlash;
-    u8	        *writableFolderPathNoSlash;
+    u8	        *userFolderPathNoSlash;
 };
 static sLinuxPlatformData	linuxPlatformData;
 
@@ -30,17 +31,22 @@ bool platform::internal_init (const char *appName)
     //info sul sistema
     linuxPlatformData.memory_pageSize = sysconf(_SC_PAGE_SIZE);
 
-	//usa la malloc per allocare il path
+	//get_current_dir_name() usa la malloc per allocare il path
     linuxPlatformData.appPathNoSlash = (u8*)get_current_dir_name();
 	gos::fs::pathSanitizeInPlace (linuxPlatformData.appPathNoSlash);
 
+    //recupero il path della user folder
+    const char *homedir = getenv("HOME");
+    if (NULL == homedir)
+        homedir = getpwuid(getuid())->pw_dir;
+
     {
-        u32 n = strlen(reinterpret_cast<const char*>(linuxPlatformData.appPathNoSlash)) +2 + strlen(appName);
-        char *temp = (char*)malloc(n);
-        sprintf_s(temp, n, "%s/%s", linuxPlatformData.appPathNoSlash, appName);
-        linuxPlatformData.writableFolderPathNoSlash = reinterpret_cast<u8*>(temp);
+        u32 n = strlen(homedir);
+        char *temp = (char*)malloc(n + 1);
+        sprintf_s (temp, n+1, "%s", homedir);
+        linuxPlatformData.userFolderPathNoSlash = reinterpret_cast<u8*>(temp);
     }
-	gos::fs::pathSanitizeInPlace (linuxPlatformData.writableFolderPathNoSlash);
+	gos::fs::pathSanitizeInPlace (linuxPlatformData.userFolderPathNoSlash);
 
     //console stuff
 	if (!console_internal_init())
@@ -53,15 +59,15 @@ void platform::internal_deinit()
 {
 	console_internal_deinit();
 	
-	if (linuxPlatformData.writableFolderPathNoSlash)
-		::free(linuxPlatformData.writableFolderPathNoSlash);
+	if (linuxPlatformData.userFolderPathNoSlash)
+		::free(linuxPlatformData.userFolderPathNoSlash);
 	if (linuxPlatformData.appPathNoSlash)
 		::free(linuxPlatformData.appPathNoSlash);
 }
 
 //**********************************************
 const u8 *platform::getAppPathNoSlash()                                         { return linuxPlatformData.appPathNoSlash; }
-const u8 *platform::getPhysicalPathToWritableFolder()				            { return linuxPlatformData.writableFolderPathNoSlash; }
+const u8 *platform::getPhysicalPathToUserFolder()				                { return linuxPlatformData.userFolderPathNoSlash; }
 void* platform::memory_alignedAlloc (size_t sizeInByte, size_t alignmentPowerOfTwo)
 { 
     assert(GOS_IS_POWER_OF_TWO(alignmentPowerOfTwo));

@@ -29,13 +29,14 @@ vulkan/gosGPUVulkanEnumAndDefine.h
 gosGPU.cpp
 gosGPU.h
 gosGPUEnumAndDefine.h
+gosGPUPipeline.cpp
+gosGPUPipeline.h
 gosGPUShader.h
 gosGPUUtils.cpp
 gosGPUUtils.h
+gosGPUViewport.h
 gosGPUVtxDecl.h
 gosGPUVtxDeclBuilder.cpp
-gosPipeline.cpp
-gosPipeline.h
 )
 
 #====================================================

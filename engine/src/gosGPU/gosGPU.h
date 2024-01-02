@@ -3,6 +3,8 @@
 #include "gosGPUEnumAndDefine.h"
 #include "gosGPUVtxDecl.h"
 #include "gosGPUShader.h"
+#include "gosGPUPipeline.h"
+#include "gosGPUViewport.h"
 #include "../gos/gos.h"
 
 namespace gos
@@ -75,6 +77,14 @@ namespace gos
         VkResult            swapChain_acquireNextImage (u32 *out_imageIndex, u64 timeout_ns=UINT64_MAX, VkSemaphore semaphore=VK_NULL_HANDLE, VkFence fence=VK_NULL_HANDLE);
         VkResult            swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount, u32 imageIndex);
 
+        //================ viewport
+        bool                    viewport_create (const gos::Pos2D &x,const gos::Pos2D &y, const gos::Dim2D &w, const gos::Dim2D &h, GPUViewportHandle *out_handle);
+        const gpu::Viewport*    viewport_get (const GPUViewportHandle &handle) const;
+        void                    viewport_delete (GPUViewportHandle &handle);
+
+        /* ritorna la viewport di default che e' sempre garantito essere aggiornata alle attuali dimensioni della main window */
+        const gpu::Viewport*    viewport_getDefault () const                { return viewport_get(defaultViewportHandle); }
+
         //================ oggetti di sincronizzazione 
         void                waitIdle();
         bool                semaphore_create  (VkSemaphore *out);
@@ -92,9 +102,11 @@ namespace gos
 
         //================ shader
         bool                vtxshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)            { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::vertexShader, mainFnName, out_shaderHandle); }
+        bool                vtxshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                          { return priv_shader_createFromFile (reinterpret_cast<const u8*>(filename), eShaderType::vertexShader, mainFnName, out_shaderHandle); }
         bool                vtxshader_createFromFile (const u8 *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                            { return priv_shader_createFromFile (filename, eShaderType::vertexShader, mainFnName, out_shaderHandle); }
         
-        bool                fragshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)          { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::fragmentShader, mainFnName, out_shaderHandle); }
+        bool                fragshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)           { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::fragmentShader, mainFnName, out_shaderHandle); }
+        bool                fragshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                         { return priv_shader_createFromFile (reinterpret_cast<const u8*>(filename), eShaderType::fragmentShader, mainFnName, out_shaderHandle); }
         bool                fragshader_createFromFile (const u8 *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                           { return priv_shader_createFromFile (filename, eShaderType::fragmentShader, mainFnName, out_shaderHandle); }
         
         VkShaderModule      shader_getVkHandle (const GPUShaderHandle shaderHandle) const;
@@ -115,24 +127,17 @@ namespace gos
         struct sWindow
         {
         public:
-            sWindow()
-            {
-                win = NULL;
-                x = y = w = h = 0;
-            }
-
-            void storeCurrentPosAndSize()
-            {
-                glfwGetWindowPos (win, &x, &y);
-                glfwGetWindowSize (win, &w, &h);
-            }
+            sWindow()                                                   { win = NULL; storedX = storedY = storedW = storedH = 0; }
+            void getCurrentPos  (int *outX, int *outY)                  { glfwGetWindowPos (win, outX, outY); }
+            void getCurrentSize (int *dimX, int *dimY)                  { glfwGetWindowSize (win, dimX, dimY); }
+            void storeCurrentPosAndSize()                               { glfwGetWindowPos (win, &storedX, &storedY); glfwGetWindowSize (win, &storedW, &storedH); }
 
         public:
             GLFWwindow *win;
-            int x;
-            int y;
-            int w;
-            int h;
+            int storedX;
+            int storedY;
+            int storedW;
+            int storedH;
         };        
 
     private:
@@ -163,10 +168,14 @@ namespace gos
         VkSurfaceCapabilitiesKHR    vkSurfCapabilities;
         VtxDeclBuilder              vtxDeclBuilder;
 
-        HandleList<GPUShaderHandle, gpu::Shader>            shaderList;
-        HandleList<GPUVtxDeclHandle, gpu::VtxDecl>    vtxDeclList;
+        GPUViewportHandle           defaultViewportHandle;
+        HandleList<GPUShaderHandle, gpu::Shader>        shaderList;
+        HandleList<GPUVtxDeclHandle, gpu::VtxDecl>      vtxDeclList;
+        HandleList<GPUViewportHandle, gpu::Viewport>    viewportlList;
+        gos::FastArray<GPUViewportHandle>               viewportHandleList;
 
     };
 } //namespace gos
+
 
 #endif //_gosGPU_h_

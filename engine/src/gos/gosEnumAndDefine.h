@@ -165,23 +165,57 @@ namespace gos
         enum class eLogMode
         {
             none = 0,
-            console            
+            only_console,
+            only_file,
+            both_console_and_file
+        };
+
+        enum class eWritableFolder
+        {
+            inTheAppFolder = 0,     //in questo caso la directory si chiama "writable" ed e' una sottodir della dir dove sta l'eseguibile
+            inUserFolder            //in questo caso la dir si chiama come l'App ed e' una sottdir della userFolder definita dall'OS
         };
 
     public:
-                sGOSInit()                                          { setLogMode(eLogMode::console); setDefaultForGame(); }
+                sGOSInit()                                                  
+                { 
+                    setLogMode(eLogMode::only_console); 
+                    _memory.setDefaultForGame(); 
+                    _writableFolder.reset();
+                }
         
-        void    setDefaultForGame()                                 { setStartingSizeOfDefaultHeap_MB(1024); setStartingSizeOfScrapAllocator_MB (128); }
-        void    setDefaultForNonGame()                              { setStartingSizeOfDefaultHeap_MB(1); setStartingSizeOfScrapAllocator_MB(1); }
-        
-        void    setStartingSizeOfDefaultHeap_MB (u32 mb)            { _startingSizeOfDefaultHeapAllocator_MB = mb; }
-        void    setStartingSizeOfScrapAllocator_MB (u32 mb)         { _startingSizeOfScrapAllocator_MB = mb; }
-        void    setLogMode (eLogMode m)                             { _logMode=m; }
+        void    setLogMode (eLogMode m)                                     { _logMode=m; }
+
+        void    memory_setDefaultForGame()                                  { _memory.setDefaultForGame(); }
+        void    memory_setDefaultForNonGame()                               { _memory.memory_setDefaultForNonGame(); }
+        void    memory_setStartingSizeOfDefaultHeap_MB (u32 mb)             { _memory.startingSizeOfDefaultHeapAllocator_MB = mb; }
+        void    memory_setStartingSizeOfScrapAllocator_MB (u32 mb)          { _memory.startingSizeOfScrapAllocator_MB = mb; }
+
+        void    writableFolder_setMode (eWritableFolder m)                  { _writableFolder.mode = m; }
+        void    writableFolder_setSuffix (const char *suff)                 { sprintf_s (_writableFolder.suffix, sizeof(_writableFolder.suffix), "%s", suff); }
         
     public:
-        u32         _startingSizeOfDefaultHeapAllocator_MB;
-        u32         _startingSizeOfScrapAllocator_MB;
-        eLogMode    _logMode;
+        struct sMemory
+        {
+            u32         startingSizeOfDefaultHeapAllocator_MB;
+            u32         startingSizeOfScrapAllocator_MB;
+
+            void setDefaultForGame()                { startingSizeOfDefaultHeapAllocator_MB = 1024; startingSizeOfScrapAllocator_MB = 128; }
+            void memory_setDefaultForNonGame()      { startingSizeOfDefaultHeapAllocator_MB = 1;    startingSizeOfScrapAllocator_MB = 1; }
+        };
+
+        struct sWritableFolder
+        {
+            eWritableFolder mode;
+            char            suffix[32];
+
+            void reset() { mode = eWritableFolder::inTheAppFolder; memset (suffix, 0, sizeof(suffix)); }
+        };
+
+    public:
+        eLogMode        _logMode;
+        sMemory         _memory;
+        sWritableFolder _writableFolder;
     };
 
     struct File

@@ -14,9 +14,12 @@ namespace gos
     class LoggerStdout : public Logger
     {
     public:
+
+    public:
                             LoggerStdout();
 		virtual             ~LoggerStdout();
 
+        void                disableStdouLogging()                                           { bShoudLogToStdout=false; }
         void                enableFileLogging (const u8 *fullFolderPathAndName);
                                 //accetta il path di un folder dentro al quale crea un certo numero di file di log in totale autonomia
 
@@ -45,6 +48,7 @@ namespace gos
         void                priv_logToFileClearLogFolder();
 
     private:
+        bool                bShoudLogToStdout;
         u16                 indent;
         char                strIndent[MAX_INDENT_CHAR+1];
         char                buffer[INTERNAL_BUFFER_SIZE];

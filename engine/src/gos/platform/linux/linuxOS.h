@@ -21,7 +21,7 @@ namespace platform
     void            memory_alignedFree (void *p);
 
     const u8*       getAppPathNoSlash ();
-    const u8*       getPhysicalPathToWritableFolder();
+    const u8*       getPhysicalPathToUserFolder();
 
     void            sleep_msec (size_t msec);
 

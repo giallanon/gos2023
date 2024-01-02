@@ -27,6 +27,8 @@ dataTypes/gosDate.cpp
 dataTypes/gosDate.h
 dataTypes/gosDateTime.cpp
 dataTypes/gosDateTime.h
+dataTypes/gosPosDim2D.cpp
+dataTypes/gosPosDim2D.h
 dataTypes/gosTime24.cpp
 dataTypes/gosTime24.h
 dataTypes/gosTimer.cpp

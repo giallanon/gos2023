@@ -1,19 +1,49 @@
 #include "gos.h"
+#include "gosUtils.h"
 #include "TTest.h"
 
 void testGos (Tester &tester);
 void testMath(Tester &tester);
 void testThread (Tester &tester);
 
-//********************************+
-int main()
+//********************************
+#include "protocol/gosProtocolChSocketTCP.h"
+#include "protocol/gosProtocolConsole.h"
+void testTCP()
 {
-    gos::sGOSInit init;
-    init.setDefaultForGame();
-    if (!gos::init (init, "testKernel"))
-        return 1;
+    //tento la connessione
+    gos::Socket sok;
+    {
+        gos::socket::init (&sok);
+        eSocketError err =  gos::socket::openAsTCPClient (&sok, "127.0.0.1", 3765);
+        if (eSocketError::none != err)
+        {
+            gos::logger::err ("%s\n", gos::utils::enumToString (err));
+            return;
+        }
+    }
 
+    //bindo la socket al channel
+    gos::ProtocolChSocketTCP channel(gos::getSysHeapAllocator(), 1024, 8192);
+    channel.bindSocket(sok);
 
+    //handshake
+    gos::logger::log ("handshake\n");
+    gos::ProtocolConsole protocol (gos::getSysHeapAllocator(), 1024);
+    if (!protocol.handshake_clientSend (&channel, gos::logger::getSystemLogger()))
+    {
+            gos::logger::err ("unable to handshake\n");
+            return;
+    }
+
+    //siamo dentro!
+    protocol.write (&channel, (const u8*)"ciao", 4, 2000);
+    protocol.close (&channel);
+}
+
+//********************************
+void runAllTest()
+{
     Tester tester;
     {
         testGos (tester);
@@ -21,6 +51,19 @@ int main()
         testThread (tester);
     }
     tester.printReport();
+}
+
+//********************************+
+int main()
+{
+    gos::sGOSInit init;
+    init.memory_setDefaultForGame();
+    if (!gos::init (init, "testKernel"))
+        return 1;
+
+    testTCP();
+    //runAllTest();
+
 
     gos::deinit();
 

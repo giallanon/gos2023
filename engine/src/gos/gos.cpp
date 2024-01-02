@@ -10,6 +10,7 @@ struct sGOSGlobals
 	u64					timeStarted_usec;
 	gos::Logger			*logger;
 	char				*appName;
+	u8					*pathToWritableFolder;
 };
 
 struct ThreadInfo
@@ -26,6 +27,8 @@ static gos::Random		gosGlobalsRnd;
 //******************************************
 bool gos::init (const gos::sGOSInit &init, const char *appName)
 {
+	u8 s[1024];
+
 	//assert sulla dimensione dei datatype
 	assert (sizeof(i8) == 1);
 	assert (sizeof(i16) == 2);
@@ -44,11 +47,37 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 
 	if (!platform::internal_init(appName))
 		return false;
+
 	gosGlobals.timeStarted_usec = platform::getTimeNow_usec();
 
 	//console stuff
 	if (!console::priv_init())
 		return false;
+
+	//memory	
+	if (!mem::priv_init(init))
+		return false;
+
+
+	//determino il path alla writable folder
+	switch (init._writableFolder.mode)
+	{
+	case gos::sGOSInit::eWritableFolder::inTheAppFolder:
+		if (0x00 == init._writableFolder.suffix[0] )
+			gos::string::utf8::spf (s, sizeof(s), "%s/writable", platform::getAppPathNoSlash());
+		else
+			gos::string::utf8::spf (s, sizeof(s), "%s/writable%s", platform::getAppPathNoSlash(), init._writableFolder.suffix);
+		break;
+
+	case gos::sGOSInit::eWritableFolder::inUserFolder:
+		if (0x00 == init._writableFolder.suffix[0] )
+			gos::string::utf8::spf (s, sizeof(s), "%s/%s/writable", platform::getPhysicalPathToUserFolder(), appName);
+		else
+			gos::string::utf8::spf (s, sizeof(s), "%s/%s/writable%s", platform::getPhysicalPathToUserFolder(), appName, init._writableFolder.suffix);
+		break;
+	}
+	gosGlobals.pathToWritableFolder = gos::string::utf8::allocStr (gos::getSysHeapAllocator(), s);
+	gos::fs::folderCreate (gosGlobals.pathToWritableFolder);
 
 	//logger
 	switch (init._logMode)
@@ -58,15 +87,31 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 		gosGlobals.logger = new gos::LoggerNull();
 		break;
 
-	case gos::sGOSInit::eLogMode::console:
+	case gos::sGOSInit::eLogMode::only_console:
 		gosGlobals.logger = new gos::LoggerStdout();
 		break;
-	}
-	gos::logger::log (eTextColor::white, "%s is starting...\n", appName);
 
-	//memory	
-	if (!mem::priv_init(init))
-		return false;
+	case gos::sGOSInit::eLogMode::only_file:
+		{
+			LoggerStdout *logger = new gos::LoggerStdout();
+			logger->disableStdouLogging();
+			string::utf8::spf (s, sizeof(s), "%s/log", gos::getPhysicalPathToWritableFolder());
+			logger->enableFileLogging (s);
+			gosGlobals.logger = logger;
+		}
+		break;
+
+	case gos::sGOSInit::eLogMode::both_console_and_file:
+		{
+			LoggerStdout *logger = new gos::LoggerStdout();
+			string::utf8::spf (s, sizeof(s), "%s/log", gos::getPhysicalPathToWritableFolder());
+			logger->enableFileLogging (s);
+			gosGlobals.logger = logger;
+		}
+		break;
+	}
+
+	gos::logger::log (eTextColor::white, "%s is starting...\n", appName);
 
 	gosGlobals.appName = reinterpret_cast<char*>(gos::string::utf8::allocStr (gos::getSysHeapAllocator(), appName));
 
@@ -98,19 +143,23 @@ void gos::deinit()
 
 	thread::internal_deinit();
 	GOSFREE(gos::getSysHeapAllocator(), gosGlobals.appName);
+	GOSFREE(gos::getSysHeapAllocator(), gosGlobals.pathToWritableFolder);
+
 	console::priv_deinit();
 	mem::priv_deinit();
 	platform::internal_deinit();
 }
 
 //******************************************
-const char* gos::getAppName()					{ return gosGlobals.appName; }
-u64 gos::getTimeSinceStart_msec()				{ return (platform::getTimeNow_usec() - gosGlobals.timeStarted_usec) / 1000; }
-u64 gos::getTimeSinceStart_usec()				{ return platform::getTimeNow_usec() - gosGlobals.timeStarted_usec; }
-f32 gos::random01()								{ return gosGlobalsRnd.get01(); }
-u32 gos::randomU32(u32 iMax)					{ return gosGlobalsRnd.getU32(iMax); }
+const char* gos::getAppName()						{ return gosGlobals.appName; }
+const u8* gos::getPhysicalPathToWritableFolder()	{ return gosGlobals.pathToWritableFolder; }
+u64 gos::getTimeSinceStart_msec()					{ return (platform::getTimeNow_usec() - gosGlobals.timeStarted_usec) / 1000; }
+u64 gos::getTimeSinceStart_usec()					{ return platform::getTimeNow_usec() - gosGlobals.timeStarted_usec; }
+f32 gos::random01()									{ return gosGlobalsRnd.get01(); }
+u32 gos::randomU32(u32 iMax)						{ return gosGlobalsRnd.getU32(iMax); }
 
 //******************************************
+gos::Logger* gos::logger::getSystemLogger()																{ return gosGlobals.logger; }
 void gos::logger::incIndent()																			{ gosGlobals.logger->incIndent(); }
 void gos::logger::decIndent()																			{ gosGlobals.logger->decIndent(); }
 void gos::logger::log (const char *format, ...)															{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (format, argptr); va_end (argptr); }

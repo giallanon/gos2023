@@ -8,6 +8,7 @@
 //A per "chunk", B per "user", C per "index", D per "counter".
 typedef gos::HandleT<8,1,14,9>	GPUShaderHandle;		//2^14=16384 => num totale di oggetti, divisi in chunk da 2^8=256
 typedef gos::HandleT<5,1,10,16>	GPUVtxDeclHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^5=32
+typedef gos::HandleT<5,6,5,16>	GPUViewportHandle;		//2^5=32 => num totale di oggetti, divisi in chunk da 2^5=32
 
 
 
