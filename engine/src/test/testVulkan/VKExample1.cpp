@@ -83,12 +83,12 @@ bool VulkanExample1::init(gos::GPU *gpuIN)
 
 
     //carico gli shader
-    if (!gpu->vtxshader_createFromFile ("shader/vert1.spv", "main", &vtxShaderHandle))
+    if (!gpu->vtxshader_createFromFile ("shader/shader1.vert.spv", "main", &vtxShaderHandle))
     {
         gos::logger::err ("can't create vert shader\n");
         return false;
     }
-    if (!gpu->fragshader_createFromFile ("shader/frag1.spv", "main", &fragShaderHandle))
+    if (!gpu->fragshader_createFromFile ("shader/shader1.frag.spv", "main", &fragShaderHandle))
     {
         gos::logger::err ("can't create frag shader\n");
         return false;
@@ -152,7 +152,7 @@ bool VulkanExample1::priv_createRenderPass (gos::GPU *gpu)
     subpass.pColorAttachments = &colorAttachmentRef;
     subpass.pDepthStencilAttachment = NULL;
 
-    //dipendenza di questo subpassa da altri subpass (in questo caso non ce ne sono)=
+    //dipendenza di questo subpass da altri subpass (in questo caso non ce ne sono)
     VkSubpassDependency dependency{};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;    //indica il subpassa before questo
     dependency.dstSubpass = 0;

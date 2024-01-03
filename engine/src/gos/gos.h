@@ -7,6 +7,11 @@
 #include "gosString.h"
 #include "dataTypes/gosDateTime.h"
 #include "gosRandom.h"
+#include "gosHandle.h"
+
+
+//A per "chunk", B per "user", C per "index", D per "counter".
+typedef gos::HandleT<5,3,10,14>	GOSThread;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^5=32
 
 
 namespace gos
@@ -19,10 +24,12 @@ namespace gos
 
 	//ritorna il path assoluto dell'applicazione, senza slash finale
     inline const u8* 	getAppPathNoSlash ()					{ return platform::getAppPathNoSlash(); }
+	u32					getLengthOfAppPathNoSlash ();
 
 	//ritorna il path di una cartella nella quale è sicuramente possibile scrivere
 	//Il path creato dipende dalle impostazioni di "writableFolder) dei paraemtri di sGOSInit
     const u8*    		getPhysicalPathToWritableFolder();
+	u32					getLengthOfPhysicalPathToWritableFolder();
 
     u64        			getTimeSinceStart_msec();
     u64 				getTimeSinceStart_usec();
@@ -74,6 +81,11 @@ namespace gos
 	 *
 	 * fs
 	 *
+	 * Tutte le fn che accettano un path sono in grado di gestire alcuni casi speciali:
+	 * 	- se il path inizia con @, allora al posto di @ viene automaticamente inserito il path alla "writable folder"
+	 * 		es: @/pippo.txt, diventa [pathWritable]/pippo.txt
+	 *  - se il path e' relativo (ovvero NON inizia con /), allora gli viene automaticamente prefisso il "path dell'app" piu' lo slash
+	 * 		es: pippo/pluto.txt, diventa [pathApp]/pippo/pluto
 	 */
 	namespace fs
 	{
@@ -88,28 +100,36 @@ namespace gos
 		void			extractFilePathWithSlash (const u8 *utf8_filename, u8 *out, u32 sizeofout);
 		void			extractFilePathWithOutSlash (const u8 *utf8_filename, u8 *out, u32 sizeofout);
 
-		inline bool		folderExists (const u8 *pathSenzaSlash)																{ return platform::FS_folderExists(pathSenzaSlash); }
-		inline bool		folderDelete (const u8 *pathSenzaSlash)																{ return platform::FS_folderDelete(pathSenzaSlash); }
-		inline bool		folderCreate (const u8 *pathSenzaSlash)																{ return platform::FS_folderCreate(pathSenzaSlash); }
-								//crea anche percorsi complessi. Es create("pippo/pluto/paperino), se necessario
-								//prima crea pippo, poi pippo/pluto e infine pippo/pluto/paperino
-		bool			folderDeleteAllFileRecursively(const u8 *pathSenzaSlash, eFolderDeleteMode folderDeleteMode);
-		void			folderDeleteAllFileWithJolly  (const u8 *pathSenzaSlash, const u8 *utf8_jolly);
-		inline void		folderDeleteAllFileWithJolly  (const u8 *pathSenzaSlash, const char *jolly)							{ folderDeleteAllFileWithJolly  (pathSenzaSlash, reinterpret_cast<const u8*>(jolly)); }
+		bool			folderExists (const u8 *utf8_pathSenzaSlashRESOLVABLE);
+		bool			folderDelete (const u8 *utf8_pathSenzaSlashRESOLVABLE);
+		bool			folderCreate (const u8 *utf8_pathSenzaSlashRESOLVABLE);
 
-		inline bool		fileExists(const u8 *utf8_fullFileNameAndPath)														{ return platform::FS_fileExists(utf8_fullFileNameAndPath); }
-		inline bool   	fileDelete(const u8 *utf8_fullFileNameAndPath)														{ return platform::FS_fileDelete(utf8_fullFileNameAndPath); }
-		inline bool		fileRename(const u8 *utf8_pathNoSlash, const u8 *utf8_oldFilename, const u8 *utf8_newFilename)		{ return platform::FS_fileRename(utf8_pathNoSlash, utf8_oldFilename, utf8_newFilename); }
-		inline void     fileGetCreationTime_UTC(const u8 *utf8_pathNoSlash, gos::DateTime *out_dt)							{ platform::FS_fileGetCreationTime_UTC(utf8_pathNoSlash, out_dt); }
-		inline void     fileGetLastTimeModified_UTC(const u8 *utf8_pathNoSlash, gos::DateTime *out_dt)						{ platform::FS_fileGetLastTimeModified_UTC(utf8_pathNoSlash, out_dt); }
-    	inline void     fileGetCreationTime_LocalTime (const u8 *utf8_filePathAndName, gos::DateTime *out_dt)				{ platform::FS_fileGetCreationTime_LocalTime (utf8_filePathAndName, out_dt); }
-    	inline void     fileGetLastTimeModified_LocalTime (const u8 *utf8_filePathAndName, gos::DateTime *out_dt)			{ platform::FS_fileGetLastTimeModified_LocalTime (utf8_filePathAndName, out_dt); }
+		//crea anche percorsi complessi. Es create("pippo/pluto/paperino), se necessario
+		//prima crea pippo, poi pippo/pluto e infine pippo/pluto/paperino
+		bool			folderDeleteAllFileRecursively(const u8 *utf8_pathSenzaSlashRESOLVABLE, eFolderDeleteMode folderDeleteMode);
+		void			folderDeleteAllFileWithJolly  (const u8 *utf8_pathSenzaSlashRESOLVABLE, const u8 *utf8_jolly);
+		inline void		folderDeleteAllFileWithJolly  (const u8 *utf8_pathSenzaSlashRESOLVABLE, const char *jolly)			{ folderDeleteAllFileWithJolly  (utf8_pathSenzaSlashRESOLVABLE, reinterpret_cast<const u8*>(jolly)); }
 
+		bool			fileExists (const u8 *utf8_filePathAndNameRESOLVABLE);
+		bool   			fileDelete (const u8 *utf8_filePathAndNameRESOLVABLE);
+		inline bool		fileRename (const u8 *utf8_pathNoSlashRESOLVABLE, const u8 *utf8_oldFilename, const u8 *utf8_newFilename);
 
-		inline bool		fileOpen  (gos::File *out_h, const u8 *utf8_filePathAndName, eFileMode mode, bool bCreateIfNotExists, bool bAppend, bool bShareRead, bool bShareWrite)		{ return platform::FS_fileOpen (&out_h->osFile, utf8_filePathAndName, mode, bCreateIfNotExists, bAppend, bShareRead, bShareWrite); }
-		inline bool		fileOpenForR (gos::File *out_h, const u8 *utf8_filePathAndName)										{ return fs::fileOpen (out_h, utf8_filePathAndName, eFileMode::readOnly, false, false, true, true); }
-		bool			fileOpenForW (gos::File *out_h, const u8 *utf8_filePathAndName, bool bAutoCreateFolders=false);
-		bool			fileOpenForAppend (gos::File *out_h, const u8 *utf8_filePathAndName, bool bAutoCreateFolders=false);
+		void     		fileGetCreationTime_UTC (const u8 *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
+		void     		fileGetLastTimeModified_UTC (const u8 *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
+    	void     		fileGetCreationTime_LocalTime (const u8 *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
+    	void     		fileGetLastTimeModified_LocalTime (const u8 *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
+
+		bool			fileOpen  (gos::File *out_h,
+									const u8 *utf8_filePathAndNameRESOLVABLE, 
+									eFileMode mode, 
+									bool bCreateIfNotExists,
+									bool bAppend, 
+									bool bShareRead,
+									bool bShareWrite);
+
+		inline bool		fileOpenForR (gos::File *out_h, const u8 *utf8_filePathAndNameRESOLVABLE)							{ return fs::fileOpen (out_h, utf8_filePathAndNameRESOLVABLE, eFileMode::readOnly, false, false, true, true); }
+		bool			fileOpenForW (gos::File *out_h, const u8 *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders=false);
+		bool			fileOpenForAppend (gos::File *out_h, const u8 *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders=false);
 		inline u32		fileRead (gos::File &h, void *buffer, u32 numMaxBytesToRead)										{ return platform::FS_fileRead(h.osFile, buffer, numMaxBytesToRead); }
 		inline u32		fileWrite (gos::File &h, const void *buffer, u32 numBytesToWrite)									{ return platform::FS_fileWrite(h.osFile, buffer, numBytesToWrite); }
 		void			fpf (gos::File &h, const char *format, ...);
@@ -117,21 +137,21 @@ namespace gos
 		inline void		fileFlush (gos::File &h) 																			{ platform::FS_fileFlush(h.osFile); }
 
 		inline u64		fileLength (gos::File  &h)																			{ return platform::FS_fileLength(h.osFile); }
-		inline u64		fileLength (const u8 *utf8_filePathAndName)															{ return platform::FS_fileLength(utf8_filePathAndName); }
-		inline u64		fileLength (const char *filePathAndName)															{ return platform::FS_fileLength(reinterpret_cast<const u8*>(filePathAndName)); }
+		u64				fileLength (const u8 *utf8_filePathAndNameRESOLVABLE);
+		u64				fileLength (const char *utf8_filePathAndNameRESOLVABLE);
 	    inline void		fileSeek(gos::File &h, u64 position, eSeek seekMode)												{ platform::FS_fileSeek(h.osFile, position, seekMode); }
     	inline u64		fileTell(gos::File &h) 																				{ return platform::FS_fileTell(h.osFile); }
 
-		u8*				fileLoadInMemory (Allocator *allocator, const u8* filePathAndName, u32 *out_fileSize=NULL);
+		u8*				fileLoadInMemory (Allocator *allocator, const u8* utf8_filePathAndNameRESOLVABLE, u32 *out_fileSize=NULL);
 
-		inline bool			findFirst (gos::FileFind *ff, const u8 *utf8_path, const u8 *utf8_jolly)						{ return platform::FS_findFirst (&ff->osFF, utf8_path, utf8_jolly); }
-		inline bool			findFirst (gos::FileFind *ff, const u8 *utf8_path, const char *jolly)							{ return platform::FS_findFirst (&ff->osFF, utf8_path, reinterpret_cast<const u8*>(jolly)); }
-		inline bool         findNext (gos::FileFind &ff)																	{ return platform::FS_findNext(ff.osFF); }
-		inline void         findClose(gos::FileFind &ff)																	{ platform::FS_findClose(ff.osFF); }
-		inline bool         findIsDirectory(const gos::FileFind &ff)														{ return platform::FS_findIsDirectory(ff.osFF); }
-		inline const u8*	findGetFileName(const gos::FileFind &ff)														{ return platform::FS_findGetFileName(ff.osFF); }
-		inline void         findGetFileName (const gos::FileFind &ff, u8 *out, u32 sizeofOut)								{ platform::FS_findGetFileName(ff.osFF, out, sizeofOut); }
-		void 				findComposeFullFilePathAndName(const gos::FileFind &ff, const u8 *pathNoSlash, u8 *out, u32 sizeofOut);
+		bool			findFirst (gos::FileFind *ff, const u8 *utf8_pathRESOLVABLE, const u8 *utf8_jolly);
+		bool			findFirst (gos::FileFind *ff, const u8 *utf8_pathRESOLVABLE, const char *jolly);
+		inline bool     findNext (gos::FileFind &ff)																	{ return platform::FS_findNext(ff.osFF); }
+		inline void     findClose(gos::FileFind &ff)																	{ platform::FS_findClose(ff.osFF); }
+		inline bool     findIsDirectory(const gos::FileFind &ff)														{ return platform::FS_findIsDirectory(ff.osFF); }
+		inline const u8* findGetFileName(const gos::FileFind &ff)														{ return platform::FS_findGetFileName(ff.osFF); }
+		inline void     findGetFileName (const gos::FileFind &ff, u8 *out, u32 sizeofOut)								{ platform::FS_findGetFileName(ff.osFF, out, sizeofOut); }
+		void 			findComposeFullFilePathAndName (const gos::FileFind &ff, const u8 *pathNoSlash, u8 *out, u32 sizeofOut);
 	} //namespace fs
 
 
@@ -157,8 +177,8 @@ namespace gos
 		inline void     eventSetInvalid (gos::Event &ev)										{ platform::eventSetInvalid (ev.osEvt); }
 		inline bool		eventIsInvalid (const gos::Event &ev)									{ return platform::eventIsInvalid (ev.osEvt); }
 
-        eThreadError    create (gos::Thread *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb=2048);
-        void            waitEnd (const gos::Thread &hThread);
+        eThreadError    create (GOSThread *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb=2048);
+        void            waitEnd (GOSThread &hThread);
 
     } // namespace thread
 

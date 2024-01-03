@@ -61,8 +61,8 @@ int main()
     if (!gos::init (init, "testKernel"))
         return 1;
 
-    testTCP();
-    //runAllTest();
+    //testTCP();
+    runAllTest();
 
 
     gos::deinit();

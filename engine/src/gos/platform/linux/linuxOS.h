@@ -59,9 +59,8 @@ namespace platform
 	inline bool		eventIsInvalid (const OSEvent &ev)									{ return (ev.evfd == -1); }
 	inline bool		eventCompare (const OSEvent &a, const OSEvent &b)					{ return (a.evfd == b.evfd); }
 
-    eThreadError    createThread  (OSThread &out_handle, OSThreadFunction threadFunction, u32 stackSizeInKb, void *userParam);
+    eThreadError    createThread  (OSThread *out_handle, GOS_ThreadMainFunction threadFunction, u32 stackSizeInKb, void *userParam);
     void            waitThreadEnd (OSThread &handle);
-    void            destroyThread (OSThread &handle);
     
 
     /******************************************************

@@ -5,20 +5,28 @@
 #include "gosUtils.h"
 #include "gosThreadMsgQ.h"
 
+struct sThreadInfo
+{
+    platform::OSThread      	osThreadHandle;
+	GOSThread					gosHandle;
+	GOS_ThreadMainFunction		fn;
+	void 						*userParam;
+};
+
+typedef gos::HandleList<GOSThread,sThreadInfo> GOSThreadHandleList;
+
 struct sGOSGlobals
 {
 	u64					timeStarted_usec;
 	gos::Logger			*logger;
 	char				*appName;
 	u8					*pathToWritableFolder;
+	u32 				lengthOfAppPathConSlash;
+	u32 				lengthOfPathToWritableFolder;
+	GOSThreadHandleList	*threadHandleList;
 };
 
-struct ThreadInfo
-{
-    platform::OSThread      	osThreadHandle;
-    GOS_ThreadMainFunction     	threadMainFn;
-    void                    	*userParam;
-};
+
 
 static sGOSGlobals		gosGlobals;
 static gos::Random		gosGlobalsRnd;
@@ -76,8 +84,14 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 			gos::string::utf8::spf (s, sizeof(s), "%s/%s/writable%s", platform::getPhysicalPathToUserFolder(), appName, init._writableFolder.suffix);
 		break;
 	}
+	gos::fs::pathSanitizeInPlace(s);
 	gosGlobals.pathToWritableFolder = gos::string::utf8::allocStr (gos::getSysHeapAllocator(), s);
 	gos::fs::folderCreate (gosGlobals.pathToWritableFolder);
+
+
+	gosGlobals.lengthOfAppPathConSlash = gos::string::utf8::lengthInByte (gos::getAppPathNoSlash());
+	gosGlobals.lengthOfPathToWritableFolder = gos::string::utf8::lengthInByte (gosGlobals.pathToWritableFolder);
+
 
 	//logger
 	switch (init._logMode)
@@ -115,6 +129,11 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 
 	gosGlobals.appName = reinterpret_cast<char*>(gos::string::utf8::allocStr (gos::getSysHeapAllocator(), appName));
 
+
+	//thread
+	gosGlobals.threadHandleList = GOSNEW(gos::getSysHeapAllocator(), GOSThreadHandleList)();
+	gosGlobals.threadHandleList->setup (gos::getSysHeapAllocator());
+
 	//generatore random
 	{
 		u16 y, m, d;
@@ -134,12 +153,14 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 //******************************************
 void gos::deinit()
 {
-
 	if (NULL != gosGlobals.logger)
 	{
 		gos::logger::log (eTextColor::white, "shutting down...\n\n\n\n");
 		delete gosGlobals.logger;
 	}
+
+	gosGlobals.threadHandleList->unsetup();
+	GOSDELETE(gos::getSysHeapAllocator(), gosGlobals.threadHandleList);
 
 	thread::internal_deinit();
 	GOSFREE(gos::getSysHeapAllocator(), gosGlobals.appName);
@@ -153,6 +174,8 @@ void gos::deinit()
 //******************************************
 const char* gos::getAppName()						{ return gosGlobals.appName; }
 const u8* gos::getPhysicalPathToWritableFolder()	{ return gosGlobals.pathToWritableFolder; }
+u32 gos::getLengthOfAppPathNoSlash ()				{ return gosGlobals.lengthOfAppPathConSlash; }
+u32 gos::getLengthOfPhysicalPathToWritableFolder ()	{ return gosGlobals.lengthOfPathToWritableFolder; }
 u64 gos::getTimeSinceStart_msec()					{ return (platform::getTimeNow_usec() - gosGlobals.timeStarted_usec) / 1000; }
 u64 gos::getTimeSinceStart_usec()					{ return platform::getTimeNow_usec() - gosGlobals.timeStarted_usec; }
 f32 gos::random01()									{ return gosGlobalsRnd.get01(); }
@@ -423,51 +446,43 @@ void gos::socket::UDPSendBroadcast(Socket &sok, const u8 *buffer, u32 nByteToSen
 
 
 //************************************************************************
-void* GOS_threadFunctionWrapper (void *userParam)
+i16 GOS_threadFunctionWrapper (void *userParam)
 {
-    ThreadInfo *th = reinterpret_cast<ThreadInfo*>(userParam);
-    GOS_ThreadMainFunction mainFn = th->threadMainFn;
+    sThreadInfo *th = reinterpret_cast<sThreadInfo*>(userParam);
 
-    //int retCode = (*mainFn)(th->userParam);
-    (*mainFn)(th->userParam);
-
-	platform::destroyThread(th->osThreadHandle);
+    i16 retCode = (*th->fn)(th->userParam);
 	
-	gos::Allocator *allocator = gos::getSysHeapAllocator();
-    GOSFREE(allocator, th);
-    
-    return NULL;
+	GOSThread gosHandle = th->gosHandle;
+	gosGlobals.threadHandleList->release (gosHandle);
+
+	return retCode;
 }
 
 //************************************************************************
-eThreadError gos::thread::create (gos::Thread *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb)
+eThreadError gos::thread::create (GOSThread *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb)
 {
-    out_hThread->p = NULL;
+	sThreadInfo *info = gosGlobals.threadHandleList->reserve (out_hThread);
+	if (NULL == info)
+		return eThreadError::tooMany;
+	info->gosHandle = *out_hThread;
+	info->fn = threadFunction;
+	info->userParam = userParam;
+	
+    eThreadError err = platform::createThread (&info->osThreadHandle, GOS_threadFunctionWrapper, stackSizeInKb, info);
+    if (eThreadError::none != err)
+	{
+		gosGlobals.threadHandleList->release (*out_hThread);
+		out_hThread->setInvalid();
+	}
 
-    Allocator *allocator = gos::getSysHeapAllocator();
-    
-    ThreadInfo *th = GOSALLOCSTRUCT(allocator, ThreadInfo);
-    memset (th, 0x00, sizeof(ThreadInfo));
-    th->threadMainFn = threadFunction;
-    th->userParam = userParam;
-
-    eThreadError err = platform::createThread (th->osThreadHandle, GOS_threadFunctionWrapper, stackSizeInKb, th);
-
-    if (eThreadError::none == err)
-        out_hThread->p = th;
-    else
-    {
-        GOSFREE(allocator, th);
-    }
-    return err;
+	return err;
 }
 
 
 //************************************************************************
-void gos::thread::waitEnd (const gos::Thread &hThread)
+void gos::thread::waitEnd (GOSThread &hThread)
 {
-    ThreadInfo *th = reinterpret_cast<ThreadInfo*>(hThread.p);
-    if (NULL == th)
-        return;
-    platform::waitThreadEnd(th->osThreadHandle);
+	sThreadInfo *info;
+	if (gosGlobals.threadHandleList->fromHandleToPointer (hThread, &info))
+	    platform::waitThreadEnd (info->osThreadHandle);
 }

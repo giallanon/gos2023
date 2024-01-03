@@ -1,6 +1,7 @@
 #ifndef _gosGPUEnumAndDefine_h_
 #define _gosGPUEnumAndDefine_h_
 #include "../gos/gosEnumAndDefine.h"
+#include "../gos/dataTypes/gosColorHDR.h"
 #include "../gos/gosHandle.h"
 #include "vulkan/gosGPUVulkanEnumAndDefine.h"
 
@@ -9,6 +10,7 @@
 typedef gos::HandleT<8,1,14,9>	GPUShaderHandle;		//2^14=16384 => num totale di oggetti, divisi in chunk da 2^8=256
 typedef gos::HandleT<5,1,10,16>	GPUVtxDeclHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^5=32
 typedef gos::HandleT<5,6,5,16>	GPUViewportHandle;		//2^5=32 => num totale di oggetti, divisi in chunk da 2^5=32
+typedef gos::HandleT<2,9,5,16>	GPUDepthStencilHandle;	//2^5=32 => num totale di oggetti, divisi in chunk da 2^2=4
 
 
 

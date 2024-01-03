@@ -240,7 +240,10 @@ namespace test_gos
             gos::fs::folderDeleteAllFileRecursively(s1, eFolderDeleteMode::deleteAlsoTheSubfolderAndTheMainFolder);
             TEST_FAIL_IF (gos::fs::folderExists(s1));
         }
+
+        //e poi la ricreo...
         gos::fs::folderCreate (s1);
+
 
         //creo 4 file in una cartella con sottocartella
         gos::string::utf8::spf (s1, sizeof(s1), "%s/testFS/dir1", gos::getPhysicalPathToWritableFolder());
@@ -248,8 +251,13 @@ namespace test_gos
 
         for (u8 i=0; i<4; i++)
         {
-            gos::File f;
             gos::string::utf8::spf (s2, sizeof(s2), "%s/file_di_esempio%02d.txt", s1, i);
+
+            //mi assicuro che non esista (perche' ho cancellato la cartella di test all'inizio)
+            TEST_ASSERT(false == gos::fs::fileExists(s2));
+
+            //lo creo
+            gos::File f;
             TEST_ASSERT (gos::fs::fileOpenForW (&f, s2, true));
             gos::fs::fpf (f, testoDelFile);
             gos::fs::fileClose(f);
@@ -264,6 +272,12 @@ namespace test_gos
             TEST_ASSERT(n == strlen(testoDelFile));
             TEST_ASSERT(memcmp(buffer, testoDelFile, n) == 0);
             GOSFREE(allocator, buffer);
+
+
+            //verifico che la risoluzione dei path funzioni
+            //Essendo nella cartella "writable", posso usare il carattere speciale @ per indicare quella cartella
+            gos::string::utf8::spf (s2, sizeof(s2), "@/testFS/dir1/file_di_esempio%02d.txt", i);
+            TEST_ASSERT(gos::fs::fileExists(s2));
         }
 
         //scanno la directory alla ricerca dei 4 file
@@ -290,6 +304,26 @@ namespace test_gos
         gos::fs::findClose(ff);
         TEST_FAIL_IF(nFound!=4);
 
+
+        //verifico che la risoluzione dei path speciali funzioni
+        //Il carattere speciale "@" l'ho gia' testato prima, ora invece verifico che path che non iniziano con "/"
+        //vengano automaticamente prefissi con il path dell'app
+        TEST_ASSERT(gos::fs::findFirst (&ff, gos::getAppPathNoSlash(), "*"));
+        do
+        {
+            if (gos::fs::findIsDirectory(ff))
+                continue;
+
+
+            //ho trovato un file nella cartella dell'app.
+            //Verifico di trovarlo anche unsando un path relativo
+            gos::string::utf8::spf (s2, sizeof(s2), "%s", gos::fs::findGetFileName(ff));
+            TEST_ASSERT (gos::fs::fileExists(s2));
+
+        } while (gos::fs::findNext(ff));
+        gos::fs::findClose(ff);        
+        
+        
 
     return 0;
     }

@@ -25,7 +25,7 @@ namespace test1
 
     int run()
     {
-        gos::Thread hThread1;
+        GOSThread hThread1;
         sUserParam1 userParam;
         userParam.paramI16 = 12345;
 
@@ -81,6 +81,7 @@ namespace test2
         printf ("  test2::mainFn2 => sending 'die' message\n");
         const char msg[3] = { 'd', 'i', 'e' };
         gos::thread::pushMsg (hMsgQWrite, 2133, 23738, msg, 3);
+        printf ("  test2::mainFn2 => msg sent\n");
 
         return 0;
     }
@@ -98,16 +99,19 @@ namespace test2
         userParam.hMsgQWrite = hMsgQWrite;
 
 
-        gos::Thread hThread1;
+        GOSThread hThread1;
         eThreadError err = gos::thread::create (&hThread1, test_thread::test2::mainFn1, &userParam);
         TEST_ASSERT(err == eThreadError::none);
 
-        gos::Thread hThread2;
+        GOSThread hThread2;
         err = gos::thread::create (&hThread2, test_thread::test2::mainFn2, &userParam);
         TEST_ASSERT(err == eThreadError::none);
 
         gos::thread::waitEnd (hThread1);
-        gos::thread::waitEnd (hThread2);;
+        printf ("thread1 finished\n");
+        
+        gos::thread::waitEnd (hThread2);
+        printf ("thread2 finished\n");
 
         gos::thread::deleteMsgQ (hMsgQRead, hMsgQWrite);
 
@@ -180,11 +184,11 @@ namespace test3
         userParam.hMsgQWrite = hMsgQWrite;
 
 
-        gos::Thread hThread1;
+        GOSThread hThread1;
         eThreadError err = gos::thread::create (&hThread1, test_thread::test3::mainFn1, &userParam);
         TEST_ASSERT(err == eThreadError::none);
 
-        gos::Thread hThread2;
+        GOSThread hThread2;
         err = gos::thread::create (&hThread2, test_thread::test3::mainFn2, &userParam);
         TEST_ASSERT(err == eThreadError::none);
 

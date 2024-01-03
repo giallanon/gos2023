@@ -217,8 +217,12 @@ bool GPU::priv_initHandleLists()
     gos::logger::log ("GPU::priv_initHandleLists()\n");
     shaderList.setup (allocator);
     vtxDeclList.setup (allocator);
+
     viewportlList.setup (allocator);
     viewportHandleList.setup (allocator, 32);   //questa mi serve per tenere traccia di tutti gli handle creati dato che durante il resize della window, devo andare ad aggiustare tutte le viewport
+
+    depthStencilList.setup (allocator);
+    depthStencilHandleList.setup (allocator, 32);   //questa mi serve per tenere traccia di tutti gli handle creati dato che durante il resize della window, devo andare ad aggiustare tutte i swpth buffer (nel caso che siano bindati alla dimensione della vport)
     return true;
 }
 
@@ -226,10 +230,15 @@ bool GPU::priv_initHandleLists()
 void  GPU::priv_deinitandleLists()
 {
     gos::logger::log ("GPU::priv_deinitandleLists()\n");
+    
+    shaderList.unsetup();
+    vtxDeclList.unsetup();
+
     viewportlList.unsetup();
     viewportHandleList.unsetup();
-    vtxDeclList.unsetup();
-    shaderList.unsetup();
+
+    depthStencilList.unsetup();
+    depthStencilHandleList.unsetup();
 }
 
 //************************************
@@ -375,13 +384,34 @@ bool GPU::swapChain_recreate ()
         ret = false;
     }
     
-    //aggiorno tutte le viewport
-    const u32 n = viewportHandleList.getNElem();
+    //attuale dimensione della vport
+    const i16 vportW = (i16)vulkan.swapChainInfo.imageExtent.width;
+    const i16 vportH = (i16)vulkan.swapChainInfo.imageExtent.height;
+
+    //aggiorno tutte le viewport che hanno una dimensione/posizione relativa
+    u32 n = viewportHandleList.getNElem();
     for (u32 i=0; i<n; i++)
     {
         gos::gpu::Viewport *v;
         if (viewportlList.fromHandleToPointer (viewportHandleList(i), &v))
-            v->resolve ((i16)vulkan.swapChainInfo.imageExtent.width, (i16)vulkan.swapChainInfo.imageExtent.height);
+            v->resolve (vportW, vportH);
+    }
+
+
+    //aggiorno tutti i depth buffer che hanno una dimensione/posizione relativa
+    n = depthStencilHandleList.getNElem();
+    for (u32 i=0; i<n; i++)
+    {
+        gos::gpu::DepthStencil *s;
+        if (depthStencilList.fromHandleToPointer (depthStencilHandleList(i), &s))
+        {
+            if (!s->width.isAbsolute() || !s->height.isAbsolute())
+            {
+                priv_depthStenicl_deleteFromStruct (*s);
+                s->resolve (vportW, vportH);
+                priv_depthStenicl_createFromStruct (*s);
+            }
+        }
     }
 
 
@@ -497,8 +527,8 @@ void GPU::shader_delete (GPUShaderHandle &shaderHandle)
         
         shader->reset();
         shaderList.release(shaderHandle);
-        shaderHandle.setInvalid();
     }
+    shaderHandle.setInvalid();
 }
 
 //************************************
@@ -631,8 +661,8 @@ void GPU::vtxDecl_delete (GPUVtxDeclHandle &handle)
     {
         s->reset();
         vtxDeclList.release(handle);
-        handle.setInvalid();
     }
+    handle.setInvalid();
 }
 
 //************************************
@@ -678,6 +708,166 @@ void GPU::viewport_delete (GPUViewportHandle &handle)
     {
         viewportlList.release(handle);
         viewportHandleList.findAndRemove(handle);
-        handle.setInvalid();
+    }
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::depthBuffer_create (const gos::Dim2D &widthIN, const gos::Dim2D &heightIN, bool bWithStencil, GPUDepthStencilHandle *out_handle)
+{
+    assert (NULL != out_handle);
+
+    //cerco il miglior formato disponibile 
+    VkFormat depthStencilFormat;
+    bool b = true;
+    if (bWithStencil)
+        b = gos::vulkanFindBestDepthStencilFormat (vulkan.phyDevInfo, &depthStencilFormat);
+    else
+        b = gos::vulkanFindBestDepthFormat (vulkan.phyDevInfo, &depthStencilFormat);
+    if (!b)
+    {
+        gos::logger::err ("GPU::depthBuffer_create() => can't find a suitabile format\n");
+        return false;
+    }
+
+
+    //riservo un handle
+    gos::gpu::DepthStencil *depthStencil = depthStencilList.reserve (out_handle);
+    if (NULL == depthStencil)
+    {
+        gos::logger::err ("GPU::depthBuffer_create() => can't reserve a new depthStencil handle!\n");
+        out_handle->setInvalid();
+        return false;
+    }
+    depthStencil->reset();
+    depthStencil->depthFormat = depthStencilFormat;
+    depthStencil->bHasStencil = bWithStencil;
+
+    //assegno width/height
+    depthStencil->width = widthIN;
+    depthStencil->height = heightIN;
+
+    //alloco le risorse vulkan
+    if (!priv_depthStenicl_createFromStruct (*depthStencil))
+        return false;
+
+    depthStencilHandleList.append (*out_handle);
+    return true;
+}
+
+//************************************
+void GPU::depthBuffer_delete (GPUDepthStencilHandle &handle)
+{
+    gos::gpu::DepthStencil *s;
+    if (depthStencilList.fromHandleToPointer (handle, &s))
+    {
+        priv_depthStenicl_deleteFromStruct (*s);
+        s->reset();
+        depthStencilList.release (handle);
+        depthStencilHandleList.findAndRemove (handle);
+    }
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::priv_depthStenicl_createFromStruct (gos::gpu::DepthStencil &depthStencil)
+{
+    assert (VK_NULL_HANDLE == depthStencil.image);
+    assert (VK_NULL_HANDLE == depthStencil.mem);
+    assert (VK_NULL_HANDLE == depthStencil.view);
+    assert (VK_FORMAT_UNDEFINED != depthStencil.depthFormat);
+
+    //risolvo la dimensione
+    {
+        int winDimX;
+        int winDimY;
+        window.getCurrentSize (&winDimX, &winDimY);
+        depthStencil.resolve (winDimX, winDimY);
+    }
+
+	VkImageCreateInfo imageCI{};
+	imageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageCI.imageType = VK_IMAGE_TYPE_2D;
+	imageCI.format = depthStencil.depthFormat;
+	imageCI.extent = { depthStencil.resolvedW, depthStencil.resolvedH, 1 };
+	imageCI.mipLevels = 1;
+	imageCI.arrayLayers = 1;
+	imageCI.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
+	imageCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+	VkResult result = vkCreateImage (vulkan.dev, &imageCI, nullptr, &depthStencil.image);    
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => vkCreateImage() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    VkMemoryRequirements memReqs{};
+	vkGetImageMemoryRequirements (vulkan.dev, depthStencil.image, &memReqs);
+
+    VkMemoryAllocateInfo memAllloc{};
+	memAllloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	memAllloc.allocationSize = memReqs.size;
+    vulkanGetMemoryType (vulkan.phyDevInfo, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &memAllloc.memoryTypeIndex);
+
+	result = vkAllocateMemory (vulkan.dev, &memAllloc, nullptr, &depthStencil.mem);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => vkAllocateMemory() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+	result = vkBindImageMemory (vulkan.dev, depthStencil.image, depthStencil.mem, 0);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => vkBindImageMemory() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    VkImageViewCreateInfo imageViewCI{};
+	imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	imageViewCI.image = depthStencil.image;
+	imageViewCI.format = depthStencil.depthFormat;
+	imageViewCI.subresourceRange.baseMipLevel = 0;
+	imageViewCI.subresourceRange.levelCount = 1;
+	imageViewCI.subresourceRange.baseArrayLayer = 0;
+	imageViewCI.subresourceRange.layerCount = 1;
+	imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	if (depthStencil.bHasStencil)
+		imageViewCI.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+
+	result = vkCreateImageView (vulkan.dev, &imageViewCI, nullptr, &depthStencil.view);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => vkCreateImageView() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    return true;
+}
+
+
+//************************************
+void GPU::priv_depthStenicl_deleteFromStruct (gos::gpu::DepthStencil &depthStencil)
+{
+    if (VK_NULL_HANDLE != depthStencil.view)
+    {
+	    vkDestroyImageView (vulkan.dev, depthStencil.view, nullptr);
+        depthStencil.view = VK_NULL_HANDLE;
+    }
+    
+    if (VK_NULL_HANDLE != depthStencil.image)
+    {
+	    vkDestroyImage(vulkan.dev, depthStencil.image, nullptr);
+        depthStencil.image = VK_NULL_HANDLE;
+    }
+
+    if (VK_NULL_HANDLE != depthStencil.mem)
+    {
+	    vkFreeMemory(vulkan.dev, depthStencil.mem, nullptr);
+        depthStencil.mem = VK_NULL_HANDLE;
     }
 }

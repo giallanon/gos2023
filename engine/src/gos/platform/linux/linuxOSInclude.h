@@ -80,8 +80,7 @@ namespace platform
     typedef int OSFile;
     typedef pthread_mutex_t OSMutex;
     typedef pthread_t OSThread;
-    typedef void* (*OSThreadFunction)(void *userParam);    
-
+    
     struct OSFileFind
     {
                         OSFileFind(): dirp(NULL), dp(NULL) { }

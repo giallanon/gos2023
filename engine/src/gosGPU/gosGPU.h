@@ -5,7 +5,9 @@
 #include "gosGPUShader.h"
 #include "gosGPUPipeline.h"
 #include "gosGPUViewport.h"
+#include "gosGPUDepthStencil.h"
 #include "../gos/gos.h"
+
 
 namespace gos
 {
@@ -67,6 +69,8 @@ namespace gos
         void                toggleFullscreen();
 
         //================ swap chain info
+        //La swap chain viene creata automaticamente da GPU::init()
+        //In caso di resize della main window, e' necessario chiamare swapChain_recreate() per aggiornare i buffer
         bool                swapChain_recreate ();
         u32                 swapChain_getWidth() const                      { return vulkan.swapChainInfo.imageExtent.width; }
         u32                 swapChain_getHeight() const                     { return vulkan.swapChainInfo.imageExtent.height; }
@@ -78,6 +82,10 @@ namespace gos
         VkResult            swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount, u32 imageIndex);
 
         //================ viewport
+        //E' possibile creare tante viewport
+        //La viewport di default (che matcha la risoluzione della swapchain), viene creata in automatico da GUPU::init() ed e' sempre
+        //accessibile tramite viewport_getDefault()
+        //Le viewport vengono automaticamente ridimensionate a seguito di un swapChain_recreate()
         bool                    viewport_create (const gos::Pos2D &x,const gos::Pos2D &y, const gos::Dim2D &w, const gos::Dim2D &h, GPUViewportHandle *out_handle);
         const gpu::Viewport*    viewport_get (const GPUViewportHandle &handle) const;
         void                    viewport_delete (GPUViewportHandle &handle);
@@ -99,6 +107,10 @@ namespace gos
         VtxDeclBuilder&     vtxDecl_createNew (GPUVtxDeclHandle *out_handle);
         void                vtxDecl_delete (GPUVtxDeclHandle &handle);
         bool                vtxDecl_query (const GPUVtxDeclHandle handle, gpu::VtxDecl *out) const;
+
+        //================ depth buffer
+        bool                depthBuffer_create (const gos::Dim2D &w, const gos::Dim2D &h, bool bWithStencil, GPUDepthStencilHandle *out_handle);
+        void                depthBuffer_delete (GPUDepthStencilHandle &handle);
 
         //================ shader
         bool                vtxshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)            { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::vertexShader, mainFnName, out_shaderHandle); }
@@ -158,6 +170,9 @@ namespace gos
         bool                priv_vxtDecl_fromHandleToPointer (const GPUVtxDeclHandle handle, gpu::VtxDecl **out) const;
         void                priv_vxtDecl_onBuilderEnds(VtxDeclBuilder *builder);
 
+        bool                priv_depthStenicl_createFromStruct (gos::gpu::DepthStencil &depthStencil);
+        void                priv_depthStenicl_deleteFromStruct (gos::gpu::DepthStencil &depthStencil);
+
     private:
         gos::Allocator              *allocator;
         sWindow                     window;
@@ -169,11 +184,13 @@ namespace gos
         VtxDeclBuilder              vtxDeclBuilder;
 
         GPUViewportHandle           defaultViewportHandle;
-        HandleList<GPUShaderHandle, gpu::Shader>        shaderList;
-        HandleList<GPUVtxDeclHandle, gpu::VtxDecl>      vtxDeclList;
-        HandleList<GPUViewportHandle, gpu::Viewport>    viewportlList;
-        gos::FastArray<GPUViewportHandle>               viewportHandleList;
 
+        HandleList<GPUShaderHandle, gpu::Shader>                    shaderList;
+        HandleList<GPUVtxDeclHandle, gpu::VtxDecl>                  vtxDeclList;
+        HandleList<GPUViewportHandle, gpu::Viewport>                viewportlList;
+        gos::FastArray<GPUViewportHandle>                           viewportHandleList;
+        HandleList<GPUDepthStencilHandle, gos::gpu::DepthStencil>   depthStencilList;
+        gos::FastArray<GPUDepthStencilHandle>                       depthStencilHandleList;
     };
 } //namespace gos
 

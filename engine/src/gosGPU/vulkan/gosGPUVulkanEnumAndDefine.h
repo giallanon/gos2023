@@ -2,6 +2,7 @@
 #define _gosGPUVulkanEnumAndDefine_h_
 #define _GLFW_X11
 #define GLFW_INCLUDE_VULKAN
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define VK_ENABLE_BETA_EXTENSIONS
 #include "GLFW/glfw3.h"
 #include <vulkan/vulkan.h>
@@ -56,14 +57,17 @@ namespace gos
 
     struct sPhyDeviceInfo
     {
+    public:
                 sPhyDeviceInfo()            { reset(); }
         void    reset()                     { vkDev=VK_NULL_HANDLE; devIndex=gfxQIndex=computeQIndex=u32MAX; }
         bool    isValid() const             { return (vkDev!=VK_NULL_HANDLE); }
 
+    public:
         VkPhysicalDevice    vkDev;
         u32                 devIndex;
         u32                 gfxQIndex;
         u32                 computeQIndex;
+        VkPhysicalDeviceMemoryProperties vkMemoryProperties;
     };
 
     struct sVkDevice

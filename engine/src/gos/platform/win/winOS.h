@@ -59,9 +59,8 @@ namespace platform
 	inline void     eventSetInvalid(OSEvent &ev)										{ ev.h = INVALID_HANDLE_VALUE; }
 	inline bool		eventIsInvalid(const OSEvent &ev)									{ return (ev.h == INVALID_HANDLE_VALUE);  }
 
-	eThreadError    createThread(OSThread &out_handle, OSThreadFunction threadFunction, u32 stackSizeInKb, void *userParam);
-	void            waitThreadEnd(OSThread &handle);
-	void            destroyThread (OSThread &handle);
+	eThreadError    createThread  (OSThread *out_handle, GOS_ThreadMainFunction threadFunction, u32 stackSizeInKb, void *userParam);
+	void            waitThreadEnd (OSThread &handle);
 
 
 				

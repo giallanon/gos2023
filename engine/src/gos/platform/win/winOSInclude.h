@@ -31,7 +31,7 @@ typedef uint64_t    u64;
 typedef float       f32;        //32 bit floating point
 typedef double      f64;        //64 bit floating point
 
-typedef uintptr_t   uiPtr;      //un "intero" la cui dimensione in byte dipende dalla piattaforma, ma che è sempre in grado di ospitare un puntatore
+typedef uintptr_t   uiPtr;      //un "intero" la cui dimensione in byte dipende dalla piattaforma, ma che ï¿½ sempre in grado di ospitare un puntatore
 
 #define	u8MAX		0xFF
 #define i8MIN		(-127 - 1)
@@ -77,8 +77,7 @@ namespace platform
 {
     typedef HANDLE			OSFile;
 	typedef HANDLE			OSThread;
-	typedef void* (*OSThreadFunction)(void *userParam);
-
+	
 	typedef struct sOSCriticalSection
 	{
 		CRITICAL_SECTION cs;

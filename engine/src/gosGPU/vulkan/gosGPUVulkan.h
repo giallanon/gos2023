@@ -12,7 +12,7 @@ namespace gos
      */
     bool    vulkanCreateInstance (VkInstance *out, const gos::StringList &requiredValidationLayerList, const gos::StringList &requiredExtensionList);
 
-    bool    vulkanScanAndSelectAPhysicalDevices (VkInstance &vkInstance, const VkSurfaceKHR &vkSurface, const gos::StringList &requiredExtensionList, sPhyDeviceInfo *out);
+    bool    vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, const VkSurfaceKHR &vkSurface, const gos::StringList &requiredExtensionList, sPhyDeviceInfo *out);
 
     /*********************************************
      * Dato il [vkPhyDevice] e una lista di estensioni richieste [requiredExtensionList], crea il device logico
@@ -21,6 +21,12 @@ namespace gos
     bool    vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringList &requiredExtensionList, sVkDevice *out_vulkan);
 
     bool    vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurface, sSwapChainInfo *out);
+
+    bool    vulkanFindBestDepthFormat (const sPhyDeviceInfo &vkPhyDevInfo, VkFormat *out_depthFormat);
+
+    bool    vulkanFindBestDepthStencilFormat (const sPhyDeviceInfo &vkPhyDevInfo, VkFormat* out_depthStencilFormat);
+
+    bool    vulkanGetMemoryType (const sPhyDeviceInfo &vkPhyDevInfo, uint32_t typeBits, VkMemoryPropertyFlags properties, u32 *out_index);
 
 } //namespace gos
 

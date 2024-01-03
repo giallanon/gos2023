@@ -28,6 +28,7 @@ vulkan/gosGPUVulkanEnumAndDefine.h
 
 gosGPU.cpp
 gosGPU.h
+gosGPUDepthStencil.h
 gosGPUEnumAndDefine.h
 gosGPUPipeline.cpp
 gosGPUPipeline.h

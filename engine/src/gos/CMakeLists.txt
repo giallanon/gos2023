@@ -23,6 +23,8 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC
 
+dataTypes/gosColorHDR.cpp
+dataTypes/gosColorHDR.h
 dataTypes/gosDate.cpp
 dataTypes/gosDate.h
 dataTypes/gosDateTime.cpp

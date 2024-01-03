@@ -3,6 +3,70 @@
 
 using namespace gos;
 
+/**********************************************
+ * FSSpecialPathResolver
+ * 
+ * Dato un path:
+ * 	- se il path inizia con @, allora al posto di @ viene automaticamente inserito il path alla "writable folder"
+ * 		es: @/pippo.txt, diventa [pathWritable]/pippo.txt
+ *  - se il path e' relativo (ovvero NON inizia con /), allora gli viene automaticamente prefisso il "path dell'app" piu' lo slash
+ * 		es: pippo/pluto.txt, diventa [pathApp]/pippo/pluto
+ *  - altrimenti ritorna il path inalterato
+ */
+class FSSpecialPathResolver
+{
+public:
+				FSSpecialPathResolver ()						{ allocatedPath=NULL; bWasAllocated=false; }
+				~FSSpecialPathResolver()						{ priv_free(); }
+
+
+	const u8*	resolve (const char *path)						{ return resolve(reinterpret_cast<const u8*>(path)); }
+	const u8*	resolve (const u8 *path)
+				{
+					priv_free();
+					if (path[0] == '@')
+					{
+						bWasAllocated = true;
+						const u32 n = gos::string::utf8::lengthInByte(path) +1 +gos::getLengthOfPhysicalPathToWritableFolder();
+						allocatedPath = GOSALLOCT(u8*, gos::getScrapAllocator(), n);
+						gos::string::utf8::spf (allocatedPath, n, "%s%s", gos::getPhysicalPathToWritableFolder(), &path[1]);
+						return allocatedPath;
+					}
+					else if (path[0] != '/')
+					{
+						bWasAllocated = true;
+						const u32 n = gos::string::utf8::lengthInByte(path) +2 +gos::getLengthOfAppPathNoSlash();
+						allocatedPath = GOSALLOCT(u8*, gos::getScrapAllocator(), n);
+						gos::string::utf8::spf (allocatedPath, n, "%s/%s", gos::getAppPathNoSlash(), path);
+						return allocatedPath;
+					}
+						
+					return path;
+				}
+
+private:
+	void		priv_free()
+				{ 
+					if (bWasAllocated) 
+					{
+						GOSFREE(gos::getScrapAllocator(), allocatedPath);
+					}
+					bWasAllocated = false; 
+					allocatedPath = NULL; 
+				}
+
+private:
+	 u8			*allocatedPath;
+	bool		bWasAllocated;
+};
+
+
+#define FS_PATH_RESOLVER(pathIN,pathRESOLVED)\
+	FSSpecialPathResolver pathResolver;\
+	const u8 *pathRESOLVED = pathResolver.resolve(pathIN);\
+
+
+
 //**************************************************************
 void fs::pathSanitize (const u8 *utf8_path, u8 *out_utf8sanitizedPath, u32 sizeOfOutSanitzed)
 {
@@ -403,34 +467,28 @@ bool fs::doesFileNameMatchJolly (const u8 *utf8_filename, const u8 *utf8_strJoll
 
 }
 
-//**************************************************************************
-void fs::findComposeFullFilePathAndName(const gos::FileFind &ff, const u8 *pathNoSlash, u8 *out, u32 sizeofOut)
+/**************************************************************************
+ * Si aspetta un path gia' risolto tramite FS_PATH_RESOLVER()
+ */
+static void FS_deleteAllFileInFolderRecursively (const u8 *pathSenzaSlashRESOLVED, bool bDeleteSubFolder)
 {
-	gos::string::utf8::spf (out, sizeofOut, "%s/", pathNoSlash);
-	const u32 n = string::utf8::lengthInByte(out);
-	fs::findGetFileName(ff, &out[n], sizeofOut - n);
-}
-
-//**************************************************************************
-static void fs_deleteAllFileInFolderRecursively(const u8 *pathSenzaSlash, bool bDeleteSubFolder)
-{
-	if (!fs::folderExists(pathSenzaSlash))
+	if (!fs::folderExists(pathSenzaSlashRESOLVED))
 		return;
 
 	gos::FileFind ff;
-	if (fs::findFirst(&ff, pathSenzaSlash, (const u8 *)"*"))
+	if (fs::findFirst(&ff, pathSenzaSlashRESOLVED, (const u8 *)"*"))
 	{
 		do
 		{
 			u8 s[512];
-			fs::findComposeFullFilePathAndName(ff, pathSenzaSlash, s, sizeof(s));
+			fs::findComposeFullFilePathAndName(ff, pathSenzaSlashRESOLVED, s, sizeof(s));
 
 			if (fs::findIsDirectory(ff))
 			{
 				const u8 *fname = fs::findGetFileName(ff);
 				if (fname[0] != '.')
 				{
-					fs_deleteAllFileInFolderRecursively(s, bDeleteSubFolder);
+					FS_deleteAllFileInFolderRecursively(s, bDeleteSubFolder);
 					if (bDeleteSubFolder)
 						fs::folderDelete(s);
 				}
@@ -444,17 +502,40 @@ static void fs_deleteAllFileInFolderRecursively(const u8 *pathSenzaSlash, bool b
 }
 
 //**************************************************************************
-bool fs::folderDeleteAllFileRecursively(const u8 *pathSenzaSlash, eFolderDeleteMode folderDeleteMode)
+bool fs::folderExists (const u8 *utf8_pathSenzaSlashRESOLVABLE)
+{ 
+	FS_PATH_RESOLVER(utf8_pathSenzaSlashRESOLVABLE, pathSenzaSlash)
+	return platform::FS_folderExists(pathSenzaSlash); 
+}
+
+//**************************************************************************
+bool fs::folderDelete (const u8 *utf8_pathSenzaSlashRESOLVABLE)
+{ 
+	FS_PATH_RESOLVER(utf8_pathSenzaSlashRESOLVABLE, pathSenzaSlash)
+	return platform::FS_folderDelete(pathSenzaSlash); 
+}
+
+//**************************************************************************
+bool fs::folderCreate (const u8 *utf8_pathSenzaSlashRESOLVABLE)
+{ 
+	FS_PATH_RESOLVER(utf8_pathSenzaSlashRESOLVABLE, pathSenzaSlash)
+	return platform::FS_folderCreate(pathSenzaSlash); 
+}
+
+
+//**************************************************************************
+bool fs::folderDeleteAllFileRecursively(const u8 *utf8_pathSenzaSlashRESOLVABLE, eFolderDeleteMode folderDeleteMode)
 {
+	FS_PATH_RESOLVER(utf8_pathSenzaSlashRESOLVABLE, pathSenzaSlash)
 	if (!fs::folderExists(pathSenzaSlash))
 		return false;
 
 	if (folderDeleteMode == eFolderDeleteMode::doNotDeleteAnyFolder)
-		fs_deleteAllFileInFolderRecursively (pathSenzaSlash, false);
+		FS_deleteAllFileInFolderRecursively (pathSenzaSlash, false);
 	else
 	{
 		//se arriviamo qui, vuol dire che di sicuro voglio cancellare tutte le subfolder
-		fs_deleteAllFileInFolderRecursively (pathSenzaSlash, true);
+		FS_deleteAllFileInFolderRecursively (pathSenzaSlash, true);
 
 		//eventualmente cancello anche la main folder
 		if (folderDeleteMode == eFolderDeleteMode::deleteAlsoTheSubfolderAndTheMainFolder)
@@ -465,8 +546,9 @@ bool fs::folderDeleteAllFileRecursively(const u8 *pathSenzaSlash, eFolderDeleteM
 }
 
 //**************************************************************************
-void fs::folderDeleteAllFileWithJolly  (const u8 *pathSenzaSlash, const u8 *utf8_jolly)
+void fs::folderDeleteAllFileWithJolly  (const u8 *utf8_pathSenzaSlashRESOLVABLE, const u8 *utf8_jolly)
 {
+	FS_PATH_RESOLVER(utf8_pathSenzaSlashRESOLVABLE, pathSenzaSlash)
 	if (!fs::folderExists(pathSenzaSlash))
 		return;
 
@@ -488,28 +570,47 @@ void fs::folderDeleteAllFileWithJolly  (const u8 *pathSenzaSlash, const u8 *utf8
 }
 
 
-//**************************************************************************
-bool fs::fileOpenForW (gos::File *out_h, const u8 *utf8_filePathAndName, bool bAutoCreateFolders)
+
+/**************************************************************************
+ * Questa suppone che [utf8_filePathAndName] sia gia' stato risolto da qualcuno altro tramite 
+ * FS_PATH_RESOLVER()
+ */
+bool FS_fileOpenRESOLVED  (gos::File *out_h, const u8 *utf8_filePathAndName, eFileMode mode, bool bCreateIfNotExists, bool bAppend, bool bShareRead, bool bShareWrite)
 {
-	if (bAutoCreateFolders)
-	{
-		u8 path[2048];
-		fs::extractFilePathWithOutSlash (utf8_filePathAndName, path, sizeof(path));
-		fs::folderCreate(path);
-	}	
-	return fs::fileOpen (out_h, utf8_filePathAndName, eFileMode::writeOnly, true, false, true, true); 
+	return platform::FS_fileOpen (&out_h->osFile, utf8_filePathAndName, mode, bCreateIfNotExists, bAppend, bShareRead, bShareWrite); 
 }
 
 //**************************************************************************
-bool fs::fileOpenForAppend (gos::File *out_h, const u8 *utf8_filePathAndName, bool bAutoCreateFolders)
+bool fs::fileOpen  (gos::File *out_h, const u8 *utf8_filePathAndNameRESOLVABLE, eFileMode mode, bool bCreateIfNotExists, bool bAppend, bool bShareRead, bool bShareWrite)
 {
+	FS_PATH_RESOLVER(utf8_filePathAndNameRESOLVABLE, utf8_filePathAndName)
+	return FS_fileOpenRESOLVED (out_h, utf8_filePathAndName, mode, bCreateIfNotExists, bAppend, bShareRead, bShareWrite); 
+}
+
+//**************************************************************************
+bool fs::fileOpenForW (gos::File *out_h, const u8 *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders)
+{
+	FS_PATH_RESOLVER(utf8_filePathAndNameRESOLVABLE, utf8_filePathAndName)
 	if (bAutoCreateFolders)
 	{
 		u8 path[2048];
 		fs::extractFilePathWithOutSlash (utf8_filePathAndName, path, sizeof(path));
 		fs::folderCreate(path);
 	}	
-	return fs::fileOpen (out_h, utf8_filePathAndName, eFileMode::writeOnly, true, true, true, true); 
+	return FS_fileOpenRESOLVED (out_h, utf8_filePathAndName, eFileMode::writeOnly, true, false, true, true); 
+}
+
+//**************************************************************************
+bool fs::fileOpenForAppend (gos::File *out_h, const u8 *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders)
+{
+	FS_PATH_RESOLVER(utf8_filePathAndNameRESOLVABLE, utf8_filePathAndName)
+	if (bAutoCreateFolders)
+	{
+		u8 path[2048];
+		fs::extractFilePathWithOutSlash (utf8_filePathAndName, path, sizeof(path));
+		fs::folderCreate(path);
+	}	
+	return FS_fileOpenRESOLVED (out_h, utf8_filePathAndName, eFileMode::writeOnly, true, true, true, true); 
 }
 
 //**************************************************************************
@@ -525,8 +626,10 @@ void fs::fpf (gos::File &h, const char *format, ...)
 }
 
 //**************************************************************************
-u8* fs::fileLoadInMemory (Allocator *allocator, const u8* filePathAndName, u32 *out_fileSize)
+u8* fs::fileLoadInMemory (Allocator *allocator, const u8* utf8_filePathAndNameRESOLVABLE, u32 *out_fileSize)
 {
+	FS_PATH_RESOLVER(utf8_filePathAndNameRESOLVABLE, filePathAndName)
+
 	gos::File hFile;
 	if (!fs::fileOpenForR (&hFile, filePathAndName))
 		return NULL;
@@ -540,3 +643,90 @@ u8* fs::fileLoadInMemory (Allocator *allocator, const u8* filePathAndName, u32 *
 		*out_fileSize = fLen;
 	return buffer;
 }
+
+//**************************************************************************
+u64 fs::fileLength (const u8 *utf8_filePathAndNameRESOLVABLE)
+{ 
+	FS_PATH_RESOLVER(utf8_filePathAndNameRESOLVABLE, utf8_filePathAndName)
+	return platform::FS_fileLength(utf8_filePathAndName);
+}
+
+//**************************************************************************
+u64 fs::fileLength (const char *utf8_filePathAndNameRESOLVABLE)
+{ 
+	FS_PATH_RESOLVER(utf8_filePathAndNameRESOLVABLE, utf8_filePathAndName)
+	return platform::FS_fileLength(utf8_filePathAndName);
+}
+
+//**************************************************************************
+bool fs::findFirst (gos::FileFind *ff, const u8 *utf8_pathRESOLVABLE, const u8 *utf8_jolly)
+{ 
+	FS_PATH_RESOLVER(utf8_pathRESOLVABLE, utf8_path)
+	return platform::FS_findFirst (&ff->osFF, utf8_path, utf8_jolly); 
+}
+
+//**************************************************************************
+bool fs::findFirst (gos::FileFind *ff, const u8 *utf8_pathRESOLVABLE, const char *jolly)
+{ 
+	FS_PATH_RESOLVER(utf8_pathRESOLVABLE, utf8_path)
+	return platform::FS_findFirst (&ff->osFF, utf8_path, reinterpret_cast<const u8*>(jolly)); 
+}
+
+//**************************************************************************
+void fs::findComposeFullFilePathAndName (const gos::FileFind &ff, const u8 *pathNoSlash, u8 *out, u32 sizeofOut)
+{
+	gos::string::utf8::spf (out, sizeofOut, "%s/", pathNoSlash);
+	const u32 n = string::utf8::lengthInByte(out);
+	fs::findGetFileName (ff, &out[n], sizeofOut - n);
+}
+
+
+//**************************************************************************
+bool fs::fileExists(const u8 *utf8_filePathAndNameRESOLVABLE)
+{ 
+	FS_PATH_RESOLVER(utf8_filePathAndNameRESOLVABLE, utf8_fullFileNameAndPath)
+	return platform::FS_fileExists (utf8_fullFileNameAndPath); 
+}
+
+//**************************************************************************
+bool fs::fileDelete(const u8 *utf8_filePathAndNameRESOLVABLE)
+{ 
+	FS_PATH_RESOLVER (utf8_filePathAndNameRESOLVABLE, utf8_fullFileNameAndPath)
+	return platform::FS_fileDelete (utf8_fullFileNameAndPath); 
+}
+
+//**************************************************************************
+bool fs::fileRename(const u8 *utf8_pathNoSlashRESOLVABLE, const u8 *utf8_oldFilename, const u8 *utf8_newFilename)
+{ 
+	FS_PATH_RESOLVER (utf8_pathNoSlashRESOLVABLE, utf8_pathNoSlash)
+	return platform::FS_fileRename (utf8_pathNoSlash, utf8_oldFilename, utf8_newFilename); 
+}
+
+//**************************************************************************
+void fs::fileGetCreationTime_UTC(const u8 *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt)
+{ 
+	FS_PATH_RESOLVER (utf8_filePathAndNameRESOLVABLE, utf8_filePathAndName)
+	platform::FS_fileGetCreationTime_UTC(utf8_filePathAndName, out_dt); 
+}
+	
+//**************************************************************************
+void fs::fileGetLastTimeModified_UTC(const u8 *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt)
+{ 
+	FS_PATH_RESOLVER (utf8_filePathAndNameRESOLVABLE, utf8_filePathAndName)
+	platform::FS_fileGetLastTimeModified_UTC (utf8_filePathAndName, out_dt); 
+}
+
+//**************************************************************************
+void fs::fileGetCreationTime_LocalTime (const u8 *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt)
+{ 
+	FS_PATH_RESOLVER (utf8_filePathAndNameRESOLVABLE, utf8_filePathAndName)
+	platform::FS_fileGetCreationTime_LocalTime (utf8_filePathAndName, out_dt); 
+}
+
+//**************************************************************************
+void fs::fileGetLastTimeModified_LocalTime (const u8 *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt)
+{ 
+	FS_PATH_RESOLVER (utf8_filePathAndNameRESOLVABLE, utf8_filePathAndName)
+	platform::FS_fileGetLastTimeModified_LocalTime (utf8_filePathAndName, out_dt); 
+}
+

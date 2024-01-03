@@ -117,7 +117,7 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
 
 
 //*********************************************
-bool gos::vulkanScanAndSelectAPhysicalDevices (VkInstance &vkInstance, const VkSurfaceKHR &vkSurface, const gos::StringList &requiredExtensionList, sPhyDeviceInfo *out)
+bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, const VkSurfaceKHR &vkSurface, const gos::StringList &requiredExtensionList, sPhyDeviceInfo *out)
 {
     gos::Allocator *allocator = gos::getScrapAllocator();
     gos::logger::log ("vulkanScanPhysicalDevices\n");
@@ -252,7 +252,12 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (VkInstance &vkInstance, const VkS
     gos::logger::decIndent();
 
     gos::logger::decIndent();
-    return out->isValid();
+    if (!out->isValid())
+        return false;
+
+    //recupero alcune props del device
+    vkGetPhysicalDeviceMemoryProperties (out->vkDev, &out->vkMemoryProperties);
+    return true;
 }
 
 /*********************************************
@@ -494,3 +499,76 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
     return (VK_SUCCESS == result);
 }
 
+//*********************************************
+bool gos::vulkanFindBestDepthFormat (const sPhyDeviceInfo &vkPhyDevInfo, VkFormat *out_depthFormat)
+{
+    // adattato da https://github.com/SaschaWillems/Vulkan/blob/master/base/VulkanTools.cpp
+    // Since all depth formats may be optional, we need to find a suitable depth format to use
+    // Start with the highest precision packed format
+    const VkFormat formatList[] = {
+        VK_FORMAT_D32_SFLOAT_S8_UINT,
+        VK_FORMAT_D32_SFLOAT,
+        VK_FORMAT_D24_UNORM_S8_UINT,
+        VK_FORMAT_D16_UNORM_S8_UINT,
+        VK_FORMAT_D16_UNORM
+    };
+
+    constexpr u32 N = sizeof(formatList) / sizeof(VkFormat);
+    for (u32 i=0; i<N; i++)
+    {
+        VkFormatProperties formatProps;
+        vkGetPhysicalDeviceFormatProperties (vkPhyDevInfo.vkDev, formatList[i], &formatProps);
+        if (formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        {
+            *out_depthFormat = formatList[i];
+            return true;
+        }
+    }
+
+    return false;
+}
+
+//*********************************************
+bool gos::vulkanFindBestDepthStencilFormat (const sPhyDeviceInfo &vkPhyDevInfo, VkFormat* out_depthStencilFormat)
+{
+    // adattato da https://github.com/SaschaWillems/Vulkan/blob/master/base/VulkanTools.cpp
+    const VkFormat formatList[] = {
+        VK_FORMAT_D32_SFLOAT_S8_UINT,
+        VK_FORMAT_D24_UNORM_S8_UINT,
+        VK_FORMAT_D16_UNORM_S8_UINT,
+    };
+
+    constexpr u32 N = sizeof(formatList) / sizeof(VkFormat);
+    for (u32 i=0; i<N; i++)
+    {
+        VkFormatProperties formatProps;
+        vkGetPhysicalDeviceFormatProperties (vkPhyDevInfo.vkDev, formatList[i], &formatProps);
+        if (formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        {
+            *out_depthStencilFormat = formatList[i];
+            return true;
+        }
+    }
+
+    return false;
+}
+
+//*********************************************
+bool gos::vulkanGetMemoryType (const sPhyDeviceInfo &vkPhyDevInfo, uint32_t typeBits, VkMemoryPropertyFlags properties, u32 *out_index)
+{
+    assert (NULL != out_index);
+    for (u32 i = 0; i < vkPhyDevInfo.vkMemoryProperties.memoryTypeCount; i++)
+    {
+        if ((typeBits & 1) == 1)
+        {
+            if ((vkPhyDevInfo.vkMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
+            {
+                *out_index = i;
+                return true;
+            }
+        }
+        typeBits >>= 1;
+    }
+
+    return false;
+}
