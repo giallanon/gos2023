@@ -32,6 +32,7 @@ public:
 						gos::string::utf8::spf (allocatedPath, n, "%s%s", gos::getPhysicalPathToWritableFolder(), &path[1]);
 						return allocatedPath;
 					}
+#ifdef GOS_PLATFORM__LINUX
 					else if (path[0] != '/')
 					{
 						bWasAllocated = true;
@@ -40,7 +41,19 @@ public:
 						gos::string::utf8::spf (allocatedPath, n, "%s/%s", gos::getAppPathNoSlash(), path);
 						return allocatedPath;
 					}
-						
+#endif
+#ifdef GOS_PLATFORM__WINDOWS
+					else if (path[1] != ':')
+					{
+						bWasAllocated = true;
+						const u32 n = gos::string::utf8::lengthInByte(path) +2 +gos::getLengthOfAppPathNoSlash();
+						allocatedPath = GOSALLOCT(u8*, gos::getScrapAllocator(), n);
+						gos::string::utf8::spf (allocatedPath, n, "%s/%s", gos::getAppPathNoSlash(), path);
+						return allocatedPath;
+					}
+#endif
+
+
 					return path;
 				}
 

@@ -62,7 +62,7 @@ namespace gos
         void                close ();
         
         // aggiunge/rimuove un gos::Event all'elenco degli oggetti osservati dalla wait()
-        bool                addEventToWaitList (const gos::Event evt, u32 userParam=0)                                { return waitableGrp.addEvent (evt, userParam); }
+        bool                addEventToWaitList (const gos::Event evt, u32 userParam=0)                                  { return waitableGrp.addEvent (evt, userParam); }
         void                removeEventFromWaitList (const gos::Event evt)                                              { waitableGrp.removeEvent (evt); }
 
         bool                addMsgQToWaitList (const HThreadMsgR &hRead, u32 userParam)                                 { return waitableGrp.addMsgQ (hRead, userParam); }
@@ -70,7 +70,7 @@ namespace gos
 
         //this può avere al max 1 external socket
 	    bool                addExternalSocket1ToWaitList (gos::Socket &sok);
-        void                removeExternalSocket1FromWaitList (gos::Socket &sok)                                        { waitableGrp.removeSocket (sok); }
+        void                removeExternalSocket1FromWaitList (gos::Socket &sokIN)                                      { waitableGrp.removeSocket (sokIN); }
                                 
         // Chiamata bloccante per un max di timeoutMSec:
         // per specificare un tempo di wait "infinito" (ie: socket sempre bloccante), usare timeoutMSec=u32MAX

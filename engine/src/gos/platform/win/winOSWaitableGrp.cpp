@@ -97,7 +97,7 @@ void OSWaitableGrp::removeSocket (const gos::Socket &sok)
 }
 
 //***********************************************
-OSWaitableGrp::sRecord* OSWaitableGrp::priv_addSocket (const os::Socket &sok)
+OSWaitableGrp::sRecord* OSWaitableGrp::priv_addSocket (const gos::Socket &sok)
 {
 	assert(debug_bWaiting == 0);
 

@@ -21,7 +21,7 @@ namespace platform
     void            memory_alignedFree (void *p);
 
     const u8*       getAppPathNoSlash ();
-    const u8*       getPhysicalPathToWritableFolder();
+    const u8*       getPhysicalPathToUserFolder();
 
     void            sleep_msec (size_t msec);
 
@@ -59,7 +59,7 @@ namespace platform
 	inline void     eventSetInvalid(OSEvent &ev)										{ ev.h = INVALID_HANDLE_VALUE; }
 	inline bool		eventIsInvalid(const OSEvent &ev)									{ return (ev.h == INVALID_HANDLE_VALUE);  }
 
-	eThreadError    createThread  (OSThread *out_handle, GOS_ThreadMainFunction threadFunction, u32 stackSizeInKb, void *userParam);
+	eThreadError    createThread  (OSThread *out_handle, gos::Allocator *allocatorTS, GOS_ThreadMainFunction threadFunction, u32 stackSizeInKb, void *userParam);
 	void            waitThreadEnd (OSThread &handle);
 
 

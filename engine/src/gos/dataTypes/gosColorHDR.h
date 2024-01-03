@@ -3,6 +3,14 @@
 #include <math.h>
 #include "../gosEnumAndDefine.h"
 
+#ifdef GOS_COMPILER__GCC
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+#ifdef GOS_COMPILER__MSVC
+	#pragma warning(disable:4201)
+#endif
+
 namespace gos
 {
 	/*================================================================
@@ -71,18 +79,26 @@ namespace gos
 
 
 	private:
-		f32					priv_sRGBSingleColorToLinear(f32 col) const
+		f32					priv_sRGBSingleColorToLinear(f32 colIN) const
 		{
 			//float3 RGB = sRGB * (sRGB * (sRGB * 0.305306011 + 0.682171111) + 0.012522878);
 			//float3 RGB = sRGB * (sRGB * a + 0.012522878);
 			//float3 RGB = sRGB * b;
-			const f32 a = (col * 0.305306011f + 0.682171111f);
-			const f32 b = (col * a + 0.012522878f);
-			return col * b;			
+			const f32 a = (colIN * 0.305306011f + 0.682171111f);
+			const f32 b = (colIN * a + 0.012522878f);
+			return colIN * b;			
 		}
 	};
 
 	ColorHDR				operator* (const ColorHDR &a, f32 alfa);
 	
 }//namespace gos
+
+#ifdef GOS_COMPILER__GCC
+	#pragma GCC diagnostic pop
+#endif
+#ifdef GOS_COMPILER__MSVC
+	#pragma warning(default:4201)
+#endif
+
 #endif //_gosColorHDR_h_

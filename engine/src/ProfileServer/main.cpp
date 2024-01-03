@@ -33,7 +33,7 @@ public:
         int nWritten = vprintf (format, argptr);
         va_end (argptr); 
 
-        cursorX += nWritten;
+        cursorX += (u16)nWritten;
     }
 
 
@@ -54,15 +54,8 @@ void consoleTrap_CTRL_C (void *userParam)
     server->quit();
 }
 
-//***********************************************
-void run()
-{
-    Server server;
-    
-    gos::console::trap_CTRL_C (consoleTrap_CTRL_C, &server);
-    server.run();
-}
 
+//***********************************************
 void testConsoleArea()
 {
     gos::console::setBgColor (eBgColor::black);
@@ -93,18 +86,11 @@ void testConsoleArea()
     getchar();
 }
 
+
+
 //***********************************************
-int main ()
+void runServer()
 {
-    gos::sGOSInit init;
-    init.memory_setDefaultForNonGame();
-    //init.setLogMode (gos::sGOSInit::eLogMode::only_file);
-    if (!gos::init (init, "ProfileServer"))
-        return 1;
-
-    testConsoleArea();
-
-/*
     gos::console::setBgColor (eBgColor::black);
     gos::console::clear();
     
@@ -123,10 +109,23 @@ int main ()
     gos::console::setTextColor (eTextColor::grey);
     printf ("press CTRL C to terminate\n\n");
 
-    gos::console::setScrollingArea (10, 20);
-    gos::console::cursorMove(3, 10);
-    run();
-*/
+
+    Server server;
+    gos::console::trap_CTRL_C (consoleTrap_CTRL_C, &server);
+    server.run();
+}
+
+//***********************************************
+int main ()
+{
+    gos::sGOSInit init;
+    init.memory_setDefaultForNonGame();
+    //init.setLogMode (gos::sGOSInit::eLogMode::only_file);
+    if (!gos::init (init, "ProfileServer"))
+        return 1;
+
+    //testConsoleArea();
+    runServer();
 
 
     gos::deinit();

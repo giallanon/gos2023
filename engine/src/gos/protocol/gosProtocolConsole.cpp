@@ -2,7 +2,7 @@
 #include "../gosUtils.h"
 #include "../gosRandom.h"
 //#include <stdio.h>
-//#include <time.h>
+#include <time.h>
 
 using namespace gos;
 
@@ -24,7 +24,7 @@ bool ProtocolConsole::handshake_clientSend(IProtocolChannel *ch, gos::Logger *lo
     const u8 key = static_cast<u8>(random.getU32(255));
 
     char handshake[32];
-    sprintf (handshake, "GOSCONSOLE");
+    sprintf_s (handshake, sizeof(handshake), "GOSCONSOLE");
     handshake[11] = key;
 
     if (logger)

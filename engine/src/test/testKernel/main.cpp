@@ -35,6 +35,7 @@ void testTCP()
             gos::logger::err ("unable to handshake\n");
             return;
     }
+    gos::logger::log (eTextColor::green, "Connected!\n");
 
     //siamo dentro!
     protocol.write (&channel, (const u8*)"ciao", 4, 2000);
@@ -57,7 +58,8 @@ void runAllTest()
 int main()
 {
     gos::sGOSInit init;
-    init.memory_setDefaultForGame();
+    init.memory_setDefaultForNonGame();
+    //init.writableFolder_setMode (gos::sGOSInit::eWritableFolder::inUserFolder);
     if (!gos::init (init, "testKernel"))
         return 1;
 

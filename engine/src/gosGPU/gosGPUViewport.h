@@ -36,15 +36,15 @@ namespace gos
         private:
             void            resolve (i16 w, i16 h)                     
                             {
-                                resolvedX = x.resolve(w);
-                                resolvedY = y.resolve(h);
-                                resolvedW = width.resolve (resolvedX, w);
-                                resolvedH = height.resolve (resolvedY, h);
+                                resolvedX = static_cast<u32>(x.resolve(w));
+                                resolvedY = static_cast<u32>(y.resolve(h));
+                                resolvedW = static_cast<u32>(width.resolve ((i16)resolvedX, (i16)w));
+                                resolvedH = static_cast<u32>(height.resolve ((i16)resolvedY, (i16)h));
 
-                                resolvedX_f32 = (f32)resolvedX;
-                                resolvedY_f32 = (f32)resolvedY;
-                                resolvedW_f32 = (f32)resolvedW;
-                                resolvedH_f32 = (f32)resolvedH;
+                                resolvedX_f32 = static_cast<f32>(resolvedX);
+                                resolvedY_f32 = static_cast<f32>(resolvedY);
+                                resolvedW_f32 = static_cast<f32>(resolvedW);
+                                resolvedH_f32 = static_cast<f32>(resolvedH);
                             }
 
         private:

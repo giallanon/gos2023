@@ -50,13 +50,13 @@ void VulkanExample1::cleanup()
 }    
 
 //************************************
-void VulkanExample1::priv_destroyFrameBuffers (gos::GPU *gpu)
+void VulkanExample1::priv_destroyFrameBuffers (gos::GPU *gpuIN)
 {
     for (u8 i=0;i<SWAPCHAIN_NUM_MAX_IMAGES;i++)
     {
         if (VK_NULL_HANDLE != frameBufferHandleList[i])
         {
-            vkDestroyFramebuffer(gpu->REMOVE_getVkDevice(), frameBufferHandleList[i], nullptr);
+            vkDestroyFramebuffer(gpuIN->REMOVE_getVkDevice(), frameBufferHandleList[i], nullptr);
             frameBufferHandleList[i] = VK_NULL_HANDLE;
         }
     }
@@ -125,14 +125,14 @@ bool VulkanExample1::init(gos::GPU *gpuIN)
 /************************************
  * input:   swapchain (per conoscere il formato dell'immagine)
  */
-bool VulkanExample1::priv_createRenderPass (gos::GPU *gpu)
+bool VulkanExample1::priv_createRenderPass (gos::GPU *gpuIN)
 {
     gos::logger::log ("VulkanExample1::priv_createRenderPass: ");
     bool ret = false;
 
     //color buffer attachment
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = gpu->swapChain_getImageFormat();
+    colorAttachment.format = gpuIN->swapChain_getImageFormat();
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;       //pulisci il buffer all'inizio del render pass
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;     //mantiene le info scritte in questo buffer alla fine del pass
@@ -171,7 +171,7 @@ bool VulkanExample1::priv_createRenderPass (gos::GPU *gpu)
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;    
 
-    VkResult result = vkCreateRenderPass (gpu->REMOVE_getVkDevice(), &renderPassInfo, nullptr, &vkRenderPassHandle);
+    VkResult result = vkCreateRenderPass (gpuIN->REMOVE_getVkDevice(), &renderPassInfo, nullptr, &vkRenderPassHandle);
     if (VK_SUCCESS == result)
     {
         ret = true;
@@ -189,28 +189,28 @@ bool VulkanExample1::priv_createRenderPass (gos::GPU *gpu)
  * input:  swapchain e vkRenderPass
  * output: frameBufferHandleList[]   => un frame buffer per ogni image della swapchain
  */
-bool VulkanExample1::priv_recreateFrameBuffers (gos::GPU *gpu, const VkRenderPass vkRenderPassHandle)
+bool VulkanExample1::priv_recreateFrameBuffers (gos::GPU *gpuIN, const VkRenderPass vkRenderPassHandleIN)
 {
     bool ret = true;
     gos::logger::log ("VulkanExample1::priv_recreateFrameBuffers()\n");
     gos::logger::incIndent();
 
-    priv_destroyFrameBuffers(gpu);
+    priv_destroyFrameBuffers(gpuIN);
 
-    for (u8 i = 0; i < gpu->swapChain_getImageCount(); i++) 
+    for (u8 i = 0; i < gpuIN->swapChain_getImageCount(); i++) 
     {
-        VkImageView imageViewList[2] = { gpu->swapChain_getImageViewHandle(i) , 0};
+        VkImageView imageViewList[2] = { gpuIN->swapChain_getImageViewHandle(i) , 0};
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = vkRenderPassHandle;
+        framebufferInfo.renderPass = vkRenderPassHandleIN;
         framebufferInfo.attachmentCount = 1;
         framebufferInfo.pAttachments = imageViewList;
-        framebufferInfo.width = gpu->swapChain_getWidth();
-        framebufferInfo.height = gpu->swapChain_getHeight();
+        framebufferInfo.width = gpuIN->swapChain_getWidth();
+        framebufferInfo.height = gpuIN->swapChain_getHeight();
         framebufferInfo.layers = 1;
 
-        const VkResult result = vkCreateFramebuffer(gpu->REMOVE_getVkDevice(), &framebufferInfo, nullptr, &frameBufferHandleList[i]);
+        const VkResult result = vkCreateFramebuffer(gpuIN->REMOVE_getVkDevice(), &framebufferInfo, nullptr, &frameBufferHandleList[i]);
         if (VK_SUCCESS != result)
         {
             gos::logger::err ("vkCreateFramebuffer() => %s\n", string_VkResult(result));
@@ -224,13 +224,13 @@ bool VulkanExample1::priv_recreateFrameBuffers (gos::GPU *gpu, const VkRenderPas
 }
 
 //************************************
-bool VulkanExample1::recordCommandBuffer (gos::GPU *gpu, const VkRenderPass &vkRenderPassHandle, const VkFramebuffer &vkFrameBufferHandle, 
+bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN, const VkRenderPass &vkRenderPassHandle, const VkFramebuffer &vkFrameBufferHandle, 
                                             const VkPipeline &vkPipelineHandle, VkCommandBuffer *out_commandBuffer)
 {
     assert (out_commandBuffer);
 
     //uso la viewport di default di GPU che e' sempre grande tanto quanto la main window
-    const gos::gpu::Viewport *viewport = gpu->viewport_getDefault();
+    const gos::gpu::Viewport *viewport = gpuIN->viewport_getDefault();
 
     VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;

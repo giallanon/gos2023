@@ -10,7 +10,7 @@ struct	sWin32PlatformData
 {
 	HINSTANCE			hInst;
 	u8					applicationPathNoSlash[256];
-	u8					writableFolderPathNoSlash[256];
+	u8					userFolderPathNoSlash[256];
 	wchar_t				chromeFullPathAndName[256];
 	u64					hiresTimerFreqMSec;
 	u64					hiresTimerFreqUSec;
@@ -90,24 +90,19 @@ bool platform::internal_init (const char *appName)
 	gos::fs::extractFilePathWithOutSlash (temp_utf8, win32PlatformData.applicationPathNoSlash, sizeof(win32PlatformData.applicationPathNoSlash));
 
 
-	//writable folder path
-	SHGetFolderPath(NULL, CSIDL_APPDATA | CSIDL_FLAG_CREATE, NULL, SHGFP_TYPE_CURRENT, wcString);
+	//user folder path
 	{
-		size_t	n = wcslen(wcString);
-		for (size_t t = 0; t < n; t++)
-		{
-			if (wcString[t] == '\\')
-				wcString[t] = '/';
-		}
+		//SHGetFolderPath(NULL, CSIDL_APPDATA | CSIDL_FLAG_CREATE, NULL, SHGFP_TYPE_CURRENT, wcString);
+		//%LOCALAPPDATA% (%USERPROFILE%\AppData\Local)
+		wchar_t *winPathToUserFolder = NULL;
+		SHGetKnownFolderPath (FOLDERID_LocalAppData, KF_FLAG_DEFAULT, NULL, &winPathToUserFolder);
+		win32::wchar_to_utf8 (winPathToUserFolder, u32MAX, win32PlatformData.userFolderPathNoSlash, sizeof(win32PlatformData.userFolderPathNoSlash));
+		CoTaskMemFree (winPathToUserFolder);
 
-		win32::wchar_to_utf8 (wcString, u32MAX, win32PlatformData.writableFolderPathNoSlash, sizeof(win32PlatformData.writableFolderPathNoSlash));
-		gos::fs::pathSanitizeInPlace (win32PlatformData.writableFolderPathNoSlash); 
+		gos::fs::pathSanitizeInPlace (win32PlatformData.userFolderPathNoSlash);
+		strcat_s((char*)win32PlatformData.userFolderPathNoSlash, sizeof(win32PlatformData.userFolderPathNoSlash), "/gos/");
+		gos::fs::folderCreate(win32PlatformData.userFolderPathNoSlash);
 	}
-
-	strcat_s((char*)win32PlatformData.writableFolderPathNoSlash, sizeof(win32PlatformData.writableFolderPathNoSlash), "/");
-	strcat_s((char*)win32PlatformData.writableFolderPathNoSlash, sizeof(win32PlatformData.writableFolderPathNoSlash), appName);
-	gos::fs::folderCreate(win32PlatformData.writableFolderPathNoSlash);
-
 
 	//initialize Winsock
 	if (0 != WSAStartup(MAKEWORD(2, 2), &win32PlatformData.wsaData))
@@ -161,7 +156,7 @@ void platform::memory_alignedFree (void *p)
 
 //**********************************************
 const u8 *platform::getAppPathNoSlash()						{ return win32PlatformData.applicationPathNoSlash; }
-const u8 *platform::getPhysicalPathToWritableFolder()		{ return win32PlatformData.writableFolderPathNoSlash; }
+const u8 *platform::getPhysicalPathToUserFolder()			{ return win32PlatformData.userFolderPathNoSlash; }
 void platform::sleep_msec(size_t msec)						{ ::Sleep((u32)msec); }
 
 //**********************************************

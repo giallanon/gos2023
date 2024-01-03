@@ -101,9 +101,9 @@ void ServerTCP::close()
 
 
 //****************************************************
-bool ServerTCP::addExternalSocket1ToWaitList (gos::Socket &sok)
+bool ServerTCP::addExternalSocket1ToWaitList (gos::Socket &sokIN)
 { 
-    return waitableGrp.addSocket (sok, EVENT_USER_PARAM_IS_EXTERNAL_SOCKET1);
+    return waitableGrp.addSocket (sokIN, EVENT_USER_PARAM_IS_EXTERNAL_SOCKET1);
 }
 
 /****************************************************
@@ -120,7 +120,7 @@ u8 ServerTCP::wait (u32 timeoutMSec)
     if (n == 0)
         return 0;
 
-    //scanno gli eventi perch� non tutti vanno ritornati, ce ne sono alcuni che devo gesire da me
+    //scanno gli eventi perche' non tutti vanno ritornati, ce ne sono alcuni che devo gesire da me
     for (u8 i=0; i<n; i++)
     {
         if (waitableGrp.getEventOrigin(i) == eWaitEventOrigin::osevent)

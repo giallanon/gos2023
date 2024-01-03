@@ -1,43 +1,45 @@
 #ifdef GOS_PLATFORM__WINDOWS
 #include "winOS.h"
+#include "../../memory/gosMemory.h"
 
-struct sThreadBootstrap
+struct sThreadInfo
 {
 	HANDLE 					winHandle;
 	GOS_ThreadMainFunction	fn;
 	void					*userData;
+	gos::Allocator			*allocatorTS;
 };
-static sThreadBootstrap	threadBootstrap[32];
-static u32				nextThreadBootstrap = 0;
 
 //*********************************************
 DWORD WINAPI Win32InternalThreadProc (void *lpParameter)
 {
-	sThreadBootstrap *init = reinterpret_cast<sThreadBootstrap*>(lpParameter);
+	sThreadInfo *info = reinterpret_cast<sThreadInfo*>(lpParameter);
 
-	platform::OSThreadFunction fn = init->fn;
-	void *userData = init->userData;
-	fn(userData);
+	GOS_ThreadMainFunction fn = info->fn;
+	fn(info->userData);
 
-	::CloseHandle(init->winHandle);
+	::CloseHandle(info->winHandle);
+	GOSFREE(info->allocatorTS, info);
 	return 0;
 }
 
 
 //*******************************************************************
-eThreadError platform::createThread (OSThread *out_handle, GOS_ThreadMainFunction threadFunction, UNUSED_PARAM(u32 stackSizeInKb), void *userParam)
+eThreadError platform::createThread (OSThread *out_handle, gos::Allocator *allocatorTS, GOS_ThreadMainFunction threadFunction, UNUSED_PARAM(u32 stackSizeInKb), void *userParam)
 {
+	assert (allocatorTS->isThreadSafe());
+	
+	//info sul thread
+	sThreadInfo *info = GOSALLOCSTRUCT(allocatorTS, sThreadInfo);
+	info->fn = threadFunction;
+	info->userData = userParam;
+	info->allocatorTS = allocatorTS;
+	
+
+
 	u32 flag = 0;
 	//if (bStartSuspended)	flag |= CREATE_SUSPENDED;
-
-
-	sThreadBootstrap *init = &threadBootstrap[nextThreadBootstrap++];
-	if (nextThreadBootstrap == 32)
-		nextThreadBootstrap = 0;
-
-	init->fn = threadFunction;
-	init->userData = userParam;
-	init->winHandle = *out_handle = ::CreateThread (NULL, 0, Win32InternalThreadProc, (void*)init, flag, NULL);
+	info->winHandle = *out_handle = ::CreateThread (NULL, 0, Win32InternalThreadProc, info, flag, NULL);
 
 	if (INVALID_HANDLE_VALUE == *out_handle)
 		return eThreadError::unknown;
