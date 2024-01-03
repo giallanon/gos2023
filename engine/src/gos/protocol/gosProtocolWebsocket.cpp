@@ -74,9 +74,27 @@ bool ProtocolServer_handshake_make_accept (const char *received_key, char *accep
     if (lenOfReceivedKey + lenOfWS_UUID >= sizeof(concat_key)-1)
         return false;
 
+#ifdef GOS_COMPILER__GCC
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wsizeof-pointer-memaccess"
+#endif
+#ifdef GOS_COMPILER__MSVC
+	//#pragma warning(disable:4201)
+#endif
+
     memset (concat_key, 0, sizeof(concat_key));
     strncpy (concat_key, received_key, sizeof(concat_key));
-    strncat (concat_key, WS_UUID, sizeof(WS_UUID));
+	strncat (concat_key, WS_UUID, sizeof(WS_UUID));
+
+#ifdef GOS_COMPILER__GCC
+	#pragma GCC diagnostic pop
+#endif
+#ifdef GOS_COMPILER__MSVC
+	//#pragma warning(default:4201)
+#endif
+
+
+    
 
 
     //sha-1 della key concatenata

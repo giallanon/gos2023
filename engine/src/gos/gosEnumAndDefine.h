@@ -238,11 +238,6 @@ namespace gos
         platform::OSEvent osEvt;  //"osEvt" e' dipendente dalla platform, per cui deve essere definito nel codice di platform
     };    
 
-    struct Thread
-    {
-        void *p;
-    };
-
     struct Socket
     {
         platform::OSSocket osSok;  //"OSSocket" e' dipendente dalla platform, per cui deve essere definito nel codice di platform
@@ -290,5 +285,7 @@ namespace gos
     };
 
 } //namespace gos
+
+
 
 #endif //_gosEnumAndDefine_h_

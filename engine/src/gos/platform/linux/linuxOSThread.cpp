@@ -4,35 +4,32 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
+#include "../../memory/gosMemory.h"
 
-struct sThreadBootstrap
+struct sThreadInfo
 {
 	GOS_ThreadMainFunction	    fn;
 	void						*userData;
 };
-static sThreadBootstrap	threadBootstrap[32];
-static u32				nextThreadBootstrap = 0;
-
 
 //*********************************************
 void* LinuxInternalThreadProc (void *userParam)
 {
-	sThreadBootstrap *init = reinterpret_cast<sThreadBootstrap*>(userParam);
-	
-    GOS_ThreadMainFunction fn = init->fn;
-	fn (init->userData);
+    sThreadInfo *info = reinterpret_cast<sThreadInfo*>(userParam);
+
+    GOS_ThreadMainFunction fn = info->fn;
+	fn (info->userData);
 
     return NULL;
 }
 
 //*******************************************************************
-eThreadError platform::createThread (OSThread *out_handle, GOS_ThreadMainFunction threadFunction, u32 stackSizeInKb, void *userParam)
+eThreadError platform::createThread (OSThread *out_handle, gos::Allocator *allocatorTS, GOS_ThreadMainFunction threadFunction, u32 stackSizeInKb, void *userParam)
 {
-	sThreadBootstrap *init = &threadBootstrap[nextThreadBootstrap++];
-	if (nextThreadBootstrap == 32)
-		nextThreadBootstrap = 0;
-	init->fn = threadFunction;
-	init->userData = userParam;
+    assert (allocatorTS->isThreadSafe());
+    sThreadInfo *info = GOSALLOCSTRUCT(allocatorTS, sThreadInfo);
+	info->fn = threadFunction;
+	info->userData = userParam;
 
 
     pthread_attr_t  attr;
@@ -47,7 +44,7 @@ eThreadError platform::createThread (OSThread *out_handle, GOS_ThreadMainFunctio
     if (rc != 0)
         return eThreadError::invalidStackSize;
 
-    rc = pthread_create (out_handle, &attr, LinuxInternalThreadProc, init);
+    rc = pthread_create (out_handle, &attr, LinuxInternalThreadProc, info);
     if (rc == 0)
         return eThreadError::none;
 

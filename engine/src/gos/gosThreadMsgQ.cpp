@@ -1,11 +1,26 @@
 #include "gosThreadMsgQ.h"
 #include "gosFIFO.h"
 #include "gosUtils.h"
+#include "memory/gosAllocatorHeap.h"
 
 using namespace gos;
 
+//data struct per un thread
+struct sThreadInfo
+{
+    platform::OSThread      	osThreadHandle;
+	GOSThread					gosHandle;
+	GOS_ThreadMainFunction		fn;
+	void 						*userParam;
+};
+
+//handle list per i thread
+typedef gos::HandleList<GOSThread,sThreadInfo> GOSThreadHandleList;
+
+//FIFO dei msg di una msgQ
 typedef gos::FIFO<thread::sMsg>  GOSThreadMsgFIFO;
 
+//data struct per una msgQ
 struct sThreadMsgQ
 {
     GOSThreadMsgFIFO    *fifo;
@@ -13,13 +28,19 @@ struct sThreadMsgQ
     gos::Mutex          cs;
 };
 
+//handle list per le msgQ
 typedef gos::HandleList<HThreadMsgHandle, sThreadMsgQ> GOSThreadMsgHandleArray;
+
+//allocatore 
+typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Safe>		GOSThreadMemAllocatorTS;
+
 
 struct sGlob
 {
-    GOSThreadMsgHandleArray     msgHandleList;
-    gos::Allocator              *allocator;
+    GOSThreadMemAllocatorTS     *allocator;
     gos::Mutex                  cs;
+    GOSThreadMsgHandleArray     msgHandleList;
+	GOSThreadHandleList	        threadHandleList;
 };
 static sGlob   gosThreadGlob;
 
@@ -27,9 +48,15 @@ static sGlob   gosThreadGlob;
 //**************************************************************
 bool thread::internal_init()
 {
-    gosThreadGlob.allocator = gos::getSysHeapAllocator();
+    //Creo un allocatore dedicato
+    gosThreadGlob.allocator = GOSNEW(gos::getSysHeapAllocator(), GOSThreadMemAllocatorTS)("Thread");
+    gosThreadGlob.allocator->setup (1024 * 1024 * 1); //1MB
+
     gosThreadGlob.msgHandleList.setup (gosThreadGlob.allocator);
+	gosThreadGlob.threadHandleList.setup (gosThreadGlob.allocator);
+    
     gos::thread::mutexCreate (&gosThreadGlob.cs);
+
     return true;
 }
 
@@ -37,11 +64,76 @@ bool thread::internal_init()
 void thread::internal_deinit()
 {
     gosThreadGlob.msgHandleList.unsetup();
+	gosThreadGlob.threadHandleList.unsetup();
     gos::thread::mutexDestroy (gosThreadGlob.cs);
+
+    GOSDELETE(gos::getSysHeapAllocator(), gosThreadGlob.allocator);
+    gosThreadGlob.allocator = NULL;
 }
 
+
+//************************************************************************
+i16 GOS_threadFunctionWrapper (void *userParam)
+{
+    //recupero l'handle del thread
+    GOSThread *_pt_to_handle = reinterpret_cast<GOSThread*>(userParam);
+    GOSThread handle = *_pt_to_handle;
+
+    //recupero le info sul thread
+    sThreadInfo *info = NULL;
+    gosThreadGlob.threadHandleList.fromHandleToPointer (handle, &info);
+    if (NULL == info)
+    {
+        DBGBREAK;
+        return i16MIN;
+    }
+
+    //main fn
+    i16 retCode = (*info->fn)(info->userParam);
+	
+    //invalido il thread handle e libero le risorse
+	gosThreadGlob.threadHandleList.release (handle);
+
+	return retCode;
+}
+
+
+//************************************************************************
+eThreadError gos::thread::create (GOSThread *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb)
+{
+    //riservo un handle
+	sThreadInfo *info = gosThreadGlob.threadHandleList.reserve (out_hThread);
+	if (NULL == info)
+		return eThreadError::tooMany;
+	info->gosHandle = *out_hThread;
+	info->fn = threadFunction;
+	info->userParam = userParam;
+	
+    //creo il thread
+    eThreadError err = platform::createThread (&info->osThreadHandle, gosThreadGlob.allocator, GOS_threadFunctionWrapper, stackSizeInKb, out_hThread);
+    if (eThreadError::none != err)
+	{
+		gosThreadGlob.threadHandleList.release (*out_hThread);
+		out_hThread->setInvalid();
+	}
+
+	return err;
+}
+
+
+//************************************************************************
+void gos::thread::waitEnd (GOSThread &hThread)
+{
+	sThreadInfo *info;
+	if (gosThreadGlob.threadHandleList.fromHandleToPointer (hThread, &info))
+	    platform::waitThreadEnd (info->osThreadHandle);
+}
+
+
+
+
 //**************************************************************
-sThreadMsgQ* thread_fromHandleToPointer (const HThreadMsgHandle &h)
+sThreadMsgQ* thread_HTreadMsgHandle_to_pointer (const HThreadMsgHandle &h)
 {
 	sThreadMsgQ *s = NULL;
 	if (gosThreadGlob.msgHandleList.fromHandleToPointer(h, &s))
@@ -57,13 +149,11 @@ bool thread::createMsgQ (HThreadMsgR *out_handleR, HThreadMsgW *out_handleW)
     out_handleR->hRead.setInvalid();
     out_handleW->hWrite.setInvalid();
 
-    sThreadMsgQ *s = NULL;
-    HThreadMsgHandle msgHandle;
-    gos::thread::mutexLock (gosThreadGlob.cs);
-    {
+    MUTEX_LOCK(gosThreadGlob.cs)
+        sThreadMsgQ *s = NULL;
+        HThreadMsgHandle msgHandle;
         s = gosThreadGlob.msgHandleList.reserve (&msgHandle);
-    }
-    gos::thread::mutexUnlock (gosThreadGlob.cs);
+    MUTEX_UNLOCK(gosThreadGlob.cs)
 
     if (NULL == s)
     {
@@ -84,13 +174,13 @@ bool thread::createMsgQ (HThreadMsgR *out_handleR, HThreadMsgW *out_handleW)
 //**************************************************************
 void thread::deleteMsgQ (HThreadMsgR &handleR, UNUSED_PARAM(HThreadMsgW &handleW))
 {
-    sThreadMsgQ *s = thread_fromHandleToPointer(handleR.hRead);
+    sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(handleR.hRead);
     if (NULL == s)
         return;
 
-    gos::thread::mutexLock(gosThreadGlob.cs);
+    MUTEX_LOCK (gosThreadGlob.cs);
 	{
-		gos::thread::mutexLock (s->cs);
+		MUTEX_LOCK (s->cs);
 		{
 			thread::sMsg msg;
 			while ( s->fifo->pop(&msg) )
@@ -99,14 +189,13 @@ void thread::deleteMsgQ (HThreadMsgR &handleR, UNUSED_PARAM(HThreadMsgW &handleW
 			s->fifo->unsetup();
 			GOSDELETE( gosThreadGlob.allocator, s->fifo );
 		}
-		gos::thread::mutexUnlock(s->cs);
-		gos::thread::mutexDestroy(s->cs);
-
+		MUTEX_UNLOCK(s->cs);
+		
+        gos::thread::mutexDestroy(s->cs);
 		gos::thread::eventDestroy (s->hEvent);
-
         gosThreadGlob.msgHandleList.release (handleR.hRead);
     }
-    gos::thread::mutexUnlock (gosThreadGlob.cs);
+    MUTEX_UNLOCK (gosThreadGlob.cs);
 }
 
 //**************************************************************
@@ -175,7 +264,7 @@ u32 thread::deserializMsg (const u8 *buffer, u16 *out_what, u32 *out_paramU32, u
 //**************************************************************
 void thread::pushMsg (const HThreadMsgW &h, u16 what, u32 paramU32, const void *src, u32 sizeInBytes)
 {
-    sThreadMsgQ *s = thread_fromHandleToPointer(h.hWrite);
+    sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hWrite);
 
     if (NULL == s)
         return;
@@ -196,16 +285,16 @@ void thread::pushMsg (const HThreadMsgW &h, u16 what, u32 paramU32, const void *
         msg.bufferSize = 0;
     }
 
-    gos::thread::mutexLock (s->cs);
+    MUTEX_LOCK (s->cs);
         s->fifo->push(msg);
 		gos::thread::eventFire (s->hEvent);
-    gos::thread::mutexUnlock (s->cs);
+    MUTEX_UNLOCK (s->cs);
 }
 
 //**************************************************************
 void thread::pushMsg2Buffer (const HThreadMsgW &h, u16 what, u32 paramU32, const void *src1, u32 sizeInBytes1, const void *src2, u32 sizeInBytes2)
 {
-    sThreadMsgQ *s = thread_fromHandleToPointer(h.hWrite);
+    sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hWrite);
 
     if (NULL == s)
         return;
@@ -232,16 +321,16 @@ void thread::pushMsg2Buffer (const HThreadMsgW &h, u16 what, u32 paramU32, const
         }
     }
 
-    gos::thread::mutexLock (s->cs);
+    MUTEX_LOCK (s->cs);
         s->fifo->push(msg);
 		gos::thread::eventFire(s->hEvent);
-    gos::thread::mutexUnlock (s->cs);
+    MUTEX_UNLOCK (s->cs);
 }
 
 //**************************************************************
 bool thread::getMsgQEvent (const HThreadMsgR &h, gos::Event *out_hEvent)
 {
-    sThreadMsgQ *s = thread_fromHandleToPointer(h.hRead);
+    sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hRead);
 
     if (NULL == s)
         return false;
@@ -252,13 +341,13 @@ bool thread::getMsgQEvent (const HThreadMsgR &h, gos::Event *out_hEvent)
 //**************************************************************
 bool thread::popMsg (const HThreadMsgR &h, thread::sMsg *out_msg)
 {
-    sThreadMsgQ *s = thread_fromHandleToPointer(h.hRead);
+    sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hRead);
     if (NULL == s)
         return false;
 
-    gos::thread::mutexLock (s->cs);
+    MUTEX_LOCK (s->cs);
         bool ret = s->fifo->pop(out_msg);
-    gos::thread::mutexUnlock (s->cs);
+    MUTEX_UNLOCK (s->cs);
 
     return ret;
 }

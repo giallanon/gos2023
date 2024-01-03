@@ -163,11 +163,16 @@ namespace gos
 	 */
     namespace thread
     {
+		//queste 2 macro sono solo degli alias. Mi piacciono perche' nel codice sono molto piu' evidenti rispetto ad usare la normale chiamata alla fn
+		#define MUTEX_LOCK(mutex) 	gos::thread::mutexLock(mutex); 
+		#define MUTEX_UNLOCK(mutex) gos::thread::mutexUnlock(mutex); 
+
         inline void    mutexCreate (gos::Mutex *m)      										{ platform::mutexCreate (&m->osm); }
         inline void    mutexDestroy (gos::Mutex &m)     										{ platform::mutexDestroy (&m.osm); }
         inline bool    mutexTryLock (gos::Mutex &m)     										{ return platform::mutexTryLock (&m.osm); }
         inline bool    mutexLock (gos::Mutex &m)        										{ return platform::mutexLock (&m.osm); }
         inline void    mutexUnlock (gos::Mutex &m)      										{ platform::mutexUnlock (&m.osm); }
+
         
 		inline bool     eventCreate (gos::Event *out_ev)										{ return platform::eventCreate (&out_ev->osEvt); }
 		inline void     eventDestroy (gos::Event &ev)											{ platform::eventDestroy (ev.osEvt); }

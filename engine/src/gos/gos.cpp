@@ -5,16 +5,6 @@
 #include "gosUtils.h"
 #include "gosThreadMsgQ.h"
 
-struct sThreadInfo
-{
-    platform::OSThread      	osThreadHandle;
-	GOSThread					gosHandle;
-	GOS_ThreadMainFunction		fn;
-	void 						*userParam;
-};
-
-typedef gos::HandleList<GOSThread,sThreadInfo> GOSThreadHandleList;
-
 struct sGOSGlobals
 {
 	u64					timeStarted_usec;
@@ -23,10 +13,7 @@ struct sGOSGlobals
 	u8					*pathToWritableFolder;
 	u32 				lengthOfAppPathConSlash;
 	u32 				lengthOfPathToWritableFolder;
-	GOSThreadHandleList	*threadHandleList;
 };
-
-
 
 static sGOSGlobals		gosGlobals;
 static gos::Random		gosGlobalsRnd;
@@ -130,9 +117,6 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 	gosGlobals.appName = reinterpret_cast<char*>(gos::string::utf8::allocStr (gos::getSysHeapAllocator(), appName));
 
 
-	//thread
-	gosGlobals.threadHandleList = GOSNEW(gos::getSysHeapAllocator(), GOSThreadHandleList)();
-	gosGlobals.threadHandleList->setup (gos::getSysHeapAllocator());
 
 	//generatore random
 	{
@@ -158,9 +142,6 @@ void gos::deinit()
 		gos::logger::log (eTextColor::white, "shutting down...\n\n\n\n");
 		delete gosGlobals.logger;
 	}
-
-	gosGlobals.threadHandleList->unsetup();
-	GOSDELETE(gos::getSysHeapAllocator(), gosGlobals.threadHandleList);
 
 	thread::internal_deinit();
 	GOSFREE(gos::getSysHeapAllocator(), gosGlobals.appName);
@@ -445,44 +426,3 @@ void gos::socket::UDPSendBroadcast(Socket &sok, const u8 *buffer, u32 nByteToSen
 
 
 
-//************************************************************************
-i16 GOS_threadFunctionWrapper (void *userParam)
-{
-    sThreadInfo *th = reinterpret_cast<sThreadInfo*>(userParam);
-
-    i16 retCode = (*th->fn)(th->userParam);
-	
-	GOSThread gosHandle = th->gosHandle;
-	gosGlobals.threadHandleList->release (gosHandle);
-
-	return retCode;
-}
-
-//************************************************************************
-eThreadError gos::thread::create (GOSThread *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb)
-{
-	sThreadInfo *info = gosGlobals.threadHandleList->reserve (out_hThread);
-	if (NULL == info)
-		return eThreadError::tooMany;
-	info->gosHandle = *out_hThread;
-	info->fn = threadFunction;
-	info->userParam = userParam;
-	
-    eThreadError err = platform::createThread (&info->osThreadHandle, GOS_threadFunctionWrapper, stackSizeInKb, info);
-    if (eThreadError::none != err)
-	{
-		gosGlobals.threadHandleList->release (*out_hThread);
-		out_hThread->setInvalid();
-	}
-
-	return err;
-}
-
-
-//************************************************************************
-void gos::thread::waitEnd (GOSThread &hThread)
-{
-	sThreadInfo *info;
-	if (gosGlobals.threadHandleList->fromHandleToPointer (hThread, &info))
-	    platform::waitThreadEnd (info->osThreadHandle);
-}
