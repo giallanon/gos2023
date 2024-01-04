@@ -1,5 +1,5 @@
-#ifndef _gosDepthStencil_h_
-#define _gosDepthStencil_h_
+#ifndef _gosResDepthStencil_h_
+#define _gosResDepthStencil_h_
 #include "gosGPUEnumAndDefine.h"
 #include "../gos/dataTypes/gosPosDim2D.h"
 
@@ -51,4 +51,4 @@ namespace gos
     } //namespace gpu
 } //namespace gos
 
-#endif //_gosDepthStencil_h_
+#endif //_gosResDepthStencil_h_

@@ -17,6 +17,9 @@ GPU::GPU()
     vkSurface = VK_NULL_HANDLE;
     vkDebugMessenger = VK_NULL_HANDLE;
     defaultViewportHandle.setInvalid();
+    defaultRTHandleList = NULL;
+    currentSwapChainImageIndex = 0;
+    bNeedToRecreateSwapchain = false;
 }
 
 //********************************************************** 
@@ -33,7 +36,17 @@ void GPU::deinit()
 
     gos::logger::log ("GPU::deinit()\n");
     gos::logger::incIndent();
-        viewport_delete(defaultViewportHandle);
+
+        toBeDeletedBuilder.deleteAll();
+        toBeDeletedBuilder.unsetup();
+
+        //elimino i default RT
+        for (u32 i=0; i<vulkan.swapChainInfo.imageCount; i++)
+            renderTargetList.release (defaultRTHandleList[i]);
+        GOSFREE(allocator, defaultRTHandleList);
+
+
+        deleteResource (defaultViewportHandle);
 
         priv_deinitandleLists();
         priv_deinitVulkan();
@@ -55,23 +68,43 @@ bool GPU::init (u16 width, u16 height, const char *appName)
     gpuAllocator->setup (1024 * 1024 * 128); //128MB
     this->allocator = gpuAllocator;
 
+    //lista dei builder temporanei da deletare
+    toBeDeletedBuilder.setup();
 
+
+    //init vero e proprio
     bool bSuccess = false;
     while (1)
     {
         if (!priv_initWindowSystem (width, height, appName))
             break;
-        if (!priv_initVulkan())
-            break;
         if (!priv_initHandleLists())
             break;
-        
+        if (!priv_initVulkan())
+            break;
         bSuccess = true;
         break;
     }
 
     //default viewport
     viewport_create ("0", "0", "0-", "0-", &defaultViewportHandle);
+
+    //creo un renderTarget per ogni image della swapchain
+    defaultRTHandleList = GOSALLOCT(GPURenderTargetHandle*, allocator, sizeof(GPURenderTargetHandle) * vulkan.swapChainInfo.imageCount);
+    for (u32 i=0; i<vulkan.swapChainInfo.imageCount; i++)
+    {
+        gpu::RenderTarget *rt = renderTargetList.reserve(&defaultRTHandleList[i]);
+        rt->reset();
+        rt->format = vulkan.swapChainInfo.imageFormat;
+        rt->image = VK_NULL_HANDLE;
+        rt->mem = VK_NULL_HANDLE;
+        rt->viewAsRT = vulkan.swapChainInfo.vkImageListView[i];
+        rt->viewAsTexture = VK_NULL_HANDLE;
+        rt->width = vulkan.swapChainInfo.imageExtent.width;
+        rt->height = vulkan.swapChainInfo.imageExtent.height;
+    }
+
+
 
     //fine
     if (bSuccess)
@@ -223,6 +256,10 @@ bool GPU::priv_initHandleLists()
 
     depthStencilList.setup (allocator);
     depthStencilHandleList.setup (allocator, 32);   //questa mi serve per tenere traccia di tutti gli handle creati dato che durante il resize della window, devo andare ad aggiustare tutte i swpth buffer (nel caso che siano bindati alla dimensione della vport)
+
+    renderTargetList.setup (allocator);
+    renderLayoutList.setup (allocator);
+    pipelineList.setup (allocator);
     return true;
 }
 
@@ -239,6 +276,10 @@ void  GPU::priv_deinitandleLists()
 
     depthStencilList.unsetup();
     depthStencilHandleList.unsetup();
+
+    renderTargetList.unsetup ();
+    renderLayoutList.unsetup ();
+    pipelineList.unsetup();
 }
 
 //************************************
@@ -330,20 +371,47 @@ VkResult GPU::fence_wait (const VkFence *fenceHandleList, u32 fenceCount, u64 ti
 }
 
 //************************************
-void  GPU::fence_reset (const VkFence *fenceHandleList, u32 fenceCount)
+void GPU::fence_reset (const VkFence *fenceHandleList, u32 fenceCount)
 {
     vkResetFences (vulkan.dev, fenceCount, fenceHandleList);
 }
 
 //************************************
-VkResult GPU::swapChain_acquireNextImage (u32 *out_imageIndex, u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
+bool GPU::newFrame (bool *out_bSwapchainWasRecreated, u32 *out_imageIndex,u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
 {
-    const VkResult result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, timeout_ns, semaphore, fence, out_imageIndex);
-    return result;
+    const u64 timeNow_msec = gos::getTimeSinceStart_msec();
+    
+    toBeDeletedBuilder.check (timeNow_msec);
+
+    const VkResult result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, timeout_ns, semaphore, fence, &currentSwapChainImageIndex);
+    *out_imageIndex = currentSwapChainImageIndex;
+
+    switch (result)
+    {
+    default:
+        gos::logger::err ("GPU::beginFrame() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
+        *out_bSwapchainWasRecreated = false;
+        return false;
+
+    case VK_SUCCESS:
+        *out_bSwapchainWasRecreated = false;
+        return true;
+
+    case VK_ERROR_OUT_OF_DATE_KHR:
+        priv_swapChain_recreate();
+        *out_bSwapchainWasRecreated = true;
+        return false;
+                
+    case VK_SUBOPTIMAL_KHR:
+        //posso ancora renderizzare, ma alla fine del prossimo present() la swapchain verra' ricreata
+        bNeedToRecreateSwapchain = true;
+        *out_bSwapchainWasRecreated = true;
+        return true;
+    }
 }
 
 //************************************
-VkResult GPU::swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount, u32 imageIndex)
+VkResult GPU::present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount, u32 imageIndex)
 {
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -353,11 +421,19 @@ VkResult GPU::swapChain_present (const VkSemaphore *semaphoreHandleList, u32 sem
     presentInfo.pSwapchains = &vulkan.swapChainInfo.vkSwapChain;
     presentInfo.pImageIndices = &imageIndex;
     
-    return vkQueuePresentKHR (vulkan.gfxQ, &presentInfo);    
+    const VkResult result = vkQueuePresentKHR (vulkan.gfxQ, &presentInfo);
+
+    if (bNeedToRecreateSwapchain)
+    {
+        priv_swapChain_recreate();
+        bNeedToRecreateSwapchain = false;
+    }
+
+    return result;
 }
 
 //**********************************************************
-bool GPU::swapChain_recreate ()
+bool GPU::priv_swapChain_recreate ()
 {
     gos::logger::log (eTextColor::green, "GPU::swapChain_recreate()\n");
     gos::logger::incIndent();
@@ -387,6 +463,17 @@ bool GPU::swapChain_recreate ()
     //attuale dimensione della vport
     const i16 vportW = (i16)vulkan.swapChainInfo.imageExtent.width;
     const i16 vportH = (i16)vulkan.swapChainInfo.imageExtent.height;
+
+    //aggiorno le view del default RT
+    for (u32 i=0; i<vulkan.swapChainInfo.imageCount; i++)
+    {
+        gpu::RenderTarget *rt;
+        priv_renderTarget_fromHandleToPointer (defaultRTHandleList[i], &rt);
+        rt->format = vulkan.swapChainInfo.imageFormat;
+        rt->viewAsRT = vulkan.swapChainInfo.vkImageListView[i];
+        rt->width = vulkan.swapChainInfo.imageExtent.width;
+        rt->height = vulkan.swapChainInfo.imageExtent.height;
+    }
 
     //aggiorno tutte le viewport che hanno una dimensione/posizione relativa
     u32 n = viewportHandleList.getNElem();
@@ -517,7 +604,7 @@ bool GPU::priv_shader_createFromMemory (const u8 *buffer, u32 bufferSize, eShade
 }
 
 //************************************
-void GPU::shader_delete (GPUShaderHandle &shaderHandle)
+void GPU::deleteResource (GPUShaderHandle &shaderHandle)
 {
     gpu::Shader *shader;
     if (priv_shader_fromHandleToPointer(shaderHandle, &shader))
@@ -654,7 +741,7 @@ void GPU::priv_vxtDecl_onBuilderEnds (VtxDeclBuilder *builder)
 }
 
 //************************************
-void GPU::vtxDecl_delete (GPUVtxDeclHandle &handle)
+void GPU::deleteResource (GPUVtxDeclHandle &handle)
 {
     gpu::VtxDecl *s;
     if (priv_vxtDecl_fromHandleToPointer(handle, &s))
@@ -701,7 +788,7 @@ const gpu::Viewport* GPU::viewport_get (const GPUViewportHandle &handle) const
 }
 
 //************************************
-void GPU::viewport_delete (GPUViewportHandle &handle)
+void GPU::deleteResource (GPUViewportHandle &handle)
 {
     gos::gpu::Viewport *v;
     if (viewportlList.fromHandleToPointer (handle, &v))
@@ -756,7 +843,7 @@ bool GPU::depthBuffer_create (const gos::Dim2D &widthIN, const gos::Dim2D &heigh
 }
 
 //************************************
-void GPU::depthBuffer_delete (GPUDepthStencilHandle &handle)
+void GPU::deleteResource (GPUDepthStencilHandle &handle)
 {
     gos::gpu::DepthStencil *s;
     if (depthStencilList.fromHandleToPointer (handle, &s))
@@ -849,7 +936,6 @@ bool GPU::priv_depthStenicl_createFromStruct (gos::gpu::DepthStencil &depthStenc
     return true;
 }
 
-
 //************************************
 void GPU::priv_depthStenicl_deleteFromStruct (gos::gpu::DepthStencil &depthStencil)
 {
@@ -871,3 +957,165 @@ void GPU::priv_depthStenicl_deleteFromStruct (gos::gpu::DepthStencil &depthStenc
         depthStencil.mem = VK_NULL_HANDLE;
     }
 }
+
+//************************************
+bool GPU::priv_renderTarget_fromHandleToPointer (const GPURenderTargetHandle handle, gpu::RenderTarget **out) const
+{
+    assert (NULL != out);
+    if (renderTargetList.fromHandleToPointer(handle, out))
+        return true;
+    
+    *out = NULL;
+    gos::logger::err ("GPU => unable to get renderTarget from handle (handle=%0x08X)\n", handle.viewAsU32());
+    return false;
+}
+
+
+
+//************************************
+GPU::RenderTaskLayoutBuilder& GPU::renderLayout_createNew (GPURenderLayoutHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+    RenderTaskLayoutBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::RenderTaskLayoutBuilder) (this, out_handle);
+    return *builder;
+}
+
+//************************************
+bool GPU::priv_renderLayout_onBuilderEnds (RenderTaskLayoutBuilder *builder)
+{
+    bool ret = true;
+
+    while (1)
+    {
+        if (builder->anyError())
+        {
+            ret = false;
+            break;
+        }
+        
+        sRenderLayout *s = renderLayoutList.reserve (builder->out_handle);
+        if (NULL == s)
+        {
+            gos::logger::err ("GPU::priv_renderLayout_onBuilderEnds() => can't reserve a handle!\n");
+            ret = false;
+            break;
+        }
+
+        s->vkRenderPassHandle = builder->vkRenderPassHandle;
+        break;
+    }
+
+    //aggiungo il builder alla lista dei builder da deletare
+    toBeDeletedBuilder.add(builder);
+
+    //fine
+    return ret;
+}
+
+//************************************
+void GPU::deleteResource (GPURenderLayoutHandle &handle)
+{
+    sRenderLayout *s;
+    if (renderLayoutList.fromHandleToPointer (handle, &s))
+    {
+        vkDestroyRenderPass (vulkan.dev, s->vkRenderPassHandle, nullptr);
+        s->reset();
+        renderLayoutList.release (handle);
+    }
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::renderLayout_toVulkan (const GPURenderLayoutHandle handle, VkRenderPass *out) const
+{
+    sRenderLayout *s;
+    if (renderLayoutList.fromHandleToPointer (handle, &s))
+    {
+        *out = s->vkRenderPassHandle;
+        return true;
+    }
+
+    gos::logger::err ("GPU::renderLayout_toVulkan() => invalid handle\n");
+    DBGBREAK;
+    return false;
+}
+
+
+
+//************************************
+GPU::PipelineBuilder& GPU::pipeline_createNew (const GPURenderLayoutHandle &renderLayoutHandle, GPUPipelineHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+    PipelineBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::PipelineBuilder) (this, renderLayoutHandle, out_handle);
+    return *builder;
+}
+
+//************************************
+bool GPU::priv_pipeline_onBuilderEnds (PipelineBuilder *builder)
+{
+    bool ret = true;
+
+    while (1)
+    {
+        if (builder->anyError())
+        {
+            ret = false;
+            break;
+        }
+        
+        sPipeline *s = pipelineList.reserve (builder->out_handle);
+        if (NULL == s)
+        {
+            gos::logger::err ("GPU::priv_pipeline_onBuilderEnds() => can't reserve a handle!\n");
+            ret = false;
+            break;
+        }
+
+        s->vkPipelineLayoutHandle = builder->vkPipelineLayoutHandle;
+        s->vkPipelineHandle = builder->vkPipelineHandle;
+        break;
+    }
+
+    //aggiungo il builder alla lista dei builder da deletare
+    toBeDeletedBuilder.add(builder);
+
+    //fine
+    return ret;
+}
+
+//************************************
+void GPU::deleteResource (GPUPipelineHandle &handle)
+{
+    sPipeline *s;
+    if (pipelineList.fromHandleToPointer (handle, &s))
+    {
+        vkDestroyPipelineLayout (vulkan.dev, s->vkPipelineLayoutHandle, nullptr);
+        vkDestroyPipeline (vulkan.dev, s->vkPipelineHandle, nullptr);
+        s->reset();
+        pipelineList.release (handle);
+    }
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::pipeline_toVulkan (const GPUPipelineHandle handle, VkPipeline *out, VkPipelineLayout *out_layout) const
+{
+    sPipeline *s;
+    if (pipelineList.fromHandleToPointer (handle, &s))
+    {
+        *out = s->vkPipelineHandle;
+        *out_layout = s->vkPipelineLayoutHandle;
+        return true;
+    }
+
+    gos::logger::err ("GPU::pipeline_toVulkan() => invalid handle\n");
+    DBGBREAK;
+    return false;
+}
+

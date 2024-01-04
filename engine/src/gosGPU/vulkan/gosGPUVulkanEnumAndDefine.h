@@ -25,8 +25,8 @@ namespace gos
                     vkSwapChain=VK_NULL_HANDLE; 
                     for (u8 i=0;i<SWAPCHAIN_NUM_MAX_IMAGES;i++)
                     { 
-                        vkImage[i]=VK_NULL_HANDLE; 
-                        vkImageView[i]=VK_NULL_HANDLE;
+                        vkImageList[i]=VK_NULL_HANDLE; 
+                        vkImageListView[i]=VK_NULL_HANDLE;
                         //frameBuffers[i]=VK_NULL_HANDLE;
                     } 
                 }
@@ -35,10 +35,8 @@ namespace gos
                 {
                     for (u8 i=0;i<imageCount;i++)
                     {
-                        //if (VK_NULL_HANDLE != frameBuffers[i]) vkDestroyFramebuffer(vkDevice, frameBuffers[i], nullptr);
-                        
-                        if (VK_NULL_HANDLE != vkImageView[i])
-                            vkDestroyImageView(vkDevice, vkImageView[i], nullptr);
+                        if (VK_NULL_HANDLE != vkImageListView[i])
+                            vkDestroyImageView(vkDevice, vkImageListView[i], nullptr);
                     }
                     if (VK_NULL_HANDLE != vkSwapChain)
                         vkDestroySwapchainKHR(vkDevice, vkSwapChain, nullptr);
@@ -50,9 +48,8 @@ namespace gos
         VkExtent2D          imageExtent;
         VkColorSpaceKHR     colorSpace;
         u32                 imageCount;
-        VkImage             vkImage[SWAPCHAIN_NUM_MAX_IMAGES];
-        VkImageView         vkImageView[SWAPCHAIN_NUM_MAX_IMAGES];
-        //VkFramebuffer       frameBuffers[N_MAX_IMAGES];
+        VkImage             vkImageList[SWAPCHAIN_NUM_MAX_IMAGES];
+        VkImageView         vkImageListView[SWAPCHAIN_NUM_MAX_IMAGES];
     };
 
     struct sPhyDeviceInfo

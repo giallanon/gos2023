@@ -6,8 +6,11 @@ namespace gos
 {
     namespace gpu
     {
-        VkFormat             dataFormat_to_vulkan (eDataFormat f);
-        VkPrimitiveTopology  drawPrimitive_to_vulkan (eDrawPrimitive f);
+        VkFormat                toVulkan (eDataFormat f);
+        VkPrimitiveTopology     toVulkan (eDrawPrimitive f);
+        VkCompareOp             toVulkan (eZFunc f);
+        VkCompareOp             toVulkan (eStencilFunc f);
+        VkStencilOp             toVulkan (eStencilOp f);
 
     } //namespace gos
 } //namespace gos

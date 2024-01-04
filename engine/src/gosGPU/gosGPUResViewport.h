@@ -1,5 +1,5 @@
-#ifndef _gosGPUViewport_h_
-#define _gosGPUViewport_h_
+#ifndef _gosGPUResViewport_h_
+#define _gosGPUResViewport_h_
 #include "gosGPUEnumAndDefine.h"
 #include "../gos/dataTypes/gosPosDim2D.h"
 
@@ -67,4 +67,4 @@ namespace gos
     } //namespace gpu
 } //namespace gos
 
-#endif // _gosGPUViewport_h_
+#endif // _gosGPUResViewport_h_

@@ -10,9 +10,9 @@
 #include "gosHandle.h"
 
 
-//A per "chunk", B per "user", C per "index", D per "counter".
-typedef gos::HandleT<5,3,10,14>	GOSThread;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^5=32
-
+//A per "num max di handle", B per "num di chunk", C per "counter"
+typedef gos::HandleT<10,5,10, 0,7>	GOSThreadHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^5=32
+typedef gos::HandleT<10,6,10, 0,6>	GOSThreadMsgHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^6=64
 
 namespace gos
 {
@@ -182,8 +182,8 @@ namespace gos
 		inline void     eventSetInvalid (gos::Event &ev)										{ platform::eventSetInvalid (ev.osEvt); }
 		inline bool		eventIsInvalid (const gos::Event &ev)									{ return platform::eventIsInvalid (ev.osEvt); }
 
-        eThreadError    create (GOSThread *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb=2048);
-        void            waitEnd (GOSThread &hThread);
+        eThreadError    create (GOSThreadHandle *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb=2048);
+        void            waitEnd (GOSThreadHandle &hThread);
 
     } // namespace thread
 

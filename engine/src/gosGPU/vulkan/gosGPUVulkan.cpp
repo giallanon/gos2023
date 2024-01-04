@@ -463,13 +463,13 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
             out->imageCount = SWAPCHAIN_NUM_MAX_IMAGES;
         }
 
-        vkGetSwapchainImagesKHR (vulkan.dev, out->vkSwapChain, &out->imageCount, out->vkImage);
+        vkGetSwapchainImagesKHR (vulkan.dev, out->vkSwapChain, &out->imageCount, out->vkImageList);
         //creo le image view
         for (u8 i=0; i<out->imageCount; i++)
         {
             VkImageViewCreateInfo imgViewCreateInfo{};
             imgViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            imgViewCreateInfo.image = out->vkImage[i];
+            imgViewCreateInfo.image = out->vkImageList[i];
             imgViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
             imgViewCreateInfo.format = out->imageFormat;
             imgViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -482,7 +482,7 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
             imgViewCreateInfo.subresourceRange.baseArrayLayer = 0;
             imgViewCreateInfo.subresourceRange.layerCount = 1;  
 
-            result = vkCreateImageView (vulkan.dev, &imgViewCreateInfo, nullptr, &out->vkImageView[i]);
+            result = vkCreateImageView (vulkan.dev, &imgViewCreateInfo, nullptr, &out->vkImageListView[i]);
             if (VK_SUCCESS != result)
             {
                 gos::logger::err ("error creating image view for image num %d: %s\n", i, string_VkResult(result));

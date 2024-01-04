@@ -1,5 +1,5 @@
-#ifndef _gosGPUVtxDecl_h_
-#define _gosGPUVtxDecl_h_
+#ifndef _gosGPUResVtxDecl_h_
+#define _gosGPUResVtxDecl_h_
 #include "gosGPUEnumAndDefine.h"
 #include "gosGPUUtils.h"
 #include "../gos/gosUtils.h"
@@ -113,4 +113,4 @@ namespace gos
 } //namespace gos
 
 
-#endif //_gosGPUVtxDecl_h_
+#endif //_gosGPUResVtxDecl_h_

@@ -21,24 +21,28 @@ public:
 
 private:    
     static bool recordCommandBuffer (gos::GPU *gpu, 
-                                    const VkRenderPass &vkRenderPassHandle, 
+                                    const GPURenderLayoutHandle &renderLayoutHandle, 
                                     const VkFramebuffer &vkFrameBufferHandle,
-                                    const VkPipeline &vkPipelineHandle,
+                                    const GPUPipelineHandle &pipelineHandle,
                                     VkCommandBuffer *out_commandBuffer);
 
-private:
-    bool        priv_createRenderPass (gos::GPU *gpu);
-    bool        priv_recreateFrameBuffers (gos::GPU *gpu, const VkRenderPass vkRenderPassHandle);
-    void        priv_destroyFrameBuffers (gos::GPU *gpu);
-    void        mainLoop_waitEveryFrame ();
 
 private:
-    gos::GPU            *gpu;
-    gos::gpu::Pipeline  pipeline;
-    GPUShaderHandle     vtxShaderHandle;
-    GPUShaderHandle     fragShaderHandle;
-    VkRenderPass        vkRenderPassHandle;
-    VkFramebuffer       frameBufferHandleList[SWAPCHAIN_NUM_MAX_IMAGES];
+    bool        priv_recreateFrameBuffers (gos::GPU *gpu, const GPURenderLayoutHandle &renderLayoutHandle);
+    void        priv_destroyFrameBuffers (gos::GPU *gpu);
+    void        mainLoop_waitEveryFrame ();
+    
+    
+//    bool priv_createRenderPass (gos::GPU *gpu);
+
+private:
+    gos::GPU                *gpu;
+    GPUPipelineHandle       pipelineHandle;
+    GPUShaderHandle         vtxShaderHandle;
+    GPUShaderHandle         fragShaderHandle;
+    GPURenderLayoutHandle   renderLayoutHandle;
+    
+    VkFramebuffer           frameBufferHandleList[SWAPCHAIN_NUM_MAX_IMAGES];
 };
 
 

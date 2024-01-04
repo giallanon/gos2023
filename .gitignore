@@ -23,3 +23,5 @@ engine/bin/ProfileServer/ProfileServer__linux_Release
 engine/bin/ProfileServer/writable/log/
 engine/bin/ProfileServer/ProfileServer__windows_Debug.exe
 engine/bin/testVulkan/testVulkan__windows_Debug.exe
+
+engine/aaCMakePresets.json

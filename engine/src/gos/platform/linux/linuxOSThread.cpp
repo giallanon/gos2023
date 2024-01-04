@@ -10,6 +10,7 @@ struct sThreadInfo
 {
 	GOS_ThreadMainFunction	    fn;
 	void						*userData;
+    gos::Allocator              *allocatorTS;
 };
 
 //*********************************************
@@ -20,6 +21,7 @@ void* LinuxInternalThreadProc (void *userParam)
     GOS_ThreadMainFunction fn = info->fn;
 	fn (info->userData);
 
+    GOSFREE(info->allocatorTS, info);
     return NULL;
 }
 
@@ -30,6 +32,7 @@ eThreadError platform::createThread (OSThread *out_handle, gos::Allocator *alloc
     sThreadInfo *info = GOSALLOCSTRUCT(allocatorTS, sThreadInfo);
 	info->fn = threadFunction;
 	info->userData = userParam;
+    info->allocatorTS = allocatorTS;
 
 
     pthread_attr_t  attr;

@@ -9,13 +9,13 @@ using namespace gos;
 struct sThreadInfo
 {
     platform::OSThread      	osThreadHandle;
-	GOSThread					gosHandle;
+	GOSThreadHandle					gosHandle;
 	GOS_ThreadMainFunction		fn;
 	void 						*userParam;
 };
 
 //handle list per i thread
-typedef gos::HandleList<GOSThread,sThreadInfo> GOSThreadHandleList;
+typedef gos::HandleList<GOSThreadHandle,sThreadInfo> GOSThreadHandleList;
 
 //FIFO dei msg di una msgQ
 typedef gos::FIFO<thread::sMsg>  GOSThreadMsgFIFO;
@@ -29,7 +29,7 @@ struct sThreadMsgQ
 };
 
 //handle list per le msgQ
-typedef gos::HandleList<HThreadMsgHandle, sThreadMsgQ> GOSThreadMsgHandleArray;
+typedef gos::HandleList<GOSThreadMsgHandle, sThreadMsgQ> GOSThreadMsgHandleArray;
 
 //allocatore 
 typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Safe>		GOSThreadMemAllocatorTS;
@@ -76,8 +76,8 @@ void thread::internal_deinit()
 i16 GOS_threadFunctionWrapper (void *userParam)
 {
     //recupero l'handle del thread
-    GOSThread *_pt_to_handle = reinterpret_cast<GOSThread*>(userParam);
-    GOSThread handle = *_pt_to_handle;
+    GOSThreadHandle *_pt_to_handle = reinterpret_cast<GOSThreadHandle*>(userParam);
+    GOSThreadHandle handle = *_pt_to_handle;
 
     //recupero le info sul thread
     sThreadInfo *info = NULL;
@@ -99,7 +99,7 @@ i16 GOS_threadFunctionWrapper (void *userParam)
 
 
 //************************************************************************
-eThreadError gos::thread::create (GOSThread *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb)
+eThreadError gos::thread::create (GOSThreadHandle *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb)
 {
     //riservo un handle
 	sThreadInfo *info = gosThreadGlob.threadHandleList.reserve (out_hThread);
@@ -122,7 +122,7 @@ eThreadError gos::thread::create (GOSThread *out_hThread, GOS_ThreadMainFunction
 
 
 //************************************************************************
-void gos::thread::waitEnd (GOSThread &hThread)
+void gos::thread::waitEnd (GOSThreadHandle &hThread)
 {
 	sThreadInfo *info;
 	if (gosThreadGlob.threadHandleList.fromHandleToPointer (hThread, &info))
@@ -133,7 +133,7 @@ void gos::thread::waitEnd (GOSThread &hThread)
 
 
 //**************************************************************
-sThreadMsgQ* thread_HTreadMsgHandle_to_pointer (const HThreadMsgHandle &h)
+sThreadMsgQ* thread_HTreadMsgHandle_to_pointer (const GOSThreadMsgHandle &h)
 {
 	sThreadMsgQ *s = NULL;
 	if (gosThreadGlob.msgHandleList.fromHandleToPointer(h, &s))
@@ -151,7 +151,7 @@ bool thread::createMsgQ (HThreadMsgR *out_handleR, HThreadMsgW *out_handleW)
 
     MUTEX_LOCK(gosThreadGlob.cs)
         sThreadMsgQ *s = NULL;
-        HThreadMsgHandle msgHandle;
+        GOSThreadMsgHandle msgHandle;
         s = gosThreadGlob.msgHandleList.reserve (&msgHandle);
     MUTEX_UNLOCK(gosThreadGlob.cs)
 

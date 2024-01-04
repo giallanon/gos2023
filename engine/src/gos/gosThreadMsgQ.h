@@ -4,13 +4,9 @@
 #include "gosHandle.h"
 
 
-
-//A per "chunk", B per "user", C per "index", D per "counter".
-typedef gos::HandleT<6,2,10,14>	HThreadMsgHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^6=64
-
 struct HThreadMsgR 
 {
-    HThreadMsgHandle    hRead;
+    GOSThreadMsgHandle    hRead;
 
     bool    operator== (const HThreadMsgR &b) const                        { return (hRead==b.hRead); }
     bool    operator!= (const HThreadMsgR &b) const                        { return (hRead!=b.hRead); }
@@ -18,7 +14,7 @@ struct HThreadMsgR
 
 struct HThreadMsgW
 {
-    HThreadMsgHandle    hWrite;
+    GOSThreadMsgHandle    hWrite;
 
     bool    operator== (const HThreadMsgW &b) const                        { return (hWrite==b.hWrite); }
     bool    operator!= (const HThreadMsgW &b) const                        { return (hWrite!=b.hWrite); }

@@ -4,7 +4,7 @@
 using namespace gos;
 
 //**********************************************************
-VkFormat gpu::dataFormat_to_vulkan (eDataFormat f)
+VkFormat gpu::toVulkan (eDataFormat f)
 {
     switch (f)
     {
@@ -33,7 +33,7 @@ VkFormat gpu::dataFormat_to_vulkan (eDataFormat f)
 }
 
 //**********************************************************
-VkPrimitiveTopology gpu::drawPrimitive_to_vulkan (eDrawPrimitive f)
+VkPrimitiveTopology gpu::toVulkan (eDrawPrimitive f)
 {
     switch (f)
     {
@@ -50,3 +50,62 @@ VkPrimitiveTopology gpu::drawPrimitive_to_vulkan (eDrawPrimitive f)
     }
 }
 
+//**********************************************************
+VkCompareOp gpu::toVulkan (eZFunc f)
+{
+    switch (f)
+    {
+    default:
+        DBGBREAK;
+        return VK_COMPARE_OP_LESS;
+
+    case eZFunc::NEVER:         return VK_COMPARE_OP_NEVER;
+    case eZFunc::LESS:          return VK_COMPARE_OP_LESS;
+    case eZFunc::EQUAL:         return VK_COMPARE_OP_EQUAL;
+    case eZFunc::LESS_EQUAL:    return VK_COMPARE_OP_LESS_OR_EQUAL;
+    case eZFunc::GREATER:       return VK_COMPARE_OP_GREATER;
+    case eZFunc::NOT_EQUAL:     return VK_COMPARE_OP_NOT_EQUAL;
+    case eZFunc::GREATER_EQUAL: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+    case eZFunc::ALWAYS:        return VK_COMPARE_OP_ALWAYS;
+    }
+}
+
+//**********************************************************
+VkCompareOp gpu::toVulkan (eStencilFunc f)
+{
+    switch (f)
+    {
+    default:
+        DBGBREAK;
+        return VK_COMPARE_OP_LESS;
+
+    case eStencilFunc::NEVER:         return VK_COMPARE_OP_NEVER;
+    case eStencilFunc::LESS:          return VK_COMPARE_OP_LESS;
+    case eStencilFunc::EQUAL:         return VK_COMPARE_OP_EQUAL;
+    case eStencilFunc::LESS_EQUAL:    return VK_COMPARE_OP_LESS_OR_EQUAL;
+    case eStencilFunc::GREATER:       return VK_COMPARE_OP_GREATER;
+    case eStencilFunc::NOT_EQUAL:     return VK_COMPARE_OP_NOT_EQUAL;
+    case eStencilFunc::GREATER_EQUAL: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+    case eStencilFunc::ALWAYS:        return VK_COMPARE_OP_ALWAYS;
+    }
+}
+
+//**********************************************************
+VkStencilOp gpu::toVulkan (eStencilOp f)
+{
+    switch (f)
+    {
+    default:
+        DBGBREAK;
+        return VK_STENCIL_OP_KEEP;
+
+    case eStencilOp::KEEP:              return VK_STENCIL_OP_KEEP;
+    case eStencilOp::ZERO:              return VK_STENCIL_OP_ZERO;
+    case eStencilOp::REPLACE:           return VK_STENCIL_OP_REPLACE;
+    case eStencilOp::INCR_AND_CLAMP:    return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+    case eStencilOp::DECR_AND_CLAMP:    return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+    case eStencilOp::INVERT:            return VK_STENCIL_OP_INVERT;
+    case eStencilOp::INCR_AND_WRAP:     return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+    case eStencilOp::DECR_AND_WRAP:     return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+    }
+}

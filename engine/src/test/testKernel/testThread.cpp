@@ -25,7 +25,7 @@ namespace test1
 
     int run()
     {
-        GOSThread hThread1;
+        GOSThreadHandle hThread1;
         sUserParam1 userParam;
         userParam.paramI16 = 12345;
 
@@ -99,11 +99,11 @@ namespace test2
         userParam.hMsgQWrite = hMsgQWrite;
 
 
-        GOSThread hThread1;
+        GOSThreadHandle hThread1;
         eThreadError err = gos::thread::create (&hThread1, test_thread::test2::mainFn1, &userParam);
         TEST_ASSERT(err == eThreadError::none);
 
-        GOSThread hThread2;
+        GOSThreadHandle hThread2;
         err = gos::thread::create (&hThread2, test_thread::test2::mainFn2, &userParam);
         TEST_ASSERT(err == eThreadError::none);
 
@@ -184,11 +184,11 @@ namespace test3
         userParam.hMsgQWrite = hMsgQWrite;
 
 
-        GOSThread hThread1;
+        GOSThreadHandle hThread1;
         eThreadError err = gos::thread::create (&hThread1, test_thread::test3::mainFn1, &userParam);
         TEST_ASSERT(err == eThreadError::none);
 
-        GOSThread hThread2;
+        GOSThreadHandle hThread2;
         err = gos::thread::create (&hThread2, test_thread::test3::mainFn2, &userParam);
         TEST_ASSERT(err == eThreadError::none);
 

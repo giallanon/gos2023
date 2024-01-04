@@ -5,7 +5,10 @@
 
 namespace test_gos
 {
-    //********************************+
+
+//********************************************
+namespace test1
+{
     int test_printSystemInfo()
     {
         gos::logger::log ("app folder = %s\n", gos::getAppPathNoSlash());
@@ -21,55 +24,131 @@ namespace test_gos
 
         return 0;
     }
+} //namespace test1
 
-    //********************************************
+//********************************************
+namespace test2
+{
+    template<u32 A, u32 B, u32 C, u32 SIG_1, u32 SIG_2>
     int testHandle()
     {
-        const u8 NBITS[4] = { 6, 2, 16, 8 };
-        const u32 MAX_VALUE_CHUNK[4] = {
-            (u32)((0x0001 << NBITS[0])),
-            (u32)((0x0001 << NBITS[1])),
-            (u32)((0x0001 << NBITS[2])),
-            (u32)((0x0001 << NBITS[3])) };
+        constexpr u32 D = SIG_1 + SIG_2;
+        const u32 NUM_MAX[4] = {
+            (u32)((0x0001 << A)),
+            (u32)((0x0001 << B)),
+            (u32)((0x0001 << C)),
+            (u32)((0x0001 << D)) 
+        };
 
-        const u32 DEF_VALUE[4] = { MAX_VALUE_CHUNK[0] - 1, MAX_VALUE_CHUNK[1] - 1 , MAX_VALUE_CHUNK[2] - 1 , MAX_VALUE_CHUNK[3] - 1 };
+        const u32 MAX_VALUE[4] = {
+            (u32)((0x0001 << A) - 1),
+            (u32)((0x0001 << B) - 1),
+            (u32)((0x0001 << C) - 1),
+            (u32)((0x0001 << D) - 1) 
+        };
 
-        gos::HandleT<6,2,16,8> h1;
+
+        gos::HandleT<A, B, C, SIG_1,SIG_2> handle1;
 
         //incremento di 1 tutti i singoli canali, uno alla volta e verifico che gli altri canali non ne siano affetti	
-        for (u8 n = 0; n < 4; n++)
+        for (u8 channelNum = 0; channelNum < 4; channelNum++)
         {
-            h1.setChunkValue(DEF_VALUE[0]); 
-            h1.setUserValue(DEF_VALUE[1]); 
-            h1.setIndexValue(DEF_VALUE[2]); 
-            h1.setCounterValue(DEF_VALUE[3]);
+            //metto tutti i canali al loro valore massimo
+            //e poi muovo 1 canale alla volta a partire dal valore 0 fino al suo massimo
+            //Lo scopo e' vedere che quel canale si incrementa correttamente e che gli altri canali mantengono
+            //il loro valore originale
+            handle1.setIndexValue (MAX_VALUE[0]); 
+            handle1.setChunkValue (MAX_VALUE[1]); 
+            handle1.setCounterValue(MAX_VALUE[2]);
+            handle1.setPADValue (MAX_VALUE[3]); 
             
-            h1.debug_setValueByIndex(n, 0);
-            for (u32 i = 0; i < MAX_VALUE_CHUNK[n]; i++)
+            u32 testValue = 0;
+            handle1.debug_setValueByIndex (channelNum, testValue);
+            for (u32 i = 0; i < NUM_MAX[channelNum]; i++)
             {
-                TEST_FAIL_IF(h1.debug_getValueByIndex(n) != i);
-                h1.debug_incValueByIndex(n);
+                TEST_FAIL_IF(handle1.debug_getValueByIndex(channelNum) != testValue);
+                handle1.debug_incValueByIndex(channelNum);
+                testValue++;
                 
                 for (u8 n2 = 0; n2 < 4; n2++)
                 {
-                    const u32 bitsValue = h1.debug_getValueByIndex(n2);
-                    if (n == n2)
+                    if (n2 != channelNum)
                     {
-                        TEST_FAIL_IF(bitsValue != ((i + 1) % MAX_VALUE_CHUNK[n]));
-                    }
-                    else
-                    {
-                        TEST_FAIL_IF(bitsValue != DEF_VALUE[n2]);
+                        const u32 channelValue = handle1.debug_getValueByIndex(n2);
+                        TEST_FAIL_IF(channelValue != MAX_VALUE[n2]);
                     }
                 }
             }
+
+            //Come sopra, ma stavolta metto tutti i canali a 0
+            handle1.setIndexValue (0); 
+            handle1.setChunkValue (0); 
+            handle1.setCounterValue(0);
+            handle1.setPADValue (0); 
+            
+            testValue = 0;
+            handle1.debug_setValueByIndex (channelNum, testValue);
+            for (u32 i = 0; i < NUM_MAX[channelNum]; i++)
+            {
+                TEST_FAIL_IF(handle1.debug_getValueByIndex(channelNum) != testValue);
+                handle1.debug_incValueByIndex(channelNum);
+                testValue++;
+                
+                for (u8 n2 = 0; n2 < 4; n2++)
+                {
+                    if (n2 != channelNum)
+                    {
+                        const u32 channelValue = handle1.debug_getValueByIndex(n2);
+                        TEST_FAIL_IF(channelValue != 0);
+                    }
+                }
+            }
+
         }
+
         return 0;
     }
 
-    //********************************************
-    int testHandleArray (gos::Allocator *allocator)
+    int run ()
     {
+        int err;
+        
+        err = testHandle<16,8,8, 0,0>(); TEST_ASSERT(err==0);
+        err = testHandle<16,7,8, 0,1>(); TEST_ASSERT(err==0);
+        err = testHandle<16,6,8, 0,2>(); TEST_ASSERT(err==0);
+        err = testHandle<16,5,8, 0,3>(); TEST_ASSERT(err==0);
+        err = testHandle<16,4,8, 0,4>(); TEST_ASSERT(err==0);
+        err = testHandle<16,3,8, 0,5>(); TEST_ASSERT(err==0);
+        err = testHandle<16,2,8, 0,6>(); TEST_ASSERT(err==0);
+        err = testHandle<16,1,8, 0,7>(); TEST_ASSERT(err==0);
+
+        err = testHandle<10,6,16, 0,0>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,15, 0,1>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,14, 0,2>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,13, 0,3>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,12, 0,4>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,11, 0,5>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,10, 0,6>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,9,  0,7>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,8,  0,8>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,7,  0,9>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,6,  0,10>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,5,  0,11>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,4,  0,12>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,3,  0,13>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,2,  0,14>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,1,  0,15>(); TEST_ASSERT(err==0);
+
+        return 0;
+    }
+}
+
+//********************************************
+namespace test3
+{
+    int testHandleArray ()
+    {
+        gos::Allocator *allocator = gos::getSysHeapAllocator();
         struct sMyData
         {
             u8	a;
@@ -78,14 +157,13 @@ namespace test_gos
             u8 chunk;
         };
 
-        const u8 CHUNKbit	= 2;
-        const u8 USERbit	= 11;
         const u8 INDEXbit	= 16;
+        const u8 CHUNKbit	= 2;
         const u8 COUNTERbit = 3;
-        typedef gos::HandleT< CHUNKbit, USERbit, INDEXbit, COUNTERbit> MyHandle;
+        typedef gos::HandleT< INDEXbit, CHUNKbit, COUNTERbit, 0, 11> MyHandle;
 
         gos::HandleList<MyHandle, sMyData> hl;
-        const u32 NMAXHANDLE = MyHandle::getNumMaxHandleAA();
+        const u32 NMAXHANDLE = MyHandle::getNumMaxHandle();
         const u32 NHANDLE_PER_CHUNK = MyHandle::getNumMaxHandlePerChunk();
 
         sMyData	*myDataList = (sMyData*)GOSALIGNEDALLOC(allocator, NMAXHANDLE * sizeof(sMyData), alignof(sMyData));
@@ -224,8 +302,11 @@ namespace test_gos
 
         return 0;
     }
+}
 
-    //********************************+
+//********************************+
+namespace test4
+{
     int testFS()
     {
         gos::Allocator *allocator = gos::getSysHeapAllocator();
@@ -327,8 +408,11 @@ namespace test_gos
 
     return 0;
     }
+}
 
-    //********************************************
+//********************************************
+namespace test5
+{
     int testStringList()
     {
         gos::Allocator *allocator = gos::getSysHeapAllocator();
@@ -343,8 +427,11 @@ namespace test_gos
 
         return 0;
     }
+}
 
-    //********************************************
+//********************************************
+namespace test6
+{
     int testBitUtils()
     {
         {
@@ -464,8 +551,11 @@ namespace test_gos
 
         return 0;
     }    
-    
-    //********************************************
+}
+
+//********************************************
+namespace test7
+{
     int testNetAddr_and_MacAdd()
     {
         u8  buffer[32];
@@ -535,16 +625,19 @@ namespace test_gos
 
         return 0;
     }
+}
+
+
 } //namespace test_gos
 
 //********************************+
 void testGos (Tester &tester)
 {
-    tester.run("gos::system info", test_gos::test_printSystemInfo);
-    tester.run("gos::handle", test_gos::testHandle);
-    tester.run("gos::handle array", test_gos::testHandleArray, gos::getSysHeapAllocator());
-    tester.run("gos::testFS", test_gos::testFS);
-    tester.run("gos::testStringList", test_gos::testStringList);
-    tester.run("gos::testBitUtils", test_gos::testBitUtils);
-    tester.run("gos::testNetAddr_and_MacAdd", test_gos::testNetAddr_and_MacAdd);
+    tester.run("test1 gos::system info", test_gos::test1::test_printSystemInfo);
+    tester.run("test2 gos::handle", test_gos::test2::run);
+    tester.run("test3 gos::handle array", test_gos::test3::testHandleArray);
+    tester.run("test4 gos::testFS", test_gos::test4::testFS);
+    tester.run("test5 gos::testStringList", test_gos::test5::testStringList);
+    tester.run("test6 gos::testBitUtils", test_gos::test6::testBitUtils);
+    tester.run("test7 gos::testNetAddr_and_MacAdd", test_gos::test7::testNetAddr_and_MacAdd);
 }

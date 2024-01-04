@@ -1,6 +1,6 @@
 #include "gosGPUVukanHelpers.h"
 #include "../gosGPU.h"
-#include "../gosGPUVtxDecl.h"
+#include "../gosGPUResVtxDecl.h"
 #include "../gosGPUUtils.h"
 #include "../../gos/gos.h"
 
@@ -63,7 +63,7 @@ bool VkPipelineVertexInputStage::build (const GPU *gpu, const GPUVtxDeclHandle h
             vtxAttributeDescrList[totNumAttributeDescr].binding =  vtxDecl.attr_getStreamIndex(firstIndex);
             vtxAttributeDescrList[totNumAttributeDescr].location = vtxDecl.attr_getBindingLocation(firstIndex);
             vtxAttributeDescrList[totNumAttributeDescr].offset = vtxDecl.attr_getOffset(firstIndex);
-            vtxAttributeDescrList[totNumAttributeDescr].format = gos::gpu::dataFormat_to_vulkan (vtxDecl.attr_getDataFormat(firstIndex));
+            vtxAttributeDescrList[totNumAttributeDescr].format = gos::gpu::toVulkan (vtxDecl.attr_getDataFormat(firstIndex));
             
             totNumAttributeDescr++;
             firstIndex++;

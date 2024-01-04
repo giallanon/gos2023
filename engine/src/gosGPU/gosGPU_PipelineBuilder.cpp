@@ -1,66 +1,64 @@
-#include "gosGPUPipeline.h"
-#include "../gos/gos.h"
 #include "gosGPU.h"
 #include "vulkan/gosGPUVukanHelpers.h"
 
 using namespace gos;
-using namespace gos::gpu;
 
 
 //******************************** 
-Pipeline::Pipeline()
+GPU::PipelineBuilder::PipelineBuilder (GPU *gpuIN, const GPURenderLayoutHandle &renderLayoutHandleIN, GPUPipelineHandle *out_handleIN) : 
+    GPU::TempBuilder (gpuIN)
 {
+    gpu = gpuIN;
+    out_handle = out_handleIN;
+    renderLayoutHandle = renderLayoutHandleIN;
+    vkPipelineHandle = VK_NULL_HANDLE;
+    vkPipelineLayoutHandle = VK_NULL_HANDLE;
+
+
     allocator= gos::getSysHeapAllocator();
 
-    gpu = NULL;            
-    vkPipelineHandle = VK_NULL_HANDLE;
-    vkPipeLayoutHandle = VK_NULL_HANDLE;
-
+    bAnyError = false;
     shaderList.setup (allocator, 8);
-}
 
-//******************************** 
-Pipeline::~Pipeline()
-{
-    cleanUp();
-    shaderList.unsetup ();
-}
-
-//******************************** 
-void Pipeline::cleanUp()
-{
-    if (VK_NULL_HANDLE != vkPipeLayoutHandle)
-    {
-        vkDestroyPipelineLayout (gpu->REMOVE_getVkDevice(), vkPipeLayoutHandle, nullptr);
-        vkPipeLayoutHandle = VK_NULL_HANDLE;
-    }
-
-    if (VK_NULL_HANDLE != vkPipelineHandle)
-    {
-        vkDestroyPipeline (gpu->REMOVE_getVkDevice(), vkPipelineHandle, nullptr);
-        vkPipelineHandle = VK_NULL_HANDLE;
-    }
-}    
-
-//******************************** 
-Pipeline& Pipeline::begin(GPU *gpuIN)
-{
-    cleanUp();
-    gpu = gpuIN;
-
-    shaderList.reset();
     setDrawPrimitive (eDrawPrimitive::trisList);
     vtxDeclHandle.setInvalid();
+    cullMode = eCullMode::CCW;
+    bWireframe = false;
 
-     return *this;
+    depthStencilParam.priv_bind (this);
+    depthStencilParam.setDefault();
 }
 
 //******************************** 
-bool Pipeline::end (VkRenderPass &vkRenderPassHandle)
+GPU::PipelineBuilder::~PipelineBuilder()
 {
-    assert (VK_NULL_HANDLE == vkPipelineHandle);
-    assert (VK_NULL_HANDLE == vkPipeLayoutHandle);
-    assert (VK_NULL_HANDLE != vkRenderPassHandle);
+    shaderList.unsetup ();
+}    
+
+
+//******************************** 
+bool GPU::PipelineBuilder::end ()
+{
+    if (!bAnyError)
+    {
+        if (!priv_buildVulkan())
+            bAnyError = true;
+    }
+
+    return gpu->priv_pipeline_onBuilderEnds (this);
+}
+
+//******************************** 
+bool GPU::PipelineBuilder::priv_buildVulkan ()
+{
+    VkRenderPass vkRenderPassHandle;
+    if (!gpu->renderLayout_toVulkan (renderLayoutHandle, &vkRenderPassHandle))
+    {
+        gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => invalid renderLayoutHandle\n");
+        return false;
+    }
+
+
 
     VkResult result;
 
@@ -74,10 +72,10 @@ bool Pipeline::end (VkRenderPass &vkRenderPassHandle)
     pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
     pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-    result = vkCreatePipelineLayout (gpu->REMOVE_getVkDevice(), &pipelineLayoutInfo, nullptr, &vkPipeLayoutHandle);
+    result = vkCreatePipelineLayout (gpu->REMOVE_getVkDevice(), &pipelineLayoutInfo, nullptr, &vkPipelineLayoutHandle);
     if (VK_SUCCESS != result)
     {
-        gos::logger::err ("GPU::Pipeline::end() => vkCreatePipelineLayout() => %s\n", string_VkResult(result)); 
+        gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => vkCreatePipelineLayout() => %s\n", string_VkResult(result)); 
         return false;
     }
 
@@ -97,7 +95,7 @@ bool Pipeline::end (VkRenderPass &vkRenderPassHandle)
             switch (gpu->shader_getType(handle))
             {
             default:
-                gos::logger::err ("GPU::Pipeline::end() => unsupported shader type\n");
+                gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => unsupported shader type\n");
                 DBGBREAK;
                 return false;
                 break;
@@ -123,7 +121,7 @@ bool Pipeline::end (VkRenderPass &vkRenderPassHandle)
     gos::VkPipelineVertexInputStage vertexInputInfo;
     if (!vertexInputInfo.build (gpu, vtxDeclHandle))
     {
-        gos::logger::err ("GPU::Pipeline::end() => cannot use the current VtxDeclaration\n");
+        gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => cannot use the current VtxDeclaration\n");
         DBGBREAK;
         return false;
     }
@@ -132,10 +130,37 @@ bool Pipeline::end (VkRenderPass &vkRenderPassHandle)
     //input assemply (aka draw primitive)
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssembly.topology = gos::gpu::drawPrimitive_to_vulkan(drawPrimitive);
+    inputAssembly.topology = gos::gpu::toVulkan(drawPrimitive);
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
+    //depth & stencil
+    VkPipelineDepthStencilStateCreateInfo depthStencil{};
+    {
+        depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depthStencil.depthTestEnable = depthStencilParam.getZBufferParams().enabled ? VK_TRUE : VK_FALSE;
+        depthStencil.depthWriteEnable = depthStencilParam.getZBufferParams().writeEnabled ? VK_TRUE : VK_FALSE;
+        depthStencil.depthCompareOp = gpu::toVulkan (depthStencilParam.getZBufferParams().compareFn);
+        depthStencil.depthBoundsTestEnable = VK_FALSE;
+        depthStencil.minDepthBounds = 0.0f; // Optional
+        depthStencil.maxDepthBounds = 1.0f; // Optional    
+        
+        depthStencil.stencilTestEnable = depthStencilParam.getStencilParams().enabled ? VK_TRUE : VK_FALSE;
+        depthStencil.front.failOp = gpu::toVulkan(depthStencilParam.getStencilParams().frontFace.ifStencilFail);
+        depthStencil.front.depthFailOp = gpu::toVulkan(depthStencilParam.getStencilParams().frontFace.ifStencilSuccessAndDepthFail);
+        depthStencil.front.passOp = gpu::toVulkan(depthStencilParam.getStencilParams().frontFace.ifStencilSuccessAndDepthSuccess);
+        depthStencil.front.compareOp = gpu::toVulkan(depthStencilParam.getStencilParams().frontFace.compareFn);
+        depthStencil.front.compareMask = depthStencilParam.getStencilParams().frontFace.compareMask;
+        depthStencil.front.writeMask = depthStencilParam.getStencilParams().frontFace.writeMask;
+        depthStencil.front.reference = depthStencilParam.getStencilParams().frontFace.referenceValue;
 
+        depthStencil.back.failOp = gpu::toVulkan(depthStencilParam.getStencilParams().backFace.ifStencilFail);
+        depthStencil.back.depthFailOp = gpu::toVulkan(depthStencilParam.getStencilParams().backFace.ifStencilSuccessAndDepthFail);
+        depthStencil.back.passOp = gpu::toVulkan(depthStencilParam.getStencilParams().backFace.ifStencilSuccessAndDepthSuccess);
+        depthStencil.back.compareOp = gpu::toVulkan(depthStencilParam.getStencilParams().backFace.compareFn);
+        depthStencil.back.compareMask = depthStencilParam.getStencilParams().backFace.compareMask;
+        depthStencil.back.writeMask = depthStencilParam.getStencilParams().backFace.writeMask;
+        depthStencil.back.reference = depthStencilParam.getStencilParams().backFace.referenceValue;
+    }
 
     //pipeline dynamic state
     //Si indicano qui quali stati delle pipeline sono dinamici e che quindi possono essere settati dinamicamente di volta in volta.
@@ -158,18 +183,34 @@ bool Pipeline::end (VkRenderPass &vkRenderPassHandle)
 
     //fill mode, cull mode...
     VkPipelineRasterizationStateCreateInfo rasterizer{};
-    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterizer.depthClampEnable = VK_FALSE;
-    rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;      //fill o wirefram
-    rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;        //questa e la successiva in sostanza indicano
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;     //il cull mode = ccq
-    rasterizer.depthBiasEnable = VK_FALSE;
-    rasterizer.depthBiasConstantFactor = 0.0f; // Optional
-    rasterizer.depthBiasClamp = 0.0f; // Optional
-    rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
+    {
+        rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        rasterizer.depthClampEnable = VK_FALSE;
+        rasterizer.rasterizerDiscardEnable = VK_FALSE;
+        rasterizer.polygonMode = bWireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;      //fill o wirefram
+        rasterizer.lineWidth = 1.0f;
+        
+        switch (cullMode)
+        {
+        case eCullMode::NONE:
+            rasterizer.cullMode = VK_CULL_MODE_NONE;
+            break;
+        
+        case eCullMode::CCW:
+            rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;     //i tris "front face" sono quelli con i vtx in ordine orario
+            rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;        //scarto tutti i triangoli backfacing
+            break;
 
+        case eCullMode::CW:
+            rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; //i tris "front face" sono quelli con i vtx in ordine anti orario
+            rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;            //scarto tutti i triangoli backfacing
+            break;
+        }
+        rasterizer.depthBiasEnable = VK_FALSE;
+        rasterizer.depthBiasConstantFactor = 0.0f; // Optional
+        rasterizer.depthBiasClamp = 0.0f; // Optional
+        rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
+    }
 
 
     //multisplame disabled
@@ -227,10 +268,10 @@ bool Pipeline::end (VkRenderPass &vkRenderPassHandle)
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState = &multisampling;
-    pipelineInfo.pDepthStencilState = nullptr; // Optional
+    pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = vkPipeLayoutHandle;
+    pipelineInfo.layout = vkPipelineLayoutHandle;
     pipelineInfo.renderPass = vkRenderPassHandle;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
@@ -239,7 +280,7 @@ bool Pipeline::end (VkRenderPass &vkRenderPassHandle)
     result = vkCreateGraphicsPipelines(gpu->REMOVE_getVkDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &vkPipelineHandle);
     if (VK_SUCCESS != result)
     {
-        gos::logger::err ("GPU::Pipeline::end() => vkCreateGraphicsPipelines() error: %s\n", string_VkResult(result)); 
+        gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => vkCreateGraphicsPipelines() error: %s\n", string_VkResult(result)); 
         return false;
     }
 

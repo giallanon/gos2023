@@ -22,7 +22,6 @@ void GLFW_key_callback (GLFWwindow* window, int key, UNUSED_PARAM(int scancode),
 VulkanExample1::VulkanExample1()
 {
     gpu = NULL;
-    vkRenderPassHandle = VK_NULL_HANDLE; 
 
     for (u8 i=0;i<SWAPCHAIN_NUM_MAX_IMAGES;i++)
         frameBufferHandleList[i] = VK_NULL_HANDLE;
@@ -31,19 +30,10 @@ VulkanExample1::VulkanExample1()
 //************************************
 void VulkanExample1::cleanup() 
 {
-    //pipe
-    pipeline.cleanUp();
-
-    //shader
-    gpu->shader_delete (vtxShaderHandle);
-    gpu->shader_delete (fragShaderHandle);
-
-    //render pass
-    if (VK_NULL_HANDLE != vkRenderPassHandle)
-    {
-        vkDestroyRenderPass (gpu->REMOVE_getVkDevice(), vkRenderPassHandle, nullptr);
-        vkRenderPassHandle = VK_NULL_HANDLE;
-    }
+    gpu->deleteResource (vtxShaderHandle);
+    gpu->deleteResource (fragShaderHandle);
+    gpu->deleteResource (pipelineHandle);
+    gpu->deleteResource (renderLayoutHandle);
 
     //frame buffer
     priv_destroyFrameBuffers (gpu);
@@ -72,38 +62,50 @@ bool VulkanExample1::init(gos::GPU *gpuIN)
     glfwSetKeyCallback (gpu->getWindow(), GLFW_key_callback);
 
     //creo il render pass
-    if (!priv_createRenderPass(gpu))
+    gpu->renderLayout_createNew (&renderLayoutHandle)
+        .requireRendertarget (eRenderTargetUsage::presentation, gpu->swapChain_getImageFormat(), true, gos::ColorHDR(0xff000080))
+        .addSubpass_GFX()
+            .useRenderTarget(0)
+        .end()
+    .end();
+    if (renderLayoutHandle.isInvalid())
     {
-        gos::logger::err ("can't create render pass\n");
+        gos::logger::err ("VulkanExample1::init() => can't create renderTaskLayout\n");
         return false;
     }
 
     //frame buffers
-    priv_recreateFrameBuffers(gpu, vkRenderPassHandle);
+    priv_recreateFrameBuffers (gpu, renderLayoutHandle);
 
 
     //carico gli shader
     if (!gpu->vtxshader_createFromFile ("shader/shader1.vert.spv", "main", &vtxShaderHandle))
     {
-        gos::logger::err ("can't create vert shader\n");
+        gos::logger::err ("VulkanExample1::init() => can't create vert shader\n");
         return false;
     }
     if (!gpu->fragshader_createFromFile ("shader/shader1.frag.spv", "main", &fragShaderHandle))
     {
-        gos::logger::err ("can't create frag shader\n");
+        gos::logger::err ("VulkanExample1::init() => can't create frag shader\n");
         return false;
     }
 
     //creo la pipeline
-    bool b = pipeline.begin (gpu)
+    gpu->pipeline_createNew (renderLayoutHandle, &pipelineHandle)
         .addShader (vtxShaderHandle)
         .addShader (fragShaderHandle)
         .setVtxDecl (GPUVtxDeclHandle::INVALID())
-        .end (vkRenderPassHandle);
+        .depthStencil()
+            .zbuffer_enable(true)
+            .zbuffer_enableWrite(true)
+            .zbuffer_setFn (eZFunc::LESS)
+            .stencil_enable(false)
+            .end()
+        .end ();
         
-    if (!b)
+    if (pipelineHandle.isInvalid())
     {
-        gos::logger::err ("can't create pipeline\n");
+        gos::logger::err ("VulkanExample1::init() => can't create pipeline\n");
         return false;
     }
 
@@ -122,78 +124,22 @@ bool VulkanExample1::init(gos::GPU *gpuIN)
     return true;
 }    
 
-/************************************
- * input:   swapchain (per conoscere il formato dell'immagine)
- */
-bool VulkanExample1::priv_createRenderPass (gos::GPU *gpuIN)
-{
-    gos::logger::log ("VulkanExample1::priv_createRenderPass: ");
-    bool ret = false;
-
-    //color buffer attachment
-    VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = gpuIN->swapChain_getImageFormat();
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;       //pulisci il buffer all'inizio del render pass
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;     //mantiene le info scritte in questo buffer alla fine del pass
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;        //stencil (dont care)
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;              //non mi interessa lo stato del buffer all'inizio, tanto lo pulisco
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;          //il formato finale deve essere prensentabile
-
-    VkAttachmentReference colorAttachmentRef{};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    //in questo esempio, voglio 1 solo "subpass" che opera sul color buffer
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = NULL;
-
-    //dipendenza di questo subpass da altri subpass (in questo caso non ce ne sono)
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;    //indica il subpassa before questo
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;    //aspetto che swapchain abbia letto tutto quanto
-    dependency.srcAccessMask = 0;    
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-    //creazione del render pass
-    VkRenderPassCreateInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = &dependency;    
-
-    VkResult result = vkCreateRenderPass (gpuIN->REMOVE_getVkDevice(), &renderPassInfo, nullptr, &vkRenderPassHandle);
-    if (VK_SUCCESS == result)
-    {
-        ret = true;
-        gos::logger::log (eTextColor::green, "OK\n");
-    }
-    else
-    {
-        gos::logger::err ("vkCreateRenderPass() error: %s\n", string_VkResult(result)); 
-    }  
-        
-    return ret;
-}
-
 /*************************************
  * input:  swapchain e vkRenderPass
  * output: frameBufferHandleList[]   => un frame buffer per ogni image della swapchain
  */
-bool VulkanExample1::priv_recreateFrameBuffers (gos::GPU *gpuIN, const VkRenderPass vkRenderPassHandleIN)
+bool VulkanExample1::priv_recreateFrameBuffers (gos::GPU *gpuIN, const GPURenderLayoutHandle &renderLayoutHandle)
 {
     bool ret = true;
     gos::logger::log ("VulkanExample1::priv_recreateFrameBuffers()\n");
     gos::logger::incIndent();
+
+    VkRenderPass vkRenderPass;
+    if (!gpu->renderLayout_toVulkan (renderLayoutHandle, &vkRenderPass))
+    {
+        gos::logger::err ("VulkanExample1::priv_recreateFrameBuffers() => invalid renderLayoutHandle\n");
+    }
+
 
     priv_destroyFrameBuffers(gpuIN);
 
@@ -203,7 +149,7 @@ bool VulkanExample1::priv_recreateFrameBuffers (gos::GPU *gpuIN, const VkRenderP
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = vkRenderPassHandleIN;
+        framebufferInfo.renderPass = vkRenderPass;
         framebufferInfo.attachmentCount = 1;
         framebufferInfo.pAttachments = imageViewList;
         framebufferInfo.width = gpuIN->swapChain_getWidth();
@@ -224,10 +170,31 @@ bool VulkanExample1::priv_recreateFrameBuffers (gos::GPU *gpuIN, const VkRenderP
 }
 
 //************************************
-bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN, const VkRenderPass &vkRenderPassHandle, const VkFramebuffer &vkFrameBufferHandle, 
-                                            const VkPipeline &vkPipelineHandle, VkCommandBuffer *out_commandBuffer)
+bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN, 
+                                            const GPURenderLayoutHandle &renderLayoutHandle, 
+                                            const VkFramebuffer &vkFrameBufferHandle, 
+                                            const GPUPipelineHandle &pipelineHandle,
+                                            VkCommandBuffer *out_commandBuffer)
 {
     assert (out_commandBuffer);
+
+    //recupero il vulkan render pass
+    VkRenderPass vkRenderPassHandle = VK_NULL_HANDLE;
+    if (!gpuIN->renderLayout_toVulkan (renderLayoutHandle, &vkRenderPassHandle))
+    {
+        gos::logger::err ("VulkanExample1::recordCommandBuffer() => invalid renderLayoutHandle\n");
+        return false;
+    }
+
+    //recupero vulkan pipeline
+    VkPipeline          vkPipelineHandle;
+    VkPipelineLayout    vkPipelineLayoutHandle;
+    if (!gpuIN->pipeline_toVulkan (pipelineHandle, &vkPipelineHandle, &vkPipelineLayoutHandle))
+    {
+        gos::logger::err ("VulkanExample1::recordCommandBuffer() => invalid pipelineHandle\n");
+        return false;
+    }
+
 
     //uso la viewport di default di GPU che e' sempre grande tanto quanto la main window
     const gos::gpu::Viewport *viewport = gpuIN->viewport_getDefault();
@@ -311,8 +278,7 @@ void VulkanExample1::mainLoop_waitEveryFrame()
         if (bNeedToRecreateSwapChain)
         {
             bNeedToRecreateSwapChain = false;
-            gpu->swapChain_recreate();
-            priv_recreateFrameBuffers (gpu, this->vkRenderPassHandle);
+            priv_recreateFrameBuffers (gpu, renderLayoutHandle);
         }
 
 //printf ("frame begin\n");
@@ -329,66 +295,42 @@ void VulkanExample1::mainLoop_waitEveryFrame()
         //recupero una immagine dalla swap chain, attendo per sempre e indico [imageAvailableSemaphore] come
         //semaforo che GPU deve segnalare quando questa operazione e' ok
         acquireImageTimer.start();
-            u32 imageIndex;
-            //result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-            result = gpu->swapChain_acquireNextImage (&imageIndex, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE);
-            if (VK_SUCCESS != result)
-            {
-                if (VK_ERROR_OUT_OF_DATE_KHR == result)
-                {
-                    gos::logger::log (eTextColor::yellow, "vkAcquireNextImageKHR() => VK_ERROR_OUT_OF_DATE_KHR\n");
-                    bNeedToRecreateSwapChain = true;
-                    continue;
-                }
-                else if (VK_SUBOPTIMAL_KHR == result)
-                {
-                    gos::logger::log (eTextColor::yellow, "vkAcquireNextImageKHR() => VK_SUBOPTIMAL_KHR\n");
-                    bNeedToRecreateSwapChain = true;
-                }
-                else
-                {
-                    //Errore generico
-                    gos::logger::err ("vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
-                    continue;
-                }
-            }
+            
+        u32 imageIndex;
+        if (gpu->newFrame (&bNeedToRecreateSwapChain, &imageIndex, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE))
+        {
             gpu->fence_reset (&inFlightFence);
 //printf ("  CPU waited vkAcquireNextImageKHR %ld us\n", acquireImageTimer.elapsed_usec());
         
-        //command buffer che opera su [imageIndex]
-        recordCommandBuffer(gpu, vkRenderPassHandle, frameBufferHandleList[imageIndex], pipeline.getVkHandle(), &vkCommandBuffer);
+            //command buffer che opera su [imageIndex]
+            recordCommandBuffer(gpu, renderLayoutHandle, frameBufferHandleList[imageIndex], pipelineHandle, &vkCommandBuffer);
 
-        //submit
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            //submit
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore semaphoresToBeWaitedBeforeStarting[] = { imageAvailableSemaphore };
-        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = semaphoresToBeWaitedBeforeStarting;
-        submitInfo.pWaitDstStageMask = waitStages;
+            VkSemaphore semaphoresToBeWaitedBeforeStarting[] = { imageAvailableSemaphore };
+            VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.pWaitSemaphores = semaphoresToBeWaitedBeforeStarting;
+            submitInfo.pWaitDstStageMask = waitStages;
 
-        submitInfo.commandBufferCount = 1;        
-        submitInfo.pCommandBuffers = &vkCommandBuffer;
+            submitInfo.commandBufferCount = 1;        
+            submitInfo.pCommandBuffers = &vkCommandBuffer;
 
-        //semaforo che GPU segnalera' al termine dell'esecuzione del command buffer
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
+            //semaforo che GPU segnalera' al termine dell'esecuzione del command buffer
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
 
-        //submitto il batch a GPU e indico che deve segnalare [inFlightFence] quando ha finito 
-        result = vkQueueSubmit (gpu->REMOVE_getGfxQHandle(), 1, &submitInfo, inFlightFence);
-        if (VK_SUCCESS != result)
-        {
-            gos::logger::err ("vkQueueSubmit() => %s\n", string_VkResult(result));
-        }
+            //submitto il batch a GPU e indico che deve segnalare [inFlightFence] quando ha finito 
+            result = vkQueueSubmit (gpu->REMOVE_getGfxQHandle(), 1, &submitInfo, inFlightFence);
+            if (VK_SUCCESS != result)
+                gos::logger::err ("vkQueueSubmit() => %s\n", string_VkResult(result));
 
-
-        //presentazione
-        result = gpu->swapChain_present (&renderFinishedSemaphore, 1, imageIndex);
-        if (VK_ERROR_OUT_OF_DATE_KHR == result || VK_SUBOPTIMAL_KHR == result)
-            bNeedToRecreateSwapChain = true;
-
+            //presentazione
+            gpu->present (&renderFinishedSemaphore, 1, imageIndex);
 //printf ("  total frame time: %ldus\n", frameTimer.elapsed_usec());
+        }
 
 
         if (fpsTimer.onFrameEnd())

@@ -1,5 +1,5 @@
-#ifndef _gosGPUShader_h_
-#define _gosGPUShader_h_
+#ifndef _gosResGPUShader_h_
+#define _gosResGPUShader_h_
 #include "gosGPUEnumAndDefine.h"
 
 namespace gos
@@ -26,4 +26,4 @@ namespace gos
     } //namespace gpu
 } //namespace gos
 
-#endif //_gosGPUShader_h_
+#endif //_gosResGPUShader_h_

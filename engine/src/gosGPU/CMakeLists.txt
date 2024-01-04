@@ -26,18 +26,24 @@ vulkan/gosGPUVulkan.cpp
 vulkan/gosGPUVulkan.h
 vulkan/gosGPUVulkanEnumAndDefine.h
 
+gosGPU_PipelineBuilder.cpp
+gosGPU_RenderLayoutBuilder.cpp
+gosGPU_VtxDeclBuilder.cpp
 gosGPU.cpp
 gosGPU.h
-gosGPUDepthStencil.h
 gosGPUEnumAndDefine.h
-gosGPUPipeline.cpp
-gosGPUPipeline.h
-gosGPUShader.h
+
+gosGPUResDepthStencil.h
+gosGPUResRenderTarget.h
+gosGPUResShader.h
+gosGPUResViewport.h
+gosGPUResVtxDecl.h
+
 gosGPUUtils.cpp
 gosGPUUtils.h
-gosGPUViewport.h
-gosGPUVtxDecl.h
-gosGPUVtxDeclBuilder.cpp
+
+
+
 )
 
 #====================================================
