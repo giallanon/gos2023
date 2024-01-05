@@ -21,6 +21,7 @@ namespace gos
                             {
                                 width = 0;
                                 height = 0;
+                                resolvedW = resolvedH = 0;
                                 boundToSwapChain = false;
                                 boundToMainRT = false;
                                 memset (vkFrameBufferList, 0, sizeof(vkFrameBufferList));
@@ -29,17 +30,24 @@ namespace gos
                                 numRenderTaget = 0;
                             }
 
+            void            resolve (i16 w, i16 h)                     
+                            {
+                                resolvedW = width.resolve (0, w);
+                                resolvedH = height.resolve (0, h);
+                            }                              
+
         public:
             bool    boundToSwapChain;   //se si, va ricreato quando la swapchain viene ricreata
             bool    boundToMainRT;      //se si, contiene N VkFramebuffer, uno per ogni image della swapchain
 
             //info per Vulkan
+            u32                     resolvedW;
+            u32                     resolvedH;
             VkFramebuffer           vkFrameBufferList[SWAPCHAIN_NUM_MAX_IMAGES];    //ne basterebbe 1 solo in teoria, ma se ci bindiamo
                                                                                     //al mainRT ne devo usare 1 per ogni swapchain imahe
+            //info di creazione
             gos::Dim2D              width;
             gos::Dim2D              height;
-    
-            //info di creazione
             GPURenderLayoutHandle   renderLayoutHandle;
             GPUDepthStencilHandle   depthStencilHandle;
             u32                     numRenderTaget;

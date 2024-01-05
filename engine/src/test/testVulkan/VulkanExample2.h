@@ -33,13 +33,21 @@ private:
 
 private:
     bool        createVertexBuffer();
+    void        moveVertex();
 
+    void        doCPUStuff (gos::TimerFPS &cpuTimer);
+
+    void        mainLoop_3();
 
 private:
     static const u8     NUM_VERTEX = 3;
 
 private:
     Vertex                  vertexList[NUM_VERTEX];
+    u64                     nextTimeMoveVtx_msec;
+    f32                     direction;
+    void                    *ptToMappedMemory;
+
     GPUVtxBufferHandle      vtxBufferHandle;
     GPUPipelineHandle       pipelineHandle;
     GPUShaderHandle         vtxShaderHandle;

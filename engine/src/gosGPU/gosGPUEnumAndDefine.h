@@ -97,6 +97,13 @@ enum class eRenderTargetUsage : u8
 	storage_discard     	//viene renderizzato ma, al termine del rendering, il suo contenuto non ci interessa piu'
 };
 
+enum class eVIBufferMode : u8
+{
+	onGPU			= 0,	//risiede in memoria GPU quindi per essere updatato necessita di uno stagin buffer e di una transferQ
+	mappale			= 1,	//puo' essere updatato (trampite map/unmpa), ma da non farsi molto di frequente
+	unknown			= 0xff
+};
+
 struct sVtxDescriptor
 {
 	u8              streamIndex;

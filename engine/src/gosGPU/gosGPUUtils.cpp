@@ -3,6 +3,21 @@
 
 using namespace gos;
 
+
+
+//*************************************************************************
+const char* gpu::enumToString (eVIBufferMode s)
+{
+    switch (s)
+    {
+    default:                        return "??INVALID-VALUE??";
+    case eVIBufferMode::onGPU:      return "onGPU";
+    case eVIBufferMode::mappale:    return "mappale";
+    case eVIBufferMode::unknown:    return "unknown";
+    }
+}
+
+
 //**********************************************************
 VkFormat gpu::toVulkan (eDataFormat f)
 {

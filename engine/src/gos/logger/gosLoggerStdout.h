@@ -45,28 +45,30 @@ namespace gos
                     LogToFile (const u8 *fullFolderPathAndName);
                     ~LogToFile();
             
-            void    open ();
-            void    close();
-
-            bool    isOpen() const                                              { return bIsOpen; }
-
-            gos::File   _f;
+            void    log (const char *format, ...);
 
         private:
-            static const u8     LOGFILE_CHECK_SIZE_COUNTER = 200;
-            static const u64    LOGFILE_MAX_FILE_SIZE_BYTES = 1024*1024;
-            static const u64    LOGFILE_MAX_NUM_LOGFILE_IN_FOLDER = 10;
+            static const u16    FLUSH_COUNTER = 200;                //ogni quanti "output" devo chiudere e riaprire il file nella speranza di flusharlo su disco per davvero?
+            static const u16    CHECK_SIZE_COUNTER = 70;            //ogni quanti "output" devo chiudere verificare che il file non sia diventato troppo grande?
+            static const u64    MAX_FILE_SIZE_BYTE = 1024*1024;
+            static const u64    MAX_NUM_LOGFILE_IN_FOLDER = 10;
 
         private:
+            u8*                 priv_allocString (const u8 *strIN) const;
+            void                priv_openForAppend ();
+            void                priv_closeAndFlush();
             void                priv_getLogFileList (gos::FastArray<u64> &elenco) const;
-            void                priv_createNewLogFile();     
+            void                priv_createNewLogFileAndOpenForAppend();     
             void                priv_clearLogFolder();
+            void                priv_logIntestazione();
 
         private:
+            gos::File   f;
             u8          *filename;
             u8          *fullFolderPathAndName;
             bool        bIsOpen;
-            u8          checkLogFileSize;
+            u16         flushCounter;
+            u16         checkFileSizeCounter;
         };
 
     private:

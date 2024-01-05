@@ -95,7 +95,9 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
 
     //recupero il frame buffer
     VkFramebuffer vkFrameBufferHandle;
-    if (!gpuIN->frameBuffer_toVulkan (frameBufferHandle, &vkFrameBufferHandle))
+    u32 renderAreaW;
+    u32 renderAreaH;
+    if (!gpuIN->frameBuffer_toVulkan (frameBufferHandle, &vkFrameBufferHandle, &renderAreaW, &renderAreaH))
     {
         gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid frameBufferHandle\n");
         return false;
@@ -110,9 +112,6 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
         return false;
     }
 
-
-    //uso la viewport di default di GPU che e' sempre grande tanto quanto la main window
-    const gos::gpu::Viewport *viewport = gpuIN->viewport_getDefault();
 
     VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -133,7 +132,7 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
         renderPassInfo.renderPass = vkRenderPassHandle;
         renderPassInfo.framebuffer = vkFrameBufferHandle;
         renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = { viewport->getW(), viewport->getH() };
+        renderPassInfo.renderArea.extent = { renderAreaW, renderAreaH };
         renderPassInfo.clearValueCount = 1;
         renderPassInfo.pClearValues = &clearColor;    
 
@@ -141,6 +140,7 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
     vkCmdBindPipeline (*out_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineHandle);
 
     //setto la viewport
+    const gos::gpu::Viewport *viewport = gpuIN->viewport_getDefault();
     VkViewport vkViewport {0.0f, 0.0f, viewport->getW_f32(), viewport->getH_f32(), 0.0f, 1.0f };
     vkCmdSetViewport(*out_commandBuffer, 0, 1, &vkViewport);
 
@@ -171,7 +171,7 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
 void VulkanExample1::virtual_onRun()
 {
     VkCommandBuffer     vkCommandBuffer;
-    gpu->createCommandBuffer (&vkCommandBuffer);
+    gpu->createCommandBuffer (eVulkanQueueType::gfx, &vkCommandBuffer);
 
     VkSemaphore         imageAvailableSemaphore;
     VkSemaphore         renderFinishedSemaphore;
@@ -187,15 +187,8 @@ void VulkanExample1::virtual_onRun()
     gos::Timer          cpuWaitTimer;
     gos::Timer          frameTimer;
     gos::Timer          acquireImageTimer;
-    bool                bNeedToRecreateSwapChain = false;
     while (!glfwWindowShouldClose (gpu->getWindow()))
     {
-        if (bNeedToRecreateSwapChain)
-        {
-            bNeedToRecreateSwapChain = false;
-            //priv_recreateFrameBuffers (gpu, renderLayoutHandle);
-        }
-
 //printf ("frame begin\n");
         frameTimer.start();
         fpsTimer.onFrameBegin();
@@ -204,16 +197,17 @@ void VulkanExample1::virtual_onRun()
 
         //draw frames
         cpuWaitTimer.start();
-            gpu->fence_wait (&inFlightFence);
+            gpu->fence_wait (inFlightFence);
 //printf ("  CPU waited GPU fence for %ld us\n", cpuWaitTimer.elapsed_usec());
 
         //recupero una immagine dalla swap chain, attendo per sempre e indico [imageAvailableSemaphore] come
         //semaforo che GPU deve segnalare quando questa operazione e' ok
         acquireImageTimer.start();
             
+        bool bNeedToRecreateSwapChain = false;
         if (gpu->newFrame (&bNeedToRecreateSwapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE))
         {
-            gpu->fence_reset (&inFlightFence);
+            gpu->fence_reset (inFlightFence);
 //printf ("  CPU waited vkAcquireNextImageKHR %ld us\n", acquireImageTimer.elapsed_usec());
         
             //command buffer che opera su [imageIndex]
@@ -259,6 +253,7 @@ void VulkanExample1::virtual_onRun()
     //aspetto che GPU abbia finito tutto cio' che ha in coda
     gpu->waitIdle();
 
+    gpu->deleteCommandBuffer (eVulkanQueueType::gfx, vkCommandBuffer);
     gpu->semaphore_destroy (imageAvailableSemaphore);
     gpu->semaphore_destroy (renderFinishedSemaphore);
     gpu->fence_destroy (inFlightFence);

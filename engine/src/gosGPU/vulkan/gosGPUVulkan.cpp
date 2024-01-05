@@ -92,12 +92,12 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
         gos::logger::incIndent();
         gos::logger::log ("extensions (%d): ", createInfo.enabledExtensionCount);
         for (u32 i=0; i<createInfo.enabledExtensionCount; i++)
-            gos::logger::log("%s ", createInfo.ppEnabledExtensionNames[i]);
+            gos::logger::log("[%s]  ", createInfo.ppEnabledExtensionNames[i]);
         gos::logger::log("\n");
 
         gos::logger::log ("layers (%d): ", createInfo.enabledLayerCount);
         for (u32 i=0; i<createInfo.enabledLayerCount; i++)
-            gos::logger::log("%s ", createInfo.ppEnabledLayerNames[i]);
+            gos::logger::log("[%s]  ", createInfo.ppEnabledLayerNames[i]);
         gos::logger::log("\n");
 
         VkResult result = vkCreateInstance(&createInfo, nullptr, out);
@@ -126,7 +126,7 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
 
     //elenco dei device disponibili nel sistema
     u32 nDevices = 0;
-    vkEnumeratePhysicalDevices(vkInstance, &nDevices, nullptr);
+    vkEnumeratePhysicalDevices (vkInstance, &nDevices, nullptr);
     if (0 == nDevices)
     {
         gos::logger::err ("no devices found!\n");
@@ -197,8 +197,9 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
         }    
 
         //enumerazione delle queue di questo device
-        u32 selectedGfxFamilyQIndex = u32MAX;
-        u32 selectedComputeFamilyQIndex = u32MAX;
+        sPhyDeviceInfo::sQueueInfo selectedQueue_gfx;
+        sPhyDeviceInfo::sQueueInfo selectedQueue_compute;
+        sPhyDeviceInfo::sQueueInfo selectedQueue_transfer;
         gos::logger::log ("available family queues:\n");
         gos::logger::incIndent();
         {
@@ -218,35 +219,79 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
                     gos::logger::log (eTextColor::red, "does NOT support PRESENT to KHR surface\n");
                 else
                 {
-                    if (u32MAX == selectedGfxFamilyQIndex)
-                    if (list.support_VK_QUEUE_GRAPHICS_BIT(i2) && list.support_VK_QVK_QUEUE_TRANSFER_BIT(i2))
-                        selectedGfxFamilyQIndex = i2;
+                    if (u32MAX == selectedQueue_gfx.familyIndex)
+                    {
+                        if (list.support_VK_QUEUE_GRAPHICS_BIT(i2))
+                        {
+                            selectedQueue_gfx.familyIndex = i2;
+                            selectedQueue_gfx.count = list.get(i2)->queueCount;
+                        }
+                    }
 
                     if (list.support_VK_QUEUE_COMPUTE_BIT(i2))
                     {
-                        if (u32MAX == selectedComputeFamilyQIndex)
-                            selectedComputeFamilyQIndex = i2;
+                        if (u32MAX == selectedQueue_compute.familyIndex)
+                        {
+                            selectedQueue_compute.familyIndex = i2;
+                            selectedQueue_compute.count = list.get(i2)->queueCount;
+                        }
                         else
                         {
                             //preferisco una Q che supporti COMPUTE ma non supporti GFX, nella speranza di avere
                             //una Q di compute pura, preferibilmente diversa da quella gfx
                             if (!list.support_VK_QUEUE_GRAPHICS_BIT(i2))
-                                selectedComputeFamilyQIndex = i2;
+                            {
+                                selectedQueue_compute.familyIndex = i2;
+                                selectedQueue_compute.count = list.get(i2)->queueCount;
+                            }
                         }
                     }
+
+                    
+                    //cerco di trovare una Q dedicata al transfer che supporti espressamente solo quello
+                    if (list.support_VK_QVK_QUEUE_TRANSFER_BIT(i2) && !list.support_VK_QUEUE_GRAPHICS_BIT(i2) && !list.support_VK_QUEUE_COMPUTE_BIT(i2))
+                    {
+                        if (u32MAX == selectedQueue_transfer.familyIndex)                        
+                        {
+                            selectedQueue_transfer.familyIndex = i2;
+                            selectedQueue_transfer.count = list.get(i2)->queueCount;
+                        }
+                        else
+                        {
+                            if (list.get(i2)->queueCount > selectedQueue_transfer.count)
+                            {
+                                selectedQueue_transfer.familyIndex = i2;
+                                selectedQueue_transfer.count = list.get(i2)->queueCount;
+                            }
+                        }
+                    }
+                    
                 }
                 gos::logger::decIndent();
+            }
+
+            //Per la transferQ... se non ne ho trovata una dedicata allora uso la GFX o la COMPUTER che
+            //sono garantite supportare la fn di transfer anche se non espressamente indicato
+            if (u32MAX == selectedQueue_transfer.familyIndex)
+            {
+                //tra le 2, scelgo quella con il maggior numero di code
+                if (selectedQueue_gfx.count > selectedQueue_compute.count)
+                    selectedQueue_transfer = selectedQueue_gfx;
+                else
+                    selectedQueue_transfer = selectedQueue_compute;
             }
         }
         gos::logger::decIndent();
 
 
-        if (bIsGoodDevice && u32MAX != selectedGfxFamilyQIndex && u32MAX != selectedComputeFamilyQIndex)
+        if (bIsGoodDevice && u32MAX != selectedQueue_gfx.familyIndex && u32MAX != selectedQueue_compute.familyIndex && u32MAX != selectedQueue_transfer.familyIndex)
         {
             out->vkDev = deviceList[i];
             out->devIndex = i;
-            out->gfxQIndex = selectedGfxFamilyQIndex;
-            out->computeQIndex = selectedComputeFamilyQIndex;
+            
+            out->queue_gfx = selectedQueue_gfx;
+            out->queue_compute = selectedQueue_compute;
+            out->queue_transfer = selectedQueue_transfer;
         }
     }
     gos::logger::decIndent();
@@ -273,7 +318,11 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
     bool ret = true;
     gos::logger::log ("vulkanCreateDevice()\n");
     gos::logger::incIndent();
-    gos::logger::log ("creating with phyDev at index:%d, gfxQ at index %d, computeQ at index:%d\n", vkPhyDevInfo.devIndex, vkPhyDevInfo.gfxQIndex, vkPhyDevInfo.computeQIndex);
+    gos::logger::log ("creating with phyDev at index:%d\n   gfxQ familyIndex:%d, count=%d\n   computeQ familyIndex:%d, count=%d\n   transferQ familyIndex:%d, count=%d\n", 
+                        vkPhyDevInfo.devIndex,
+                        vkPhyDevInfo.queue_gfx.familyIndex, vkPhyDevInfo.queue_gfx.count,
+                        vkPhyDevInfo.queue_compute.familyIndex, vkPhyDevInfo.queue_compute.count,
+                        vkPhyDevInfo.queue_transfer.familyIndex, vkPhyDevInfo.queue_transfer.count);
 
     //quali e quante queue mi servono?
     float queuePriority = 1.0f;
@@ -281,20 +330,30 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
     u8 numOfQueue = 0;
     memset (queueCreateInfo, 0, sizeof(queueCreateInfo));
     queueCreateInfo[numOfQueue].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo[numOfQueue].queueFamilyIndex = vkPhyDevInfo.gfxQIndex;
-    queueCreateInfo[numOfQueue].queueCount = 1;
+    queueCreateInfo[numOfQueue].queueFamilyIndex = vkPhyDevInfo.queue_gfx.familyIndex;
+    queueCreateInfo[numOfQueue].queueCount = 1; //vkPhyDevInfo.queue_gfx.count;     TODO indagare se avere + di 1 Q ha senso
     queueCreateInfo[numOfQueue].pQueuePriorities = &queuePriority;
     numOfQueue++;
 
-    if (vkPhyDevInfo.gfxQIndex != vkPhyDevInfo.computeQIndex)
+    if (vkPhyDevInfo.queue_compute.familyIndex != vkPhyDevInfo.queue_gfx.familyIndex)
     {
         queueCreateInfo[numOfQueue].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo[numOfQueue].queueFamilyIndex = vkPhyDevInfo.computeQIndex;
+        queueCreateInfo[numOfQueue].queueFamilyIndex = vkPhyDevInfo.queue_compute.familyIndex;
         queueCreateInfo[numOfQueue].queueCount = 1;
         queueCreateInfo[numOfQueue].pQueuePriorities = &queuePriority;
         numOfQueue++;
     }
-    
+
+    if (vkPhyDevInfo.queue_transfer.familyIndex != vkPhyDevInfo.queue_gfx.familyIndex && 
+        vkPhyDevInfo.queue_transfer.familyIndex != vkPhyDevInfo.queue_compute.familyIndex)
+    {
+        queueCreateInfo[numOfQueue].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo[numOfQueue].queueFamilyIndex = vkPhyDevInfo.queue_transfer.familyIndex;
+        queueCreateInfo[numOfQueue].queueCount = 1;
+        queueCreateInfo[numOfQueue].pQueuePriorities = &queuePriority;
+        numOfQueue++;
+    }
+
     //quali feature voglio usare?
     VkPhysicalDeviceFeatures deviceFeatures{};
 
@@ -335,7 +394,7 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
 
     if (ret)
     {
-        VkResult result = vkCreateDevice(vkPhyDevInfo.vkDev, &createInfo, nullptr, &out_vulkan->dev);
+        VkResult result = vkCreateDevice (vkPhyDevInfo.vkDev, &createInfo, nullptr, &out_vulkan->dev);
         if (VK_SUCCESS != result) 
         {
             gos::logger::err ("vkCreateDevice() returned %s\n", string_VkResult(result));
@@ -343,40 +402,63 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
         }
         else
         {
-            gos::logger::log (eTextColor::green, "OK\n");
-
             out_vulkan->phyDevInfo = vkPhyDevInfo;
-            if (vkPhyDevInfo.gfxQIndex == vkPhyDevInfo.computeQIndex)
-                vkPhyDevInfo.computeQIndex = vkPhyDevInfo.gfxQIndex;
 
             //recupero l'handle della gfxQ
-            vkGetDeviceQueue(out_vulkan->dev, vkPhyDevInfo.gfxQIndex, 0, &out_vulkan->gfxQ);
-            vkGetDeviceQueue(out_vulkan->dev, vkPhyDevInfo.computeQIndex, 0, &out_vulkan->computeQ);
+            sVkDevice::sQueueInfo *queueInfo = out_vulkan->getQueueInfo (eVulkanQueueType::gfx);
+            queueInfo->familyIndex = vkPhyDevInfo.queue_gfx.familyIndex;
+            vkGetDeviceQueue (out_vulkan->dev, queueInfo->familyIndex, 0, &queueInfo->vkQueueHandle);
+            queueInfo->bIsUnique = true;
+
+            queueInfo = out_vulkan->getQueueInfo (eVulkanQueueType::compute);
+            queueInfo->familyIndex = vkPhyDevInfo.queue_compute.familyIndex;
+            vkGetDeviceQueue (out_vulkan->dev, queueInfo->familyIndex, 0, &queueInfo->vkQueueHandle);
+            if (queueInfo->familyIndex != vkPhyDevInfo.queue_gfx.familyIndex)
+                queueInfo->bIsUnique = true;
+
+            queueInfo = out_vulkan->getQueueInfo (eVulkanQueueType::transfer);
+            queueInfo->familyIndex = vkPhyDevInfo.queue_transfer.familyIndex;
+            vkGetDeviceQueue (out_vulkan->dev, queueInfo->familyIndex, 0, &queueInfo->vkQueueHandle);
+            if (queueInfo->familyIndex != vkPhyDevInfo.queue_gfx.familyIndex && queueInfo->familyIndex != vkPhyDevInfo.queue_compute.familyIndex)
+                queueInfo->bIsUnique = true;
         }
     }
     
-    //creo un command pool
+    //creo un command pool per ogni Q
     if (ret)
     {
-        VkCommandPoolCreateInfo poolInfo{};
-        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        poolInfo.queueFamilyIndex = out_vulkan->phyDevInfo.gfxQIndex;
-        
-        const VkResult result = vkCreateCommandPool(out_vulkan->dev, &poolInfo, nullptr, &out_vulkan->commandPool);
-        if (VK_SUCCESS != result)
+        const eVulkanQueueType queueType[] = { eVulkanQueueType::gfx, eVulkanQueueType::compute, eVulkanQueueType::transfer };
+
+        for (u32 i=0; i< sizeof(queueType) / sizeof(eVulkanQueueType); i++)
         {
-            ret = false;
-            gos::logger::err ("vkCreateCommandPool() error: %s\n", string_VkResult(result)); 
+            sVkDevice::sQueueInfo *queueInfo = out_vulkan->getQueueInfo (queueType[i]);
+            if (queueInfo->bIsUnique)
+            {
+                VkCommandPoolCreateInfo poolInfo{};
+                poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+                poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+                poolInfo.queueFamilyIndex = queueInfo->familyIndex;
+                
+                gos::logger::log ("creating CommandPool for queue %d\n");
+                const VkResult result = vkCreateCommandPool (out_vulkan->dev, &poolInfo, nullptr, &queueInfo->vkPoolHandle);
+                if (VK_SUCCESS != result)
+                {
+                    ret = false;
+                    gos::logger::err ("vkCreateCommandPool() error: %s\n", string_VkResult(result)); 
+                }
+            }
         }
     }
 
+    if (ret)
+        gos::logger::log (eTextColor::green, "OK\n");
+        
     gos::logger::decIndent();
     return ret;
 }
 
 //*********************************************
-bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurface, sSwapChainInfo *out)
+bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurface, bool bVSync, sSwapChainInfo *out)
 {
     gos::logger::log("vulkanCreateSwapChain\n");
     gos::logger::incIndent();
@@ -388,7 +470,7 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
     gos::logger::log ("surf capab\n");
     gos::logger::incIndent();
     gos::logger::log ("min/max image count:%d;%d\n", vkSurfCapabilities.minImageCount, vkSurfCapabilities.maxImageCount);
-    gos::logger::log ("curremt width/height: %d;%d\n", vkSurfCapabilities.currentExtent.width, vkSurfCapabilities.currentExtent.height);
+    gos::logger::log ("current width/height: %d;%d\n", vkSurfCapabilities.currentExtent.width, vkSurfCapabilities.currentExtent.height);
     gos::logger::decIndent();
 
     VPhyDevicekSurfaceFormatKHRList listOfSurfaceFormat;
@@ -414,12 +496,15 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
     if (out->imageCount < vkSurfCapabilities.minImageCount)
         out->imageCount = vkSurfCapabilities.minImageCount;
     
-    VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
-    if (listOfPresentMode.exists(VK_PRESENT_MODE_MAILBOX_KHR))
-        presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-    else if (listOfPresentMode.exists(VK_PRESENT_MODE_FIFO_RELAXED_KHR))
-        presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
-
+    VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;    //vsync, sempre disponibile
+    if (!bVSync)
+    {
+        if (listOfPresentMode.exists(VK_PRESENT_MODE_MAILBOX_KHR))
+            presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+        else if (listOfPresentMode.exists(VK_PRESENT_MODE_FIFO_RELAXED_KHR))
+            presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+    }
+    
     VkSwapchainCreateInfoKHR createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     createInfo.surface = vkSurface;
@@ -572,3 +657,55 @@ bool gos::vulkanGetMemoryType (const sPhyDeviceInfo &vkPhyDevInfo, uint32_t type
 
     return false;
 }
+
+//*********************************************
+bool gos::vulkanCreateBuffer (const sVkDevice &vulkan, u32 sizeInByte, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties,
+                              VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle)
+{
+    assert (NULL != out_vkBufferHandle);
+    assert (NULL != out_vkMemHandle);
+    *out_vkBufferHandle = VK_NULL_HANDLE;
+    *out_vkMemHandle = VK_NULL_HANDLE;
+
+    VkBufferCreateInfo createInfo {};
+    createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;         //vuol dire che puo' appartenere solo ad una Q di rendering
+    createInfo.size = sizeInByte;
+    createInfo.usage = usage;
+
+    //creo il buffer
+    VkResult result = vkCreateBuffer (vulkan.dev, &createInfo, nullptr, out_vkBufferHandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err (" gos::vulkanCreateBuffer(size=%d) => vkCreateBuffer() => %s\n", sizeInByte, string_VkResult(result));
+        return false;
+    }
+
+    //alloco memoria
+    VkMemoryRequirements memReqs;
+    vkGetBufferMemoryRequirements (vulkan.dev, *out_vkBufferHandle, &memReqs);       
+
+    VkMemoryAllocateInfo memAllloc{};
+	memAllloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	memAllloc.allocationSize = memReqs.size;
+    vulkanGetMemoryType (vulkan.phyDevInfo, memReqs.memoryTypeBits, memProperties, &memAllloc.memoryTypeIndex);
+
+	result = vkAllocateMemory (vulkan.dev, &memAllloc, nullptr, out_vkMemHandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("gos::vulkanCreateBuffer() => vkAllocateMemory() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    //bindo il buffer alla memoria allocata
+    result = vkBindBufferMemory (vulkan.dev, *out_vkBufferHandle, *out_vkMemHandle, 0);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("gos::vulkanCreateBuffer() => vkBindBufferMemory() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    return true;    
+}
+
+

@@ -24,6 +24,9 @@ namespace gos
                         ~AllocatorHeap()
                         {
 #ifdef _DEBUG
+                            struct mallinfo mi = mspace_mallinfo(ms);
+                            track.printReport (mi.usmblks);
+                            
                             if (track.anyMemLeaks())
                                 DBGBREAK;
 #endif

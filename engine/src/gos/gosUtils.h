@@ -7,6 +7,7 @@ namespace gos
     namespace utils
     {
         const char* enumToString (eSocketError s);
+        
 
         u8	        getFormatSize (eDataFormat f);
 

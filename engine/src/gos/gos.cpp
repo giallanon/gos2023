@@ -137,11 +137,9 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 //******************************************
 void gos::deinit()
 {
-	if (NULL != gosGlobals.logger)
-	{
-		gos::logger::log (eTextColor::white, "shutting down...\n\n\n\n");
-		delete gosGlobals.logger;
-	}
+	gos::Logger *logger = gosGlobals.logger;
+	if (NULL != logger)
+		gos::logger::log (eTextColor::white, "\n\ngos is shutting down...\n");
 
 	thread::internal_deinit();
 	GOSFREE(gos::getSysHeapAllocator(), gosGlobals.appName);
@@ -150,6 +148,12 @@ void gos::deinit()
 	console::priv_deinit();
 	mem::priv_deinit();
 	platform::internal_deinit();
+
+	if (NULL != logger)
+	{
+		logger->log ("FIN\n\n\n\n");
+		delete logger;
+	}
 }
 
 //******************************************

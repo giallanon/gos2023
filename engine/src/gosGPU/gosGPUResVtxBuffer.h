@@ -21,12 +21,14 @@ namespace gos
                             {
                                 vkHandle = VK_NULL_HANDLE;
                                 vkMemHandle = VK_NULL_HANDLE;
+                                mode = eVIBufferMode::unknown;
                             }
 
 
         public:
             VkBuffer        vkHandle;
             VkDeviceMemory  vkMemHandle;
+            eVIBufferMode   mode;
         };
 
     } //namespace gpu

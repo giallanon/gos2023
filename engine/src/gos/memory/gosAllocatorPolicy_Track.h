@@ -2,6 +2,7 @@
 #define _gosAllocatorPolicy_Track_h_
 #include "../gosEnumAndDefine.h"
 #include "../gosString.h"
+#include "../gos.h"
 
 namespace gos
 {
@@ -12,6 +13,7 @@ namespace gos
     {
     public:
                     AllocPolicy_Track_none (UNUSED_PARAM(const char *nameIN))                       { }
+        void        printReport (UNUSED_PARAM(u64 totMemoryReserved))                               { }
         bool		anyMemLeaks()                                                                   { return false; }
         void		onAlloc (UNUSED_PARAM(const void *p), UNUSED_PARAM(size_t size))                { }
         void		onDealloc (UNUSED_PARAM(const void *p), UNUSED_PARAM(size_t size))              { }
@@ -29,12 +31,19 @@ namespace gos
                         {
                         }
 
+        void            printReport (u64 totMemoryReserved)
+        {
+                            char sTotAllocated[16];
+                            gos::string::format::memoryToKB_MB_GB (totMemoryReserved, sTotAllocated, sizeof(sTotAllocated));
+
+                            char sMaxUsed[16];
+                            gos::string::format::memoryToKB_MB_GB (maxMemalloc, sMaxUsed, sizeof(sMaxUsed));
+
+                            gos::logger::log (eTextColor::blue, "AllocatorTrakSimple: final report for [%s] => max mem allocated: %s/%s, num tot allocation: %d\n", allocatorName, sMaxUsed, sTotAllocated, nTotAlloc);
+        }
+
         bool			anyMemLeaks()
                         {
-                            char s[16];
-                            gos::string::format::memoryToKB_MB_GB (maxMemalloc, s, sizeof(s));
-
-                            printf ("AllocatorTrakSimple: final report for [%s] => max mem allocated: %s, num tot allocation: %d\n", allocatorName, s, nTotAlloc);
                             return !(nCurAlloc==0 && curMemalloc==0); 
                         }
 

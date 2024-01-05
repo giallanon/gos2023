@@ -24,7 +24,7 @@ int main()
     if (gos::init (init, "testVulkan"))
     {
         gos::GPU gpu;
-        if (gpu.init (800, 600, gos::getAppName()))
+        if (gpu.init (800, 600, true, gos::getAppName()))
         {
             //runExample<VulkanExample1>(&gpu, "VulkanExample1");
             runExample<VulkanExample2>(&gpu, "VulkanExample2");

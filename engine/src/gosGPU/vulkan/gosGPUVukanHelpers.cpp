@@ -104,7 +104,7 @@ void VkInstanceValidationLayersList::printInfo () const
     gos::logger::log ("available validation layers (%d):\n", getCount());
     gos::logger::incIndent();
     for (u32 i=0; i<getCount(); i++)
-        gos::logger::log (" %s", get(i)->layerName);
+        gos::logger::log ("[%s]  ", get(i)->layerName);
     gos::logger::log ("\n");
     gos::logger::decIndent();    
 }
@@ -116,7 +116,7 @@ u32 VkInstanceValidationLayersList::find (const char *layerName) const
         if (strcasecmp(layerName, get(i)->layerName) == 0)
             return i;
     }
-    return i32MAX;
+    return u32MAX;
 }
 
 
@@ -143,7 +143,7 @@ void VkInstanceExtensionList::printInfo () const
     gos::logger::log ("available extensions (%d):\n", getCount());
     gos::logger::incIndent();
     for (u32 i=0; i<getCount(); i++)
-        gos::logger::log (" %s ", get(i)->extensionName);
+        gos::logger::log ("[%s]  ", get(i)->extensionName);
     gos::logger::log ("\n");
     gos::logger::decIndent();
 }            
@@ -155,7 +155,7 @@ u32 VkInstanceExtensionList::find (const char *extensionName) const
         if (strcasecmp(extensionName, get(i)->extensionName) == 0)
             return i;
     }
-    return i32MAX;
+    return u32MAX;
 }
 
 
@@ -183,7 +183,8 @@ void VkPhyDeviceExtensionList::printInfo () const
     gos::logger::log ("supported extensions:\n");
     gos::logger::incIndent();
     for (u32 i2=0; i2<getCount(); i2++)
-        gos::logger::log ("%s\n", get(i2)->extensionName);
+        gos::logger::log ("[%s]  ", get(i2)->extensionName);
+    gos::logger::log ("\n");
     gos::logger::decIndent();
 }            
 
@@ -194,7 +195,7 @@ u32 VkPhyDeviceExtensionList::find (const char *extensionName) const
         if (strcasecmp(extensionName, get(i)->extensionName) == 0)
             return i;
     }
-    return i32MAX;
+    return u32MAX;
 }
 
 
@@ -219,17 +220,17 @@ void VkPhyDeviceQueueList::build (gos::Allocator *allocatorIN, VkPhysicalDevice 
 
 void VkPhyDeviceQueueList::printQueueFamilyInfo (u32 i) const
 {
-    gos::logger::log ("count=%d\n", get(i)->queueCount);
-    gos::logger::log ("flags=");
-    if (support_VK_QUEUE_GRAPHICS_BIT(i)) gos::logger::log ("VK_QUEUE_GRAPHICS_BIT ");
-    if (support_VK_QUEUE_COMPUTE_BIT(i)) gos::logger::log ("VK_QUEUE_COMPUTE_BIT ");
-    if (support_VK_QVK_QUEUE_TRANSFER_BIT(i)) gos::logger::log ("VK_QUEUE_TRANSFER_BIT ");
-    if (support_VK_QUEUE_SPARSE_BINDING_BIT(i)) gos::logger::log ("VK_QUEUE_SPARSE_BINDING_BIT ");
-    if ((get(i)->queueFlags & VK_QUEUE_VIDEO_DECODE_BIT_KHR)) gos::logger::log ("VK_QUEUE_VIDEO_DECODE_BIT_KHR ");
-    if ((get(i)->queueFlags & VK_QUEUE_VIDEO_ENCODE_BIT_KHR)) gos::logger::log ("VK_QUEUE_VIDEO_ENCODE_BIT_KHR ");
-    if ((get(i)->queueFlags & VK_QUEUE_OPTICAL_FLOW_BIT_NV)) gos::logger::log ("VK_QUEUE_OPTICAL_FLOW_BIT_NV ");
-    if ((get(i)->queueFlags & VK_QUEUE_PROTECTED_BIT)) gos::logger::log ("VK_QUEUE_PROTECTED_BIT ");
-    if ((get(i)->queueFlags & VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT)) gos::logger::log ("VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT ");
+    gos::logger::log ("count = %d\n", get(i)->queueCount);
+    gos::logger::log ("flags = ");
+    if (support_VK_QUEUE_GRAPHICS_BIT(i)) gos::logger::log ("[VK_QUEUE_GRAPHICS_BIT]  ");
+    if (support_VK_QUEUE_COMPUTE_BIT(i)) gos::logger::log ("[VK_QUEUE_COMPUTE_BIT]  ");
+    if (support_VK_QVK_QUEUE_TRANSFER_BIT(i)) gos::logger::log ("[VK_QUEUE_TRANSFER_BIT]  ");
+    if (support_VK_QUEUE_SPARSE_BINDING_BIT(i)) gos::logger::log ("[VK_QUEUE_SPARSE_BINDING_BIT]  ");
+    if ((get(i)->queueFlags & VK_QUEUE_VIDEO_DECODE_BIT_KHR)) gos::logger::log ("[VK_QUEUE_VIDEO_DECODE_BIT_KHR]  ");
+    if ((get(i)->queueFlags & VK_QUEUE_VIDEO_ENCODE_BIT_KHR)) gos::logger::log ("[VK_QUEUE_VIDEO_ENCODE_BIT_KHR]  ");
+    if ((get(i)->queueFlags & VK_QUEUE_OPTICAL_FLOW_BIT_NV)) gos::logger::log ("[VK_QUEUE_OPTICAL_FLOW_BIT_NV]  ");
+    if ((get(i)->queueFlags & VK_QUEUE_PROTECTED_BIT)) gos::logger::log ("[VK_QUEUE_PROTECTED_BIT]  ");
+    if ((get(i)->queueFlags & VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT)) gos::logger::log ("[VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT]  ");
     gos::logger::log ("\n");
 }
 

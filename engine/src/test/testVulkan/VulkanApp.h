@@ -20,6 +20,7 @@ public:
     void        cleanup()                                   { virtual_onCleanup(); }
 
     void        toggleFullscreen()                          { gpu->toggleFullscreen(); }
+    void        toggleVSync();
 
 
 protected:

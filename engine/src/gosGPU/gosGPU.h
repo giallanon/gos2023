@@ -358,12 +358,15 @@ namespace gos
                             ~GPU();
 
 
-        bool                init (u16 width, u16 height, const char *appName);
+        bool                init (u16 width, u16 height, bool vSync, const char *appName);
         void                deinit();
 
         //================ window stuff
         GLFWwindow*         getWindow()                                     { return window.win; }
         void                toggleFullscreen();
+        bool                vsync_isEnabled() const                         { return vSync; }
+        void                vsync_enable (bool b);
+
 
         //================ rendering & presentazione
         bool                newFrame (bool *out_bSwapchainWasRecreated, u64 timeout_ns=UINT64_MAX, VkSemaphore semaphore=VK_NULL_HANDLE, VkFence fence=VK_NULL_HANDLE);
@@ -387,8 +390,16 @@ namespace gos
         
         bool                fence_create  (bool bStartAsSignaled, VkFence *out);
         void                fence_destroy  (VkFence &in);
-        VkResult            fence_wait (const VkFence *fenceHandleList, u32 fenceCount=1, u64 timeout_ns = UINT64_MAX);
-        void                fence_reset (const VkFence *fenceHandleList, u32 fenceCount=1);
+
+        //ritorna true se il [fence] e' segnalato, false se timeout
+        bool                fence_wait (const VkFence &fenceHandle, u64 timeout_ns = UINT64_MAX);
+        bool                fence_waitMany (const VkFence *fenceHandleList, bool bWaitForAll, u32 fenceCount, u64 timeout_ns = UINT64_MAX);
+
+        //riporta [fence] in stato non segnalato
+        void                fence_reset (const VkFence &fenceHandle);
+        void                fence_resetMany (const VkFence *fenceHandleList, u32 fenceCount);
+
+        bool                fence_isSignaled  (const VkFence &fenceHandle);
 
 
         //================ viewport
@@ -422,7 +433,7 @@ namespace gos
         //================ Frame buffer
         FrameBuffersBuilder&    frameBuffer_createNew (const GPURenderLayoutHandle &renderLayoutHandle, GPUFrameBufferHandle *out_handle);
         void                    deleteResource (GPUFrameBufferHandle &handle);
-        bool                    frameBuffer_toVulkan (const GPUFrameBufferHandle handle, VkFramebuffer *out) const;
+        bool                    frameBuffer_toVulkan (const GPUFrameBufferHandle handle, VkFramebuffer *out, u32 *out_renderAreaW, u32 *out_renderAreaH) const;
 
 
 
@@ -442,10 +453,12 @@ namespace gos
 
 
         //================ vertex buffer
-        bool                vertexBuffer_create (u32 sizeInByte, GPUVtxBufferHandle *out_handle);
+        bool                vertexBuffer_create (u32 sizeInByte, eVIBufferMode mode, GPUVtxBufferHandle *out_handle);
         void                deleteResource (GPUVtxBufferHandle &handle);
         bool                vertexBuffer_toVulkan (const GPUVtxBufferHandle handle, VkBuffer *out) const;
-        bool                vertexBuffer_copyBufferToGPU (const GPUVtxBufferHandle handleDST, u32 offsetDST, void *src, u32 sizeInByte) const;
+        
+        bool                vertexBuffer_map (const GPUVtxBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
+        bool                vertexBuffer_unmap  (const GPUVtxBufferHandle handle);
 
         //================ shader
         bool                vtxshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)            { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::vertexShader, mainFnName, out_shaderHandle); }
@@ -464,13 +477,15 @@ namespace gos
 
 
         //================ command buffer
-        bool                createCommandBuffer (VkCommandBuffer *out);
+        bool                createCommandBuffer (eVulkanQueueType whichQ, VkCommandBuffer *out);
+        bool                deleteCommandBuffer (eVulkanQueueType whichQ, VkCommandBuffer &vkHandle);
 
 
         //================ da rimuovere
         VkDevice           REMOVE_getVkDevice() const               { return vulkan.dev; }
-        VkQueue            REMOVE_getGfxQHandle() const             { return vulkan.gfxQ; }
-        VkQueue            REMOVE_getComputeQHandle() const         { return vulkan.computeQ; }
+        VkQueue            REMOVE_getGfxQHandle()                   { return vulkan.getQueueInfo(eVulkanQueueType::gfx)->vkQueueHandle; }
+        VkQueue            REMOVE_getComputeQHandle()               { return vulkan.getQueueInfo(eVulkanQueueType::compute)->vkQueueHandle; }
+        VkQueue            REMOVE_getTransferQHandle()              { return vulkan.getQueueInfo(eVulkanQueueType::transfer)->vkQueueHandle; }
 
     private:
         struct sWindow
@@ -531,7 +546,7 @@ namespace gos
         };
 
     private:
-        bool                priv_initWindowSystem(u16 width, u16 height, const char *appName);
+        bool                priv_initWindowSystem (u16 width, u16 height, const char *appName);
         void                priv_deinitWindowSystem();
         
         bool                priv_initVulkan ();
@@ -581,6 +596,7 @@ namespace gos
         VtxDeclBuilder              vtxDeclBuilder;
         u32                         currentSwapChainImageIndex;
         bool                        bNeedToRecreateSwapchain;
+        bool                        vSync;
         ToBeDeletedBuilder          toBeDeletedBuilder;
 
         GPUViewportHandle           defaultViewportHandle;
