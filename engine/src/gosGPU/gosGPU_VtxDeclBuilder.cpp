@@ -15,9 +15,9 @@ GPU::VtxDeclBuilder& GPU::VtxDeclBuilder::addStream (eVtxStreamInputRate inputRa
 }
 
 //************************************************************
-GPU::VtxDeclBuilder& GPU::VtxDeclBuilder::addDescriptor (u32 offset, u8 bindingLocation, eDataFormat dataFormat)
+GPU::VtxDeclBuilder& GPU::VtxDeclBuilder::addLayout (u8 bindingLocation, u32 offsetInBuffer, eDataFormat dataFormat)
 {
-    assert (offset <= 0xFF);
+    assert (offsetInBuffer <= 0xFF);
     if (!priv_isValid())
         return (*this);
 
@@ -42,7 +42,7 @@ GPU::VtxDeclBuilder& GPU::VtxDeclBuilder::addDescriptor (u32 offset, u8 bindingL
         if (attributeDesc[iPrev].streamIndex == streamIndex)
         {
             const u32 nextValidOffset = attributeDesc[iPrev].offset + gos::utils::getFormatSize(attributeDesc[iPrev].format);
-            if (offset < nextValidOffset)
+            if (offsetInBuffer < nextValidOffset)
             {
                 priv_markAsInvalid();
                 return (*this);
@@ -55,10 +55,10 @@ GPU::VtxDeclBuilder& GPU::VtxDeclBuilder::addDescriptor (u32 offset, u8 bindingL
         }
     }
 
-    attributeDesc[i].streamIndex = streamIndex;
     attributeDesc[i].bindingLocation = bindingLocation;
+    attributeDesc[i].streamIndex = streamIndex;
     attributeDesc[i].format = dataFormat;
-    attributeDesc[i].offset = static_cast<u8>(offset);                        
+    attributeDesc[i].offset = static_cast<u8>(offsetInBuffer);                        
     return (*this);
 }
 

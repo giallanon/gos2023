@@ -64,7 +64,7 @@ namespace gos
                             thread.lock();
                             void *ret = mspace_memalign (ms, align, sizeInBytes);
                             assert (ret);
-                            track.onAlloc (ret, getAllocatedSize(ret), getName(), getAllocatorID());
+                            track.onAlloc (ret, getAllocatedSize(ret));
                             thread.unlock();
                             return ret;
                         }
@@ -75,7 +75,7 @@ namespace gos
                                 return;
                             assert (NULL!=ms);
                             thread.lock();
-                            track.onDealloc (p, getAllocatedSize(p), getName(), getAllocatorID());
+                            track.onDealloc (p, getAllocatedSize(p));
                             mspace_free (ms, p);
                             thread.unlock();
                         }

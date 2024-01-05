@@ -15,7 +15,7 @@ GPU::PipelineBuilder::PipelineBuilder (GPU *gpuIN, const GPURenderLayoutHandle &
     vkPipelineLayoutHandle = VK_NULL_HANDLE;
 
 
-    allocator= gos::getSysHeapAllocator();
+    allocator= gos::getScrapAllocator();
 
     bAnyError = false;
     shaderList.setup (allocator, 8);

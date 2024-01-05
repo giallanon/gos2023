@@ -14,7 +14,7 @@ typedef gos::GPU::RenderTaskLayoutBuilder::SubPassInfo      SUBPASS_INFO;   //di
  ***********************************************************************************************************************/
 SUBPASS_INFO& GPU::RenderTaskLayoutBuilder::SubPassInfo::useRenderTarget (u8 index)
 {
-    if (index < NUM_MAX_RENDER_TARGET)
+    if (index < GOSGPU__NUM_MAX_RENDER_TARGET)
         renderTargetIndexList[nRenderTarget++] = index;
     else
     {
@@ -52,7 +52,7 @@ GPU::RenderTaskLayoutBuilder::~RenderTaskLayoutBuilder()
 //***********************************************************
 RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (eRenderTargetUsage usage, VkFormat imageFormat, bool bClear, const gos::ColorHDR &clearColor)
 {
-    if (numRenderTargetInfo < NUM_MAX_RENDER_TARGET)
+    if (numRenderTargetInfo < GOSGPU__NUM_MAX_RENDER_TARGET)
     {
         rtInfoList[numRenderTargetInfo].usage = usage;
         rtInfoList[numRenderTargetInfo].bClear = bClear;
@@ -130,7 +130,7 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
 {
     //color buffer attachment
     u8 numAttachment = 0;
-    VkAttachmentDescription attachmentList[NUM_MAX_RENDER_TARGET];
+    VkAttachmentDescription attachmentList[GOSGPU__NUM_MAX_RENDER_TARGET];
     for (u8 i=0; i<numRenderTargetInfo; i++)
     {
         numAttachment++;

@@ -1,0 +1,38 @@
+GPU è il responsabile di tutte le risorse Vulkan.
+Tramite GPU si possono creare le varie RES tipo VtxDecl, FrameBuffer, DepthBuffer.
+
+Per ognuna di queste risorse ho creato una class di aiuto chiamata xxxBuilder che serve per collezionare
+i parametri di creazione.
+Solitamente per creare una risorsa si chiama il metodo gpu->[risorsa]_createNew ()
+
+
+=============== RenderTaskLayout (aka RenderPass in Vulkan) ===================
+Questa RES definisce la struttura di un task di rendering.
+Per struttura si intende:
+    - il tipo e il numero di RenderTarget sui quali deve operare
+    - un eventuale DepthStencil sul quale operare
+    - il tipo e il numero di "subpass" di rendering che deve supportare
+
+Ribadisco che questa RES definisce solo lo scheletro del lavoro di rendering, non binda le risorse necessarie
+ma definisce solo quali tipi di risorse sono compatibili con il Task
+
+
+=============== FrameBuffer =========================
+Questa RES definisce in modo concreto (cioè binda) i RenderTarget fisici e il DepthStencil fisico utilizzati da
+un ben preciso RenderTaskLayout.
+
+Se RenderTaskLayout ha dichiarato per es di volere un colorBuffer A32R32G32B32 e un DepthStencil senza stencil, 
+allora un FrameBuffer compatibile è quello che binda esattamente un ColorBuffer A32R32G32B32 e un DepthStencil senza stencil.
+
+Il FrameBuffer è inoltre responabile nel definire l'area di rendering (solitamente fullscreen).
+I RenderTarget/DepthStencil bindati al FrameBuffer devono avere dimensioni >= della RendertArea definita
+
+
+=============== Pipeline ============================== 
+Anch'essa associata ad un preciso RenderTaskLayout, definisce lo stato della pipeline:
+    -input stage (aka VtxDeclaration)
+    -shader utilizzabili dal RenderTaskLayout
+    -DrawPrimitive
+    -cull mode
+    -stato dello zbuffer e dello stencil
+    -stato dell'alpha blend

@@ -1,66 +1,22 @@
-#include "VKExample1.h"
-#include "dataTypes/gosTimer.h"
+#include "VulkanExample1.h"
+
 
 using namespace gos;
 
-
 //************************************
-void GLFW_key_callback (GLFWwindow* window, int key, UNUSED_PARAM(int scancode), int action, int mods)
-{
-    VulkanExample1 *app = reinterpret_cast<VulkanExample1*>(glfwGetWindowUserPointer(window));
-    if (key == GLFW_KEY_ENTER && action == GLFW_RELEASE)
-    {
-        if ((mods & GLFW_MOD_ALT) != 0)
-            app->toggleFullscreen();    //ALT + ENTER
-    }
-}
-
-
-
-
-//************************************
-VulkanExample1::VulkanExample1()
-{
-    gpu = NULL;
-
-    for (u8 i=0;i<SWAPCHAIN_NUM_MAX_IMAGES;i++)
-        frameBufferHandleList[i] = VK_NULL_HANDLE;
-}
-
-//************************************
-void VulkanExample1::cleanup() 
+void VulkanExample1::virtual_onCleanup() 
 {
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
     gpu->deleteResource (pipelineHandle);
     gpu->deleteResource (renderLayoutHandle);
-
-    //frame buffer
-    priv_destroyFrameBuffers (gpu);
+    gpu->deleteResource (frameBufferHandle);
 }    
 
-//************************************
-void VulkanExample1::priv_destroyFrameBuffers (gos::GPU *gpuIN)
-{
-    for (u8 i=0;i<SWAPCHAIN_NUM_MAX_IMAGES;i++)
-    {
-        if (VK_NULL_HANDLE != frameBufferHandleList[i])
-        {
-            vkDestroyFramebuffer(gpuIN->REMOVE_getVkDevice(), frameBufferHandleList[i], nullptr);
-            frameBufferHandleList[i] = VK_NULL_HANDLE;
-        }
-    }
-}
-
 
 //************************************
-bool VulkanExample1::init(gos::GPU *gpuIN)
+bool VulkanExample1::virtual_onInit ()
 {
-    gpu = gpuIN;
-
-    glfwSetWindowUserPointer (gpu->getWindow(), this);
-    glfwSetKeyCallback (gpu->getWindow(), GLFW_key_callback);
-
     //creo il render pass
     gpu->renderLayout_createNew (&renderLayoutHandle)
         .requireRendertarget (eRenderTargetUsage::presentation, gpu->swapChain_getImageFormat(), true, gos::ColorHDR(0xff000080))
@@ -70,23 +26,30 @@ bool VulkanExample1::init(gos::GPU *gpuIN)
     .end();
     if (renderLayoutHandle.isInvalid())
     {
-        gos::logger::err ("VulkanExample1::init() => can't create renderTaskLayout\n");
+        gos::logger::err ("VulkanApp::init() => can't create renderTaskLayout\n");
         return false;
     }
 
     //frame buffers
-    priv_recreateFrameBuffers (gpu, renderLayoutHandle);
+    gpu->frameBuffer_createNew (renderLayoutHandle, &frameBufferHandle)
+        .bindRenderTarget (gpu->renderTarget_getDefault())
+        .end();
+    if (frameBufferHandle.isInvalid())
+    {
+        gos::logger::err ("VulkanApp::init() => can't create frameBufferHandle\n");
+        return false;
+    }        
 
 
     //carico gli shader
-    if (!gpu->vtxshader_createFromFile ("shader/shader1.vert.spv", "main", &vtxShaderHandle))
+    if (!gpu->vtxshader_createFromFile ("shader/example1/shader.vert.spv", "main", &vtxShaderHandle))
     {
-        gos::logger::err ("VulkanExample1::init() => can't create vert shader\n");
+        gos::logger::err ("VulkanApp::init() => can't create vert shader\n");
         return false;
     }
-    if (!gpu->fragshader_createFromFile ("shader/shader1.frag.spv", "main", &fragShaderHandle))
+    if (!gpu->fragshader_createFromFile ("shader/example1/shader.frag.spv", "main", &fragShaderHandle))
     {
-        gos::logger::err ("VulkanExample1::init() => can't create frag shader\n");
+        gos::logger::err ("VulkanApp::init() => can't create frag shader\n");
         return false;
     }
 
@@ -105,74 +68,18 @@ bool VulkanExample1::init(gos::GPU *gpuIN)
         
     if (pipelineHandle.isInvalid())
     {
-        gos::logger::err ("VulkanExample1::init() => can't create pipeline\n");
+        gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
         return false;
     }
-
-    //esempio di vtxDecl
-    /*
-    GPUVtxDeclHandle h;
-    gpu->vtxDecl_createNew(&h)
-        .addStream(eVtxStreamInputRate::perVertex)
-        .addDescriptor (0, 0, eDataFormat::_3f32)        //position
-        .addDescriptor (12, 1, eDataFormat::_3u32)      //color
-        .end();
-    assert (h.isValid());
-    gpu->vtxDecl_delete (h);
-    */
 
     return true;
 }    
 
-/*************************************
- * input:  swapchain e vkRenderPass
- * output: frameBufferHandleList[]   => un frame buffer per ogni image della swapchain
- */
-bool VulkanExample1::priv_recreateFrameBuffers (gos::GPU *gpuIN, const GPURenderLayoutHandle &renderLayoutHandle)
-{
-    bool ret = true;
-    gos::logger::log ("VulkanExample1::priv_recreateFrameBuffers()\n");
-    gos::logger::incIndent();
-
-    VkRenderPass vkRenderPass;
-    if (!gpu->renderLayout_toVulkan (renderLayoutHandle, &vkRenderPass))
-    {
-        gos::logger::err ("VulkanExample1::priv_recreateFrameBuffers() => invalid renderLayoutHandle\n");
-    }
-
-
-    priv_destroyFrameBuffers(gpuIN);
-
-    for (u8 i = 0; i < gpuIN->swapChain_getImageCount(); i++) 
-    {
-        VkImageView imageViewList[2] = { gpuIN->swapChain_getImageViewHandle(i) , 0};
-
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = vkRenderPass;
-        framebufferInfo.attachmentCount = 1;
-        framebufferInfo.pAttachments = imageViewList;
-        framebufferInfo.width = gpuIN->swapChain_getWidth();
-        framebufferInfo.height = gpuIN->swapChain_getHeight();
-        framebufferInfo.layers = 1;
-
-        const VkResult result = vkCreateFramebuffer(gpuIN->REMOVE_getVkDevice(), &framebufferInfo, nullptr, &frameBufferHandleList[i]);
-        if (VK_SUCCESS != result)
-        {
-            gos::logger::err ("vkCreateFramebuffer() => %s\n", string_VkResult(result));
-            ret = false;
-            break;
-        }
-    }
-
-    gos::logger::decIndent();
-    return ret;
-}
 
 //************************************
 bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN, 
                                             const GPURenderLayoutHandle &renderLayoutHandle, 
-                                            const VkFramebuffer &vkFrameBufferHandle, 
+                                            const GPUFrameBufferHandle &frameBufferHandle,
                                             const GPUPipelineHandle &pipelineHandle,
                                             VkCommandBuffer *out_commandBuffer)
 {
@@ -182,7 +89,15 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
     VkRenderPass vkRenderPassHandle = VK_NULL_HANDLE;
     if (!gpuIN->renderLayout_toVulkan (renderLayoutHandle, &vkRenderPassHandle))
     {
-        gos::logger::err ("VulkanExample1::recordCommandBuffer() => invalid renderLayoutHandle\n");
+        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid renderLayoutHandle\n");
+        return false;
+    }
+
+    //recupero il frame buffer
+    VkFramebuffer vkFrameBufferHandle;
+    if (!gpuIN->frameBuffer_toVulkan (frameBufferHandle, &vkFrameBufferHandle))
+    {
+        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid frameBufferHandle\n");
         return false;
     }
 
@@ -191,7 +106,7 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
     VkPipelineLayout    vkPipelineLayoutHandle;
     if (!gpuIN->pipeline_toVulkan (pipelineHandle, &vkPipelineHandle, &vkPipelineLayoutHandle))
     {
-        gos::logger::err ("VulkanExample1::recordCommandBuffer() => invalid pipelineHandle\n");
+        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid pipelineHandle\n");
         return false;
     }
 
@@ -253,7 +168,7 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
  * renderizza inviando command buffer a GPU e poi aspettando che questa
  * abbia finito il suo lavoro
  */
-void VulkanExample1::mainLoop_waitEveryFrame()
+void VulkanExample1::virtual_onRun()
 {
     VkCommandBuffer     vkCommandBuffer;
     gpu->createCommandBuffer (&vkCommandBuffer);
@@ -278,7 +193,7 @@ void VulkanExample1::mainLoop_waitEveryFrame()
         if (bNeedToRecreateSwapChain)
         {
             bNeedToRecreateSwapChain = false;
-            priv_recreateFrameBuffers (gpu, renderLayoutHandle);
+            //priv_recreateFrameBuffers (gpu, renderLayoutHandle);
         }
 
 //printf ("frame begin\n");
@@ -296,14 +211,14 @@ void VulkanExample1::mainLoop_waitEveryFrame()
         //semaforo che GPU deve segnalare quando questa operazione e' ok
         acquireImageTimer.start();
             
-        u32 imageIndex;
-        if (gpu->newFrame (&bNeedToRecreateSwapChain, &imageIndex, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE))
+        if (gpu->newFrame (&bNeedToRecreateSwapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE))
         {
             gpu->fence_reset (&inFlightFence);
 //printf ("  CPU waited vkAcquireNextImageKHR %ld us\n", acquireImageTimer.elapsed_usec());
         
             //command buffer che opera su [imageIndex]
-            recordCommandBuffer(gpu, renderLayoutHandle, frameBufferHandleList[imageIndex], pipelineHandle, &vkCommandBuffer);
+            //recordCommandBuffer(gpu, renderLayoutHandle, frameBufferHandleList[imageIndex], pipelineHandle, &vkCommandBuffer);
+            recordCommandBuffer(gpu, renderLayoutHandle, frameBufferHandle, pipelineHandle, &vkCommandBuffer);
 
             //submit
             VkSubmitInfo submitInfo{};
@@ -328,7 +243,7 @@ void VulkanExample1::mainLoop_waitEveryFrame()
                 gos::logger::err ("vkQueueSubmit() => %s\n", string_VkResult(result));
 
             //presentazione
-            gpu->present (&renderFinishedSemaphore, 1, imageIndex);
+            gpu->present (&renderFinishedSemaphore, 1);
 //printf ("  total frame time: %ldus\n", frameTimer.elapsed_usec());
         }
 
@@ -349,9 +264,3 @@ void VulkanExample1::mainLoop_waitEveryFrame()
     gpu->fence_destroy (inFlightFence);
 }
 
-
-//************************************
-void VulkanExample1::mainLoop()
-{
-    mainLoop_waitEveryFrame();
-}

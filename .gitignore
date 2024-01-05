@@ -25,3 +25,5 @@ engine/bin/ProfileServer/ProfileServer__windows_Debug.exe
 engine/bin/testVulkan/testVulkan__windows_Debug.exe
 
 engine/aaCMakePresets.json
+
+*.goslog

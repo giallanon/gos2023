@@ -57,7 +57,7 @@ namespace test2
             //e poi muovo 1 canale alla volta a partire dal valore 0 fino al suo massimo
             //Lo scopo e' vedere che quel canale si incrementa correttamente e che gli altri canali mantengono
             //il loro valore originale
-            handle1.setIndexValue (MAX_VALUE[0]); 
+            handle1.set_indexValue (MAX_VALUE[0]); 
             handle1.setChunkValue (MAX_VALUE[1]); 
             handle1.setCounterValue(MAX_VALUE[2]);
             handle1.setPADValue (MAX_VALUE[3]); 
@@ -81,7 +81,7 @@ namespace test2
             }
 
             //Come sopra, ma stavolta metto tutti i canali a 0
-            handle1.setIndexValue (0); 
+            handle1.set_indexValue (0); 
             handle1.setChunkValue (0); 
             handle1.setCounterValue(0);
             handle1.setPADValue (0); 
@@ -179,7 +179,7 @@ namespace test3
             TEST_ASSERT (handle.getChunkValue() == 0);
             TEST_FAIL_IF(!s || handle.isInvalid());
             TEST_FAIL_IF(handle.getCounterValue() != 1);
-            TEST_FAIL_IF(handle.getIndexValue() != i);
+            TEST_FAIL_IF(handle.get_indexValue() != i);
 
             s->a = (u8)(i & 0xFF);
             s->b = (u16)(i & 0xFFFF);
@@ -206,7 +206,7 @@ namespace test3
             TEST_ASSERT (handle.getChunkValue() == 1);
             TEST_FAIL_IF (!s || handle.isInvalid());
             TEST_FAIL_IF (handle.getCounterValue() != 1);
-            TEST_FAIL_IF (handle.getIndexValue() != i);
+            TEST_FAIL_IF (handle.get_indexValue() != i);
 
             s->a = (u8)(i & 0xFF);
             s->b = (u16)(i & 0xFFFF);
@@ -241,14 +241,14 @@ namespace test3
             MyHandle h;
             sMyData *s = hl.reserve(&h);
             TEST_FAIL_IF (NULL == s || h.isInvalid());
-            TEST_ASSERT (h.getIndexValue() == 0);
+            TEST_ASSERT (h.get_indexValue() == 0);
             TEST_ASSERT (h.getCounterValue() == 2);
             TEST_ASSERT (h.getChunkValue() == 0);
 
             MyHandle h2;
             s = hl.reserve(&h2);
             TEST_FAIL_IF(NULL == s || h2.isInvalid());
-            TEST_ASSERT (h2.getIndexValue() == 1);
+            TEST_ASSERT (h2.get_indexValue() == 1);
             TEST_ASSERT (h2.getCounterValue() == 2);
             TEST_ASSERT (h.getChunkValue() == 0);
 
@@ -257,13 +257,13 @@ namespace test3
 
             s = hl.reserve(&h);
             TEST_FAIL_IF (NULL == s || h.isInvalid());
-            TEST_ASSERT (h.getIndexValue() == 1);
+            TEST_ASSERT (h.get_indexValue() == 1);
             TEST_ASSERT (h.getCounterValue() == 3);
             TEST_ASSERT (h.getChunkValue() == 0);
 
             s = hl.reserve(&h2);
             TEST_FAIL_IF (NULL == s || h2.isInvalid());
-            TEST_ASSERT (h2.getIndexValue() == 0);
+            TEST_ASSERT (h2.get_indexValue() == 0);
             TEST_ASSERT (h2.getCounterValue() == 3);
             TEST_ASSERT (h.getChunkValue() == 0);
 

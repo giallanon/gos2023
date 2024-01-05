@@ -1,13 +1,15 @@
 #include "gosGPU.h"
-#include "VKExample1.h"
+#include "VulkanExample1.h"
+#include "VulkanExample2.h"
 
 //******************************** 
-void runExample1 (gos::GPU *gpu)
+template<class VKAPP>
+void runExample (gos::GPU *gpu, const char *title)
 {
-    VulkanExample1 app;
-    if (app.init(gpu))
+    VKAPP app;
+    if (app.init(gpu, title))
     {
-        app.mainLoop();
+        app.run();
         app.cleanup();
     }
 }
@@ -18,12 +20,14 @@ int main()
 {
     gos::sGOSInit init;
     init.memory_setDefaultForGame();
+    init.setLogMode (gos::sGOSInit::eLogMode::both_console_and_file);
     if (gos::init (init, "testVulkan"))
     {
         gos::GPU gpu;
         if (gpu.init (800, 600, gos::getAppName()))
         {
-            runExample1 (&gpu);
+            //runExample<VulkanExample1>(&gpu, "VulkanExample1");
+            runExample<VulkanExample2>(&gpu, "VulkanExample2");
             gpu.deinit();
         }
 

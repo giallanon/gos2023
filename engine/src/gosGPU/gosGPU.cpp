@@ -17,7 +17,7 @@ GPU::GPU()
     vkSurface = VK_NULL_HANDLE;
     vkDebugMessenger = VK_NULL_HANDLE;
     defaultViewportHandle.setInvalid();
-    defaultRTHandleList = NULL;
+    defaultRTHandle.setInvalid();
     currentSwapChainImageIndex = 0;
     bNeedToRecreateSwapchain = false;
 }
@@ -40,12 +40,12 @@ void GPU::deinit()
         toBeDeletedBuilder.deleteAll();
         toBeDeletedBuilder.unsetup();
 
-        //elimino i default RT
-        for (u32 i=0; i<vulkan.swapChainInfo.imageCount; i++)
-            renderTargetList.release (defaultRTHandleList[i]);
-        GOSFREE(allocator, defaultRTHandleList);
+        frameBufferDependentOnSwapChainList.unsetup();
 
+        //elimino l'handle del default RT
+        renderTargetList.release (defaultRTHandle);
 
+        //elimino la vport di default
         deleteResource (defaultViewportHandle);
 
         priv_deinitandleLists();
@@ -68,8 +68,9 @@ bool GPU::init (u16 width, u16 height, const char *appName)
     gpuAllocator->setup (1024 * 1024 * 128); //128MB
     this->allocator = gpuAllocator;
 
-    //lista dei builder temporanei da deletare
+    //liste varie
     toBeDeletedBuilder.setup();
+    frameBufferDependentOnSwapChainList.setup (allocator, 128);
 
 
     //init vero e proprio
@@ -89,17 +90,15 @@ bool GPU::init (u16 width, u16 height, const char *appName)
     //default viewport
     viewport_create ("0", "0", "0-", "0-", &defaultViewportHandle);
 
-    //creo un renderTarget per ogni image della swapchain
-    defaultRTHandleList = GOSALLOCT(GPURenderTargetHandle*, allocator, sizeof(GPURenderTargetHandle) * vulkan.swapChainInfo.imageCount);
-    for (u32 i=0; i<vulkan.swapChainInfo.imageCount; i++)
+    //default render target che e' in sostanza bindata alla viewport
     {
-        gpu::RenderTarget *rt = renderTargetList.reserve(&defaultRTHandleList[i]);
+        gpu::RenderTarget *rt = renderTargetList.reserve (&defaultRTHandle);
         rt->reset();
         rt->format = vulkan.swapChainInfo.imageFormat;
         rt->image = VK_NULL_HANDLE;
-        rt->mem = VK_NULL_HANDLE;
-        rt->viewAsRT = vulkan.swapChainInfo.vkImageListView[i];
-        rt->viewAsTexture = VK_NULL_HANDLE;
+        rt->vkMemHandle = VK_NULL_HANDLE;
+        rt->viewAsRT = NULL;
+        rt->viewAsTexture = NULL;
         rt->width = vulkan.swapChainInfo.imageExtent.width;
         rt->height = vulkan.swapChainInfo.imageExtent.height;
     }
@@ -260,6 +259,8 @@ bool GPU::priv_initHandleLists()
     renderTargetList.setup (allocator);
     renderLayoutList.setup (allocator);
     pipelineList.setup (allocator);
+    frameBufferList.setup (allocator);
+    vtxBufferList.setup (allocator);
     return true;
 }
 
@@ -280,6 +281,8 @@ void  GPU::priv_deinitandleLists()
     renderTargetList.unsetup ();
     renderLayoutList.unsetup ();
     pipelineList.unsetup();
+    frameBufferList.unsetup();
+    vtxBufferList.unsetup();
 }
 
 //************************************
@@ -297,7 +300,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL GOS_vulkanDebugCallback (VkDebugUtilsMessa
     else
         sprintf_s (prefix, sizeof(prefix), "VULKAN [unknown]=> ");
 
-    gos::logger::logWithPrefix (eTextColor::magenta, prefix, "%s\n", pCallbackData->pMessage);
+    gos::logger::logWithPrefix (eTextColor::magenta, prefix, "%s\n\n", pCallbackData->pMessage);
     return VK_FALSE;
 }
 
@@ -377,14 +380,13 @@ void GPU::fence_reset (const VkFence *fenceHandleList, u32 fenceCount)
 }
 
 //************************************
-bool GPU::newFrame (bool *out_bSwapchainWasRecreated, u32 *out_imageIndex,u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
+bool GPU::newFrame (bool *out_bSwapchainWasRecreated,u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
 {
     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
     
     toBeDeletedBuilder.check (timeNow_msec);
 
     const VkResult result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, timeout_ns, semaphore, fence, &currentSwapChainImageIndex);
-    *out_imageIndex = currentSwapChainImageIndex;
 
     switch (result)
     {
@@ -411,7 +413,7 @@ bool GPU::newFrame (bool *out_bSwapchainWasRecreated, u32 *out_imageIndex,u64 ti
 }
 
 //************************************
-VkResult GPU::present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount, u32 imageIndex)
+VkResult GPU::present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount)
 {
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -419,7 +421,7 @@ VkResult GPU::present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCoun
     presentInfo.pWaitSemaphores = semaphoreHandleList; //prima di presentare, aspetta che GPU segnali tutti i semafori di [semaphoreHandleList]
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &vulkan.swapChainInfo.vkSwapChain;
-    presentInfo.pImageIndices = &imageIndex;
+    presentInfo.pImageIndices = &currentSwapChainImageIndex;
     
     const VkResult result = vkQueuePresentKHR (vulkan.gfxQ, &presentInfo);
 
@@ -447,10 +449,11 @@ bool GPU::priv_swapChain_recreate ()
         glfwWaitEvents();
     }
 
-
+    //attendo che Vulkan sia in idel
     bool ret = true;
     vkDeviceWaitIdle (vulkan.dev);
 
+    //distruggo la swapchain
     vulkan.swapChainInfo.destroy(vulkan.dev);
 
     //ricreazione swap chain
@@ -464,13 +467,11 @@ bool GPU::priv_swapChain_recreate ()
     const i16 vportW = (i16)vulkan.swapChainInfo.imageExtent.width;
     const i16 vportH = (i16)vulkan.swapChainInfo.imageExtent.height;
 
-    //aggiorno le view del default RT
-    for (u32 i=0; i<vulkan.swapChainInfo.imageCount; i++)
+    //aggiorno le info del default RT
     {
         gpu::RenderTarget *rt;
-        priv_renderTarget_fromHandleToPointer (defaultRTHandleList[i], &rt);
+        priv_renderTarget_fromHandleToPointer (defaultRTHandle, &rt);
         rt->format = vulkan.swapChainInfo.imageFormat;
-        rt->viewAsRT = vulkan.swapChainInfo.vkImageListView[i];
         rt->width = vulkan.swapChainInfo.imageExtent.width;
         rt->height = vulkan.swapChainInfo.imageExtent.height;
     }
@@ -484,7 +485,6 @@ bool GPU::priv_swapChain_recreate ()
             v->resolve (vportW, vportH);
     }
 
-
     //aggiorno tutti i depth buffer che hanno una dimensione/posizione relativa
     n = depthStencilHandleList.getNElem();
     for (u32 i=0; i<n; i++)
@@ -494,15 +494,29 @@ bool GPU::priv_swapChain_recreate ()
         {
             if (!s->width.isAbsolute() || !s->height.isAbsolute())
             {
-                priv_depthStenicl_deleteFromStruct (*s);
+                priv_depthStencil_deleteFromStruct (*s);
                 s->resolve (vportW, vportH);
-                priv_depthStenicl_createFromStruct (*s);
+                priv_depthStencil_createFromStruct (*s);
             }
         }
     }
 
+    //ricredo tutti i FrameBuffer che sono dipendenti dalla swapchain
+    n = frameBufferDependentOnSwapChainList.getNElem();
+    for (u32 i=0; i<n; i++)
+    {
+        GPUFrameBufferHandle handle = frameBufferDependentOnSwapChainList(i);
 
+        gpu::FrameBuffer *sFB;
+        if (!priv_frameBuffer_fromHandleToPointer (handle, &sFB))
+            return false;
+        
+        gos::logger::verbose ("recreating FrameBuffer handle=0x%08X\n", handle.viewAsU32());
+        priv_frameBuffer_deleteFromStruct (sFB);
+        priv_frameBuffer_recreate (sFB);
+    }
 
+    //fine
     gos::logger::decIndent();
     return ret;  
 }
@@ -536,18 +550,40 @@ void  GPU::waitIdle()
 }
 
 //************************************
-bool GPU::priv_shader_fromHandleToPointer (const GPUShaderHandle handle, gpu::Shader **out) const
+void  GPU::toggleFullscreen()
 {
-    assert (NULL != out);
-    if (shaderList.fromHandleToPointer(handle, out))
-        return true;
-    
-    *out = NULL;
-    gos::logger::err ("GPU => unable to get shader from handle (handle=%0x08X)\n", handle.viewAsU32());
-    return false;
+    gos::logger::log (eTextColor::yellow, "toggleFullscreen\n");
+    gos::logger::incIndent();
+
+    GLFWmonitor *monitor = glfwGetWindowMonitor(window.win);
+    if (NULL == monitor)
+    {
+        //andiamo in full
+        window.storeCurrentPosAndSize();
+        gos::logger::log ("going full screen, current win pos and size (%d,%d) (%d,%d)\n", window.storedX, window.storedY, window.storedW, window.storedH);
+
+        monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+        glfwSetWindowMonitor (window.win, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+    }    
+    else
+    {
+        //torniamo in windowed
+        gos::logger::log ("going in windowed mode, current win pos and size (%d,%d) (%d,%d)\n", window.storedX, window.storedY, window.storedW, window.storedH);
+        glfwSetWindowMonitor(window.win, NULL, window.storedX, window.storedY, window.storedW, window.storedH, 0);
+    }
+
+    gos::logger::decIndent();
 }
 
-//**********************************************************
+
+
+
+/************************************************************************************************************
+ * Shader
+ * 
+ * 
+ *************************************************************************************************************/
 bool GPU::priv_shader_createFromFile (const u8 *filename, eShaderType shaderType, const char *mainFnName, GPUShaderHandle *out_shaderHandle)
 {
     assert (NULL != out_shaderHandle);
@@ -604,6 +640,18 @@ bool GPU::priv_shader_createFromMemory (const u8 *buffer, u32 bufferSize, eShade
 }
 
 //************************************
+bool GPU::priv_shader_fromHandleToPointer (const GPUShaderHandle handle, gpu::Shader **out) const
+{
+    assert (NULL != out);
+    if (shaderList.fromHandleToPointer(handle, out))
+        return true;
+    
+    *out = NULL;
+    gos::logger::err ("GPU => unable to get shader from handle (handle=%0x08X)\n", handle.viewAsU32());
+    return false;
+}
+
+//************************************
 void GPU::deleteResource (GPUShaderHandle &shaderHandle)
 {
     gpu::Shader *shader;
@@ -645,67 +693,33 @@ eShaderType GPU::shader_getType (const GPUShaderHandle shaderHandle) const
     return eShaderType::unknown;
 }
 
-//************************************
-void  GPU::toggleFullscreen()
-{
-    gos::logger::log (eTextColor::yellow, "toggleFullscreen\n");
-    gos::logger::incIndent();
 
-    GLFWmonitor *monitor = glfwGetWindowMonitor(window.win);
-    if (NULL == monitor)
-    {
-        //andiamo in full
-        window.storeCurrentPosAndSize();
-        gos::logger::log ("going full screen, current win pos and size (%d,%d) (%d,%d)\n", window.storedX, window.storedY, window.storedW, window.storedH);
 
-        monitor = glfwGetPrimaryMonitor();
-        const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-        glfwSetWindowMonitor (window.win, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-    }    
-    else
-    {
-        //torniamo in windowed
-        gos::logger::log ("going in windowed mode, current win pos and size (%d,%d) (%d,%d)\n", window.storedX, window.storedY, window.storedW, window.storedH);
-        glfwSetWindowMonitor(window.win, NULL, window.storedX, window.storedY, window.storedW, window.storedH, 0);
-    }
 
-    gos::logger::decIndent();
-}
 
-//************************************
-bool GPU::priv_vxtDecl_fromHandleToPointer (const GPUVtxDeclHandle handle, gpu::VtxDecl **out) const
-{
-    assert (NULL != out);
-    if (vtxDeclList.fromHandleToPointer(handle, out))
-        return true;
-    
-    *out = NULL;
-    gos::logger::err ("GPU => unable to get VtxDecl from handle (handle=%0x08X)\n", handle.viewAsU32());
-    return false;
-}
 
-//************************************
-bool GPU::vtxDecl_query (const GPUVtxDeclHandle handle, gpu::VtxDecl *out) const
-{
-    assert (out);
-    gpu::VtxDecl *p;
-    if (priv_vxtDecl_fromHandleToPointer(handle, &p))
-    {
-        //ritorno una copia dell'oggetto, non il pt all'oggetto
-        (*out) = (*p);
-        return true;
-    }
-
-    out->reset();
-    return false;
-}
-
-//************************************
+/************************************************************************************************************
+ * VtxDecl
+ * 
+ * 
+ *************************************************************************************************************/
 GPU::VtxDeclBuilder& GPU::vtxDecl_createNew (GPUVtxDeclHandle *out_handle)
 {
     out_handle->setInvalid();
     vtxDeclBuilder.priv_begin(this, out_handle);
     return vtxDeclBuilder;
+}
+
+//************************************
+void GPU::deleteResource (GPUVtxDeclHandle &handle)
+{
+    gpu::VtxDecl *s;
+    if (priv_vxtDecl_fromHandleToPointer(handle, &s))
+    {
+        s->reset();
+        vtxDeclList.release(handle);
+    }
+    handle.setInvalid();
 }
 
 //************************************
@@ -741,18 +755,42 @@ void GPU::priv_vxtDecl_onBuilderEnds (VtxDeclBuilder *builder)
 }
 
 //************************************
-void GPU::deleteResource (GPUVtxDeclHandle &handle)
+bool GPU::priv_vxtDecl_fromHandleToPointer (const GPUVtxDeclHandle handle, gpu::VtxDecl **out) const
 {
-    gpu::VtxDecl *s;
-    if (priv_vxtDecl_fromHandleToPointer(handle, &s))
-    {
-        s->reset();
-        vtxDeclList.release(handle);
-    }
-    handle.setInvalid();
+    assert (NULL != out);
+    if (vtxDeclList.fromHandleToPointer(handle, out))
+        return true;
+    
+    *out = NULL;
+    gos::logger::err ("GPU => unable to get VtxDecl from handle (handle=%0x08X)\n", handle.viewAsU32());
+    return false;
 }
 
 //************************************
+bool GPU::vtxDecl_query (const GPUVtxDeclHandle handle, gpu::VtxDecl *out) const
+{
+    assert (out);
+    gpu::VtxDecl *p;
+    if (priv_vxtDecl_fromHandleToPointer(handle, &p))
+    {
+        //ritorno una copia dell'oggetto, non il pt all'oggetto
+        (*out) = (*p);
+        return true;
+    }
+
+    out->reset();
+    return false;
+}
+
+
+
+
+
+/************************************************************************************************************
+ * viewport
+ * 
+ * 
+ *************************************************************************************************************/
 bool GPU::viewport_create (const gos::Pos2D &x,const gos::Pos2D &y, const gos::Dim2D &w, const gos::Dim2D &h, GPUViewportHandle *out_handle)
 {
     assert (NULL != out_handle);
@@ -779,15 +817,6 @@ bool GPU::viewport_create (const gos::Pos2D &x,const gos::Pos2D &y, const gos::D
 }
 
 //************************************
-const gpu::Viewport* GPU::viewport_get (const GPUViewportHandle &handle) const
-{
-    gos::gpu::Viewport *v;
-    if (!viewportlList.fromHandleToPointer (handle, &v))
-        return NULL;
-    return v;
-}
-
-//************************************
 void GPU::deleteResource (GPUViewportHandle &handle)
 {
     gos::gpu::Viewport *v;
@@ -800,7 +829,24 @@ void GPU::deleteResource (GPUViewportHandle &handle)
 }
 
 //************************************
-bool GPU::depthBuffer_create (const gos::Dim2D &widthIN, const gos::Dim2D &heightIN, bool bWithStencil, GPUDepthStencilHandle *out_handle)
+const gpu::Viewport* GPU::viewport_get (const GPUViewportHandle &handle) const
+{
+    gos::gpu::Viewport *v;
+    if (!viewportlList.fromHandleToPointer (handle, &v))
+        return NULL;
+    return v;
+}
+
+
+
+
+
+/************************************************************************************************************
+ * DepthStencil
+ * 
+ * 
+ *************************************************************************************************************/
+bool GPU::depthStencil_create (const gos::Dim2D &widthIN, const gos::Dim2D &heightIN, bool bWithStencil, GPUDepthStencilHandle *out_handle)
 {
     assert (NULL != out_handle);
 
@@ -813,7 +859,7 @@ bool GPU::depthBuffer_create (const gos::Dim2D &widthIN, const gos::Dim2D &heigh
         b = gos::vulkanFindBestDepthFormat (vulkan.phyDevInfo, &depthStencilFormat);
     if (!b)
     {
-        gos::logger::err ("GPU::depthBuffer_create() => can't find a suitabile format\n");
+        gos::logger::err ("GPU::depthStencil_create() => can't find a suitabile format\n");
         return false;
     }
 
@@ -822,7 +868,7 @@ bool GPU::depthBuffer_create (const gos::Dim2D &widthIN, const gos::Dim2D &heigh
     gos::gpu::DepthStencil *depthStencil = depthStencilList.reserve (out_handle);
     if (NULL == depthStencil)
     {
-        gos::logger::err ("GPU::depthBuffer_create() => can't reserve a new depthStencil handle!\n");
+        gos::logger::err ("GPU::depthStencil_create() => can't reserve a new depthStencil handle!\n");
         out_handle->setInvalid();
         return false;
     }
@@ -835,7 +881,7 @@ bool GPU::depthBuffer_create (const gos::Dim2D &widthIN, const gos::Dim2D &heigh
     depthStencil->height = heightIN;
 
     //alloco le risorse vulkan
-    if (!priv_depthStenicl_createFromStruct (*depthStencil))
+    if (!priv_depthStencil_createFromStruct (*depthStencil))
         return false;
 
     depthStencilHandleList.append (*out_handle);
@@ -848,7 +894,7 @@ void GPU::deleteResource (GPUDepthStencilHandle &handle)
     gos::gpu::DepthStencil *s;
     if (depthStencilList.fromHandleToPointer (handle, &s))
     {
-        priv_depthStenicl_deleteFromStruct (*s);
+        priv_depthStencil_deleteFromStruct (*s);
         s->reset();
         depthStencilList.release (handle);
         depthStencilHandleList.findAndRemove (handle);
@@ -858,10 +904,10 @@ void GPU::deleteResource (GPUDepthStencilHandle &handle)
 }
 
 //************************************
-bool GPU::priv_depthStenicl_createFromStruct (gos::gpu::DepthStencil &depthStencil)
+bool GPU::priv_depthStencil_createFromStruct (gos::gpu::DepthStencil &depthStencil)
 {
     assert (VK_NULL_HANDLE == depthStencil.image);
-    assert (VK_NULL_HANDLE == depthStencil.mem);
+    assert (VK_NULL_HANDLE == depthStencil.vkMemHandle);
     assert (VK_NULL_HANDLE == depthStencil.view);
     assert (VK_FORMAT_UNDEFINED != depthStencil.depthFormat);
 
@@ -899,14 +945,14 @@ bool GPU::priv_depthStenicl_createFromStruct (gos::gpu::DepthStencil &depthStenc
 	memAllloc.allocationSize = memReqs.size;
     vulkanGetMemoryType (vulkan.phyDevInfo, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &memAllloc.memoryTypeIndex);
 
-	result = vkAllocateMemory (vulkan.dev, &memAllloc, nullptr, &depthStencil.mem);
+	result = vkAllocateMemory (vulkan.dev, &memAllloc, nullptr, &depthStencil.vkMemHandle);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => vkAllocateMemory() => %s\n", string_VkResult(result));
         return false;
     }
 
-	result = vkBindImageMemory (vulkan.dev, depthStencil.image, depthStencil.mem, 0);
+	result = vkBindImageMemory (vulkan.dev, depthStencil.image, depthStencil.vkMemHandle, 0);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => vkBindImageMemory() => %s\n", string_VkResult(result));
@@ -937,7 +983,7 @@ bool GPU::priv_depthStenicl_createFromStruct (gos::gpu::DepthStencil &depthStenc
 }
 
 //************************************
-void GPU::priv_depthStenicl_deleteFromStruct (gos::gpu::DepthStencil &depthStencil)
+void GPU::priv_depthStencil_deleteFromStruct (gos::gpu::DepthStencil &depthStencil)
 {
     if (VK_NULL_HANDLE != depthStencil.view)
     {
@@ -951,14 +997,33 @@ void GPU::priv_depthStenicl_deleteFromStruct (gos::gpu::DepthStencil &depthStenc
         depthStencil.image = VK_NULL_HANDLE;
     }
 
-    if (VK_NULL_HANDLE != depthStencil.mem)
+    if (VK_NULL_HANDLE != depthStencil.vkMemHandle)
     {
-	    vkFreeMemory(vulkan.dev, depthStencil.mem, nullptr);
-        depthStencil.mem = VK_NULL_HANDLE;
+	    vkFreeMemory(vulkan.dev, depthStencil.vkMemHandle, nullptr);
+        depthStencil.vkMemHandle = VK_NULL_HANDLE;
     }
 }
 
 //************************************
+bool GPU::priv_depthStencil_fromHandleToPointer (const GPUDepthStencilHandle handle, gpu::DepthStencil **out) const
+{
+    assert (NULL != out);
+    if (depthStencilList.fromHandleToPointer(handle, out))
+        return true;
+    
+    *out = NULL;
+    gos::logger::err ("GPU::priv_depthStenicl_fromHandleToPointer() => invalid handle %0x08X\n", handle.viewAsU32());
+    return false;
+}
+
+
+
+
+/************************************************************************************************************
+ * Render Target
+ * 
+ * 
+ *************************************************************************************************************/
 bool GPU::priv_renderTarget_fromHandleToPointer (const GPURenderTargetHandle handle, gpu::RenderTarget **out) const
 {
     assert (NULL != out);
@@ -972,7 +1037,253 @@ bool GPU::priv_renderTarget_fromHandleToPointer (const GPURenderTargetHandle han
 
 
 
+
+
+/************************************************************************************************************
+ * FrameBuffer
+ * 
+ * 
+ *************************************************************************************************************/
+GPU::FrameBuffersBuilder& GPU::frameBuffer_createNew (const GPURenderLayoutHandle &renderLayoutHandle, GPUFrameBufferHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+    FrameBuffersBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::FrameBuffersBuilder) (this, renderLayoutHandle, out_handle);
+    return *builder;
+}
+
 //************************************
+bool GPU::priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder)
+{
+    //aggiungo il builder alla lista dei builder da deletare
+    toBeDeletedBuilder.add(builder);
+
+    if (builder->anyError())
+        return false;
+        
+
+    GPUFrameBufferHandle handle;
+    gpu::FrameBuffer *s = frameBufferList.reserve (&handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::priv_renderTarget__onBuilderEnds() => can't reserve a handle!\n");
+        return false;
+    }
+
+
+    //Fillo la struttura con i dati di creazione recuperati dal builder
+    s->reset();
+    s->width = builder->width;
+    s->height = builder->height;
+
+    
+    //render layout. Mi accerto che sia valido
+    sRenderLayout *sRL;
+    if (!priv_renderLayout_fromHandleToPointer(builder->renderLayoutHandle, &sRL))
+    {
+        gos::logger::err ("GPU::priv_renderTarget__onBuilderEnds() => invalid renderLayoutHandle\n");
+        frameBufferList.release (handle);
+        return false;
+    }
+    s->renderLayoutHandle = builder->renderLayoutHandle;
+    
+
+    //depthstencil. Se le sue dimensioni non sono assolute, allora vuol dire che dipendono dalla
+    //dimensione della swapchain e quindi questo framBuffer devo marcalco come "bound to swapchain"
+    //per poterlo ricreare in auto quando la swapchain cambia
+    s->depthStencilHandle = builder->depthStencilHandle;
+    if (s->depthStencilHandle.isValid())
+    {
+        gpu::DepthStencil *ds;
+        if (!priv_depthStencil_fromHandleToPointer (s->depthStencilHandle, &ds))
+        {
+            gos::logger::err ("GPU::priv_renderTarget__onBuilderEnds() => invalid depthstencil handle\n");
+            frameBufferList.release (handle);
+            return false;
+        }
+        
+        if (ds->width.isRelative() || ds->height.isRelative())
+            s->boundToSwapChain = true;
+    }
+
+    //render target
+    s->numRenderTaget = builder->numRenderTarget;
+    for (u32 i=0;i<builder->numRenderTarget;i++)
+    {
+        const GPURenderTargetHandle rt = builder->renderTargetHandleList[i];
+        s->renderTargetHandleList[i] = rt;
+
+        if (rt == defaultRTHandle)
+        {
+            //ci stiamo bindando al default RT
+            s->boundToSwapChain = true;
+            s->boundToMainRT = true;
+        }
+        else
+        {
+            //come per il deptStencil, devo verificare se il RT e' a dimensioni assolute o relative
+            gpu::RenderTarget *sRT;
+            if (!priv_renderTarget_fromHandleToPointer (rt, &sRT))
+            {
+                gos::logger::err ("GPU::priv_renderTarget__onBuilderEnds() => invalid render target handle at index %d\n", i);
+                frameBufferList.release (handle);
+                return false;
+            }
+
+            if (sRT->width.isRelative() || sRT->height.isRelative())
+                s->boundToSwapChain = true;
+        }
+    }
+
+
+    //tutto ok
+    *builder->out_handle = handle;
+    if (s->boundToSwapChain)
+        frameBufferDependentOnSwapChainList.append(handle);
+    priv_frameBuffer_recreate (s);
+
+
+    gos::logger::verbose ("created FrameBuffer handle=0x%08X\n", handle.viewAsU32());
+    return true;
+}
+
+//************************************
+void GPU::deleteResource (GPUFrameBufferHandle &handle)
+{
+    gpu::FrameBuffer *s;
+    if (priv_frameBuffer_fromHandleToPointer (handle, &s))
+    {
+        if (s->boundToSwapChain)
+            frameBufferDependentOnSwapChainList.findAndRemove(handle);
+        priv_frameBuffer_deleteFromStruct (s);
+        s->reset();
+        frameBufferList.release (handle);
+    }
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::priv_frameBuffer_fromHandleToPointer (const GPUFrameBufferHandle handle, gpu::FrameBuffer **out) const
+{
+    assert (NULL != out);
+    if (frameBufferList.fromHandleToPointer (handle, out))
+        return true;
+
+    gos::logger::err ("GPU::priv_frameBuffer_fromHandleToPointer() => invalid handle\n");
+    return false;
+}
+
+//************************************
+void GPU::priv_frameBuffer_deleteFromStruct (gpu::FrameBuffer *s)
+{
+    if (!s->boundToMainRT)
+    {
+        vkDestroyFramebuffer (vulkan.dev, s->vkFrameBufferList[0], nullptr);
+    }
+    else
+    {
+        for (u32 i=0; i<vulkan.swapChainInfo.imageCount; i++)
+            vkDestroyFramebuffer (vulkan.dev, s->vkFrameBufferList[i], nullptr);
+    }
+}
+
+//************************************
+bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
+{
+    //render area
+    const u32 renderAreaW = s->width.resolve (0, vulkan.swapChainInfo.imageExtent.width);
+    const u32 renderAreaH = s->height.resolve (0, vulkan.swapChainInfo.imageExtent.height);
+
+    //render layout
+    sRenderLayout *sRL;
+    if (!priv_renderLayout_fromHandleToPointer (s->renderLayoutHandle, &sRL))
+        return false;
+
+
+    //Se sono bindato al mainRT, devo creare N VulkanFrameBuffer, 1 per ogni immagine della swapchain
+    u32 numDaCreare = 1;
+    if (s->boundToMainRT)
+        numDaCreare = vulkan.swapChainInfo.imageCount;
+
+    for (u32 t=0; t<numDaCreare; t++)
+    {
+        //render target
+        VkImageView imageViewList[GOSGPU__NUM_MAX_RENDER_TARGET + 1];
+        u32 nViewList = 0;
+
+        for (u32 i=0; i<s->numRenderTaget; i++)
+        {
+            if (s->renderTargetHandleList[i] == defaultRTHandle)
+            {
+                assert (s->boundToMainRT);
+                imageViewList[nViewList++] = vulkan.swapChainInfo.vkImageListView[t];
+            }
+            else
+            {
+                gpu::RenderTarget *sRT;
+                if (!priv_renderTarget_fromHandleToPointer (s->renderTargetHandleList[i], &sRT))
+                    return false;
+
+                assert (NULL != sRT->viewAsRT);
+                imageViewList[nViewList++] = sRT->viewAsRT;
+            }
+        }
+
+        //depthStencil
+        if (s->depthStencilHandle.isValid())
+        {
+            //TODO
+            DBGBREAK;
+        }
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = sRL->vkRenderPassHandle;
+        framebufferInfo.attachmentCount = nViewList;
+        framebufferInfo.pAttachments = imageViewList;
+        framebufferInfo.width = renderAreaW;
+        framebufferInfo.height = renderAreaH;
+        framebufferInfo.layers = 1;
+
+        const VkResult result = vkCreateFramebuffer(vulkan.dev, &framebufferInfo, nullptr, &s->vkFrameBufferList[t]);
+        if (VK_SUCCESS != result)
+        {
+            gos::logger::err ("GPU::priv_frameBuffer_recreate() => vkCreateFramebuffer => %s\n", string_VkResult(result));
+            return false;
+        }
+    }
+
+    return true;
+}
+
+//************************************
+bool GPU::frameBuffer_toVulkan (const GPUFrameBufferHandle handle, VkFramebuffer *out) const
+{
+    gpu::FrameBuffer *s;
+    if (!priv_frameBuffer_fromHandleToPointer (handle, &s))
+    {
+        *out = VK_NULL_HANDLE;
+        gos::logger::err ("GPU::frameBuffer_toVulkan() => invalid handle\n");
+        return false;        
+    }
+
+    if (s->boundToMainRT)
+        *out = s->vkFrameBufferList[this->currentSwapChainImageIndex];
+    else
+        *out = s->vkFrameBufferList[0];
+
+    return true;
+}
+
+
+
+/************************************************************************************************************
+ * RenderTaskLayout
+ * 
+ * 
+ *************************************************************************************************************/
 GPU::RenderTaskLayoutBuilder& GPU::renderLayout_createNew (GPURenderLayoutHandle *out_handle)
 {
     assert (NULL != out_handle);
@@ -985,33 +1296,21 @@ GPU::RenderTaskLayoutBuilder& GPU::renderLayout_createNew (GPURenderLayoutHandle
 //************************************
 bool GPU::priv_renderLayout_onBuilderEnds (RenderTaskLayoutBuilder *builder)
 {
-    bool ret = true;
-
-    while (1)
-    {
-        if (builder->anyError())
-        {
-            ret = false;
-            break;
-        }
-        
-        sRenderLayout *s = renderLayoutList.reserve (builder->out_handle);
-        if (NULL == s)
-        {
-            gos::logger::err ("GPU::priv_renderLayout_onBuilderEnds() => can't reserve a handle!\n");
-            ret = false;
-            break;
-        }
-
-        s->vkRenderPassHandle = builder->vkRenderPassHandle;
-        break;
-    }
-
     //aggiungo il builder alla lista dei builder da deletare
     toBeDeletedBuilder.add(builder);
 
-    //fine
-    return ret;
+    if (builder->anyError())
+        return false;
+        
+    sRenderLayout *s = renderLayoutList.reserve (builder->out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::priv_renderLayout_onBuilderEnds() => can't reserve a handle!\n");
+        return false;
+    }
+
+    s->vkRenderPassHandle = builder->vkRenderPassHandle;
+    return true;
 }
 
 //************************************
@@ -1029,23 +1328,38 @@ void GPU::deleteResource (GPURenderLayoutHandle &handle)
 }
 
 //************************************
+bool GPU::priv_renderLayout_fromHandleToPointer (const GPURenderLayoutHandle handle, sRenderLayout **out) const
+{
+    assert (NULL != out);
+    if (renderLayoutList.fromHandleToPointer (handle, out))
+        return true;
+
+    gos::logger::err ("GPU::priv_renderLayout_fromHandleToPointer() => invalid handle\n");
+    return false;
+}
+
+//************************************
 bool GPU::renderLayout_toVulkan (const GPURenderLayoutHandle handle, VkRenderPass *out) const
 {
     sRenderLayout *s;
-    if (renderLayoutList.fromHandleToPointer (handle, &s))
+    if (priv_renderLayout_fromHandleToPointer(handle, &s))
     {
         *out = s->vkRenderPassHandle;
         return true;
     }
 
     gos::logger::err ("GPU::renderLayout_toVulkan() => invalid handle\n");
-    DBGBREAK;
     return false;
 }
 
 
 
-//************************************
+
+/************************************************************************************************************
+ * Pipeline
+ * 
+ * 
+ *************************************************************************************************************/
 GPU::PipelineBuilder& GPU::pipeline_createNew (const GPURenderLayoutHandle &renderLayoutHandle, GPUPipelineHandle *out_handle)
 {
     assert (NULL != out_handle);
@@ -1058,34 +1372,22 @@ GPU::PipelineBuilder& GPU::pipeline_createNew (const GPURenderLayoutHandle &rend
 //************************************
 bool GPU::priv_pipeline_onBuilderEnds (PipelineBuilder *builder)
 {
-    bool ret = true;
-
-    while (1)
-    {
-        if (builder->anyError())
-        {
-            ret = false;
-            break;
-        }
-        
-        sPipeline *s = pipelineList.reserve (builder->out_handle);
-        if (NULL == s)
-        {
-            gos::logger::err ("GPU::priv_pipeline_onBuilderEnds() => can't reserve a handle!\n");
-            ret = false;
-            break;
-        }
-
-        s->vkPipelineLayoutHandle = builder->vkPipelineLayoutHandle;
-        s->vkPipelineHandle = builder->vkPipelineHandle;
-        break;
-    }
-
     //aggiungo il builder alla lista dei builder da deletare
     toBeDeletedBuilder.add(builder);
 
-    //fine
-    return ret;
+    if (builder->anyError())
+        return false;
+        
+    sPipeline *s = pipelineList.reserve (builder->out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::priv_pipeline_onBuilderEnds() => can't reserve a handle!\n");
+        return false;
+    }
+
+    s->vkPipelineLayoutHandle = builder->vkPipelineLayoutHandle;
+    s->vkPipelineHandle = builder->vkPipelineHandle;
+    return true;
 }
 
 //************************************
@@ -1114,8 +1416,145 @@ bool GPU::pipeline_toVulkan (const GPUPipelineHandle handle, VkPipeline *out, Vk
         return true;
     }
 
+    *out = VK_NULL_HANDLE;
+    *out_layout = VK_NULL_HANDLE;
     gos::logger::err ("GPU::pipeline_toVulkan() => invalid handle\n");
     DBGBREAK;
     return false;
 }
+
+
+
+
+/************************************************************************************************************
+ * Vertex buffer
+ * 
+ * 
+ *************************************************************************************************************/
+bool GPU::vertexBuffer_create (u32 sizeInByte, GPUVtxBufferHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+    VkBufferCreateInfo createInfo {};
+    createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;         //vuol dire che puo' appartenere solo ad una Q di rendering
+    createInfo.size = sizeInByte;
+    createInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+    //creo il buffer
+    VkBuffer        vkHandle = VK_NULL_HANDLE;
+    VkDeviceMemory  vkMemHandle = VK_NULL_HANDLE;
+
+    VkResult result = vkCreateBuffer (vulkan.dev, &createInfo, nullptr, &vkHandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::vertexBuffer_create(size=%d) => vkCreateBuffer() => %s\n", sizeInByte, string_VkResult(result));
+        return false;
+    }
+
+    //alloco memoria
+    VkMemoryRequirements memReqs;
+    vkGetBufferMemoryRequirements (vulkan.dev, vkHandle, &memReqs);       
+
+    VkMemoryAllocateInfo memAllloc{};
+	memAllloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	memAllloc.allocationSize = memReqs.size;
+    vulkanGetMemoryType (vulkan.phyDevInfo, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &memAllloc.memoryTypeIndex);
+
+	result = vkAllocateMemory (vulkan.dev, &memAllloc, nullptr, &vkMemHandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::vertexBuffer_create() => vkAllocateMemory() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    //bindo il buffer alla memoria allocata
+    result = vkBindBufferMemory (vulkan.dev, vkHandle, vkMemHandle, 0);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::vertexBuffer_create() => vkBindBufferMemory() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    //pare tutto ok, creo un nuovo handle
+    gpu::VtxBuffer *s = vtxBufferList.reserve (out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::vertexBuffer_create() => can't reserve a handle!\n");
+        return false;
+    }
+    s->reset();
+    s->vkHandle = vkHandle;
+    s->vkMemHandle = vkMemHandle;
+    return true;
+}
+
+//************************************
+bool GPU::priv_vertexBuffer_fromHandleToPointer (const GPUVtxBufferHandle handle, gpu::VtxBuffer **out) const
+{
+    assert (NULL != out);
+    if (vtxBufferList.fromHandleToPointer (handle, out))
+        return true;
+
+    gos::logger::err ("GPU::priv_vertexBuffer_fromHandleToPointer() => invalid handle\n");
+    DBGBREAK;
+    return false;
+}
+
+//************************************
+void GPU::deleteResource (GPUVtxBufferHandle &handle)
+{
+    gpu::VtxBuffer *s;
+    if (vtxBufferList.fromHandleToPointer (handle, &s))
+    {
+        vkDestroyBuffer (vulkan.dev, s->vkHandle, nullptr);
+        vkFreeMemory (vulkan.dev, s->vkMemHandle, nullptr);
+        s->reset();
+        vtxBufferList.release (handle);
+    }
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::vertexBuffer_toVulkan (const GPUVtxBufferHandle handle, VkBuffer *out) const
+{
+    gpu::VtxBuffer *s;
+    if (priv_vertexBuffer_fromHandleToPointer(handle, &s))
+    {
+        *out = s->vkHandle;
+        return true;
+    }
+
+    *out = VK_NULL_HANDLE;
+    gos::logger::err ("GPU::vertexBuffer_toVulkan() => invalid handle\n");
+    return false;    
+}
+
+//************************************
+bool GPU::vertexBuffer_copyBufferToGPU (const GPUVtxBufferHandle  handleDST, u32 offsetDST, void *src, u32 sizeInByte) const
+{
+    gpu::VtxBuffer *s;
+    if (!priv_vertexBuffer_fromHandleToPointer(handleDST, &s))
+    {
+        gos::logger::err ("GPU::vertexBuffer_copyBufferToGPU() => invalid handle\n");
+        return false;
+    }
+
+    void *data;
+    VkResult result = vkMapMemory(vulkan.dev, s->vkMemHandle, offsetDST, sizeInByte, 0, &data);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::vertexBuffer_copyBufferToGPU(d) => vkMapMemory() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    memcpy (data, src, sizeInByte);
+
+    vkUnmapMemory(vulkan.dev, s->vkMemHandle);
+    
+    return true;
+}
+
 

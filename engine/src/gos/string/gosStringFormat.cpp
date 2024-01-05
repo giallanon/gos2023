@@ -249,6 +249,31 @@ void string::format::Hex8(u8 hex, char *out, UNUSED_PARAM(u32 sizeofout))
 	out[2] = 0;
 }
 
+//*******************************************************************
+void string::format::memoryToKB_MB_GB (u64 qtyInByte, char *out, u32 sizeof_out)
+{
+	if (sizeof_out < 8)
+	{
+		out[0] = 0;
+		return;
+	}
+
+	char um[4] = {'K', 'B', 0, 0};
+
+	f32 tot = (f32)qtyInByte / 1024.0f;
+	if (tot >= 1000)
+	{
+		tot /= 1024.0f;
+		um[0] = 'M';
+	}
+	if (tot >= 1000)
+	{
+		tot /= 1024.0f;
+		um[0] = 'G';
+	}
+
+	sprintf_s (out, sizeof_out, "%.2f %s", tot, um);
+}
 
 /*******************************************************************
  * formatta [price] riempendo [out] con una stringa che rappresenta il numero [price] le cui ultime [numDecimal]

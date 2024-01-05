@@ -43,6 +43,7 @@ namespace gos
 		i16			resolve (i16 w) const;
 		eMode		getMode() const								{ return mode; }
 		bool		isAbsolute() const 							{ return (mode == eMode::absolute); }
+		bool 		isRelative() const 							{ return (mode != eMode::absolute); }
 
 	private:
 		i16			value;
@@ -87,6 +88,7 @@ namespace gos
 		i16			resolve (i16 from, i16 w) const;
 		eMode		getMode() const								{ return mode; }
 		bool		isAbsolute() const 							{ return (mode == eMode::absolute); }
+		bool 		isRelative() const 							{ return (mode != eMode::absolute); }
 		
 	private:
 		i16			value;

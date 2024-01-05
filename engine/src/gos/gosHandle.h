@@ -82,7 +82,7 @@ namespace gos
 		bool		isInvalid() const						{ return (id == u32MAX); }
 		bool		isValid() const							{ return (id != u32MAX); }
 
-		u32			getIndexValue() const					{ return ((id & MASK_0) >> MASKSHIFT_0); }
+		u32			get_indexValue() const					{ return ((id & MASK_0) >> MASKSHIFT_0); }
 		u32			getChunkValue() const					{ return ((id & MASK_1) >> MASKSHIFT_1); }
 		u32			getCounterValue() const					{ return ((id & MASK_2) >> MASKSHIFT_2); }
 		u32			getPADValue() const						
@@ -93,7 +93,7 @@ namespace gos
 							return ((id & MASK_3) >> MASKSHIFT_3); 
 					}
 
-		void		setIndexValue(u32 value)				{ id &= ~(MASK_0);  id |= ((value << MASKSHIFT_0) & MASK_0); }
+		void		set_indexValue(u32 value)				{ id &= ~(MASK_0);  id |= ((value << MASKSHIFT_0) & MASK_0); }
 		void		setChunkValue(u32 value)				{ id &= ~(MASK_1);  id |= ((value << MASKSHIFT_1) & MASK_1); }
 		void		setCounterValue(u32 value)				{ id &= ~(MASK_2);  id |= ((value << MASKSHIFT_2) & MASK_2); }
 		void		setPADValue(u32 value)					
@@ -107,7 +107,7 @@ namespace gos
 						}
 					}
 
-		u32			incIndexValue()							{ u32 v = getIndexValue();  v++; setIndexValue(v); return getIndexValue(); }
+		u32			inc_indexValue()						{ u32 v = get_indexValue();  v++; set_indexValue(v); return get_indexValue(); }
 		u32			incChunkValue()							{ u32 v = getChunkValue();  v++; setChunkValue(v); return getChunkValue(); }
 		u32			incCounterValue()						{ u32 v = getCounterValue();  v++; setCounterValue(v); return getCounterValue(); }
 		u32			incPADValue()
@@ -130,7 +130,7 @@ namespace gos
 		{ 
 			switch (which)
 			{
-			case 0: return getIndexValue();
+			case 0: return get_indexValue();
 			case 1: return getChunkValue();
 			case 2: return getCounterValue();
 			case 3: return getPADValue();
@@ -141,7 +141,7 @@ namespace gos
 		{
 			switch (which)
 			{
-			case 0: return incIndexValue();
+			case 0: return inc_indexValue();
 			case 1: return incChunkValue();
 			case 2: return incCounterValue();
 			case 3: return incPADValue();
@@ -152,7 +152,7 @@ namespace gos
 		{
 			switch (which)
 			{
-			case 0: setIndexValue(value); return;
+			case 0: set_indexValue(value); return;
 			case 1: setChunkValue(value); return;
 			case 2: setCounterValue(value); return;
 			case 3: setPADValue(value); return;
@@ -258,7 +258,7 @@ namespace gos
 
 					out_handle->setFromU32(0);
 					out_handle->setChunkValue(i);
-					out_handle->setIndexValue(indexReturned);
+					out_handle->set_indexValue(indexReturned);
 					out_handle->setCounterValue(ret->curCounter);
 					return &ret->userData;
 				}
@@ -279,7 +279,7 @@ namespace gos
 			}
 
 			const u32 chunk = handle.getChunkValue();
-			const u32 index = handle.getIndexValue();
+			const u32 index = handle.get_indexValue();
 			r->curCounter = (u16)handle.incCounterValue();
 			r->nextFree = (u16)firstFree[chunk];
 			handle.setInvalid();
@@ -335,7 +335,7 @@ namespace gos
 						if (h.isInvalid())
 							return NULL;
 						const u32	chunk = h.getChunkValue();
-						const u32	index = h.getIndexValue();
+						const u32	index = h.get_indexValue();
 						const u32	counter = h.getCounterValue();
 
 			#ifdef _DEBUG

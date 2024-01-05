@@ -5,6 +5,10 @@
 #include "../gos/gosHandle.h"
 #include "vulkan/gosGPUVulkanEnumAndDefine.h"
 
+#define 	GOSGPU__NUM_MAX_VTXDECL_ATTR	32
+#define 	GOSGPU__NUM_MAX_VXTDECL_STREAM	16
+#define 	GOSGPU__NUM_MAX_RENDER_TARGET	8
+
 
 //A per "num max di handle", B per "num di chunk", C per "counter"
 typedef gos::HandleT<14,8,10, 0,0>	GPUShaderHandle;		//2^14=16384 => num totale di oggetti, divisi in chunk da 2^8=256
@@ -14,10 +18,9 @@ typedef gos::HandleT<5,3,16, 0,8>	GPUDepthStencilHandle;	//2^5=32 => num totale 
 typedef gos::HandleT<6,5,16, 0,5>	GPURenderTargetHandle;	//2^6=64 => num totale di oggetti, divisi in chunk da 2^3=5
 typedef gos::HandleT<8,7,16, 0,1>	GPURenderLayoutHandle;	//2^8=256 => num totale di oggetti, divisi in chunk da 2^7=128
 typedef gos::HandleT<8,5,16, 0,3>	GPUPipelineHandle;		//2^8=256 => num totale di oggetti, divisi in chunk da 2^5=32
-
-#define 	GOSGPU__NUM_MAX_VTXDECL_ATTR	32
-#define 	GOSGPU__NUM_MAX_VXTDECL_STREAM	16
-
+typedef gos::HandleT<9,7,16, 0,0>	GPUFrameBufferHandle;	//2^9=512 => num totale di oggetti, divisi in chunk da 2^7=128
+typedef gos::HandleT<10,7,14, 0,1>	GPUVtxBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
+typedef gos::HandleT<10,7,14, 1,0>	GPUidxBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
 
 enum class eVtxStreamInputRate : u8
 {

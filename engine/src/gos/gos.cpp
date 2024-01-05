@@ -171,6 +171,7 @@ void gos::logger::log (const eTextColor col, const char *format, ...)           
 void gos::logger::logWithPrefix (const char *prefix, const char *format, ...)                           { va_list argptr; va_start (argptr, format); gosGlobals.logger->vlogWithPrefix (prefix, format, argptr); va_end (argptr); }
 void gos::logger::logWithPrefix (const eTextColor col, const char *prefix, const char *format, ...)     { va_list argptr; va_start (argptr, format); gosGlobals.logger->vlogWithPrefix (col, prefix, format, argptr); va_end (argptr); }
 void gos::logger::err (const char *format, ...)															{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlogWithPrefix (eTextColor::red, "ERROR=>", format, argptr); va_end (argptr); }
+void gos::logger::verbose (const char *format, ...)														{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlogWithPrefix (eTextColor::darkYellow, "VERBOSE=>", format, argptr); va_end (argptr); }
 
 //***************************************************
 bool gos::netaddr::getMACAddressAsString (const gos::MacAddress &mac, char *out_macAddress, u32 sizeOfMacAddress, char optionalSeparator)

@@ -2,6 +2,8 @@
 #define _LoggerStdout_h_
 #include "gosLogger.h"
 #include "../gos.h"
+#include "../gosFastArray.h"
+
 
 namespace gos
 {
@@ -35,18 +37,45 @@ namespace gos
     private:
         static const u16    MAX_INDENT_CHAR = 31;
         static const u16    INTERNAL_BUFFER_SIZE = 1024;
-        static const u8     LOGFILE_CHECK_SIZE_COUNTER = 200;
-        static const u64    LOGFILE_MAX_FILE_SIZE_BYTES = 1024*1024;
-        static const u64    LOGFILE_MAX_NUM_LOGFILE_IN_FOLDER = 10;
+
+    private:
+        class LogToFile
+        {
+        public:
+                    LogToFile (const u8 *fullFolderPathAndName);
+                    ~LogToFile();
+            
+            void    open ();
+            void    close();
+
+            bool    isOpen() const                                              { return bIsOpen; }
+
+            gos::File   _f;
+
+        private:
+            static const u8     LOGFILE_CHECK_SIZE_COUNTER = 200;
+            static const u64    LOGFILE_MAX_FILE_SIZE_BYTES = 1024*1024;
+            static const u64    LOGFILE_MAX_NUM_LOGFILE_IN_FOLDER = 10;
+
+        private:
+            void                priv_getLogFileList (gos::FastArray<u64> &elenco) const;
+            void                priv_createNewLogFile();     
+            void                priv_clearLogFolder();
+
+        private:
+            u8          *filename;
+            u8          *fullFolderPathAndName;
+            bool        bIsOpen;
+            u8          checkLogFileSize;
+        };
 
     private:
         void                priv_buildIndentStr();
         void                priv_out (const char *what);
         void                priv_log (const char *prefix, const char *format, va_list argptr);
-        void                priv_logToFile (const char *what);
-        void                priv_createNewLogFile();
+        
         void                priv_logToFileClearLogFolder();
-
+        
     private:
         bool                bShoudLogToStdout;
         u16                 indent;
@@ -54,10 +83,7 @@ namespace gos
         char                buffer[INTERNAL_BUFFER_SIZE];
         u8                  isANewLine;
 		Mutex	            mutex;
-        u8                  *logfile_filename;
-        u8                  *logFile_fullFolderPathAndName;
-        u8                  checkLogFileSize;
-
+        LogToFile           *logToFile;
     };
 } //namespace gos
 #endif //_LoggerStdout_h_
