@@ -28,7 +28,10 @@ namespace gos
 
     bool    vulkanGetMemoryType (const sPhyDeviceInfo &vkPhyDevInfo, uint32_t typeBits, VkMemoryPropertyFlags properties, u32 *out_index);
 
-    bool    vulkanCreateBuffer (const sVkDevice &vulkan, u32 sizeInByte, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties,
+    bool    vulkanCreateBuffer (const sVkDevice &vulkan, u32 sizeInByte, 
+                                VkBufferUsageFlags usage, 
+                                VkMemoryPropertyFlags memProperties,
+                                bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ,
                                 VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle);
 
 } //namespace gos

@@ -1,6 +1,7 @@
 #include "gosGPUVulkan.h"
 #include "gosGPUVukanHelpers.h"
 #include "../../../gos/gos.h"
+#include "../gosGPUUtils.h"
 
 using namespace gos;
 
@@ -406,41 +407,43 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
             out_vulkan->phyDevInfo = vkPhyDevInfo;
 
             //recupero l'handle della gfxQ
-            sVkDevice::sQueueInfo *queueInfo = out_vulkan->getQueueInfo (eVulkanQueueType::gfx);
+            sVkDevice::sQueueInfo *queueInfo = out_vulkan->getQueueInfo (eGPUQueueType::gfx);
             queueInfo->familyIndex = vkPhyDevInfo.queue_gfx.familyIndex;
             vkGetDeviceQueue (out_vulkan->dev, queueInfo->familyIndex, 0, &queueInfo->vkQueueHandle);
-            queueInfo->bIsUnique = true;
+            
 
-            queueInfo = out_vulkan->getQueueInfo (eVulkanQueueType::compute);
+            queueInfo = out_vulkan->getQueueInfo (eGPUQueueType::compute);
             queueInfo->familyIndex = vkPhyDevInfo.queue_compute.familyIndex;
             vkGetDeviceQueue (out_vulkan->dev, queueInfo->familyIndex, 0, &queueInfo->vkQueueHandle);
-            if (queueInfo->familyIndex != vkPhyDevInfo.queue_gfx.familyIndex)
-                queueInfo->bIsUnique = true;
+            if (queueInfo->familyIndex == vkPhyDevInfo.queue_gfx.familyIndex)
+                queueInfo->isAnAliasFor = eGPUQueueType::gfx;
 
-            queueInfo = out_vulkan->getQueueInfo (eVulkanQueueType::transfer);
+            queueInfo = out_vulkan->getQueueInfo (eGPUQueueType::transfer);
             queueInfo->familyIndex = vkPhyDevInfo.queue_transfer.familyIndex;
             vkGetDeviceQueue (out_vulkan->dev, queueInfo->familyIndex, 0, &queueInfo->vkQueueHandle);
-            if (queueInfo->familyIndex != vkPhyDevInfo.queue_gfx.familyIndex && queueInfo->familyIndex != vkPhyDevInfo.queue_compute.familyIndex)
-                queueInfo->bIsUnique = true;
+            if (queueInfo->familyIndex == vkPhyDevInfo.queue_gfx.familyIndex)
+                queueInfo->isAnAliasFor = eGPUQueueType::gfx;
+            else if (queueInfo->familyIndex == vkPhyDevInfo.queue_compute.familyIndex)
+                queueInfo->isAnAliasFor = eGPUQueueType::compute;
         }
     }
     
     //creo un command pool per ogni Q
     if (ret)
     {
-        const eVulkanQueueType queueType[] = { eVulkanQueueType::gfx, eVulkanQueueType::compute, eVulkanQueueType::transfer };
-
-        for (u32 i=0; i< sizeof(queueType) / sizeof(eVulkanQueueType); i++)
+        const eGPUQueueType queueType[] = { eGPUQueueType::gfx, eGPUQueueType::compute, eGPUQueueType::transfer };
+        const u32 NUM_Q =  sizeof(queueType) / sizeof(eGPUQueueType);
+        for (u32 i=0; i<NUM_Q; i++)
         {
             sVkDevice::sQueueInfo *queueInfo = out_vulkan->getQueueInfo (queueType[i]);
-            if (queueInfo->bIsUnique)
+            if (eGPUQueueType::unknown == queueInfo->isAnAliasFor)
             {
                 VkCommandPoolCreateInfo poolInfo{};
                 poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
                 poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
                 poolInfo.queueFamilyIndex = queueInfo->familyIndex;
                 
-                gos::logger::log ("creating CommandPool for queue %d\n");
+                gos::logger::log ("creating CommandPool for queue %d [%s]\n", i, gpu::enumToString(queueType[i]));
                 const VkResult result = vkCreateCommandPool (out_vulkan->dev, &poolInfo, nullptr, &queueInfo->vkPoolHandle);
                 if (VK_SUCCESS != result)
                 {
@@ -448,6 +451,19 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
                     gos::logger::err ("vkCreateCommandPool() error: %s\n", string_VkResult(result)); 
                 }
             }
+        }
+
+        for (u32 i=0; i<NUM_Q; i++)
+        {
+            sVkDevice::sQueueInfo *queueInfo = out_vulkan->getQueueInfo (queueType[i]);
+            if (eGPUQueueType::unknown != queueInfo->isAnAliasFor)
+            {
+                //questa Q e' un alias per un'altra Q, quindi condivide lo stesso command pool      
+                gos::logger::log ("CommandPool for queue %d [%s] is an alias of [%s]\n", i, gpu::enumToString(queueType[i]), gpu::enumToString(queueInfo->isAnAliasFor));          
+                queueInfo->vkPoolHandle = out_vulkan->getQueueInfo(queueInfo->isAnAliasFor)->vkPoolHandle;
+            }
+
+            
         }
     }
 
@@ -661,18 +677,53 @@ bool gos::vulkanGetMemoryType (const sPhyDeviceInfo &vkPhyDevInfo, uint32_t type
 
 //*********************************************
 bool gos::vulkanCreateBuffer (const sVkDevice &vulkan, u32 sizeInByte, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties,
-                              VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle)
+                                bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ,
+                                VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle)
 {
     assert (NULL != out_vkBufferHandle);
     assert (NULL != out_vkMemHandle);
     *out_vkBufferHandle = VK_NULL_HANDLE;
     *out_vkMemHandle = VK_NULL_HANDLE;
 
+    //Se la risorsa e' usata da una sola queueFamiliIndex, allora e' EXCLUSIVE, altrimenti e' CONCURRENT
+    VkSharingMode sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    u32 queueIndexList[3];
+    u32 queueCount = 0;
+    if (bCanBeUsedBy_gfxQ || bCanBeUsedBy_computeQ || bCanBeUsedBy_transferQ)
+    {
+        const u32 familyIndex_gfx = vulkan.getQueueInfo(eGPUQueueType::gfx)->familyIndex;
+        const u32 familyIndex_compute = vulkan.getQueueInfo(eGPUQueueType::compute)->familyIndex;
+        const u32 familyIndex_transfer = vulkan.getQueueInfo(eGPUQueueType::transfer)->familyIndex;
+
+        const u32 MASK_gfx = (0x00000001 << familyIndex_gfx);
+        const u32 MASK_compute = (0x00000001 << familyIndex_compute);
+        const u32 MASK_transfer = (0x00000001 << familyIndex_transfer);
+
+        u32 mask = 0;
+        if (bCanBeUsedBy_gfxQ)          mask |= MASK_gfx;
+        if (bCanBeUsedBy_computeQ)      mask |= MASK_compute;
+        if (bCanBeUsedBy_transferQ)     mask |= MASK_transfer;
+
+        assert (mask != 0);
+        if (mask == MASK_gfx || mask == MASK_compute || mask == MASK_transfer)
+            sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        else
+        {
+            sharingMode = VK_SHARING_MODE_CONCURRENT;
+            if ((mask & MASK_gfx) != 0)                 queueIndexList[queueCount++] = familyIndex_gfx;
+            if ((mask & bCanBeUsedBy_computeQ) != 0)    queueIndexList[queueCount++] = familyIndex_compute;
+            if ((mask & bCanBeUsedBy_transferQ) != 0)   queueIndexList[queueCount++] = familyIndex_transfer;
+        }
+    }
+    
+
     VkBufferCreateInfo createInfo {};
     createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;         //vuol dire che puo' appartenere solo ad una Q di rendering
+    createInfo.sharingMode = sharingMode;
     createInfo.size = sizeInByte;
     createInfo.usage = usage;
+    createInfo.queueFamilyIndexCount = queueCount;
+    createInfo.pQueueFamilyIndices = queueIndexList;
 
     //creo il buffer
     VkResult result = vkCreateBuffer (vulkan.dev, &createInfo, nullptr, out_vkBufferHandle);

@@ -1,6 +1,7 @@
 #include "gosGPU.h"
 #include "VulkanExample1.h"
 #include "VulkanExample2.h"
+#include "VulkanExample3.h"
 
 //******************************** 
 template<class VKAPP>
@@ -27,7 +28,8 @@ int main()
         if (gpu.init (800, 600, false, gos::getAppName()))
         {
             //runExample<VulkanExample1>(&gpu, "VulkanExample1");
-            runExample<VulkanExample2>(&gpu, "VulkanExample2");
+            //runExample<VulkanExample2>(&gpu, "VulkanExample2");
+            runExample<VulkanExample3>(&gpu, "VulkanExample3");
             gpu.deinit();
         }
 

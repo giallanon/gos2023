@@ -10,6 +10,26 @@ using namespace gos;
 
 typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Safe>		GOSGPUMemAllocatorTS;
 
+//************************************
+static VKAPI_ATTR VkBool32 VKAPI_CALL GOS_vulkanDebugCallback (VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, UNUSED_PARAM(VkDebugUtilsMessageTypeFlagsEXT messageType), const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, UNUSED_PARAM(void* pUserData)) 
+{
+    char prefix[32];
+    if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT))
+        sprintf_s (prefix, sizeof(prefix), "VULKAN [verbose]=> ");
+    else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT))
+        sprintf_s (prefix, sizeof(prefix), "VULKAN [info   ]=> ");
+    else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT))
+        sprintf_s (prefix, sizeof(prefix), "VULKAN [warn   ]=> ");
+    else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT))
+        sprintf_s (prefix, sizeof(prefix), "VULKAN [error  ]=> ");
+    else
+        sprintf_s (prefix, sizeof(prefix), "VULKAN [unknown]=> ");
+
+    gos::logger::logWithPrefix (eTextColor::magenta, prefix, "%s\n\n", pCallbackData->pMessage);
+    return VK_FALSE;
+}
+
+
 //********************************************************** 
 GPU::GPU()
 {
@@ -20,7 +40,7 @@ GPU::GPU()
     defaultViewportHandle.setInvalid();
     defaultRTHandle.setInvalid();
     currentSwapChainImageIndex = 0;
-    bNeedToRecreateSwapchain = false;
+    bRecreateSwapChainOnNextFrame = false;
 }
 
 //********************************************************** 
@@ -269,6 +289,8 @@ bool GPU::priv_initHandleLists()
     pipelineList.setup (allocator);
     frameBufferList.setup (allocator);
     vtxBufferList.setup (allocator);
+    staginBufferList.setup (allocator);
+    idxBufferList.setup (allocator);
     return true;
 }
 
@@ -291,25 +313,8 @@ void  GPU::priv_deinitandleLists()
     pipelineList.unsetup();
     frameBufferList.unsetup();
     vtxBufferList.unsetup();
-}
-
-//************************************
-static VKAPI_ATTR VkBool32 VKAPI_CALL GOS_vulkanDebugCallback (VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, UNUSED_PARAM(VkDebugUtilsMessageTypeFlagsEXT messageType), const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, UNUSED_PARAM(void* pUserData)) 
-{
-    char prefix[32];
-    if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT))
-        sprintf_s (prefix, sizeof(prefix), "VULKAN [verbose]=> ");
-    else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT))
-        sprintf_s (prefix, sizeof(prefix), "VULKAN [info   ]=> ");
-    else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT))
-        sprintf_s (prefix, sizeof(prefix), "VULKAN [warn   ]=> ");
-    else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT))
-        sprintf_s (prefix, sizeof(prefix), "VULKAN [error  ]=> ");
-    else
-        sprintf_s (prefix, sizeof(prefix), "VULKAN [unknown]=> ");
-
-    gos::logger::logWithPrefix (eTextColor::magenta, prefix, "%s\n\n", pCallbackData->pMessage);
-    return VK_FALSE;
+    staginBufferList.unsetup();
+    idxBufferList.unsetup();
 }
 
 //************************************
@@ -421,11 +426,17 @@ void GPU::fence_resetMany (const VkFence *fenceHandleList, u32 fenceCount)
 
 
 //************************************
-bool GPU::newFrame (bool *out_bSwapchainWasRecreated,u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
+bool GPU::newFrame (u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
 {
     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
-    
     toBeDeletedBuilder.check (timeNow_msec);
+
+    if (bRecreateSwapChainOnNextFrame)
+    {
+        bRecreateSwapChainOnNextFrame = false;
+        priv_swapChain_recreate();
+    }
+
 
     const VkResult result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, timeout_ns, semaphore, fence, &currentSwapChainImageIndex);
 
@@ -433,22 +444,18 @@ bool GPU::newFrame (bool *out_bSwapchainWasRecreated,u64 timeout_ns, VkSemaphore
     {
     default:
         gos::logger::err ("GPU::beginFrame() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
-        *out_bSwapchainWasRecreated = false;
         return false;
 
     case VK_SUCCESS:
-        *out_bSwapchainWasRecreated = false;
         return true;
 
     case VK_SUBOPTIMAL_KHR:
-        //posso ancora renderizzare, ma alla fine del prossimo present() la swapchain verra' ricreata
-        bNeedToRecreateSwapchain = true;
-        *out_bSwapchainWasRecreated = true;
+        //posso ancora renderizzare, ma al prossimo newFrame la swapchain verra' ricreata
+        bRecreateSwapChainOnNextFrame = true;
         return true;
 
     case VK_ERROR_OUT_OF_DATE_KHR:
         priv_swapChain_recreate();
-        *out_bSwapchainWasRecreated = true;
         return false;
 
     case VK_TIMEOUT:
@@ -470,15 +477,7 @@ VkResult GPU::present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCoun
     presentInfo.pSwapchains = &vulkan.swapChainInfo.vkSwapChain;
     presentInfo.pImageIndices = &currentSwapChainImageIndex;
     
-    const VkResult result = vkQueuePresentKHR (vulkan.getQueueInfo(eVulkanQueueType::gfx)->vkQueueHandle, &presentInfo);
-
-    if (bNeedToRecreateSwapchain)
-    {
-        priv_swapChain_recreate();
-        bNeedToRecreateSwapchain = false;
-    }
-
-    return result;
+    return vkQueuePresentKHR (vulkan.getQueueInfo(eGPUQueueType::gfx)->vkQueueHandle, &presentInfo);
 }
 
 //**********************************************************
@@ -555,12 +554,12 @@ bool GPU::priv_swapChain_recreate ()
         GPUFrameBufferHandle handle = frameBufferDependentOnSwapChainList(i);
 
         gpu::FrameBuffer *sFB;
-        if (!priv_frameBuffer_fromHandleToPointer (handle, &sFB))
-            return false;
-        
-        gos::logger::verbose ("recreating FrameBuffer handle=0x%08X\n", handle.viewAsU32());
-        priv_frameBuffer_deleteFromStruct (sFB);
-        priv_frameBuffer_recreate (sFB);
+        if (priv_frameBuffer_fromHandleToPointer (handle, &sFB))
+        {
+            gos::logger::verbose ("recreating FrameBuffer handle=0x%08X\n", handle.viewAsU32());
+            priv_frameBuffer_deleteFromStruct (sFB);
+            priv_frameBuffer_recreate (sFB);
+        }
     }
 
     //fine
@@ -569,7 +568,7 @@ bool GPU::priv_swapChain_recreate ()
 }
 
 //************************************
-bool GPU::createCommandBuffer (eVulkanQueueType whichQ, VkCommandBuffer *out)
+bool GPU::createCommandBuffer (eGPUQueueType whichQ, VkCommandBuffer *out)
 {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -586,7 +585,7 @@ bool GPU::createCommandBuffer (eVulkanQueueType whichQ, VkCommandBuffer *out)
 }
 
 //************************************
-bool GPU::deleteCommandBuffer (eVulkanQueueType whichQ, VkCommandBuffer &vkHandle)
+bool GPU::deleteCommandBuffer (eGPUQueueType whichQ, VkCommandBuffer &vkHandle)
 {
     VkCommandBuffer vkCmdBufferList[] = { vkHandle };
 
@@ -598,6 +597,12 @@ bool GPU::deleteCommandBuffer (eVulkanQueueType whichQ, VkCommandBuffer &vkHandl
 void  GPU::waitIdle()
 {
     vkDeviceWaitIdle(vulkan.dev);
+}
+
+//**********************************************************
+void  GPU::waitIdle (eGPUQueueType q)
+{
+    vkQueueWaitIdle (vulkan.getQueueInfo(q)->vkQueueHandle);
 }
 
 //************************************
@@ -632,11 +637,48 @@ void GPU::vsync_enable (bool b)
 {
     if (vSync == b)
         return;
-    vSync = b        ;
-    priv_swapChain_recreate();
+    vSync = b;
+    bRecreateSwapChainOnNextFrame = true;
 }
 
 
+//************************************
+bool GPU::priv_copyVulkanBuffer (const VkBuffer srcBuffer, const VkBuffer dstBuffer, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
+{
+    //perparo un command buffer per il trasferimento dei dati
+    VkCommandBuffer vkCmdBuffer;
+    if (!createCommandBuffer (gos::eGPUQueueType::transfer, &vkCmdBuffer))
+    {
+        gos::logger::err ("GPU::priv_copyVulkanBuffer() => createCommandBuffer failed\n");
+        return false;
+    }
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer (vkCmdBuffer, &beginInfo);    
+
+    VkBufferCopy copyRegion{};
+    copyRegion.srcOffset = offsetSRC;
+    copyRegion.dstOffset = offsetDST;
+    copyRegion.size = howManyByteToCopy;
+    vkCmdCopyBuffer(vkCmdBuffer, srcBuffer, dstBuffer, 1, &copyRegion);    
+
+    vkEndCommandBuffer(vkCmdBuffer);
+
+    //submit
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &vkCmdBuffer;
+    vkQueueSubmit (vulkan.getQueueInfo(eGPUQueueType::transfer)->vkQueueHandle, 1, &submitInfo, VK_NULL_HANDLE);
+    
+    //attendo
+    waitIdle (eGPUQueueType::transfer);
+
+    deleteCommandBuffer (gos::eGPUQueueType::transfer, vkCmdBuffer);
+    return true;    
+}
 
 /************************************************************************************************************
  * Shader
@@ -1219,6 +1261,10 @@ void GPU::deleteResource (GPUFrameBufferHandle &handle)
         s->reset();
         frameBufferList.release (handle);
     }
+#ifdef _DEBUG
+    else    
+        DBGBREAK;
+#endif
 
     handle.setInvalid();
 }
@@ -1237,14 +1283,14 @@ bool GPU::priv_frameBuffer_fromHandleToPointer (const GPUFrameBufferHandle handl
 //************************************
 void GPU::priv_frameBuffer_deleteFromStruct (gpu::FrameBuffer *s)
 {
-    if (!s->boundToMainRT)
+    if (s->boundToMainRT)
     {
-        vkDestroyFramebuffer (vulkan.dev, s->vkFrameBufferList[0], nullptr);
+        for (u32 i=0; i<s->numFrameBuffer; i++)
+            vkDestroyFramebuffer (vulkan.dev, s->vkFrameBufferList[i], nullptr);
     }
     else
     {
-        for (u32 i=0; i<vulkan.swapChainInfo.imageCount; i++)
-            vkDestroyFramebuffer (vulkan.dev, s->vkFrameBufferList[i], nullptr);
+        vkDestroyFramebuffer (vulkan.dev, s->vkFrameBufferList[0], nullptr);
     }
 }
 
@@ -1261,11 +1307,11 @@ bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
 
 
     //Se sono bindato al mainRT, devo creare N VulkanFrameBuffer, 1 per ogni immagine della swapchain
-    u32 numDaCreare = 1;
+    s->numFrameBuffer = 1;
     if (s->boundToMainRT)
-        numDaCreare = vulkan.swapChainInfo.imageCount;
+        s->numFrameBuffer = vulkan.swapChainInfo.imageCount;
 
-    for (u32 t=0; t<numDaCreare; t++)
+    for (u32 t=0; t<s->numFrameBuffer; t++)
     {
         //render target
         VkImageView imageViewList[GOSGPU__NUM_MAX_RENDER_TARGET + 1];
@@ -1317,7 +1363,7 @@ bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
 }
 
 //************************************
-bool GPU::frameBuffer_toVulkan (const GPUFrameBufferHandle handle, VkFramebuffer *out, u32 *out_renderAreaW, u32 *out_renderAreaH) const
+bool GPU::toVulkan (const GPUFrameBufferHandle handle, VkFramebuffer *out, u32 *out_renderAreaW, u32 *out_renderAreaH) const
 {
     assert (NULL != out);
     assert (NULL != out_renderAreaW);
@@ -1404,7 +1450,7 @@ bool GPU::priv_renderLayout_fromHandleToPointer (const GPURenderLayoutHandle han
 }
 
 //************************************
-bool GPU::renderLayout_toVulkan (const GPURenderLayoutHandle handle, VkRenderPass *out) const
+bool GPU::toVulkan (const GPURenderLayoutHandle handle, VkRenderPass *out) const
 {
     sRenderLayout *s;
     if (priv_renderLayout_fromHandleToPointer(handle, &s))
@@ -1471,7 +1517,7 @@ void GPU::deleteResource (GPUPipelineHandle &handle)
 }
 
 //************************************
-bool GPU::pipeline_toVulkan (const GPUPipelineHandle handle, VkPipeline *out, VkPipelineLayout *out_layout) const
+bool GPU::toVulkan (const GPUPipelineHandle handle, VkPipeline *out, VkPipelineLayout *out_layout) const
 {
     sPipeline *s;
     if (pipelineList.fromHandleToPointer (handle, &s))
@@ -1503,6 +1549,10 @@ bool GPU::vertexBuffer_create (u32 sizeInByte, eVIBufferMode modeIN, GPUVtxBuffe
 
     VkBufferUsageFlags      vkUsage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     VkMemoryPropertyFlags   vkMemProperties =0;
+    bool                    bCanBeUsedByQueue_gfx = true;
+    bool                    bCanBeUsedByQueue_compute = false;
+    bool                    bCanBeUsedByQueue_transfer = false;
+
     switch (modeIN)
     {
     default:
@@ -1510,11 +1560,17 @@ bool GPU::vertexBuffer_create (u32 sizeInByte, eVIBufferMode modeIN, GPUVtxBuffe
         return false;
 
     case eVIBufferMode::onGPU:
+        //questo buffer e' accessibile solo da GPU, CPU non puo' mapparlo
         vkUsage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         vkMemProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+        //L'unico modo per accedere al buffer e' usare un CommandBuffer che trasferisca tramite la Q di transfer
+        //dalla memoria CPU alla memoria GPU
+        bCanBeUsedByQueue_transfer = true;
         break;
 
     case eVIBufferMode::mappale:
+        //questo buffer e' accessibile anche da CPU tramite le fn map()/unmap()
         vkMemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         break;
     }
@@ -1525,6 +1581,7 @@ bool GPU::vertexBuffer_create (u32 sizeInByte, eVIBufferMode modeIN, GPUVtxBuffe
     if (!vulkanCreateBuffer (vulkan, sizeInByte, 
                         vkUsage,
                         vkMemProperties,
+                        bCanBeUsedByQueue_gfx, bCanBeUsedByQueue_compute, bCanBeUsedByQueue_transfer,
                         &vkHandle,
                         &vkMemHandle))
     {
@@ -1575,7 +1632,7 @@ void GPU::deleteResource (GPUVtxBufferHandle &handle)
 }
 
 //************************************
-bool GPU::vertexBuffer_toVulkan (const GPUVtxBufferHandle handle, VkBuffer *out) const
+bool GPU::toVulkan (const GPUVtxBufferHandle handle, VkBuffer *out) const
 {
     gpu::VtxBuffer *s;
     if (priv_vertexBuffer_fromHandleToPointer(handle, &s))
@@ -1634,4 +1691,326 @@ bool GPU::vertexBuffer_unmap  (const GPUVtxBufferHandle handle)
 
 
 
+/************************************************************************************************************
+ * Staging buffer
+ * 
+ * 
+ *************************************************************************************************************/
+bool GPU::stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+    VkBufferUsageFlags      vkUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    VkMemoryPropertyFlags   vkMemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+
+    //chiedo a Vulkan di creare il buffer
+    VkBuffer        vkHandle;
+    VkDeviceMemory  vkMemHandle = VK_NULL_HANDLE;
+    if (!vulkanCreateBuffer (vulkan, sizeInByte, 
+                        vkUsage,
+                        vkMemProperties,
+                        false, false, false,
+                        &vkHandle,
+                        &vkMemHandle))
+    {
+        gos::logger::err ("GPU::staginBuffer_create() => failed\n");
+        return false;
+    }
+
+    //pare tutto ok, creo un nuovo handle
+    gpu::StagingBuffer *s = staginBufferList.reserve (out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::staginBuffer_create() => can't reserve a handle!\n");
+        return false;
+    }
+    s->reset();
+    s->vkHandle = vkHandle;
+    s->vkMemHandle = vkMemHandle;
+    s->allocatedSizeInByte = sizeInByte;
+    return true;    
+}
+
+//************************************
+void GPU::deleteResource (GPUStgBufferHandle &handle)
+{
+    gpu::StagingBuffer *s;
+    if (staginBufferList.fromHandleToPointer (handle, &s))
+    {
+        vkDestroyBuffer (vulkan.dev, s->vkHandle, nullptr);
+        vkFreeMemory (vulkan.dev, s->vkMemHandle, nullptr);
+        s->reset();
+        staginBufferList.release (handle);
+    }
+
+    handle.setInvalid();
+}
+
+
+//************************************
+bool GPU::toVulkan (const GPUStgBufferHandle handle, VkBuffer *out) const
+{
+    gpu::StagingBuffer *s;
+    if (priv_stagingBuffer_fromHandleToPointer(handle, &s))
+    {
+        *out = s->vkHandle;
+        return true;
+    }
+
+    *out = VK_NULL_HANDLE;
+    gos::logger::err ("GPU::stagingBuffer_toVulkan() => invalid handle\n");
+    return false;    
+}
+
+//************************************
+bool GPU::priv_stagingBuffer_fromHandleToPointer (const GPUStgBufferHandle handle, gpu::StagingBuffer **out) const
+{
+    assert (NULL != out);
+    if (staginBufferList.fromHandleToPointer (handle, out))
+        return true;
+
+    gos::logger::err ("GPU::priv_staginBuffer_fromHandleToPointer() => invalid handle\n");
+    DBGBREAK;
+    return false;
+}
+
+//************************************
+bool GPU::stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const
+{
+    assert (NULL != out);
+
+    gpu::StagingBuffer *s;
+    if (!priv_stagingBuffer_fromHandleToPointer(handle, &s))
+    {
+        gos::logger::err ("GPU::stagingBuffer_map() => invalid handle\n");
+        return false;
+    }
+
+    VkResult result = vkMapMemory (vulkan.dev, s->vkMemHandle, offsetDST, sizeInByte, 0, out);
+    if (VK_SUCCESS != result)
+    {
+        *out = NULL;
+        gos::logger::err ("GPU::stagingBuffer_map(d) => vkMapMemory() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    s->mapped_pt = out;
+    s->mapped_offset = offsetDST;
+    s->mapped_size = sizeInByte;
+    return true;
+}
+
+//************************************
+bool GPU::stagingBuffer_unmap  (const GPUStgBufferHandle handle)
+{
+    gpu::StagingBuffer *s;
+    if (!priv_stagingBuffer_fromHandleToPointer(handle, &s))
+    {
+        gos::logger::err ("GPU::stagingBuffer_unmap() => invalid handle\n");
+        return false;
+    }
+
+    s->mapped_pt = NULL;
+    s->mapped_offset = 0;
+    s->mapped_size = 0;
+
+    vkUnmapMemory(vulkan.dev, s->vkMemHandle);
+    return true;
+}
+
+//************************************
+bool GPU::stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUVtxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
+{
+    //ora creo un job per copiare via GPU il buffer di staging nel vxtBuffer
+    VkBuffer srcBuffer;
+    if (!toVulkan (handleSRC, &srcBuffer))
+    {
+        gos::logger::err ("GPU::stagingBuffer_copyToVtxBuffer() => invalid handleSRC\n");
+        return false;
+    }    
+
+    VkBuffer dstBuffer;
+    if (!toVulkan (handleDST, &dstBuffer))
+    {
+        gos::logger::err ("GPU::stagingBuffer_copyToVtxBuffer() => invalid handleDST\n");
+        return false;
+    }    
+
+    return priv_copyVulkanBuffer (srcBuffer, dstBuffer, offsetSRC, offsetDST, howManyByteToCopy);
+}
+
+//************************************
+bool GPU::stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUIdxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
+{
+    //ora creo un job per copiare via GPU il buffer di staging nel vxtBuffer
+    VkBuffer srcBuffer;
+    if (!toVulkan (handleSRC, &srcBuffer))
+    {
+        gos::logger::err ("GPU::stagingBuffer_copyToIdxBuffer() => invalid handleSRC\n");
+        return false;
+    }    
+
+    VkBuffer dstBuffer;
+    if (!toVulkan (handleDST, &dstBuffer))
+    {
+        gos::logger::err ("GPU::stagingBuffer_copyToIdxBuffer() => invalid handleDST\n");
+        return false;
+    }    
+
+    return priv_copyVulkanBuffer (srcBuffer, dstBuffer, offsetSRC, offsetDST, howManyByteToCopy);
+}
+
+/************************************************************************************************************
+ * Vertex buffer
+ * 
+ * 
+ *************************************************************************************************************/
+bool GPU::indexBuffer_create (u32 sizeInByte, eVIBufferMode modeIN, GPUIdxBufferHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+    VkBufferUsageFlags      vkUsage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    VkMemoryPropertyFlags   vkMemProperties =0;
+    bool                    bCanBeUsedByQueue_gfx = true;
+    bool                    bCanBeUsedByQueue_compute = false;
+    bool                    bCanBeUsedByQueue_transfer = false;
+
+    switch (modeIN)
+    {
+    default:
+        gos::logger::err ("GPU::indexBuffer_create() => invalid param mode\n");
+        return false;
+
+    case eVIBufferMode::onGPU:
+        //questo buffer e' accessibile solo da GPU, CPU non puo' mapparlo
+        vkUsage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        vkMemProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+        //L'unico modo per accedere al buffer e' usare un CommandBuffer che trasferisca tramite la Q di transfer
+        //dalla memoria CPU alla memoria GPU
+        bCanBeUsedByQueue_transfer = true;
+        break;
+
+    case eVIBufferMode::mappale:
+        //questo buffer e' accessibile anche da CPU tramite le fn map()/unmap()
+        vkMemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        break;
+    }
+
+    //chiedo a Vulkan di creare il buffer
+    VkBuffer        vkHandle;
+    VkDeviceMemory  vkMemHandle = VK_NULL_HANDLE;
+    if (!vulkanCreateBuffer (vulkan, sizeInByte, 
+                        vkUsage,
+                        vkMemProperties,
+                        bCanBeUsedByQueue_gfx, bCanBeUsedByQueue_compute, bCanBeUsedByQueue_transfer,
+                        &vkHandle,
+                        &vkMemHandle))
+    {
+        gos::logger::err ("GPU::indexBuffer_create() => failed\n");
+        return false;
+    }
+
+
+    //pare tutto ok, creo un nuovo handle
+    gpu::IdxBuffer *s = idxBufferList.reserve (out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::indexBuffer_create() => can't reserve a handle!\n");
+        return false;
+    }
+    s->reset();
+    s->mode = modeIN;
+    s->vkHandle = vkHandle;
+    s->vkMemHandle = vkMemHandle;
+    return true;
+}
+
+//************************************
+bool GPU::priv_indexBuffer_fromHandleToPointer (const GPUIdxBufferHandle handle, gpu::IdxBuffer **out) const
+{
+    assert (NULL != out);
+    if (idxBufferList.fromHandleToPointer (handle, out))
+        return true;
+
+    gos::logger::err ("GPU::priv_indexBuffer_fromHandleToPointer() => invalid handle\n");
+    DBGBREAK;
+    return false;
+}
+
+//************************************
+void GPU::deleteResource (GPUIdxBufferHandle &handle)
+{
+    gpu::IdxBuffer *s;
+    if (idxBufferList.fromHandleToPointer (handle, &s))
+    {
+        vkDestroyBuffer (vulkan.dev, s->vkHandle, nullptr);
+        vkFreeMemory (vulkan.dev, s->vkMemHandle, nullptr);
+        s->reset();
+        idxBufferList.release (handle);
+    }
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::toVulkan (const GPUIdxBufferHandle handle, VkBuffer *out) const
+{
+    gpu::IdxBuffer *s;
+    if (priv_indexBuffer_fromHandleToPointer(handle, &s))
+    {
+        *out = s->vkHandle;
+        return true;
+    }
+
+    *out = VK_NULL_HANDLE;
+    gos::logger::err ("GPU::indexBuffer_toVulkan() => invalid handle\n");
+    return false;    
+}
+
+//************************************
+bool GPU::indexBuffer_map (const GPUIdxBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const
+{
+    assert (NULL != out);
+
+    gpu::IdxBuffer *s;
+    if (!priv_indexBuffer_fromHandleToPointer(handle, &s))
+    {
+        gos::logger::err ("GPU::indexBuffer_Map() => invalid handle\n");
+        return false;
+    }
+
+    if (eVIBufferMode::mappale != s->mode)
+    {
+        gos::logger::err ("GPU::indexBuffer_Map() => invalid buffer mode. Buffer mode must be MAPPABLE, current mode is %s\n", gpu::enumToString(s->mode));
+        return false;
+    }
+
+    VkResult result = vkMapMemory (vulkan.dev, s->vkMemHandle, offsetDST, sizeInByte, 0, out);
+    if (VK_SUCCESS != result)
+    {
+        *out = NULL;
+        gos::logger::err ("GPU::indexBuffer_Map(d) => vkMapMemory() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    return true;
+}
+
+//************************************
+bool GPU::indexBuffer_unmap  (const GPUIdxBufferHandle handle)
+{
+    gpu::IdxBuffer *s;
+    if (!priv_indexBuffer_fromHandleToPointer(handle, &s))
+    {
+        gos::logger::err ("GPU::indexBuffer_Unmap() => invalid handle\n");
+        return false;
+    }
+
+    vkUnmapMemory(vulkan.dev, s->vkMemHandle);
+    return true;
+}
 

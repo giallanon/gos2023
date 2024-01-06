@@ -36,8 +36,10 @@ gosGPUEnumAndDefine.h
 
 gosGPUResDepthStencil.h
 gosGPUResFrameBuffer.h
+gosGPUResIdxBuffer.h
 gosGPUResRenderTarget.h
 gosGPUResShader.h
+gosGPUResStagingBuffer.h
 gosGPUResViewport.h
 gosGPUResVtxBuffer.h
 gosGPUResVtxDecl.h

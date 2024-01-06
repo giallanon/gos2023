@@ -37,11 +37,17 @@ bool VulkanApp::init (gos::GPU *gpuIN, const char *title)
     if (!virtual_onInit())
         return false;
 
+
     gos::logger::log (eTextColor::white, "\n\n=======================================================\n");
     gos::logger::log (eTextColor::green, "%s\n", title);
-    gos::logger::log (eTextColor::white, "ALT + ENTER = toggle fullscreen\n");
-    gos::logger::log (eTextColor::white, "ALT + BASKPACE = toggle vsync\n");
-    gos::logger::log ("\n\n");
+    gos::logger::incIndent();
+        virtual_explain();
+
+        gos::logger::log ("\n");
+        gos::logger::log (eTextColor::white, "ALT + ENTER = toggle fullscreen\n");
+        gos::logger::log (eTextColor::white, "ALT + BASKPACE = toggle vsync\n");
+        gos::logger::log ("\n\n");
+    gos::logger::decIndent();
     return true;
 }    
 

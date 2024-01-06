@@ -119,6 +119,8 @@ gosEnumAndDefine.h
 gosFastArray.h
 gosFIFO.h
 gosFIFOFixedSize.h
+gosFS_FSSpecialPathResolver.cpp
+gosFS_FSSpecialPathResolver.h
 gosFS.cpp
 gosHandle.h
 gosLIFOFixedSize.h

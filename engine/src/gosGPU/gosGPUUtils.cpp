@@ -17,6 +17,19 @@ const char* gpu::enumToString (eVIBufferMode s)
     }
 }
 
+//*************************************************************************
+const char* gpu::enumToString (eGPUQueueType s)
+{
+    switch (s)
+    {
+    default:                        return "??INVALID-VALUE??";
+    case eGPUQueueType::gfx:        return "gfx";
+    case eGPUQueueType::compute:    return "compute";
+    case eGPUQueueType::transfer:   return "transfer";
+    }
+}
+
+
 
 //**********************************************************
 VkFormat gpu::toVulkan (eDataFormat f)

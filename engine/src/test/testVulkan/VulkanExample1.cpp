@@ -3,6 +3,12 @@
 
 using namespace gos;
 
+
+//************************************
+void VulkanExample1::virtual_explain()
+{
+}
+
 //************************************
 void VulkanExample1::virtual_onCleanup() 
 {
@@ -87,7 +93,7 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
 
     //recupero il vulkan render pass
     VkRenderPass vkRenderPassHandle = VK_NULL_HANDLE;
-    if (!gpuIN->renderLayout_toVulkan (renderLayoutHandle, &vkRenderPassHandle))
+    if (!gpuIN->toVulkan (renderLayoutHandle, &vkRenderPassHandle))
     {
         gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid renderLayoutHandle\n");
         return false;
@@ -97,7 +103,7 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
     VkFramebuffer vkFrameBufferHandle;
     u32 renderAreaW;
     u32 renderAreaH;
-    if (!gpuIN->frameBuffer_toVulkan (frameBufferHandle, &vkFrameBufferHandle, &renderAreaW, &renderAreaH))
+    if (!gpuIN->toVulkan (frameBufferHandle, &vkFrameBufferHandle, &renderAreaW, &renderAreaH))
     {
         gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid frameBufferHandle\n");
         return false;
@@ -106,7 +112,7 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
     //recupero vulkan pipeline
     VkPipeline          vkPipelineHandle;
     VkPipelineLayout    vkPipelineLayoutHandle;
-    if (!gpuIN->pipeline_toVulkan (pipelineHandle, &vkPipelineHandle, &vkPipelineLayoutHandle))
+    if (!gpuIN->toVulkan (pipelineHandle, &vkPipelineHandle, &vkPipelineLayoutHandle))
     {
         gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid pipelineHandle\n");
         return false;
@@ -171,7 +177,7 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
 void VulkanExample1::virtual_onRun()
 {
     VkCommandBuffer     vkCommandBuffer;
-    gpu->createCommandBuffer (eVulkanQueueType::gfx, &vkCommandBuffer);
+    gpu->createCommandBuffer (eGPUQueueType::gfx, &vkCommandBuffer);
 
     VkSemaphore         imageAvailableSemaphore;
     VkSemaphore         renderFinishedSemaphore;
@@ -204,8 +210,7 @@ void VulkanExample1::virtual_onRun()
         //semaforo che GPU deve segnalare quando questa operazione e' ok
         acquireImageTimer.start();
             
-        bool bNeedToRecreateSwapChain = false;
-        if (gpu->newFrame (&bNeedToRecreateSwapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE))
+        if (gpu->newFrame (UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE))
         {
             gpu->fence_reset (inFlightFence);
 //printf ("  CPU waited vkAcquireNextImageKHR %ld us\n", acquireImageTimer.elapsed_usec());
@@ -253,7 +258,7 @@ void VulkanExample1::virtual_onRun()
     //aspetto che GPU abbia finito tutto cio' che ha in coda
     gpu->waitIdle();
 
-    gpu->deleteCommandBuffer (eVulkanQueueType::gfx, vkCommandBuffer);
+    gpu->deleteCommandBuffer (eGPUQueueType::gfx, vkCommandBuffer);
     gpu->semaphore_destroy (imageAvailableSemaphore);
     gpu->semaphore_destroy (renderFinishedSemaphore);
     gpu->fence_destroy (inFlightFence);

@@ -7,8 +7,10 @@
 
 #include "gosGPUResDepthStencil.h"
 #include "gosGPUResFrameBuffer.h"
+#include "gosGPUResIdxBuffer.h"
 #include "gosGPUResRenderTarget.h"
 #include "gosGPUResShader.h"
+#include "gosGPUResStagingBuffer.h"
 #include "gosGPUResViewport.h"
 #include "gosGPUResVtxBuffer.h"
 #include "gosGPUResVtxDecl.h"
@@ -369,12 +371,11 @@ namespace gos
 
 
         //================ rendering & presentazione
-        bool                newFrame (bool *out_bSwapchainWasRecreated, u64 timeout_ns=UINT64_MAX, VkSemaphore semaphore=VK_NULL_HANDLE, VkFence fence=VK_NULL_HANDLE);
+        bool                newFrame (u64 timeout_ns=UINT64_MAX, VkSemaphore semaphore=VK_NULL_HANDLE, VkFence fence=VK_NULL_HANDLE);
         VkResult            present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount);
 
         //================ swap chain info
         //La swap chain viene creata automaticamente da GPU::init()
-        //In caso di resize della main window, e' necessario chiamare swapChain_recreate() per aggiornare i buffer
         u32                 swapChain_getWidth() const                      { return vulkan.swapChainInfo.imageExtent.width; }
         u32                 swapChain_getHeight() const                     { return vulkan.swapChainInfo.imageExtent.height; }
         VkFormat            swapChain_getImageFormat() const                { return vulkan.swapChainInfo.imageFormat; }
@@ -385,6 +386,7 @@ namespace gos
 
         //================ oggetti di sincronizzazione 
         void                waitIdle();
+        void                waitIdle(eGPUQueueType q);
         bool                semaphore_create  (VkSemaphore *out);
         void                semaphore_destroy  (VkSemaphore &in);
         
@@ -426,21 +428,21 @@ namespace gos
         //================ render layout
         RenderTaskLayoutBuilder&    renderLayout_createNew (GPURenderLayoutHandle *out_handle);
         void                        deleteResource (GPURenderLayoutHandle &handle);
-        bool                        renderLayout_toVulkan (const GPURenderLayoutHandle handle, VkRenderPass *out) const;
+        bool                        toVulkan (const GPURenderLayoutHandle handle, VkRenderPass *out) const;
 
 
 
         //================ Frame buffer
         FrameBuffersBuilder&    frameBuffer_createNew (const GPURenderLayoutHandle &renderLayoutHandle, GPUFrameBufferHandle *out_handle);
         void                    deleteResource (GPUFrameBufferHandle &handle);
-        bool                    frameBuffer_toVulkan (const GPUFrameBufferHandle handle, VkFramebuffer *out, u32 *out_renderAreaW, u32 *out_renderAreaH) const;
+        bool                    toVulkan (const GPUFrameBufferHandle handle, VkFramebuffer *out, u32 *out_renderAreaW, u32 *out_renderAreaH) const;
 
 
 
         //================ Pipeline
         PipelineBuilder&    pipeline_createNew (const GPURenderLayoutHandle &enderLayoutHandle, GPUPipelineHandle *out_handle);
         void                deleteResource (GPUPipelineHandle &handle);
-        bool                pipeline_toVulkan (const GPUPipelineHandle handle, VkPipeline *out, VkPipelineLayout *out_layout) const;
+        bool                toVulkan (const GPUPipelineHandle handle, VkPipeline *out, VkPipelineLayout *out_layout) const;
 
 
         //================ depth buffer
@@ -452,13 +454,36 @@ namespace gos
         GPURenderTargetHandle   renderTarget_getDefault() const                         { return defaultRTHandle; }
 
 
+        //================ stagin buffer
+        bool                stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle);
+        void                deleteResource (GPUStgBufferHandle &handle);
+        bool                toVulkan (const GPUStgBufferHandle handle, VkBuffer *out) const;
+        bool                stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
+        bool                stagingBuffer_unmap  (const GPUStgBufferHandle handle);
+
+        bool                stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUVtxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
+        bool                stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUIdxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
+
+
         //================ vertex buffer
         bool                vertexBuffer_create (u32 sizeInByte, eVIBufferMode mode, GPUVtxBufferHandle *out_handle);
         void                deleteResource (GPUVtxBufferHandle &handle);
-        bool                vertexBuffer_toVulkan (const GPUVtxBufferHandle handle, VkBuffer *out) const;
+        bool                toVulkan (const GPUVtxBufferHandle handle, VkBuffer *out) const;
         
+        //map/unmap sono validi sono per i buffer creati con eVUBufferMode::mappale
         bool                vertexBuffer_map (const GPUVtxBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
         bool                vertexBuffer_unmap  (const GPUVtxBufferHandle handle);
+
+        
+        //================ index buffer
+        bool                indexBuffer_create (u32 sizeInByte, eVIBufferMode mode, GPUIdxBufferHandle *out_handle);
+        void                deleteResource (GPUIdxBufferHandle &handle);
+        bool                toVulkan (const GPUIdxBufferHandle handle, VkBuffer *out) const;
+        
+        //map/unmap sono validi sono per i buffer creati con eVUBufferMode::mappale
+        bool                indexBuffer_map (const GPUIdxBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
+        bool                indexBuffer_unmap  (const GPUIdxBufferHandle handle);
+
 
         //================ shader
         bool                vtxshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)            { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::vertexShader, mainFnName, out_shaderHandle); }
@@ -477,15 +502,15 @@ namespace gos
 
 
         //================ command buffer
-        bool                createCommandBuffer (eVulkanQueueType whichQ, VkCommandBuffer *out);
-        bool                deleteCommandBuffer (eVulkanQueueType whichQ, VkCommandBuffer &vkHandle);
+        bool                createCommandBuffer (eGPUQueueType whichQ, VkCommandBuffer *out);
+        bool                deleteCommandBuffer (eGPUQueueType whichQ, VkCommandBuffer &vkHandle);
 
 
         //================ da rimuovere
         VkDevice           REMOVE_getVkDevice() const               { return vulkan.dev; }
-        VkQueue            REMOVE_getGfxQHandle()                   { return vulkan.getQueueInfo(eVulkanQueueType::gfx)->vkQueueHandle; }
-        VkQueue            REMOVE_getComputeQHandle()               { return vulkan.getQueueInfo(eVulkanQueueType::compute)->vkQueueHandle; }
-        VkQueue            REMOVE_getTransferQHandle()              { return vulkan.getQueueInfo(eVulkanQueueType::transfer)->vkQueueHandle; }
+        VkQueue            REMOVE_getGfxQHandle()                   { return vulkan.getQueueInfo(eGPUQueueType::gfx)->vkQueueHandle; }
+        VkQueue            REMOVE_getComputeQHandle()               { return vulkan.getQueueInfo(eGPUQueueType::compute)->vkQueueHandle; }
+        VkQueue            REMOVE_getTransferQHandle()              { return vulkan.getQueueInfo(eGPUQueueType::transfer)->vkQueueHandle; }
 
     private:
         struct sWindow
@@ -582,7 +607,10 @@ namespace gos
         bool                priv_frameBuffer_recreate (gpu::FrameBuffer *s);
         
         bool                priv_vertexBuffer_fromHandleToPointer (const GPUVtxBufferHandle handle, gpu::VtxBuffer **out) const;
+        bool                priv_indexBuffer_fromHandleToPointer (const GPUIdxBufferHandle handle, gpu::IdxBuffer **out) const;
+        bool                priv_stagingBuffer_fromHandleToPointer (const GPUStgBufferHandle handle, gpu::StagingBuffer **out) const;
 
+        bool                priv_copyVulkanBuffer (const VkBuffer srcBuffer, const VkBuffer dstBuffer, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
 
 
     private:
@@ -595,7 +623,7 @@ namespace gos
         VkSurfaceCapabilitiesKHR    vkSurfCapabilities;
         VtxDeclBuilder              vtxDeclBuilder;
         u32                         currentSwapChainImageIndex;
-        bool                        bNeedToRecreateSwapchain;
+        bool                        bRecreateSwapChainOnNextFrame;
         bool                        vSync;
         ToBeDeletedBuilder          toBeDeletedBuilder;
 
@@ -614,7 +642,8 @@ namespace gos
         HandleList<GPUFrameBufferHandle, gpu::FrameBuffer>          frameBufferList;
         gos::FastArray<GPUFrameBufferHandle>                        frameBufferDependentOnSwapChainList;
         HandleList<GPUVtxBufferHandle,gpu::VtxBuffer>               vtxBufferList;
-        
+        HandleList<GPUStgBufferHandle,gpu::StagingBuffer>           staginBufferList;
+        HandleList<GPUIdxBufferHandle,gpu::IdxBuffer>               idxBufferList;
     };
 } //namespace gos
 

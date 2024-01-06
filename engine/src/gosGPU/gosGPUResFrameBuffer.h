@@ -28,6 +28,7 @@ namespace gos
                                 renderLayoutHandle.setInvalid();
                                 depthStencilHandle.setInvalid();
                                 numRenderTaget = 0;
+                                numFrameBuffer = 0;
                             }
 
             void            resolve (i16 w, i16 h)                     
@@ -43,6 +44,7 @@ namespace gos
             //info per Vulkan
             u32                     resolvedW;
             u32                     resolvedH;
+            u32                     numFrameBuffer;                                 //indica quanti handle buoni ci sono in vkFrameBufferList
             VkFramebuffer           vkFrameBufferList[SWAPCHAIN_NUM_MAX_IMAGES];    //ne basterebbe 1 solo in teoria, ma se ci bindiamo
                                                                                     //al mainRT ne devo usare 1 per ogni swapchain imahe
             //info di creazione

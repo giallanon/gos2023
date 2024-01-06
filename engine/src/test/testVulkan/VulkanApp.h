@@ -1,7 +1,8 @@
 #ifndef _VulkanApp_h_
 #define _VulkanApp_h_
 #include "gosGPU.h"
-#include "dataTypes/gosTimer.h"
+#include "FPSMegaTimer.h"
+#include "GPUMainLoop.h"
 
 
 /*************************************************
@@ -24,11 +25,13 @@ public:
 
 
 protected:
-    gos::GPU    *gpu;
+    gos::GPU        *gpu;
+    FPSMegaTimer    fpsMegaTimer;
 
 
 protected:
     virtual bool    virtual_onInit() = 0;    
+    virtual void    virtual_explain() = 0;
     virtual void    virtual_onRun() = 0;
     virtual void    virtual_onCleanup() = 0;
 

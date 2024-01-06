@@ -353,12 +353,6 @@ namespace test4
             TEST_ASSERT(n == strlen(testoDelFile));
             TEST_ASSERT(memcmp(buffer, testoDelFile, n) == 0);
             GOSFREE(allocator, buffer);
-
-
-            //verifico che la risoluzione dei path funzioni
-            //Essendo nella cartella "writable", posso usare il carattere speciale @ per indicare quella cartella
-            gos::string::utf8::spf (s2, sizeof(s2), "@/testFS/dir1/file_di_esempio%02d.txt", i);
-            TEST_ASSERT(gos::fs::fileExists(s2));
         }
 
         //scanno la directory alla ricerca dei 4 file
@@ -404,7 +398,19 @@ namespace test4
         } while (gos::fs::findNext(ff));
         gos::fs::findClose(ff);        
         
-        
+
+        //verifico il fn degli alias
+        TEST_ASSERT (gos::fs::fileExists (reinterpret_cast<const u8*>("@w/testFS/dir1/file_di_esempio00.txt")));
+
+        TEST_ASSERT (gos::fs::addAlias ("@fs1", "testFS", eAliasPathMode::relativeToWritableFolder));
+        TEST_ASSERT (gos::fs::fileExists (reinterpret_cast<const u8*>("@fs1/dir1/file_di_esempio00.txt")));
+
+        TEST_ASSERT (gos::fs::addAlias ("@fs2", "testFS/dir1", eAliasPathMode::relativeToWritableFolder));
+        TEST_ASSERT (gos::fs::fileExists (reinterpret_cast<const u8*>("@fs2/file_di_esempio00.txt")));
+
+        gos::string::utf8::spf (s1, sizeof(s1), "%s/testFS/dir1", gos::getPhysicalPathToWritableFolder());
+        TEST_ASSERT (gos::fs::addAlias ("@fs3", s1, eAliasPathMode::absolutePath));
+        TEST_ASSERT (gos::fs::fileExists (reinterpret_cast<const u8*>("@fs3/file_di_esempio00.txt")));
 
     return 0;
     }

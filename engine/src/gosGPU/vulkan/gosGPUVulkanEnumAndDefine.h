@@ -15,11 +15,13 @@ static constexpr u8 SWAPCHAIN_NUM_MAX_IMAGES = 8;
 
 namespace gos
 {
-    enum class eVulkanQueueType : u8
+    enum class eGPUQueueType : u8
     {
         gfx = 0,
         compute = 1,
-        transfer = 2
+        transfer = 2,
+
+        unknown = 0xff
     };
 
     struct sSwapChainInfo
@@ -91,13 +93,13 @@ namespace gos
         struct sQueueInfo
         {
         public:
-            void reset()        { vkQueueHandle = VK_NULL_HANDLE; vkPoolHandle=VK_NULL_HANDLE; bIsUnique=false; familyIndex=u32MAX; }
+            void reset()        { vkQueueHandle = VK_NULL_HANDLE; vkPoolHandle=VK_NULL_HANDLE; isAnAliasFor=eGPUQueueType::unknown; familyIndex=u32MAX; }
 
         public:
             VkQueue         vkQueueHandle;
             VkCommandPool   vkPoolHandle;
             u32             familyIndex;
-            bool            bIsUnique;
+            eGPUQueueType   isAnAliasFor; // se == unknown, allora e' una Q vera e propria, altrimenti e' un alias per un'altra Q
         };
 
     public:
@@ -119,7 +121,7 @@ namespace gos
 
                         for (u8 i=0; i<NUM_Q; i++)
                         {
-                            if (_queueList[i].bIsUnique)
+                            if (eGPUQueueType::unknown == _queueList[i].isAnAliasFor)
                             {
                                 if (VK_NULL_HANDLE != _queueList[i].vkPoolHandle)
                                 {
@@ -135,20 +137,33 @@ namespace gos
                         reset();
                     }
 
-        sQueueInfo* getQueueInfo (eVulkanQueueType type)
+        sQueueInfo* getQueueInfo (eGPUQueueType type)
         {
             switch (type)
             {
             default:
                 DBGBREAK;
                 return &_queueList[0];
-            case eVulkanQueueType::gfx:         return &_queueList[0];
-            case eVulkanQueueType::compute:     return &_queueList[1];
-            case eVulkanQueueType::transfer:    return &_queueList[2];
+            case eGPUQueueType::gfx:         return &_queueList[0];
+            case eGPUQueueType::compute:     return &_queueList[1];
+            case eGPUQueueType::transfer:    return &_queueList[2];
             }
         }
 
-    private:
+        const sQueueInfo* getQueueInfo (eGPUQueueType type) const
+        {
+            switch (type)
+            {
+            default:
+                DBGBREAK;
+                return &_queueList[0];
+            case eGPUQueueType::gfx:         return &_queueList[0];
+            case eGPUQueueType::compute:     return &_queueList[1];
+            case eGPUQueueType::transfer:    return &_queueList[2];
+            }
+        }
+        
+   private:
         static const u8 NUM_Q = 3;
 
     public:

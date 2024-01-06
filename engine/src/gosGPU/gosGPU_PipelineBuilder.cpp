@@ -52,7 +52,7 @@ bool GPU::PipelineBuilder::end ()
 bool GPU::PipelineBuilder::priv_buildVulkan ()
 {
     VkRenderPass vkRenderPassHandle;
-    if (!gpu->renderLayout_toVulkan (renderLayoutHandle, &vkRenderPassHandle))
+    if (!gpu->toVulkan (renderLayoutHandle, &vkRenderPassHandle))
     {
         gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => invalid renderLayoutHandle\n");
         return false;

@@ -20,6 +20,9 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 #====================================================
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
+FPSMegaTimer.h
+GPUMainLoop.cpp
+GPUMainLoop.h
 main.cpp
 VulkanApp.cpp
 VulkanApp.h
@@ -27,6 +30,8 @@ VulkanExample1.cpp
 VulkanExample1.h
 VulkanExample2.cpp
 VulkanExample2.h
+VulkanExample3.cpp
+VulkanExample3.h
 )
 
 #====================================================

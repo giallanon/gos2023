@@ -13,6 +13,13 @@ VulkanExample2::VulkanExample2()
 }
 
 //************************************
+void VulkanExample2::virtual_explain()
+{
+    gos::logger::log ("esperimenti con Vtx Buffer di tipo 'mappable'");
+}
+
+
+//************************************
 void VulkanExample2::virtual_onCleanup() 
 {
     if (NULL != ptToMappedMemory)
@@ -177,7 +184,7 @@ bool VulkanExample2::recordCommandBuffer (gos::GPU *gpuIN,
 
     //recupero il vulkan render pass
     VkRenderPass vkRenderPassHandle = VK_NULL_HANDLE;
-    if (!gpuIN->renderLayout_toVulkan (renderLayoutHandle, &vkRenderPassHandle))
+    if (!gpuIN->toVulkan (renderLayoutHandle, &vkRenderPassHandle))
     {
         gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid renderLayoutHandle\n");
         return false;
@@ -187,7 +194,7 @@ bool VulkanExample2::recordCommandBuffer (gos::GPU *gpuIN,
     VkFramebuffer vkFrameBufferHandle;
     u32 renderAreaW;
     u32 renderAreaH;
-    if (!gpuIN->frameBuffer_toVulkan (frameBufferHandle, &vkFrameBufferHandle, &renderAreaW, &renderAreaH))
+    if (!gpuIN->toVulkan (frameBufferHandle, &vkFrameBufferHandle, &renderAreaW, &renderAreaH))
     {
         gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid frameBufferHandle\n");
         return false;
@@ -196,7 +203,7 @@ bool VulkanExample2::recordCommandBuffer (gos::GPU *gpuIN,
     //recupero vulkan pipeline
     VkPipeline          vkPipelineHandle;
     VkPipelineLayout    vkPipelineLayoutHandle;
-    if (!gpuIN->pipeline_toVulkan (pipelineHandle, &vkPipelineHandle, &vkPipelineLayoutHandle))
+    if (!gpuIN->toVulkan (pipelineHandle, &vkPipelineHandle, &vkPipelineLayoutHandle))
     {
         gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid pipelineHandle\n");
         return false;
@@ -204,7 +211,7 @@ bool VulkanExample2::recordCommandBuffer (gos::GPU *gpuIN,
 
     //recupero il vtxBuffer
     VkBuffer vkVtxBuffer;
-    if (!gpuIN->vertexBuffer_toVulkan (vtxBufferHandle, &vkVtxBuffer))
+    if (!gpuIN->toVulkan (vtxBufferHandle, &vkVtxBuffer))
     {
         gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid vtxBufferHandle\n");
         return false;
@@ -283,12 +290,11 @@ void VulkanExample2::virtual_onRun()
 }
 
 //**********************************
-void VulkanExample2::doCPUStuff (gos::TimerFPS &cpuTimer)
+void VulkanExample2::doCPUStuff ()
 {
-    cpuTimer.onFrameBegin();
+    fpsMegaTimer.onFrameBegin(FPSTIMER_CPU);
 
     glfwPollEvents();
-
 
     moveVertex();
 
@@ -307,12 +313,9 @@ void VulkanExample2::doCPUStuff (gos::TimerFPS &cpuTimer)
     if (tot < 0)
         printf ("A\n");
 
-    if (cpuTimer.onFrameEnd())
-    {
-        const float usec = cpuTimer.getAvgFrameTime_usec();
-        const float msec = usec/ 1000.0f;
-        printf ("                   CPU: avg time: %.2fms [%.2fus] [fps: %.01f]\n", msec, usec, cpuTimer.getAvgFPS());
-    }
+
+    fpsMegaTimer.onFrameEnd(FPSTIMER_CPU);
+    fpsMegaTimer.printReport();
 }
 
 
@@ -320,7 +323,7 @@ void VulkanExample2::doCPUStuff (gos::TimerFPS &cpuTimer)
 void VulkanExample2::mainLoop_3()
 {
     VkCommandBuffer     vkCommandBuffer;
-    gpu->createCommandBuffer (eVulkanQueueType::gfx, &vkCommandBuffer);
+    gpu->createCommandBuffer (eGPUQueueType::gfx, &vkCommandBuffer);
         
     //I semafori sono oggetti di sync tra GPU & GPU (non e' un errore e' proprio GPU-GPU)
     //Fence sono oggetti di sync tra GPU & CPU (a differenza dei semafori che riguardano solo la CPU)
@@ -335,32 +338,20 @@ void VulkanExample2::mainLoop_3()
 
 
     VkResult            result;
-    gos::TimerFPS       cpuTimer;
-    gos::TimerFPS       gpuBatchTimer;
-    gos::TimerFPS       fpsTimer;
-    gpuBatchTimer.onFrameBegin();
-    fpsTimer.onFrameBegin();
     while (!glfwWindowShouldClose (gpu->getWindow()))
     {
-        doCPUStuff (cpuTimer);
-
+        doCPUStuff ();
         //attende che il precedente batch sia terminato
         if (gpu->fence_wait (inFlightFence, 0))
         {
-            if (gpuBatchTimer.onFrameEnd())
-            {
-                const float usec = gpuBatchTimer.getAvgFrameTime_usec();
-                const float msec = usec/ 1000.0f;
-                printf ("GPU batch: avg time: %.2fms [%.2fus] [fps: %.01f]\n", msec, usec, gpuBatchTimer.getAvgFPS());
-            }
+            fpsMegaTimer.onFrameEnd (FPSTIMER_GPU);
             //Chiedo a GPU una immagine dalla swap chain, non attendo nemmeno 1 attimo e indico [semaphore_imageReady] come
             //semaforo che GPU deve segnalare quando questa operazione e' ok. Indico inoltre [fenceSwapChainReady] come fence da segnalre
             //quando l'immagine e' disponibile
             //Questa fn ritorna quando GPU e' in grado di determinare quale sara' la prossima immagine sulla quale renderizzare.
             //Quando GPU ha questa informazione, non vuol dire pero' che l'immagine e' gia' immediatamente disponibile per l'uso.
             //E' per questo che si usa [semaphore_imageReady] e [fenceSwapChainReady], per sapere quando davvero l'immagine sara' disponibile
-            bool bNeedToRecreateSwapChain = false;
-            if (gpu->newFrame (&bNeedToRecreateSwapChain, 0, VK_NULL_HANDLE, fenceSwapChainReady))
+            if (gpu->newFrame (0, VK_NULL_HANDLE, fenceSwapChainReady))
             {
                 //A questo GPU ha capito quale sara' l'immagine che prima o poi mi dara', ma non e' detto che questa sia gia' disponibile
                 //Lo diventa quando [fenceSwapChainReady] e' segnalata.
@@ -369,19 +360,14 @@ void VulkanExample2::mainLoop_3()
                 //Intanto che aspetto che GPU renda disponibile una immagine, faccio le mie cose
                 while (!gpu->fence_wait (fenceSwapChainReady, 0))
                 {
-                    doCPUStuff (cpuTimer);
+                    doCPUStuff ();
                 }
 
-                if (fpsTimer.onFrameEnd())
-                {
-                    const float usec = fpsTimer.getAvgFrameTime_usec();
-                    const float msec = usec/ 1000.0f;
-                    printf ("FPS avg time: %.2fms [%.2fus] [fps: %.01f]\n", msec, usec, fpsTimer.getAvgFPS());
-                }
-                fpsTimer.onFrameBegin();
+                fpsMegaTimer.onFrameEnd(FPSTIMER_FPS);
+                fpsMegaTimer.onFrameBegin(FPSTIMER_FPS);
 
                 //arrivo qui quando GPU mi ha finalmente dato l'immagine
-                gpuBatchTimer.onFrameBegin();
+                fpsMegaTimer.onFrameBegin(FPSTIMER_GPU);
 
                 gpu->fence_reset (fenceSwapChainReady);
                 gpu->fence_reset (inFlightFence);
@@ -429,7 +415,7 @@ void VulkanExample2::mainLoop_3()
     //aspetto che GPU abbia finito tutto cio' che ha in coda
     gpu->waitIdle();
 
-    gpu->deleteCommandBuffer (eVulkanQueueType::gfx, vkCommandBuffer);
+    gpu->deleteCommandBuffer (eGPUQueueType::gfx, vkCommandBuffer);
     //gpu->semaphore_destroy (semaphore_imageReady);
     gpu->semaphore_destroy (semaphore_renderFinished);
     gpu->fence_destroy (fenceSwapChainReady);

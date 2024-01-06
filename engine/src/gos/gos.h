@@ -90,6 +90,27 @@ namespace gos
 	 */
 	namespace fs
 	{
+		bool			priv_init ();
+		void			priv_deinit ();
+
+		
+		//addAlias consente di aggiungere degli shortcut utilizzabili dai path delle fn di fs.
+		//Gli shortcut iniziano sempre con @
+		//Ad esempio:
+		//	addAlias ("@pippo", "/usr/bin");
+		//  implica che posso usare l'alias "@pippo" nelle chimate di fn
+		//  Per aprire il file /usr/bin/pluto.txt posso usare fileOpen ("@pippo/pluto.txt")
+		//  Per aprire il file /usr/bin/sottocartella/pluto.txt posso usare fileOpen ("@pippo/sottocartella/pluto.txt")
+		//
+		//Di default, gos aggiunge d'ufficio i senguenti alias:
+		//	@w => punta alla directory "writable".  Quindi "@w/ciao.txt" punta a ".../writable/ciato.txt"
+		//
+		//	[aliasNoChioccola] e' l'alias da aggiungere
+		//	[realPathNoSlash] e' il path reale, non deve terminare con /
+		bool 			addAlias (const char *alias, const u8 *realPathNoSlash, eAliasPathMode mode);
+		bool 			addAlias (const char *alias, const char *realPathNoSlash, eAliasPathMode mode);
+
+
 		void 			pathSanitize (const u8 *utf8_path, u8 *out_utf8sanitizedPath, u32 sizeOfOutSanitzed);
 		void			pathSanitizeInPlace (u8 *utf8_path, u32 nBytesToCheck = u32MAX);
 		void			pathGoBack (const u8 *pathSenzaSlashIN, u8 *out, u32 sizeofout);

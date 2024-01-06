@@ -157,6 +157,13 @@ enum class eWaitEventOrigin : u8
 	deleted = 5
 };
 
+enum class eAliasPathMode : u8
+{
+    relativeToAppFolder = 0,
+    relativeToWritableFolder,
+    absolutePath
+};
+
 namespace gos
 {
     struct sGOSInit

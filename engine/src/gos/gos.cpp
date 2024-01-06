@@ -53,6 +53,10 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 	if (!mem::priv_init(init))
 		return false;
 
+	//fs
+	if (!fs::priv_init())
+		return false;
+	
 
 	//determino il path alla writable folder
 	switch (init._writableFolder.mode)
@@ -74,6 +78,7 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 	gos::fs::pathSanitizeInPlace(s);
 	gosGlobals.pathToWritableFolder = gos::string::utf8::allocStr (gos::getSysHeapAllocator(), s);
 	gos::fs::folderCreate (gosGlobals.pathToWritableFolder);
+	gos::fs::addAlias ("@w", gosGlobals.pathToWritableFolder, eAliasPathMode::absolutePath);
 
 
 	gosGlobals.lengthOfAppPathConSlash = gos::string::utf8::lengthInByte (gos::getAppPathNoSlash());
@@ -146,6 +151,7 @@ void gos::deinit()
 	GOSFREE(gos::getSysHeapAllocator(), gosGlobals.pathToWritableFolder);
 
 	console::priv_deinit();
+	fs::priv_deinit();
 	mem::priv_deinit();
 	platform::internal_deinit();
 

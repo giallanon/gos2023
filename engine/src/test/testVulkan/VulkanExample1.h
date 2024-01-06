@@ -17,6 +17,7 @@ public:
     bool        virtual_onInit ();
     void        virtual_onRun();
     void        virtual_onCleanup();
+    void        virtual_explain();
 
 private:    
     static bool recordCommandBuffer (gos::GPU *gpu, 
