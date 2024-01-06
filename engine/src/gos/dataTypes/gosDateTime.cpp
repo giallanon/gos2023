@@ -59,18 +59,18 @@ void DateTime::formatAs_YYYYMMDDHHMMSS(char *out, u32 sizeOfOut, char char_betwe
 	if (n == 0)
 		return;
 
-	u32 nLeft = sizeOfOut - n;
-	if (nLeft)
+	if (sizeOfOut > n)
 	{
+		u32 nLeft = sizeOfOut - n;
 		if (char_between_date_and_time != 0x00)
 		{
 			out[n++] = char_between_date_and_time;
 			nLeft--;
 		}
 		out[n] = 0;
-	}
 
-	time.formatAs_HHMMSS(&out[n], nLeft, time_sep);
+		time.formatAs_HHMMSS(&out[n], nLeft, time_sep);
+	}
 }
 
 //****************************

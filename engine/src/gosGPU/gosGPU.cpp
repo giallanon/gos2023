@@ -975,7 +975,7 @@ bool GPU::priv_depthStencil_createFromStruct (gos::gpu::DepthStencil &depthStenc
         int winDimX;
         int winDimY;
         window.getCurrentSize (&winDimX, &winDimY);
-        depthStencil.resolve (winDimX, winDimY);
+        depthStencil.resolve ((i16)winDimX, (i16)winDimY);
     }
 
 	VkImageCreateInfo imageCI{};
@@ -1252,7 +1252,7 @@ void GPU::priv_frameBuffer_deleteFromStruct (gpu::FrameBuffer *s)
 bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
 {
     //render area
-    s->resolve (vulkan.swapChainInfo.imageExtent.width, vulkan.swapChainInfo.imageExtent.height);
+    s->resolve ((i16)vulkan.swapChainInfo.imageExtent.width, (i16)vulkan.swapChainInfo.imageExtent.height);
 
     //render layout
     sRenderLayout *sRL;

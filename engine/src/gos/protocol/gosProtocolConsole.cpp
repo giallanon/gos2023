@@ -104,7 +104,7 @@ bool ProtocolConsole::handshake_serverAnswer(IProtocolChannel *ch, UNUSED_PARAM(
 	ch->consumeReadBuffer(12);
 
 	char answer[16];
-	sprintf(answer, "GOSCONSOLE");
+	sprintf_s(answer, sizeof(answer), "GOSCONSOLE");
 	answer[11] = key;
 	const u32 n = ch->write ((const u8 *)answer, 12, 3000);
 

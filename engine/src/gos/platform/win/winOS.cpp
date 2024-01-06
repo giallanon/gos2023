@@ -66,7 +66,7 @@ bool win32::wchar_to_utf8 (const wchar_t *wstring, u32 nBytesToUse, u8 *out, u32
 }
 
 //**********************************************
-bool platform::internal_init (const char *appName)
+bool platform::internal_init ()
 {
 	memset(&win32PlatformData, 0, sizeof(win32PlatformData));
 

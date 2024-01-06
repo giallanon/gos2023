@@ -40,7 +40,7 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 
 	memset (&gosGlobals, 0, sizeof(gosGlobals));
 
-	if (!platform::internal_init(appName))
+	if (!platform::internal_init())
 		return false;
 
 	gosGlobals.timeStarted_usec = platform::getTimeNow_usec();
@@ -124,8 +124,8 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 		u8 hh, mm, ss;
 		gos::Date::getDateNow(&y, &m, &d);
 		gos::Time24::getTimeNow(&hh, &mm, &ss);
-        const u32 s = (y * 365 + m * 31 + d) * 24 * 3600 + hh * 3600 + mm * 60 + ss +static_cast<u32>(gosGlobals.timeStarted_usec);
-		gosGlobalsRnd.seed(s);
+        const u32 seed = (y * 365 + m * 31 + d) * 24 * 3600 + hh * 3600 + mm * 60 + ss +static_cast<u32>(gosGlobals.timeStarted_usec);
+		gosGlobalsRnd.seed(seed);
 	}
 
 	if (!gos::thread::internal_init())

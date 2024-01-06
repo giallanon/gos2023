@@ -24,7 +24,7 @@ struct	sLinuxPlatformData
 static sLinuxPlatformData	linuxPlatformData;
 
 //*******************************************************************
-bool platform::internal_init (const char *appName)
+bool platform::internal_init ()
 {
 	memset (&linuxPlatformData, 0, sizeof(linuxPlatformData));
 

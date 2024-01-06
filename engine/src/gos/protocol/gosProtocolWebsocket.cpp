@@ -80,6 +80,7 @@ bool ProtocolServer_handshake_make_accept (const char *received_key, char *accep
 #endif
 #ifdef GOS_COMPILER__MSVC
 	//#pragma warning(disable:4201)
+	#pragma warning(disable:4996)
 #endif
 
     memset (concat_key, 0, sizeof(concat_key));
@@ -91,6 +92,7 @@ bool ProtocolServer_handshake_make_accept (const char *received_key, char *accep
 #endif
 #ifdef GOS_COMPILER__MSVC
 	//#pragma warning(default:4201)
+	#pragma warning(default:4996)
 #endif
 
 
@@ -196,7 +198,7 @@ bool ProtocolWebsocket::handshake_serverAnswer(IProtocolChannel *ch, UNUSED_PARA
         connection = HEADER_CONNECTION2;
     }
     char answer[300];
-    sprintf(answer,    "HTTP/1.1 101 Switching Protocols\r\n"\
+    sprintf_s(answer, sizeof(answer),   "HTTP/1.1 101 Switching Protocols\r\n"\
                         "Upgrade: websocket\r\n"\
                         "%s\r\n"\
                         "Sec-WebSocket-Accept: %s\r\n"\

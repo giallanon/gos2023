@@ -24,7 +24,7 @@ int main()
     if (gos::init (init, "testVulkan"))
     {
         gos::GPU gpu;
-        if (gpu.init (800, 600, true, gos::getAppName()))
+        if (gpu.init (800, 600, false, gos::getAppName()))
         {
             //runExample<VulkanExample1>(&gpu, "VulkanExample1");
             runExample<VulkanExample2>(&gpu, "VulkanExample2");
@@ -33,10 +33,7 @@ int main()
 
         gos::deinit();
     }
-#ifdef GOS_PLATFORM__WINDOWS
-    printf ("\nPress any key to terminate\n");
-    _getch();
-#endif
+
 
     return 0;
 }

@@ -12,7 +12,7 @@ namespace gos
 
 namespace platform
 {
-    bool            internal_init (const char *appName);
+    bool            internal_init ();
     void            internal_deinit ();
 
     u32             systeminfo_getNumOfCPUCore();

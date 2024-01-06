@@ -134,7 +134,7 @@ namespace gos
 		inline u32		fileRead (gos::File &h, void *buffer, u32 numMaxBytesToRead)										{ return platform::FS_fileRead(h.osFile, buffer, numMaxBytesToRead); }
 		inline u32		fileWrite (gos::File &h, const void *buffer, u32 numBytesToWrite)									{ return platform::FS_fileWrite(h.osFile, buffer, numBytesToWrite); }
 		void			fpf (gos::File &h, const char *format, ...);
-		void			fpf (gos::File &h, const char *format, va_list argptr);
+		void			fpf_valist (gos::File &h, const char *format, va_list argptr);
 		inline void		fileClose (gos::File  &h)																			{ platform::FS_fileClose(h.osFile); }
 		inline void		fileFlush (gos::File &h) 																			{ platform::FS_fileFlush(h.osFile); }
 

@@ -326,7 +326,7 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
 
     //quali e quante queue mi servono?
     float queuePriority = 1.0f;
-    VkDeviceQueueCreateInfo queueCreateInfo[2];
+    VkDeviceQueueCreateInfo queueCreateInfo[16];
     u8 numOfQueue = 0;
     memset (queueCreateInfo, 0, sizeof(queueCreateInfo));
     queueCreateInfo[numOfQueue].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -394,6 +394,7 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
 
     if (ret)
     {
+
         VkResult result = vkCreateDevice (vkPhyDevInfo.vkDev, &createInfo, nullptr, &out_vulkan->dev);
         if (VK_SUCCESS != result) 
         {

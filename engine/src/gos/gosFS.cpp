@@ -627,7 +627,7 @@ bool fs::fileOpenForAppend (gos::File *out_h, const u8 *utf8_filePathAndNameRESO
 }
 
 //**************************************************************************
-void fs::fpf (gos::File &h, const char *format, va_list argptr)
+void fs::fpf_valist (gos::File &h, const char *format, va_list argptr)
 {
 	static char buffer[2048];
 	const int n = vsnprintf (buffer, sizeof(buffer), format, argptr);
@@ -638,7 +638,7 @@ void fs::fpf (gos::File &h, const char *format, ...)
 {
 	va_list argptr;
 	va_start (argptr, format );
-	fs::fpf (h, format, argptr);
+	fs::fpf_valist (h, format, argptr);
 	va_end(argptr);
 }
 

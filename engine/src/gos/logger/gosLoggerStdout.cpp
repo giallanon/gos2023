@@ -301,7 +301,7 @@ void LoggerStdout::LogToFile::log (const char *format, ...)
 
     va_list argptr; 
     va_start (argptr, format);
-    gos::fs::fpf (f, format, argptr);
+    gos::fs::fpf_valist (f, format, argptr);
     va_end (argptr);
 
     //ogni tot righe di log su file, chiudo e flusho nella speranza che OS scriva davvero su file
@@ -349,13 +349,13 @@ void LoggerStdout::LogToFile::priv_createNewLogFileAndOpenForAppend()
     u8 s[1204];
     gos::string::utf8::spf (s, sizeof(s), "%s/%s.goslog", fullFolderPathAndName, yyyymmddhhmmss);
 
-    gos::File f;
-    if (!gos::fs::fileOpenForW (&f, s, true))
+    gos::File f2;
+    if (!gos::fs::fileOpenForW (&f2, s, true))
     {
         DBGBREAK;
         return;
     }
-    gos::fs::fileClose(f);
+    gos::fs::fileClose(f2);
 
     filename = priv_allocString (s);
     priv_clearLogFolder();
