@@ -289,6 +289,17 @@ void LoggerStdout::LogToFile::priv_logIntestazione()
 
     gos::fs::fpf (f, "\n\n\n\n============================================================================\n");
     gos::fs::fpf (f, "LOG BEGIN @ %s\n", ymdhms);
+#ifdef GOS_PLATFORM__LINUX
+    gos::fs::fpf (f, "  platform: linux\n");
+#endif
+#ifdef GOS_PLATFORM__WINDOWS
+    gos::fs::fpf (f, "  platform: windows\n");
+#endif
+#ifdef _DEBUG
+    gos::fs::fpf (f, "  version: DEBUG\n");
+#else
+    gos::fs::fpf (f, "  build: RELEASE\n");
+#endif
 
 }
 

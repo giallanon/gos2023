@@ -27,3 +27,5 @@ engine/bin/testVulkan/testVulkan__windows_Debug.exe
 engine/aaCMakePresets.json
 
 *.goslog
+*.exe
+*.manifest

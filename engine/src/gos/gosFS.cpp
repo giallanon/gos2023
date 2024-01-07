@@ -22,12 +22,19 @@ void fs::priv_deinit()
 }
 
 //**************************************************************
-bool FS_isPathAbsolute (const u8 *path)
+bool fs::isPathAbsolute (const char *path)
 {
+	return fs::isPathAbsolute (reinterpret_cast<const u8*>(path));
+}
+bool fs::isPathAbsolute (const u8 *path)
+{
+	assert (NULL != path);
 #ifdef GOS_PLATFORM__LINUX		
 	return (path[0] == '/');
 #endif
 #ifdef GOS_PLATFORM__WINDOWS
+	if (path[0] == 0x00)
+		return false;
 	return (path[1] == ':');
 #endif
 }
@@ -48,7 +55,7 @@ bool fs::addAlias (const char *alias, const u8 *realPathNoSlash, eAliasPathMode 
 		return false;
 
 	case eAliasPathMode::absolutePath:
-		if (!FS_isPathAbsolute(realPathNoSlash))
+		if (!fs::isPathAbsolute(realPathNoSlash))
 			return false;
 
 		return pathResolver.addAlias (alias, realPathNoSlash);
@@ -56,13 +63,13 @@ bool fs::addAlias (const char *alias, const u8 *realPathNoSlash, eAliasPathMode 
 
 		
 	case eAliasPathMode::relativeToAppFolder:
-		if (FS_isPathAbsolute(realPathNoSlash))
+		if (fs::isPathAbsolute(realPathNoSlash))
 			return false;
 		string::utf8::spf (s, sizeof(s), "%s/%s", gos::getAppPathNoSlash(), realPathNoSlash);
 		return pathResolver.addAlias (alias, s);
 
 	case eAliasPathMode::relativeToWritableFolder:
-		if (FS_isPathAbsolute(realPathNoSlash))
+		if (fs::isPathAbsolute(realPathNoSlash))
 			return false;
 		string::utf8::spf (s, sizeof(s), "%s/%s", gos::getPhysicalPathToWritableFolder(), realPathNoSlash);
 		return pathResolver.addAlias (alias, s);

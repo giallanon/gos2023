@@ -111,6 +111,8 @@ namespace gos
 		bool 			addAlias (const char *alias, const char *realPathNoSlash, eAliasPathMode mode);
 
 
+		bool			isPathAbsolute (const char *path);
+		bool			isPathAbsolute (const u8 *path);
 		void 			pathSanitize (const u8 *utf8_path, u8 *out_utf8sanitizedPath, u32 sizeOfOutSanitzed);
 		void			pathSanitizeInPlace (u8 *utf8_path, u32 nBytesToCheck = u32MAX);
 		void			pathGoBack (const u8 *pathSenzaSlashIN, u8 *out, u32 sizeofout);

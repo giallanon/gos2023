@@ -76,25 +76,10 @@ void fs::SpecialPathResolver::resolve (const u8 *path, u8 *out, u32 sizeof_out) 
         return;
     }
 
-#ifdef GOS_PLATFORM__LINUX
-    if (path[0] != '/')
-    {
-        //se non inzia con '/' vuol dire che e' un path relativo
+    if (fs::isPathAbsolute(path))
+        gos::string::utf8::spf (out, sizeof_out, "%s", path);
+    else
         gos::string::utf8::spf (out, sizeof_out, "%s/%s", gos::getAppPathNoSlash(), path);
-        return;
-    }
-#endif
-#ifdef GOS_PLATFORM__WINDOWS
-    if (path[0] != ':')
-    {
-        gos::string::utf8::spf (out, sizeof_out, "%s/%s", gos::getAppPathNoSlash(), path);
-        return;
-    }
-#endif
-
-
-    //era un path normale
-    gos::string::utf8::spf (out, sizeof_out, "%s", path);
 }
 
 //*********************************************
