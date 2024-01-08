@@ -2,7 +2,7 @@
   "version": 2,
   "configurePresets": [
     {
-      "name": "windows-default",
+      "name": "winDEBUG",
       "displayName": "Windows x64 Debug",
       "description": "Target Windows with the Visual Studio development environment.",
       "generator": "Ninja",
@@ -24,7 +24,7 @@
       }
     },
     {
-      "name": "windows-default2",
+      "name": "winRELEASE",
       "displayName": "Windows x64 Release",
       "description": "Target Windows with the Visual Studio development environment.",
       "generator": "Ninja",

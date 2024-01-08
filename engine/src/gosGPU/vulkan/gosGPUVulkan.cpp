@@ -297,12 +297,67 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
     }
     gos::logger::decIndent();
 
+
+    //recupero alcune props del device
+    if (out->isValid())
+    {
+        gos::logger::log ("GetPhysicalDeviceMemoryProperties\n");
+        gos::logger::incIndent();
+        vkGetPhysicalDeviceMemoryProperties (out->vkDev, &out->vkMemoryProperties);
+    
+        const VkPhysicalDeviceMemoryProperties *info = &out->vkMemoryProperties;
+        gos::logger::log ("memory heap count:%d\n", info->memoryHeapCount);
+        gos::logger::incIndent();
+        for (u32 i = 0; i < info->memoryHeapCount; i++)
+        {
+            gos::logger::log ("index:%d\tsize= %" PRIu64 "B ", i, info->memoryHeaps[i].size);
+            if (((info->memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0))
+                gos::logger::log (", HEAP_DEVICE_LOCAL");
+            gos::logger::log ("\n");
+        }
+        gos::logger::decIndent();
+
+        
+        gos::logger::log ("memory type count: %d\n", info->memoryTypeCount);
+        gos::logger::incIndent();
+        for (u32 i = 0; i < info->memoryTypeCount; i++)
+        {
+            gos::logger::log ("heap-index:%d", info->memoryTypes[i].heapIndex);
+
+            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0)
+                gos::logger::log (", DEVICE_LOCAL");
+            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT ) != 0)
+                gos::logger::log (", HOST_VISIBLE");
+            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ) != 0)
+                gos::logger::log (", HOST_COHERENT");
+            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT ) != 0)
+                gos::logger::log (", HOST_CACHED");
+            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT ) != 0)
+                gos::logger::log (", LAZILY_ALLOCATED");
+
+
+            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_PROTECTED_BIT  ) != 0)
+                gos::logger::log (", PROTECTED");
+            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD  ) != 0)
+                gos::logger::log (", DEVICE_COHERENT_BIT_AMD");
+            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD  ) != 0)
+                gos::logger::log (", DEVICE_UNCACHED_BIT_AMD");
+            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_RDMA_CAPABLE_BIT_NV  ) != 0)
+                gos::logger::log (", RDMA_CAPABLE");
+
+            gos::logger::log ("\n");
+        }
+        gos::logger::decIndent();
+
+            
+        gos::logger::decIndent();
+    }
+
+
+
     gos::logger::decIndent();
     if (!out->isValid())
         return false;
-
-    //recupero alcune props del device
-    vkGetPhysicalDeviceMemoryProperties (out->vkDev, &out->vkMemoryProperties);
     return true;
 }
 
@@ -710,9 +765,9 @@ bool gos::vulkanCreateBuffer (const sVkDevice &vulkan, u32 sizeInByte, VkBufferU
         else
         {
             sharingMode = VK_SHARING_MODE_CONCURRENT;
-            if ((mask & MASK_gfx) != 0)                 queueIndexList[queueCount++] = familyIndex_gfx;
-            if ((mask & bCanBeUsedBy_computeQ) != 0)    queueIndexList[queueCount++] = familyIndex_compute;
-            if ((mask & bCanBeUsedBy_transferQ) != 0)   queueIndexList[queueCount++] = familyIndex_transfer;
+            if ((mask & MASK_gfx) != 0)             queueIndexList[queueCount++] = familyIndex_gfx;
+            if ((mask & MASK_compute) != 0)         queueIndexList[queueCount++] = familyIndex_compute;
+            if ((mask & MASK_transfer) != 0)        queueIndexList[queueCount++] = familyIndex_transfer;
         }
     }
     
