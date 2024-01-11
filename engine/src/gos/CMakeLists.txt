@@ -94,6 +94,7 @@ protocol/gosProtocolEnumAndDefine.h
 protocol/gosProtocolWebsocket.cpp
 protocol/gosProtocolWebsocket.h
 
+string/gosCompileTimeHashedString.h
 string/gosString.cpp 
 string/gosStringANSI.cpp 
 string/gosStringEnumAndDefine.h

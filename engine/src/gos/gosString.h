@@ -1,7 +1,7 @@
 #ifndef _gosString_h_
 #define _gosString_h_
 #include "string/gosStringEnumAndDefine.h"
-#include "gosEnumAndDefine.h"
+#include "string/gosCompileTimeHashedString.h"
 
 namespace gos
 {

@@ -634,6 +634,37 @@ namespace test7
 }
 
 
+namespace test8
+{
+
+    enum TestEnum
+    {
+        CrcVal01 = STR_HASH("stack-overflow"),
+    };
+
+    int run()
+    {
+        u32 test1 = STR_HASH("stack-overflow"); printf ("0x%08X\n", test1);
+        TEST_ASSERT(0x335CC04A==test1);
+        TEST_ASSERT(0x335CC04A==CrcVal01);
+        TEST_ASSERT(STR_HASH("stack-overflow")==CrcVal01);
+
+        if constexpr (STR_HASH("pippo fa la pizza") == STR_HASH("pippo fa la pizza"))
+        {
+            TEST_ASSERT(1);
+        }
+        else
+        {
+            TEST_ASSERT(0);
+        }
+        
+        TEST_ASSERT(0x3483329A==STR_HASH("pippo fa la pizza"));
+
+        return 0;
+    }    
+}
+
+
 } //namespace test_gos
 
 //********************************+
@@ -646,4 +677,5 @@ void testGos (Tester &tester)
     tester.run("test5 gos::testStringList", test_gos::test5::testStringList);
     tester.run("test6 gos::testBitUtils", test_gos::test6::testBitUtils);
     tester.run("test7 gos::testNetAddr_and_MacAdd", test_gos::test7::testNetAddr_and_MacAdd);
+    tester.run("test8 string hash", test_gos::test8::run);
 }
