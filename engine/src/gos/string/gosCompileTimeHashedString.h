@@ -69,7 +69,7 @@ constexpr u32 crc32 (const char * str)
 
 // This is the stop-recursion function
 template<>
-constexpr u32 crc32<size_t(-1)>(const char * str)
+constexpr u32 crc32<size_t(-1)>(UNUSED_PARAM(const char * str))
 {
     return 0xFFFFFFFF;
 }
