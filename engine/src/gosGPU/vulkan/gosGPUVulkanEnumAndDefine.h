@@ -90,6 +90,9 @@ namespace gos
     struct sVkDevice
     {
     public:
+        static constexpr u8 NUM_QUEUE = 3;
+
+    public:
         struct sQueueInfo
         {
         public:
@@ -110,7 +113,7 @@ namespace gos
                         phyDevInfo.reset(); 
                         dev=VK_NULL_HANDLE;
                         swapChainInfo.reset();
-                        for (u8 i=0; i<NUM_Q; i++)
+                        for (u8 i=0; i<NUM_QUEUE; i++)
                             _queueList[i].reset();
                     }
 
@@ -119,7 +122,7 @@ namespace gos
                         if (VK_NULL_HANDLE == dev)
                             return;
 
-                        for (u8 i=0; i<NUM_Q; i++)
+                        for (u8 i=0; i<NUM_QUEUE; i++)
                         {
                             if (eGPUQueueType::unknown == _queueList[i].isAnAliasFor)
                             {
@@ -163,14 +166,17 @@ namespace gos
             }
         }
         
-   private:
-        static const u8 NUM_Q = 3;
-
+        const sQueueInfo* getQueueInfoByIndex (u32 i) const
+        {
+            assert (i < NUM_QUEUE);
+            return &_queueList[i];
+        }
+        
     public:
         sPhyDeviceInfo      phyDevInfo;
         sSwapChainInfo      swapChainInfo;
         VkDevice            dev;
-        sQueueInfo          _queueList[NUM_Q];
+        sQueueInfo          _queueList[NUM_QUEUE];
         
     };
 

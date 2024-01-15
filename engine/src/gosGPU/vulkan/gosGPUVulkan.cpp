@@ -746,29 +746,36 @@ bool gos::vulkanCreateBuffer (const sVkDevice &vulkan, u32 sizeInByte, VkBufferU
     u32 queueCount = 0;
     if (bCanBeUsedBy_gfxQ || bCanBeUsedBy_computeQ || bCanBeUsedBy_transferQ)
     {
-        const u32 familyIndex_gfx = vulkan.getQueueInfo(eGPUQueueType::gfx)->familyIndex;
-        const u32 familyIndex_compute = vulkan.getQueueInfo(eGPUQueueType::compute)->familyIndex;
-        const u32 familyIndex_transfer = vulkan.getQueueInfo(eGPUQueueType::transfer)->familyIndex;
+        const u32 familyIndex[] = {
+            vulkan.getQueueInfo(eGPUQueueType::gfx)->familyIndex,
+            vulkan.getQueueInfo(eGPUQueueType::compute)->familyIndex,
+            vulkan.getQueueInfo(eGPUQueueType::transfer)->familyIndex
+        };
 
-        const u32 MASK_gfx = (0x00000001 << familyIndex_gfx);
-        const u32 MASK_compute = (0x00000001 << familyIndex_compute);
-        const u32 MASK_transfer = (0x00000001 << familyIndex_transfer);
+        const u32 MASK[] = {
+            ((u32)0x00000001 << familyIndex[0]),
+            ((u32)0x00000001 << familyIndex[1]),
+            ((u32)0x00000001 << familyIndex[2])
+        };
 
         u32 mask = 0;
-        if (bCanBeUsedBy_gfxQ)          mask |= MASK_gfx;
-        if (bCanBeUsedBy_computeQ)      mask |= MASK_compute;
-        if (bCanBeUsedBy_transferQ)     mask |= MASK_transfer;
+        if (bCanBeUsedBy_gfxQ)          mask |= MASK[0];
+        if (bCanBeUsedBy_computeQ)      mask |= MASK[1];
+        if (bCanBeUsedBy_transferQ)     mask |= MASK[2];
 
-        assert (mask != 0);
-        if (mask == MASK_gfx || mask == MASK_compute || mask == MASK_transfer)
+        for (u8 i=0; i<3; i++)
+        {
+            if ((mask & MASK[i]) != 0)
+            {
+                queueIndexList[queueCount++] = familyIndex[i]; 
+                mask &= (~MASK[i]); 
+            }
+        }
+
+        if (queueCount==1)
             sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         else
-        {
             sharingMode = VK_SHARING_MODE_CONCURRENT;
-            if ((mask & MASK_gfx) != 0)             queueIndexList[queueCount++] = familyIndex_gfx;
-            if ((mask & MASK_compute) != 0)         queueIndexList[queueCount++] = familyIndex_compute;
-            if ((mask & MASK_transfer) != 0)        queueIndexList[queueCount++] = familyIndex_transfer;
-        }
     }
     
 
