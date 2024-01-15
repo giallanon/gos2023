@@ -291,6 +291,8 @@ bool GPU::priv_initHandleLists()
     vtxBufferList.setup (allocator);
     staginBufferList.setup (allocator);
     idxBufferList.setup (allocator);
+    descrLayoutList.setup (allocator);
+    uniformBufferList.setup (allocator);
     return true;
 }
 
@@ -315,6 +317,8 @@ void  GPU::priv_deinitandleLists()
     vtxBufferList.unsetup();
     staginBufferList.unsetup();
     idxBufferList.unsetup();
+    descrLayoutList.unsetup();
+    uniformBufferList.unsetup();
 }
 
 //************************************
@@ -516,7 +520,7 @@ bool GPU::priv_swapChain_recreate ()
     //aggiorno le info del default RT
     {
         gpu::RenderTarget *rt;
-        priv_renderTarget_fromHandleToPointer (defaultRTHandle, &rt);
+        priv_fromHandleToPointer (renderTargetList, defaultRTHandle, &rt);
         rt->format = vulkan.swapChainInfo.imageFormat;
         rt->width = vulkan.swapChainInfo.imageExtent.width;
         rt->height = vulkan.swapChainInfo.imageExtent.height;
@@ -554,7 +558,7 @@ bool GPU::priv_swapChain_recreate ()
         GPUFrameBufferHandle handle = frameBufferDependentOnSwapChainList(i);
 
         gpu::FrameBuffer *sFB;
-        if (priv_frameBuffer_fromHandleToPointer (handle, &sFB))
+        if (priv_fromHandleToPointer (frameBufferList, handle, &sFB))
         {
             gos::logger::verbose ("recreating FrameBuffer handle=0x%08X\n", handle.viewAsU32());
             priv_frameBuffer_deleteFromStruct (sFB);
@@ -740,8 +744,8 @@ bool GPU::priv_shader_createFromMemory (const u8 *buffer, u32 bufferSize, eShade
     return true;
 }
 
-//************************************
-bool GPU::priv_shader_fromHandleToPointer (const GPUShaderHandle handle, gpu::Shader **out) const
+/************************************
+bool GPU::priv_fromHandleToPointer (const GPUShaderHandle handle, gpu::Shader **out) const
 {
     assert (NULL != out);
     if (shaderList.fromHandleToPointer(handle, out))
@@ -751,12 +755,13 @@ bool GPU::priv_shader_fromHandleToPointer (const GPUShaderHandle handle, gpu::Sh
     gos::logger::err ("GPU => unable to get shader from handle (handle=%0x08X)\n", handle.viewAsU32());
     return false;
 }
+*/
 
 //************************************
 void GPU::deleteResource (GPUShaderHandle &shaderHandle)
 {
     gpu::Shader *shader;
-    if (priv_shader_fromHandleToPointer(shaderHandle, &shader))
+    if (priv_fromHandleToPointer(shaderList, shaderHandle, &shader))
     {
         if (VK_NULL_HANDLE != shader->_vkHandle)
             vkDestroyShaderModule (vulkan.dev, shader->_vkHandle, nullptr);
@@ -771,7 +776,7 @@ void GPU::deleteResource (GPUShaderHandle &shaderHandle)
 VkShaderModule GPU::shader_getVkHandle (const GPUShaderHandle shaderHandle) const
 {
     gpu::Shader *shader;
-    if (priv_shader_fromHandleToPointer(shaderHandle, &shader))
+    if (priv_fromHandleToPointer(shaderList, shaderHandle, &shader))
         return shader->_vkHandle;
     return VK_NULL_HANDLE;
 }
@@ -780,7 +785,7 @@ VkShaderModule GPU::shader_getVkHandle (const GPUShaderHandle shaderHandle) cons
 const char* GPU::shader_getMainFnName (const GPUShaderHandle shaderHandle) const
 {
     gpu::Shader *shader;
-    if (priv_shader_fromHandleToPointer(shaderHandle, &shader))
+    if (priv_fromHandleToPointer(shaderList, shaderHandle, &shader))
         return shader->_mainFnName;
     return NULL;
 }
@@ -789,7 +794,7 @@ const char* GPU::shader_getMainFnName (const GPUShaderHandle shaderHandle) const
 eShaderType GPU::shader_getType (const GPUShaderHandle shaderHandle) const
 {
     gpu::Shader *shader;
-    if (priv_shader_fromHandleToPointer(shaderHandle, &shader))
+    if (priv_fromHandleToPointer(shaderList, shaderHandle, &shader))
         return shader->_shaderType;
     return eShaderType::unknown;
 }
@@ -815,7 +820,7 @@ GPU::VtxDeclBuilder& GPU::vtxDecl_createNew (GPUVtxDeclHandle *out_handle)
 void GPU::deleteResource (GPUVtxDeclHandle &handle)
 {
     gpu::VtxDecl *s;
-    if (priv_vxtDecl_fromHandleToPointer(handle, &s))
+    if (priv_fromHandleToPointer(vtxDeclList, handle, &s))
     {
         s->reset();
         vtxDeclList.release(handle);
@@ -855,8 +860,8 @@ void GPU::priv_vxtDecl_onBuilderEnds (VtxDeclBuilder *builder)
     }
 }
 
-//************************************
-bool GPU::priv_vxtDecl_fromHandleToPointer (const GPUVtxDeclHandle handle, gpu::VtxDecl **out) const
+/************************************
+bool GPU::priv_fromHandleToPointer (const GPUVtxDeclHandle handle, gpu::VtxDecl **out) const
 {
     assert (NULL != out);
     if (vtxDeclList.fromHandleToPointer(handle, out))
@@ -866,13 +871,14 @@ bool GPU::priv_vxtDecl_fromHandleToPointer (const GPUVtxDeclHandle handle, gpu::
     gos::logger::err ("GPU => unable to get VtxDecl from handle (handle=%0x08X)\n", handle.viewAsU32());
     return false;
 }
+*/
 
 //************************************
 bool GPU::vtxDecl_query (const GPUVtxDeclHandle handle, gpu::VtxDecl *out) const
 {
     assert (out);
     gpu::VtxDecl *p;
-    if (priv_vxtDecl_fromHandleToPointer(handle, &p))
+    if (priv_fromHandleToPointer(vtxDeclList, handle, &p))
     {
         //ritorno una copia dell'oggetto, non il pt all'oggetto
         (*out) = (*p);
@@ -1105,19 +1111,6 @@ void GPU::priv_depthStencil_deleteFromStruct (gos::gpu::DepthStencil &depthStenc
     }
 }
 
-//************************************
-bool GPU::priv_depthStencil_fromHandleToPointer (const GPUDepthStencilHandle handle, gpu::DepthStencil **out) const
-{
-    assert (NULL != out);
-    if (depthStencilList.fromHandleToPointer(handle, out))
-        return true;
-    
-    *out = NULL;
-    gos::logger::err ("GPU::priv_depthStenicl_fromHandleToPointer() => invalid handle %0x08X\n", handle.viewAsU32());
-    return false;
-}
-
-
 
 
 /************************************************************************************************************
@@ -1125,17 +1118,6 @@ bool GPU::priv_depthStencil_fromHandleToPointer (const GPUDepthStencilHandle han
  * 
  * 
  *************************************************************************************************************/
-bool GPU::priv_renderTarget_fromHandleToPointer (const GPURenderTargetHandle handle, gpu::RenderTarget **out) const
-{
-    assert (NULL != out);
-    if (renderTargetList.fromHandleToPointer(handle, out))
-        return true;
-    
-    *out = NULL;
-    gos::logger::err ("GPU => unable to get renderTarget from handle (handle=%0x08X)\n", handle.viewAsU32());
-    return false;
-}
-
 
 
 
@@ -1181,7 +1163,7 @@ bool GPU::priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder)
     
     //render layout. Mi accerto che sia valido
     sRenderLayout *sRL;
-    if (!priv_renderLayout_fromHandleToPointer(builder->renderLayoutHandle, &sRL))
+    if (!priv_fromHandleToPointer (renderLayoutList, builder->renderLayoutHandle, &sRL))
     {
         gos::logger::err ("GPU::priv_renderTarget__onBuilderEnds() => invalid renderLayoutHandle\n");
         frameBufferList.release (handle);
@@ -1197,7 +1179,7 @@ bool GPU::priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder)
     if (s->depthStencilHandle.isValid())
     {
         gpu::DepthStencil *ds;
-        if (!priv_depthStencil_fromHandleToPointer (s->depthStencilHandle, &ds))
+        if (!priv_fromHandleToPointer (depthStencilList, s->depthStencilHandle, &ds))
         {
             gos::logger::err ("GPU::priv_renderTarget__onBuilderEnds() => invalid depthstencil handle\n");
             frameBufferList.release (handle);
@@ -1225,7 +1207,7 @@ bool GPU::priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder)
         {
             //come per il deptStencil, devo verificare se il RT e' a dimensioni assolute o relative
             gpu::RenderTarget *sRT;
-            if (!priv_renderTarget_fromHandleToPointer (rt, &sRT))
+            if (!priv_fromHandleToPointer (renderTargetList, rt, &sRT))
             {
                 gos::logger::err ("GPU::priv_renderTarget__onBuilderEnds() => invalid render target handle at index %d\n", i);
                 frameBufferList.release (handle);
@@ -1253,7 +1235,7 @@ bool GPU::priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder)
 void GPU::deleteResource (GPUFrameBufferHandle &handle)
 {
     gpu::FrameBuffer *s;
-    if (priv_frameBuffer_fromHandleToPointer (handle, &s))
+    if (priv_fromHandleToPointer (frameBufferList, handle, &s))
     {
         if (s->boundToSwapChain)
             frameBufferDependentOnSwapChainList.findAndRemove(handle);
@@ -1269,7 +1251,7 @@ void GPU::deleteResource (GPUFrameBufferHandle &handle)
     handle.setInvalid();
 }
 
-//************************************
+/************************************
 bool GPU::priv_frameBuffer_fromHandleToPointer (const GPUFrameBufferHandle handle, gpu::FrameBuffer **out) const
 {
     assert (NULL != out);
@@ -1279,7 +1261,7 @@ bool GPU::priv_frameBuffer_fromHandleToPointer (const GPUFrameBufferHandle handl
     gos::logger::err ("GPU::priv_frameBuffer_fromHandleToPointer() => invalid handle\n");
     return false;
 }
-
+*/
 //************************************
 void GPU::priv_frameBuffer_deleteFromStruct (gpu::FrameBuffer *s)
 {
@@ -1302,7 +1284,7 @@ bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
 
     //render layout
     sRenderLayout *sRL;
-    if (!priv_renderLayout_fromHandleToPointer (s->renderLayoutHandle, &sRL))
+    if (!priv_fromHandleToPointer (renderLayoutList, s->renderLayoutHandle, &sRL))
         return false;
 
 
@@ -1327,7 +1309,7 @@ bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
             else
             {
                 gpu::RenderTarget *sRT;
-                if (!priv_renderTarget_fromHandleToPointer (s->renderTargetHandleList[i], &sRT))
+                if (!priv_fromHandleToPointer (renderTargetList, s->renderTargetHandleList[i], &sRT))
                     return false;
 
                 assert (NULL != sRT->viewAsRT);
@@ -1370,7 +1352,7 @@ bool GPU::toVulkan (const GPUFrameBufferHandle handle, VkFramebuffer *out, u32 *
     assert (NULL != out_renderAreaH);
 
     gpu::FrameBuffer *s;
-    if (!priv_frameBuffer_fromHandleToPointer (handle, &s))
+    if (!priv_fromHandleToPointer (frameBufferList, handle, &s))
     {
         *out = VK_NULL_HANDLE;
         gos::logger::err ("GPU::frameBuffer_toVulkan() => invalid handle\n");
@@ -1439,21 +1421,10 @@ void GPU::deleteResource (GPURenderLayoutHandle &handle)
 }
 
 //************************************
-bool GPU::priv_renderLayout_fromHandleToPointer (const GPURenderLayoutHandle handle, sRenderLayout **out) const
-{
-    assert (NULL != out);
-    if (renderLayoutList.fromHandleToPointer (handle, out))
-        return true;
-
-    gos::logger::err ("GPU::priv_renderLayout_fromHandleToPointer() => invalid handle\n");
-    return false;
-}
-
-//************************************
 bool GPU::toVulkan (const GPURenderLayoutHandle handle, VkRenderPass *out) const
 {
     sRenderLayout *s;
-    if (priv_renderLayout_fromHandleToPointer(handle, &s))
+    if (priv_fromHandleToPointer(renderLayoutList, handle, &s))
     {
         *out = s->vkRenderPassHandle;
         return true;
@@ -1604,7 +1575,7 @@ bool GPU::vertexBuffer_create (u32 sizeInByte, eVIBufferMode modeIN, GPUVtxBuffe
     return true;
 }
 
-//************************************
+/************************************
 bool GPU::priv_vertexBuffer_fromHandleToPointer (const GPUVtxBufferHandle handle, gpu::VtxBuffer **out) const
 {
     assert (NULL != out);
@@ -1615,6 +1586,7 @@ bool GPU::priv_vertexBuffer_fromHandleToPointer (const GPUVtxBufferHandle handle
     DBGBREAK;
     return false;
 }
+*/
 
 //************************************
 void GPU::deleteResource (GPUVtxBufferHandle &handle)
@@ -1635,7 +1607,7 @@ void GPU::deleteResource (GPUVtxBufferHandle &handle)
 bool GPU::toVulkan (const GPUVtxBufferHandle handle, VkBuffer *out) const
 {
     gpu::VtxBuffer *s;
-    if (priv_vertexBuffer_fromHandleToPointer(handle, &s))
+    if (priv_fromHandleToPointer(vtxBufferList, handle, &s))
     {
         *out = s->vkHandle;
         return true;
@@ -1652,7 +1624,7 @@ bool GPU::vertexBuffer_map (const GPUVtxBufferHandle handle, u32 offsetDST, u32 
     assert (NULL != out);
 
     gpu::VtxBuffer *s;
-    if (!priv_vertexBuffer_fromHandleToPointer(handle, &s))
+    if (!priv_fromHandleToPointer(vtxBufferList, handle, &s))
     {
         gos::logger::err ("GPU::vertexBuffer_Map() => invalid handle\n");
         return false;
@@ -1679,7 +1651,7 @@ bool GPU::vertexBuffer_map (const GPUVtxBufferHandle handle, u32 offsetDST, u32 
 bool GPU::vertexBuffer_unmap  (const GPUVtxBufferHandle handle)
 {
     gpu::VtxBuffer *s;
-    if (!priv_vertexBuffer_fromHandleToPointer(handle, &s))
+    if (!priv_fromHandleToPointer(vtxBufferList, handle, &s))
     {
         gos::logger::err ("GPU::vertexBuffer_Unmap() => invalid handle\n");
         return false;
@@ -1748,12 +1720,11 @@ void GPU::deleteResource (GPUStgBufferHandle &handle)
     handle.setInvalid();
 }
 
-
 //************************************
 bool GPU::toVulkan (const GPUStgBufferHandle handle, VkBuffer *out) const
 {
     gpu::StagingBuffer *s;
-    if (priv_stagingBuffer_fromHandleToPointer(handle, &s))
+    if (priv_fromHandleToPointer(staginBufferList, handle, &s))
     {
         *out = s->vkHandle;
         return true;
@@ -1764,7 +1735,7 @@ bool GPU::toVulkan (const GPUStgBufferHandle handle, VkBuffer *out) const
     return false;    
 }
 
-//************************************
+/************************************
 bool GPU::priv_stagingBuffer_fromHandleToPointer (const GPUStgBufferHandle handle, gpu::StagingBuffer **out) const
 {
     assert (NULL != out);
@@ -1775,6 +1746,7 @@ bool GPU::priv_stagingBuffer_fromHandleToPointer (const GPUStgBufferHandle handl
     DBGBREAK;
     return false;
 }
+*/
 
 //************************************
 bool GPU::stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const
@@ -1782,23 +1754,41 @@ bool GPU::stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32
     assert (NULL != out);
 
     gpu::StagingBuffer *s;
-    if (!priv_stagingBuffer_fromHandleToPointer(handle, &s))
+    if (!priv_fromHandleToPointer(staginBufferList, handle, &s))
     {
         gos::logger::err ("GPU::stagingBuffer_map() => invalid handle\n");
         return false;
     }
 
-    VkResult result = vkMapMemory (vulkan.dev, s->vkMemHandle, offsetDST, sizeInByte, 0, out);
-    if (VK_SUCCESS != result)
+    if (NULL == s->mapped_pt)
     {
-        *out = NULL;
-        gos::logger::err ("GPU::stagingBuffer_map(d) => vkMapMemory() => %s\n", string_VkResult(result));
+
+        VkResult result = vkMapMemory (vulkan.dev, s->vkMemHandle, offsetDST, sizeInByte, 0, &s->mapped_pt);
+        if (VK_SUCCESS != result)
+        {
+            *out = NULL;
+            gos::logger::err ("GPU::stagingBuffer_map(d) => vkMapMemory() => %s\n", string_VkResult(result));
+            return false;
+        }
+        s->mapped_offset = offsetDST;
+        s->mapped_size = sizeInByte;
+    }
+
+    //gli uniform sono sempre mappati in memoria, lo faccio durante la create
+    if (sizeInByte > s->mapped_size)
+    {
+        gos::logger::err ("GPU::uniformBuffer_map() => invalid params1 (%d, %d). Buffer size is %d\n", offsetDST, sizeInByte, s->mapped_size);
         return false;
     }
 
-    s->mapped_pt = out;
-    s->mapped_offset = offsetDST;
-    s->mapped_size = sizeInByte;
+    if (offsetDST + sizeInByte > s->mapped_size)
+    {
+        gos::logger::err ("GPU::uniformBuffer_map() => invalid params2 (%d, %d). Buffer size is %d, mapped from %d\n", offsetDST, sizeInByte, s->mapped_size, s->mapped_offset);
+        return false;
+    }
+
+    *out = s->mapped_pt;
+
     return true;
 }
 
@@ -1806,7 +1796,7 @@ bool GPU::stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32
 bool GPU::stagingBuffer_unmap  (const GPUStgBufferHandle handle)
 {
     gpu::StagingBuffer *s;
-    if (!priv_stagingBuffer_fromHandleToPointer(handle, &s))
+    if (!priv_fromHandleToPointer(staginBufferList, handle, &s))
     {
         gos::logger::err ("GPU::stagingBuffer_unmap() => invalid handle\n");
         return false;
@@ -1861,6 +1851,9 @@ bool GPU::stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const 
 
     return priv_copyVulkanBuffer (srcBuffer, dstBuffer, offsetSRC, offsetDST, howManyByteToCopy);
 }
+
+
+
 
 /************************************************************************************************************
  * Vertex buffer
@@ -1929,7 +1922,7 @@ bool GPU::indexBuffer_create (u32 sizeInByte, eVIBufferMode modeIN, GPUIdxBuffer
     return true;
 }
 
-//************************************
+/************************************
 bool GPU::priv_indexBuffer_fromHandleToPointer (const GPUIdxBufferHandle handle, gpu::IdxBuffer **out) const
 {
     assert (NULL != out);
@@ -1940,6 +1933,7 @@ bool GPU::priv_indexBuffer_fromHandleToPointer (const GPUIdxBufferHandle handle,
     DBGBREAK;
     return false;
 }
+*/
 
 //************************************
 void GPU::deleteResource (GPUIdxBufferHandle &handle)
@@ -1960,7 +1954,7 @@ void GPU::deleteResource (GPUIdxBufferHandle &handle)
 bool GPU::toVulkan (const GPUIdxBufferHandle handle, VkBuffer *out) const
 {
     gpu::IdxBuffer *s;
-    if (priv_indexBuffer_fromHandleToPointer(handle, &s))
+    if (priv_fromHandleToPointer(idxBufferList, handle, &s))
     {
         *out = s->vkHandle;
         return true;
@@ -1977,7 +1971,7 @@ bool GPU::indexBuffer_map (const GPUIdxBufferHandle handle, u32 offsetDST, u32 s
     assert (NULL != out);
 
     gpu::IdxBuffer *s;
-    if (!priv_indexBuffer_fromHandleToPointer(handle, &s))
+    if (!priv_fromHandleToPointer(idxBufferList, handle, &s))
     {
         gos::logger::err ("GPU::indexBuffer_Map() => invalid handle\n");
         return false;
@@ -2004,7 +1998,7 @@ bool GPU::indexBuffer_map (const GPUIdxBufferHandle handle, u32 offsetDST, u32 s
 bool GPU::indexBuffer_unmap  (const GPUIdxBufferHandle handle)
 {
     gpu::IdxBuffer *s;
-    if (!priv_indexBuffer_fromHandleToPointer(handle, &s))
+    if (!priv_fromHandleToPointer(idxBufferList,handle, &s))
     {
         gos::logger::err ("GPU::indexBuffer_Unmap() => invalid handle\n");
         return false;
@@ -2012,5 +2006,196 @@ bool GPU::indexBuffer_unmap  (const GPUIdxBufferHandle handle)
 
     vkUnmapMemory(vulkan.dev, s->vkMemHandle);
     return true;
+}
+
+
+
+
+/************************************************************************************************************
+ * Description Layput
+ * 
+ * 
+ *************************************************************************************************************/
+bool GPU::descrLayout_create (const VkDescriptorSetLayoutCreateInfo &creatInfo, GPUDescrLayoutHandle *out_handle)
+{
+    VkDescriptorSetLayout vkHandle;
+    VkResult result = vkCreateDescriptorSetLayout(vulkan.dev, &creatInfo, nullptr, &vkHandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::descrLayout_create () => vkCreateDescriptorSetLayout failed => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    gpu::DescrLayout *s = descrLayoutList.reserve (out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::descrLayout_create() => can't reserve a handle!\n");
+        return false;
+    }
+    s->reset();
+    s->vkHandle = vkHandle;
+    return true;
+}
+
+//************************************
+void GPU::deleteResource (GPUDescrLayoutHandle &handle)
+{
+    gpu::DescrLayout *s;
+    if (descrLayoutList.fromHandleToPointer (handle, &s))
+    {
+        vkDestroyDescriptorSetLayout (vulkan.dev, s->vkHandle, nullptr);
+        s->reset();
+        descrLayoutList.release (handle);
+    }
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::toVulkan (const GPUDescrLayoutHandle handle, VkDescriptorSetLayout *out) const
+{
+    gpu::DescrLayout *s;
+    if (priv_fromHandleToPointer(descrLayoutList,handle, &s))
+    {
+        *out = s->vkHandle;
+        return true;
+    }
+
+    *out = VK_NULL_HANDLE;
+    gos::logger::err ("GPU::descrLayout_toVulkan() => invalid handle\n");
+    return false;    
+}
+
+
+
+/************************************************************************************************************
+ * Description Layput
+ * 
+ * 
+ *************************************************************************************************************/
+bool GPU::uniformBuffer_create (u32 sizeInByte, GPUUniformBufferHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+    const VkBufferUsageFlags      vkUsage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    const VkMemoryPropertyFlags   vkMemProperties =VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    const bool                    bCanBeUsedByQueue_gfx = true;
+    const bool                    bCanBeUsedByQueue_compute = false;
+    const bool                    bCanBeUsedByQueue_transfer = false;
+
+
+    //chiedo a Vulkan di creare il buffer
+    VkBuffer        vkHandle;
+    VkDeviceMemory  vkMemHandle = VK_NULL_HANDLE;
+    if (!vulkanCreateBuffer (vulkan, sizeInByte, 
+                        vkUsage,
+                        vkMemProperties,
+                        bCanBeUsedByQueue_gfx, bCanBeUsedByQueue_compute, bCanBeUsedByQueue_transfer,
+                        &vkHandle,
+                        &vkMemHandle))
+    {
+        gos::logger::err ("GPU::uniformBuffer_create() => failed\n");
+        return false;
+    }
+
+    //dato che e' sempre HOST_VISIBLE e HOST_COHERENT, lo mappo direttamente ora e lo lascio per sempre mappato
+    void *host_pt;
+    VkResult result = vkMapMemory (vulkan.dev, vkMemHandle, 0, sizeInByte, 0, &host_pt);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::uniformBuffer_create() => fail to map buffer. vkMapMemory() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+
+    //pare tutto ok, creo un nuovo handle
+    gpu::UniformBuffer *s = uniformBufferList.reserve (out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::uniformBuffer_create() => can't reserve a handle!\n");
+        return false;
+    }
+    s->reset();
+    s->vkHandle = vkHandle;
+    s->vkMemHandle = vkMemHandle;
+    s->mapped_host_pt = host_pt;
+    s->mapped_offset = 0;
+    s->bufferSize = sizeInByte;
+
+
+    return true;
+}
+
+//************************************
+void GPU::deleteResource (GPUUniformBufferHandle &handle)
+{
+    gpu::UniformBuffer *s;
+    if (uniformBufferList.fromHandleToPointer (handle, &s))
+    {
+        vkDestroyBuffer (vulkan.dev, s->vkHandle, nullptr);
+        vkFreeMemory (vulkan.dev, s->vkMemHandle, nullptr);
+        s->reset();
+        uniformBufferList.release (handle);
+    }
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::toVulkan (const GPUUniformBufferHandle handle, VkBuffer *out) const
+{
+    gpu::UniformBuffer *s;
+    if (priv_fromHandleToPointer (uniformBufferList, handle, &s))
+    {
+        *out = s->vkHandle;
+        return true;
+    }
+
+    *out = VK_NULL_HANDLE;
+    gos::logger::err ("GPU::uniformBuffer_toVulkan() => invalid handle\n");
+    return false;    
+}
+
+//************************************
+bool GPU::uniformBuffer_map (const GPUUniformBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const
+{
+    assert (NULL != out);
+
+    gpu::UniformBuffer *s;
+    if (!priv_fromHandleToPointer(uniformBufferList, handle, &s))
+    {
+        gos::logger::err ("GPU::uniformBuffer_map() => invalid handle\n");
+        return false;
+    }
+
+    //gli uniform sono sempre mappati in memoria, lo faccio durante la create
+    if (sizeInByte > s->bufferSize)
+    {
+        gos::logger::err ("GPU::uniformBuffer_map() => invalid params1 (%d, %d). Buffer size is %d\n", offsetDST, sizeInByte, s->bufferSize);
+        return false;
+    }
+
+    if (offsetDST + sizeInByte > s->bufferSize)
+    {
+        gos::logger::err ("GPU::uniformBuffer_map() => invalid params2 (%d, %d). Buffer size is %d, mapped from %d\n", offsetDST, sizeInByte, s->bufferSize, s->mapped_offset);
+        return false;
+    }
+
+    *out = s->mapped_host_pt;
+    return true;
+}
+
+//************************************
+bool GPU::uniformBuffer_mapCopyUnmap (const GPUUniformBufferHandle handle, u32 offsetDST, u32 sizeInByte, const void *src) const
+{
+    void *p;
+    if (uniformBuffer_map (handle, offsetDST, sizeInByte, &p))
+    {
+        memcpy (p, src, sizeInByte);
+        //uniformBuffer_unmap (handle);
+        return true;
+    }
+
+    return false;
 }
 

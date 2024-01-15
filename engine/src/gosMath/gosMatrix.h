@@ -332,6 +332,20 @@ namespace gos
 								values[ADDR(3,3)]=1;
 							}
 			
+			void			buildPerspective (f32 aspectRatio, f32 fovY_rad, f32 nearplane, f32 farplane)
+							{
+								const f32 tanHalfFov = tanf (fovY_rad * 0.5f);
+								const f32 m00 = 1.0f / (aspectRatio * tanHalfFov);
+								const f32 m11 = 1.0f / tanHalfFov;
+								const f32 m22 = (-nearplane - farplane) / (nearplane - farplane);
+								const f32 m23 = (2.0f*farplane*nearplane) / (nearplane - farplane);
+
+								values[ADDR(0, 0)] = m00;	values[ADDR(0, 1)] = 0;		values[ADDR(0, 2)] = 0;		values[ADDR(0, 3)] = 0;
+								values[ADDR(1, 0)] = 0;		values[ADDR(1, 1)] = m11;	values[ADDR(1, 2)] = 0;		values[ADDR(1, 3)] = 0;
+								values[ADDR(2, 0)] = 0;		values[ADDR(2, 1)] = 0;		values[ADDR(2, 2)] = m22;	values[ADDR(2, 3)] = m23;
+								values[ADDR(3, 0)] = 0;		values[ADDR(3, 1)] = 0;		values[ADDR(3, 2)] = 1;		values[ADDR(3, 3)] = 0;
+							}
+
 			void			calcInverse (my_type *out) const
 							{
 								T m00 = values[ADDR(0,0)], m01 = values[ADDR(0,1)], m02 = values[ADDR(0,2)], m03 = values[ADDR(0,3)];

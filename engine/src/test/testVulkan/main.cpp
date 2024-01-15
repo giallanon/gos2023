@@ -2,6 +2,7 @@
 #include "VulkanExample1.h"
 #include "VulkanExample2.h"
 #include "VulkanExample3.h"
+#include "VulkanExample4.h"
 
 //******************************** 
 template<class VKAPP>
@@ -29,7 +30,8 @@ int main()
         {
             //runExample<VulkanExample1>(&gpu, "VulkanExample1");
             //runExample<VulkanExample2>(&gpu, "VulkanExample2");
-            runExample<VulkanExample3>(&gpu, "VulkanExample3");
+            //runExample<VulkanExample3>(&gpu, "VulkanExample3");
+            runExample<VulkanExample4>(&gpu, "VulkanExample4");
             gpu.deinit();
         }
 

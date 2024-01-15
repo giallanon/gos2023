@@ -35,21 +35,20 @@ gosGPU.h
 gosGPUEnumAndDefine.h
 
 gosGPUResDepthStencil.h
+gosGPUResDescrLayout.h
 gosGPUResFrameBuffer.h
 gosGPUResIdxBuffer.h
 gosGPUResRenderTarget.h
 gosGPUResShader.h
 gosGPUResStagingBuffer.h
+gosGPUResUniformBuffer.h
 gosGPUResViewport.h
 gosGPUResVtxBuffer.h
 gosGPUResVtxDecl.h
 
 gosGPUUtils.cpp
 gosGPUUtils.h
-
-
-
-)
+ )
 
 #====================================================
 # info a video

@@ -37,6 +37,7 @@ namespace gos
             void            *mapped_pt;
             u32             mapped_size;
             u32             mapped_offset;
+
         };
 
     } //namespace gpu

@@ -1,28 +1,25 @@
-#include "VulkanExample3.h"
+#include "VulkanExample4.h"
 
 
 using namespace gos;
 
 
 //************************************
-VulkanExample3::VulkanExample3()
+VulkanExample4::VulkanExample4()
 {
-    nextTimeMoveVtx_msec = 0;
-    direction = -1;
-    ptToMappedStagingBuffer = NULL;
+    nextTimeRotate_msec = 0;
+    rotation_grad = 0;
 }
 
 //************************************
-void VulkanExample3::virtual_explain()
+void VulkanExample4::virtual_explain()
 {
-    gos::logger::log ("Introduzione della class GPUMainLoop, che si occupa di gestire la sync con i frame!\n");
-    gos::logger::log ("Esperimenti con Vtx Buffer di tipo 'GPU only'\n");
-    gos::logger::log ("Introduzione idx buffer\n");
+    gos::logger::log ("Esperimenti con Uniform buffer\n");
 }
 
 
 //************************************
-void VulkanExample3::virtual_onCleanup() 
+void VulkanExample4::virtual_onCleanup() 
 {
     gpu->deleteResource (idxBufferHandle);
     gpu->deleteResource (stgBufferHandle);
@@ -32,12 +29,49 @@ void VulkanExample3::virtual_onCleanup()
     gpu->deleteResource (pipelineHandle);
     gpu->deleteResource (renderLayoutHandle);
     gpu->deleteResource (frameBufferHandle);
+    gpu->deleteResource (descrLayoutHandle);
+    gpu->deleteResource (uboHandle);
 }    
 
 
 //************************************
-bool VulkanExample3::virtual_onInit ()
+bool VulkanExample4::virtual_onInit ()
 {
+    /*
+    * 
+    * TODO: Sto cercando di capire come funzionano i descriptr
+    * 
+    * VkDescriptorSetLayout     descrive il layout di un descriptorSet
+    *                           il layout indica il binding (quale shader puo' usarelo e in quale binding slot)
+    * 
+    *
+    * VkDescriptorPool          pool dal quale allocare un descriptorSet
+    *
+    VkDescriptorPoolSize poolSize{};
+        poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSize.descriptorCount = 16;
+
+    VkDescriptorPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = 1;
+        poolInfo.pPoolSizes = &poolSize;                                    //num max Descriptor allocabili per ogni tipo di pool
+        poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);     //num max DescriptorSET allocabili
+
+        */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     //vertici
     u32 n=0;
     vertexList[n++].set(-0.5f, -0.5f,       1.0f, 0.0f, 0.0f);
@@ -103,7 +137,7 @@ bool VulkanExample3::virtual_onInit ()
 
 
     //carico gli shader
-    fs::addAlias ("@shader", "shader/example3", eAliasPathMode::relativeToAppFolder);
+    fs::addAlias ("@shader", "shader/example4", eAliasPathMode::relativeToAppFolder);
     if (!gpu->vtxshader_createFromFile ("@shader/shader.vert.spv", "main", &vtxShaderHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create vert shader\n");
@@ -116,34 +150,48 @@ bool VulkanExample3::virtual_onInit ()
     }
 
     //creo la pipeline
-    gpu->pipeline_createNew (renderLayoutHandle, &pipelineHandle)
-        .addShader (vtxShaderHandle)
-        .addShader (fragShaderHandle)
-        .setVtxDecl (vtxDeclHandle)
-        .depthStencil()
-            .zbuffer_enable(true)
-            .zbuffer_enableWrite(true)
-            .zbuffer_setFn (eZFunc::LESS)
-            .stencil_enable(false)
-        .end()  //depth stencil
-        .end ();
-        
-    if (pipelineHandle.isInvalid())
     {
-        gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
-        return false;
-    }
+        if (!createDescriptorSetLayout (gpu, &descrLayoutHandle))
+            return false;
 
+        gpu->pipeline_createNew (renderLayoutHandle, &pipelineHandle)
+            .addShader (vtxShaderHandle)
+            .addShader (fragShaderHandle)
+            .setVtxDecl (vtxDeclHandle)
+            .depthStencil()
+                .zbuffer_enable(true)
+                .zbuffer_enableWrite(true)
+                .zbuffer_setFn (eZFunc::LESS)
+                .stencil_enable(false)
+            .end() //depth stencil
+            .descriptor_add (descrLayoutHandle)
+            .end ();
+
+        if (pipelineHandle.isInvalid())
+        {
+            gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
+            return false;
+        }
+    }
 
     //non mi serve piu'
     gpu->deleteResource (vtxDeclHandle);
+
+
+    //creo un buffer per UBO
+    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), &uboHandle))
+    {
+        gos::logger::err ("VulkanApp::init() => GPU::uniformBuffer_create\n");
+        return false;
+    }
+
 
     return true;
 }    
 
 
 //************************************
-bool VulkanExample3::createVertexIndexStageBuffer()
+bool VulkanExample4::createVertexIndexStageBuffer()
 {
     const u32 sizeInByte = sizeof(Vertex) * NUM_VERTEX;
     if (!gpu->vertexBuffer_create (sizeInByte, eVIBufferMode::onGPU, &vtxBufferHandle))
@@ -167,6 +215,7 @@ bool VulkanExample3::createVertexIndexStageBuffer()
 
 
     //Mappo lo staging buffer
+    void  *ptToMappedStagingBuffer;
     if (!gpu->stagingBuffer_map (stgBufferHandle, 0, sizeInByte, &ptToMappedStagingBuffer))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->stagingBuffer_map() failed\n");
@@ -188,7 +237,7 @@ bool VulkanExample3::createVertexIndexStageBuffer()
 }
 
 //************************************
-bool VulkanExample3::copyIntoVtxBuffer()
+bool VulkanExample4::copyIntoVtxBuffer()
 {
     const u32 sizeInByte = sizeof(Vertex) * NUM_VERTEX;
 
@@ -196,6 +245,12 @@ bool VulkanExample3::copyIntoVtxBuffer()
     //gpu->stagingBuffer_unmap (stgBufferHandle);    ptToMappedMemory = NULL;
 
     //copio i Vtx nello staging array
+    void  *ptToMappedStagingBuffer;
+    if (!gpu->stagingBuffer_map (stgBufferHandle, 0, sizeInByte, &ptToMappedStagingBuffer))
+    {
+        gos::logger::err ("VulkanApp::copyIntoVtxBuffer() => gpu->stagingBuffer_map() failed\n");
+        return false;
+    } 
     memcpy (ptToMappedStagingBuffer, vertexList, sizeInByte);
 
 
@@ -204,23 +259,35 @@ bool VulkanExample3::copyIntoVtxBuffer()
     return true;
 }
 
+
+
 //************************************
-void VulkanExample3::moveVertex()
+bool VulkanExample4::createDescriptorSetLayout (GPU *gpu, GPUDescrLayoutHandle *out)
 {
-    const u64 timeNow_msec = gos::getTimeSinceStart_msec();
-    if (timeNow_msec < nextTimeMoveVtx_msec)
-        return;
-    nextTimeMoveVtx_msec = timeNow_msec + 15;
-    
-    vertexList[0].pos.y += direction* 0.01f;
-    if (vertexList[0].pos.y <= -1.0f)
-        direction = 1;
-    else if (vertexList[0].pos.y >= -0.5f)
-        direction = -1;
+    VkDescriptorSetLayoutBinding uboLayoutBinding{};
+    uboLayoutBinding.binding = 0;
+    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboLayoutBinding.descriptorCount = 1;
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &uboLayoutBinding;
+
+    if (!gpu->descrLayout_create (layoutInfo, out))
+    {
+        gos::logger::err ("VulkanApp::createDescriptorSetLayout() => gpu->descrLayout_create failed => \n");
+        return false;
+    }
+
+    return true;
 }
 
 //************************************
-bool VulkanExample3::recordCommandBuffer (VkCommandBuffer *out_commandBuffer)
+bool VulkanExample4::recordCommandBuffer (VkCommandBuffer *out_commandBuffer)
 {
     assert (out_commandBuffer);
 
@@ -341,22 +408,36 @@ bool VulkanExample3::recordCommandBuffer (VkCommandBuffer *out_commandBuffer)
  * renderizza inviando command buffer a GPU e poi aspettando che questa
  * abbia finito il suo lavoro
  */
-void VulkanExample3::virtual_onRun()
+void VulkanExample4::virtual_onRun()
 {
     mainLoop();
 }
 
 //**********************************
-void VulkanExample3::doCPUStuff ()
+void VulkanExample4::doCPUStuff ()
 {
     fpsMegaTimer.onFrameBegin(FPSTIMER_CPU);
 
     glfwPollEvents();
 
-    //prepare vtx
-    moveVertex();
+    //prepare frame
+    {
+        const u64 timeNow_msec = gos::getTimeSinceStart_msec();
+        if (timeNow_msec >= nextTimeRotate_msec)
+        {
+            nextTimeRotate_msec = timeNow_msec + 300;
+            rotation_grad+=1.0f;
+            ubo.world.identity();
+            ubo.world.buildRotationAboutY (math::gradToRad(rotation_grad));
 
-    //do some other stuff
+            ubo.view.buildLookAt (gos::vec3f(2.0f, 2.0f, -2.0f), gos::vec3f(0.0f, 0.0f, 0.0f), gos::vec3f(0.0f, 1.0f, 0.0f));
+
+            ubo.proj.buildPerspective (gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 10.0f);
+        }
+        gpu->uniformBuffer_mapCopyUnmap (uboHandle, 0, sizeof(sUniformBufferObject), &ubo);
+    }
+
+    //do some stuff
     i32 tot = 0;
     for (u32 i=0; i<1000; i++)
     {
@@ -378,7 +459,7 @@ void VulkanExample3::doCPUStuff ()
 
 
 //**********************************
-void VulkanExample3::mainLoop()
+void VulkanExample4::mainLoop()
 {
     GPUMainLoop gpuLoop;
     gpuLoop.setup (gpu, &fpsMegaTimer);
@@ -396,7 +477,6 @@ void VulkanExample3::mainLoop()
         gpuLoop.run ();
         if (gpuLoop.canSubmitGFXJob())
         {
-            copyIntoVtxBuffer();
             recordCommandBuffer (&vkCommandBuffer_GFX);
             gpuLoop.submitGFXJob (vkCommandBuffer_GFX);
         }

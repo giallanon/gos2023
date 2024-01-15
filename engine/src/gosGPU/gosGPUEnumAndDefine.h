@@ -22,6 +22,8 @@ typedef gos::HandleT<9,7,16, 0,0>	GPUFrameBufferHandle;	//2^9=512 => num totale 
 typedef gos::HandleT<10,7,14, 0,1>	GPUVtxBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
 typedef gos::HandleT<10,7,14, 1,0>	GPUIdxBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
 typedef gos::HandleT<10,7,13, 0,2>	GPUStgBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
+typedef gos::HandleT<10,8,12, 0,2>	GPUDescrLayoutHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
+typedef gos::HandleT<10,8,12, 2,0>	GPUUniformBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
 
 enum class eVtxStreamInputRate : u8
 {

@@ -32,7 +32,9 @@ VulkanExample2.cpp
 VulkanExample2.h
 VulkanExample3.cpp
 VulkanExample3.h
-)
+VulkanExample4.cpp
+VulkanExample4.h
+ )
 
 #====================================================
 # additional include path

@@ -19,6 +19,7 @@ GPU::PipelineBuilder::PipelineBuilder (GPU *gpuIN, const GPURenderLayoutHandle &
 
     bAnyError = false;
     shaderList.setup (allocator, 8);
+    descrLayoutList.setup (allocator, 8);
 
     setDrawPrimitive (eDrawPrimitive::trisList);
     vtxDeclHandle.setInvalid();
@@ -33,6 +34,7 @@ GPU::PipelineBuilder::PipelineBuilder (GPU *gpuIN, const GPURenderLayoutHandle &
 GPU::PipelineBuilder::~PipelineBuilder()
 {
     shaderList.unsetup ();
+    descrLayoutList.unsetup ();
 }    
 
 
@@ -66,19 +68,33 @@ bool GPU::PipelineBuilder::priv_buildVulkan ()
     //Pipeline layout
     //Serve ad indicare il numero di "const push" disponibili alla pipe
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0; // Optional
-    pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
-    pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-
-    result = vkCreatePipelineLayout (gpu->REMOVE_getVkDevice(), &pipelineLayoutInfo, nullptr, &vkPipelineLayoutHandle);
-    if (VK_SUCCESS != result)
+    VkDescriptorSetLayout vkElencoDescrLayout[64];
     {
-        gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => vkCreatePipelineLayout() => %s\n", string_VkResult(result)); 
-        return false;
-    }
+        u32 numDescrLayput = 0;
+        for (u32 i = 0; i < descrLayoutList.getNElem(); i++)
+        {
+            if (!gpu->toVulkan (descrLayoutList(i), &vkElencoDescrLayout[numDescrLayput]))
+            {
+                gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => invalid descrLayputHnale\n");
+                return false;
+            }
+            numDescrLayput++;
+        }
+        assert (numDescrLayput <= 64);
 
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount = numDescrLayput;
+        pipelineLayoutInfo.pSetLayouts = vkElencoDescrLayout;
+        pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+        pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+
+        result = vkCreatePipelineLayout (gpu->REMOVE_getVkDevice(), &pipelineLayoutInfo, nullptr, &vkPipelineLayoutHandle);
+        if (VK_SUCCESS != result)
+        {
+            gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => vkCreatePipelineLayout() => %s\n", string_VkResult(result));
+            return false;
+        }
+    }
 
 
     //shader
@@ -213,7 +229,7 @@ bool GPU::PipelineBuilder::priv_buildVulkan ()
     }
 
 
-    //multisplame disabled
+    //multisample disabled
     VkPipelineMultisampleStateCreateInfo multisampling{};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_FALSE;

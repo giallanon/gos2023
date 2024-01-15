@@ -6,11 +6,13 @@
 #include "../gosMath/gosMath.h"
 
 #include "gosGPUResDepthStencil.h"
+#include "gosGPUResDescrLayout.h"
 #include "gosGPUResFrameBuffer.h"
 #include "gosGPUResIdxBuffer.h"
 #include "gosGPUResRenderTarget.h"
 #include "gosGPUResShader.h"
 #include "gosGPUResStagingBuffer.h"
+#include "gosGPUResUniformBuffer.h"
 #include "gosGPUResViewport.h"
 #include "gosGPUResVtxBuffer.h"
 #include "gosGPUResVtxDecl.h"
@@ -264,7 +266,6 @@ namespace gos
                 DepthStencilParam&  stencil_BackFace_writeMask (u32 v)                                  { stp.backFace.writeMask = v; return *this; }
                 DepthStencilParam&  stencil_BackFace_referenceValue (u32 v)                             { stp.backFace.referenceValue = v; return *this; }
 
-
                 //============================== get
                 const sZBufferParams&   getZBufferParams() const                                        { return zbp; }
                 const sStencilParams&   getStencilParams() const                                        { return stp; }
@@ -286,15 +287,17 @@ namespace gos
 
             void                cleanUp();
 
-            PipelineBuilder&    addShader (const GPUShaderHandle handle)                { shaderList.append (handle); return *this; }
-            PipelineBuilder&    setDrawPrimitive (eDrawPrimitive p)                     { drawPrimitive=p; return *this; }
-            PipelineBuilder&    setVtxDecl (const GPUVtxDeclHandle handle)              { vtxDeclHandle = handle; return *this; }
-            DepthStencilParam&  depthStencil()                                          { return depthStencilParam; }
-			PipelineBuilder&    setCullMode (eCullMode m)							    { cullMode = m; return *this; }
-			PipelineBuilder&    setWireframe (bool b)								    { bWireframe = b; return *this; }
+            PipelineBuilder&    addShader (const GPUShaderHandle handle)                        { shaderList.append (handle); return *this; }
+            PipelineBuilder&    setDrawPrimitive (eDrawPrimitive p)                             { drawPrimitive=p; return *this; }
+            PipelineBuilder&    setVtxDecl (const GPUVtxDeclHandle handle)                      { vtxDeclHandle = handle; return *this; }
+            DepthStencilParam&  depthStencil()                                                  { return depthStencilParam; }
+			PipelineBuilder&    setCullMode (eCullMode m)							            { cullMode = m; return *this; }
+			PipelineBuilder&    setWireframe (bool b)								            { bWireframe = b; return *this; }
+            PipelineBuilder&    descriptor_add (const GPUDescrLayoutHandle handle)              { descrLayoutList.append (handle); return *this; }
+
             bool                end ();
 
-            bool                anyError() const                                        { return bAnyError; }
+            bool                anyError() const                                                { return bAnyError; }
 
         private:
             bool                priv_buildVulkan ();
@@ -303,6 +306,7 @@ namespace gos
             bool                                bAnyError;
             gos::Allocator                      *allocator;
             gos::FastArray<GPUShaderHandle>     shaderList;
+            gos::FastArray<GPUDescrLayoutHandle> descrLayoutList;
             eDrawPrimitive                      drawPrimitive;
             GPUVtxDeclHandle                    vtxDeclHandle;
             DepthStencilParam                   depthStencilParam;
@@ -378,6 +382,7 @@ namespace gos
         //La swap chain viene creata automaticamente da GPU::init()
         u32                 swapChain_getWidth() const                      { return vulkan.swapChainInfo.imageExtent.width; }
         u32                 swapChain_getHeight() const                     { return vulkan.swapChainInfo.imageExtent.height; }
+        f32                 swapChain_calcAspectRatio() const               { return (f32)swapChain_getWidth() / (f32)swapChain_getHeight(); }
         VkFormat            swapChain_getImageFormat() const                { return vulkan.swapChainInfo.imageFormat; }
         u8                  swapChain_getImageCount() const                 { return static_cast<u8>(vulkan.swapChainInfo.imageCount); }
         VkImageView         swapChain_getImageViewHandle(u8 i) const        { assert(i < swapChain_getImageCount()); return vulkan.swapChainInfo.vkImageListView[i]; }
@@ -454,7 +459,7 @@ namespace gos
         GPURenderTargetHandle   renderTarget_getDefault() const                         { return defaultRTHandle; }
 
 
-        //================ stagin buffer
+        //================ staging buffer
         bool                stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle);
         void                deleteResource (GPUStgBufferHandle &handle);
         bool                toVulkan (const GPUStgBufferHandle handle, VkBuffer *out) const;
@@ -484,6 +489,14 @@ namespace gos
         bool                indexBuffer_map (const GPUIdxBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
         bool                indexBuffer_unmap  (const GPUIdxBufferHandle handle);
 
+        //================ uniform buffer
+        bool                uniformBuffer_create (u32 sizeInByte, GPUUniformBufferHandle *out_handle);
+        void                deleteResource (GPUUniformBufferHandle &handle);
+        bool                toVulkan (const GPUUniformBufferHandle handle, VkBuffer *out) const;
+        bool                uniformBuffer_map (const GPUUniformBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
+        //bool                uniformBuffer_unmap  (const GPUUniformBufferHandle handle);
+        bool                uniformBuffer_mapCopyUnmap (const GPUUniformBufferHandle handle, u32 offsetDST, u32 sizeInByte, const void *src) const;
+
 
         //================ shader
         bool                vtxshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)            { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::vertexShader, mainFnName, out_shaderHandle); }
@@ -499,6 +512,10 @@ namespace gos
         eShaderType         shader_getType (const GPUShaderHandle shaderHandle) const;
         void                deleteResource (GPUShaderHandle &shaderHandle);
 
+        //================ descriptor layout
+        bool                descrLayout_create (const VkDescriptorSetLayoutCreateInfo &creatInfo, GPUDescrLayoutHandle *out_handle);
+        void                deleteResource (GPUDescrLayoutHandle &handle);
+        bool                toVulkan (const GPUDescrLayoutHandle handle, VkDescriptorSetLayout *out) const;
 
 
         //================ command buffer
@@ -583,33 +600,30 @@ namespace gos
         void                priv_vulkanAddDebugCallback();
         bool                priv_swapChain_recreate ();
 
+
+                            template<typename THANDLE, typename TSTRUCT>
+        bool                priv_fromHandleToPointer (const HandleList<THANDLE,TSTRUCT> &handleList, const THANDLE handle, TSTRUCT **out) const
+                            {
+                                assert (NULL != out);
+                                return (handleList.fromHandleToPointer (handle, out));
+                            }
+
         bool                priv_shader_createFromFile (const u8 *filename, eShaderType shaderType, const char *mainFnName, GPUShaderHandle *out_shaderHandle);
         bool                priv_shader_createFromMemory (const u8 *buffer, u32 bufferSize, eShaderType shaderType, const char *mainFnName, GPUShaderHandle *out_shaderHandle);
-        bool                priv_shader_fromHandleToPointer (const GPUShaderHandle shaderHandle, gpu::Shader **out) const;
 
-        bool                priv_vxtDecl_fromHandleToPointer (const GPUVtxDeclHandle handle, gpu::VtxDecl **out) const;
         void                priv_vxtDecl_onBuilderEnds (VtxDeclBuilder *builder);
 
         bool                priv_renderLayout_onBuilderEnds (RenderTaskLayoutBuilder *builder);
-        bool                priv_renderLayout_fromHandleToPointer (const GPURenderLayoutHandle handle, sRenderLayout **out) const;
 
         bool                priv_pipeline_onBuilderEnds (PipelineBuilder *builder);
 
         bool                priv_depthStencil_createFromStruct (gos::gpu::DepthStencil &depthStencil);
         void                priv_depthStencil_deleteFromStruct (gos::gpu::DepthStencil &depthStencil);
-        bool                priv_depthStencil_fromHandleToPointer (const GPUDepthStencilHandle handle, gpu::DepthStencil **out) const;
 
-        bool                priv_renderTarget_fromHandleToPointer (const GPURenderTargetHandle handle, gpu::RenderTarget **out) const;
-        
         bool                priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder);
-        bool                priv_frameBuffer_fromHandleToPointer (const GPUFrameBufferHandle handle, gpu::FrameBuffer **out) const;
         void                priv_frameBuffer_deleteFromStruct (gpu::FrameBuffer *s);
         bool                priv_frameBuffer_recreate (gpu::FrameBuffer *s);
         
-        bool                priv_vertexBuffer_fromHandleToPointer (const GPUVtxBufferHandle handle, gpu::VtxBuffer **out) const;
-        bool                priv_indexBuffer_fromHandleToPointer (const GPUIdxBufferHandle handle, gpu::IdxBuffer **out) const;
-        bool                priv_stagingBuffer_fromHandleToPointer (const GPUStgBufferHandle handle, gpu::StagingBuffer **out) const;
-
         bool                priv_copyVulkanBuffer (const VkBuffer srcBuffer, const VkBuffer dstBuffer, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
 
 
@@ -644,6 +658,8 @@ namespace gos
         HandleList<GPUVtxBufferHandle,gpu::VtxBuffer>               vtxBufferList;
         HandleList<GPUStgBufferHandle,gpu::StagingBuffer>           staginBufferList;
         HandleList<GPUIdxBufferHandle,gpu::IdxBuffer>               idxBufferList;
+        HandleList<GPUDescrLayoutHandle, gpu::DescrLayout>          descrLayoutList;
+        HandleList<GPUUniformBufferHandle, gpu::UniformBuffer>      uniformBufferList;
     };
 } //namespace gos
 
