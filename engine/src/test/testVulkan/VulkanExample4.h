@@ -28,14 +28,12 @@ private:
 
     struct sUniformBufferObject 
     {
+        //glm::mat4 world;
         gos::mat4x4f world;
         gos::mat4x4f view;
         gos::mat4x4f proj;
     };
 
-
-private:
-    static bool createDescriptorSetLayout (gos::GPU *gpu, GPUDescrLayoutHandle *out);
 
 
 private:
@@ -69,7 +67,9 @@ private:
     GPURenderLayoutHandle   renderLayoutHandle;
     GPUFrameBufferHandle    frameBufferHandle;
 
-    GPUDescrLayoutHandle    descrLayoutHandle;
+    GPUDescrPoolHandle      descrPoolHandle;
+    GPUDescrSetLayoutHandle descrSetLayoutHandle;
+    GPUDescrSetInstancerHandle descrSetInstancerHandle;
     GPUUniformBufferHandle  uboHandle;
 };
 

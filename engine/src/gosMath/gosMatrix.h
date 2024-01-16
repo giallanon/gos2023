@@ -23,8 +23,8 @@ namespace gos
 		/*=========================================================================
 		 * Il template che rappresenta una generica matrice<T,r,c>
 		 *
-		 *	Può memorizzare i dati in formato col_major oppure row_major
-		 *	L'unica differenza tra i 2 è l'ordine con il quale vengono memorizzati i singoli elementi
+		 *	Puï¿½ memorizzare i dati in formato col_major oppure row_major
+		 *	L'unica differenza tra i 2 ï¿½ l'ordine con il quale vengono memorizzati i singoli elementi
 		 *	della matrice
 		 */
 		template <class T, bool isColMajor, int ROWS, int COLS>
@@ -559,8 +559,9 @@ namespace gos
 	typedef math::Matrix<f32, false, 4, 4>	mat4x4f;
 	typedef math::Matrix<f32, false, 3, 4>	mat3x4f;
 
-	//versione row major
+	//versione column major
 	typedef math::Matrix<f32, true, 3, 4>	matCM3x4f;
+	typedef math::Matrix<f32, true, 4, 4>	matCM4x4f;
 	
 }// namespace gos
 

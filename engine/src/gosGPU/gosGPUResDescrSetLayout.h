@@ -1,5 +1,5 @@
-#ifndef _gosGPUResDescLayout_h_
-#define _gosGPUResDescLayout_h_
+#ifndef _gosGPUResDescrSetLayout_h_
+#define _gosGPUResDescrSetLayout_h_
 #include "gosGPUEnumAndDefine.h"
 
 
@@ -8,14 +8,14 @@ namespace gos
     namespace gpu
     {
         /****************************************************
-         * DescrLayout
+         * DescrSetLayout
          * 
-         * struttura interna accessibile tramite i metodi di GPU utilizzando uno GPUDescrLayoutrHandle
+         * struttura interna accessibile tramite i metodi di GPU utilizzando uno GPUDescrSetLayoutrHandle
          */
-        struct DescrLayout
+        struct DescrSetLayout
         {
         public:
-                            DescrLayout()                        { reset(); }
+                            DescrSetLayout()                        { reset(); }
 
             void            reset ()
                             {
@@ -31,4 +31,4 @@ namespace gos
 } //namespace gos
 
 
-#endif //_gosGPUResDescLayout_h_
+#endif //_gosGPUResDescrSetLayout_h_

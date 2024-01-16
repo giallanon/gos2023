@@ -19,7 +19,7 @@ GPU::PipelineBuilder::PipelineBuilder (GPU *gpuIN, const GPURenderLayoutHandle &
 
     bAnyError = false;
     shaderList.setup (allocator, 8);
-    descrLayoutList.setup (allocator, 8);
+    descrSetLayoutList.setup (allocator, 8);
 
     setDrawPrimitive (eDrawPrimitive::trisList);
     vtxDeclHandle.setInvalid();
@@ -34,7 +34,7 @@ GPU::PipelineBuilder::PipelineBuilder (GPU *gpuIN, const GPURenderLayoutHandle &
 GPU::PipelineBuilder::~PipelineBuilder()
 {
     shaderList.unsetup ();
-    descrLayoutList.unsetup ();
+    descrSetLayoutList.unsetup ();
 }    
 
 
@@ -71,9 +71,9 @@ bool GPU::PipelineBuilder::priv_buildVulkan ()
     VkDescriptorSetLayout vkElencoDescrLayout[64];
     {
         u32 numDescrLayput = 0;
-        for (u32 i = 0; i < descrLayoutList.getNElem(); i++)
+        for (u32 i = 0; i < descrSetLayoutList.getNElem(); i++)
         {
-            if (!gpu->toVulkan (descrLayoutList(i), &vkElencoDescrLayout[numDescrLayput]))
+            if (!gpu->toVulkan (descrSetLayoutList(i), &vkElencoDescrLayout[numDescrLayput]))
             {
                 gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => invalid descrLayputHnale\n");
                 return false;

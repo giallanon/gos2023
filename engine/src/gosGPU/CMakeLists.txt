@@ -26,16 +26,22 @@ vulkan/gosGPUVulkan.cpp
 vulkan/gosGPUVulkan.h
 vulkan/gosGPUVulkanEnumAndDefine.h
 
+gosGPU_DescriptorPoolBuilder.cpp
+gosGPU_DescriptorSetLayoutBuilder.cpp
 gosGPU_FrameBuffersBuilder.cpp
 gosGPU_PipelineBuilder.cpp
 gosGPU_RenderLayoutBuilder.cpp
 gosGPU_VtxDeclBuilder.cpp
 gosGPU.cpp
 gosGPU.h
+gosGPUDescrSetInstanceWriter.cpp
+gosGPUDescrSetInstanceWriter.h
 gosGPUEnumAndDefine.h
 
 gosGPUResDepthStencil.h
-gosGPUResDescrLayout.h
+gosGPUResDescrPool.h
+gosGPUResDescrSetInstance.h
+gosGPUResDescrSetLayout.h
 gosGPUResFrameBuffer.h
 gosGPUResIdxBuffer.h
 gosGPUResRenderTarget.h

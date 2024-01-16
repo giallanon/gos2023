@@ -5,25 +5,30 @@
 #include "../gos/gosHandle.h"
 #include "vulkan/gosGPUVulkanEnumAndDefine.h"
 
-#define 	GOSGPU__NUM_MAX_VTXDECL_ATTR	32
-#define 	GOSGPU__NUM_MAX_VXTDECL_STREAM	16
-#define 	GOSGPU__NUM_MAX_RENDER_TARGET	8
+#define 	GOSGPU__NUM_MAX_VTXDECL_ATTR					32
+#define 	GOSGPU__NUM_MAX_VXTDECL_STREAM					16
+#define 	GOSGPU__NUM_MAX_RENDER_TARGET					8
+#define 	GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET				32
+#define 	GOSGPU__NUM_MAX_DESCRIPTOR_POOL_SIZE_PER_POOL	16
 
 
 //A per "num max di handle", B per "num di chunk", C per "counter"
-typedef gos::HandleT<14,8,10, 0,0>	GPUShaderHandle;		//2^14=16384 => num totale di oggetti, divisi in chunk da 2^8=256
-typedef gos::HandleT<10,5,16, 0,1>	GPUVtxDeclHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^5=32
-typedef gos::HandleT<5,5,16, 0,6>	GPUViewportHandle;		//2^5=32 => num totale di oggetti, divisi in chunk da 2^5=32
-typedef gos::HandleT<5,3,16, 0,8>	GPUDepthStencilHandle;	//2^5=32 => num totale di oggetti, divisi in chunk da 2^3=8
-typedef gos::HandleT<6,5,16, 0,5>	GPURenderTargetHandle;	//2^6=64 => num totale di oggetti, divisi in chunk da 2^3=5
-typedef gos::HandleT<8,7,16, 0,1>	GPURenderLayoutHandle;	//2^8=256 => num totale di oggetti, divisi in chunk da 2^7=128
-typedef gos::HandleT<8,5,16, 0,3>	GPUPipelineHandle;		//2^8=256 => num totale di oggetti, divisi in chunk da 2^5=32
-typedef gos::HandleT<9,7,16, 0,0>	GPUFrameBufferHandle;	//2^9=512 => num totale di oggetti, divisi in chunk da 2^7=128
-typedef gos::HandleT<10,7,14, 0,1>	GPUVtxBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-typedef gos::HandleT<10,7,14, 1,0>	GPUIdxBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-typedef gos::HandleT<10,7,13, 0,2>	GPUStgBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-typedef gos::HandleT<10,8,12, 0,2>	GPUDescrLayoutHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
+typedef gos::HandleT< 5,3,16, 0,8>	GPUDepthStencilHandle;		//2^5=32 => num totale di oggetti, divisi in chunk da 2^3=8
+typedef gos::HandleT< 5,5,16, 0,6>	GPUViewportHandle;			//2^5=32 => num totale di oggetti, divisi in chunk da 2^5=32
+typedef gos::HandleT< 6,5,16, 0,5>	GPURenderTargetHandle;		//2^6=64 => num totale di oggetti, divisi in chunk da 2^5=32
+typedef gos::HandleT< 6,5,16, 1,4>	GPUDescrPoolHandle;			//2^6=64 => num totale di oggetti, divisi in chunk da 2^5=32
+typedef gos::HandleT< 8,5,16, 0,3>	GPUPipelineHandle;			//2^8=256 => num totale di oggetti, divisi in chunk da 2^5=32
+typedef gos::HandleT< 8,7,16, 0,1>	GPURenderLayoutHandle;		//2^8=256 => num totale di oggetti, divisi in chunk da 2^7=128
+typedef gos::HandleT< 9,7,16, 0,0>	GPUFrameBufferHandle;		//2^9=512 => num totale di oggetti, divisi in chunk da 2^7=128
+typedef gos::HandleT<10,5,16, 0,1>	GPUVtxDeclHandle;			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^5=32
+typedef gos::HandleT<10,7,14, 0,1>	GPUVtxBufferHandle;			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
+typedef gos::HandleT<10,7,14, 1,0>	GPUIdxBufferHandle;			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
+typedef gos::HandleT<10,7,13, 0,2>	GPUStgBufferHandle;			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
+typedef gos::HandleT<10,8,12, 0,2>	GPUDescrSetLayoutHandle;	//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
+typedef gos::HandleT<10,8,12, 1,1>	GPUDescrSetInstancerHandle;	//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
 typedef gos::HandleT<10,8,12, 2,0>	GPUUniformBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
+typedef gos::HandleT<14,8,10, 0,0>	GPUShaderHandle;			//2^14=16384 => num totale di oggetti, divisi in chunk da 2^8=256
+
 
 enum class eVtxStreamInputRate : u8
 {
@@ -106,6 +111,7 @@ enum class eVIBufferMode : u8
 	mappale			= 1,	//puo' essere updatato (trampite map/unmpa), ma da non farsi molto di frequente
 	unknown			= 0xff
 };
+
 
 struct sVtxDescriptor
 {

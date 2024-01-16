@@ -29,8 +29,10 @@ void VulkanExample4::virtual_onCleanup()
     gpu->deleteResource (pipelineHandle);
     gpu->deleteResource (renderLayoutHandle);
     gpu->deleteResource (frameBufferHandle);
-    gpu->deleteResource (descrLayoutHandle);
     gpu->deleteResource (uboHandle);
+    gpu->deleteResource (descrSetInstancerHandle);
+    gpu->deleteResource (descrSetLayoutHandle);
+    gpu->deleteResource (descrPoolHandle);
 }    
 
 
@@ -41,35 +43,37 @@ bool VulkanExample4::virtual_onInit ()
     * 
     * TODO: Sto cercando di capire come funzionano i descriptr
     * 
-    * VkDescriptorSetLayout     descrive il layout di un descriptorSet
-    *                           il layout indica il binding (quale shader puo' usarelo e in quale binding slot)
+    * [descriptor] è un puntatore ad una risorsa
+    *       Per esempio, un "buffer descriptor" punta a un UBO, mentre un "image descriptor" punta ad una texture
     * 
-    *
-    * VkDescriptorPool          pool dal quale allocare un descriptorSet
-    *
-    VkDescriptorPoolSize poolSize{};
-        poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSize.descriptorCount = 16;
-
-    VkDescriptorPoolCreateInfo poolInfo{};
-        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 1;
-        poolInfo.pPoolSizes = &poolSize;                                    //num max Descriptor allocabili per ogni tipo di pool
-        poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);     //num max DescriptorSET allocabili
-
-        */
-
-
-
-
-
-
-
-
-
-
-
-
+    * 
+    * [descriptor-set] è semplicemente una collezione di [descriptor] che vengono uppati/aggiornati tutti in un colpo solo
+    * 
+    * In linea di massima, crea un [descriptor-set] livello di complessita. Un classico esempio è:
+    *   [descriptor-set 1] uniform buffer con dentro matV e matP    (unico upload per tutta l'intera scena)
+    *   [descriptor-set 2] texture per material                     (cambiano ogni volta che cambia il materiale)
+    *   [descriptor-set 3] world matrix dell'instanza del modello   (cambia ad ogni oggetto che renderizziamo)
+    * 
+    * 
+    * 
+    * [descriptor-set-layout] è un insieme di [descriptor-set].
+    *       All'interno del set, bisogna indicare un "binding number" per ogni risorsa del set, a partire da 0.
+    * 
+    *       N [descriptor-set-layout] vanno poi bindati alla pipeline. Il primo set sara' il set 0, il secondo il set 1 e via dicendo.
+    *       Esempio di pipeline con 3 set e vari binding per set:
+    *           set #0 con matV @binding 0  e matP @binding 1
+    *           set #1 con diffuse texture @binding 0  e specular-texture @binding 1 
+    *           set #3 con model matW @ binding 0
+    * 
+    *  
+    * 
+    * [descriptor-pool] servono per allocare [descriptor-set]
+    *   VkDescriptorPoolCreateInfo.maxSets = numero massimo di [descriptor-set] allocabili dal pool
+    *   VkDescriptorPoolCreateInfo.poolSizeCount = num di elementi in pPoolSizes
+    *   VkDescriptorPoolCreateInfo.pPoolSizes = array di VkDescriptorPoolSize ognuno dei quali indica che tipo di descriptor posso allocare (uniform, texture..) e quanti
+    *                                           descriptor di quel tipo posso allocare
+    * 
+    */
 
 
     //vertici
@@ -149,29 +153,35 @@ bool VulkanExample4::virtual_onInit ()
         return false;
     }
 
-    //creo la pipeline
+    //Creo il descriptorSet layoutm con un solo UNIFORM BUFFER per il VTX SHADER
+    gpu->descrSetLayout_createNew(&descrSetLayoutHandle)
+        .add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+        .end();
+    if (descrSetLayoutHandle.isInvalid())
     {
-        if (!createDescriptorSetLayout (gpu, &descrLayoutHandle))
-            return false;
+        gos::logger::err ("VulkanApp::init() => can't create descriptor set\n");
+        return false;
+    }
 
-        gpu->pipeline_createNew (renderLayoutHandle, &pipelineHandle)
-            .addShader (vtxShaderHandle)
-            .addShader (fragShaderHandle)
-            .setVtxDecl (vtxDeclHandle)
-            .depthStencil()
-                .zbuffer_enable(true)
-                .zbuffer_enableWrite(true)
-                .zbuffer_setFn (eZFunc::LESS)
-                .stencil_enable(false)
-            .end() //depth stencil
-            .descriptor_add (descrLayoutHandle)
-            .end ();
+    //creo la pipeline
+    gpu->pipeline_createNew (renderLayoutHandle, &pipelineHandle)
+        .addShader (vtxShaderHandle)
+        .addShader (fragShaderHandle)
+        .setVtxDecl (vtxDeclHandle)
+        .depthStencil()
+            .zbuffer_enable(true)
+            .zbuffer_enableWrite(true)
+            .zbuffer_setFn (eZFunc::LESS)
+            .stencil_enable(false)
+        .end() //depth stencil
+        .setCullMode (eCullMode::NONE)
+        .descriptor_add (descrSetLayoutHandle)
+        .end ();
 
-        if (pipelineHandle.isInvalid())
-        {
-            gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
-            return false;
-        }
+    if (pipelineHandle.isInvalid())
+    {
+        gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
+        return false;
     }
 
     //non mi serve piu'
@@ -182,6 +192,25 @@ bool VulkanExample4::virtual_onInit ()
     if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), &uboHandle))
     {
         gos::logger::err ("VulkanApp::init() => GPU::uniformBuffer_create\n");
+        return false;
+    }
+
+
+    //creo un descriptor pool
+    gpu->descrPool_createNew (&descrPoolHandle)
+        .setMaxNumDescriptorSet(4)
+        .addPool_uniformBuffer()
+        .end();
+    if (descrPoolHandle.isInvalid())
+    {
+        gos::logger::err ("VulkanApp::init() => can't create descriptor pool\n");
+        return false;
+    }
+
+    //alloco una istanza del descriptorSet
+    if (!gpu->descrSetInstance_createNew (descrPoolHandle, descrSetLayoutHandle, &descrSetInstancerHandle))
+    {
+        gos::logger::err ("VulkanApp::init() => can't create descriptorSet instance\n");
         return false;
     }
 
@@ -261,35 +290,19 @@ bool VulkanExample4::copyIntoVtxBuffer()
 
 
 
-//************************************
-bool VulkanExample4::createDescriptorSetLayout (GPU *gpu, GPUDescrLayoutHandle *out)
-{
-    VkDescriptorSetLayoutBinding uboLayoutBinding{};
-    uboLayoutBinding.binding = 0;
-    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboLayoutBinding.descriptorCount = 1;
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
-
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &uboLayoutBinding;
-
-    if (!gpu->descrLayout_create (layoutInfo, out))
-    {
-        gos::logger::err ("VulkanApp::createDescriptorSetLayout() => gpu->descrLayout_create failed => \n");
-        return false;
-    }
-
-    return true;
-}
 
 //************************************
 bool VulkanExample4::recordCommandBuffer (VkCommandBuffer *out_commandBuffer)
 {
     assert (out_commandBuffer);
+
+
+    //aggiorno UBO
+    gos::gpu::DescrSetInstanceWriter descrWriter;
+    descrWriter.begin (gpu, descrSetInstancerHandle)
+        .updateUniformBuffer (0, uboHandle)
+        .end();
+
 
     //recupero il vulkan render pass
     VkRenderPass vkRenderPassHandle = VK_NULL_HANDLE;
@@ -334,6 +347,14 @@ bool VulkanExample4::recordCommandBuffer (VkCommandBuffer *out_commandBuffer)
         return false;
     }
 
+    //recupero il descrSetInstance
+    VkDescriptorSet vkDescrSetHandle;
+    if (!gpu->toVulkan (descrSetInstancerHandle, &vkDescrSetHandle))
+    {
+        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid descrSetInstace handle\n");
+        return false;
+    }    
+
     //begin command buffer
     VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -347,8 +368,9 @@ bool VulkanExample4::recordCommandBuffer (VkCommandBuffer *out_commandBuffer)
         return false;
     }
 
+
     //begin render pass
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.01f, 1.0f}}};
     VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = vkRenderPassHandle;
@@ -362,6 +384,11 @@ bool VulkanExample4::recordCommandBuffer (VkCommandBuffer *out_commandBuffer)
     
     //bindo la pipeline
     vkCmdBindPipeline (*out_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineHandle);
+
+
+    //bindo il descrSetLayout
+    vkCmdBindDescriptorSets (*out_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineLayoutHandle, 0, 1, &vkDescrSetHandle, 0, nullptr);
+
 
     //bindo il vtx buffer a partire dal layout=0
     static const u8 VTXBUFFER__FIRST_VTX_STREAM_INDEX = 0;

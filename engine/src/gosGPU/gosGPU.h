@@ -4,9 +4,12 @@
 #include "../gos/gos.h"
 #include "../gos/gosFastArray.h"
 #include "../gosMath/gosMath.h"
+#include "gosGPUDescrSetInstanceWriter.h"
 
 #include "gosGPUResDepthStencil.h"
-#include "gosGPUResDescrLayout.h"
+#include "gosGPUResDescrPool.h"
+#include "gosGPUResDescrSetInstance.h"
+#include "gosGPUResDescrSetLayout.h"
 #include "gosGPUResFrameBuffer.h"
 #include "gosGPUResIdxBuffer.h"
 #include "gosGPUResRenderTarget.h"
@@ -293,7 +296,7 @@ namespace gos
             DepthStencilParam&  depthStencil()                                                  { return depthStencilParam; }
 			PipelineBuilder&    setCullMode (eCullMode m)							            { cullMode = m; return *this; }
 			PipelineBuilder&    setWireframe (bool b)								            { bWireframe = b; return *this; }
-            PipelineBuilder&    descriptor_add (const GPUDescrLayoutHandle handle)              { descrLayoutList.append (handle); return *this; }
+            PipelineBuilder&    descriptor_add (const GPUDescrSetLayoutHandle handle)           { descrSetLayoutList.append (handle); return *this; }
 
             bool                end ();
 
@@ -306,7 +309,7 @@ namespace gos
             bool                                bAnyError;
             gos::Allocator                      *allocator;
             gos::FastArray<GPUShaderHandle>     shaderList;
-            gos::FastArray<GPUDescrLayoutHandle> descrLayoutList;
+            gos::FastArray<GPUDescrSetLayoutHandle> descrSetLayoutList;
             eDrawPrimitive                      drawPrimitive;
             GPUVtxDeclHandle                    vtxDeclHandle;
             DepthStencilParam                   depthStencilParam;
@@ -354,10 +357,76 @@ namespace gos
             GPUFrameBufferHandle    *out_handle;
 
         friend class GPU;
-        }; //class FrameBuffers
+        }; //class FrameBuffersBuilder
 
 
 
+
+        /**************************************
+         * DescriptorSetLayoutBuilder
+         * 
+         */
+        class DescriptorSetLayoutBuilder : public TempBuilder
+        {
+        public:
+                                            DescriptorSetLayoutBuilder (GPU *gpu, GPUDescrSetLayoutHandle *out_handle);
+            virtual                         ~DescriptorSetLayoutBuilder();
+
+            //aggiunge un descriptor al set.
+            //  [stageFlags], vedi anche gos::ShaderStageFlag che contiene i flag utilizzabili
+            DescriptorSetLayoutBuilder&     add (VkDescriptorType descrType, VkShaderStageFlagBits stageFlags, u32 count=1);
+            bool                            end();
+
+            bool                            anyError() const        { return bAnyError; }
+
+        private:
+            bool    bAnyError;
+            u32     nextBindingNumber;
+            u32     numDescriptor;
+            VkDescriptorSetLayoutBinding   list[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
+
+            GPUDescrSetLayoutHandle    *out_handle;
+
+        friend class GPU;
+        }; //class DescriptorSetLayoutBuilder
+
+
+   
+        /**************************************
+         * DescriptorPoolBuilder
+         * 
+         */
+        class DescriptorPoolBuilder : public TempBuilder
+        {
+        public:
+                                        DescriptorPoolBuilder (GPU *gpu, GPUDescrPoolHandle *out_handle);
+            virtual                     ~DescriptorPoolBuilder();
+
+            DescriptorPoolBuilder&      setMaxNumDescriptorSet (u32 n)              { numMaxDescriptorSets = n; return *this; }
+            DescriptorPoolBuilder&      addPool_uniformBuffer ();
+            DescriptorPoolBuilder&      addPool_storageBuffer ();
+            bool                        end();
+
+            bool                        anyError() const                            { return bAnyError; }
+
+        private:
+            VkDescriptorPoolSize*       priv_findOrAddByDescrType (VkDescriptorType descrType);
+
+        private:
+            bool    bAnyError;
+            u32     numMaxDescriptorSets;
+            u32     numPool;
+            VkDescriptorPoolCreateFlags  vkPoolFlags;
+            VkDescriptorPoolSize   list[GOSGPU__NUM_MAX_DESCRIPTOR_POOL_SIZE_PER_POOL];
+
+            GPUDescrPoolHandle    *out_handle;
+
+        friend class GPU;
+        }; //class DescriptorPoolBuilder
+
+   
+ 
+   
 
     public:
                             GPU();
@@ -492,7 +561,7 @@ namespace gos
         //================ uniform buffer
         bool                uniformBuffer_create (u32 sizeInByte, GPUUniformBufferHandle *out_handle);
         void                deleteResource (GPUUniformBufferHandle &handle);
-        bool                toVulkan (const GPUUniformBufferHandle handle, VkBuffer *out) const;
+        bool                toVulkan (const GPUUniformBufferHandle handle, VkBuffer *out, u32 *out_bufferSize) const;
         bool                uniformBuffer_map (const GPUUniformBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
         //bool                uniformBuffer_unmap  (const GPUUniformBufferHandle handle);
         bool                uniformBuffer_mapCopyUnmap (const GPUUniformBufferHandle handle, u32 offsetDST, u32 sizeInByte, const void *src) const;
@@ -512,10 +581,22 @@ namespace gos
         eShaderType         shader_getType (const GPUShaderHandle shaderHandle) const;
         void                deleteResource (GPUShaderHandle &shaderHandle);
 
-        //================ descriptor layout
-        bool                descrLayout_create (const VkDescriptorSetLayoutCreateInfo &creatInfo, GPUDescrLayoutHandle *out_handle);
-        void                deleteResource (GPUDescrLayoutHandle &handle);
-        bool                toVulkan (const GPUDescrLayoutHandle handle, VkDescriptorSetLayout *out) const;
+        //================ descriptor pool
+        DescriptorPoolBuilder& descrPool_createNew (GPUDescrPoolHandle *out_handle);
+        void                deleteResource (GPUDescrPoolHandle &handle);
+        bool                toVulkan (const GPUDescrPoolHandle handle, VkDescriptorPool *out) const;
+
+
+        //================ descriptorSet layout
+        DescriptorSetLayoutBuilder&    descrSetLayout_createNew (GPUDescrSetLayoutHandle *out_handle);
+        void                deleteResource (GPUDescrSetLayoutHandle &handle);
+        bool                toVulkan (const GPUDescrSetLayoutHandle handle, VkDescriptorSetLayout *out) const;
+
+        //================ descriptorSetInstance
+        bool                descrSetInstance_createNew (const GPUDescrPoolHandle &poolHandle, const GPUDescrSetLayoutHandle &descrSetLayoutHandle, GPUDescrSetInstancerHandle *out_handle);
+        void                deleteResource (GPUDescrSetInstancerHandle &handle);
+        bool                toVulkan (const GPUDescrSetInstancerHandle handle, VkDescriptorSet *out) const;
+
 
 
         //================ command buffer
@@ -626,6 +707,8 @@ namespace gos
         
         bool                priv_copyVulkanBuffer (const VkBuffer srcBuffer, const VkBuffer dstBuffer, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
 
+        bool                priv_descrSetLayout_onBuilderEnds (DescriptorSetLayoutBuilder *builder);
+        bool                priv_descrPool_onBuilderEnds (DescriptorPoolBuilder *builder);
 
     private:
         gos::Allocator              *allocator;
@@ -658,8 +741,11 @@ namespace gos
         HandleList<GPUVtxBufferHandle,gpu::VtxBuffer>               vtxBufferList;
         HandleList<GPUStgBufferHandle,gpu::StagingBuffer>           staginBufferList;
         HandleList<GPUIdxBufferHandle,gpu::IdxBuffer>               idxBufferList;
-        HandleList<GPUDescrLayoutHandle, gpu::DescrLayout>          descrLayoutList;
         HandleList<GPUUniformBufferHandle, gpu::UniformBuffer>      uniformBufferList;
+        HandleList<GPUDescrSetLayoutHandle, gpu::DescrSetLayout>    descrSetLayoutList;
+        HandleList<GPUDescrPoolHandle, gpu::DescrPool>              descrPoolList;
+        HandleList<GPUDescrSetInstancerHandle, gpu::DescrSetInstance> descrSetInstanceList;
+        
     };
 } //namespace gos
 

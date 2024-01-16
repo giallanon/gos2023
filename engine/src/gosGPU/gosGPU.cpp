@@ -291,8 +291,10 @@ bool GPU::priv_initHandleLists()
     vtxBufferList.setup (allocator);
     staginBufferList.setup (allocator);
     idxBufferList.setup (allocator);
-    descrLayoutList.setup (allocator);
+    descrSetLayoutList.setup (allocator);
     uniformBufferList.setup (allocator);
+    descrPoolList.setup (allocator);
+    descrSetInstanceList.setup (allocator);
     return true;
 }
 
@@ -317,8 +319,10 @@ void  GPU::priv_deinitandleLists()
     vtxBufferList.unsetup();
     staginBufferList.unsetup();
     idxBufferList.unsetup();
-    descrLayoutList.unsetup();
+    descrSetLayoutList.unsetup();
     uniformBufferList.unsetup();
+    descrPoolList.unsetup();
+    descrSetInstanceList.unsetup();
 }
 
 //************************************
@@ -684,6 +688,9 @@ bool GPU::priv_copyVulkanBuffer (const VkBuffer srcBuffer, const VkBuffer dstBuf
     return true;    
 }
 
+
+
+
 /************************************************************************************************************
  * Shader
  * 
@@ -743,19 +750,6 @@ bool GPU::priv_shader_createFromMemory (const u8 *buffer, u32 bufferSize, eShade
     sprintf_s (shader->_mainFnName, sizeof(shader->_mainFnName), "%s", mainFnName);
     return true;
 }
-
-/************************************
-bool GPU::priv_fromHandleToPointer (const GPUShaderHandle handle, gpu::Shader **out) const
-{
-    assert (NULL != out);
-    if (shaderList.fromHandleToPointer(handle, out))
-        return true;
-    
-    *out = NULL;
-    gos::logger::err ("GPU => unable to get shader from handle (handle=%0x08X)\n", handle.viewAsU32());
-    return false;
-}
-*/
 
 //************************************
 void GPU::deleteResource (GPUShaderHandle &shaderHandle)
@@ -859,19 +853,6 @@ void GPU::priv_vxtDecl_onBuilderEnds (VtxDeclBuilder *builder)
         vtxDecl->attr_setOffset (i, builder->attributeDesc[i].offset);
     }
 }
-
-/************************************
-bool GPU::priv_fromHandleToPointer (const GPUVtxDeclHandle handle, gpu::VtxDecl **out) const
-{
-    assert (NULL != out);
-    if (vtxDeclList.fromHandleToPointer(handle, out))
-        return true;
-    
-    *out = NULL;
-    gos::logger::err ("GPU => unable to get VtxDecl from handle (handle=%0x08X)\n", handle.viewAsU32());
-    return false;
-}
-*/
 
 //************************************
 bool GPU::vtxDecl_query (const GPUVtxDeclHandle handle, gpu::VtxDecl *out) const
@@ -1251,17 +1232,6 @@ void GPU::deleteResource (GPUFrameBufferHandle &handle)
     handle.setInvalid();
 }
 
-/************************************
-bool GPU::priv_frameBuffer_fromHandleToPointer (const GPUFrameBufferHandle handle, gpu::FrameBuffer **out) const
-{
-    assert (NULL != out);
-    if (frameBufferList.fromHandleToPointer (handle, out))
-        return true;
-
-    gos::logger::err ("GPU::priv_frameBuffer_fromHandleToPointer() => invalid handle\n");
-    return false;
-}
-*/
 //************************************
 void GPU::priv_frameBuffer_deleteFromStruct (gpu::FrameBuffer *s)
 {
@@ -1575,19 +1545,6 @@ bool GPU::vertexBuffer_create (u32 sizeInByte, eVIBufferMode modeIN, GPUVtxBuffe
     return true;
 }
 
-/************************************
-bool GPU::priv_vertexBuffer_fromHandleToPointer (const GPUVtxBufferHandle handle, gpu::VtxBuffer **out) const
-{
-    assert (NULL != out);
-    if (vtxBufferList.fromHandleToPointer (handle, out))
-        return true;
-
-    gos::logger::err ("GPU::priv_vertexBuffer_fromHandleToPointer() => invalid handle\n");
-    DBGBREAK;
-    return false;
-}
-*/
-
 //************************************
 void GPU::deleteResource (GPUVtxBufferHandle &handle)
 {
@@ -1735,19 +1692,6 @@ bool GPU::toVulkan (const GPUStgBufferHandle handle, VkBuffer *out) const
     return false;    
 }
 
-/************************************
-bool GPU::priv_stagingBuffer_fromHandleToPointer (const GPUStgBufferHandle handle, gpu::StagingBuffer **out) const
-{
-    assert (NULL != out);
-    if (staginBufferList.fromHandleToPointer (handle, out))
-        return true;
-
-    gos::logger::err ("GPU::priv_staginBuffer_fromHandleToPointer() => invalid handle\n");
-    DBGBREAK;
-    return false;
-}
-*/
-
 //************************************
 bool GPU::stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const
 {
@@ -1856,7 +1800,7 @@ bool GPU::stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const 
 
 
 /************************************************************************************************************
- * Vertex buffer
+ * Index buffer
  * 
  * 
  *************************************************************************************************************/
@@ -1921,19 +1865,6 @@ bool GPU::indexBuffer_create (u32 sizeInByte, eVIBufferMode modeIN, GPUIdxBuffer
     s->vkMemHandle = vkMemHandle;
     return true;
 }
-
-/************************************
-bool GPU::priv_indexBuffer_fromHandleToPointer (const GPUIdxBufferHandle handle, gpu::IdxBuffer **out) const
-{
-    assert (NULL != out);
-    if (idxBufferList.fromHandleToPointer (handle, out))
-        return true;
-
-    gos::logger::err ("GPU::priv_indexBuffer_fromHandleToPointer() => invalid handle\n");
-    DBGBREAK;
-    return false;
-}
-*/
 
 //************************************
 void GPU::deleteResource (GPUIdxBufferHandle &handle)
@@ -2012,64 +1943,7 @@ bool GPU::indexBuffer_unmap  (const GPUIdxBufferHandle handle)
 
 
 /************************************************************************************************************
- * Description Layput
- * 
- * 
- *************************************************************************************************************/
-bool GPU::descrLayout_create (const VkDescriptorSetLayoutCreateInfo &creatInfo, GPUDescrLayoutHandle *out_handle)
-{
-    VkDescriptorSetLayout vkHandle;
-    VkResult result = vkCreateDescriptorSetLayout(vulkan.dev, &creatInfo, nullptr, &vkHandle);
-    if (VK_SUCCESS != result)
-    {
-        gos::logger::err ("GPU::descrLayout_create () => vkCreateDescriptorSetLayout failed => %s\n", string_VkResult(result));
-        return false;
-    }
-
-    gpu::DescrLayout *s = descrLayoutList.reserve (out_handle);
-    if (NULL == s)
-    {
-        gos::logger::err ("GPU::descrLayout_create() => can't reserve a handle!\n");
-        return false;
-    }
-    s->reset();
-    s->vkHandle = vkHandle;
-    return true;
-}
-
-//************************************
-void GPU::deleteResource (GPUDescrLayoutHandle &handle)
-{
-    gpu::DescrLayout *s;
-    if (descrLayoutList.fromHandleToPointer (handle, &s))
-    {
-        vkDestroyDescriptorSetLayout (vulkan.dev, s->vkHandle, nullptr);
-        s->reset();
-        descrLayoutList.release (handle);
-    }
-
-    handle.setInvalid();
-}
-
-//************************************
-bool GPU::toVulkan (const GPUDescrLayoutHandle handle, VkDescriptorSetLayout *out) const
-{
-    gpu::DescrLayout *s;
-    if (priv_fromHandleToPointer(descrLayoutList,handle, &s))
-    {
-        *out = s->vkHandle;
-        return true;
-    }
-
-    *out = VK_NULL_HANDLE;
-    gos::logger::err ("GPU::descrLayout_toVulkan() => invalid handle\n");
-    return false;    
-}
-
-
-
-/************************************************************************************************************
- * Description Layput
+ * uniform buffer
  * 
  * 
  *************************************************************************************************************/
@@ -2142,12 +2016,16 @@ void GPU::deleteResource (GPUUniformBufferHandle &handle)
 }
 
 //************************************
-bool GPU::toVulkan (const GPUUniformBufferHandle handle, VkBuffer *out) const
+bool GPU::toVulkan (const GPUUniformBufferHandle handle, VkBuffer *out, u32 *out_bufferSize) const
 {
+    assert (NULL != out);
+    assert (NULL != out_bufferSize);
+
     gpu::UniformBuffer *s;
     if (priv_fromHandleToPointer (uniformBufferList, handle, &s))
     {
         *out = s->vkHandle;
+        *out_bufferSize = s->bufferSize;
         return true;
     }
 
@@ -2198,4 +2076,261 @@ bool GPU::uniformBuffer_mapCopyUnmap (const GPUUniformBufferHandle handle, u32 o
 
     return false;
 }
+
+
+
+
+/************************************************************************************************************
+ * DescriptorSet Layput
+ * 
+ * 
+ *************************************************************************************************************/
+GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_createNew (GPUDescrSetLayoutHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+    DescriptorSetLayoutBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::DescriptorSetLayoutBuilder) (this, out_handle);
+    return *builder;
+}    
+
+//************************************
+bool GPU::priv_descrSetLayout_onBuilderEnds (DescriptorSetLayoutBuilder *builder)
+{
+    //aggiungo il builder alla lista dei builder da deletare
+    toBeDeletedBuilder.add(builder);
+
+    if (builder->anyError())
+        return false;
+
+
+    //TODO: cachare i descriptor-set ed eventualmente riutilizzarli visto che sono dei descrittori, non e' necessario
+    //      crearne N diversi che descrivono la stessa cosa
+    VkDescriptorSetLayoutCreateInfo creatInfo{};
+    creatInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    creatInfo.bindingCount = builder->numDescriptor;
+    creatInfo.pBindings = builder->list;
+
+    VkDescriptorSetLayout vkHandle;
+    VkResult result = vkCreateDescriptorSetLayout (vulkan.dev, &creatInfo, nullptr, &vkHandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::priv_descrSetLayout_onBuilderEnds () => vkCreateDescriptorSetLayout failed => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    gpu::DescrSetLayout *s = descrSetLayoutList.reserve (builder->out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::priv_descrSetLayout_onBuilderEnds() => can't reserve a handle!\n");
+        return false;
+    }
+    s->reset();
+    s->vkHandle = vkHandle;
+    return true;
+}
+
+//************************************
+void GPU::deleteResource (GPUDescrSetLayoutHandle &handle)
+{
+    gpu::DescrSetLayout *s;
+    if (descrSetLayoutList.fromHandleToPointer (handle, &s))
+    {
+        vkDestroyDescriptorSetLayout (vulkan.dev, s->vkHandle, nullptr);
+        s->reset();
+        descrSetLayoutList.release (handle);
+    }
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::toVulkan (const GPUDescrSetLayoutHandle handle, VkDescriptorSetLayout *out) const
+{
+    gpu::DescrSetLayout *s;
+    if (priv_fromHandleToPointer(descrSetLayoutList,handle, &s))
+    {
+        *out = s->vkHandle;
+        return true;
+    }
+
+    *out = VK_NULL_HANDLE;
+    gos::logger::err ("GPU::descrSetLayout_toVulkan() => invalid handle\n");
+    return false;    
+}
+
+
+
+
+/************************************************************************************************************
+ * Descriptor pool
+ * 
+ * 
+ *************************************************************************************************************/
+GPU::DescriptorPoolBuilder& GPU::descrPool_createNew (GPUDescrPoolHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+    DescriptorPoolBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::DescriptorPoolBuilder) (this, out_handle);
+    return *builder;
+}    
+
+//************************************
+bool GPU::priv_descrPool_onBuilderEnds (DescriptorPoolBuilder *builder)
+{
+    //aggiungo il builder alla lista dei builder da deletare
+    toBeDeletedBuilder.add(builder);
+
+    if (builder->anyError())
+        return false;
+
+    VkDescriptorPoolCreateInfo creatInfo{};
+    creatInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    creatInfo.poolSizeCount = builder->numPool;
+    creatInfo.pPoolSizes = builder->list;
+    creatInfo.maxSets = builder->numMaxDescriptorSets;
+
+    VkDescriptorPool vkHandle;
+    VkResult result = vkCreateDescriptorPool (vulkan.dev, &creatInfo, nullptr, &vkHandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::priv_descrPool_onBuilderEnds () => vkCreateDescriptorPool failed => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    gpu::DescrPool *s = descrPoolList.reserve (builder->out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::priv_descrPool_onBuilderEnds() => can't reserve a handle!\n");
+        return false;
+    }
+    s->reset();
+    s->vkHandle = vkHandle;
+    s->flags = builder->vkPoolFlags;
+    return true;
+}
+
+//************************************
+void GPU::deleteResource (GPUDescrPoolHandle &handle)
+{
+    gpu::DescrPool *s;
+    if (descrPoolList.fromHandleToPointer (handle, &s))
+    {
+        vkDestroyDescriptorPool (vulkan.dev, s->vkHandle, nullptr);
+        s->reset();
+        descrPoolList.release (handle);
+    }
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::toVulkan (const GPUDescrPoolHandle handle, VkDescriptorPool *out) const
+{
+    gpu::DescrPool *s;
+    if (priv_fromHandleToPointer(descrPoolList,handle, &s))
+    {
+        *out = s->vkHandle;
+        return true;
+    }
+
+    *out = VK_NULL_HANDLE;
+    gos::logger::err ("GPU::descrPool_toVulkan() => invalid handle\n");
+    return false;    
+}
+
+
+
+
+
+/************************************************************************************************************
+ * DescriptorSet instance
+ * 
+ * 
+ *************************************************************************************************************/
+bool GPU::descrSetInstance_createNew (const GPUDescrPoolHandle &poolHandle, const GPUDescrSetLayoutHandle &descrSetLayoutHandle, GPUDescrSetInstancerHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+    gpu::DescrPool *pool;
+    if (!descrPoolList.fromHandleToPointer (poolHandle, &pool))
+    {
+        gos::logger::err ("GPU::descrSetInstance_createNew() => invalid pool handle\n");
+        return false;
+    }
+
+
+    VkDescriptorSetLayout vkDescSetLayoutHandle;
+    if (!toVulkan (descrSetLayoutHandle, &vkDescSetLayoutHandle))
+    {
+        gos::logger::err ("GPU::descrSetInstance_createNew() => invalid descrSetLayoutHandle handle\n");
+        return false;
+    }
+
+
+    gpu::DescrSetInstance *s = descrSetInstanceList.reserve (out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::descrSetInstance_createNew() => can't reserve a handle!\n");
+        descrSetInstanceList.release(*out_handle);
+        return false;
+    }
+
+    s->reset();
+    s->vkPoolHandle = pool->vkHandle;
+    s->bCanBeFreed = ( (pool->flags & VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT) != 0 );
+
+
+
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = pool->vkHandle;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &vkDescSetLayoutHandle;
+
+    const VkResult result = vkAllocateDescriptorSets (vulkan.dev, &allocInfo, &s->vkHandle);
+    if (VK_SUCCESS == result)
+        return true;
+
+
+    s->reset();
+    descrSetInstanceList.release(*out_handle);
+    gos::logger::err ("GPU::descrSetInstance_createNew () => vkAllocateDescriptorSets failed => %s\n", string_VkResult(result));
+    return false;
+}
+
+//************************************
+void GPU::deleteResource (GPUDescrSetInstancerHandle &handle)
+{
+    gpu::DescrSetInstance *s;
+    if (descrSetInstanceList.fromHandleToPointer (handle, &s))
+    {
+        if (s->bCanBeFreed)
+            vkFreeDescriptorSets (vulkan.dev, s->vkPoolHandle, 1, &s->vkHandle);
+        s->reset();
+        descrSetInstanceList.release (handle);
+    }
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::toVulkan (const GPUDescrSetInstancerHandle handle, VkDescriptorSet *out) const
+{
+    gpu::DescrSetInstance *s;
+    if (priv_fromHandleToPointer(descrSetInstanceList,handle, &s))
+    {
+        *out = s->vkHandle;
+        return true;
+    }
+
+    *out = VK_NULL_HANDLE;
+    gos::logger::err ("GPU::descrSetInstance_toVulkan() => invalid handle\n");
+    return false;    
+}
+
+
+
 
