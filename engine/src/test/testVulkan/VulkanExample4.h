@@ -20,10 +20,10 @@ public:
 private:
     struct Vertex 
     {
-        gos::vec2f  pos;
+        gos::vec3f  pos;
         gos::vec3f  colorRGB;
 
-        void set (f32 x, f32 y, f32 r, f32 g, f32 b)    { pos.set(x,y); colorRGB.set(r,g,b); }
+        void set (f32 x, f32 y, f32 z, f32 r, f32 g, f32 b)    { pos.set(x,y,z); colorRGB.set(r,g,b); }
     };
 
     struct sUniformBufferObject 

@@ -78,10 +78,11 @@ bool VulkanExample4::virtual_onInit ()
 
     //vertici
     u32 n=0;
-    vertexList[n++].set(-0.5f, -0.5f,       1.0f, 0.0f, 0.0f);
-    vertexList[n++].set(0.5f, -0.5f,        0.0f, 1.0f, 0.0f);
-    vertexList[n++].set(0.5f, 0.5f,         0.0f, 0.0f, 1.0f);
-    vertexList[n++].set(-0.5f, 0.5f,        1.0f, 1.0f, 1.0f);
+    f32 z = 8.0f;
+    vertexList[n++].set(-0.2f, -0.5f, z,         1.0f, 0.0f, 0.0f);
+    vertexList[n++].set(-0.5f,  0.5f, z,         0.0f, 1.0f, 0.0f);
+    vertexList[n++].set( 0.5f,  0.5f, z,         0.0f, 0.0f, 1.0f);
+    vertexList[n++].set( 0.5f, -0.5f, z,         1.0f, 1.0f, 1.0f);
     assert (n==NUM_VERTEX);
 
     n = 0;
@@ -457,7 +458,7 @@ void VulkanExample4::doCPUStuff ()
             ubo.world.identity();
             ubo.world.buildRotationAboutY (math::gradToRad(rotation_grad));
 
-            ubo.view.buildLookAt (gos::vec3f(2.0f, 2.0f, -2.0f), gos::vec3f(0.0f, 0.0f, 0.0f), gos::vec3f(0.0f, 1.0f, 0.0f));
+            ubo.view.buildLookAt (gos::vec3f(0.0f, 2.0f, -5.0f), gos::vec3f(0.0f, 0.0f, 0.0f), gos::vec3f(0.0f, 1.0f, 0.0f));
 
             ubo.proj.buildPerspective (gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 10.0f);
         }
