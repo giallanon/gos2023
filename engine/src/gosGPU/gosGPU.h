@@ -140,7 +140,7 @@ namespace gos
             virtual         ~RenderTaskLayoutBuilder();
 
             RTLB&           requireRendertarget (eRenderTargetUsage usage, VkFormat imageFormat, bool bClear, const gos::ColorHDR &clearColor = gos::ColorHDR(1.0f, 1, 1, 1) );
-            RTLB&           requireDepthStencil (bool bWithStencil, bool bClear, f32 clearValue=1.0f);
+            RTLB&           requireDepthStencil (VkFormat imageFormat, bool bWithStencil, bool bClear, f32 clearValue=1.0f);
 
             SubPassInfo&    addSubpass_GFX ();
             SubPassInfo&    addSubpass_COMPUTE ();
@@ -165,6 +165,7 @@ namespace gos
                 bool    bWithStencil;
                 bool    bClear;
                 f32     clearValue;
+                VkFormat imageFormat;
             };
 
         private:
@@ -520,9 +521,10 @@ namespace gos
 
 
         //================ depth buffer
-        bool                depthStencil_create (const gos::Dim2D &w, const gos::Dim2D &h, bool bWithStencil, GPUDepthStencilHandle *out_handle);
-        void                deleteResource (GPUDepthStencilHandle &handle);
-
+        bool                    depthStencil_create (const gos::Dim2D &w, const gos::Dim2D &h, bool bWithStencil, GPUDepthStencilHandle *out_handle);
+        void                    deleteResource (GPUDepthStencilHandle &handle);
+        GPUDepthStencilHandle   depthStencil_getDefault() const                         { return defaultDepthStencil.handle; }
+        VkFormat                depthStencil_getDefaultFormat() const                   { return defaultDepthStencil.format; }
 
         //================ render target
         GPURenderTargetHandle   renderTarget_getDefault() const                         { return defaultRTHandle; }
@@ -639,8 +641,14 @@ namespace gos
 
             VkPipelineLayout    vkPipelineLayoutHandle;
             VkPipeline          vkPipelineHandle;
-
         };        
+
+        struct sDefaultDepthStencil
+        {
+            GPUDepthStencilHandle   handle;
+            VkFormat                format;
+        };
+
 
         class ToBeDeletedBuilder
         {
@@ -726,6 +734,7 @@ namespace gos
 
         GPUViewportHandle           defaultViewportHandle;
         GPURenderTargetHandle       defaultRTHandle;
+        sDefaultDepthStencil        defaultDepthStencil;
 
         HandleList<GPUShaderHandle, gpu::Shader>                    shaderList;
         HandleList<GPUVtxDeclHandle, gpu::VtxDecl>                  vtxDeclList;

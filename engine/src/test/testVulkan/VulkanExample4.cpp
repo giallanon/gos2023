@@ -101,7 +101,18 @@ bool VulkanExample4::virtual_onInit ()
         indexList[ni++] = (nv - 4); indexList[ni++] = (nv - 3); indexList[ni++] = (nv - 2);
         indexList[ni++] = (nv - 2); indexList[ni++] = (nv - 1); indexList[ni++] = (nv - 4);
 
+        //right (blue)
+        z = 1; r = 0; g = 0; b = 1;
+        vertexList[nv++].set(1, 1, 1, r, g, b);
+        vertexList[nv++].set(1, 1, -1, r, g, b);
+        vertexList[nv++].set(1, -1, -1, r, g, b);
+        vertexList[nv++].set(-1, -1, 1, r, g, b);
+        indexList[ni++] = (nv - 4); indexList[ni++] = (nv - 3); indexList[ni++] = (nv - 2);
+        indexList[ni++] = (nv - 2); indexList[ni++] = (nv - 1); indexList[ni++] = (nv - 4);
 
+
+        assert (nv==NUM_VERTEX);
+        assert (ni==NUM_INDEX);
 
     }
 
@@ -136,8 +147,10 @@ bool VulkanExample4::virtual_onInit ()
     //creo il render pass
     gpu->renderLayout_createNew (&renderLayoutHandle)
         .requireRendertarget (eRenderTargetUsage::presentation, gpu->swapChain_getImageFormat(), true, gos::ColorHDR(0xff000080))
+        .requireDepthStencil (gpu->depthStencil_getDefaultFormat(), false, true, 1.0f)
         .addSubpass_GFX()
             .useRenderTarget(0)
+            .useDepthStencil()
         .end()
     .end();
     if (renderLayoutHandle.isInvalid())
@@ -149,6 +162,7 @@ bool VulkanExample4::virtual_onInit ()
     //frame buffers
     gpu->frameBuffer_createNew (renderLayoutHandle, &frameBufferHandle)
         .bindRenderTarget (gpu->renderTarget_getDefault())
+        .bindDepthStencil (gpu->depthStencil_getDefault())
         .end();
     if (frameBufferHandle.isInvalid())
     {
@@ -191,7 +205,7 @@ bool VulkanExample4::virtual_onInit ()
             .zbuffer_setFn (eZFunc::LESS)
             .stencil_enable(false)
         .end() //depth stencil
-        .setCullMode (eCullMode::CCW)
+        .setCullMode (eCullMode::NONE)
         .descriptor_add (descrSetLayoutHandle)
         .end ();
 
@@ -387,15 +401,18 @@ bool VulkanExample4::recordCommandBuffer (VkCommandBuffer *out_commandBuffer)
 
 
     //begin render pass
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.01f, 1.0f}}};
+    VkClearValue clearColor[2];
+    clearColor[0].color = { {0.0f, 0.0f, 0.01f, 1.0f} };
+    clearColor[1].depthStencil = {1.0f, 0};
+
     VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = vkRenderPassHandle;
         renderPassInfo.framebuffer = vkFrameBufferHandle;
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = { renderAreaW, renderAreaH };
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues = &clearColor;    
+        renderPassInfo.clearValueCount = 2;
+        renderPassInfo.pClearValues = clearColor;
 
     vkCmdBeginRenderPass (*out_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     
@@ -474,7 +491,7 @@ void VulkanExample4::doCPUStuff ()
 
             anim.nextTimeRotate_msec = timeNow_msec + 16;
             anim.rotation_grad+=1.0f;
-anim.rotation_grad=2.0f;
+anim.rotation_grad=12.0f;
             anim.zPos += anim.zInc;
             if (anim.zPos >= 10 || anim.zPos < 0)
                 anim.zInc = -anim.zInc;

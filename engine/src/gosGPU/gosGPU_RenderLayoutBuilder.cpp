@@ -70,12 +70,13 @@ RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (eRenderTargetUsage
 }
 
 //***********************************************************
-RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireDepthStencil (bool bWithStencil, bool bClear, f32 clearValue)
+RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireDepthStencil (VkFormat imageFormat, bool bWithStencil, bool bClear, f32 clearValue)
 {
     depthBuffer.isRequired = true;
     depthBuffer.bWithStencil = bWithStencil;
     depthBuffer.bClear = bClear;
     depthBuffer.clearValue = clearValue;
+    depthBuffer.imageFormat = imageFormat;
     return *this;
 }
 
@@ -175,15 +176,23 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
 
 
     //depthstencil
+    VkAttachmentDescription depthAttachment{};
+    VkAttachmentReference depthAttachmentRef{};
     if (depthBuffer.isRequired)
     {
-        //TODO
-        DBGBREAK;
+        depthAttachment.format = depthBuffer.imageFormat;
+        depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        depthAttachment.loadOp = depthBuffer.bClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-        const u8 i = numAttachment++;
-        memset (&attachmentList[i], 0, sizeof(VkAttachmentDescription));
+
+        depthAttachmentRef.attachment = 1;
+        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     }
-
 
 
     //subpass
@@ -248,8 +257,7 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
         //depth stencil
         if (subpassInfoList[i].bUseDepthStencil)
         {
-            //TODO
-            DBGBREAK;
+            subpassList[i].pDepthStencilAttachment = &depthAttachmentRef;
         }
         else
             subpassList[i].pDepthStencilAttachment = NULL;
@@ -266,18 +274,31 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
     //dipendenza di questo subpass da altri subpass (in questo caso non ce ne sono)
     VkSubpassDependency dependency{};
 
-        //indicio che il mio [subpass_0] dipende da un qualunque precedente e già esistente RenderPass sia in questo momento in esecuzione
+    if (subpassInfoList[0].bUseDepthStencil)
+    {
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependency.srcAccessMask = 0;
+
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    }
+    else
+    {
+        //indico che il mio [subpass_0] dipende da un qualunque precedente e già esistente RenderPass sia in questo momento in esecuzione
         dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
         dependency.dstSubpass = 0;
 
         //quando [srcSubpass] ha terminato [STAGE_COLOR_ATTACHMENT_OUTPUT], allora segnala che la dipendenza è risolta
         dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;    
+        dependency.srcAccessMask = 0;
 
         //[subpass_0] può partire in ogni momento ma, primia di entrare in [STAGE_COLOR_ATTACHMENT] deve attendere che [srcSubpass] abbia segnalato la dipendenza
         dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;    //specifica in dettaglio quali tipi di accesso sono necessari. In questo caso, devo scrivere su un RenderTarget
-
+    }
 
 
     //creazione del render pass

@@ -39,6 +39,7 @@ GPU::GPU()
     vkDebugMessenger = VK_NULL_HANDLE;
     defaultViewportHandle.setInvalid();
     defaultRTHandle.setInvalid();
+    defaultDepthStencil.handle.setInvalid();
     currentSwapChainImageIndex = 0;
     bRecreateSwapChainOnNextFrame = false;
 }
@@ -65,6 +66,8 @@ void GPU::deinit()
 
         //elimino l'handle del default RT
         renderTargetList.release (defaultRTHandle);
+
+        depthStencilList.release(defaultDepthStencil.handle);
 
         //elimino la vport di default
         deleteResource (defaultViewportHandle);
@@ -126,7 +129,13 @@ bool GPU::init (u16 width, u16 height, bool vSyncIN, const char *appName)
         rt->height = vulkan.swapChainInfo.imageExtent.height;
     }
 
-
+    //default depth stencil
+    {
+        depthStencil_create ("0-", "0-", false, &defaultDepthStencil.handle);
+        gos::gpu::DepthStencil *s;
+        if (depthStencilList.fromHandleToPointer (defaultDepthStencil.handle, &s))
+            defaultDepthStencil.format = s->depthFormat;
+    }
 
     //fine
     if (bSuccess)
@@ -1290,8 +1299,10 @@ bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
         //depthStencil
         if (s->depthStencilHandle.isValid())
         {
-            //TODO
-            DBGBREAK;
+            if (s->depthStencilHandle != this->defaultDepthStencil.handle)
+            {
+                DBGBREAK;
+            }
         }
 
         VkFramebufferCreateInfo framebufferInfo{};

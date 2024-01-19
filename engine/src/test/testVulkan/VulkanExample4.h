@@ -54,7 +54,7 @@ private:
 
 
 private:
-    static const u8     NUM_FACES = 2;
+    static const u8     NUM_FACES = 3;
     static const u8     NUM_VERTEX = 4*NUM_FACES;
     static const u8     NUM_INDEX = 6*NUM_FACES;
 
