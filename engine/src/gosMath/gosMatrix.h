@@ -341,7 +341,7 @@ namespace gos
 								const f32 m23 = (2.0f*farplane*nearplane) / (nearplane - farplane);
 
 								values[ADDR(0, 0)] = m00;	values[ADDR(0, 1)] = 0;		values[ADDR(0, 2)] = 0;		values[ADDR(0, 3)] = 0;
-								values[ADDR(1, 0)] = 0;		values[ADDR(1, 1)] = m11;	values[ADDR(1, 2)] = 0;		values[ADDR(1, 3)] = 0;
+								values[ADDR(1, 0)] = 0;		values[ADDR(1, 1)] = -m11;	values[ADDR(1, 2)] = 0;		values[ADDR(1, 3)] = 0;
 								values[ADDR(2, 0)] = 0;		values[ADDR(2, 1)] = 0;		values[ADDR(2, 2)] = m22;	values[ADDR(2, 3)] = m23;
 								values[ADDR(3, 0)] = 0;		values[ADDR(3, 1)] = 0;		values[ADDR(3, 2)] = 1;		values[ADDR(3, 3)] = 0;
 							}

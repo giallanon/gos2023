@@ -19,8 +19,6 @@ layout(location = 0) out vec3 out_colorRGB;
 void main() 
 {
     //[gl_Position] esiste automaticamente nei VertexShader e rappresenta le coordinate in clip space da passare al FragmentShader
-	//gl_Position = ubo.proj * ubo.view * ubo.world * vec4(in_position, 0.0, 1.0);
-	//gl_Position = vec4(in_position, 1.0, 1.0) * ubo.world * ubo.view * ubo.proj;
-	gl_Position = vec4(in_position, 1.0) * ubo.proj;
+	gl_Position = vec4(in_position, 1.0) * ubo.world * ubo.view * ubo.proj;
     out_colorRGB = in_colorRGB;
 }

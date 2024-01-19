@@ -35,6 +35,15 @@ private:
     };
 
 
+    struct sAnimation
+    {
+        u64 nextTimeRotate_msec;
+        f32 rotation_grad;
+        f32 zPos;
+        f32 zInc;
+
+        void reset () { nextTimeRotate_msec = 0; rotation_grad = 0; zPos = 0; zInc = 0.1f; }
+    };
 
 private:
     bool        createVertexIndexStageBuffer();
@@ -45,16 +54,15 @@ private:
 
 
 private:
-    static const u8     NUM_VERTEX = 4;
-    static const u8     NUM_INDEX = 6;
+    static const u8     NUM_FACES = 2;
+    static const u8     NUM_VERTEX = 4*NUM_FACES;
+    static const u8     NUM_INDEX = 6*NUM_FACES;
 
 private:
     Vertex                  vertexList[NUM_VERTEX];
     u16                     indexList[NUM_INDEX];
     sUniformBufferObject    ubo;
-
-    u64                     nextTimeRotate_msec;
-    f32                     rotation_grad;
+    sAnimation              anim;
     
 
     GPUVtxBufferHandle      vtxBufferHandle;

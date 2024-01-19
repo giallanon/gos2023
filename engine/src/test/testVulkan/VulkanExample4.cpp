@@ -1,4 +1,5 @@
 #include "VulkanExample4.h"
+#include "../gosGeom/gosGeomCamera3.h"
 
 
 using namespace gos;
@@ -7,8 +8,7 @@ using namespace gos;
 //************************************
 VulkanExample4::VulkanExample4()
 {
-    nextTimeRotate_msec = 0;
-    rotation_grad = 0;
+    anim.reset();
 }
 
 //************************************
@@ -77,22 +77,38 @@ bool VulkanExample4::virtual_onInit ()
 
 
     //vertici
-    u32 n=0;
-    f32 z = 8.0f;
-    vertexList[n++].set(-0.2f, -0.5f, z,         1.0f, 0.0f, 0.0f);
-    vertexList[n++].set(-0.5f,  0.5f, z,         0.0f, 1.0f, 0.0f);
-    vertexList[n++].set( 0.5f,  0.5f, z,         0.0f, 0.0f, 1.0f);
-    vertexList[n++].set( 0.5f, -0.5f, z,         1.0f, 1.0f, 1.0f);
-    assert (n==NUM_VERTEX);
+    {
+        u8 nv = 0;
+        u32 ni = 0;
+        f32 z, r, g, b;
 
-    n = 0;
-    indexList[n++] = 0;
-    indexList[n++] = 1;
-    indexList[n++] = 2;
-    indexList[n++] = 2;
-    indexList[n++] = 3;
-    indexList[n++] = 0;
-    assert (n==NUM_INDEX);
+
+        //front (green)
+        z = -8; r = 0; g = 1; b = 0;
+        vertexList[nv++].set(-1, 1, z, r, g, b);
+        vertexList[nv++].set(1, 1, z, r, g, b);
+        vertexList[nv++].set(1, -1, z, r, g, b);
+        vertexList[nv++].set(-1, -1, z, r, g, b);
+        indexList[ni++] = (nv - 4); indexList[ni++] = (nv - 3); indexList[ni++] = (nv - 2);
+        indexList[ni++] = (nv - 2); indexList[ni++] = (nv - 1); indexList[ni++] = (nv - 4);
+
+        //back (red)
+        z = 1; r = 1; g = 0; b = 0;
+        vertexList[nv++].set(-1, 1, z, r, g, b);
+        vertexList[nv++].set(1, 1, z, r, g, b);
+        vertexList[nv++].set(1, -1, z, r, g, b);
+        vertexList[nv++].set(-1, -1, z, r, g, b);
+        indexList[ni++] = (nv - 4); indexList[ni++] = (nv - 3); indexList[ni++] = (nv - 2);
+        indexList[ni++] = (nv - 2); indexList[ni++] = (nv - 1); indexList[ni++] = (nv - 4);
+
+
+
+    }
+
+
+    //creo un cubo
+
+
 
 
     if (!createVertexIndexStageBuffer())
@@ -107,7 +123,7 @@ bool VulkanExample4::virtual_onInit ()
     GPUVtxDeclHandle vtxDeclHandle;
     gpu->vtxDecl_createNew (&vtxDeclHandle)
         .addStream(eVtxStreamInputRate::perVertex)
-        .addLayout (0, offsetof(Vertex, pos), eDataFormat::_2f32)        //position
+        .addLayout (0, offsetof(Vertex, pos), eDataFormat::_3f32)        //position
         .addLayout (1, offsetof(Vertex, colorRGB), eDataFormat::_3f32)   //color
         .end();
     if (vtxDeclHandle.isInvalid())
@@ -175,7 +191,7 @@ bool VulkanExample4::virtual_onInit ()
             .zbuffer_setFn (eZFunc::LESS)
             .stencil_enable(false)
         .end() //depth stencil
-        .setCullMode (eCullMode::NONE)
+        .setCullMode (eCullMode::CCW)
         .descriptor_add (descrSetLayoutHandle)
         .end ();
 
@@ -451,16 +467,53 @@ void VulkanExample4::doCPUStuff ()
     //prepare frame
     {
         const u64 timeNow_msec = gos::getTimeSinceStart_msec();
-        if (timeNow_msec >= nextTimeRotate_msec)
+        if (timeNow_msec >= anim.nextTimeRotate_msec)
         {
-            nextTimeRotate_msec = timeNow_msec + 300;
-            rotation_grad+=1.0f;
-            ubo.world.identity();
-            ubo.world.buildRotationAboutY (math::gradToRad(rotation_grad));
+            mat4x4f matT;
+            mat4x4f matR;
 
-            ubo.view.buildLookAt (gos::vec3f(0.0f, 2.0f, -5.0f), gos::vec3f(0.0f, 0.0f, 0.0f), gos::vec3f(0.0f, 1.0f, 0.0f));
+            anim.nextTimeRotate_msec = timeNow_msec + 16;
+            anim.rotation_grad+=1.0f;
+anim.rotation_grad=2.0f;
+            anim.zPos += anim.zInc;
+            if (anim.zPos >= 10 || anim.zPos < 0)
+                anim.zInc = -anim.zInc;
+            
+            matR.buildRotationAboutY (math::gradToRad(anim.rotation_grad));
+            matT.buildTranslation (0,0,anim.zPos);
+            ubo.world = matT * matR;
+//            ubo.world.identity();
 
-            ubo.proj.buildPerspective (gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 10.0f);
+
+            gos::geom::Camera3 cam;
+            cam.setPerspectiveFovLH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
+            cam.pos.identity();
+            cam.pos.warp (0, 1, -19);
+            cam.pos.lookAt (vec3f(0,0,0));
+            cam.markUpdated();
+            ubo.view = cam.getMatV();
+            ubo.proj = cam.getMatP();
+
+
+            
+
+
+
+            vec4f vIN[4];
+            vIN[0].set (0,0,0,1);
+            vIN[1].set (0,0,1,1);
+            vIN[2].set (0,0,10,1);
+            vIN[3].set (0,0,100,1);
+            vec4f vOUT[4];
+            for (u32 i = 0; i < 4; i++)
+            {
+                //vec4f v (vertexList[i].pos.x, vertexList[i].pos.y, vertexList[i].pos.z, 1);
+                //vOUT[i] = math::vecTransform (ubo.proj, v);
+                vOUT[i] = math::vecTransform (ubo.proj, vIN[i]);
+            }
+            vOUT[0].w = 1;
+
+
         }
         gpu->uniformBuffer_mapCopyUnmap (uboHandle, 0, sizeof(sUniformBufferObject), &ubo);
     }

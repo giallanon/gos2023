@@ -38,17 +38,7 @@ void Camera3::setPerspectiveFovLH (f32 aspectIN, f32 fovY_radIN, f32 nearplane, 
 	farDistance = farplane;
 	fovy_rad = fovY_radIN;
 
-
-	const f32 tanHalfFov = tanf (fovy_rad * 0.5f);
-	const f32 m00 = 1.0f / (aspectRatio * tanHalfFov);
-	const f32 m11 = 1.0f / tanHalfFov;
-	const f32 m22 = (-nearplane - farplane) / (nearplane - farplane);
-	const f32 m23 = (2.0f*farplane*nearplane) / (nearplane - farplane);
-
-	matP(0, 0) = m00;	matP(0, 1) = 0;		matP(0, 2) = 0;		matP(0, 3) = 0;
-	matP(1, 0) = 0;		matP(1, 1) = m11;	matP(1, 2) = 0;		matP(1, 3) = 0;
-	matP(2, 0) = 0;		matP(2, 1) = 0;		matP(2, 2) = m22;	matP(2, 3) = m23;
-	matP(3, 0) = 0;		matP(3, 1) = 0;		matP(3, 2) = 1;		matP(3, 3) = 0;
+	matP.buildPerspective (aspectRatio, fovy_rad, nearDistance, farDistance);
 }
 
 //*************************************************************

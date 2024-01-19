@@ -65,11 +65,14 @@ namespace gos
 			void					alignAsseY (const vec3f &align);
 			void					alignAsseZ (const vec3f &align);
 			void					normalizeRotMatrix();
-
+			
+			//un vect espresso in word coordinate [vIn] viene trasformato in local coordinate [vOut]
 			void					vect_ToLocal (const vec3f *vIn, vec3f *vOut, u32 n) const;
-										//un vect espresso in word coordinate [vIn] viene trasformato in local coordinate [vOut]
+										
+			//un vect espresso in local coordinate [vIn] viene trasformato in world coordinate [vOut]
 			void					vect_ToWorld (const vec3f *vIn, vec3f *vOut, u32 n) const;
-										//un vect espresso in local coordinate [vIn] viene trasformato in world coordinate [vOut]
+										
+			//come sopra, ma per i punti
 			void					point_ToLocal (const vec3f *vIn, vec3f *vOut, u32 n) const;
 			void					point_ToWorld (const vec3f *vIn, vec3f *vOut, u32 n) const;
 
