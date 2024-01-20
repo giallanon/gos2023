@@ -14,7 +14,7 @@ typedef gos::GPU::RenderTaskLayoutBuilder::SubPassInfo      SUBPASS_INFO;   //di
  ***********************************************************************************************************************/
 SUBPASS_INFO& GPU::RenderTaskLayoutBuilder::SubPassInfo::useRenderTarget (u8 index)
 {
-    if (index < GOSGPU__NUM_MAX_RENDER_TARGET)
+    if (index < GOSGPU__NUM_MAX_ATTACHMENT)
         renderTargetIndexList[nRenderTarget++] = index;
     else
     {
@@ -52,7 +52,7 @@ GPU::RenderTaskLayoutBuilder::~RenderTaskLayoutBuilder()
 //***********************************************************
 RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (eRenderTargetUsage usage, VkFormat imageFormat, bool bClear, const gos::ColorHDR &clearColor)
 {
-    if (numRenderTargetInfo < GOSGPU__NUM_MAX_RENDER_TARGET)
+    if (numRenderTargetInfo < GOSGPU__NUM_MAX_ATTACHMENT)
     {
         rtInfoList[numRenderTargetInfo].usage = usage;
         rtInfoList[numRenderTargetInfo].bClear = bClear;
@@ -131,17 +131,19 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
 {
     //color buffer attachment
     u8 numAttachment = 0;
-    VkAttachmentDescription attachmentList[GOSGPU__NUM_MAX_RENDER_TARGET];
+    VkAttachmentDescription attachmentList[GOSGPU__NUM_MAX_ATTACHMENT];
+
+
+    //elenco dei color buffer attachment
     for (u8 i=0; i<numRenderTargetInfo; i++)
     {
-        numAttachment++;
-        memset (&attachmentList[i], 0, sizeof(VkAttachmentDescription));
+        memset (&attachmentList[numAttachment], 0, sizeof(VkAttachmentDescription));
         
-        attachmentList[i].format = rtInfoList[i].imageFormat;
-        attachmentList[i].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachmentList[i].loadOp = rtInfoList[i].bClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachmentList[numAttachment].format = rtInfoList[i].imageFormat;
+        attachmentList[numAttachment].samples = VK_SAMPLE_COUNT_1_BIT;
+        attachmentList[numAttachment].loadOp = rtInfoList[i].bClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         
-        attachmentList[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;              //non mi interessa lo stato del buffer all'inizio, tanto lo pulisco
+        attachmentList[numAttachment].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;              //non mi interessa lo stato del buffer all'inizio, tanto lo pulisco
 
         switch (rtInfoList[i].usage)
         {
@@ -151,53 +153,54 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
 
         case eRenderTargetUsage::presentation:
             //Lo uso per essere presentato a video
-            attachmentList[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;                  //mantiene le info scritte in questo buffer
-            attachmentList[i].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;          //il formato finale deve essere prensentabile
+            attachmentList[numAttachment].storeOp = VK_ATTACHMENT_STORE_OP_STORE;                  //mantiene le info scritte in questo buffer
+            attachmentList[numAttachment].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;          //il formato finale deve essere prensentabile
             break;
 
         case eRenderTargetUsage::storage:
             //Lo uso durante il rendering e, alla fine, devo conservarne i risultati
-            attachmentList[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;                  //mantiene le info scritte in questo buffer
-            attachmentList[i].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;  //leggibile dagli shader
+            attachmentList[numAttachment].storeOp = VK_ATTACHMENT_STORE_OP_STORE;                  //mantiene le info scritte in questo buffer
+            attachmentList[numAttachment].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;  //leggibile dagli shader
             break;
 
         case eRenderTargetUsage::storage_discard:
             //Lo uso durante il rendering, ma alla fine lo posso buttare via
-            attachmentList[i].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;              //alla fine del rendering, puoi buttare via il contenuto
-            attachmentList[i].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;  //leggibile dagli shader
+            attachmentList[numAttachment].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;              //alla fine del rendering, puoi buttare via il contenuto
+            attachmentList[numAttachment].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;  //leggibile dagli shader
             break;
         }
 
         //stencil: don't care visto che e' un color buffer
-        attachmentList[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentList[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachmentList[numAttachment].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachmentList[numAttachment].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+        numAttachment++;
     }
 
 
-
-    //depthstencil
-    VkAttachmentDescription depthAttachment{};
-    VkAttachmentReference depthAttachmentRef{};
+    //depthstencil attachment se necessario
+    u32 indexOfDepthStencilAttachment = u32MAX;
     if (depthBuffer.isRequired)
     {
-        depthAttachment.format = depthBuffer.imageFormat;
-        depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        depthAttachment.loadOp = depthBuffer.bClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        indexOfDepthStencilAttachment = numAttachment;
+        memset (&attachmentList[numAttachment], 0, sizeof(VkAttachmentDescription));
 
-
-        depthAttachmentRef.attachment = 1;
-        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachmentList[numAttachment].format = depthBuffer.imageFormat;
+        attachmentList[numAttachment].samples = VK_SAMPLE_COUNT_1_BIT;
+        attachmentList[numAttachment].loadOp = depthBuffer.bClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachmentList[numAttachment].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachmentList[numAttachment].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachmentList[numAttachment].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachmentList[numAttachment].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attachmentList[numAttachment].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        numAttachment++;
     }
+
 
 
     //subpass
-    const u8 NUM_MAX_COLOR_ATTACHMENT_REF = 32;
-    VkAttachmentReference colorAttachmentRef[NUM_MAX_COLOR_ATTACHMENT_REF];
+    static constexpr u32 NUM_MAX_ATTACHMENT_REF = 32;
+    VkAttachmentReference attachmentRef[NUM_MAX_ATTACHMENT_REF];
     u32 nRef = 0;
 
     VkSubpassDescription subpassList[NUM_MAX_SUBPASS];
@@ -225,13 +228,13 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
         const u8 nRT = subpassInfoList[i].nRenderTarget;
         if (0 == nRT)
         {
-            subpassList[i].colorAttachmentCount = nRT;
+            subpassList[i].colorAttachmentCount = 0;
             subpassList[i].pColorAttachments = NULL;
         }
         else
         {
             subpassList[i].colorAttachmentCount = nRT;
-            subpassList[i].pColorAttachments = &colorAttachmentRef[nRef];
+            subpassList[i].pColorAttachments = &attachmentRef[nRef];
             
             for (u8 i2=0; i2<nRT; i2++)
             {
@@ -242,14 +245,14 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
                     return false;                    
                 }
 
-                if (nRef >= NUM_MAX_COLOR_ATTACHMENT_REF)
+                if (nRef >= GOSGPU__NUM_MAX_ATTACHMENT)
                 {
                     gos::logger::err ("RenderTaskLayout::end() => too many color attachment REF\n");
                     return false;                    
                 }                
                 
-                colorAttachmentRef[nRef].attachment = rtIndex;
-                colorAttachmentRef[nRef].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                attachmentRef[nRef].attachment = rtIndex;
+                attachmentRef[nRef].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
                 nRef++;
             }
         }
@@ -257,7 +260,11 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
         //depth stencil
         if (subpassInfoList[i].bUseDepthStencil)
         {
-            subpassList[i].pDepthStencilAttachment = &depthAttachmentRef;
+            subpassList[i].pDepthStencilAttachment = &attachmentRef[nRef];
+            
+            attachmentRef[nRef].attachment = indexOfDepthStencilAttachment;
+            attachmentRef[nRef].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            nRef++;
         }
         else
             subpassList[i].pDepthStencilAttachment = NULL;

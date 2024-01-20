@@ -35,10 +35,10 @@ GPUFBB& GPU::FrameBuffersBuilder::setRenderAreaSize (const gos::Dim2D &w, const 
 //*********************************************** 
 GPUFBB& GPU::FrameBuffersBuilder::bindRenderTarget (const GPURenderTargetHandle &handle)
 {
-    if (numRenderTarget >= GOSGPU__NUM_MAX_RENDER_TARGET)
+    if (numRenderTarget >= GOSGPU__NUM_MAX_ATTACHMENT)
     {
         bAnyError = true;
-        gos::logger::err ("GPU::FrameBuffersBuilder::bindRenderTarget() => too many RenderTarget. Max is %d\n", GOSGPU__NUM_MAX_RENDER_TARGET);
+        gos::logger::err ("GPU::FrameBuffersBuilder::bindRenderTarget() => too many RenderTarget. Max is %d\n", GOSGPU__NUM_MAX_ATTACHMENT);
     }
     else
     {

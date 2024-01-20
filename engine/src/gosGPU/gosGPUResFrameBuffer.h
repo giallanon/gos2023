@@ -53,7 +53,7 @@ namespace gos
             GPURenderLayoutHandle   renderLayoutHandle;
             GPUDepthStencilHandle   depthStencilHandle;
             u32                     numRenderTaget;
-            GPURenderTargetHandle   renderTargetHandleList[GOSGPU__NUM_MAX_RENDER_TARGET];    //elenco dei RT da usare
+            GPURenderTargetHandle   renderTargetHandleList[GOSGPU__NUM_MAX_ATTACHMENT];    //elenco dei RT da usare
         };
 
     } //namespace gpu

@@ -67,7 +67,8 @@ void GPU::deinit()
         //elimino l'handle del default RT
         renderTargetList.release (defaultRTHandle);
 
-        depthStencilList.release(defaultDepthStencil.handle);
+        deleteResource(defaultDepthStencil.handle);
+        //depthStencilList.release(defaultDepthStencil.handle);
 
         //elimino la vport di default
         deleteResource (defaultViewportHandle);
@@ -529,7 +530,6 @@ bool GPU::priv_swapChain_recreate ()
     //attuale dimensione della vport
     const i16 vportW = (i16)vulkan.swapChainInfo.imageExtent.width;
     const i16 vportH = (i16)vulkan.swapChainInfo.imageExtent.height;
-
     //aggiorno le info del default RT
     {
         gpu::RenderTarget *rt;
@@ -555,7 +555,7 @@ bool GPU::priv_swapChain_recreate ()
         gos::gpu::DepthStencil *s;
         if (depthStencilList.fromHandleToPointer (depthStencilHandleList(i), &s))
         {
-            if (!s->width.isAbsolute() || !s->height.isAbsolute())
+            if (s->width.isRelative() || s->height.isRelative())
             {
                 priv_depthStencil_deleteFromStruct (*s);
                 s->resolve (vportW, vportH);
@@ -1009,12 +1009,8 @@ bool GPU::priv_depthStencil_createFromStruct (gos::gpu::DepthStencil &depthStenc
     assert (VK_FORMAT_UNDEFINED != depthStencil.depthFormat);
 
     //risolvo la dimensione
-    {
-        int winDimX;
-        int winDimY;
-        window.getCurrentSize (&winDimX, &winDimY);
-        depthStencil.resolve ((i16)winDimX, (i16)winDimY);
-    }
+    depthStencil.resolve ((i16)vulkan.swapChainInfo.imageExtent.width, (i16)vulkan.swapChainInfo.imageExtent.height);
+
 
 	VkImageCreateInfo imageCI{};
 	imageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1261,6 +1257,8 @@ bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
     //render area
     s->resolve ((i16)vulkan.swapChainInfo.imageExtent.width, (i16)vulkan.swapChainInfo.imageExtent.height);
 
+    gos::logger::verbose ("GPU::priv_frameBuffer_recreate() => frame buffer size: %d %d\n", s->resolvedW, s->resolvedH);
+
     //render layout
     sRenderLayout *sRL;
     if (!priv_fromHandleToPointer (renderLayoutList, s->renderLayoutHandle, &sRL))
@@ -1275,7 +1273,7 @@ bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
     for (u32 t=0; t<s->numFrameBuffer; t++)
     {
         //render target
-        VkImageView imageViewList[GOSGPU__NUM_MAX_RENDER_TARGET + 1];
+        VkImageView imageViewList[GOSGPU__NUM_MAX_ATTACHMENT + 1];
         u32 nViewList = 0;
 
         for (u32 i=0; i<s->numRenderTaget; i++)
@@ -1299,10 +1297,11 @@ bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
         //depthStencil
         if (s->depthStencilHandle.isValid())
         {
-            if (s->depthStencilHandle != this->defaultDepthStencil.handle)
-            {
-                DBGBREAK;
-            }
+            gpu::DepthStencil *zb;
+            if (!priv_fromHandleToPointer (depthStencilList, s->depthStencilHandle, &zb))
+                return false;
+            gos::logger::verbose ("GPU::priv_frameBuffer_recreate() => depth stencile size: %d %d\n", zb->resolvedW, zb->resolvedH);
+            imageViewList[nViewList++] = zb->view;
         }
 
         VkFramebufferCreateInfo framebufferInfo{};

@@ -84,7 +84,7 @@ bool VulkanExample4::virtual_onInit ()
 
 
         //front (green)
-        z = -8; r = 0; g = 1; b = 0;
+        z = -1; r = 0; g = 1; b = 0;
         vertexList[nv++].set(-1, 1, z, r, g, b);
         vertexList[nv++].set(1, 1, z, r, g, b);
         vertexList[nv++].set(1, -1, z, r, g, b);
@@ -94,22 +94,39 @@ bool VulkanExample4::virtual_onInit ()
 
         //back (red)
         z = 1; r = 1; g = 0; b = 0;
-        vertexList[nv++].set(-1, 1, z, r, g, b);
         vertexList[nv++].set(1, 1, z, r, g, b);
-        vertexList[nv++].set(1, -1, z, r, g, b);
+        vertexList[nv++].set(-1, 1, z, r, g, b);
         vertexList[nv++].set(-1, -1, z, r, g, b);
+        vertexList[nv++].set(1, -1, z, r, g, b);
         indexList[ni++] = (nv - 4); indexList[ni++] = (nv - 3); indexList[ni++] = (nv - 2);
         indexList[ni++] = (nv - 2); indexList[ni++] = (nv - 1); indexList[ni++] = (nv - 4);
 
         //right (blue)
         z = 1; r = 0; g = 0; b = 1;
-        vertexList[nv++].set(1, 1, 1, r, g, b);
         vertexList[nv++].set(1, 1, -1, r, g, b);
+        vertexList[nv++].set(1, 1,  1, r, g, b);
+        vertexList[nv++].set(1, -1, 1, r, g, b);
         vertexList[nv++].set(1, -1, -1, r, g, b);
+        indexList[ni++] = (nv - 4); indexList[ni++] = (nv - 3); indexList[ni++] = (nv - 2);
+        indexList[ni++] = (nv - 2); indexList[ni++] = (nv - 1); indexList[ni++] = (nv - 4);
+
+        //right (white)
+        z = 1; r = 1; g = 1; b = 1;
+        vertexList[nv++].set(-1, 1, 1, r, g, b);
+        vertexList[nv++].set(-1, 1, -1, r, g, b);
+        vertexList[nv++].set(-1, -1, -1, r, g, b);
         vertexList[nv++].set(-1, -1, 1, r, g, b);
         indexList[ni++] = (nv - 4); indexList[ni++] = (nv - 3); indexList[ni++] = (nv - 2);
         indexList[ni++] = (nv - 2); indexList[ni++] = (nv - 1); indexList[ni++] = (nv - 4);
 
+        //top (yellow)
+        z = 1; r = 1; g = 1; b = 0;
+        vertexList[nv++].set(-1, 1, -1, r, g, b);
+        vertexList[nv++].set(-1, 1,  1, r, g, b);
+        vertexList[nv++].set( 1, 1,  1, r, g, b);
+        vertexList[nv++].set( 1, 1, -1, r, g, b);
+        indexList[ni++] = (nv - 4); indexList[ni++] = (nv - 3); indexList[ni++] = (nv - 2);
+        indexList[ni++] = (nv - 2); indexList[ni++] = (nv - 1); indexList[ni++] = (nv - 4);
 
         assert (nv==NUM_VERTEX);
         assert (ni==NUM_INDEX);
@@ -205,7 +222,7 @@ bool VulkanExample4::virtual_onInit ()
             .zbuffer_setFn (eZFunc::LESS)
             .stencil_enable(false)
         .end() //depth stencil
-        .setCullMode (eCullMode::NONE)
+        .setCullMode (eCullMode::CCW)
         .descriptor_add (descrSetLayoutHandle)
         .end ();
 
@@ -491,7 +508,7 @@ void VulkanExample4::doCPUStuff ()
 
             anim.nextTimeRotate_msec = timeNow_msec + 16;
             anim.rotation_grad+=1.0f;
-anim.rotation_grad=12.0f;
+//anim.rotation_grad=12.0f;
             anim.zPos += anim.zInc;
             if (anim.zPos >= 10 || anim.zPos < 0)
                 anim.zInc = -anim.zInc;
@@ -505,7 +522,7 @@ anim.rotation_grad=12.0f;
             gos::geom::Camera3 cam;
             cam.setPerspectiveFovLH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
             cam.pos.identity();
-            cam.pos.warp (0, 1, -19);
+            cam.pos.warp (0, 9, -19);
             cam.pos.lookAt (vec3f(0,0,0));
             cam.markUpdated();
             ubo.view = cam.getMatV();

@@ -129,7 +129,7 @@ namespace gos
                 eMode   mode;
                 bool    bUseDepthStencil;
                 u8      nRenderTarget;
-                u8      renderTargetIndexList[GOSGPU__NUM_MAX_RENDER_TARGET];
+                u8      renderTargetIndexList[GOSGPU__NUM_MAX_ATTACHMENT];
 
             friend class RenderTaskLayoutBuilder;
             }; //class SubPassInfo
@@ -176,7 +176,7 @@ namespace gos
 
             bool                    bAnyError;
             u8                      numRenderTargetInfo;
-            sRenderTargetInfo       rtInfoList[GOSGPU__NUM_MAX_RENDER_TARGET];
+            sRenderTargetInfo       rtInfoList[GOSGPU__NUM_MAX_ATTACHMENT];
             sDepthBufferInfo        depthBuffer;
             u8                      numSubpassInfo;
             SubPassInfo             subpassInfoList[NUM_MAX_SUBPASS];
@@ -350,7 +350,7 @@ namespace gos
             gos::Dim2D              width;
             gos::Dim2D              height;
             u32                     numRenderTarget;
-            GPURenderTargetHandle   renderTargetHandleList[GOSGPU__NUM_MAX_RENDER_TARGET];
+            GPURenderTargetHandle   renderTargetHandleList[GOSGPU__NUM_MAX_ATTACHMENT];
             GPUDepthStencilHandle   depthStencilHandle;
 
 
