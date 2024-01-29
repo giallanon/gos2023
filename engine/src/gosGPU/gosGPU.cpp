@@ -37,6 +37,7 @@ GPU::GPU()
     vkInstance = VK_NULL_HANDLE;
     vkSurface = VK_NULL_HANDLE;
     vkDebugMessenger = VK_NULL_HANDLE;
+    vkCommandBufferForStagingCopy = VK_NULL_HANDLE;
     defaultViewportHandle.setInvalid();
     defaultRTHandle.setInvalid();
     defaultDepthStencil.handle.setInvalid();
@@ -59,6 +60,12 @@ void GPU::deinit()
     gos::logger::log ("GPU::deinit()\n");
     gos::logger::incIndent();
 
+        if (VK_NULL_HANDLE != vkCommandBufferForStagingCopy)
+        {
+            vulkanDeleteCommandBuffer (vulkan, gos::eGPUQueueType::transfer, vkCommandBufferForStagingCopy);
+            vkCommandBufferForStagingCopy = VK_NULL_HANDLE;
+        }
+        
         toBeDeletedBuilder.deleteAll();
         toBeDeletedBuilder.unsetup();
 
@@ -305,6 +312,7 @@ bool GPU::priv_initHandleLists()
     uniformBufferList.setup (allocator);
     descrPoolList.setup (allocator);
     descrSetInstanceList.setup (allocator);
+    cmdBufferList.setup (allocator);
     return true;
 }
 
@@ -333,6 +341,7 @@ void  GPU::priv_deinitandleLists()
     uniformBufferList.unsetup();
     descrPoolList.unsetup();
     descrSetInstanceList.unsetup();
+    cmdBufferList.unsetup();
 }
 
 //************************************
@@ -584,32 +593,6 @@ bool GPU::priv_swapChain_recreate ()
     return ret;  
 }
 
-//************************************
-bool GPU::createCommandBuffer (eGPUQueueType whichQ, VkCommandBuffer *out)
-{
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = vulkan.getQueueInfo(whichQ)->vkPoolHandle;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
-
-    const VkResult result = vkAllocateCommandBuffers (vulkan.dev, &allocInfo, out);
-    if (result == VK_SUCCESS)
-        return true;
-    
-    gos::logger::log ("GPU::createCommandBuffer() => vkAllocateCommandBuffers() => %s\n", string_VkResult(result));
-    return false;
-}
-
-//************************************
-bool GPU::deleteCommandBuffer (eGPUQueueType whichQ, VkCommandBuffer &vkHandle)
-{
-    VkCommandBuffer vkCmdBufferList[] = { vkHandle };
-
-    vkFreeCommandBuffers (vulkan.dev, vulkan.getQueueInfo(whichQ)->vkPoolHandle, 1, vkCmdBufferList);
-    return true;
-}
-
 //**********************************************************
 void  GPU::waitIdle()
 {
@@ -663,37 +646,39 @@ void GPU::vsync_enable (bool b)
 bool GPU::priv_copyVulkanBuffer (const VkBuffer srcBuffer, const VkBuffer dstBuffer, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
 {
     //perparo un command buffer per il trasferimento dei dati
-    VkCommandBuffer vkCmdBuffer;
-    if (!createCommandBuffer (gos::eGPUQueueType::transfer, &vkCmdBuffer))
+    if (VK_NULL_HANDLE == vkCommandBufferForStagingCopy)
     {
-        gos::logger::err ("GPU::priv_copyVulkanBuffer() => createCommandBuffer failed\n");
-        return false;
+        if (!vulkanCreateCommandBuffer (vulkan, gos::eGPUQueueType::transfer, &vkCommandBufferForStagingCopy))
+        {
+            gos::logger::err ("GPU::priv_copyVulkanBuffer() => createCommandBuffer failed\n");
+            return false;
+        }
     }
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer (vkCmdBuffer, &beginInfo);    
+    vkBeginCommandBuffer (vkCommandBufferForStagingCopy, &beginInfo);    
 
     VkBufferCopy copyRegion{};
     copyRegion.srcOffset = offsetSRC;
     copyRegion.dstOffset = offsetDST;
     copyRegion.size = howManyByteToCopy;
-    vkCmdCopyBuffer(vkCmdBuffer, srcBuffer, dstBuffer, 1, &copyRegion);    
+    vkCmdCopyBuffer(vkCommandBufferForStagingCopy, srcBuffer, dstBuffer, 1, &copyRegion);    
 
-    vkEndCommandBuffer(vkCmdBuffer);
+    vkEndCommandBuffer(vkCommandBufferForStagingCopy);
 
     //submit
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &vkCmdBuffer;
+    submitInfo.pCommandBuffers = &vkCommandBufferForStagingCopy;
     vkQueueSubmit (vulkan.getQueueInfo(eGPUQueueType::transfer)->vkQueueHandle, 1, &submitInfo, VK_NULL_HANDLE);
     
     //attendo
     waitIdle (eGPUQueueType::transfer);
 
-    deleteCommandBuffer (gos::eGPUQueueType::transfer, vkCmdBuffer);
+    //deleteCommandBuffer (gos::eGPUQueueType::transfer, vkCommandBufferForStagingCopy);
     return true;    
 }
 
@@ -1148,7 +1133,7 @@ bool GPU::priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder)
 
     
     //render layout. Mi accerto che sia valido
-    sRenderLayout *sRL;
+    gpu::RenderLayout *sRL;
     if (!priv_fromHandleToPointer (renderLayoutList, builder->renderLayoutHandle, &sRL))
     {
         gos::logger::err ("GPU::priv_renderTarget__onBuilderEnds() => invalid renderLayoutHandle\n");
@@ -1260,7 +1245,7 @@ bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
     gos::logger::verbose ("GPU::priv_frameBuffer_recreate() => frame buffer size: %d %d\n", s->resolvedW, s->resolvedH);
 
     //render layout
-    sRenderLayout *sRL;
+    gpu::RenderLayout *sRL;
     if (!priv_fromHandleToPointer (renderLayoutList, s->renderLayoutHandle, &sRL))
         return false;
 
@@ -1375,7 +1360,7 @@ bool GPU::priv_renderLayout_onBuilderEnds (RenderTaskLayoutBuilder *builder)
     if (builder->anyError())
         return false;
         
-    sRenderLayout *s = renderLayoutList.reserve (builder->out_handle);
+    gpu::RenderLayout *s = renderLayoutList.reserve (builder->out_handle);
     if (NULL == s)
     {
         gos::logger::err ("GPU::priv_renderLayout_onBuilderEnds() => can't reserve a handle!\n");
@@ -1383,13 +1368,20 @@ bool GPU::priv_renderLayout_onBuilderEnds (RenderTaskLayoutBuilder *builder)
     }
 
     s->vkRenderPassHandle = builder->vkRenderPassHandle;
+    s->numColorBuffer = builder->numRenderTargetInfo;
+    s->numAttachment = builder->numRenderTargetInfo;
+    if (builder->depthBuffer.isRequired)
+    {
+        s->numAttachment++;
+        s->indexOfDepthStencilBuffer = builder->depthBuffer.indexOfDepthStencilAttachment;
+    }
     return true;
 }
 
 //************************************
 void GPU::deleteResource (GPURenderLayoutHandle &handle)
 {
-    sRenderLayout *s;
+    gpu::RenderLayout *s;
     if (renderLayoutList.fromHandleToPointer (handle, &s))
     {
         vkDestroyRenderPass (vulkan.dev, s->vkRenderPassHandle, nullptr);
@@ -1401,9 +1393,18 @@ void GPU::deleteResource (GPURenderLayoutHandle &handle)
 }
 
 //************************************
+const gpu::RenderLayout* GPU::getInfo (const GPURenderLayoutHandle handle) const
+{
+    gpu::RenderLayout *s;
+    if (priv_fromHandleToPointer (renderLayoutList, handle, &s))
+        return s;
+    return NULL;
+}
+
+//************************************
 bool GPU::toVulkan (const GPURenderLayoutHandle handle, VkRenderPass *out) const
 {
-    sRenderLayout *s;
+    gpu::RenderLayout *s;
     if (priv_fromHandleToPointer(renderLayoutList, handle, &s))
     {
         *out = s->vkRenderPassHandle;
@@ -1631,6 +1632,67 @@ bool GPU::vertexBuffer_unmap  (const GPUVtxBufferHandle handle)
 
 
 /************************************************************************************************************
+ * Command buffer
+ * 
+ * 
+ *************************************************************************************************************/
+bool GPU::cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+    VkCommandBuffer vkCmdBufferHandle;
+    if (!vulkanCreateCommandBuffer (vulkan, whichQ, &vkCmdBufferHandle))
+    {
+        gos::logger::log ("GPU::cmdBuffer_create() => failed\n");
+        return false;
+    }
+
+
+    gpu::CommandBuffer *s =cmdBufferList.reserve (out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::cmdBuffer_create() => can't reserve a handle!\n");
+        return false;
+    }
+    s->reset();
+    s->vkHandle = vkCmdBufferHandle;
+    s->whichQ = whichQ;
+    return true;    
+}
+
+//************************************
+void GPU::deleteResource (GPUCmdBufferHandle &handle)
+{
+    gpu::CommandBuffer *s;
+    if (cmdBufferList.fromHandleToPointer (handle, &s))
+    {
+        vulkanDeleteCommandBuffer (vulkan, s->whichQ, s->vkHandle);
+        s->reset();
+        cmdBufferList.release (handle);
+    }
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::toVulkan (const GPUCmdBufferHandle handle, VkCommandBuffer *out) const
+{
+    assert (NULL != out);
+    gpu::CommandBuffer *s;
+    if (cmdBufferList.fromHandleToPointer(handle, &s))
+    {
+        *out = s->vkHandle;
+        return true;
+    }
+
+    *out = VK_NULL_HANDLE;
+    gos::logger::err ("GPU::cmdBuffer_toVulkan() => invalid handle\n");
+    return false;    
+}
+
+
+/************************************************************************************************************
  * Staging buffer
  * 
  * 
@@ -1669,6 +1731,20 @@ bool GPU::stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle)
     s->vkHandle = vkHandle;
     s->vkMemHandle = vkMemHandle;
     s->allocatedSizeInByte = sizeInByte;
+    s->mapped_offset = 0;
+    s->mapped_size = sizeInByte;    
+
+
+    //mappo la memoria del buffer direttamente qui, visto che questo buffer e' sempre HOST_MAPPABLE e COHERENT
+    VkResult result = vkMapMemory (vulkan.dev, s->vkMemHandle, 0, sizeInByte, 0, &s->mapped_pt);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::stagingBuffer_create() => vkMapMemory() => %s\n", string_VkResult(result));
+        vkDestroyBuffer (vulkan.dev, s->vkHandle, nullptr);
+        staginBufferList.release(*out_handle);
+        return false;
+    }
+
     return true;    
 }
 
@@ -1688,6 +1764,51 @@ void GPU::deleteResource (GPUStgBufferHandle &handle)
 }
 
 //************************************
+bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy)
+{
+    VkBuffer dstBuffer;
+    if (!toVulkan (handleDST, &dstBuffer))
+    {
+        gos::logger::err ("GPU::stagingBuffer_uploadToGPUBuffer() => invalid handleDST\n");
+        return false;
+    }
+    
+    gpu::StagingBuffer *s;
+    if (!priv_fromHandleToPointer(staginBufferList, handleSRC, &s))
+    {
+        gos::logger::err ("GPU::stagingBuffer_uploadToGPUBuffer() => invalid handleSRC\n");
+        return false;
+    }
+
+    assert (s->mapped_size >= howManyByteToCopy);
+    memcpy (s->mapped_pt, dataSRC, howManyByteToCopy);
+    return priv_copyVulkanBuffer (s->vkHandle, dstBuffer, 0, offsetDST, howManyByteToCopy);
+}
+
+//************************************
+bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy)
+{
+    VkBuffer dstBuffer;
+    if (!toVulkan (handleDST, &dstBuffer))
+    {
+        gos::logger::err ("GPU::stagingBuffer_uploadToGPUBuffer() => invalid handleDST\n");
+        return false;
+    }
+    
+    gpu::StagingBuffer *s;
+    if (!priv_fromHandleToPointer(staginBufferList, handleSRC, &s))
+    {
+        gos::logger::err ("GPU::stagingBuffer_uploadToGPUBuffer() => invalid handleSRC\n");
+        return false;
+    }
+
+    assert (s->mapped_size >= howManyByteToCopy);
+    memcpy (s->mapped_pt, dataSRC, howManyByteToCopy);
+    return priv_copyVulkanBuffer (s->vkHandle, dstBuffer, 0, offsetDST, howManyByteToCopy);
+}
+
+
+/************************************
 bool GPU::toVulkan (const GPUStgBufferHandle handle, VkBuffer *out) const
 {
     gpu::StagingBuffer *s;
@@ -1701,8 +1822,9 @@ bool GPU::toVulkan (const GPUStgBufferHandle handle, VkBuffer *out) const
     gos::logger::err ("GPU::stagingBuffer_toVulkan() => invalid handle\n");
     return false;    
 }
+*/
 
-//************************************
+/************************************
 bool GPU::stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const
 {
     assert (NULL != out);
@@ -1728,7 +1850,7 @@ bool GPU::stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32
         s->mapped_size = sizeInByte;
     }
 
-    //gli uniform sono sempre mappati in memoria, lo faccio durante la create
+    //gli staging sono sempre mappati in memoria CPU, lo faccio durante la create
     if (sizeInByte > s->mapped_size)
     {
         gos::logger::err ("GPU::uniformBuffer_map() => invalid params1 (%d, %d). Buffer size is %d\n", offsetDST, sizeInByte, s->mapped_size);
@@ -1745,8 +1867,9 @@ bool GPU::stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32
 
     return true;
 }
+*/
 
-//************************************
+/************************************
 bool GPU::stagingBuffer_unmap  (const GPUStgBufferHandle handle)
 {
     gpu::StagingBuffer *s;
@@ -1763,8 +1886,10 @@ bool GPU::stagingBuffer_unmap  (const GPUStgBufferHandle handle)
     vkUnmapMemory(vulkan.dev, s->vkMemHandle);
     return true;
 }
+*/
 
-//************************************
+
+/************************************
 bool GPU::stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUVtxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
 {
     //ora creo un job per copiare via GPU il buffer di staging nel vxtBuffer
@@ -1784,8 +1909,9 @@ bool GPU::stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const 
 
     return priv_copyVulkanBuffer (srcBuffer, dstBuffer, offsetSRC, offsetDST, howManyByteToCopy);
 }
+*/
 
-//************************************
+/************************************
 bool GPU::stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUIdxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
 {
     //ora creo un job per copiare via GPU il buffer di staging nel vxtBuffer
@@ -1805,7 +1931,7 @@ bool GPU::stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const 
 
     return priv_copyVulkanBuffer (srcBuffer, dstBuffer, offsetSRC, offsetDST, howManyByteToCopy);
 }
-
+*/
 
 
 

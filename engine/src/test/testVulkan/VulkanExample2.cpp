@@ -70,7 +70,7 @@ bool VulkanExample2::virtual_onInit ()
 
     //creo il render pass
     gpu->renderLayout_createNew (&renderLayoutHandle)
-        .requireRendertarget (eRenderTargetUsage::presentation, gpu->swapChain_getImageFormat(), true, gos::ColorHDR(0xff000080))
+        .requireRendertarget (eRenderTargetUsage::presentation, gpu->swapChain_getImageFormat(), true)
         .addSubpass_GFX()
             .useRenderTarget(0)
         .end()
@@ -256,7 +256,7 @@ bool VulkanExample2::recordCommandBuffer (gos::GPU *gpuIN,
 
 
     //setto la viewport
-    const gos::gpu::Viewport *viewport = gpuIN->viewport_getDefault();
+    const gos::gpu::Viewport *viewport = gpuIN->viewport_get(gpuIN->viewport_getDefault());
     VkViewport vkViewport {0.0f, 0.0f, (viewport->getW_f32()), viewport->getH_f32(), 0.0f, 1.0f };
     vkCmdSetViewport(*out_commandBuffer, 0, 1, &vkViewport);
 
@@ -322,8 +322,8 @@ void VulkanExample2::doCPUStuff ()
 //**********************************
 void VulkanExample2::mainLoop_3()
 {
-    VkCommandBuffer     vkCommandBuffer;
-    gpu->createCommandBuffer (eGPUQueueType::gfx, &vkCommandBuffer);
+    GPUCmdBufferHandle  cmdBufferHandle;
+    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
         
     //I semafori sono oggetti di sync tra GPU & GPU (non e' un errore e' proprio GPU-GPU)
     //Fence sono oggetti di sync tra GPU & CPU (a differenza dei semafori che riguardano solo la CPU)
@@ -373,6 +373,8 @@ void VulkanExample2::mainLoop_3()
                 gpu->fence_reset (inFlightFence);
             
                 //command buffer: indica il lavoro che GPU deve fare
+                VkCommandBuffer vkCommandBuffer;
+                gpu->toVulkan (cmdBufferHandle, &vkCommandBuffer);
                 recordCommandBuffer (gpu, renderLayoutHandle, frameBufferHandle, pipelineHandle, vtxBufferHandle, &vkCommandBuffer);
 
                 //submit del command buffer
@@ -415,7 +417,7 @@ void VulkanExample2::mainLoop_3()
     //aspetto che GPU abbia finito tutto cio' che ha in coda
     gpu->waitIdle();
 
-    gpu->deleteCommandBuffer (eGPUQueueType::gfx, vkCommandBuffer);
+    gpu->deleteResource (cmdBufferHandle);
     //gpu->semaphore_destroy (semaphore_imageReady);
     gpu->semaphore_destroy (semaphore_renderFinished);
     gpu->fence_destroy (fenceSwapChainReady);

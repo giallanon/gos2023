@@ -34,6 +34,9 @@ namespace gos
                                 bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ,
                                 VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle);
 
+    bool    vulkanCreateCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer *out_handle);
+    bool    vulkanDeleteCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer &vkHandle);
+
 } //namespace gos
 
 #endif //_gosGPUVulkan_h_

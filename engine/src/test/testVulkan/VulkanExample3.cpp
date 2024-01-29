@@ -80,7 +80,7 @@ bool VulkanExample3::virtual_onInit ()
 
     //creo il render pass
     gpu->renderLayout_createNew (&renderLayoutHandle)
-        .requireRendertarget (eRenderTargetUsage::presentation, gpu->swapChain_getImageFormat(), true, gos::ColorHDR(0xff000080))
+        .requireRendertarget (eRenderTargetUsage::presentation, gpu->swapChain_getImageFormat(), true)
         .addSubpass_GFX()
             .useRenderTarget(0)
         .end()
@@ -166,23 +166,12 @@ bool VulkanExample3::createVertexIndexStageBuffer()
     }
 
 
-    //Mappo lo staging buffer
-    if (!gpu->stagingBuffer_map (stgBufferHandle, 0, sizeInByte, &ptToMappedStagingBuffer))
+    //copio gli indici nell'idxBuffer tramite uno staging buffer
+    if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, indexList, idxBufferHandle, 0, sizeof(u16) * NUM_INDEX))
     {
-        gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->stagingBuffer_map() failed\n");
+        gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->stagingBuffer_uploadToGPUBuffer() failed\n");
         return false;
-    } 
-
-
-    // ci copio gli index
-    memcpy (ptToMappedStagingBuffer, indexList, sizeof(u16) * NUM_INDEX);
-
-    //copio stage buffer in GPU
-    if (!gpu->stagingBuffer_copyToBuffer (stgBufferHandle, idxBufferHandle, 0, 0, sizeof(u16) * NUM_INDEX))
-    {
-        gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->stagingBuffer_copyToBuffer() failed\n");
-        return false;
-    } 
+    }
 
     return true;
 }
@@ -190,18 +179,10 @@ bool VulkanExample3::createVertexIndexStageBuffer()
 //************************************
 bool VulkanExample3::copyIntoVtxBuffer()
 {
+    //copio i Vtx in vtxBuffer tramite lo staging array
     const u32 sizeInByte = sizeof(Vertex) * NUM_VERTEX;
+    return gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, vertexList, vtxBufferHandle, 0, sizeInByte);
 
-    //apparentemente non e' necessario mappare/unmappare lo stagin buffer ogni volta
-    //gpu->stagingBuffer_unmap (stgBufferHandle);    ptToMappedMemory = NULL;
-
-    //copio i Vtx nello staging array
-    memcpy (ptToMappedStagingBuffer, vertexList, sizeInByte);
-
-
-    gpu->stagingBuffer_copyToBuffer (stgBufferHandle, vtxBufferHandle, 0, 0, sizeInByte);
-    
-    return true;
 }
 
 //************************************
@@ -220,9 +201,14 @@ void VulkanExample3::moveVertex()
 }
 
 //************************************
-bool VulkanExample3::recordCommandBuffer (VkCommandBuffer *out_commandBuffer)
+bool VulkanExample3::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
 {
-    assert (out_commandBuffer);
+    VkCommandBuffer vkCommandBuffer;
+    if (!gpu->toVulkan (cmdBufferHandle, &vkCommandBuffer))
+    {
+        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid cmdBufferHandle\n");
+        return false;
+    }
 
     //recupero il vulkan render pass
     VkRenderPass vkRenderPassHandle = VK_NULL_HANDLE;
@@ -273,7 +259,7 @@ bool VulkanExample3::recordCommandBuffer (VkCommandBuffer *out_commandBuffer)
         beginInfo.flags = 0; // Optional
         beginInfo.pInheritanceInfo = nullptr; // Optional
 
-    VkResult result = vkBeginCommandBuffer (*out_commandBuffer, &beginInfo);
+    VkResult result = vkBeginCommandBuffer (vkCommandBuffer, &beginInfo);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("VulkanApp::recordCommandBuffer() => vkBeginCommandBuffer() => %s\n", string_VkResult(result));
@@ -281,7 +267,7 @@ bool VulkanExample3::recordCommandBuffer (VkCommandBuffer *out_commandBuffer)
     }
 
     //begin render pass
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.01f, 1.0f}}};
     VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = vkRenderPassHandle;
@@ -291,29 +277,29 @@ bool VulkanExample3::recordCommandBuffer (VkCommandBuffer *out_commandBuffer)
         renderPassInfo.clearValueCount = 1;
         renderPassInfo.pClearValues = &clearColor;    
 
-    vkCmdBeginRenderPass (*out_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass (vkCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     
     //bindo la pipeline
-    vkCmdBindPipeline (*out_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineHandle);
+    vkCmdBindPipeline (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineHandle);
 
     //bindo il vtx buffer a partire dal layout=0
     static const u8 VTXBUFFER__FIRST_VTX_STREAM_INDEX = 0;
     static const u8 VTXBUFFER__NUM_STREAM = 1;
     VkBuffer        vtxBufferList[VTXBUFFER__NUM_STREAM] = { vkVtxBuffer };
     VkDeviceSize    vtxBufferOffsetsList[VTXBUFFER__NUM_STREAM] = {0};    
-    vkCmdBindVertexBuffers (*out_commandBuffer, VTXBUFFER__FIRST_VTX_STREAM_INDEX, VTXBUFFER__NUM_STREAM, vtxBufferList, vtxBufferOffsetsList);
+    vkCmdBindVertexBuffers (vkCommandBuffer, VTXBUFFER__FIRST_VTX_STREAM_INDEX, VTXBUFFER__NUM_STREAM, vtxBufferList, vtxBufferOffsetsList);
 
     //bindo idxBuffer
-    vkCmdBindIndexBuffer (*out_commandBuffer, vkIdxBuffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer (vkCommandBuffer, vkIdxBuffer, 0, VK_INDEX_TYPE_UINT16);
 
 
     //setto la viewport
-    const gos::gpu::Viewport *viewport = gpu->viewport_getDefault();
+    const gos::gpu::Viewport *viewport = gpu->viewport_get(gpu->viewport_getDefault());
     VkViewport vkViewport {0.0f, 0.0f, (viewport->getW_f32()), viewport->getH_f32(), 0.0f, 1.0f };
-    vkCmdSetViewport(*out_commandBuffer, 0, 1, &vkViewport);
+    vkCmdSetViewport(vkCommandBuffer, 0, 1, &vkViewport);
 
     VkRect2D scissor { 0, 0, viewport->getW(), viewport->getH() };
-    vkCmdSetScissor (*out_commandBuffer, 0, 1, &scissor);
+    vkCmdSetScissor (vkCommandBuffer, 0, 1, &scissor);
 
     //draw primitive:
     //      num-index => num di vertici che verranno passati al vxtshader
@@ -321,13 +307,13 @@ bool VulkanExample3::recordCommandBuffer (VkCommandBuffer *out_commandBuffer)
     //      ofsset-idxBuffer  => passare 1 significa che si parte dall'indice [1] dell'idxBuffer (quindi non parliamo di un offset in byte)
     //      index-base = specifies an offset to add to the indices in the index buffer.
     //      offset-instancin = non lo so...
-    vkCmdDrawIndexed(*out_commandBuffer, NUM_INDEX, 1, 0, 0, 0);
+    vkCmdDrawIndexed(vkCommandBuffer, NUM_INDEX, 1, 0, 0, 0);
 
     //fine del render pass
-    vkCmdEndRenderPass (*out_commandBuffer);
+    vkCmdEndRenderPass (vkCommandBuffer);
 
     //fine del command buffer
-    result = vkEndCommandBuffer (*out_commandBuffer);
+    result = vkEndCommandBuffer (vkCommandBuffer);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("VulkanApp::recordCommandBuffer() => vkEndCommandBuffer() => %s\n", string_VkResult(result));
@@ -384,8 +370,8 @@ void VulkanExample3::mainLoop()
     gpuLoop.setup (gpu, &fpsMegaTimer);
 
     //command buffer 
-    VkCommandBuffer         vkCommandBuffer_GFX;
-    gpu->createCommandBuffer (eGPUQueueType::gfx, &vkCommandBuffer_GFX);
+    GPUCmdBufferHandle  cmdBufferHandle;
+    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
 
     //main loop
     while (!glfwWindowShouldClose (gpu->getWindow()))
@@ -397,8 +383,8 @@ void VulkanExample3::mainLoop()
         if (gpuLoop.canSubmitGFXJob())
         {
             copyIntoVtxBuffer();
-            recordCommandBuffer (&vkCommandBuffer_GFX);
-            gpuLoop.submitGFXJob (vkCommandBuffer_GFX);
+            recordCommandBuffer (cmdBufferHandle);
+            gpuLoop.submitGFXJob (cmdBufferHandle);
         }
 
     }
@@ -407,7 +393,7 @@ void VulkanExample3::mainLoop()
     gpu->waitIdle();
 
     //free
-    gpu->deleteCommandBuffer (eGPUQueueType::gfx, vkCommandBuffer_GFX);
+    gpu->deleteResource (cmdBufferHandle);
     gpuLoop.unsetup();
 }
 

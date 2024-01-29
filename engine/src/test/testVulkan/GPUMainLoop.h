@@ -26,7 +26,7 @@ public:
     bool    run ();
 
     bool    canSubmitGFXJob () const;
-    void    submitGFXJob (const VkCommandBuffer &vkCommandBuffer);
+    void    submitGFXJob (const GPUCmdBufferHandle &cmdBufferHandle);
 
 private:
     static const u8     RESULTBIT_CAN_SUMBIT_GFX_JOB = 0; 
@@ -47,7 +47,7 @@ private:
     VkSemaphore         semaphore_renderFinished;
     VkFence             fence_inFlight;
     VkFence             fenceSwapChainReady;
-    VkCommandBuffer     vkCommandBuffer_GFX;
+    GPUCmdBufferHandle  commandBuffer_GFX;
 
     bool                canAccept_GFXJob;
 

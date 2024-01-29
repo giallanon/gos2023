@@ -30,7 +30,7 @@ private:
 private:
     bool        createVertexIndexStageBuffer();
     void        moveVertex();
-    bool        recordCommandBuffer (VkCommandBuffer *out_commandBuffer);
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle);
     bool        copyIntoVtxBuffer();
     void        doCPUStuff ();
     void        mainLoop();

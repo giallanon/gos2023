@@ -50,14 +50,13 @@ GPU::RenderTaskLayoutBuilder::~RenderTaskLayoutBuilder()
 }
 
 //***********************************************************
-RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (eRenderTargetUsage usage, VkFormat imageFormat, bool bClear, const gos::ColorHDR &clearColor)
+RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (eRenderTargetUsage usage, VkFormat imageFormat, bool bClear)
 {
     if (numRenderTargetInfo < GOSGPU__NUM_MAX_ATTACHMENT)
     {
         rtInfoList[numRenderTargetInfo].usage = usage;
         rtInfoList[numRenderTargetInfo].bClear = bClear;
         rtInfoList[numRenderTargetInfo].imageFormat = imageFormat;
-        rtInfoList[numRenderTargetInfo].clearColor = clearColor;
         numRenderTargetInfo++;
     }
     else
@@ -70,12 +69,11 @@ RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (eRenderTargetUsage
 }
 
 //***********************************************************
-RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireDepthStencil (VkFormat imageFormat, bool bWithStencil, bool bClear, f32 clearValue)
+RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireDepthStencil (VkFormat imageFormat, bool bWithStencil, bool bClear)
 {
     depthBuffer.isRequired = true;
     depthBuffer.bWithStencil = bWithStencil;
     depthBuffer.bClear = bClear;
-    depthBuffer.clearValue = clearValue;
     depthBuffer.imageFormat = imageFormat;
     return *this;
 }
@@ -129,7 +127,7 @@ bool GPU::RenderTaskLayoutBuilder::end()
 //***********************************************************
 bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
 {
-    //color buffer attachment
+    //elenco degli attachment
     u8 numAttachment = 0;
     VkAttachmentDescription attachmentList[GOSGPU__NUM_MAX_ATTACHMENT];
 
@@ -179,10 +177,10 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
 
 
     //depthstencil attachment se necessario
-    u32 indexOfDepthStencilAttachment = u32MAX;
+    depthBuffer.indexOfDepthStencilAttachment = 0xFF;
     if (depthBuffer.isRequired)
     {
-        indexOfDepthStencilAttachment = numAttachment;
+        depthBuffer.indexOfDepthStencilAttachment = numAttachment;
         memset (&attachmentList[numAttachment], 0, sizeof(VkAttachmentDescription));
 
         attachmentList[numAttachment].format = depthBuffer.imageFormat;
@@ -262,7 +260,7 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
         {
             subpassList[i].pDepthStencilAttachment = &attachmentRef[nRef];
             
-            attachmentRef[nRef].attachment = indexOfDepthStencilAttachment;
+            attachmentRef[nRef].attachment = depthBuffer.indexOfDepthStencilAttachment;
             attachmentRef[nRef].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             nRef++;
         }

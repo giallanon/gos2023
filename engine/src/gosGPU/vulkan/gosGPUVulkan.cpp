@@ -823,3 +823,29 @@ bool gos::vulkanCreateBuffer (const sVkDevice &vulkan, u32 sizeInByte, VkBufferU
 }
 
 
+
+//*********************************************
+bool gos::vulkanCreateCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer *out_handle)
+{
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = vulkan.getQueueInfo(whichQ)->vkPoolHandle;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
+
+    const VkResult result = vkAllocateCommandBuffers (vulkan.dev, &allocInfo, out_handle);
+    if (result == VK_SUCCESS)
+        return true;
+    
+    gos::logger::log ("vulkanCreateCommandBuffer() => vkAllocateCommandBuffers() => %s\n", string_VkResult(result));
+    return false;
+}
+
+//*********************************************
+bool gos::vulkanDeleteCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer &vkHandle)
+{
+    VkCommandBuffer vkCmdBufferList[] = { vkHandle };
+
+    vkFreeCommandBuffers (vulkan.dev, vulkan.getQueueInfo(whichQ)->vkPoolHandle, 1, vkCmdBufferList);
+    return true;
+}

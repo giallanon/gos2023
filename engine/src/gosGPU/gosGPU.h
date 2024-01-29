@@ -5,13 +5,15 @@
 #include "../gos/gosFastArray.h"
 #include "../gosMath/gosMath.h"
 #include "gosGPUDescrSetInstanceWriter.h"
-
+#include "gosGPUCmdBufferWriter.h"
+#include "gosGPUResCommandBuffer.h"
 #include "gosGPUResDepthStencil.h"
 #include "gosGPUResDescrPool.h"
 #include "gosGPUResDescrSetInstance.h"
 #include "gosGPUResDescrSetLayout.h"
 #include "gosGPUResFrameBuffer.h"
 #include "gosGPUResIdxBuffer.h"
+#include "gosGPUResRenderLayout.h"
 #include "gosGPUResRenderTarget.h"
 #include "gosGPUResShader.h"
 #include "gosGPUResStagingBuffer.h"
@@ -139,8 +141,8 @@ namespace gos
                             RenderTaskLayoutBuilder (GPU *gpuIN, GPURenderLayoutHandle *out_handle);
             virtual         ~RenderTaskLayoutBuilder();
 
-            RTLB&           requireRendertarget (eRenderTargetUsage usage, VkFormat imageFormat, bool bClear, const gos::ColorHDR &clearColor = gos::ColorHDR(1.0f, 1, 1, 1) );
-            RTLB&           requireDepthStencil (VkFormat imageFormat, bool bWithStencil, bool bClear, f32 clearValue=1.0f);
+            RTLB&           requireRendertarget (eRenderTargetUsage usage, VkFormat imageFormat, bool bClearOnLoad);
+            RTLB&           requireDepthStencil (VkFormat imageFormat, bool bWithStencil, bool bClearOnLoad);
 
             SubPassInfo&    addSubpass_GFX ();
             SubPassInfo&    addSubpass_COMPUTE ();
@@ -154,17 +156,16 @@ namespace gos
                 eRenderTargetUsage  usage;
                 VkFormat            imageFormat;
                 bool                bClear;
-                gos::ColorHDR       clearColor;
             };
 
             struct sDepthBufferInfo
             {
-                void    reset()                 { isRequired = false; bWithStencil=false; bClear=false; clearValue=1.0f; }
+                void    reset()                 { isRequired = false; bWithStencil=false; bClear=false; indexOfDepthStencilAttachment=0xFF; }
 
                 bool    isRequired;
                 bool    bWithStencil;
                 bool    bClear;
-                f32     clearValue;
+                u8      indexOfDepthStencilAttachment;
                 VkFormat imageFormat;
             };
 
@@ -489,8 +490,7 @@ namespace gos
         void                    deleteResource (GPUViewportHandle &handle);
 
         /* ritorna la viewport di default che e' sempre garantito essere aggiornata alle attuali dimensioni della main window */
-        const gpu::Viewport*    viewport_getDefault () const                { return viewport_get(defaultViewportHandle); }
-
+        GPUViewportHandle       viewport_getDefault () const                { return defaultViewportHandle; }
         
 
         //================ vtx declaration
@@ -504,7 +504,7 @@ namespace gos
         RenderTaskLayoutBuilder&    renderLayout_createNew (GPURenderLayoutHandle *out_handle);
         void                        deleteResource (GPURenderLayoutHandle &handle);
         bool                        toVulkan (const GPURenderLayoutHandle handle, VkRenderPass *out) const;
-
+        const gpu::RenderLayout*    getInfo (const GPURenderLayoutHandle handle) const;
 
 
         //================ Frame buffer
@@ -529,16 +529,22 @@ namespace gos
         //================ render target
         GPURenderTargetHandle   renderTarget_getDefault() const                         { return defaultRTHandle; }
 
+        //================ command buffer
+        bool                cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle);
+        void                deleteResource (GPUCmdBufferHandle &handle);
+        bool                toVulkan (const GPUCmdBufferHandle handle, VkCommandBuffer *out) const;
+
 
         //================ staging buffer
         bool                stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle);
         void                deleteResource (GPUStgBufferHandle &handle);
-        bool                toVulkan (const GPUStgBufferHandle handle, VkBuffer *out) const;
-        bool                stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
-        bool                stagingBuffer_unmap  (const GPUStgBufferHandle handle);
-
-        bool                stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUVtxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
-        bool                stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUIdxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
+        bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
+        bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
+        //bool                toVulkan (const GPUStgBufferHandle handle, VkBuffer *out) const;
+        //bool                stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
+        //bool                stagingBuffer_unmap  (const GPUStgBufferHandle handle);
+        //bool                stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUVtxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
+        //bool                stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUIdxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
 
 
         //================ vertex buffer
@@ -601,11 +607,6 @@ namespace gos
 
 
 
-        //================ command buffer
-        bool                createCommandBuffer (eGPUQueueType whichQ, VkCommandBuffer *out);
-        bool                deleteCommandBuffer (eGPUQueueType whichQ, VkCommandBuffer &vkHandle);
-
-
         //================ da rimuovere
         VkDevice           REMOVE_getVkDevice() const               { return vulkan.dev; }
         VkQueue            REMOVE_getGfxQHandle()                   { return vulkan.getQueueInfo(eGPUQueueType::gfx)->vkQueueHandle; }
@@ -629,12 +630,6 @@ namespace gos
             int storedH;
         };
         
-        struct sRenderLayout
-        {
-            void    reset ()                        { vkRenderPassHandle = VK_NULL_HANDLE; }
-            VkRenderPass    vkRenderPassHandle;
-        };
-
         struct sPipeline
         {
             void    reset ()                        { vkPipelineLayoutHandle = VK_NULL_HANDLE; vkPipelineHandle = VK_NULL_HANDLE; }
@@ -735,6 +730,7 @@ namespace gos
         GPUViewportHandle           defaultViewportHandle;
         GPURenderTargetHandle       defaultRTHandle;
         sDefaultDepthStencil        defaultDepthStencil;
+        VkCommandBuffer             vkCommandBufferForStagingCopy;
 
         HandleList<GPUShaderHandle, gpu::Shader>                    shaderList;
         HandleList<GPUVtxDeclHandle, gpu::VtxDecl>                  vtxDeclList;
@@ -743,7 +739,7 @@ namespace gos
         HandleList<GPUDepthStencilHandle, gpu::DepthStencil>        depthStencilList;
         gos::FastArray<GPUDepthStencilHandle>                       depthStencilHandleList;
         HandleList<GPURenderTargetHandle, gpu::RenderTarget>        renderTargetList;
-        HandleList<GPURenderLayoutHandle,sRenderLayout>             renderLayoutList;
+        HandleList<GPURenderLayoutHandle,gpu::RenderLayout>         renderLayoutList;
         HandleList<GPUPipelineHandle,sPipeline>                     pipelineList;
         HandleList<GPUFrameBufferHandle, gpu::FrameBuffer>          frameBufferList;
         gos::FastArray<GPUFrameBufferHandle>                        frameBufferDependentOnSwapChainList;
@@ -754,6 +750,7 @@ namespace gos
         HandleList<GPUDescrSetLayoutHandle, gpu::DescrSetLayout>    descrSetLayoutList;
         HandleList<GPUDescrPoolHandle, gpu::DescrPool>              descrPoolList;
         HandleList<GPUDescrSetInstancerHandle, gpu::DescrSetInstance> descrSetInstanceList;
+        HandleList<GPUCmdBufferHandle, gpu::CommandBuffer>          cmdBufferList;
         
     };
 } //namespace gos

@@ -25,7 +25,7 @@ bool VulkanExample1::virtual_onInit ()
 {
     //creo il render pass
     gpu->renderLayout_createNew (&renderLayoutHandle)
-        .requireRendertarget (eRenderTargetUsage::presentation, gpu->swapChain_getImageFormat(), true, gos::ColorHDR(0xff000080))
+        .requireRendertarget (eRenderTargetUsage::presentation, gpu->swapChain_getImageFormat(), true)
         .addSubpass_GFX()
             .useRenderTarget(0)
         .end()
@@ -146,7 +146,7 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
     vkCmdBindPipeline (*out_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineHandle);
 
     //setto la viewport
-    const gos::gpu::Viewport *viewport = gpuIN->viewport_getDefault();
+    const gos::gpu::Viewport *viewport = gpuIN->viewport_get (gpuIN->viewport_getDefault());
     VkViewport vkViewport {0.0f, 0.0f, viewport->getW_f32(), viewport->getH_f32(), 0.0f, 1.0f };
     vkCmdSetViewport(*out_commandBuffer, 0, 1, &vkViewport);
 
@@ -176,8 +176,9 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
  */
 void VulkanExample1::virtual_onRun()
 {
-    VkCommandBuffer     vkCommandBuffer;
-    gpu->createCommandBuffer (eGPUQueueType::gfx, &vkCommandBuffer);
+    GPUCmdBufferHandle  cmdBufferHandle;
+    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+
 
     VkSemaphore         imageAvailableSemaphore;
     VkSemaphore         renderFinishedSemaphore;
@@ -216,6 +217,8 @@ void VulkanExample1::virtual_onRun()
 //printf ("  CPU waited vkAcquireNextImageKHR %ld us\n", acquireImageTimer.elapsed_usec());
         
             //command buffer che opera su [imageIndex]
+            VkCommandBuffer vkCommandBuffer;
+            gpu->toVulkan (cmdBufferHandle, &vkCommandBuffer);
             //recordCommandBuffer(gpu, renderLayoutHandle, frameBufferHandleList[imageIndex], pipelineHandle, &vkCommandBuffer);
             recordCommandBuffer(gpu, renderLayoutHandle, frameBufferHandle, pipelineHandle, &vkCommandBuffer);
 
@@ -258,7 +261,7 @@ void VulkanExample1::virtual_onRun()
     //aspetto che GPU abbia finito tutto cio' che ha in coda
     gpu->waitIdle();
 
-    gpu->deleteCommandBuffer (eGPUQueueType::gfx, vkCommandBuffer);
+    gpu->deleteResource (cmdBufferHandle);
     gpu->semaphore_destroy (imageAvailableSemaphore);
     gpu->semaphore_destroy (renderFinishedSemaphore);
     gpu->fence_destroy (inFlightFence);

@@ -47,8 +47,7 @@ private:
 
 private:
     bool        createVertexIndexStageBuffer();
-    bool        recordCommandBuffer (VkCommandBuffer *out_commandBuffer);
-    bool        copyIntoVtxBuffer();
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle);
     void        doCPUStuff ();
     void        mainLoop();
 

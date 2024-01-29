@@ -34,16 +34,20 @@ gosGPU_RenderLayoutBuilder.cpp
 gosGPU_VtxDeclBuilder.cpp
 gosGPU.cpp
 gosGPU.h
+gosGPUCmdBufferWriter.cpp
+gosGPUCmdBufferWriter.h
 gosGPUDescrSetInstanceWriter.cpp
 gosGPUDescrSetInstanceWriter.h
 gosGPUEnumAndDefine.h
 
+gosGPUResCommandBuffer.h
 gosGPUResDepthStencil.h
 gosGPUResDescrPool.h
 gosGPUResDescrSetInstance.h
 gosGPUResDescrSetLayout.h
 gosGPUResFrameBuffer.h
 gosGPUResIdxBuffer.h
+gosGPUResRenderLayout.h
 gosGPUResRenderTarget.h
 gosGPUResShader.h
 gosGPUResStagingBuffer.h

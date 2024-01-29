@@ -36,13 +36,13 @@ bool GPUMainLoop::canSubmitGFXJob () const
 }
 
 //************************************************
-void GPUMainLoop::submitGFXJob (const VkCommandBuffer &vkCommandBuffer)
+void GPUMainLoop::submitGFXJob (const GPUCmdBufferHandle &cmdBufferHandle)
 {
     assert (canAccept_GFXJob);
     
     if (canAccept_GFXJob)
     {
-        vkCommandBuffer_GFX = vkCommandBuffer;
+        commandBuffer_GFX = cmdBufferHandle;
         canAccept_GFXJob = false;
     }
 }
@@ -106,6 +106,9 @@ bool GPUMainLoop::run ()
 
         //submit del command buffer
         {
+            VkCommandBuffer vkCommandBuffer_GFX;
+            gpu->toVulkan (commandBuffer_GFX, &vkCommandBuffer_GFX);
+            
             //indico a GPU che quando questo bacth di lavoro arriva nello state di presentazione [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT],
             //allora, prima di iniziare quello stage, deve aspettare che il semaforo [semaphore_imageReady] sia segnalato (il che implica
             //che GPU ha finalmente a disposizione l'immagine che ci ha promesso in newFram()
