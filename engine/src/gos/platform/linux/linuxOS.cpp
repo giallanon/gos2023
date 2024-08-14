@@ -204,8 +204,48 @@ bool linuxPlatorm_check_if_wireless (const char* ifname)
 }
 
 //*******************************************************************
+bool linuxPlatorm_NET__getMACandIP_fromInterface (const char *nomeInterfaccia, gos::MacAddress *outMAC, gos::IPv4 *outIP)
+{
+    //recupero info sull'interfaccia selezionata
+    assert (NULL != outMAC);
+    assert (NULL != outIP);
+    memset (outMAC, 0, sizeof(gos::MacAddress));
+    memset (outIP, 0, sizeof(gos::IPv4));
+
+	int fd = socket (PF_INET, SOCK_DGRAM, IPPROTO_IP);
+
+    //prova a recupeare il MAC
+	struct ifreq s;
+    strcpy(s.ifr_name, nomeInterfaccia);
+    if (0 == ioctl(fd, SIOCGIFHWADDR, &s))
+    {
+        outMAC->b[0] = (unsigned char)s.ifr_addr.sa_data[0];
+        outMAC->b[1] = (unsigned char)s.ifr_addr.sa_data[1];
+        outMAC->b[2] = (unsigned char)s.ifr_addr.sa_data[2];
+        outMAC->b[3] = (unsigned char)s.ifr_addr.sa_data[3];
+        outMAC->b[4] = (unsigned char)s.ifr_addr.sa_data[4];
+        outMAC->b[5] = (unsigned char)s.ifr_addr.sa_data[5];
+
+        //prova a recuperare IP
+        if (0 == ioctl(fd, SIOCGIFADDR, &s))
+        {
+            sockaddr_in *sin = reinterpret_cast<sockaddr_in*>(&s.ifr_addr);
+
+            char ip[32];
+            inet_ntop(AF_INET, &sin->sin_addr, ip, INET_ADDRSTRLEN);
+
+            gos::netaddr::ipstrToIPv4  (ip, outIP);
+            return true;
+        }
+    }
+	return false;    
+}
+
+//*******************************************************************
 bool platform::NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP)
 {
+    bool ret = false;
+
     //scanno tutte le interfacce di rete disponibili e scelgo preferibilmente quella ethernet rispetto a quella via cavo
     char  nomeInterfaccia[64];
     memset (nomeInterfaccia,0, sizeof(nomeInterfaccia));
@@ -224,10 +264,26 @@ bool platform::NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP)
                 //skippo loopback
                 if (strcasecmp(addr->ifa_name, "lo") != 0)
                 {
+                    gos::MacAddress MAC;
+                    gos::IPv4 IP;
                     sprintf_s (nomeInterfaccia, sizeof(nomeInterfaccia), "%s", addr->ifa_name);
-                    const bool bIsWiFi = linuxPlatorm_check_if_wireless (addr->ifa_name);
-                    if (!bIsWiFi)
-                        break;
+                    if (linuxPlatorm_NET__getMACandIP_fromInterface (nomeInterfaccia, &MAC, &IP))
+                    {
+                        ret = true;
+                        *outMAC = MAC;
+                        *outIP = IP;
+
+                        if (!linuxPlatorm_check_if_wireless (addr->ifa_name))
+                        {
+                            //ho trovato una interfaccia non wifi con MAC e IP... ho finito
+                            break;
+                        }
+                        else
+                        {
+                            //ho trovato una interfaccia wifi.. vado avanti per vedere se c'è di meglio
+
+                        }
+                    }
                 }
             }
         }
@@ -236,38 +292,7 @@ bool platform::NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP)
     }
     freeifaddrs(addrList);
 
-
-    //recpuero info sull'interfaccia selezionata
-    assert (NULL != outMAC);
-    assert (NULL != outIP);
-    memset (outMAC, 0, sizeof(gos::MacAddress));
-    memset (outIP, 0, sizeof(gos::IPv4));
-
-	int fd = socket (PF_INET, SOCK_DGRAM, IPPROTO_IP);
-
-	struct ifreq s;
-    strcpy(s.ifr_name, nomeInterfaccia);
-    if (0 == ioctl(fd, SIOCGIFHWADDR, &s))
-    {
-        outMAC->b[0] = (unsigned char)s.ifr_addr.sa_data[0];
-        outMAC->b[1] = (unsigned char)s.ifr_addr.sa_data[1];
-        outMAC->b[2] = (unsigned char)s.ifr_addr.sa_data[2];
-        outMAC->b[3] = (unsigned char)s.ifr_addr.sa_data[3];
-        outMAC->b[4] = (unsigned char)s.ifr_addr.sa_data[4];
-        outMAC->b[5] = (unsigned char)s.ifr_addr.sa_data[5];
-
-        if (0 == ioctl(fd, SIOCGIFADDR, &s))
-        {
-            sockaddr_in *sin = reinterpret_cast<sockaddr_in*>(&s.ifr_addr);
-
-            char ip[32];
-            inet_ntop(AF_INET, &sin->sin_addr, ip, INET_ADDRSTRLEN);
-
-            gos::netaddr::ipstrToIPv4  (ip, outIP);
-            return true;
-        }
-    }
-	return false;
+    return ret;
 }
 
 #endif //GOS_PLATFORM__LINUX
