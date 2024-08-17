@@ -20,8 +20,8 @@ namespace platform
     void*           memory_alignedAlloc (size_t size, size_t alignmentPowerOfTwo);
     void            memory_alignedFree (void *p);
 
-    const u8*       getAppPathNoSlash ();
-    const u8*       getPhysicalPathToUserFolder();
+    const char*     getAppPathNoSlash ();
+    const char*     getPhysicalPathToUserFolder();
 
     void            sleep_msec (size_t msec);
 
@@ -67,43 +67,36 @@ namespace platform
      * File system
      * 
      */
-    bool			FS_folderCreate (const u8 *utf8_path);
-    bool			FS_folderDelete (const u8 *utf8_path);
-    bool			FS_folderExists (const u8 *utf8_path);
+    bool			FS_folderCreate (const char *utf8_path);
+    bool			FS_folderDelete (const char *utf8_path);
+    bool			FS_folderExists (const char *utf8_path);
     
-    bool			FS_fileExists(const u8 *utf8_filename);
-    bool			FS_fileDelete(const u8 *utf8_filename);
-    bool			FS_fileRename(const u8 *utf8_path, const u8 *utf8_oldFilename, const u8 *utf8_newFilename);
+    bool			FS_fileExists(const char *utf8_filename);
+    bool			FS_fileDelete(const char *utf8_filename);
+    bool			FS_fileRename(const char *utf8_path, const char *utf8_oldFilename, const char *utf8_newFilename);
 
-    void            FS_fileGetCreationTime_UTC (const u8 *utf8_filePathAndName, gos::DateTime *out_dt);
     void            FS_fileGetCreationTime_UTC (const char *filePathAndName, gos::DateTime *out_dt);
-
-    void            FS_fileGetLastTimeModified_UTC (const u8 *utf8_filePathAndName, gos::DateTime *out_dt);
     void            FS_fileGetLastTimeModified_UTC (const char *filePathAndName, gos::DateTime *out_dt);
-
-    void            FS_fileGetCreationTime_LocalTime (const u8 *utf8_filePathAndName, gos::DateTime *out_dt);
     void            FS_fileGetCreationTime_LocalTime (const char *filePathAndName, gos::DateTime *out_dt);
-
-    void            FS_fileGetLastTimeModified_LocalTime (const u8 *utf8_filePathAndName, gos::DateTime *out_dt);
     void            FS_fileGetLastTimeModified_LocalTime (const char *filePathAndName, gos::DateTime *out_dt);
 
-    bool			FS_fileOpen  (OSFile *out_h, const u8 *utf8_filePathAndName, eFileMode mode, bool bCreateIfNotExists, bool bAppend, bool bShareRead, bool bShareWrite);
+    bool			FS_fileOpen  (OSFile *out_h, const char *utf8_filePathAndName, eFileMode mode, bool bCreateIfNotExists, bool bAppend, bool bShareRead, bool bShareWrite);
     u32				FS_fileRead (OSFile &h, void *buffer, u32 numMaxBytesToRead);
     u32				FS_fileWrite (OSFile &h, const void *buffer, u32 numBytesToWrite);
     void			FS_fileClose (OSFile &h);
     void            FS_fileFlush (OSFile &h);
 
     u64				FS_fileLength (OSFile &h);
-    u64				FS_fileLength (const u8 *utf8_filePathAndName);
-    void			FS_fileSeek(OSFile &h, u64 position, eSeek seekMode);
-    u64				FS_fileTell(OSFile &h);
+    u64				FS_fileLength (const char *utf8_filePathAndName);
+    void			FS_fileSeek (OSFile &h, u64 position, eSeek seekMode);
+    u64				FS_fileTell (OSFile &h);
 
-    bool            FS_findFirst (OSFileFind *ff, const u8 *utf8_path, const u8 *utf8_jolly);
+    bool            FS_findFirst (OSFileFind *ff, const char *utf8_path, const char *utf8_jolly);
     bool            FS_findNext (OSFileFind &ff);
     void            FS_findClose(OSFileFind &ff);
     bool            FS_findIsDirectory(const OSFileFind &ff);
-    const u8*       FS_findGetFileName(const OSFileFind &ff);
-    void            FS_findGetFileName (const OSFileFind &ff, u8 *out, u32 sizeofOut);
+    const char*     FS_findGetFileName(const OSFileFind &ff);
+    void            FS_findGetFileName (const OSFileFind &ff, char *out, u32 sizeofOut);
 
 
     /******************************************************

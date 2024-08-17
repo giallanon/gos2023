@@ -23,12 +23,12 @@ namespace gos
 	const char*			getAppName();
 
 	//ritorna il path assoluto dell'applicazione, senza slash finale
-    inline const u8* 	getAppPathNoSlash ()					{ return platform::getAppPathNoSlash(); }
+    inline const char* 	getAppPathNoSlash ()					{ return platform::getAppPathNoSlash(); }
 	u32					getLengthOfAppPathNoSlash ();
 
 	//ritorna il path di una cartella nella quale è sicuramente possibile scrivere
 	//Il path creato dipende dalle impostazioni di "writableFolder) dei paraemtri di sGOSInit
-    const u8*    		getPhysicalPathToWritableFolder();
+    const char*    		getPhysicalPathToWritableFolder();
 	u32					getLengthOfPhysicalPathToWritableFolder();
 
     u64        			getTimeSinceStart_msec();
@@ -107,53 +107,50 @@ namespace gos
 		//
 		//	[aliasNoChioccola] e' l'alias da aggiungere
 		//	[realPathNoSlash] e' il path reale, non deve terminare con /
-		bool 			addAlias (const char *alias, const u8 *realPathNoSlash, eAliasPathMode mode);
 		bool 			addAlias (const char *alias, const char *realPathNoSlash, eAliasPathMode mode);
 
 
 		bool			isPathAbsolute (const char *path);
-		bool			isPathAbsolute (const u8 *path);
-		void 			pathSanitize (const u8 *utf8_path, u8 *out_utf8sanitizedPath, u32 sizeOfOutSanitzed);
-		void			pathSanitizeInPlace (u8 *utf8_path, u32 nBytesToCheck = u32MAX);
-		void			pathGoBack (const u8 *pathSenzaSlashIN, u8 *out, u32 sizeofout);
-		bool			doesFileNameMatchJolly (const u8 *utf8_filename, const u8 *utf8_strJolly);
+		void 			pathSanitize (const char *utf8_path, char *out_utf8sanitizedPath, u32 sizeOfOutSanitzed);
+		void			pathSanitizeInPlace (char *utf8_path, u32 nBytesToCheck = u32MAX);
+		void			pathGoBack (const char *pathSenzaSlashIN, char *out, u32 sizeofout);
+		bool			doesFileNameMatchJolly (const char *utf8_filename, const char *utf8_strJolly);
 
-		void			extractFileExt (const u8 *utf8_filename, u8 *out, u32 sizeofout);
-		void			extractFileNameWithExt (const u8 *utf8_filename, u8 *out, u32 sizeofout);
-		void			extractFileNameWithoutExt (const u8 *utf8_filename, u8 *out, u32 sizeofout);
-		void			extractFilePathWithSlash (const u8 *utf8_filename, u8 *out, u32 sizeofout);
-		void			extractFilePathWithOutSlash (const u8 *utf8_filename, u8 *out, u32 sizeofout);
+		void			extractFileExt (const char *utf8_filename, char *out, u32 sizeofout);
+		void			extractFileNameWithExt (const char *utf8_filename, char *out, u32 sizeofout);
+		void			extractFileNameWithoutExt (const char *utf8_filename, char *out, u32 sizeofout);
+		void			extractFilePathWithSlash (const char *utf8_filename, char *out, u32 sizeofout);
+		void			extractFilePathWithOutSlash (const char *utf8_filename, char *out, u32 sizeofout);
 
-		bool			folderExists (const u8 *utf8_pathSenzaSlashRESOLVABLE);
-		bool			folderDelete (const u8 *utf8_pathSenzaSlashRESOLVABLE);
-		bool			folderCreate (const u8 *utf8_pathSenzaSlashRESOLVABLE);
+		bool			folderExists (const char *utf8_pathSenzaSlashRESOLVABLE);
+		bool			folderDelete (const char *utf8_pathSenzaSlashRESOLVABLE);
+		bool			folderCreate (const char *utf8_pathSenzaSlashRESOLVABLE);
 
 		//crea anche percorsi complessi. Es create("pippo/pluto/paperino), se necessario
 		//prima crea pippo, poi pippo/pluto e infine pippo/pluto/paperino
-		bool			folderDeleteAllFileRecursively(const u8 *utf8_pathSenzaSlashRESOLVABLE, eFolderDeleteMode folderDeleteMode);
-		void			folderDeleteAllFileWithJolly  (const u8 *utf8_pathSenzaSlashRESOLVABLE, const u8 *utf8_jolly);
-		inline void		folderDeleteAllFileWithJolly  (const u8 *utf8_pathSenzaSlashRESOLVABLE, const char *jolly)			{ folderDeleteAllFileWithJolly  (utf8_pathSenzaSlashRESOLVABLE, reinterpret_cast<const u8*>(jolly)); }
+		bool			folderDeleteAllFileRecursively(const char *utf8_pathSenzaSlashRESOLVABLE, eFolderDeleteMode folderDeleteMode);
+		void			folderDeleteAllFileWithJolly  (const char *utf8_pathSenzaSlashRESOLVABLE, const char *utf8_jolly);
 
-		bool			fileExists (const u8 *utf8_filePathAndNameRESOLVABLE);
-		bool   			fileDelete (const u8 *utf8_filePathAndNameRESOLVABLE);
-		inline bool		fileRename (const u8 *utf8_pathNoSlashRESOLVABLE, const u8 *utf8_oldFilename, const u8 *utf8_newFilename);
+		bool			fileExists (const char *utf8_filePathAndNameRESOLVABLE);
+		bool   			fileDelete (const char *utf8_filePathAndNameRESOLVABLE);
+		inline bool		fileRename (const char *utf8_pathNoSlashRESOLVABLE, const char *utf8_oldFilename, const char *utf8_newFilename);
 
-		void     		fileGetCreationTime_UTC (const u8 *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
-		void     		fileGetLastTimeModified_UTC (const u8 *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
-    	void     		fileGetCreationTime_LocalTime (const u8 *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
-    	void     		fileGetLastTimeModified_LocalTime (const u8 *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
+		void     		fileGetCreationTime_UTC (const char *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
+		void     		fileGetLastTimeModified_UTC (const char *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
+    	void     		fileGetCreationTime_LocalTime (const char *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
+    	void     		fileGetLastTimeModified_LocalTime (const char *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
 
 		bool			fileOpen  (gos::File *out_h,
-									const u8 *utf8_filePathAndNameRESOLVABLE, 
+									const char *utf8_filePathAndNameRESOLVABLE, 
 									eFileMode mode, 
 									bool bCreateIfNotExists,
 									bool bAppend, 
 									bool bShareRead,
 									bool bShareWrite);
 
-		inline bool		fileOpenForR (gos::File *out_h, const u8 *utf8_filePathAndNameRESOLVABLE)							{ return fs::fileOpen (out_h, utf8_filePathAndNameRESOLVABLE, eFileMode::readOnly, false, false, true, true); }
-		bool			fileOpenForW (gos::File *out_h, const u8 *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders=false);
-		bool			fileOpenForAppend (gos::File *out_h, const u8 *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders=false);
+		inline bool		fileOpenForR (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE)							{ return fs::fileOpen (out_h, utf8_filePathAndNameRESOLVABLE, eFileMode::readOnly, false, false, true, true); }
+		bool			fileOpenForW (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders=false);
+		bool			fileOpenForAppend (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders=false);
 		inline u32		fileRead (gos::File &h, void *buffer, u32 numMaxBytesToRead)										{ return platform::FS_fileRead(h.osFile, buffer, numMaxBytesToRead); }
 		inline u32		fileWrite (gos::File &h, const void *buffer, u32 numBytesToWrite)									{ return platform::FS_fileWrite(h.osFile, buffer, numBytesToWrite); }
 		void			fpf (gos::File &h, const char *format, ...);
@@ -161,22 +158,20 @@ namespace gos
 		inline void		fileClose (gos::File  &h)																			{ platform::FS_fileClose(h.osFile); }
 		inline void		fileFlush (gos::File &h) 																			{ platform::FS_fileFlush(h.osFile); }
 
-		inline u64		fileLength (gos::File  &h)																			{ return platform::FS_fileLength(h.osFile); }
-		u64				fileLength (const u8 *utf8_filePathAndNameRESOLVABLE);
+		inline u64		fileLength (gos::File &h)																			{ return platform::FS_fileLength(h.osFile); }
 		u64				fileLength (const char *utf8_filePathAndNameRESOLVABLE);
 	    inline void		fileSeek(gos::File &h, u64 position, eSeek seekMode)												{ platform::FS_fileSeek(h.osFile, position, seekMode); }
     	inline u64		fileTell(gos::File &h) 																				{ return platform::FS_fileTell(h.osFile); }
 
-		u8*				fileLoadInMemory (Allocator *allocator, const u8* utf8_filePathAndNameRESOLVABLE, u32 *out_fileSize=NULL);
+		u8*				fileLoadInMemory (Allocator *allocator, const char* utf8_filePathAndNameRESOLVABLE, u32 *out_fileSize=NULL);
 
-		bool			findFirst (gos::FileFind *ff, const u8 *utf8_pathRESOLVABLE, const u8 *utf8_jolly);
-		bool			findFirst (gos::FileFind *ff, const u8 *utf8_pathRESOLVABLE, const char *jolly);
+		bool			findFirst (gos::FileFind *ff, const char *utf8_pathRESOLVABLE, const char *utf8_jolly);
 		inline bool     findNext (gos::FileFind &ff)																	{ return platform::FS_findNext(ff.osFF); }
 		inline void     findClose(gos::FileFind &ff)																	{ platform::FS_findClose(ff.osFF); }
 		inline bool     findIsDirectory(const gos::FileFind &ff)														{ return platform::FS_findIsDirectory(ff.osFF); }
-		inline const u8* findGetFileName(const gos::FileFind &ff)														{ return platform::FS_findGetFileName(ff.osFF); }
-		inline void     findGetFileName (const gos::FileFind &ff, u8 *out, u32 sizeofOut)								{ platform::FS_findGetFileName(ff.osFF, out, sizeofOut); }
-		void 			findComposeFullFilePathAndName (const gos::FileFind &ff, const u8 *pathNoSlash, u8 *out, u32 sizeofOut);
+		inline const char* findGetFileName(const gos::FileFind &ff)														{ return platform::FS_findGetFileName(ff.osFF); }
+		inline void     findGetFileName (const gos::FileFind &ff, char *out, u32 sizeofOut)								{ platform::FS_findGetFileName(ff.osFF, out, sizeofOut); }
+		void 			findComposeFullFilePathAndName (const gos::FileFind &ff, const char *pathNoSlash, char *out, u32 sizeofOut);
 	} //namespace fs
 
 
@@ -277,7 +272,6 @@ namespace gos
 		//se [bStringHasSeparator]==true, allora [macString] è nel formato AA:BB:CC:DD:EE:FF 
 		//altrimenti è nel formato AABBCCDDEEFF 
 		bool				setFromMACString (MacAddress &me, const char *macString, bool bStringHasSeparator);
-		bool				setFromMACString (MacAddress &me, const u8 *macString, bool bStringHasSeparator);
 
 		//ritorna il MAC address di eth0 se esiste.
 		//[out_macAddress] deve essere di almeno 16 char

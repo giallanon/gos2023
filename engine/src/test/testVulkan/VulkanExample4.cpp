@@ -49,7 +49,7 @@ bool VulkanExample4::virtual_onInit ()
     * 
     * [descriptor-set] è semplicemente una collezione di [descriptor] che vengono uppati/aggiornati tutti in un colpo solo
     * 
-    * In linea di massima, crea un [descriptor-set] livello di complessita. Un classico esempio è:
+    * In linea di massima, crea un [descriptor-set] per ogni livello di complessita. Un classico esempio è:
     *   [descriptor-set 1] uniform buffer con dentro matV e matP    (unico upload per tutta l'intera scena)
     *   [descriptor-set 2] texture per material                     (cambiano ogni volta che cambia il materiale)
     *   [descriptor-set 3] world matrix dell'instanza del modello   (cambia ad ogni oggetto che renderizziamo)
@@ -213,7 +213,7 @@ bool VulkanExample4::virtual_onInit ()
         return false;
     }
 
-    //Creo il descriptorSet layoutm con un solo UNIFORM BUFFER per il VTX SHADER
+    //Creo il descriptorSet layout  con un solo UNIFORM BUFFER per il VTX SHADER
     gpu->descrSetLayout_createNew(&descrSetLayoutHandle)
         .add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
         .end();
@@ -347,7 +347,7 @@ void VulkanExample4::doCPUStuff ()
 {
     fpsMegaTimer.onFrameBegin(FPSTIMER_CPU);
 
-    glfwPollEvents();
+    handleInput();
 
     //prepare frame
     {
@@ -435,7 +435,7 @@ void VulkanExample4::mainLoop()
     gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
 
     //main loop
-    while (!glfwWindowShouldClose (gpu->getWindow()))
+    while (bQuitApp == false)
     {
         doCPUStuff ();
 

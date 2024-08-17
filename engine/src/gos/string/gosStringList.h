@@ -21,16 +21,18 @@ namespace gos
         void        unsetup()                                               { buffer.unsetup(); }
 
         void        reset()                                                 { cursor=0; count=0; buffer.zero(); }
-        void        add (const char *m);
-        void        add (const u8 *m);
+        u32         add (const char *m);
+                    //add() ritorna un offset utilizzabile per puntare alla stringa
+                    //e recuperarla con getStringAtOffset()
+
+        const char* getStringAtOffset (u32 offset) const;
 
         u32         getNumString() const                                    { return count; }
         void        toStart (u32 *iter) const                               { (*iter) = 0;};
-        const char* nextAsChar(u32 *iter) const;
-        const u8*   nextAsU8(u32 *iter) const;
+        const char* next (u32 *iter) const;
 
     private:
-        void        priv_doAdd (const void *m, u32 sizeInByte);
+        u32         priv_doAdd (const void *m, u32 sizeInByte);
 
     private:
         gos::BufferLinear   buffer;

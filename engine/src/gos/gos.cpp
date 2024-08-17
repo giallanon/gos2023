@@ -10,7 +10,7 @@ struct sGOSGlobals
 	u64					timeStarted_usec;
 	gos::Logger			*logger;
 	char				*appName;
-	u8					*pathToWritableFolder;
+	char				*pathToWritableFolder;
 	u32 				lengthOfAppPathConSlash;
 	u32 				lengthOfPathToWritableFolder;
 };
@@ -22,7 +22,7 @@ static gos::Random		gosGlobalsRnd;
 //******************************************
 bool gos::init (const gos::sGOSInit &init, const char *appName)
 {
-	u8 s[1024];
+	char s[1024];
 
 	//assert sulla dimensione dei datatype
 	assert (sizeof(i8) == 1);
@@ -164,7 +164,7 @@ void gos::deinit()
 
 //******************************************
 const char* gos::getAppName()						{ return gosGlobals.appName; }
-const u8* gos::getPhysicalPathToWritableFolder()	{ return gosGlobals.pathToWritableFolder; }
+const char* gos::getPhysicalPathToWritableFolder()	{ return gosGlobals.pathToWritableFolder; }
 u32 gos::getLengthOfAppPathNoSlash ()				{ return gosGlobals.lengthOfAppPathConSlash; }
 u32 gos::getLengthOfPhysicalPathToWritableFolder ()	{ return gosGlobals.lengthOfPathToWritableFolder; }
 u64 gos::getTimeSinceStart_msec()					{ return (platform::getTimeNow_usec() - gosGlobals.timeStarted_usec) / 1000; }
@@ -233,7 +233,7 @@ void gos::netaddr::ipstrToIPv4  (const char *ip, gos::IPv4 *out)
 	memset (out->ips, 0, 4);
 
 	gos::string::utf8::Iter iter;
-    iter.setup (reinterpret_cast<const u8 *>(ip));
+    iter.setup (ip);
 
 	const UTF8Char chPunto(".");
 	i32 n = 0;
@@ -258,9 +258,8 @@ void gos::netaddr::ipstrToIPv4  (const char *ip, gos::IPv4 *out)
 
 //***************************************************
 void gos::netaddr::setInvalid (gos::MacAddress &me)															{ memset(me.b, 0, 6); }
-bool gos::netaddr::isInvalid (const gos::MacAddress &me)														{ return (me.b[0]==0 && me.b[1]==0 && me.b[2]==0 && me.b[3]==0 && me.b[4]==0 && me.b[5]==0); }
+bool gos::netaddr::isInvalid (const gos::MacAddress &me)													{ return (me.b[0]==0 && me.b[1]==0 && me.b[2]==0 && me.b[3]==0 && me.b[4]==0 && me.b[5]==0); }
 bool gos::netaddr::isValid (const gos::MacAddress &me)														{ return !netaddr::isInvalid(me); }
-bool gos::netaddr::setFromMACString (gos::MacAddress &me, const u8 *macString, bool bStringHasSeparator)		{ return netaddr::setFromMACString (me, reinterpret_cast<const char*>(macString), bStringHasSeparator); }
 bool gos::netaddr::setFromMACString (gos::MacAddress &me, const char *macString, bool bStringHasSeparator)
 {
 	if (NULL == macString)
@@ -433,7 +432,4 @@ void gos::socket::UDPSendBroadcast(Socket &sok, const u8 *buffer, u32 nByteToSen
 	i = 0;
     setsockopt (sok.osSok.socketID, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&i), sizeof(i));
 }
-
-
-
 

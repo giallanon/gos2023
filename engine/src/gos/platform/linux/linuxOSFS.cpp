@@ -6,7 +6,7 @@
 
 
 //*********************************************
-static bool linux_createFolderFromUTF8Path (const u8 *utf8_path, u32 nBytesToUseForPath)
+static bool linux_createFolderFromUTF8Path (const char *utf8_path, u32 nBytesToUseForPath)
 {
     char path[512];
     memcpy (path, utf8_path, nBytesToUseForPath);
@@ -21,7 +21,7 @@ static bool linux_createFolderFromUTF8Path (const u8 *utf8_path, u32 nBytesToUse
 }
 
 //*****************************************************
-bool platform::FS_folderCreate (const u8 *utf8_path)
+bool platform::FS_folderCreate (const char *utf8_path)
 {
     if (NULL == utf8_path)
         return false;
@@ -44,24 +44,24 @@ bool platform::FS_folderCreate (const u8 *utf8_path)
 }
 
 //*****************************************************
-bool platform::FS_folderDelete (const u8 *path)
+bool platform::FS_folderDelete (const char *path)
 {
-    return (rmdir((const char*)path) == 0);
+    return (rmdir(path) == 0);
 }
 
 //*****************************************************
-bool platform::FS_folderExists(const u8 *path)
+bool platform::FS_folderExists(const char *path)
 {
     struct stat sb;
-    if (stat((const char*)path, &sb) == 0 && S_ISDIR(sb.st_mode))
+    if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))
         return true;
     return false;
 }
 
 //*****************************************************
-bool platform::FS_fileExists(const u8 *filename)
+bool platform::FS_fileExists(const char *filename)
 {
-    FILE *f = fopen((const char*)filename, "r");
+    FILE *f = fopen(filename, "r");
     if (NULL == f)
         return false;
     fclose(f);
@@ -69,23 +69,23 @@ bool platform::FS_fileExists(const u8 *filename)
 }
 
 //*****************************************************
-bool platform::FS_fileDelete(const u8 *filename)
+bool platform::FS_fileDelete(const char *filename)
 {
-    return (remove((const char*)filename) == 0);
+    return (remove(filename) == 0);
 }
 
 //*****************************************************
-bool platform::FS_fileRename(const u8 *utf8_pathNoSlash, const u8 *utf8_oldFilename, const u8 *utf8_newFilename)
+bool platform::FS_fileRename(const char *utf8_pathNoSlash, const char *utf8_oldFilename, const char *utf8_newFilename)
 {
-    u8 temp1[512];
+    char temp1[512];
     gos::string::utf8::spf (temp1, sizeof(temp1), "%s/%s", utf8_pathNoSlash, utf8_oldFilename);
     gos::fs::pathSanitizeInPlace(temp1);
 
-    u8 temp2[512];
+    char temp2[512];
     gos::string::utf8::spf (temp2, sizeof(temp2), "%s/%s", utf8_pathNoSlash, utf8_newFilename);
     gos::fs::pathSanitizeInPlace(temp2);
 
-    return (rename(reinterpret_cast<const char*>(temp1), reinterpret_cast<const char*>(temp2)) == 0);
+    return (rename(temp1, temp2) == 0);
 }
 
 //*****************************************************
@@ -94,17 +94,8 @@ void platform::FS_fileGetCreationTime_UTC (const char *filePathAndName, gos::Dat
     //NB; linux non ha la nozione di creationTime, quindi ritorno il last modified time
     FS_fileGetLastTimeModified_UTC (filePathAndName, out_dt);
 }
-void platform::FS_fileGetCreationTime_UTC(const u8 *utf8_filePathAndName, gos::DateTime *out_dt)
-{
-    //NB; linux non ha la nozione di creationTime, quindi ritorno il last modified time
-    FS_fileGetLastTimeModified_UTC (utf8_filePathAndName, out_dt);
-}
 
 //*****************************************************
-void platform::FS_fileGetLastTimeModified_UTC(const u8 *utf8_filePathAndName, gos::DateTime *out_dt)
-{
-    platform::FS_fileGetLastTimeModified_UTC (reinterpret_cast<const char*>(utf8_filePathAndName), out_dt);
-}
 void platform::FS_fileGetLastTimeModified_UTC(const char *filePathAndName, gos::DateTime *out_dt)
 {
     assert(NULL != out_dt);
@@ -120,10 +111,6 @@ void platform::FS_fileGetLastTimeModified_UTC(const char *filePathAndName, gos::
 }
 
 //*****************************************************
-void platform::FS_fileGetCreationTime_LocalTime(const u8 *utf8_filePathAndName, gos::DateTime *out_dt)
-{
-    FS_fileGetCreationTime_LocalTime (reinterpret_cast<const char*>(utf8_filePathAndName), out_dt);
-}
 void platform::FS_fileGetCreationTime_LocalTime(const char *filePathAndName, gos::DateTime *out_dt)
 {
     //NB; linux non ha la nozione di creationTime, quindi ritorno il last modified time
@@ -131,10 +118,6 @@ void platform::FS_fileGetCreationTime_LocalTime(const char *filePathAndName, gos
 }
 
 //*****************************************************
-void platform::FS_fileGetLastTimeModified_LocalTime(const u8 *utf8_filePathAndName, gos::DateTime *out_dt)
-{
-    FS_fileGetLastTimeModified_LocalTime (reinterpret_cast<const char*>(utf8_filePathAndName), out_dt);
-}
 void platform::FS_fileGetLastTimeModified_LocalTime(const char *filePathAndName, gos::DateTime *out_dt)
 {
     assert(NULL != out_dt);
@@ -150,7 +133,7 @@ void platform::FS_fileGetLastTimeModified_LocalTime(const char *filePathAndName,
 }
 
 //*****************************************************
-bool platform::FS_fileOpen  (OSFile *out_h, const u8 *utf8_filePathAndName, eFileMode openMode, bool bCreateIfNotExists, bool bAppend, UNUSED_PARAM(bool bShareRead), UNUSED_PARAM(bool bShareWrite))
+bool platform::FS_fileOpen  (OSFile *out_h, const char *utf8_filePathAndName, eFileMode openMode, bool bCreateIfNotExists, bool bAppend, UNUSED_PARAM(bool bShareRead), UNUSED_PARAM(bool bShareWrite))
 {
     assert (NULL != out_h);
     assert (NULL != utf8_filePathAndName);
@@ -218,7 +201,7 @@ u64 platform::FS_fileLength (OSFile &h)
 }
 
 //*****************************************************
-u64 platform::FS_fileLength (const u8 *utf8_filePathAndName)
+u64 platform::FS_fileLength (const char *utf8_filePathAndName)
 {
     struct stat st;
     stat(reinterpret_cast<const char*>(utf8_filePathAndName), &st);
@@ -276,7 +259,7 @@ u32 platform::FS_fileWrite (OSFile &h, const void *buffer, u32 numBytesToWrite)
 }
 
 //*****************************************************
-bool platform::FS_findFirst (OSFileFind *ff, const u8 *utf8_path, const u8 *utf8_jolly)
+bool platform::FS_findFirst (OSFileFind *ff, const char *utf8_path, const char *utf8_jolly)
 {
     assert(ff->dirp == NULL);
 
@@ -306,7 +289,7 @@ bool platform::FS_findNext (OSFileFind &ff)
         if (ff.dp->d_type == DT_DIR)
             return true;
 
-        if (gos::fs::doesFileNameMatchJolly ((const u8 *)ff.dp->d_name, (const u8 *)ff.strJolly))
+        if (gos::fs::doesFileNameMatchJolly (ff.dp->d_name, ff.strJolly))
             return true;
     }
 }
@@ -329,14 +312,14 @@ bool platform::FS_findIsDirectory(const OSFileFind &ff)
 }
 
 //*****************************************************
-const u8* platform::FS_findGetFileName(const OSFileFind &ff)
+const char* platform::FS_findGetFileName(const OSFileFind &ff)
 {
     assert(ff.dirp != NULL);
-    return (const u8 *)ff.dp->d_name;
+    return ff.dp->d_name;
 }
 
 //*****************************************************
-void platform::FS_findGetFileName (const OSFileFind &ff, u8 *out, u32 sizeofOut)
+void platform::FS_findGetFileName (const OSFileFind &ff, char *out, u32 sizeofOut)
 {
     assert(ff.dirp != NULL);
     sprintf_s((char*)out, sizeofOut, "%s", ff.dp->d_name);

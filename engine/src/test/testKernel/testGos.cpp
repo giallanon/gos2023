@@ -310,8 +310,8 @@ namespace test4
     int testFS()
     {
         gos::Allocator *allocator = gos::getSysHeapAllocator();
-        u8  s1[2048];
-        u8  s2[2048];
+        char  s1[2048];
+        char  s2[2048];
 
         //se la cartella di test esiste, la elimino
         gos::string::utf8::spf (s1, sizeof(s1), "%s/testFS", gos::getPhysicalPathToWritableFolder());
@@ -400,17 +400,17 @@ namespace test4
         
 
         //verifico il fn degli alias
-        TEST_ASSERT (gos::fs::fileExists (reinterpret_cast<const u8*>("@w/testFS/dir1/file_di_esempio00.txt")));
+        TEST_ASSERT (gos::fs::fileExists ("@w/testFS/dir1/file_di_esempio00.txt"));
 
         TEST_ASSERT (gos::fs::addAlias ("@fs1", "testFS", eAliasPathMode::relativeToWritableFolder));
-        TEST_ASSERT (gos::fs::fileExists (reinterpret_cast<const u8*>("@fs1/dir1/file_di_esempio00.txt")));
+        TEST_ASSERT (gos::fs::fileExists ("@fs1/dir1/file_di_esempio00.txt"));
 
         TEST_ASSERT (gos::fs::addAlias ("@fs2", "testFS/dir1", eAliasPathMode::relativeToWritableFolder));
-        TEST_ASSERT (gos::fs::fileExists (reinterpret_cast<const u8*>("@fs2/file_di_esempio00.txt")));
+        TEST_ASSERT (gos::fs::fileExists ("@fs2/file_di_esempio00.txt"));
 
         gos::string::utf8::spf (s1, sizeof(s1), "%s/testFS/dir1", gos::getPhysicalPathToWritableFolder());
         TEST_ASSERT (gos::fs::addAlias ("@fs3", s1, eAliasPathMode::absolutePath));
-        TEST_ASSERT (gos::fs::fileExists (reinterpret_cast<const u8*>("@fs3/file_di_esempio00.txt")));
+        TEST_ASSERT (gos::fs::fileExists ("@fs3/file_di_esempio00.txt"));
 
     return 0;
     }
@@ -424,12 +424,18 @@ namespace test5
         gos::Allocator *allocator = gos::getSysHeapAllocator();
         gos::StringList sl;
 
-        sl.setup (allocator, 1024);
-        sl.add ("Pippo");    
-        sl.add ("Pluto");
-        sl.add ("paperino");
+        sl.setup (allocator, 16);
+        const u32 offset1 = sl.add ("Pippo");    
+        const u32 offset2 = sl.add ("Pluto");
+
+        //l'inserimento di questa stringa causa una espazione della stringlist
+        const u32 offset3 = sl.add ("paperino");
 
         TEST_ASSERT(sl.getNumString() == 3);
+
+        TEST_ASSERT(strcmp (sl.getStringAtOffset(offset1), "Pippo") == 0);
+        TEST_ASSERT(strcmp (sl.getStringAtOffset(offset2), "Pluto") == 0);
+        TEST_ASSERT(strcmp (sl.getStringAtOffset(offset3), "paperino") == 0);
 
         return 0;
     }
@@ -639,17 +645,17 @@ namespace test8
 
     enum TestEnum
     {
-        CrcVal01 = STR_HASH("stack-overflow"),
+        CrcVal01 = COMPILE_TIME_STR_CRC32("stack-overflow"),
     };
 
     int run()
     {
-        u32 test1 = STR_HASH("stack-overflow"); printf ("0x%08X\n", test1);
-        TEST_ASSERT(0x335CC04A==test1);
-        TEST_ASSERT(0x335CC04A==CrcVal01);
-        TEST_ASSERT(STR_HASH("stack-overflow")==CrcVal01);
+        u32 test1 = COMPILE_TIME_STR_CRC32("stack-overflow"); printf ("0x%08X\n", test1);
+        TEST_ASSERT(0x44381BC3==test1);
+        TEST_ASSERT(0x44381BC3==CrcVal01);
+        TEST_ASSERT(COMPILE_TIME_STR_CRC32("stack-overflow")==CrcVal01);
 
-        if constexpr (STR_HASH("pippo fa la pizza") == STR_HASH("pippo fa la pizza"))
+        if constexpr (COMPILE_TIME_STR_CRC32("pippo fa la pizza") == COMPILE_TIME_STR_CRC32("pippo fa la pizza"))
         {
             TEST_ASSERT(1);
         }
@@ -658,8 +664,12 @@ namespace test8
             TEST_ASSERT(0);
         }
         
-        TEST_ASSERT(0x3483329A==STR_HASH("pippo fa la pizza"));
+        TEST_ASSERT(0xC2EC16E5==COMPILE_TIME_STR_CRC32("pippo fa la pizza"));
 
+        TEST_ASSERT(gos::utils::crc32("stack-overflow") == 0x44381BC3);
+        TEST_ASSERT(gos::utils::crc32("stack-overflow") == CrcVal01);
+        TEST_ASSERT(gos::utils::crc32("stack-overflow") == COMPILE_TIME_STR_CRC32("stack-overflow"));
+        TEST_ASSERT(gos::utils::crc32("pippo fa la pizza") == COMPILE_TIME_STR_CRC32("pippo fa la pizza"));
         return 0;
     }    
 }

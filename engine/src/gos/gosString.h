@@ -7,24 +7,24 @@ namespace gos
 {
 	namespace string
 	{
-		bool		strANSItoUTF8  (const char* in, u8* out,  u32 sizeOfOut);
-		bool		strANSItoUTF8  (const char* in, u32 lenOfIN, u8* out,  u32 sizeOfOut);
-		bool		strANSItoUTF16 (const char* in, u16* out, u32 sizeOfOutInBytes);
-		bool		strUTF8toUTF16 (const u8 *in, u16* out, u32 sizeOfOutInBytes);
-		bool		strUTF16toUTF8 (const u16* in, u8* out, u32 sizeOfOutInBytes);
+		bool		strANSItoUTF8  (const char *in, char *out, u32 sizeOfOut);
+		bool		strANSItoUTF8  (const char *in, u32 lenOfIN, char *out,  u32 sizeOfOut);
+		bool		strANSItoUTF16 (const char *in, u16 *out, u32 sizeOfOutInBytes);
+		bool		strUTF8toUTF16 (const char *in, u16 *out, u32 sizeOfOutInBytes);
+		bool		strUTF16toUTF8 (const u16 *in, char *out, u32 sizeOfOutInBytes);
 
 		namespace ansi
 		{
-			u32				lengthInBytes (const char* p);
-			bool			toUTF8   (const ANSIChar& in, UTF8Char* out);
-			bool			toUTF16  (const ANSIChar& in, UTF16Char* out);
-			bool			toUTF32  (const ANSIChar& in, UTF32Char* out);
-			u8				extractAChar (const char* p, u32 lenInBytes, ANSIChar *out);
+			u32				lengthInBytes (const char *p);
+			bool			toUTF8   (const ANSIChar &in, UTF8Char *out);
+			bool			toUTF16  (const ANSIChar &in, UTF16Char *out);
+			bool			toUTF32  (const ANSIChar &in, UTF32Char *out);
+			u8				extractAChar (const char *p, u32 lenInBytes, ANSIChar *out);
 
-			inline	i64		toI64 (const char *s)														{ if (NULL == s) return 0; return (i64)atoll((const char*)s); }
-			inline	i32		toI32 (const char *s)														{ if (NULL==s) return 0; return (i32)atoi((const char*)s); }
-			inline	u64		toU64 (const char *s)														{ if (NULL == s) return 0; return (u64)atoll((const char*)s); }
-			inline	u32		toU32 (const char *s)														{ if (NULL==s) return 0; return (u32)atoi((const char*)s); }
+			inline	i64		toI64 (const char *s)														{ if (NULL == s) return 0; return (i64)atoll(s); }
+			inline	i32		toI32 (const char *s)														{ if (NULL==s) return 0; return (i32)atoi(s); }
+			inline	u64		toU64 (const char *s)														{ if (NULL == s) return 0; return (u64)atoll(s); }
+			inline	u32		toU32 (const char *s)														{ if (NULL==s) return 0; return (u32)atoi(s); }
 					f32		toF32 (const char *s, u32 lenOfS=u32MAX);
 
 			/* s deve essere un hex valido, il che vuol dire:
@@ -40,18 +40,18 @@ namespace gos
 		namespace utf16
 		{
 			u32				lengthInBytes (const u16 *utf16_str);
-			bool			toUTF8  (const UTF16Char& in, UTF8Char* out);
+			bool			toUTF8  (const UTF16Char &in, UTF8Char *out);
 			bool			toUTF32 (const UTF16Char &in, UTF32Char *out);
-			u8				extractAChar (const u16* utf16_str, u32 lenInBytes, UTF16Char *out);
+			u8				extractAChar (const u16 *utf16_str, u32 lenInBytes, UTF16Char *out);
 
 			/* trimma a destra e ritorna la nuova lunghezza in bytes della string trimmata() */
-			u32				rtrim(u16 *s);
+			u32				rtrim (u16 *s);
 								
 			/* appende la stringa ASCII [src] alla string utf16 [dst] */
-			void			concatFromASCII(u16 *dst, u32 sizeofDstInBytes, const char* src);
+			void			concatFromASCII (u16 *dst, u32 sizeofDstInBytes, const char *src);
 								
 			/* prepende [strToPrepend] a [dst] */
-			void			prepend(u16 *dst, u32 sizeOfDstInBytes, const u16* const strToPrepend);
+			void			prepend (u16 *dst, u32 sizeOfDstInBytes, const u16* const strToPrepend);
 								
 
 		} //namespace utf16
@@ -61,9 +61,9 @@ namespace gos
 		namespace utf32
 		{
 			u32				lengthInBytes (const u32 *utf32_str);
-			bool			toUTF8  (const UTF32Char& in, UTF8Char* out);
-			bool			toUTF16 (const UTF32Char& in, UTF16Char* out);
-			u8				extractAChar (const u32* p, u32 lenInBytes, UTF32Char *out);
+			bool			toUTF8  (const UTF32Char &in, UTF8Char *out);
+			bool			toUTF16 (const UTF32Char &in, UTF16Char *out);
+			u8				extractAChar (const u32 *p, u32 lenInBytes, UTF32Char *out);
 		} //namespace utf32
 
 
@@ -100,82 +100,74 @@ namespace gos
 			extern			const UTF8Char SECTION_SIGN;	// UTF8 per il carattere § (noto come 'section sign'), ovvero 0xc2 0xa7
 
 			//equivalente alla strlen
-			u32				lengthInByte (const u8 *utf8_str);
+			u32				lengthInByte (const char *utf8_str);
 
 			//controlla [utf8IN] estraendo carattere per carattere e mettendolo in [out]. Se incontra dei caratteri invalidi, li sostituisce con 
 			//[useThisWhenInvalidChar]. Ritorna la lunghezza in bytes di [out]
-			u32				sanitize (const u8 *utf8IN, u32 numBytesInUT8IN, const UTF8Char &useThisWhenInvalidChar, u8 *out, u32 sizeof_out);
+			u32				sanitize (const char *utf8IN, u32 numBytesInUT8IN, const UTF8Char &useThisWhenInvalidChar, char *out, u32 sizeof_out);
 
 			bool			toUTF16  (const UTF8Char &in, UTF16Char *out);
 			bool			toUTF32  (const UTF8Char &in, UTF32Char *out);
 			
 			/*	ritorna il num di bytes utilizzati per il char.
 				ritorna 0 in caso di fine string o sequenza invalida*/
-			u8				extractAChar (const u8 *utf8_str, u32 lenInBytes, UTF8Char *out);
+			u8				extractAChar (const char *utf8_str, u32 lenInBytes, UTF8Char *out);
 
-			u8*				allocStr	(Allocator *allocator, const char* src, u32 numBytesDaUtilizzare=u32MAX);
-			u8*				allocStr	(Allocator *allocator, const u8 *src, u32 numBytesDaUtilizzare=u32MAX);
+			char*			allocStr	(Allocator *allocator, const char *src, u32 numBytesDaUtilizzare=u32MAX);
 			
-			// ritorna la "lengthInBytes" di dst
-			u32				makeStr		(u8 *dst, u32 sizeofDst, const char* src);	
-										
 
 			//è l'equivalente della sprintf_s, solo che [dest] è di tipo u8 invece che char*
-			void			spf (u8 *dest, u32 sizeOfDest, const char *format, ...);
+			void			spf (char *dest, u32 sizeof_dst, const char *format, ...);
 								
 
-
-			u32				copyStr		(u8 *dst, u32 sizeofDst, const u8 *src, u32 numBytesDaUtilizzare=u32MAX);
+			u32				copyStr (char *dst, u32 sizeof_dst, const char *src, u32 numBytesDaUtilizzare=u32MAX);
 
 			// Copia in [dst] il massimo num di byte possibili di [src] e mette sempre un 0x00 alla fine di [dst]
-			// Se [sizeOfDest] è troppo piccolo, non va in buffer overflow ma copia tutto quello che può da [src]
+			// Se [sizeof_dst] è troppo piccolo, non va in buffer overflow ma copia tutto quello che può da [src]
 			// e aggiunge uno 0x00 alla fine di [dst]
 			// Ritorna length(dst)
-            u32             copyStrAsMuchAsYouCan (u8 *dst, u32 sizeOfDest, const u8 *src);
+            u32             copyStrAsMuchAsYouCan (char *dst, u32 sizeof_dst, const char *src);
 
 			
 			// ritornano la "lengthInBytes" di dst
-			u32				concatStr	(u8 *dst, u32 sizeofDst, const char* src);
-			inline u32		concatStr	(u8 *dst, u32 sizeofDst, const u8 *src)								{ return utf8::concatStr(dst, sizeofDst, (const char*)src);  }
-			u32				concat		(u8 *dst, u32 sizeofDst, const UTF8Char &c);
+			u32				concatStr	(char *dst, u32 sizeof_dst, const char* src);
+			u32				concat		(char *dst, u32 sizeof_dst, const UTF8Char &c);
 							
 			//ritorna la len di src nel caso in cui fosse applicato l'escaping
-			u32				calcEscapedSeqLength (const u8 *src, u32 srcLenInBytes=u32MAX);
+			u32				calcEscapedSeqLength (const char *src, u32 srcLenInBytes=u32MAX);
 
 			// ritornano la "lengthInBytes" di dst								
-			u32				escape (u8 *dst, u32 sizeofDst, const u8 *src, u32 srcLenInBytes=u32MAX);
-			u32				unescape (u8 *dst, u32 sizeofDst, const u8 *src, u32 srcLenInBytes=u32MAX);
-			u32				unescapeInPlace (u8 *src_dst, u32 srcLenInBytes=u32MAX);
+			u32				escape (char *dst, u32 sizeof_dst, const char *src, u32 srcLenInBytes=u32MAX);
+			u32				unescape (char *dst, u32 sizeof_dst, const char *src, u32 srcLenInBytes=u32MAX);
+			u32				unescapeInPlace (char *src_dst, u32 srcLenInBytes=u32MAX);
 							
 							
-					void	appendUTF8Char (u8 *dst, u32 sizeOfDest, const UTF8Char &ch);
-					void	appendU32 (u8 *dst, u32 sizeOfDest, u32 num, u8 minNumOfDigit=0);
-			inline	void	appendU16 (u8 *dst, u32 sizeOfDest, u16 num)									{ appendU32(dst, sizeOfDest, (u32)num); }
-			inline	void	appendU8  (u8 *dst, u32 sizeOfDest, u8 num)										{ appendU32(dst, sizeOfDest, (u32)num); }
-					void	appendI32 (u8 *dst, u32 sizeOfDest, i32 num, u8 minNumOfDigit = 0);
-			inline	void	appendI16 (u8 *dst, u32 sizeOfDest, i16 num)									{ appendI32(dst, sizeOfDest, (i32)num); }
-			inline	void	appendI8  (u8 *dst, u32 sizeOfDest, i8 num)										{ appendI32(dst, sizeOfDest, (i32)num); }
+					void	appendUTF8Char (char *dst, u32 sizeof_dst, const UTF8Char &ch);
+					void	appendU32 (char *dst, u32 sizeof_dst, u32 num, u8 minNumOfDigit=0);
+			inline	void	appendU16 (char *dst, u32 sizeof_dst, u16 num)										{ appendU32(dst, sizeof_dst, (u32)num); }
+			inline	void	appendU8  (char *dst, u32 sizeof_dst, u8 num)										{ appendU32(dst, sizeof_dst, (u32)num); }
+					void	appendI32 (char *dst, u32 sizeof_dst, i32 num, u8 minNumOfDigit = 0);
+			inline	void	appendI16 (char *dst, u32 sizeof_dst, i16 num)										{ appendI32(dst, sizeof_dst, (i32)num); }
+			inline	void	appendI8  (char *dst, u32 sizeof_dst, i8 num)										{ appendI32(dst, sizeof_dst, (i32)num); }
 
-			bool			areEqual (const u8 *a, const u8 *b, bool bCaseSensitive);
-			bool			areEqual (const u8 *a, const char *b, bool bCaseSensitive);
-			bool			areEqualWithLen (const u8 *a, const u8 *b, bool bCaseSensitive, u32 numBytesToCompare);
-			bool			areEqualWithLen (const u8 *a, const char *b, bool bCaseSensitive, u32 numBytesToCompare);
+			bool			areEqual (const char *a, const char *b, bool bCaseSensitive);
+			bool			areEqualWithLen (const char *a, const char *b, bool bCaseSensitive, u32 numBytesToCompare);
 
-			inline	i64		toI64 (const u8 *s)																{ return ansi::toI64((const char*)s); }
-			inline	i32		toI32 (const u8 *s)																{ return ansi::toI32((const char*)s); }
-			inline	u64		toU64 (const u8 *s)																{ return ansi::toU64((const char*)s); }
-			inline	u32		toU32 (const u8 *s)																{ return ansi::toU32((const char*)s); }
-			inline	f32		toF32 (const u8 *s, u32 lenOfS=u32MAX)											{ return ansi::toF32((const char*)s, lenOfS); }
+			inline	i64		toI64 (const char *s)																{ return ansi::toI64(s); }
+			inline	i32		toI32 (const char *s)																{ return ansi::toI32(s); }
+			inline	u64		toU64 (const char *s)																{ return ansi::toU64(s); }
+			inline	u32		toU32 (const char *s)																{ return ansi::toU32(s); }
+			inline	f32		toF32 (const char *s, u32 lenOfS=u32MAX)											{ return ansi::toF32(s, lenOfS); }
 
 			//se [out_urlEncoded] == NULL, allora ritorna il num di bytes necessari a contenere l'intera [urlIN] encodata
 			//altrimenti ritorna il num di byte inseriti in [out_urlEncoded]
-			u32				encodeURI (const u8 *urlIN, u8 *out_urlEncoded, u32 sizeof_outURIEncoded);
+			u32				encodeURI (const char *urlIN, char *out_urlEncoded, u32 sizeof_outURIEncoded);
 
 			//sostituisce le sequenze %xx con la relativa rappresentazione in byte
 			//Ritorna la nuova lunghezza di s
-			u32				decodeURIinPlace(u8 *s);
+			u32				decodeURIinPlace (char *s);
 						
-			u32 			rtrim(u8 *s);
+			u32 			rtrim (char *s);
 
 			/*=======================================================
 			 * Iter
@@ -184,11 +176,10 @@ namespace gos
 			class Iter
 			{
 			public:
-									Iter()														{ setup((const u8 *)NULL); }
+									Iter()														{ setup(NULL); }
 									Iter (const Iter &b)										{ priv_copyFrom (b); }
 
-				void				setup (const char *src, u32 firstByte=0, u32 lenghtInBytes=u32MAX);
-				void				setup (const u8 *utf8_src, u32 firstByte=0, u32 lenghtInBytes=u32MAX);
+				void				setup (const char *utf8_src, u32 firstByte=0, u32 lenghtInBytes=u32MAX);
 
 				void				toStart();
 				void				toLast();
@@ -196,22 +187,22 @@ namespace gos
 				bool				backOneChar();		//ritorna false quando si va sotto zero
 			
 				const UTF8Char&		getCurChar() const												{ return curChar; }
-				const u8 *			getPointerToCurrentPosition() const;
+				const char*			getPointerToCurrentPosition() const;
 				u32					getCursorPos () const											{ return cursorPos; }
 
 				//copia in [out] tutta la stringa, a partire da utf8_seq[startingCursorPos] fino al carattere attuale (compreso se bIncludeCurrentChar==true).
 				//Ritorna il num di bytes copiati (strlen) e mette uno 0x00 alla fine
-				u32					copyStrFromXToCurrentPosition (u32 startingCursorPos, u8 *utf8_out, u32 sizeofOut, bool bIncludeCurrentChar) const;
+				u32					copyStrFromXToCurrentPosition (u32 startingCursorPos, char *utf8_out, u32 sizeofOut, bool bIncludeCurrentChar) const;
 
-				u32					copyStrFromCurrentPositionToEnd (u8 *utf8_out, u32 sizeofOut) const;
-				u32					copyAllStr(u8 *utf8_out, u32 sizeofOut) const;
+				u32					copyStrFromCurrentPositionToEnd (char *utf8_out, u32 sizeofOut) const;
+				u32					copyAllStr (char *utf8_out, u32 sizeofOut) const;
 					
 				u32					totalLenghtInBytes() const										{ return seq_length; }
 				u32					getBytesLeft() const											{ if (curChar.isEOF()) return 0; return (seq_length - cursorPos); }
 
 				Iter&				operator= (const Iter &b)										{ priv_copyFrom(b); return *this; }
 
-				bool				cmp (const u8 *b, bool bCaseSensitive) const							
+				bool				cmp (const char *b, bool bCaseSensitive) const							
 									{ 
 										if (curChar.isEOF()) return false;
 										return utf8::areEqualWithLen (getPointerToCurrentPosition(), b, bCaseSensitive, getBytesLeft());
@@ -222,7 +213,7 @@ namespace gos
 				void				priv_copyFrom (const Iter &b)									{ utf8_seq = b.utf8_seq; seq_length = b.seq_length; curChar = b.curChar; cursorPos = b.cursorPos; bytesUsedForCurChar = b.bytesUsedForCurChar;  }
 
 			private:
-				const u8			*utf8_seq;
+				const char			*utf8_seq;
 				u32					seq_length;
 				UTF8Char			curChar;
 				u32					cursorPos;				//posizione attuale all'interno di [utf8_seq]. Il curChar parte da &utf8_seq[cursorPos]
@@ -262,7 +253,6 @@ namespace gos
 
 			//ritorna true se trova esattamente la stringa [whatToFind]. In questo caso, [src] punta al primo carattere dell'istanza di [whatToFind]
 			//Ritorna false altrimenti. In questo caso, [src] è avanzato fino a EOF
-			bool			find (Iter &src, const u8 *whatToFind);
 			bool			find (Iter &src, const char *whatToFind);
 
 			//Prende tutti i caratteri compresti tra src.getCurChar() e l'EOL e li ritorna in out_result
@@ -334,9 +324,8 @@ namespace gos
 			public:
 						StringListParser() : iter() 				{ }
 
-				void	toStart (const char *src, const UTF8Char &separator, u32 firstByte=0, u32 lenghtInBytes=u32MAX)			{ toStart (reinterpret_cast<const u8*>(src), separator, firstByte, lenghtInBytes); }
-				void	toStart (const u8 *utf8_src, const UTF8Char &separatorIN, u32 firstByte=0, u32 lenghtInBytes=u32MAX)	{ iter.setup (utf8_src, firstByte, lenghtInBytes); separatore = separatorIN; }
-				bool	next (u8 *out, u32 sizeof_out)
+				void	toStart (const char *utf8_src, const UTF8Char &separatorIN, u32 firstByte=0, u32 lenghtInBytes=u32MAX)	{ iter.setup (utf8_src, firstByte, lenghtInBytes); separatore = separatorIN; }
+				bool	next (char *out, u32 sizeof_out)
 				{
 					assert(out && sizeof_out);
 					if (iter.getCurChar().isEOF())

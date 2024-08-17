@@ -73,7 +73,7 @@ namespace gos
 		u32					priv_decodeOneMessage (const u8 *buffer, u32 nBytesInBuffer, sDecodeResult *out_result) const;
         u32                 priv_encodeAMessage (bool bFin, eWebSocketOpcode opcode, const void *payloadToSend, u32 payloadLen, u8 *wBuffer, u32 sizeOfOutBuffer);
 
-		static bool         priv_server_isAValidHandshake(const void *bufferIN, u32 sizeOfBuffer, Handshake *out);
+		static bool         priv_server_isAValidHandshake (const void *bufferIN, u32 sizeOfBuffer, Handshake *out);
 	};
 
 } //namespace gos

@@ -18,8 +18,8 @@
 struct	sLinuxPlatformData
 {
     u32         memory_pageSize;
-    u8	        *appPathNoSlash;
-    u8	        *userFolderPathNoSlash;
+    char	    *appPathNoSlash;
+    char        *userFolderPathNoSlash;
 };
 static sLinuxPlatformData	linuxPlatformData;
 
@@ -32,7 +32,7 @@ bool platform::internal_init ()
     linuxPlatformData.memory_pageSize = sysconf(_SC_PAGE_SIZE);
 
 	//get_current_dir_name() usa la malloc per allocare il path
-    linuxPlatformData.appPathNoSlash = (u8*)get_current_dir_name();
+    linuxPlatformData.appPathNoSlash = get_current_dir_name();
 	gos::fs::pathSanitizeInPlace (linuxPlatformData.appPathNoSlash);
 
     //recupero il path della user folder
@@ -44,7 +44,7 @@ bool platform::internal_init ()
         u32 n = strlen(homedir);
         char *temp = (char*)malloc(n + 1);
         sprintf_s (temp, n+1, "%s", homedir);
-        linuxPlatformData.userFolderPathNoSlash = reinterpret_cast<u8*>(temp);
+        linuxPlatformData.userFolderPathNoSlash = temp;
     }
 	gos::fs::pathSanitizeInPlace (linuxPlatformData.userFolderPathNoSlash);
 
@@ -66,8 +66,8 @@ void platform::internal_deinit()
 }
 
 //**********************************************
-const u8 *platform::getAppPathNoSlash()                                         { return linuxPlatformData.appPathNoSlash; }
-const u8 *platform::getPhysicalPathToUserFolder()				                { return linuxPlatformData.userFolderPathNoSlash; }
+const char *platform::getAppPathNoSlash()                                           { return linuxPlatformData.appPathNoSlash; }
+const char *platform::getPhysicalPathToUserFolder()				                    { return linuxPlatformData.userFolderPathNoSlash; }
 void* platform::memory_alignedAlloc (size_t sizeInByte, size_t alignmentPowerOfTwo)
 { 
     assert(GOS_IS_POWER_OF_TWO(alignmentPowerOfTwo));

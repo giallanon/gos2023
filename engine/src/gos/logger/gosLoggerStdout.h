@@ -22,7 +22,7 @@ namespace gos
 		virtual             ~LoggerStdout();
 
         void                disableStdouLogging()                                           { bShoudLogToStdout=false; }
-        void                enableFileLogging (const u8 *fullFolderPathAndName);
+        void                enableFileLogging (const char *fullFolderPathAndName);
                                 //accetta il path di un folder dentro al quale crea un certo numero di file di log in totale autonomia
 
 		void                incIndent();
@@ -42,7 +42,7 @@ namespace gos
         class LogToFile
         {
         public:
-                    LogToFile (const u8 *fullFolderPathAndName);
+                    LogToFile (const char *fullFolderPathAndName);
                     ~LogToFile();
             
             void    log (const char *format, ...);
@@ -54,7 +54,7 @@ namespace gos
             static const u64    MAX_NUM_LOGFILE_IN_FOLDER = 10;
 
         private:
-            u8*                 priv_allocString (const u8 *strIN) const;
+            char*               priv_allocString (const char *strIN) const;
             void                priv_openForAppend ();
             void                priv_closeAndFlush();
             void                priv_getLogFileList (gos::FastArray<u64> &elenco) const;
@@ -64,8 +64,8 @@ namespace gos
 
         private:
             gos::File   f;
-            u8          *filename;
-            u8          *fullFolderPathAndName;
+            char        *filename;
+            char        *fullFolderPathAndName;
             bool        bIsOpen;
             u16         flushCounter;
             u16         checkFileSizeCounter;

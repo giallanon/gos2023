@@ -57,7 +57,7 @@ typedef uintptr_t   uiPtr;      //un "intero" la cui dimensione in byte dipende 
  * debug helpers
  */
 #ifdef _DEBUG
-    //#define	DBGBREAK	raise(SIGTRAP);
+    //#define	DBGBREAK	raise(SIGABRT);
     #define	DBGBREAK	raise(SIGINT);
 #else
     #define	DBGBREAK

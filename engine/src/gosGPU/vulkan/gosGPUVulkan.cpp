@@ -46,7 +46,7 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
         u32 iter;
         const char *identifier;
         requiredValidationLayerList.toStart(&iter);
-        while (NULL != (identifier = requiredValidationLayerList.nextAsChar(&iter)))
+        while (NULL != (identifier = requiredValidationLayerList.next(&iter)))
         {
             const u32 index = vkAvailValidationLayerList.find(identifier);
             if (u32MAX == index)
@@ -72,7 +72,7 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
         u32 iter;
         const char *identifier;
         requiredExtensionList.toStart(&iter);
-        while (NULL != (identifier = requiredExtensionList.nextAsChar(&iter)))
+        while (NULL != (identifier = requiredExtensionList.next(&iter)))
         {
             const u32 index = vkAvailExtensionList.find(identifier);
             if (u32MAX == index)
@@ -183,7 +183,7 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
         u32 iter;
         const char *identifier;
         requiredExtensionList.toStart(&iter);
-        while (NULL != (identifier = requiredExtensionList.nextAsChar(&iter)))
+        while (NULL != (identifier = requiredExtensionList.next(&iter)))
         {
             const u32 index = extList.find (identifier);
             if (u32MAX == index)
@@ -431,7 +431,7 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
         u32 iter;
         const char *identifier;
         requiredExtensionList.toStart(&iter);
-        while (NULL != (identifier = requiredExtensionList.nextAsChar(&iter)))
+        while (NULL != (identifier = requiredExtensionList.next(&iter)))
         {
             const u32 index = extList.find(identifier);
             if (u32MAX == index)

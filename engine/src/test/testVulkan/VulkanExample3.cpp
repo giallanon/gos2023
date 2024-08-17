@@ -337,7 +337,7 @@ void VulkanExample3::doCPUStuff ()
 {
     fpsMegaTimer.onFrameBegin(FPSTIMER_CPU);
 
-    glfwPollEvents();
+    handleInput();
 
     //prepare vtx
     moveVertex();
@@ -374,7 +374,7 @@ void VulkanExample3::mainLoop()
     gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
 
     //main loop
-    while (!glfwWindowShouldClose (gpu->getWindow()))
+    while (bQuitApp == false)
     {
         doCPUStuff ();
 

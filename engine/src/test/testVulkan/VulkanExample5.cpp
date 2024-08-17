@@ -39,5 +39,9 @@ bool VulkanExample5::virtual_onInit ()
  */
 void VulkanExample5::virtual_onRun()
 {
+    while (bQuitApp == false)
+    {
+        handleInput();
+    }
 }
 

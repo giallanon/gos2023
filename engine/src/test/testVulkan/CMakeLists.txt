@@ -43,6 +43,7 @@ VulkanExample5.h
 include_directories(${PROJECT_SOURCE_DIR}/../../gos)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosMath)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosGeom)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosInput)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosGPU)
 
 #====================================================
@@ -58,7 +59,7 @@ message("         compiler flags: ${MAIN_CFLAGS}")
 
 #====================================================
 # additional library to be linked
-set(LIBRARY_LIST "gosGPU;gosMath;gosGeom;gos")
+set(LIBRARY_LIST "gosGPU;gosInput;gosMath;gosGeom;gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
     message("         linkling libray [${libName}] => ${finalLibNameAndPath}")

@@ -25,21 +25,19 @@ namespace gos
 
             void        setup (gos::Allocator *allocator);
             void        unsetup();
-            bool        addAlias (const char *alias, const u8 *realPathNoSlash);
-
-            void	    resolve (const char *path, u8 *out, u32 sizeof_out) const           { return resolve(reinterpret_cast<const u8*>(path), out, sizeof_out); }
-            void        resolve (const u8 *path, u8 *out, u32 sizeof_out) const;
+            bool        addAlias (const char *alias, const char *realPathNoSlash);
+            void        resolve (const char *path, char *out, u32 sizeof_out) const;
 
         private:
             struct sAlias
             {
-                u8  *alias;
-                u8  *realPathNoSlash;
+                char  *alias;
+                char  *realPathNoSlash;
             };
 
         private:
-            bool            priv_resolve (const u8 *path, u8 *out, u32 sizeof_out)  const;
-            const sAlias*   priv_findAlias (const u8 *alias) const;
+            bool            priv_resolve (const char *path, char *out, u32 sizeof_out)  const;
+            const sAlias*   priv_findAlias (const char *alias) const;
 
         private:
             gos::Allocator          *allocator;

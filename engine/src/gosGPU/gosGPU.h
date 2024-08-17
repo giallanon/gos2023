@@ -4,6 +4,7 @@
 #include "../gos/gos.h"
 #include "../gos/gosFastArray.h"
 #include "../gosMath/gosMath.h"
+#include "../gosInput/gosInput.h"
 #include "gosGPUDescrSetInstanceWriter.h"
 #include "gosGPUCmdBufferWriter.h"
 #include "gosGPUResCommandBuffer.h"
@@ -435,11 +436,11 @@ namespace gos
                             ~GPU();
 
 
-        bool                init (u16 width, u16 height, bool vSync, const char *appName);
+        bool                init (GOSWinHandle mainWin, bool vSync);
         void                deinit();
 
         //================ window stuff
-        GLFWwindow*         getWindow()                                     { return window.win; }
+        GOSWinHandle        getWindow()                                     { return window.winH; }
         void                toggleFullscreen();
         bool                vsync_isEnabled() const                         { return vSync; }
         void                vsync_enable (bool b);
@@ -577,12 +578,10 @@ namespace gos
 
         //================ shader
         bool                vtxshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)            { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::vertexShader, mainFnName, out_shaderHandle); }
-        bool                vtxshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                          { return priv_shader_createFromFile (reinterpret_cast<const u8*>(filename), eShaderType::vertexShader, mainFnName, out_shaderHandle); }
-        bool                vtxshader_createFromFile (const u8 *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                            { return priv_shader_createFromFile (filename, eShaderType::vertexShader, mainFnName, out_shaderHandle); }
+        bool                vtxshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                          { return priv_shader_createFromFile (filename, eShaderType::vertexShader, mainFnName, out_shaderHandle); }
         
         bool                fragshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)           { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::fragmentShader, mainFnName, out_shaderHandle); }
-        bool                fragshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                         { return priv_shader_createFromFile (reinterpret_cast<const u8*>(filename), eShaderType::fragmentShader, mainFnName, out_shaderHandle); }
-        bool                fragshader_createFromFile (const u8 *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                           { return priv_shader_createFromFile (filename, eShaderType::fragmentShader, mainFnName, out_shaderHandle); }
+        bool                fragshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                         { return priv_shader_createFromFile (filename, eShaderType::fragmentShader, mainFnName, out_shaderHandle); }
         
         VkShaderModule      shader_getVkHandle (const GPUShaderHandle shaderHandle) const;
         const char*         shader_getMainFnName (const GPUShaderHandle shaderHandle) const;
@@ -617,18 +616,30 @@ namespace gos
         struct sWindow
         {
         public:
-            sWindow()                                                   { win = NULL; storedX = storedY = storedW = storedH = 0; }
-            void getCurrentPos  (int *outX, int *outY)                  { glfwGetWindowPos (win, outX, outY); }
-            void getCurrentSize (int *dimX, int *dimY)                  { glfwGetWindowSize (win, dimX, dimY); }
-            void storeCurrentPosAndSize()                               { glfwGetWindowPos (win, &storedX, &storedY); glfwGetWindowSize (win, &storedW, &storedH); }
+            sWindow()                                                   { winH.setInvalid(); storedX = storedY = storedW = storedH = 0; }
 
+            void            getCurrentSize (int *out_w, int *out_h)     { input::window_getSize (winH, out_w, out_h); }
+
+            void            storeCurrentPosAndSize()
+                            {
+                                input::window_getPos (winH, &storedX, &storedY);
+                                input::window_getSize (winH, &storedW, &storedH);
+                            }
+
+            GLFWwindow*     getGLF() const
+                            {
+                                GLFWwindow *glfWin;
+                                input::window_getGLF (winH, &glfWin);
+                                return glfWin;
+                            }
         public:
-            GLFWwindow *win;
+            GOSWinHandle winH;
             int storedX;
             int storedY;
             int storedW;
             int storedH;
         };
+
         
         struct sPipeline
         {
@@ -672,9 +683,6 @@ namespace gos
         };
 
     private:
-        bool                priv_initWindowSystem (u16 width, u16 height, const char *appName);
-        void                priv_deinitWindowSystem();
-        
         bool                priv_initVulkan ();
         void                priv_deinitVulkan();
 
@@ -692,7 +700,7 @@ namespace gos
                                 return (handleList.fromHandleToPointer (handle, out));
                             }
 
-        bool                priv_shader_createFromFile (const u8 *filename, eShaderType shaderType, const char *mainFnName, GPUShaderHandle *out_shaderHandle);
+        bool                priv_shader_createFromFile (const char *filename, eShaderType shaderType, const char *mainFnName, GPUShaderHandle *out_shaderHandle);
         bool                priv_shader_createFromMemory (const u8 *buffer, u32 bufferSize, eShaderType shaderType, const char *mainFnName, GPUShaderHandle *out_shaderHandle);
 
         void                priv_vxtDecl_onBuilderEnds (VtxDeclBuilder *builder);

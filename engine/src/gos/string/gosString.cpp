@@ -5,13 +5,13 @@
 using namespace gos;
 
 //**************************************************
-bool string::strANSItoUTF8 (const char* in, u8 *out, u32 sizeOfOut)
+bool string::strANSItoUTF8 (const char *in, char *out, u32 sizeOfOut)
 {
 	return strANSItoUTF8 (in, (u32)strlen(in), out, sizeOfOut);
 }
 
 //**************************************************
-bool string::strANSItoUTF8  (const char* in, u32 lenOfIN, u8* out,  u32 sizeOfOut)
+bool string::strANSItoUTF8  (const char *in, u32 lenOfIN, char *out,  u32 sizeOfOut)
 {
 	assert (out && sizeOfOut);
 
@@ -56,7 +56,7 @@ bool string::strANSItoUTF8  (const char* in, u32 lenOfIN, u8* out,  u32 sizeOfOu
 }
 
 //**************************************************
-bool string::strANSItoUTF16 (const char* in, u16* out, u32 sizeOfOutInBytes)
+bool string::strANSItoUTF16 (const char *in, u16 *out, u32 sizeOfOutInBytes)
 {
 	assert (out && sizeOfOutInBytes);
 
@@ -100,7 +100,7 @@ bool string::strANSItoUTF16 (const char* in, u16* out, u32 sizeOfOutInBytes)
 }
 
 //**************************************************
-bool string::strUTF8toUTF16 (const u8 *in, u16* outIN, u32 sizeOfOutInBytes)
+bool string::strUTF8toUTF16 (const char *in, u16* outIN, u32 sizeOfOutInBytes)
 {
 	assert (outIN && sizeOfOutInBytes);
 
@@ -143,7 +143,7 @@ bool string::strUTF8toUTF16 (const u8 *in, u16* outIN, u32 sizeOfOutInBytes)
 }
 
 //**************************************************
-bool string::strUTF16toUTF8 (const u16* in, u8 *out, u32 sizeOfOutInBytes)
+bool string::strUTF16toUTF8 (const u16* in, char *out, u32 sizeOfOutInBytes)
 {
 	assert (out && sizeOfOutInBytes);
 	out[0] = 0x00;

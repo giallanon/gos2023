@@ -1,0 +1,130 @@
+#ifndef _gosInputEnumAndDefine_h_
+#define _gosInputEnumAndDefine_h_
+#define _GLFW_X11
+#define GLFW_INCLUDE_VULKAN
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define VK_ENABLE_BETA_EXTENSIONS
+#include "GLFW/glfw3.h"
+#include "../gos/gosEnumAndDefine.h"
+#include "../gos/dataTypes/gosColorHDR.h"
+#include "../gos/gosHandle.h"
+
+
+//A per "num max di handle", B per "num di chunk", C per "counter"
+typedef gos::HandleT< 5,3,4, 4,16>	GOSWinHandle;		//2^5=32 => num totale di oggetti, divisi in chunk da 2^3=8
+
+
+#define BUTTON_MOUSE_LEFT       0
+#define BUTTON_MOUSE_RIGHT      1
+#define BUTTON_MOUSE_MIDDLE     2
+
+#define BUTTON_WINDOW_CLOSE     0
+
+
+namespace gos
+{
+    namespace input
+    {
+        enum class eOrigin : u8
+        {
+            keyboard = 0,
+            mouse = 1,
+            window = 2
+        };
+
+        enum class eType : u8
+        {
+            button = 0,
+            axle = 1
+        };        
+
+        enum class eButtonStatus : u8
+        {
+            released = 0,
+            pressed = 1
+        };
+
+        enum class eButtonModifier : u8
+        {
+            NONE =  0x00,
+            LCTRL =  0x01,
+            RCTRL =  0x02,
+            LSHIFT = 0x04,
+            RSHIFT = 0x08,
+            LALT =   0x10,
+            RALT =   0x20
+        };
+
+        enum class eAxle : u8
+        {
+            x = 0,
+            y = 1,
+            z = 2
+        };
+
+        enum class eMouseMode : u8
+        {
+            absolute = 0,
+            relative = 1
+        };
+
+        struct sButtonModifier
+        {
+        public:
+                    sButtonModifier()                                                               { reset(); }
+                    sButtonModifier(eButtonModifier m1)                                             { reset(); set(m1); }
+                    sButtonModifier(eButtonModifier m1, eButtonModifier m2)                         { reset(); set(m1); set(m2); }
+                    sButtonModifier(eButtonModifier m1, eButtonModifier m2, eButtonModifier m3)     { reset(); set(m1); set(m2); set(m3); }
+                    
+            bool    operator== (const sButtonModifier &b) const     { return (_status==b._status); }
+
+        public:
+            void    reset()                                         { _status = 0; }
+            void    set (eButtonModifier b, bool pressed=true)      { if (pressed) _status |= static_cast<u8>(b); else clear(b); }
+            void    clear (eButtonModifier b)                       { _status &= ~(static_cast<u8>(b)); }
+            bool    isSet (eButtonModifier b) const                 { return (_status & static_cast<u8>(b)) != 0; }
+
+            bool    isCTRL() const                                  { return isSet(eButtonModifier::LCTRL) || isSet(eButtonModifier::RCTRL); }
+            bool    isALT() const                                   { return isSet(eButtonModifier::LALT) || isSet(eButtonModifier::RALT); }
+            bool    isSHIFT() const                                 { return isSet(eButtonModifier::LSHIFT) || isSet(eButtonModifier::RSHIFT); }
+
+        public:
+            u8      _status;
+        };
+
+        struct EventID
+        {
+            bool    operator== (const EventID &b) const { return (_data==b._data); }
+            bool    operator!= (const EventID &b) const { return (_data!=b._data); }
+            u32     _data;
+        };
+
+        struct sBtnEvent
+        {
+            u16             id;         //id del btn premuto/rilasciato
+            eButtonStatus   status;   
+            sButtonModifier modifier;
+        };
+
+        struct sAxleEvent
+        {
+            eAxle   axle;
+            i16     pos;
+        };
+
+        union uData
+        {
+            sBtnEvent   asBtnEvt;
+            sAxleEvent  asAxleEvt;
+        };          
+
+        struct sEvent
+        {
+            eOrigin     origin;
+            eType       type;
+            uData       data;
+        };
+
+    } //namespace input
+} //namespace gos
+#endif //_gosInputEnumAndDefine_h_

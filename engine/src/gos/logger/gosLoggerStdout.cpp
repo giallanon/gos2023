@@ -34,7 +34,7 @@ LoggerStdout::~LoggerStdout()
 }
 
 //*************************************************
-void LoggerStdout::enableFileLogging (const u8 *fullFolderPathAndName)
+void LoggerStdout::enableFileLogging (const char *fullFolderPathAndName)
 {
     logToFile = new LogToFile (fullFolderPathAndName);
 }
@@ -207,7 +207,7 @@ void LoggerStdout::priv_log (const char *prefix, const char *format, va_list arg
  * 
  * 
  ****************************************************************************/
-LoggerStdout::LogToFile::LogToFile(const u8 *fullFolderPathAndNameIN)
+LoggerStdout::LogToFile::LogToFile(const char *fullFolderPathAndNameIN)
 {
     assert (CHECK_SIZE_COUNTER < FLUSH_COUNTER);
     bIsOpen = false;
@@ -216,7 +216,7 @@ LoggerStdout::LogToFile::LogToFile(const u8 *fullFolderPathAndNameIN)
     flushCounter = 0;
     fullFolderPathAndName = priv_allocString (fullFolderPathAndNameIN);
 
-    gos::fs::folderCreate(fullFolderPathAndName);
+    gos::fs::folderCreate (fullFolderPathAndName);
     priv_clearLogFolder();
 
     //apro un nuovo file oppure uso l'ultimo gia' esistente
@@ -227,7 +227,7 @@ LoggerStdout::LogToFile::LogToFile(const u8 *fullFolderPathAndNameIN)
     {
         elenco.bubbleSort(LoggerStdout_sortFn_discendente);
 
-        u8 s[1024];
+        char s[1024];
         gos::string::utf8::spf (s, sizeof(s), "%s/%" PRIu64 ".goslog", fullFolderPathAndName, elenco(0));
         if (gos::fs::fileLength (s) < ((MAX_FILE_SIZE_BYTE * 80) / 100) )
         {
@@ -270,10 +270,10 @@ void LoggerStdout::LogToFile::priv_openForAppend ()
     checkFileSizeCounter = 0;
 }
 
-u8* LoggerStdout::LogToFile::priv_allocString (const u8 *strIN) const
+char* LoggerStdout::LogToFile::priv_allocString (const char *strIN) const
 {
     const u32 len = 1 + gos::string::utf8::lengthInByte (strIN);
-    u8 *ret = (u8*)malloc(len);
+    char *ret = (char*)malloc(len);
     memcpy (ret, strIN, len);
     return ret;
 }
@@ -357,7 +357,7 @@ void LoggerStdout::LogToFile::priv_createNewLogFileAndOpenForAppend()
     dt.setNow();
     dt.formatAs_YYYYMMDDHHMMSS (yyyymmddhhmmss, sizeof(yyyymmddhhmmss), 0x00, 0x00, 0x00);
 
-    u8 s[1204];
+    char s[1204];
     gos::string::utf8::spf (s, sizeof(s), "%s/%s.goslog", fullFolderPathAndName, yyyymmddhhmmss);
 
     gos::File f2;
@@ -382,7 +382,7 @@ void LoggerStdout::LogToFile::priv_getLogFileList (gos::FastArray<u64> &elenco) 
     if (gos::fs::findFirst (&ff, fullFolderPathAndName, "*.goslog"))
     {
         //elenco dei file di log nella directory
-        u8 s[1024];
+        char s[1024];
         do
         {
             if (!gos::fs::findIsDirectory(ff))
@@ -415,7 +415,7 @@ void LoggerStdout::LogToFile::priv_clearLogFolder()
         const u32 numFileToDelete = elenco.getNElem() - MAX_NUM_LOGFILE_IN_FOLDER;
         for (u32 i = 0; i < numFileToDelete; i++)
         {
-            u8 s[1024];
+            char s[1024];
             gos::string::utf8::spf (s, sizeof(s), "%s/%" PRIu64 ".goslog", fullFolderPathAndName, elenco(i));
             gos::fs::fileDelete(s);
         }

@@ -12,12 +12,12 @@ class VulkanApp
 {
 public:
     
-                VulkanApp()                                 { gpu = NULL; }
+                VulkanApp();
     virtual     ~VulkanApp()                                { }
 
 
     bool        init (gos::GPU *gpu, const char *title);
-    void        run()                                       { virtual_onRun(); }
+    void        run()                                       { bQuitApp=false; virtual_onRun(); }
     void        cleanup()                                   { virtual_onCleanup(); }
 
     void        toggleFullscreen()                          { gpu->toggleFullscreen(); }
@@ -25,15 +25,20 @@ public:
 
 
 protected:
-    gos::GPU        *gpu;
-    FPSMegaTimer    fpsMegaTimer;
-
+    gos::GPU                *gpu;
+    FPSMegaTimer            fpsMegaTimer;
+    bool                    bQuitApp;
 
 protected:
+    void            handleInput();
     virtual bool    virtual_onInit() = 0;    
     virtual void    virtual_explain() = 0;
     virtual void    virtual_onRun() = 0;
     virtual void    virtual_onCleanup() = 0;
+    virtual void    virtual_onInputEvent (u32 event32) { }
+
+private:
+    gos::input::Controller  controller;
 
 
 };

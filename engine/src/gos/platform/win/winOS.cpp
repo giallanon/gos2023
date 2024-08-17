@@ -9,8 +9,8 @@
 struct	sWin32PlatformData
 {
 	HINSTANCE			hInst;
-	u8					applicationPathNoSlash[256];
-	u8					userFolderPathNoSlash[256];
+	char				applicationPathNoSlash[256];
+	char				userFolderPathNoSlash[256];
 	wchar_t				chromeFullPathAndName[256];
 	u64					hiresTimerFreqMSec;
 	u64					hiresTimerFreqUSec;
@@ -23,7 +23,7 @@ static sWin32PlatformData	win32PlatformData;
 
 
 //********************************************* 
-bool win32::utf8_towchar (const u8 *utf8_string, u32 nBytesToUse, wchar_t *out, u32 sizeInBytesOfOut)
+bool win32::utf8_towchar (const char *utf8_string, u32 nBytesToUse, wchar_t *out, u32 sizeInBytesOfOut)
 {
 	int n;
 	if (nBytesToUse == u32MAX)
@@ -45,7 +45,7 @@ bool win32::utf8_towchar (const u8 *utf8_string, u32 nBytesToUse, wchar_t *out, 
 }
 
 //********************************************* 
-bool win32::wchar_to_utf8 (const wchar_t *wstring, u32 nBytesToUse, u8 *out, u32 sizeInBytesOfOut)
+bool win32::wchar_to_utf8 (const wchar_t *wstring, u32 nBytesToUse, char *out, u32 sizeInBytesOfOut)
 {
 	int n;
 	if (nBytesToUse == u32MAX)
@@ -84,7 +84,7 @@ bool platform::internal_init ()
 	wchar_t wcString[MAX_PATH];
 	GetModuleFileName (win32PlatformData.hInst, wcString, MAX_PATH);
 	
-	u8 temp_utf8[512];
+	char temp_utf8[512];
 	win32::wchar_to_utf8 (wcString, u32MAX, temp_utf8, sizeof(temp_utf8));
 	gos::fs::pathSanitizeInPlace (temp_utf8);
 	gos::fs::extractFilePathWithOutSlash (temp_utf8, win32PlatformData.applicationPathNoSlash, sizeof(win32PlatformData.applicationPathNoSlash));
@@ -155,8 +155,8 @@ void platform::memory_alignedFree (void *p)
 
 
 //**********************************************
-const u8 *platform::getAppPathNoSlash()						{ return win32PlatformData.applicationPathNoSlash; }
-const u8 *platform::getPhysicalPathToUserFolder()			{ return win32PlatformData.userFolderPathNoSlash; }
+const char *platform::getAppPathNoSlash()					{ return win32PlatformData.applicationPathNoSlash; }
+const char *platform::getPhysicalPathToUserFolder()			{ return win32PlatformData.userFolderPathNoSlash; }
 void platform::sleep_msec(size_t msec)						{ ::Sleep((u32)msec); }
 
 //**********************************************

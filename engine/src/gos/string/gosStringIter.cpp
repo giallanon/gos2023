@@ -5,11 +5,7 @@ using namespace gos;
 
 
 //**************************************************
-void string::utf8::Iter::setup (const char *src, u32 firstByte, u32 lenghtInBytes)
-{
-	setup(reinterpret_cast<const u8*>(src), firstByte, lenghtInBytes);
-}
-void string::utf8::Iter::setup (const u8 *utf8_src, u32 firstByteIN, u32 lenghtInBytesIN)
+void string::utf8::Iter::setup (const char *utf8_src, u32 firstByteIN, u32 lenghtInBytesIN)
 {
 	utf8_seq = NULL;
 	seq_length = 0;
@@ -131,7 +127,7 @@ bool string::utf8::Iter::backOneChar()
 }
 
 //**************************************************
-const u8 *string::utf8::Iter::getPointerToCurrentPosition() const
+const char* string::utf8::Iter::getPointerToCurrentPosition() const
 {
 	if (curChar.isEOF())
 		return NULL;
@@ -139,7 +135,7 @@ const u8 *string::utf8::Iter::getPointerToCurrentPosition() const
 }
 
 //**************************************************
-u32 string::utf8::Iter::copyAllStr(u8 *out, u32 sizeofOut) const
+u32 string::utf8::Iter::copyAllStr (char *out, u32 sizeofOut) const
 {
 	assert (NULL != out && sizeofOut > 0);
 	if (seq_length +1  >= sizeofOut)
@@ -154,7 +150,7 @@ u32 string::utf8::Iter::copyAllStr(u8 *out, u32 sizeofOut) const
 }
 
 //**************************************************
-u32 string::utf8::Iter::copyStrFromCurrentPositionToEnd (u8 *utf8_out, u32 sizeofOut) const
+u32 string::utf8::Iter::copyStrFromCurrentPositionToEnd (char *utf8_out, u32 sizeofOut) const
 {
 	assert (NULL != utf8_out && sizeofOut > 0);
 	u32 nToCopy = getBytesLeft();
@@ -176,7 +172,7 @@ u32 string::utf8::Iter::copyStrFromCurrentPositionToEnd (u8 *utf8_out, u32 sizeo
 }
 
 //**************************************************
-u32 string::utf8::Iter::copyStrFromXToCurrentPosition(u32 startingCursorPos, u8 *out, u32 sizeofOut, bool bIncludeCurrentChar) const
+u32 string::utf8::Iter::copyStrFromXToCurrentPosition(u32 startingCursorPos, char *out, u32 sizeofOut, bool bIncludeCurrentChar) const
 {
 	assert (NULL != out && sizeofOut > 0);
 

@@ -82,7 +82,7 @@ void GPU::deinit()
 
         priv_deinitandleLists();
         priv_deinitVulkan();
-        priv_deinitWindowSystem();
+        //priv_deinitWindowSystem();
     gos::logger::decIndent();
 
     GOSDELETE(gos::getSysHeapAllocator(), allocator);
@@ -90,11 +90,11 @@ void GPU::deinit()
 }    
 
 //********************************************************** 
-bool GPU::init (u16 width, u16 height, bool vSyncIN, const char *appName)
+bool GPU::init (GOSWinHandle mainWin, bool vSyncIN)
 {
     vSync = vSyncIN;
 
-    gos::logger::log ("GPU::init (%d, %d)\n", width, height);
+    gos::logger::log ("GPU::init\n");
     gos::logger::incIndent();
 
     //Creo un allocatore dedicato per la GPU
@@ -111,8 +111,10 @@ bool GPU::init (u16 width, u16 height, bool vSyncIN, const char *appName)
     bool bSuccess = false;
     while (1)
     {
-        if (!priv_initWindowSystem (width, height, appName))
-            break;
+        //if (!priv_initWindowSystem (width, height, appName))
+        //    break;
+        this->window.winH = mainWin;
+
         if (!priv_initHandleLists())
             break;
         if (!priv_initVulkan())
@@ -156,30 +158,6 @@ bool GPU::init (u16 width, u16 height, bool vSyncIN, const char *appName)
 }
 
 //**********************************************************
-bool GPU::priv_initWindowSystem(u16 width, u16 height, const char *appName)
-{
-    gos::logger::log ("GPU::priv_initWindowSystem(%d,%d)\n", width, height);
-    glfwInit();
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-
-    window.win = glfwCreateWindow (width, height, appName, nullptr, nullptr);
-    return (window.win != NULL);
-}
-
-//**********************************************************
-void  GPU::priv_deinitWindowSystem()
-{
-    gos::logger::log ("GPU::priv_deinitWindowSystem()\n");
-    if (NULL != window.win)
-    {
-        glfwDestroyWindow (window.win);
-        glfwTerminate();
-        window.win = NULL;
-    }    
-}
-
-//**********************************************************
 bool GPU::priv_initVulkan ()
 {
     gos::logger::log ("GPU::priv_initVulkan()\n");
@@ -217,7 +195,8 @@ bool GPU::priv_initVulkan ()
 
     //creo una surface basata sulla [window]
     //GLFW fa tutto da solo, ma in linea di massima questa parte sarebbe dipendente da piattaforma
-    VkResult result = glfwCreateWindowSurface(vkInstance, window.win, nullptr, &vkSurface);
+    GLFWwindow *glfWin = window.getGLF();
+    VkResult result = glfwCreateWindowSurface(vkInstance, glfWin, nullptr, &vkSurface);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("glfwCreateWindowSurface() returned %s\n", string_VkResult(result));
@@ -518,7 +497,9 @@ bool GPU::priv_swapChain_recreate ()
     while (width == 0 || height == 0) 
     {
         gos::logger::log ("windows size is weird (w=%d, h=%d), waiting...\n", width, height);
-        glfwGetFramebufferSize(window.win, &width, &height);
+
+        GLFWwindow *glfWin = window.getGLF();
+        glfwGetFramebufferSize (glfWin, &width, &height);
         glfwWaitEvents();
     }
 
@@ -611,7 +592,8 @@ void  GPU::toggleFullscreen()
     gos::logger::log (eTextColor::yellow, "toggleFullscreen\n");
     gos::logger::incIndent();
 
-    GLFWmonitor *monitor = glfwGetWindowMonitor(window.win);
+    GLFWwindow *glfWin = window.getGLF();
+    GLFWmonitor *monitor = glfwGetWindowMonitor(glfWin);
     if (NULL == monitor)
     {
         //andiamo in full
@@ -620,13 +602,13 @@ void  GPU::toggleFullscreen()
 
         monitor = glfwGetPrimaryMonitor();
         const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-        glfwSetWindowMonitor (window.win, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+        glfwSetWindowMonitor (glfWin, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
     }    
     else
     {
         //torniamo in windowed
         gos::logger::log ("going in windowed mode, current win pos and size (%d,%d) (%d,%d)\n", window.storedX, window.storedY, window.storedW, window.storedH);
-        glfwSetWindowMonitor(window.win, NULL, window.storedX, window.storedY, window.storedW, window.storedH, 0);
+        glfwSetWindowMonitor(glfWin, NULL, window.storedX, window.storedY, window.storedW, window.storedH, 0);
     }
 
     gos::logger::decIndent();
@@ -690,7 +672,7 @@ bool GPU::priv_copyVulkanBuffer (const VkBuffer srcBuffer, const VkBuffer dstBuf
  * 
  * 
  *************************************************************************************************************/
-bool GPU::priv_shader_createFromFile (const u8 *filename, eShaderType shaderType, const char *mainFnName, GPUShaderHandle *out_shaderHandle)
+bool GPU::priv_shader_createFromFile (const char *filename, eShaderType shaderType, const char *mainFnName, GPUShaderHandle *out_shaderHandle)
 {
     assert (NULL != out_shaderHandle);
     

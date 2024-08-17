@@ -663,8 +663,10 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #endif  /* MMAP_CLEARS */
 #ifndef HAVE_MREMAP
 #ifdef linux
-#define HAVE_MREMAP 1
-#define _GNU_SOURCE /* Turns on mremap() definition */
+  #define HAVE_MREMAP 1
+  #ifndef _GNU_SOURCE
+    #define _GNU_SOURCE /* Turns on mremap() definition */
+  #endif
 #else   /* linux */
 #define HAVE_MREMAP 0
 #endif  /* linux */

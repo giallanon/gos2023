@@ -294,7 +294,7 @@ void VulkanExample2::doCPUStuff ()
 {
     fpsMegaTimer.onFrameBegin(FPSTIMER_CPU);
 
-    glfwPollEvents();
+    handleInput();
 
     moveVertex();
 
@@ -338,7 +338,7 @@ void VulkanExample2::mainLoop_3()
 
 
     VkResult            result;
-    while (!glfwWindowShouldClose (gpu->getWindow()))
+    while (bQuitApp == false)
     {
         doCPUStuff ();
         //attende che il precedente batch sia terminato

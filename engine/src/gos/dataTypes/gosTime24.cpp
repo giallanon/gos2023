@@ -23,18 +23,12 @@ void Time24::getTimeNow(u8 *out_hour, u8 *out_min, u8 *out_sec)
 //****************************
 void Time24::setFromHHMMSS (const char *hhmmss)
 {
-    setFromHHMMSS (reinterpret_cast<const u8*>(hhmmss));
-}
-
-//****************************
-void Time24::setFromHHMMSS (const u8 *hhmmss)
-{
     if (NULL == hhmmss)
         return;
     if (string::utf8::lengthInByte(hhmmss) < 6)
         return;
 
-    u8 s[4] = { 0,0,0,0 };
+    char s[4] = { 0,0,0,0 };
     
     s[0] = hhmmss[0];   s[1] = hhmmss[1];   setHour (string::utf8::toU32(s));
     s[0] = hhmmss[2];   s[1] = hhmmss[3];   setMin (string::utf8::toU32(s));
@@ -47,7 +41,7 @@ u32 Time24::formatAs_HHMMSS() const
 {
 	char s[8];
 	formatAs_HHMMSS(s, sizeof(s), 0x00);
-	return gos::string::utf8::toU32((const u8 *)s);
+	return gos::string::utf8::toU32(s);
 }
 
 //****************************

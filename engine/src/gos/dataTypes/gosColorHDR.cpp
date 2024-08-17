@@ -33,7 +33,7 @@ void ColorHDR::fromU32 (u32 argb)
 	col.b = (f32) ((argb & 0x000000FF)) / 255.0f;
 }
 
-bool gosColorHDR_channelFromHex (f32 originalVal, const u8* s, u32 len, f32 *out)
+bool gosColorHDR_channelFromHex (f32 originalVal, const char* s, u32 len, f32 *out)
 {
 	if (len==1)
 	{
@@ -46,8 +46,8 @@ bool gosColorHDR_channelFromHex (f32 originalVal, const u8* s, u32 len, f32 *out
 		if ((s[0]>='0' && s[0]<='9') || (s[0]>='a' && s[0]<='f') || (s[0]>='A' && s[0]<='F'))
 		{
 			u32 n;
-			const u8 hex[4] = {s[0], s[0], 0, 0};
-			string::ansi::hexToInt (reinterpret_cast<const char*>(hex), &n, 2);
+			const char hex[4] = {s[0], s[0], 0, 0};
+			string::ansi::hexToInt (hex, &n, 2);
 			*out = (f32)n / 255.0f;
 			return true;
 		}
@@ -65,8 +65,8 @@ bool gosColorHDR_channelFromHex (f32 originalVal, const u8* s, u32 len, f32 *out
 			)
 		{
 			u32 n;
-			const u8 hex[4] = {s[0], s[1], 0, 0};
-			string::ansi::hexToInt (reinterpret_cast<const char*>(hex), &n, 2);
+			const char hex[4] = {s[0], s[1], 0, 0};
+			string::ansi::hexToInt (hex, &n, 2);
 			*out = (f32)n / 255.0f;;
 			return true;
 		}
@@ -76,7 +76,7 @@ bool gosColorHDR_channelFromHex (f32 originalVal, const u8* s, u32 len, f32 *out
 }
 
 //******************************************
-void ColorHDR::setFromString (const u8* s, u32 lenOfS)
+void ColorHDR::setFromString (const char* s, u32 lenOfS)
 {
 	if (NULL == s || s[0] != '#')
 	{

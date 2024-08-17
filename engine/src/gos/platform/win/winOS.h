@@ -20,8 +20,8 @@ namespace platform
     void*           memory_alignedAlloc (size_t size, size_t alignmentPowerOfTwo);
     void            memory_alignedFree (void *p);
 
-    const u8*       getAppPathNoSlash ();
-    const u8*       getPhysicalPathToUserFolder();
+    const char*     getAppPathNoSlash ();
+    const char*     getPhysicalPathToUserFolder();
 
     void            sleep_msec (size_t msec);
 

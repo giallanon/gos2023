@@ -31,11 +31,11 @@ void fs::SpecialPathResolver::unsetup()
 
 
 //*********************************************
-bool fs::SpecialPathResolver::addAlias (const char *alias, const u8 *realPathNoSlash) 
+bool fs::SpecialPathResolver::addAlias (const char *alias, const char *realPathNoSlash) 
 {
     assert (alias[0] == '@');
 
-    const sAlias *s = priv_findAlias(reinterpret_cast<const u8*>(alias));
+    const sAlias *s = priv_findAlias(alias);
     if (NULL != s)
     {
         gos::logger::err ("fs::addAlias(%s,%s) => alias already exists and point to %s\n", alias, realPathNoSlash, s->realPathNoSlash);
@@ -52,7 +52,7 @@ bool fs::SpecialPathResolver::addAlias (const char *alias, const u8 *realPathNoS
 }
 
 //*********************************************
-const fs::SpecialPathResolver::sAlias* fs::SpecialPathResolver::priv_findAlias (const u8 *alias) const
+const fs::SpecialPathResolver::sAlias* fs::SpecialPathResolver::priv_findAlias (const char *alias) const
 {
     const u32 n= listString.getNElem();
     for (u32 i=0; i<n; i++)
@@ -65,7 +65,7 @@ const fs::SpecialPathResolver::sAlias* fs::SpecialPathResolver::priv_findAlias (
 }
 
 //*********************************************
-void fs::SpecialPathResolver::resolve (const u8 *path, u8 *out, u32 sizeof_out) const
+void fs::SpecialPathResolver::resolve (const char *path, char *out, u32 sizeof_out) const
 {
     assert (out);
     assert(sizeof_out);
@@ -83,7 +83,7 @@ void fs::SpecialPathResolver::resolve (const u8 *path, u8 *out, u32 sizeof_out) 
 }
 
 //*********************************************
-bool fs::SpecialPathResolver::priv_resolve (const u8 *path, u8 *out, u32 sizeof_out)  const
+bool fs::SpecialPathResolver::priv_resolve (const char *path, char *out, u32 sizeof_out)  const
 {
     string::utf8::Iter src;
     string::utf8::Iter result;

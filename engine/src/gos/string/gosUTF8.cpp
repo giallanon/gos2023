@@ -84,7 +84,7 @@ bool string::utf8::toUTF32 (const UTF8Char &in, UTF32Char *out)
 }
 
 //**************************************************
-u32 string::utf8::lengthInByte (const u8 *utf8_str)
+u32 string::utf8::lengthInByte (const char *utf8_str)
 {
 	if (NULL == utf8_str)
 		return 0;
@@ -104,7 +104,7 @@ u32 string::utf8::lengthInByte (const u8 *utf8_str)
 }
 
 //**************************************************
-u32 string::utf8::sanitize (const u8 *utf8IN, u32 numBytesInUT8IN, const UTF8Char &useThisWhenInvalidChar, u8 *out, u32 sizeof_out)
+u32 string::utf8::sanitize (const char *utf8IN, u32 numBytesInUT8IN, const UTF8Char &useThisWhenInvalidChar, char *out, u32 sizeof_out)
 {
 	assert (NULL != utf8IN);
 	assert (NULL != out);
@@ -154,7 +154,7 @@ u32 string::utf8::sanitize (const u8 *utf8IN, u32 numBytesInUT8IN, const UTF8Cha
 }
 
 //**************************************************
-u8 string::utf8::extractAChar (const u8 *p, u32 lenInBytes, UTF8Char *out)
+u8 string::utf8::extractAChar (const char *p, u32 lenInBytes, UTF8Char *out)
 {
 	if (NULL == p || lenInBytes<1)
 		return 0;
@@ -248,16 +248,8 @@ u8 string::utf8::extractAChar (const u8 *p, u32 lenInBytes, UTF8Char *out)
 	return 0;
 }
 
-
 //**************************************************
-u8* string::utf8::allocStr (Allocator *allocator, const char* src, u32 numBytesDaUtilizzare)
-{
-    return utf8::allocStr (allocator, reinterpret_cast<const u8 *>(src), numBytesDaUtilizzare);
-}
-
-
-//**************************************************
-u8* string::utf8::allocStr (Allocator *allocator, const u8 *src, u32 numBytesDaUtilizzare)
+char* string::utf8::allocStr (Allocator *allocator, const char *src, u32 numBytesDaUtilizzare)
 {
 	assert (allocator && src);
 
@@ -266,7 +258,7 @@ u8* string::utf8::allocStr (Allocator *allocator, const u8 *src, u32 numBytesDaU
 	if (0 == numBytesDaUtilizzare)
 		return NULL;
 	
-    u8 *ret = GOSALLOCT (u8*, allocator, numBytesDaUtilizzare+1);
+    char *ret = GOSALLOCT (char*, allocator, numBytesDaUtilizzare+1);
 	memcpy (ret, src, numBytesDaUtilizzare);
 	ret[numBytesDaUtilizzare] = 0x00;
 	return ret;
@@ -274,49 +266,9 @@ u8* string::utf8::allocStr (Allocator *allocator, const u8 *src, u32 numBytesDaU
 
 
 //**************************************************
-u32 string::utf8::makeStr (u8 *dst, u32 sizeofDst, const char* src)
+u32 string::utf8::copyStr (char *dst, u32 sizeof_dst, const char *src, u32 numBytesDaUtilizzare)
 {
-	assert (dst && sizeofDst);
-	dst[0] = 0;
-
-	u32 i = 0;
-	u32 n = 0;
-	while (1)
-	{
-		gos::UTF8Char utf8char;
-		u8 nBytesConsumed;
-		
-		if (!utf8char.setFromConstChar (&src[i], &nBytesConsumed))
-		{
-			//sequenza invalida
-			DBGBREAK;
-			dst[n] = 0;
-			return n;
-		}
-
-		const u8 len = utf8char.length();
-		if (len == 0)
-			break;
-		if (n+len >=sizeofDst)
-		{
-			DBGBREAK;
-			dst[n] = 0;
-			return n;
-		}
-
-		memcpy (&dst[n], utf8char.data, len);
-		n += len;
-		i += nBytesConsumed;
-	}
-
-	dst[n] = 0x00;
-	return n;
-}
-
-//**************************************************
-u32 string::utf8::copyStr (u8 *dst, u32 sizeofDst, const u8 *src, u32 numBytesDaUtilizzare)
-{
-	assert (dst && sizeofDst);
+	assert (dst && sizeof_dst);
 
 	if (NULL == src)
 	{
@@ -332,7 +284,7 @@ u32 string::utf8::copyStr (u8 *dst, u32 sizeofDst, const u8 *src, u32 numBytesDa
 	if (u32MAX == numBytesDaUtilizzare)
 		numBytesDaUtilizzare = utf8::lengthInByte (src);
 	
-	if (sizeofDst > numBytesDaUtilizzare)
+	if (sizeof_dst > numBytesDaUtilizzare)
 	{
 		memcpy (dst, src, numBytesDaUtilizzare);
 		dst[numBytesDaUtilizzare] = 0;
@@ -344,11 +296,11 @@ u32 string::utf8::copyStr (u8 *dst, u32 sizeofDst, const u8 *src, u32 numBytesDa
 }
 
 //**************************************************
-u32 string::utf8::copyStrAsMuchAsYouCan (u8 *dst, u32 sizeOfDest, const u8 *src)
+u32 string::utf8::copyStrAsMuchAsYouCan (char *dst, u32 sizeof_dst, const char *src)
 {
     if (NULL == dst)
         return 0;
-    if (0 == sizeOfDest)
+    if (0 == sizeof_dst)
         return 0;
 
     if (NULL == src)
@@ -364,31 +316,50 @@ u32 string::utf8::copyStrAsMuchAsYouCan (u8 *dst, u32 sizeOfDest, const u8 *src)
         return 0;
     }
 
-    if (sizeOfDest >= (srcLen+1))
+    if (sizeof_dst >= (srcLen+1))
     {
         memcpy (dst, src, srcLen+1);
         return srcLen;
     }
 
-    sizeOfDest--;
-    if (sizeOfDest)
-        memcpy (dst, src, sizeOfDest);
-    dst[sizeOfDest] = 0;
-    return sizeOfDest;
+    sizeof_dst--;
+    if (sizeof_dst)
+        memcpy (dst, src, sizeof_dst);
+    dst[sizeof_dst] = 0;
+    return sizeof_dst;
 }
 
 //**************************************************
-u32 string::utf8::concatStr (u8 *dst, u32 sizeofDst, const char* src)
+u32 string::utf8::concatStr (char *dst, u32 sizeof_dst, const char *src)
 {
-	u32 n = string::utf8::lengthInByte(dst);
-	return n + utf8::makeStr (&dst[n], sizeofDst - n, src);
+	assert (NULL != dst);
+	u32 nDST = string::utf8::lengthInByte(dst);
+
+	if (sizeof_dst <= nDST)
+		return nDST;
+	if (NULL == src)
+		return nDST;
+	
+	u32 nSRC = string::utf8::lengthInByte(src);
+	if (nSRC > 0)
+	{
+		if (nDST + nSRC + 1 > sizeof_dst)
+			nSRC = sizeof_dst -1 - nDST;
+		if (nSRC)
+		{
+			mempcpy (&dst[nDST], src, nSRC);
+			nDST += nSRC;
+			dst[nDST] = 0;
+		}
+	}
+	return nDST;
 }
 
 //**************************************************
-u32 string::utf8::concat (u8 *dst, u32 sizeofDst, const UTF8Char &c)
+u32 string::utf8::concat (char *dst, u32 sizeof_dst, const UTF8Char &c)
 {
 	u32 n = string::utf8::lengthInByte(dst);
-	if (n + c.length() >= sizeofDst)
+	if (n + c.length() >= sizeof_dst)
 	{
 		DBGBREAK;
 		return n;
@@ -401,8 +372,7 @@ u32 string::utf8::concat (u8 *dst, u32 sizeofDst, const UTF8Char &c)
 }
 
 //**************************************************
-bool string::utf8::areEqual (const u8 *a, const char *b, bool bCaseSensitive)										{ return string::utf8::areEqual (a, reinterpret_cast<const u8*>(b), bCaseSensitive); }
-bool string::utf8::areEqual (const u8 *a, const u8 *b, bool bCaseSensitive)							
+bool string::utf8::areEqual (const char *a, const char *b, bool bCaseSensitive)							
 { 
 	assert (NULL != a && NULL != b);
 	
@@ -413,13 +383,12 @@ bool string::utf8::areEqual (const u8 *a, const u8 *b, bool bCaseSensitive)
 }
 
 //**************************************************
-bool string::utf8::areEqualWithLen (const u8 *a, const char *b, bool bCaseSensitive, u32 numBytesToCompare)			{ return string::utf8::areEqualWithLen (a, reinterpret_cast<const u8*>(b), bCaseSensitive, numBytesToCompare); }
-bool string::utf8::areEqualWithLen (const u8 *a, const u8 *b, bool bCaseSensitive, u32 numBytesToCompare)
+bool string::utf8::areEqualWithLen (const char *a, const char *b, bool bCaseSensitive, u32 numBytesToCompare)
 {
 	if (bCaseSensitive) 
-        return ( strncmp (reinterpret_cast<const char*>(a), reinterpret_cast<const char*>(b), numBytesToCompare) == 0);
+        return ( strncmp (a, b, numBytesToCompare) == 0);
 
-    return (strncasecmp (reinterpret_cast<const char*>(a), reinterpret_cast<const char*>(b), numBytesToCompare) == 0);
+    return (strncasecmp (a, b, numBytesToCompare) == 0);
 }
 
 //**************************************************
@@ -528,8 +497,7 @@ void string::utf8::advanceToEOL (Iter &src, bool bskipEOL)
 }
 
 //**************************************************
-bool string::utf8::find (Iter &src, const char *whatToFind)		{ return utf8::find (src, reinterpret_cast<const u8*>(whatToFind)); }
-bool string::utf8::find (Iter &src, const u8 *whatToFind)
+bool string::utf8::find (Iter &src, const char *whatToFind)
 {
 	if (NULL == whatToFind)
 		return false;
@@ -760,7 +728,7 @@ bool string::utf8::extractFloat (Iter &srcIN, f32 *out, const UTF8Char &sepDecim
 
 	//se arrivo qui vuol dire che la stringa conteneva un num valido e curChar() punta al separatore o a fine buffer
 	const u32 MAXTEMP = 64;
-	u8 temp[MAXTEMP];
+	char temp[MAXTEMP];
     src.copyStrFromXToCurrentPosition (srcIN.getCursorPos(), temp, MAXTEMP, false);
 
 	//converto in float
@@ -849,7 +817,7 @@ bool string::utf8::extractI32 (Iter &srcIN, i32 *out, const UTF8Char *validClosi
 
 	//se arrivo qui vuol dire che la stringa conteneva un num valido e curChar() punta al separatore o a fine buffer
 	const u32 MAXTEMP = 64;
-	u8 temp[MAXTEMP];
+	char temp[MAXTEMP];
     src.copyStrFromXToCurrentPosition (srcIN.getCursorPos(), temp, MAXTEMP, false);
 
 	//converto in float
@@ -907,7 +875,7 @@ bool string::utf8::extractU32 (Iter &srcIN, u32 *out, const UTF8Char *validClosi
 
 	//se arrivo qui vuol dire che la stringa conteneva un num valido e curChar() punta al separatore o a fine buffer
 	const u32 MAXTEMP = 64;
-	u8 temp[MAXTEMP];
+	char temp[MAXTEMP];
     src.copyStrFromXToCurrentPosition (srcIN.getCursorPos(), temp, MAXTEMP, false);
 
 	//converto in float
@@ -1049,12 +1017,12 @@ bool string::utf8::extractCPPComment (Iter &srcIN, Iter *result)
 }
 
 //*******************************************************************
-u32 string::utf8::decodeURIinPlace (u8 *s)
+u32 string::utf8::decodeURIinPlace (char *s)
 {
 	if (NULL == s)
 		return 0;
-    u8 *pIN = s;
-	u8 *pOUT = pIN;
+    char *pIN = s;
+	char *pOUT = pIN;
 	u32 ct = 0;
 	u32 i = 0;
 	while (pIN[i] != 0x00)
@@ -1070,8 +1038,8 @@ u32 string::utf8::decodeURIinPlace (u8 *s)
 				if ((c3 >= 'A' && c3 <= 'F') || (c3 >= '0' && c3 <= '9'))
 				{
 					u32 b = 0;
-                    ansi::hexToInt (reinterpret_cast<const char*>(&s[i + 1]), &b, 2);
-                    pOUT[ct++] = static_cast<u8>(b);
+                    ansi::hexToInt ( &s[i + 1], &b, 2);
+                    pOUT[ct++] = b;
 					i += 2;
 				}
 			}
@@ -1085,11 +1053,11 @@ u32 string::utf8::decodeURIinPlace (u8 *s)
 }
 
 //*********************************************************
-void string::utf8::appendUTF8Char (u8 *dst, u32 sizeOfDest, const UTF8Char &ch)
+void string::utf8::appendUTF8Char (char *dst, u32 sizeof_dst, const UTF8Char &ch)
 {
 	u32 currentDSTLen = string::utf8::lengthInByte(dst);
 	const u32 nBytes = ch.length();
-	if (currentDSTLen + nBytes >= sizeOfDest)
+	if (currentDSTLen + nBytes >= sizeof_dst)
 	{
 		DBGBREAK;
 		return;
@@ -1101,7 +1069,7 @@ void string::utf8::appendUTF8Char (u8 *dst, u32 sizeOfDest, const UTF8Char &ch)
 }
 
 //*********************************************************
-void string::utf8::appendU32 (u8 *dst, u32 sizeOfDest, u32 num, u8 minNumOfDigit)
+void string::utf8::appendU32 (char *dst, u32 sizeof_dst, u32 num, u8 minNumOfDigit)
 { 
 	char s[16];
 	if (minNumOfDigit==0)	
@@ -1109,11 +1077,11 @@ void string::utf8::appendU32 (u8 *dst, u32 sizeOfDest, u32 num, u8 minNumOfDigit
 	else
 		sprintf_s(s, sizeof(s), "%0*d", minNumOfDigit, num);
 	
-	utf8::concatStr (dst, sizeOfDest, s);
+	utf8::concatStr (dst, sizeof_dst, s);
 }
 
 //*********************************************************
-void string::utf8::appendI32 (u8 *dst, u32 sizeOfDest, i32 num, u8 minNumOfDigit)
+void string::utf8::appendI32 (char *dst, u32 sizeof_dst, i32 num, u8 minNumOfDigit)
 {
 	char s[16];
 	if (minNumOfDigit == 0)
@@ -1121,21 +1089,21 @@ void string::utf8::appendI32 (u8 *dst, u32 sizeOfDest, i32 num, u8 minNumOfDigit
 	else
 		sprintf_s(s, sizeof(s), "%0*d", minNumOfDigit, num);
 
-	utf8::concatStr (dst, sizeOfDest, s);
+	utf8::concatStr (dst, sizeof_dst, s);
 }
 
 
 //*********************************************************
-void string::utf8::spf (u8 *dest, u32 sizeOfDest, const char *format, ...)
+void string::utf8::spf (char *dest, u32 sizeof_dst, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	vsnprintf (reinterpret_cast<char*>(dest), sizeOfDest, format, argptr);
+	vsnprintf (reinterpret_cast<char*>(dest), sizeof_dst, format, argptr);
 	va_end(argptr);
 }
 
 //*******************************************************************
-u32 string::utf8::encodeURI (const u8 *urlIN, u8 *out_urlEncoded, u32 sizeof_outURIEncoded)
+u32 string::utf8::encodeURI (const char *urlIN, char *out_urlEncoded, u32 sizeof_outURIEncoded)
 {
 	utf8::Iter iter;
 	iter.setup (urlIN);
@@ -1186,7 +1154,7 @@ u32 string::utf8::encodeURI (const u8 *urlIN, u8 *out_urlEncoded, u32 sizeof_out
 }
 
 //*******************************************************************
-u32 string::utf8::calcEscapedSeqLength (const u8 *src, u32 srcLenInBytes)
+u32 string::utf8::calcEscapedSeqLength (const char *src, u32 srcLenInBytes)
 {
 	u32 ret = 0;
 	if (u32MAX == srcLenInBytes)
@@ -1214,7 +1182,7 @@ u32 string::utf8::calcEscapedSeqLength (const u8 *src, u32 srcLenInBytes)
 }
 
 //*******************************************************************
-u32 string::utf8::escape (u8 *dst, u32 sizeofDst, const u8 *src, u32 srcLenInBytes)
+u32 string::utf8::escape (char *dst, u32 sizeof_dst, const char *src, u32 srcLenInBytes)
 {
 	utf8::Iter i1;
 	i1.setup (src, 0, srcLenInBytes);
@@ -1227,21 +1195,21 @@ u32 string::utf8::escape (u8 *dst, u32 sizeofDst, const u8 *src, u32 srcLenInByt
 	{
 		if (ch == cApiceDoppio)
 		{
-			if (lenDST + 2 >= sizeofDst)
+			if (lenDST + 2 >= sizeof_dst)
 				break;
 			dst[lenDST++] = '\\';
 			dst[lenDST++] = '\"';
 		}
 		else if (ch == cSlash)
 		{
-			if (lenDST + 2 >= sizeofDst)
+			if (lenDST + 2 >= sizeof_dst)
 				break;
 			dst[lenDST++] = '\\';
 			dst[lenDST++] = '\\';
 		}
 		else
 		{
-			if (lenDST + ch.length() >= sizeofDst)
+			if (lenDST + ch.length() >= sizeof_dst)
 				break;
 			memcpy (&dst[lenDST], ch.data, ch.length());
 			lenDST += ch.length();
@@ -1254,7 +1222,7 @@ u32 string::utf8::escape (u8 *dst, u32 sizeofDst, const u8 *src, u32 srcLenInByt
 }
 
 //*******************************************************************
-u32 string::utf8::unescape(u8 *dst, u32 sizeofDst, const u8 *src, u32 srcLenInBytes)
+u32 string::utf8::unescape(char *dst, u32 sizeof_dst, const char *src, u32 srcLenInBytes)
 {
 	utf8::Iter i1;
 	i1.setup (src, 0, srcLenInBytes);
@@ -1272,7 +1240,7 @@ u32 string::utf8::unescape(u8 *dst, u32 sizeofDst, const u8 *src, u32 srcLenInBy
 		}
 		else
 		{
-			if (lenDST + ch.length() >= sizeofDst)
+			if (lenDST + ch.length() >= sizeof_dst)
 				break;
 			memcpy (&dst[lenDST], ch.data, ch.length());
 			lenDST += ch.length();
@@ -1285,7 +1253,7 @@ u32 string::utf8::unescape(u8 *dst, u32 sizeofDst, const u8 *src, u32 srcLenInBy
 }
 
 //*******************************************************************
-u32 string::utf8::unescapeInPlace (u8 *src_dst, u32 srcLenInBytes)
+u32 string::utf8::unescapeInPlace (char *src_dst, u32 srcLenInBytes)
 {
 	u32 ret = 0;
 	if (u32MAX == srcLenInBytes)
@@ -1327,7 +1295,7 @@ u32 string::utf8::unescapeInPlace (u8 *src_dst, u32 srcLenInBytes)
 }
 
 //***************************************************************
-u32 string::utf8::rtrim(u8 *s)
+u32 string::utf8::rtrim(char *s)
 {
 	u32 n = utf8::lengthInByte(s);
 	if (n == 0)

@@ -39,7 +39,6 @@ namespace gos
         void			setSec(u32 t) 															{ assert(t<60);   ts &= (~0x0000FC00); ts |= (t<<10); }
         void			setMSec(u32 t) 															{ assert(t<1000); ts &= (~0x000003FF); ts |= t; }
         void            setFromHHMMSS (const char *hhmmss);
-        void            setFromHHMMSS (const u8 *hhmmss);
 
         u8				getHour() const															{ return (u8)((ts & 0x07C00000) >> 22); }
         u8				getMin() const															{ return (u8)((ts & 0x003F0000) >> 16); }

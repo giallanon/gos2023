@@ -32,7 +32,6 @@ namespace gos
         void			setMonth(u32 t) 													{ assert(t<13);		ts &= 0xFFFF00FF; ts |= (t<<8); }
         void			setYear(u32 t) 														{ assert(t<u16MAX); ts &= 0x0000FFFF; ts |= (t<<16); }
         void            setFromYYYYMMDD (const char *yyyymmdd);
-        void            setFromYYYYMMDD (const u8 *yyyymmdd);
 
         u32				getDay() const														{ return ((ts & 0x000000FF)); }
         u32				getMonth() const													{ return ((ts & 0x0000FF00) >> 8); }
@@ -40,12 +39,12 @@ namespace gos
         u32				getYMD() const														{ return ts; }
         eDayOfWeek      getDayOfWeek () const;
 
-        void			formatAs_YYYYMMDD(char *out, u32 sizeofout, char date_sep = 0x00) const;
-		u32				formatAs_YYYYMMDD() const; 
+        void			formatAs_YYYYMMDD (char *out, u32 sizeofout, char date_sep = 0x00) const;
+		u32				formatAs_YYYYMMDD () const; 
 							//questa ritorna un U32 del tipo 20190412
 
-		void			add(const Date &b)													{ addYMD(b.getYear(), b.getMonth(), b.getDay()); }
-		void			addYMD(u32 years, u32 months, u32 days);
+		void			add (const Date &b)													{ addYMD(b.getYear(), b.getMonth(), b.getDay()); }
+		void			addYMD (u32 years, u32 months, u32 days);
 
         u32				getInternalRappresentation() const									{ return ts; }
         void			setFromInternalRappresentation(u32 u)								{ ts = u; }

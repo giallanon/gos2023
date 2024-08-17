@@ -116,7 +116,7 @@ bool ProtocolWebsocket::server_isAValidHandshake(const void *bufferIN, u32 sizeO
 }
 
 //****************************************************
-bool ProtocolWebsocket::priv_server_isAValidHandshake(const void *bufferIN, u32 sizeOfBufferIN, Handshake *out)
+bool ProtocolWebsocket::priv_server_isAValidHandshake (const void *bufferIN, u32 sizeOfBufferIN, ProtocolWebsocket::Handshake *out)
 {
 	const u16 MAX_BUFFER_SIZE = 1024;
 	char buffer[MAX_BUFFER_SIZE];
@@ -157,7 +157,7 @@ bool ProtocolWebsocket::priv_server_isAValidHandshake(const void *bufferIN, u32 
 			ProtocolServer_handshake_copy_header(out->received_key, &token[strlen(HEADER_KEY)], sizeof(out->received_key));
 
 		else if (ProtocolServer_handshake_check_header(token, HEADER_VERSION))
-			out->version = gos::string::utf8::toU32((const u8 *)&token[strlen(HEADER_VERSION)]);
+			out->version = gos::string::utf8::toU32 (&token[strlen(HEADER_VERSION)]);
 		else if (ProtocolServer_handshake_check_header(token, HEADER_EXTENSION))
 			ProtocolServer_handshake_copy_header(out->extension, &token[strlen(HEADER_EXTENSION)], sizeof(out->extension));
 
@@ -177,7 +177,7 @@ bool ProtocolWebsocket::priv_server_isAValidHandshake(const void *bufferIN, u32 
 
 
 //****************************************************
-bool ProtocolWebsocket::handshake_serverAnswer(IProtocolChannel *ch, UNUSED_PARAM(gos::Logger *logger))
+bool ProtocolWebsocket::handshake_serverAnswer (IProtocolChannel *ch, UNUSED_PARAM(gos::Logger *logger))
 {
 	Handshake hs;
 	if (!priv_server_isAValidHandshake(ch->getReadBuffer(), ch->getNumBytesInReadBuffer(), &hs))
@@ -207,7 +207,7 @@ bool ProtocolWebsocket::handshake_serverAnswer(IProtocolChannel *ch, UNUSED_PARA
     //printf ("Handshake response: %s\n", out);
 
 
-	const u32 n = ch->write((const u8 *)answer, (u16)strlen(answer), 2000);
+	const u32 n = ch->write (reinterpret_cast<const u8*>(answer), (u16)strlen(answer), 2000);
     if (n == 0 || n >= protocol::RES_ERROR)
         return false;
     return true;

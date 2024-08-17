@@ -32,6 +32,8 @@ namespace gos
          * [out] deve essere di almeno 20 bytes */
         bool        sha1 (void *out, u32 sizeOfOutInBytes, const void *in, u32 sizeInBytesOfIn);
 
+        u32         crc32 (const void *buffer, u32 sizeOfBuffer);
+        u32         crc32 (const char *str);
                     
         /**********************************************************
          * Manipolazione di BIT 

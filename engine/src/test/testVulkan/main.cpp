@@ -1,4 +1,5 @@
 #include "gosGPU.h"
+#include "gosInput.h"
 #include "VulkanExample1.h"
 #include "VulkanExample2.h"
 #include "VulkanExample3.h"
@@ -18,6 +19,21 @@ void runExample (gos::GPU *gpu, const char *title)
 
 
 //******************************** 
+void test1 (GOSWinHandle &mainWin)
+{
+    gos::GPU gpu;
+    if (gpu.init (mainWin, false))
+    {
+        //runExample<VulkanExample1>(&gpu, "VulkanExample1");
+        //runExample<VulkanExample2>(&gpu, "VulkanExample2");
+        //runExample<VulkanExample3>(&gpu, "VulkanExample3");
+        runExample<VulkanExample4>(&gpu, "VulkanExample4");
+        gpu.deinit();
+    }
+}
+
+
+//******************************** 
 int main()
 {
     gos::sGOSInit init;
@@ -25,16 +41,16 @@ int main()
     init.setLogMode (gos::sGOSInit::eLogMode::both_console_and_file);
     if (gos::init (init, "testVulkan"))
     {
-        gos::GPU gpu;
-        if (gpu.init (800, 600, false, gos::getAppName()))
+        if (gos::input::init())
         {
-            //runExample<VulkanExample1>(&gpu, "VulkanExample1");
-            //runExample<VulkanExample2>(&gpu, "VulkanExample2");
-            //runExample<VulkanExample3>(&gpu, "VulkanExample3");
-            runExample<VulkanExample4>(&gpu, "VulkanExample4");
-            gpu.deinit();
+            GOSWinHandle mainWin;
+            if (gos::input::window_create (800, 600, gos::getAppName(), &mainWin))
+            {
+                test1 (mainWin);
+                gos::input::window_destroy (mainWin);
+            }
+            gos::input::deinit();
         }
-
         gos::deinit();
     }
 

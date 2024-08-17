@@ -29,9 +29,9 @@ namespace gos
 							ColorHDR (f32 r, f32 g, f32 b)						{ set (r, g, b); }
 							ColorHDR (f32 a, f32 r, f32 g, f32 b)				{ set (a, r, g, b); }
 							ColorHDR (u32 colARGB)								{ fromU32(colARGB); }
-							ColorHDR (const u8* s)								{ setFromString(s); }
+							ColorHDR (const char* s)							{ setFromString(s); }
 
-				ColorHDR&	operator= (const u8* s)								{ setFromString(s); return *this; }
+				ColorHDR&	operator= (const char* s)							{ setFromString(s); return *this; }
 				ColorHDR&	operator= (const ColorHDR &b)						{ set (b.col.a, b.col.r, b.col.g, b.col.b); return *this; }
 				ColorHDR&	operator*= (f32 alfa)								{ col.a*=alfa; return *this; }
 				bool		operator== (const ColorHDR &b) const				{ return memcmp(col.rgba, b.col.rgba, sizeof(col.rgba))==0; }
@@ -39,7 +39,7 @@ namespace gos
 
 				void		set (f32 r, f32 g, f32 b)							{ col.a=1.0f;	col.r=r; col.g=g; col.b=b; }
 				void		set (f32 a, f32 r, f32 g, f32 b)					{ col.a=a;		col.r=r; col.g=g; col.b=b; }
-				void		setFromString (const u8* s, u32 lenOfS=u32MAX);
+				void		setFromString (const char* s, u32 lenOfS=u32MAX);
 				void		setU32_argb (u32 argb)								{ fromU32(argb); }
 				void		setU8_argb (u8 a, u8 r, u8 g, u8 b)					{ col.a = (f32)a / 255.0f; col.r = (f32)r / 255.0f; col.g = (f32)g / 255.0f; col.b = (f32)b / 255.0f; }
 				void		setU8_a (u8 a)										{ col.a = (f32)a / 255.0f; }
@@ -80,14 +80,14 @@ namespace gos
 
 	private:
 		f32					priv_sRGBSingleColorToLinear(f32 colIN) const
-		{
-			//float3 RGB = sRGB * (sRGB * (sRGB * 0.305306011 + 0.682171111) + 0.012522878);
-			//float3 RGB = sRGB * (sRGB * a + 0.012522878);
-			//float3 RGB = sRGB * b;
-			const f32 a = (colIN * 0.305306011f + 0.682171111f);
-			const f32 b = (colIN * a + 0.012522878f);
-			return colIN * b;			
-		}
+							{
+								//float3 RGB = sRGB * (sRGB * (sRGB * 0.305306011 + 0.682171111) + 0.012522878);
+								//float3 RGB = sRGB * (sRGB * a + 0.012522878);
+								//float3 RGB = sRGB * b;
+								const f32 a = (colIN * 0.305306011f + 0.682171111f);
+								const f32 b = (colIN * a + 0.012522878f);
+								return colIN * b;			
+							}
 	};
 
 	ColorHDR				operator* (const ColorHDR &a, f32 alfa);

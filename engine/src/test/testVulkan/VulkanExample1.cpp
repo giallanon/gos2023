@@ -194,13 +194,13 @@ void VulkanExample1::virtual_onRun()
     gos::Timer          cpuWaitTimer;
     gos::Timer          frameTimer;
     gos::Timer          acquireImageTimer;
-    while (!glfwWindowShouldClose (gpu->getWindow()))
+    while (bQuitApp == false)
     {
 //printf ("frame begin\n");
         frameTimer.start();
         fpsTimer.onFrameBegin();
 
-        glfwPollEvents();
+        handleInput();
 
         //draw frames
         cpuWaitTimer.start();

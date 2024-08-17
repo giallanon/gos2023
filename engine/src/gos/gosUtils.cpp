@@ -1,4 +1,5 @@
 #include "gosUtils.h"
+#include "string/gosCompileTimeHashedString.h"
 
 using namespace gos;
 
@@ -277,4 +278,27 @@ u16 utils::simpleChecksum16_calc (const void *bufferIN, u32 lenInBytes)
     for (u32 i=0;i<lenInBytes;i++)
         ret += buffer[i];
     return ret;
+}
+
+//********************************************************
+inline u32 gos_utils_CRC32 (const u8 *buffer, int len)
+{
+    if (len < 0)
+        return 0xFFFFFFFF;
+    return (gos_utils_CRC32(buffer, len-1) >> 8) ^ crc_table[(gos_utils_CRC32(buffer, len-1) ^ buffer[len]) & 0x000000FF];
+}
+
+//********************************************************
+u32 utils::crc32 (const void *buffer, u32 sizeOfBuffer)
+{
+	assert (NULL != buffer);
+    return (gos_utils_CRC32 (reinterpret_cast<const u8*>(buffer), (int)sizeOfBuffer) ^ 0xFFFFFFFF);
+}
+
+//********************************************************
+u32 utils::crc32 (const char *str)
+{
+	assert (NULL != str);
+	const int len = strlen(str);
+	return crc32(str, len);
 }

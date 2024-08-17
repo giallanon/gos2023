@@ -34,18 +34,12 @@ void Date::getDateNow(u16 *out_year, u16 *out_month, u16 *out_day)
 //****************************
 void Date::setFromYYYYMMDD (const char *yyyymmdd)
 {
-	setFromYYYYMMDD (reinterpret_cast<const u8*>(yyyymmdd));
-}
-
-//****************************
-void Date::setFromYYYYMMDD (const u8 *yyyymmdd)
-{
     if (NULL == yyyymmdd)
         return;
     if (string::utf8::lengthInByte(yyyymmdd) < 8)
         return;
 
-    u8 s[8] = { 0,0,0,0,0,0,0,0 };
+    char s[8] = { 0,0,0,0,0,0,0,0 };
     
     s[0] = yyyymmdd[4];   s[1] = yyyymmdd[5];   setMonth (string::utf8::toU32(s));
     s[0] = yyyymmdd[6];   s[1] = yyyymmdd[7];   setDay (string::utf8::toU32(s));
@@ -57,7 +51,7 @@ u32 Date::formatAs_YYYYMMDD() const
 {
 	char s[16];
 	formatAs_YYYYMMDD(s, sizeof(s), 0x00);
-	return gos::string::utf8::toU32((const u8 *)s);
+	return gos::string::utf8::toU32(s);
 }
 
 //****************************
