@@ -194,6 +194,52 @@ namespace gos
 								(*out)(2,2) =  ( values[ADDR(0,0)] * values[ADDR(1,1)] - values[ADDR(1,0)] * values[ADDR(0,1)])/det;
 							}
 
+			void 			getEulerAngles_YXZ (f32 *out_rad_y, f32 *out_rad_x, f32 *out_rad_z)
+			{
+				const T R31 = values[ADDR(2,0)];
+				if (R31 != 1 && R31 != -1)
+				{
+					const T R11 = values[ADDR(0,0)];
+					const T R21 = values[ADDR(1,0)];
+					const T R32 = values[ADDR(2,1)];
+					const T R33 = values[ADDR(2,2)];
+
+					const T pitch_1 = -asinf(R31);
+					/*const T roll_1 = atan2f ( R32 / cosf(pitch_1) , R33 /cosf(pitch_1) );
+					const T yaw_1 = atan2f ( R21 / cosf(pitch_1) , R11 / cosf(pitch_1) );
+					*out_rad_x = roll_1;
+					*out_rad_y = pitch_1;
+					*out_rad_z = yaw_1 ;*/
+
+					const T pitch_2 = math::PI - pitch_1;
+					const T roll_2 = atan2f ( R32 / cosf(pitch_2) , R33 /cosf(pitch_2) );
+					const T yaw_2 = atan2f ( R21 / cosf(pitch_2) , R11 / cosf(pitch_2) );
+					*out_rad_x = roll_2;
+					*out_rad_y = pitch_2;
+					*out_rad_z = yaw_2 ;
+
+					//IMPORTANT NOTE here, there is more than one solution but we choose the first for this case for simplicity !
+					//You can insert your own domain logic here on how to handle both solutions appropriately (see the reference publication link for more info). 
+				}
+				else
+				{
+					const T yaw = 0; //anything (we default this to zero)
+					const T R12 = values[ADDR(0,1)];
+					const T R13 = values[ADDR(0,2)];
+					if (R31 == -1)
+					{
+						*out_rad_y = math::PI / 2;
+						*out_rad_x = yaw + atan2f(R12,R13);
+					}
+					else
+					{
+						*out_rad_y = -math::PI / 2;
+						*out_rad_x = -1*yaw + atan2f(-1*R12,-1*R13);
+					}
+					*out_rad_z = yaw;
+				}
+			}
+
 		private:
 			T	values[9];
 #undef ADDR

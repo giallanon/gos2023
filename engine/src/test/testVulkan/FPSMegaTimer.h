@@ -19,6 +19,7 @@ public:
             FPSMegaTimer()
             {
                 nextTimePrintReport_msec = 0;
+                print_report_every_msec = 1000;
 
                 memset (nameList, 0, sizeof(nameList));
                 sprintf_s (nameList[0], sizeof(nameList[0]), "CPU");
@@ -44,12 +45,13 @@ public:
                 }
             }
 
+    void    setPrintReportEvery (u32 msec)              { print_report_every_msec = msec; }
     void    printReport()
             {
                 const u64 timeNow_msec = gos::getTimeSinceStart_msec();
                 if (timeNow_msec < nextTimePrintReport_msec)
                     return;
-                nextTimePrintReport_msec = timeNow_msec + 1000;
+                nextTimePrintReport_msec = timeNow_msec + print_report_every_msec;
 
                 char s[1024];
                 memset (s, 0, sizeof(s));
@@ -77,6 +79,7 @@ private:
     f32             avgFPS[N_TIMER];
     u64             nextTimePrintReport_msec;
     char            nameList[N_TIMER][32];
+    u32             print_report_every_msec;
 };
 
 #endif //_FPSMegaTimer_h_

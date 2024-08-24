@@ -25,14 +25,16 @@ namespace gos
             CmdBufferWriter&    begin (GPU *gpuIN, const GPUCmdBufferHandle handle);
             CmdBufferWriter&    setViewport (const GPUViewportHandle handle);
             CmdBufferWriter&    bindPipeline (const GPUPipelineHandle handle);
-            CmdBufferWriter&    bindDescriptorSet (const GPUDescrSetInstancerHandle handle);
+            CmdBufferWriter&    bindDescriptorSet (const GPUDescrSetInstanceHandle handle);
 
             CmdBufferWriter&    setClearColor (u8 colorAttachmentIndex, const gos::ColorHDR &color);
             CmdBufferWriter&    setDepthBufferColor (f32 depth, u32 stencil);
             CmdBufferWriter&    renderPass_begin (const GPURenderLayoutHandle renderLayoutHandle, const GPUFrameBufferHandle frameBufferHandle);
             CmdBufferWriter&    bindVtxBuffer (const GPUVtxBufferHandle handle);
+            CmdBufferWriter&    bindVtxBuffers (const GPUVtxBufferHandle handleStream0, const GPUVtxBufferHandle handleStream1);
             CmdBufferWriter&    bindIdxBufferU16 (const GPUIdxBufferHandle handle);
             CmdBufferWriter&    drawIndexed (u32 indexCount, u32 instanceCount, u32 firstIndex, u32 vertexOffset, u32 firstInstance);
+            CmdBufferWriter&    draw (u32 vtxCount, u32 instanceCount, u32 firstVtx, u32 firstInstance);
             CmdBufferWriter&    renderPass_end();
 
             bool                end();    

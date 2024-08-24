@@ -16,22 +16,32 @@ namespace gos
 							Window (GLFWwindow *glfwHandle);
 							~Window();
 
-			void			addButtonPressed (input::eOrigin dev, int buttonId) 					{ curEvtList->addButtonPressed (dev, buttonId, curBtnModifier); }
-			void			addButtonReleased (input::eOrigin dev, int buttonId) 					{ curEvtList->addButtonReleased (dev, buttonId, curBtnModifier); }
-			void			addAxleEvt (input::eOrigin dev, input::eAxle axle, i16 pos)				{ curEvtList->addAxleEvt (dev, axle, pos); }
+			void			addButtonEvt (input::eOrigin origin, int buttonId, eButtonStatus status)							{ curEvtList->addButtonEvt (origin, buttonId, status, curBtnModifier); }
+			void			addAxleAbsEvt (input::eOrigin origin, input::eAxle axle, i16 pos)									{ curEvtList->addAxleAbsEvt (origin, axle, pos); }
+			void			addAxleRelEvt (input::eOrigin origin, input::eAxle axle, input::eAxleDirection dir, u16 strength)	{ curEvtList->addAxleRelEvt (origin, axle, dir, strength); }
 
 			void			setMouseMode (eMouseMode mode);
 			void			toggleMouseMode()														{ if (mouseMode == eMouseMode::absolute) setMouseMode(eMouseMode::relative); else setMouseMode(eMouseMode::absolute); }
 			eMouseMode		getMouseMode() const	 												{ return mouseMode; }
+
 			GLFWwindow*		getGLFWHandle() const 													{ return glfwHandle; }
 			const EvtList*	swapEvtList();
+
+            void            storeCurrentPosAndSize()
+                            {
+								glfwGetWindowPos (glfwHandle, &storedX, &storedY);
+								glfwGetWindowSize (glfwHandle, &storedW, &storedH);
+                            }
 
 		public:
             void        	*userpt;
 			i32				lastMouseX;
 			i32				lastMouseY;
 			sButtonModifier	curBtnModifier;
-			
+            int 			storedX;
+            int 			storedY;
+            int 			storedW;
+            int 			storedH;			
 
 		private:
             GLFWwindow  	*glfwHandle;

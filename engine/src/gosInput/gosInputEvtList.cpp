@@ -29,15 +29,21 @@ void EvtList::reset()
 void EvtList::addButtonEvt (eOrigin origin, u16 buttonId, eButtonStatus status, const sButtonModifier &modifier)
 {
 	if (eOrigin::window == origin)
-		priv_doAddEvent (input::event_makeID (origin, buttonId, status, sButtonModifier()));
+		priv_doAddEvent (input::event_button_makeID (origin, buttonId, status, sButtonModifier()));
 	else
-		priv_doAddEvent (input::event_makeID (origin, buttonId, status, modifier));
+		priv_doAddEvent (input::event_button_makeID (origin, buttonId, status, modifier));
 }
 
 //****************************************
-void EvtList::addAxleEvt (eOrigin origin, input::eAxle axle, i16 pos)
+void EvtList::addAxleAbsEvt (eOrigin origin, input::eAxle axle, i16 pos)
 {
-	priv_doAddEvent (input::event_makeID (origin, axle, pos));
+	priv_doAddEvent (input::event_axleAbs_makeID (origin, axle, pos));
+}
+
+//****************************************
+void EvtList::addAxleRelEvt (input::eOrigin origin, input::eAxle axle, input::eAxleDirection dir, u16 strength)
+{
+	priv_doAddEvent (input::event_axleRel_makeID (origin, axle, dir, strength));
 }
 
 //****************************************

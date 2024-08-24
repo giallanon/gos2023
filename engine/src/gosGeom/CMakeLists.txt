@@ -38,6 +38,11 @@ gosGeomPlane3.cpp
 gosGeomPlane3.h
 gosGeomPos3.cpp
 gosGeomPos3.h
+gosGeomShapes_cube.cpp
+gosGeomShapes_cylinder.cpp
+gosGeomShapes_sphere.cpp
+gosGeomShapes_vtxMap.cpp
+gosGeomShapes.h
 )
 
 #====================================================

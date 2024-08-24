@@ -21,7 +21,7 @@ namespace gos
         public:
                                         DescrSetInstanceWriter();
 
-            DescrSetInstanceWriter&     begin (gos::GPU *gpu, const GPUDescrSetInstancerHandle &descrSetInstanceHandle);
+            DescrSetInstanceWriter&     begin (gos::GPU *gpu, const GPUDescrSetInstanceHandle &descrSetInstanceHandle);
             DescrSetInstanceWriter&     updateUniformBuffer (u32 binding, const GPUUniformBufferHandle &handle);
             bool                        end();
 

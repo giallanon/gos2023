@@ -24,6 +24,7 @@ public:
     void    unsetup();
   
     bool    run ();
+    bool    swapchainRecreated() const                                  { return bSwapchainRecreated; }
 
     bool    canSubmitGFXJob () const;
     void    submitGFXJob (const GPUCmdBufferHandle &cmdBufferHandle);
@@ -50,6 +51,7 @@ private:
     GPUCmdBufferHandle  commandBuffer_GFX;
 
     bool                canAccept_GFXJob;
+    bool                bSwapchainRecreated;
 
 };
 

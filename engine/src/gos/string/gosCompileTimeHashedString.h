@@ -62,7 +62,7 @@ static constexpr u32 crc_table[256] = {
 
 
 template<size_t idx>
-constexpr u32 compile_time_crc32 (const char * str)
+constexpr u32 compile_time_crc32 (const char *str)
 {
     //printf("x");
     return (compile_time_crc32<idx-1>(str) >> 8) ^ crc_table[(compile_time_crc32<idx-1>(str) ^ str[idx]) & 0x000000FF];
@@ -70,7 +70,7 @@ constexpr u32 compile_time_crc32 (const char * str)
 
 // This is the stop-recursion function
 template<>
-constexpr u32 compile_time_crc32<size_t(-1)>(UNUSED_PARAM(const char * str))
+constexpr u32 compile_time_crc32<size_t(-1)>(UNUSED_PARAM(const char *str))
 {
     return 0xFFFFFFFF;
 }

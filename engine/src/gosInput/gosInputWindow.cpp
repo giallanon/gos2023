@@ -78,7 +78,7 @@ void GOSInputWindow_close_callback (GLFWwindow* window)
     glfwSetWindowShouldClose (window, false);
 
     input::Window *win = reinterpret_cast<input::Window*> (glfwGetWindowUserPointer(window));
-    win->addButtonPressed (input::eOrigin::window, BUTTON_WINDOW_CLOSE);
+    win->addButtonEvt (input::eOrigin::window, GOS_BUTTON_WINDOW_CLOSE, eButtonStatus::pressed);
 }
 
 //************************************
@@ -90,12 +90,14 @@ void GOSInputWindow_mouse_movement_callback (GLFWwindow* window, double xpos, do
 	{
         if (eMouseMode::absolute == win->getMouseMode())
         {
-            win->addAxleEvt (input::eOrigin::mouse, input::eAxle::x, x);
+            win->addAxleAbsEvt (input::eOrigin::mouse, input::eAxle::x, x);
         }
         else
         {
-            const i16 diff = (x - win->lastMouseX);
-            win->addAxleEvt (input::eOrigin::mouse, input::eAxle::x, diff);
+            if (x > win->lastMouseX)
+                win->addAxleRelEvt (input::eOrigin::mouse, input::eAxle::x, input::eAxleDirection::positive, x - win->lastMouseX);
+            else
+                win->addAxleRelEvt (input::eOrigin::mouse, input::eAxle::x, input::eAxleDirection::negative, win->lastMouseX - x);
         }
         win->lastMouseX = x;
 	}
@@ -105,12 +107,14 @@ void GOSInputWindow_mouse_movement_callback (GLFWwindow* window, double xpos, do
 	{
         if (eMouseMode::absolute == win->getMouseMode())
         {
-            win->addAxleEvt (input::eOrigin::mouse, input::eAxle::y, y);
+            win->addAxleAbsEvt (input::eOrigin::mouse, input::eAxle::y, y);
         }
         else
         {
-            const i16 diff = (win->lastMouseY -y);
-            win->addAxleEvt (input::eOrigin::mouse, input::eAxle::y, diff);
+            if (y > win->lastMouseY)
+                win->addAxleRelEvt (input::eOrigin::mouse, input::eAxle::y, input::eAxleDirection::positive, y - win->lastMouseY);
+            else
+                win->addAxleRelEvt (input::eOrigin::mouse, input::eAxle::y, input::eAxleDirection::negative, win->lastMouseY - y);
         }
 		win->lastMouseY = y;
 	}	
@@ -122,9 +126,9 @@ void GOSInputWindow_mouse_wheel_callback (GLFWwindow* window, double xoffset, do
     input::Window *win = reinterpret_cast<input::Window*> (glfwGetWindowUserPointer(window));
 
     if (yoffset<0)
-        win->addAxleEvt (input::eOrigin::mouse, input::eAxle::z, -1);
+        win->addAxleRelEvt (input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::negative, 1);
     else if (yoffset>0)
-        win->addAxleEvt (input::eOrigin::mouse, input::eAxle::z, 1);
+        win->addAxleRelEvt (input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::positive, 1);
 }
 
 //************************************
@@ -133,9 +137,9 @@ void GOSInputWindow_mouse_button_callback (GLFWwindow* window, int button, int a
     assert (button <= 0xFFFF);
 	input::Window *win = reinterpret_cast<input::Window*> (glfwGetWindowUserPointer(window));
     if (GLFW_PRESS == action)
-        win->addButtonPressed (input::eOrigin::mouse, (u16)button);
+        win->addButtonEvt (input::eOrigin::mouse, (u16)button, eButtonStatus::pressed);
     else
-        win->addButtonReleased (input::eOrigin::mouse, (u16)button);
+        win->addButtonEvt (input::eOrigin::mouse, (u16)button, eButtonStatus::released);
 }
 
 
@@ -159,9 +163,9 @@ void GOSInputWindow_KB_key_callback (GLFWwindow* window, int key, UNUSED_PARAM(i
 
 
     if (GLFW_RELEASE == action)
-        win->addButtonReleased (input::eOrigin::keyboard, (u16)key);
+        win->addButtonEvt (input::eOrigin::keyboard, (u16)key, eButtonStatus::released);
     else if (GLFW_PRESS == action)
-        win->addButtonPressed (input::eOrigin::keyboard, (u16)key);
+        win->addButtonEvt (input::eOrigin::keyboard, (u16)key, eButtonStatus::pressed);
 
 
 

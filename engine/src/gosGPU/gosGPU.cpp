@@ -43,6 +43,7 @@ GPU::GPU()
     defaultDepthStencil.handle.setInvalid();
     currentSwapChainImageIndex = 0;
     bRecreateSwapChainOnNextFrame = false;
+    bSwapChainRecreatedDuringThisFrame = false;
 }
 
 //********************************************************** 
@@ -434,6 +435,8 @@ void GPU::fence_resetMany (const VkFence *fenceHandleList, u32 fenceCount)
 //************************************
 bool GPU::newFrame (u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
 {
+    bSwapChainRecreatedDuringThisFrame = false;
+
     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
     toBeDeletedBuilder.check (timeNow_msec);
 
@@ -489,6 +492,7 @@ VkResult GPU::present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCoun
 //**********************************************************
 bool GPU::priv_swapChain_recreate ()
 {
+    bSwapChainRecreatedDuringThisFrame = true;
     gos::logger::log (eTextColor::green, "GPU::swapChain_recreate()\n");
     gos::logger::incIndent();
 
@@ -612,6 +616,8 @@ void  GPU::toggleFullscreen()
     }
 
     gos::logger::decIndent();
+
+    bRecreateSwapChainOnNextFrame = true;
 }
 
 //************************************
@@ -1196,10 +1202,6 @@ void GPU::deleteResource (GPUFrameBufferHandle &handle)
         s->reset();
         frameBufferList.release (handle);
     }
-#ifdef _DEBUG
-    else    
-        DBGBREAK;
-#endif
 
     handle.setInvalid();
 }
@@ -1746,7 +1748,7 @@ void GPU::deleteResource (GPUStgBufferHandle &handle)
 }
 
 //************************************
-bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy)
+bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy)
 {
     VkBuffer dstBuffer;
     if (!toVulkan (handleDST, &dstBuffer))
@@ -1768,7 +1770,7 @@ bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, v
 }
 
 //************************************
-bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy)
+bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy)
 {
     VkBuffer dstBuffer;
     if (!toVulkan (handleDST, &dstBuffer))
@@ -2367,7 +2369,7 @@ bool GPU::toVulkan (const GPUDescrPoolHandle handle, VkDescriptorPool *out) cons
  * 
  * 
  *************************************************************************************************************/
-bool GPU::descrSetInstance_createNew (const GPUDescrPoolHandle &poolHandle, const GPUDescrSetLayoutHandle &descrSetLayoutHandle, GPUDescrSetInstancerHandle *out_handle)
+bool GPU::descrSetInstance_createNew (const GPUDescrPoolHandle &poolHandle, const GPUDescrSetLayoutHandle &descrSetLayoutHandle, GPUDescrSetInstanceHandle *out_handle)
 {
     assert (NULL != out_handle);
     out_handle->setInvalid();
@@ -2420,7 +2422,7 @@ bool GPU::descrSetInstance_createNew (const GPUDescrPoolHandle &poolHandle, cons
 }
 
 //************************************
-void GPU::deleteResource (GPUDescrSetInstancerHandle &handle)
+void GPU::deleteResource (GPUDescrSetInstanceHandle &handle)
 {
     gpu::DescrSetInstance *s;
     if (descrSetInstanceList.fromHandleToPointer (handle, &s))
@@ -2435,7 +2437,7 @@ void GPU::deleteResource (GPUDescrSetInstancerHandle &handle)
 }
 
 //************************************
-bool GPU::toVulkan (const GPUDescrSetInstancerHandle handle, VkDescriptorSet *out) const
+bool GPU::toVulkan (const GPUDescrSetInstanceHandle handle, VkDescriptorSet *out) const
 {
     gpu::DescrSetInstance *s;
     if (priv_fromHandleToPointer(descrSetInstanceList,handle, &s))

@@ -4,6 +4,7 @@
 #include "VulkanExample2.h"
 #include "VulkanExample3.h"
 #include "VulkanExample4.h"
+#include "VulkanExample5.h"
 
 //******************************** 
 template<class VKAPP>
@@ -27,7 +28,8 @@ void test1 (GOSWinHandle &mainWin)
         //runExample<VulkanExample1>(&gpu, "VulkanExample1");
         //runExample<VulkanExample2>(&gpu, "VulkanExample2");
         //runExample<VulkanExample3>(&gpu, "VulkanExample3");
-        runExample<VulkanExample4>(&gpu, "VulkanExample4");
+        //runExample<VulkanExample4>(&gpu, "VulkanExample4");
+        runExample<VulkanExample5>(&gpu, "VulkanExample5");
         gpu.deinit();
     }
 }
@@ -44,8 +46,9 @@ int main()
         if (gos::input::init())
         {
             GOSWinHandle mainWin;
-            if (gos::input::window_create (800, 600, gos::getAppName(), &mainWin))
+            if (gos::input::window_create (1024, 768, gos::getAppName(), &mainWin))
             {
+                //gos::input::window_toggleFullscreen(mainWin);
                 test1 (mainWin);
                 gos::input::window_destroy (mainWin);
             }

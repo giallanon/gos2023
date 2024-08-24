@@ -202,7 +202,7 @@ void Camera3::unproject (f32 viewportDimx, f32 viewportDimy, const vec2f *points
 	for (u32 i=0; i<nPoints; i++)
 	{
 		/* screen to device coord
-		 * in device coordinate,  l'angolo in alto a sx è definito come -1,1 mentre l'angolo in basso a dx è definito come 1,-1
+		 * in device coordinate,  l'angolo in alto a sx e' definito come -1,1 mentre l'angolo in basso a dx e' definito come 1,-1
 		 */
 		vec2f pointDevCoord (points2D[i].x / vpHalfDimx -1.0f, 1.0f - points2D[i].y / vpHalfDimy);
 		
@@ -212,7 +212,7 @@ void Camera3::unproject (f32 viewportDimx, f32 viewportDimy, const vec2f *points
 		/* il punto in 3D giace sul near plane */
 		vec3f p3D = nearCenter + nearHalfAsseX*pointDevCoord.x +nearHalfAsseY*pointDevCoord.y;
 
-		/* quello che ritorno, è una direzione di un ipotetico ray che parte dall'origine della cam e interseca il punto 2D sul near plane */
+		/* quello che ritorno, e' una direzione di un ipotetico ray che parte dall'origine della cam e interseca il punto 2D sul near plane */
 		points3D[i] = p3D - camO;
 		points3D[i].normalize();
 	}

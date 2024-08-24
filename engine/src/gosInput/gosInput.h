@@ -2,7 +2,7 @@
 #define _gosInput_h_
 #include "gosInputEnumAndDefine.h"
 #include "gosInputEvtList.h"
-#include "gosInputController.h"
+#include "gosInputMapper.h"
 
 namespace gos
 {
@@ -17,6 +17,7 @@ namespace gos
 		const char* 	enumToString (input::eType e);
 		const char* 	enumToString (input::eOrigin e);
 		const char* 	enumToString (input::eAxle e);
+		const char* 	enumToString (input::eAxleDirection e);
 
 		/************************************************************************************************************
 		 *
@@ -38,6 +39,7 @@ namespace gos
 		bool			window_getGLF (const GOSWinHandle &handle, GLFWwindow **out_GLFWindow);
 		void			window_setMouseMode (const GOSWinHandle &handle, eMouseMode mode);
 		void			window_toggleMouseMode (const GOSWinHandle &handle);
+		void			window_toggleFullscreen(const GOSWinHandle &handle);
 		const EvtList*	window_getEventList (const GOSWinHandle &handle);
 
 		/************************************************************************************************************
@@ -45,14 +47,30 @@ namespace gos
 		 * gestione eventi di input "low level"
 		 *
 		 */
-        EventID    		event_makeID (input::eOrigin origin, u16 btnId, eButtonStatus status, const sButtonModifier &modifier);
-		EventID    		event_makeID (input::eOrigin origin, eAxle axle, i16 pos);
-		eOrigin 		event_getOrigin (const EventID &id);
-		eType			event_getType (const EventID &id);
-		bool			event_toButtonEvent (const EventID &id, sBtnEvent *out);
-		bool			event_toAxleEvent (const EventID &id, sAxleEvent *out);
-		void			debug_event_printInfo (const EventID &id);
-		void			event_getEventName (const EventID &id, char *out, u32 sizeof_out); 
+						//event_button_makeID()
+						//Nel caso di "bottoni", un [event] e' identificato dall'id bottone, il suo stato di premuto/rilasciato
+						//e gli eventuali [modifier] quali ALT, SHIFT e CTRL
+        EventID    		event_button_makeID (input::eOrigin origin, u16 btnId, eButtonStatus status, const sButtonModifier &modifier);
+
+						//event_axleAbs_makeID
+						//Un eventID nel caso di [axle] assoluto, riporta l'asse stesso e la posizione assoluta dell'asse
+		EventID    		event_axleAbs_makeID (input::eOrigin origin, eAxle axle, i16 pos);
+
+						//event_axleRel_makeID
+						//Un eventID nel caso di [axle] relativo, riporta l'asse, la direzione dell'asse (positivo/negativo) e la
+						//"forza" con cui è stato mosso l'asse
+		EventID    		event_axleRel_makeID (input::eOrigin origin, eAxle axle, eAxleDirection direction, u16 strength);
+		
+		eOrigin 		event_getOrigin (const EventID &eventID);
+		eType			event_getType (const EventID &eventID);
+		bool			event_toButtonEvent (const EventID &eventID, sBtnEvent *out);
+		bool			event_toAxleAbsEvent (const EventID &eventID, sAxleAbsEvent *out);
+		bool			event_toAxleRelEvent (const EventID &eventID, sAxleRelEvent *out);
+		void			debug_event_printInfo (const EventID &eventID);
+		
+						//event_getEventName
+						//Filla [out] con il nome "umano" della combinazione di tasti/assi (es: ALT + Q)
+		void			event_getEventName (const EventID &eventID, char *out, u32 sizeof_out); 
 
 	} //namespace input
 } //namespace gos

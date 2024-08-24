@@ -37,7 +37,7 @@ namespace gos
 			void					markUpdated()											{ ++lastTimeUpdated; }
 									/* ogni volta che modifichi pos, ricordati di chiamare 
 										markUpdated() in modo che Camera possa sapere che la sua
-										posizione è stata modificata e quindi aggiornare le
+										posizione e' stata modificata e quindi aggiornare le
 										sue matrici
 									*/
 

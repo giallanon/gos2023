@@ -1,6 +1,5 @@
 #include "VulkanExample4.h"
-#include "../gosGeom/gosGeomCamera3.h"
-
+#include "../gosGeom/gosGeomShapes.h"
 
 using namespace gos;
 
@@ -14,7 +13,8 @@ VulkanExample4::VulkanExample4()
 //************************************
 void VulkanExample4::virtual_explain()
 {
-    gos::logger::log ("Esperimenti con Uniform buffer\n");
+    gos::logger::log ("Esperimenti con Uniform buffer, gestione dell'input da KB/mouse, movimento camera in 3d\n");
+    gos::logger::log (eTextColor::white, "TAB = toggle mouse mode\n");
 }
 
 
@@ -76,62 +76,49 @@ bool VulkanExample4::virtual_onInit ()
     */
 
 
-    //vertici
+    //creo un cubo
     {
-        u8 nv = 0;
-        u32 ni = 0;
-        f32 z, r, g, b;
+        gos::shape::VtxMap vtxMap;
+        vtxMap.begin()
+            .addPos3 (offsetof(Vertex,pos))
+            .addNorm3 (offsetof(Vertex,normal))
+        .end();
 
+        gos::shape::Writer writer;
+        writer.setup (vtxMap, vertexList, sizeof(Vertex), NUM_VERTEX, indexList, NUM_INDEX);
 
-        //front (green)
-        z = -1; r = 0; g = 1; b = 0;
-        vertexList[nv++].set(-1, 1, z, r, g, b);
-        vertexList[nv++].set(1, 1, z, r, g, b);
-        vertexList[nv++].set(1, -1, z, r, g, b);
-        vertexList[nv++].set(-1, -1, z, r, g, b);
-        indexList[ni++] = (nv - 4); indexList[ni++] = (nv - 3); indexList[ni++] = (nv - 2);
-        indexList[ni++] = (nv - 2); indexList[ni++] = (nv - 1); indexList[ni++] = (nv - 4);
+        gos::shape::Info info;
+        gos::shape::buildCube24 (vec3f(0,0,0), vec3f(4,2,3), &writer, &info);
 
-        //back (red)
-        z = 1; r = 1; g = 0; b = 0;
-        vertexList[nv++].set(1, 1, z, r, g, b);
-        vertexList[nv++].set(-1, 1, z, r, g, b);
-        vertexList[nv++].set(-1, -1, z, r, g, b);
-        vertexList[nv++].set(1, -1, z, r, g, b);
-        indexList[ni++] = (nv - 4); indexList[ni++] = (nv - 3); indexList[ni++] = (nv - 2);
-        indexList[ni++] = (nv - 2); indexList[ni++] = (nv - 1); indexList[ni++] = (nv - 4);
+        assert (info.numVertex==NUM_VERTEX);
+        assert (info.numIndex==NUM_INDEX);
 
-        //right (blue)
-        z = 1; r = 0; g = 0; b = 1;
-        vertexList[nv++].set(1, 1, -1, r, g, b);
-        vertexList[nv++].set(1, 1,  1, r, g, b);
-        vertexList[nv++].set(1, -1, 1, r, g, b);
-        vertexList[nv++].set(1, -1, -1, r, g, b);
-        indexList[ni++] = (nv - 4); indexList[ni++] = (nv - 3); indexList[ni++] = (nv - 2);
-        indexList[ni++] = (nv - 2); indexList[ni++] = (nv - 1); indexList[ni++] = (nv - 4);
+        //front face (green)
+        vertexList[0].colorRGB.set (0, 1, 0);
+        vertexList[1].colorRGB = vertexList[2].colorRGB = vertexList[3].colorRGB = vertexList[0].colorRGB;
 
-        //right (white)
-        z = 1; r = 1; g = 1; b = 1;
-        vertexList[nv++].set(-1, 1, 1, r, g, b);
-        vertexList[nv++].set(-1, 1, -1, r, g, b);
-        vertexList[nv++].set(-1, -1, -1, r, g, b);
-        vertexList[nv++].set(-1, -1, 1, r, g, b);
-        indexList[ni++] = (nv - 4); indexList[ni++] = (nv - 3); indexList[ni++] = (nv - 2);
-        indexList[ni++] = (nv - 2); indexList[ni++] = (nv - 1); indexList[ni++] = (nv - 4);
+        //back face (red)
+        vertexList[4].colorRGB.set (1, 0, 0);
+        vertexList[5].colorRGB = vertexList[6].colorRGB = vertexList[7].colorRGB = vertexList[4].colorRGB;
 
-        //top (yellow)
-        z = 1; r = 1; g = 1; b = 0;
-        vertexList[nv++].set(-1, 1, -1, r, g, b);
-        vertexList[nv++].set(-1, 1,  1, r, g, b);
-        vertexList[nv++].set( 1, 1,  1, r, g, b);
-        vertexList[nv++].set( 1, 1, -1, r, g, b);
-        indexList[ni++] = (nv - 4); indexList[ni++] = (nv - 3); indexList[ni++] = (nv - 2);
-        indexList[ni++] = (nv - 2); indexList[ni++] = (nv - 1); indexList[ni++] = (nv - 4);
+        ///right face (blue)
+        vertexList[8].colorRGB.set (0, 0, 1);
+        vertexList[9].colorRGB = vertexList[10].colorRGB = vertexList[11].colorRGB = vertexList[8].colorRGB;
 
-        assert (nv==NUM_VERTEX);
-        assert (ni==NUM_INDEX);
+        //left face (white)
+        vertexList[12].colorRGB.set (1, 1, 1);
+        vertexList[13].colorRGB = vertexList[14].colorRGB = vertexList[15].colorRGB = vertexList[12].colorRGB;
 
+        //top face (yellow)
+        vertexList[16].colorRGB.set (1, 1, 0);
+        vertexList[17].colorRGB = vertexList[18].colorRGB = vertexList[19].colorRGB = vertexList[16].colorRGB;
+
+        //bottom face (azzurro)
+        vertexList[20].colorRGB.set (0, 1, 1);
+        vertexList[21].colorRGB = vertexList[22].colorRGB = vertexList[23].colorRGB = vertexList[20].colorRGB;
     }
+
+    
 
 
     //creo vtx/idx/staging buffer
@@ -165,6 +152,7 @@ bool VulkanExample4::virtual_onInit ()
         .addStream(eVtxStreamInputRate::perVertex)
         .addLayout (0, offsetof(Vertex, pos), eDataFormat::_3f32)        //position
         .addLayout (1, offsetof(Vertex, colorRGB), eDataFormat::_3f32)   //color
+        .addLayout (2, offsetof(Vertex, normal), eDataFormat::_3f32)   //color
         .end();
     if (vtxDeclHandle.isInvalid())
     {
@@ -323,7 +311,7 @@ bool VulkanExample4::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
         .setViewport (gpu->viewport_getDefault())
         .bindPipeline (pipelineHandle)
         .bindDescriptorSet (descrSetInstancerHandle)
-        .setClearColor (0, gos::ColorHDR(0, 0.0f, 0.1f))
+        .setClearColor (0, gos::ColorHDR(0, 0.1f, 0.3f))
         .setDepthBufferColor(1, 0)
         .renderPass_begin (renderLayoutHandle, frameBufferHandle)
             .bindVtxBuffer(vtxBufferHandle)
@@ -339,7 +327,34 @@ bool VulkanExample4::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
  */
 void VulkanExample4::virtual_onRun()
 {
+    cam.setPerspectiveFovLH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
+    cam.pos.identity();
+    cam.pos.warp (0, 0, -19);
+    cam.pos.lookAt (vec3f(0,0,0));
+    cam.markUpdated();
+
+    movement.bind (&cam.pos);
     mainLoop();
+}
+
+//**********************************
+void VulkanExample4::virtual_onInputEvent (u32 actionID, i16 value)
+{
+    switch (actionID)
+    {
+    default:
+        break;
+
+    case COMPILE_TIME_STR_CRC32("game.move_forward"):           movement.moveForward ((value == 1));break;
+    case COMPILE_TIME_STR_CRC32("game.move_backward"):          movement.moveBackward ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("game.strafe_left"):            movement.strafeLeft ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("game.strafe_right"):           movement.strafeRight ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("game.strafe_up"):              movement.strafeUp ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("game.strafe_down"):            movement.strafeDown ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("game.rotateY"):                movement.rotateY ((value<0)); break;
+    case COMPILE_TIME_STR_CRC32("game.rotateX"):                movement.rotateX ((value<0)); break;
+    
+    }
 }
 
 //**********************************
@@ -359,32 +374,25 @@ void VulkanExample4::doCPUStuff ()
 
             anim.nextTimeRotate_msec = timeNow_msec + 16;
             anim.rotation_grad+=1.0f;
-//anim.rotation_grad=12.0f;
-            anim.zPos += anim.zInc;
+            //anim.zPos += anim.zInc;
             if (anim.zPos >= 10 || anim.zPos < 0)
                 anim.zInc = -anim.zInc;
             
             matR.buildRotationAboutY (math::gradToRad(anim.rotation_grad));
             matT.buildTranslation (0,0,anim.zPos);
-            ubo.world = matT * matR;
+            ubo.objWorld = matT * matR;
 //            ubo.world.identity();
 
 
-            gos::geom::Camera3 cam;
-            cam.setPerspectiveFovLH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
-            cam.pos.identity();
-            cam.pos.warp (0, 9, -19);
-            cam.pos.lookAt (vec3f(0,0,0));
-            cam.markUpdated();
-            ubo.view = cam.getMatV();
-            ubo.proj = cam.getMatP();
+            //camera
+            ubo.camView = cam.getMatV();
+            ubo.camProj = cam.getMatP();
+            //ubo.lightDir.set (-1, -0.3f, 0, 0);
+            ubo.lightDir.set (-1, -0, 0, 0);
+            ubo.lightDir.normalize();
 
 
-            
-
-
-
-            vec4f vIN[4];
+            /*vec4f vIN[4];
             vIN[0].set (0,0,0,1);
             vIN[1].set (0,0,1,1);
             vIN[2].set (0,0,10,1);
@@ -392,12 +400,10 @@ void VulkanExample4::doCPUStuff ()
             vec4f vOUT[4];
             for (u32 i = 0; i < 4; i++)
             {
-                //vec4f v (vertexList[i].pos.x, vertexList[i].pos.y, vertexList[i].pos.z, 1);
-                //vOUT[i] = math::vecTransform (ubo.proj, v);
                 vOUT[i] = math::vecTransform (ubo.proj, vIN[i]);
             }
             vOUT[0].w = 1;
-
+*/
 
         }
         gpu->uniformBuffer_mapCopyUnmap (uboHandle, 0, sizeof(sUniformBufferObject), &ubo);
@@ -418,6 +424,11 @@ void VulkanExample4::doCPUStuff ()
     if (tot < 0)
         printf ("A\n");
 
+
+    //gestione del movimento
+    const u64 timeNow_msec = gos::getTimeSinceStart_msec();
+    movement.update(timeNow_msec);
+    cam.markUpdated();
 
     fpsMegaTimer.onFrameEnd(FPSTIMER_CPU);
     fpsMegaTimer.printReport();
@@ -441,6 +452,8 @@ void VulkanExample4::mainLoop()
 
 
         gpuLoop.run ();
+        if (gpuLoop.swapchainRecreated())
+            cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
         if (gpuLoop.canSubmitGFXJob())
         {
             recordCommandBuffer (cmdBufferHandle);

@@ -2,7 +2,6 @@
 #define _VulkanExample4_h_
 #include "VulkanApp.h"
 
-
 /************************************
  *  VulkanExample4
  */
@@ -22,6 +21,7 @@ private:
     {
         gos::vec3f  pos;
         gos::vec3f  colorRGB;
+        gos::vec3f  normal;
 
         void set (f32 x, f32 y, f32 z, f32 r, f32 g, f32 b)    { pos.set(x,y,z); colorRGB.set(r,g,b); }
     };
@@ -29,9 +29,10 @@ private:
     struct sUniformBufferObject 
     {
         //glm::mat4 world;
-        gos::mat4x4f world;
-        gos::mat4x4f view;
-        gos::mat4x4f proj;
+        gos::mat4x4f    camView;
+        gos::mat4x4f    camProj;
+        gos::vec4f      lightDir;
+        gos::mat4x4f    objWorld;
     };
 
 
@@ -50,10 +51,10 @@ private:
     bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle);
     void        doCPUStuff ();
     void        mainLoop();
-
+    void        virtual_onInputEvent (u32 event32, i16 value);
 
 private:
-    static const u8     NUM_FACES = 5;
+    static const u8     NUM_FACES = 6;
     static const u8     NUM_VERTEX = 4*NUM_FACES;
     static const u8     NUM_INDEX = 6*NUM_FACES;
 
@@ -62,7 +63,9 @@ private:
     u16                     indexList[NUM_INDEX];
     sUniformBufferObject    ubo;
     sAnimation              anim;
-    
+    gos::geom::Camera3      cam;
+    FPSMovement            movement;
+
 
     GPUVtxBufferHandle      vtxBufferHandle;
     GPUIdxBufferHandle      idxBufferHandle;
@@ -76,7 +79,7 @@ private:
 
     GPUDescrPoolHandle      descrPoolHandle;
     GPUDescrSetLayoutHandle descrSetLayoutHandle;
-    GPUDescrSetInstancerHandle descrSetInstancerHandle;
+    GPUDescrSetInstanceHandle descrSetInstancerHandle;
     GPUUniformBufferHandle  uboHandle;
 };
 

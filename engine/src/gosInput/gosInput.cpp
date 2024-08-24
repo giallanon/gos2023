@@ -106,7 +106,8 @@ const char* input::enumToString (input::eType e)
     {
         default:    DBGBREAK; return "???";
         case eType::button: return "button";
-        case eType::axle:   return "axle";
+        case eType::axleABS:   return "axleABS";
+        case eType::axleREL:   return "axleREL";
     }
 }
 
@@ -131,6 +132,17 @@ const char* input::enumToString (input::eAxle e)
         case eAxle::x: return "x";
         case eAxle::y: return "y";
         case eAxle::z: return "z";
+    }
+}
+
+//*****************************************
+const char* input::enumToString (input::eAxleDirection e)
+{
+    switch (e)
+    {
+        default:    DBGBREAK;   return "???";
+        case eAxleDirection::positive: return "pos";
+        case eAxleDirection::negative: return "neg";
     }
 }
 
@@ -278,6 +290,33 @@ void input::window_toggleMouseMode (const GOSWinHandle &handle)
 }
 
 //*****************************************
+void input::window_toggleFullscreen(const GOSWinHandle &handle)
+{
+    input::Window *win = gos_input_getWindowFromHandle (handle);
+    if (NULL == win)
+        return;
+
+    GLFWwindow *glfWin = win->getGLFWHandle();
+    GLFWmonitor *monitor = glfwGetWindowMonitor(glfWin);
+    if (NULL == monitor)
+    {
+        //andiamo in full
+        win->storeCurrentPosAndSize();
+        gos::logger::log ("going full screen, current win pos and size (%d,%d) (%d,%d)\n", win->storedX, win->storedY, win->storedW, win->storedH);
+
+        monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+        glfwSetWindowMonitor (glfWin, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+    }    
+    else
+    {
+        //torniamo in windowed
+        gos::logger::log ("going in windowed mode, current win pos and size (%d,%d) (%d,%d)\n", win->storedX, win->storedY, win->storedW, win->storedH);
+        glfwSetWindowMonitor(glfWin, NULL, win->storedX, win->storedY, win->storedW, win->storedH, 0);
+    }
+}
+
+//*****************************************
 const input::EvtList* input::window_getEventList (const GOSWinHandle &handle)
 {
     input::Window *win = gos_input_getWindowFromHandle (handle);
@@ -288,112 +327,144 @@ const input::EvtList* input::window_getEventList (const GOSWinHandle &handle)
 }
 
 //*****************************************
-u32 gos_input_makeBaseEventID (input::eOrigin origin, input::eType type)
+input::eOrigin input::event_getOrigin (const EventID &eventID)
 {
-    //origin 3 bit
-    //type   2 bit
-    //empty  27bit
+    //description
+    //type      3bit
+    //origin    3bit    
+    return static_cast<input::eOrigin>( (eventID._data.asU16.description >> 10)  & 0x07);
+}
+
+//*****************************************
+input::eType input::event_getType (const EventID &eventID)
+{
+    //description
+    //type      3bit
+    //origin    3bit    
+    return static_cast<input::eType>(  (eventID._data.asU16.description >> 13) & 0x07);
+}
+
+//*****************************************
+input::EventID input::event_button_makeID (input::eOrigin origin, u16 btnId, eButtonStatus status, const sButtonModifier &modifier)
+{
     assert (static_cast<u32>(origin) < 8);
-    assert (static_cast<u32>(type) < 4);
-    
-    u32 id = ((u32)origin) << 29;
-    id |= (static_cast<u32>(type) << 27);
-    return id;
-}
-
-//*****************************************
-input::eOrigin input::event_getOrigin (const EventID &id)
-{
-    return static_cast<input::eOrigin>( (id._data >> 29) );
-}
-
-//*****************************************
-input::eType input::event_getType (const EventID &id)
-{
-    return static_cast<input::eType>(  (id._data >> 27) & 0x03);
-}
-
-//*****************************************
-input::EventID input::event_makeID (input::eOrigin origin, u16 btnId, eButtonStatus status, const sButtonModifier &modifier)
-{
-    u32 id = gos_input_makeBaseEventID (origin, input::eType::button);
-    //ci sono 27 bit liberi:
-    // empty    2 bit
-    // status	1 bit
-	// modifier	8 bit
-    // btnID	16 bit    
-
+    assert (static_cast<u32>(status) < 2);
     assert (static_cast<u32>(modifier._status) < 256);
-    
-    if (eButtonStatus::pressed == status)
-        id |= (0x00000001 << 24);
-    id |= (static_cast<u32>(modifier._status) << 16);
+    //description
+    //type      3bit
+    //origin    3bit
+    //status    1bit
+    //empty     1bit
+    //modifier  8bit
+    EventID eventID;
+    eventID._data.asU32.data = 0;
+    eventID._data.asU16.description |= (static_cast<u32>(eType::button) << 13);
+    eventID._data.asU16.description |= (static_cast<u32>(origin) << 10);
+    eventID._data.asU16.description |= (static_cast<u32>(status) << 9);
+    eventID._data.asU16.description |= modifier._status;
 
-    id |= btnId;
-
-    input::EventID ret;
-    ret._data = id;
-    return ret;
+    eventID._data.asU16.value = btnId;
+    return eventID;
 }
 
 //*****************************************
-input::EventID input::event_makeID (input::eOrigin origin, eAxle axle, i16 pos)
-{
-    u32 id = gos_input_makeBaseEventID (origin, input::eType::axle);
-    //ci sono 27 bit liberi:
-    // empty    9 bit
-    // axle     2 bit
-    // pos      16bit
-    assert (static_cast<u32>(axle) < 4);
-    
-    id |= (static_cast<u32>(axle) << 16);
-    id |= (u32)(pos & 0xFFFF);
-
-    input::EventID ret;
-    ret._data = id;
-    return ret;
-}
-
-//*****************************************
-bool input::event_toButtonEvent (const EventID &id, sBtnEvent *out)
+bool input::event_toButtonEvent (const EventID &eventID, sBtnEvent *out)
 {
     assert (NULL != out);
-    if (event_getType(id) != eType::button)
+    if (event_getType(eventID) != eType::button)
     {
         DBGBREAK;
         return false;
     }
 
-    out->id = (id._data & 0x0000FFFF);
-    out->modifier._status = ((id._data & 0x00FF0000) >> 16);
-    if ((id._data & 0x01000000) != 0)
-        out->status = eButtonStatus::pressed;
-    else
-        out->status = eButtonStatus::released;
+    out->id = eventID._data.asU16.value;
+    out->modifier._status = static_cast<u8>(eventID._data.asU16.description & 0x00ff);
+    out->status = static_cast<input::eButtonStatus>( (eventID._data.asU16.description >> 9) & 0x01 );
 
     return true;
 }
 
 //*****************************************
-bool input::event_toAxleEvent (const EventID &id, sAxleEvent *out)
+input::EventID input::event_axleAbs_makeID (input::eOrigin origin, eAxle axle, i16 pos)
+{
+    assert (static_cast<u32>(origin) < 8);
+    assert (static_cast<u32>(axle) < 8);
+    //description
+    //type      3bit
+    //origin    3bit
+    //axle      3bit
+    //empty     7bit
+    EventID eventID;
+    eventID._data.asU32.data = 0;
+    eventID._data.asU16.description |= (static_cast<u32>(eType::axleABS) << 13);
+    eventID._data.asU16.description |= (static_cast<u32>(origin) << 10);
+    eventID._data.asU16.description |= (static_cast<u32>(axle) << 7);
+
+    eventID._data.asU16.value = static_cast<u16>(pos & 0xFFFF);
+
+    return eventID;
+}
+
+//*****************************************
+bool input::event_toAxleAbsEvent (const EventID &eventID, sAxleAbsEvent *out)
 {
     assert (NULL != out);
-    if (event_getType(id) != eType::axle)
+    if (event_getType(eventID) != eType::axleABS)
     {
         DBGBREAK;
         return false;
     }
 
-    out->axle = static_cast<input::eAxle>((id._data >> 16) & 0x03);
-    out->pos = static_cast<i16>(id._data & 0x0000FFFF);
+    out->axle = static_cast<input::eAxle>((eventID._data.asU16.description >> 7) & 0x07);
+    out->pos = static_cast<i16>(eventID._data.asU16.value);
     return true;
 }
 
+//*****************************************
+input::EventID input::event_axleRel_makeID (input::eOrigin origin, eAxle axle, eAxleDirection direction, u16 strength)
+{
+    assert (static_cast<u32>(origin) < 8);
+    assert (static_cast<u32>(axle) < 8);
+    assert (static_cast<u32>(direction) < 2);
+    //description
+    //type      3bit
+    //origin    3bit
+    //axle      3bit
+    //direction 1bit
+    //empty     6bit
+
+    EventID eventID;
+    eventID._data.asU32.data = 0;
+    eventID._data.asU16.description |= (static_cast<u32>(eType::axleREL) << 13);
+    eventID._data.asU16.description |= (static_cast<u32>(origin) << 10);
+    eventID._data.asU16.description |= (static_cast<u32>(axle) << 7);
+    eventID._data.asU16.description |= (static_cast<u32>(direction) << 6);
+
+    eventID._data.asU16.value = strength;
+
+    return eventID;
+}
+
+//*****************************************
+bool input::event_toAxleRelEvent (const EventID &eventID, sAxleRelEvent *out)
+{
+    assert (NULL != out);
+    if (event_getType(eventID) != eType::axleREL)
+    {
+        DBGBREAK;
+        return false;
+    }
+
+    out->axle = static_cast<input::eAxle>((eventID._data.asU16.description >> 7) & 0x07);
+    out->direction = static_cast<input::eAxleDirection>((eventID._data.asU16.description >> 6) & 0x01);
+    out->strength = eventID._data.asU16.value;
+    return true;
+}
 
 //*****************************************
 void input::debug_event_printInfo (const EventID &eventID)
 {
-    printf ("event_info(0x%08X) => origin:%s, ", eventID._data, input::enumToString(input::event_getOrigin(eventID)));
+    printf ("event_info(0x%08X) => origin:%s, ", eventID._data.asU32.data, input::enumToString(input::event_getOrigin(eventID)));
     switch (event_getType(eventID))
     {
     default:
@@ -413,14 +484,23 @@ void input::debug_event_printInfo (const EventID &eventID)
         }
         break;
 
-    case eType::axle:
-        printf ("type=axle, ");
+    case eType::axleABS:
+        printf ("type=axleABS, ");
         {
-            sAxleEvent info;
-            input::event_toAxleEvent (eventID, &info);
+            sAxleAbsEvent info;
+            input::event_toAxleAbsEvent (eventID, &info);
             printf ("axle=%s, pos=%d", input::enumToString(info.axle), info.pos);
         }
-        break;    
+        break;
+
+    case eType::axleREL:
+        printf ("type=axleREL, ");
+        {
+            sAxleRelEvent info;
+            input::event_toAxleRelEvent (eventID, &info);
+            printf ("axle=%s, dir=%s, str=%d", input::enumToString(info.axle), input::enumToString(info.direction), info.strength);
+        }
+        break;           
     }
 
     printf ("\n");
@@ -518,29 +598,66 @@ void input::event_getEventName (const EventID &eventID, char *out, u32 sizeof_ou
         {
             sBtnEvent info;
             input::event_toButtonEvent(eventID, &info);
+
+            //stringhizza gli eventuali modifier
+            char mod[512];
+            memset (mod, 0, sizeof(mod));
+            if (info.modifier.isLSHIFT())       strcat_s (mod, sizeof(mod), "LSHIFT+");
+            if (info.modifier.isRSHIFT())       strcat_s (mod, sizeof(mod), "RSHIFT+");
+            if (info.modifier.isLCTRL())        strcat_s (mod, sizeof(mod), "LCTRL+");
+            if (info.modifier.isRCTRL())        strcat_s (mod, sizeof(mod), "RCTRL+");
+            if (info.modifier.isLALT())         strcat_s (mod, sizeof(mod), "LALT+");
+            if (info.modifier.isRALT())         strcat_s (mod, sizeof(mod), "RALT+");
+
             switch (input::event_getOrigin(eventID))
             {
             case eOrigin::keyboard:
-                gos_input_getKEYname (info.id, out, sizeof_out);
+                {
+                    char keyName[32];
+                    gos_input_getKEYname (info.id, keyName, sizeof(keyName));
+                    sprintf_s (out, sizeof_out, "%s%s", mod, keyName);
+                }
                 break;
 
             case eOrigin::mouse:
-                sprintf_s (out, sizeof_out, "mouse.btn%d", info.id);
+                sprintf_s (out, sizeof_out, "%smouse.btn%d", mod, info.id);
                 break;
 
             case eOrigin::window:
-                sprintf_s (out, sizeof_out, "win.%d", info.id);
-                break;
+                switch (info.id)
+                {
+                default:
+                    sprintf_s (out, sizeof_out, "%swin.%d", mod, info.id);
+                    break;
+
+                case GOS_BUTTON_WINDOW_CLOSE:
+                    sprintf_s (out, sizeof_out, "%swin.CLOSE", mod);
+                    break;
+                }
             }
+
+            if (input::eButtonStatus::pressed == info.status)
+                strcat_s (out, sizeof_out, ".pressed");
+            else
+                strcat_s (out, sizeof_out, ".released");
         }
         break;
 
-    case eType::axle:
+    case eType::axleABS:
         {
-            sAxleEvent info;
-            input::event_toAxleEvent (eventID, &info);
+            sAxleAbsEvent info;
+            input::event_toAxleAbsEvent (eventID, &info);
             
             sprintf_s (out, sizeof_out, "%s.%s", input::enumToString(event_getOrigin(eventID)), input::enumToString(info.axle));
+        }
+        break;
+
+    case eType::axleREL:
+        {
+            sAxleRelEvent info;
+            input::event_toAxleRelEvent (eventID, &info);
+            
+            sprintf_s (out, sizeof_out, "%s.%s.%s", input::enumToString(event_getOrigin(eventID)), input::enumToString(info.axle), input::enumToString(info.direction));
         }
         break;
     }    

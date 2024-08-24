@@ -21,9 +21,8 @@ namespace gos
 
 			void	reset();
 			void	addButtonEvt (input::eOrigin origin, u16 buttonId, eButtonStatus status, const sButtonModifier &modifier);
-			void	addButtonPressed (input::eOrigin origin, u16 buttonId, const sButtonModifier &modifier) 					{ addButtonEvt (origin, buttonId, eButtonStatus::pressed, modifier); }
-			void	addButtonReleased (input::eOrigin origin, u16 buttonId, const sButtonModifier &modifier) 					{ addButtonEvt (origin, buttonId, eButtonStatus::released, modifier); }
-			void	addAxleEvt (input::eOrigin origin, input::eAxle axle, i16 pos);
+			void	addAxleAbsEvt (input::eOrigin origin, input::eAxle axle, i16 pos);
+			void	addAxleRelEvt (input::eOrigin origin, input::eAxle axle, input::eAxleDirection dir, u16 strength);
 
 			void	toStart (Iter &iter) const;
 			bool	next (Iter &iter, input::EventID *out) const; 

@@ -88,7 +88,7 @@ GPUCMDWR& gpu::CmdBufferWriter::bindPipeline (const GPUPipelineHandle pipelineHa
 }
 
 //***********************************************
-GPUCMDWR& gpu::CmdBufferWriter::bindDescriptorSet (const GPUDescrSetInstancerHandle handle)
+GPUCMDWR& gpu::CmdBufferWriter::bindDescriptorSet (const GPUDescrSetInstanceHandle handle)
 {
     while (1)
     {
@@ -138,6 +138,42 @@ GPUCMDWR& gpu::CmdBufferWriter::bindVtxBuffer (const GPUVtxBufferHandle handle)
         static const u8 VTXBUFFER__FIRST_VTX_STREAM_INDEX = 0;
         static const u8 VTXBUFFER__NUM_STREAM = 1;
         VkBuffer        vtxBufferList[VTXBUFFER__NUM_STREAM] = { vkVtxBuffer };
+        VkDeviceSize    vtxBufferOffsetsList[VTXBUFFER__NUM_STREAM] = {0};    
+        vkCmdBindVertexBuffers (vkCommandBuffer, VTXBUFFER__FIRST_VTX_STREAM_INDEX, VTXBUFFER__NUM_STREAM, vtxBufferList, vtxBufferOffsetsList);
+        break;
+    }
+
+    return *this;
+}
+
+//***********************************************
+GPUCMDWR& gpu::CmdBufferWriter::bindVtxBuffers (const GPUVtxBufferHandle handleStream0, const GPUVtxBufferHandle handleStream1)
+{
+    while (1)
+    {
+        if (anyError())
+            break;
+
+        VkBuffer vkVtxBuffer0;
+        if (!gpu->toVulkan (handleStream0, &vkVtxBuffer0))
+        {
+            gos::logger::err ("gpu::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
+            priv_setError();
+            break;
+        }            
+
+        VkBuffer vkVtxBuffer1;
+        if (!gpu->toVulkan (handleStream1, &vkVtxBuffer1))
+        {
+            gos::logger::err ("gpu::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
+            priv_setError();
+            break;
+        }            
+
+        //bindo il vtx buffer a partire dal layout=0
+        static const u8 VTXBUFFER__FIRST_VTX_STREAM_INDEX = 0;
+        static const u8 VTXBUFFER__NUM_STREAM = 2;
+        VkBuffer        vtxBufferList[VTXBUFFER__NUM_STREAM] = { vkVtxBuffer0, vkVtxBuffer1 };
         VkDeviceSize    vtxBufferOffsetsList[VTXBUFFER__NUM_STREAM] = {0};    
         vkCmdBindVertexBuffers (vkCommandBuffer, VTXBUFFER__FIRST_VTX_STREAM_INDEX, VTXBUFFER__NUM_STREAM, vtxBufferList, vtxBufferOffsetsList);
         break;
@@ -305,6 +341,28 @@ GPUCMDWR& gpu::CmdBufferWriter::drawIndexed (u32 indexCount, u32 instanceCount, 
 }
 
 //***********************************************
+GPUCMDWR& gpu::CmdBufferWriter::draw (u32 vtxCount, u32 instanceCount, u32 firstVtx, u32 firstInstance)
+{
+    while (1)
+    {
+        if (anyError())
+            break;
+
+        if (!gos::utils::isBitSET(&flag, FLAG__RENDER_PASS_BEGIN))
+        {
+            gos::logger::err ("gpu::CmdBufferWriter::draw() => you need to call renderPass_begin() first\n");
+            priv_setError();
+            break;
+        }
+
+        vkCmdDraw (vkCommandBuffer, vtxCount, instanceCount, firstVtx, firstInstance);        
+        break;
+    }
+    return *this;
+}
+
+
+//***********************************************
 GPUCMDWR& gpu::CmdBufferWriter::renderPass_end()
 {
     while (1)
@@ -351,5 +409,6 @@ bool gpu::CmdBufferWriter::end()
         break;
     }
 
+    vkCommandBuffer = NULL;
     return !anyError();
 }

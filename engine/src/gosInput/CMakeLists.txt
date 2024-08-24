@@ -23,11 +23,11 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 add_library(${BINARY_OUTPUT_FILENAME} STATIC
 gosInput.cpp
 gosInput.h
-gosInputController.cpp
-gosInputController.h
 gosInputEnumAndDefine.h
 gosInputEvtList.cpp
 gosInputEvtList.h
+gosInputMapper.cpp
+gosInputMapper.h
 gosInputWindow.cpp
 gosInputWindow.h
 )

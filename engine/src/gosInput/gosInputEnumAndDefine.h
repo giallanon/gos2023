@@ -14,11 +14,11 @@
 typedef gos::HandleT< 5,3,4, 4,16>	GOSWinHandle;		//2^5=32 => num totale di oggetti, divisi in chunk da 2^3=8
 
 
-#define BUTTON_MOUSE_LEFT       0
-#define BUTTON_MOUSE_RIGHT      1
-#define BUTTON_MOUSE_MIDDLE     2
+#define GOS_BUTTON_MOUSE_LEFT       0
+#define GOS_BUTTON_MOUSE_RIGHT      1
+#define GOS_BUTTON_MOUSE_MIDDLE     2
 
-#define BUTTON_WINDOW_CLOSE     0
+#define GOS_BUTTON_WINDOW_CLOSE     0
 
 
 namespace gos
@@ -30,18 +30,22 @@ namespace gos
             keyboard = 0,
             mouse = 1,
             window = 2
+            //max 8 elementi
         };
 
         enum class eType : u8
         {
             button = 0,
-            axle = 1
+            axleABS = 1,
+            axleREL = 2
+            //max 8 elementi
         };        
 
         enum class eButtonStatus : u8
         {
             released = 0,
-            pressed = 1
+            pressed = 1,
+            both = 2
         };
 
         enum class eButtonModifier : u8
@@ -61,6 +65,13 @@ namespace gos
             y = 1,
             z = 2
         };
+
+        enum class eAxleDirection : u8
+        {
+            positive = 0,
+            negative = 1,
+            both = 2
+        };        
 
         enum class eMouseMode : u8
         {
@@ -88,15 +99,37 @@ namespace gos
             bool    isALT() const                                   { return isSet(eButtonModifier::LALT) || isSet(eButtonModifier::RALT); }
             bool    isSHIFT() const                                 { return isSet(eButtonModifier::LSHIFT) || isSet(eButtonModifier::RSHIFT); }
 
+            bool    isLCTRL() const                                 { return isSet(eButtonModifier::LCTRL); }
+            bool    isRCTRL() const                                 { return isSet(eButtonModifier::RCTRL); }
+            bool    isLALT() const                                  { return isSet(eButtonModifier::LALT); }
+            bool    isRALT() const                                  { return isSet(eButtonModifier::RALT); }
+            bool    isLSHIFT() const                                { return isSet(eButtonModifier::LSHIFT); }
+            bool    isRSHIFT() const                                { return isSet(eButtonModifier::RSHIFT); }
+
         public:
             u8      _status;
         };
 
         struct EventID
         {
-            bool    operator== (const EventID &b) const { return (_data==b._data); }
-            bool    operator!= (const EventID &b) const { return (_data!=b._data); }
-            u32     _data;
+            struct sAsU32
+            {
+                u32 data;
+            };
+
+            struct sAsU16
+            {
+                u16 description;
+                u16 value;
+            };
+
+            union eData
+            {
+                sAsU32  asU32;
+                sAsU16  asU16;
+            };
+
+            eData   _data;
         };
 
         struct sBtnEvent
@@ -106,24 +139,19 @@ namespace gos
             sButtonModifier modifier;
         };
 
-        struct sAxleEvent
+        struct sAxleAbsEvent
         {
             eAxle   axle;
             i16     pos;
         };
 
-        union uData
+        struct sAxleRelEvent
         {
-            sBtnEvent   asBtnEvt;
-            sAxleEvent  asAxleEvt;
-        };          
-
-        struct sEvent
-        {
-            eOrigin     origin;
-            eType       type;
-            uData       data;
+            eAxle           axle;
+            eAxleDirection  direction;
+            u16             strength;
         };
+
 
     } //namespace input
 } //namespace gos

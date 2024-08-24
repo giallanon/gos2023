@@ -448,6 +448,7 @@ namespace gos
 
         //================ rendering & presentazione
         bool                newFrame (u64 timeout_ns=UINT64_MAX, VkSemaphore semaphore=VK_NULL_HANDLE, VkFence fence=VK_NULL_HANDLE);
+        bool                swapChain_wasRecreated() const                  { return bSwapChainRecreatedDuringThisFrame; }
         VkResult            present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount);
 
         //================ swap chain info
@@ -539,8 +540,8 @@ namespace gos
         //================ staging buffer
         bool                stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle);
         void                deleteResource (GPUStgBufferHandle &handle);
-        bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
-        bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
+        bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
+        bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
         //bool                toVulkan (const GPUStgBufferHandle handle, VkBuffer *out) const;
         //bool                stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
         //bool                stagingBuffer_unmap  (const GPUStgBufferHandle handle);
@@ -600,9 +601,9 @@ namespace gos
         bool                toVulkan (const GPUDescrSetLayoutHandle handle, VkDescriptorSetLayout *out) const;
 
         //================ descriptorSetInstance
-        bool                descrSetInstance_createNew (const GPUDescrPoolHandle &poolHandle, const GPUDescrSetLayoutHandle &descrSetLayoutHandle, GPUDescrSetInstancerHandle *out_handle);
-        void                deleteResource (GPUDescrSetInstancerHandle &handle);
-        bool                toVulkan (const GPUDescrSetInstancerHandle handle, VkDescriptorSet *out) const;
+        bool                descrSetInstance_createNew (const GPUDescrPoolHandle &poolHandle, const GPUDescrSetLayoutHandle &descrSetLayoutHandle, GPUDescrSetInstanceHandle *out_handle);
+        void                deleteResource (GPUDescrSetInstanceHandle &handle);
+        bool                toVulkan (const GPUDescrSetInstanceHandle handle, VkDescriptorSet *out) const;
 
 
 
@@ -733,6 +734,7 @@ namespace gos
         u32                         currentSwapChainImageIndex;
         bool                        bRecreateSwapChainOnNextFrame;
         bool                        vSync;
+        bool                        bSwapChainRecreatedDuringThisFrame;
         ToBeDeletedBuilder          toBeDeletedBuilder;
 
         GPUViewportHandle           defaultViewportHandle;
@@ -757,7 +759,7 @@ namespace gos
         HandleList<GPUUniformBufferHandle, gpu::UniformBuffer>      uniformBufferList;
         HandleList<GPUDescrSetLayoutHandle, gpu::DescrSetLayout>    descrSetLayoutList;
         HandleList<GPUDescrPoolHandle, gpu::DescrPool>              descrPoolList;
-        HandleList<GPUDescrSetInstancerHandle, gpu::DescrSetInstance> descrSetInstanceList;
+        HandleList<GPUDescrSetInstanceHandle, gpu::DescrSetInstance> descrSetInstanceList;
         HandleList<GPUCmdBufferHandle, gpu::CommandBuffer>          cmdBufferList;
         
     };

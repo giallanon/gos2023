@@ -47,9 +47,11 @@ void GPUMainLoop::submitGFXJob (const GPUCmdBufferHandle &cmdBufferHandle)
     }
 }
 
+
 //************************************************
 bool GPUMainLoop::run ()
 {
+    bSwapchainRecreated = false;
     if (eStato::waitingOnFence_inFlight == stato)
     {
         //attende che il precedente batch sia terminato
@@ -72,6 +74,7 @@ bool GPUMainLoop::run ()
         if (!gpu->newFrame (0, VK_NULL_HANDLE, fenceSwapChainReady))
             return false;
 
+        bSwapchainRecreated = gpu->swapChain_wasRecreated();
         canAccept_GFXJob = true;
         stato = eStato::waitingOnFence_swapChainReady;
     }

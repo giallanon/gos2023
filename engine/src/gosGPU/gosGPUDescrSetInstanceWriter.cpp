@@ -12,7 +12,7 @@ gpu::DescrSetInstanceWriter::DescrSetInstanceWriter()
 }
 
 //***************************** 
-gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::begin (gos::GPU *gpuIN, const GPUDescrSetInstancerHandle &descrSetInstanceHandle)
+gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::begin (gos::GPU *gpuIN, const GPUDescrSetInstanceHandle &descrSetInstanceHandle)
 {
     bAnyError = false;
     gpu = gpuIN;
