@@ -125,8 +125,8 @@ namespace gos
 							// ritorna lo stato del mouse in quel preciso momento, avendo elaborato
 							// solo gli input macinati fino ad ora
 			u32				resolve_getNextActionID (i16 *out_value);
-			const MouseStatus&	resolve_getMouse() const						{ return mouseStatus; }
-
+			const MouseStatus&			resolve_getMouse() const						{ return mouseStatus; }
+			const sButtonModifier&		resolve_getBtnModifier() const 					{ return btnModifier; }
 
 			//============== utils
 			void 			logAllMappedInput() const;
@@ -144,6 +144,7 @@ namespace gos
 			const EvtList 		*evtList;
 			EvtList::Iter		iter;			
 			MouseStatus			mouseStatus;
+			sButtonModifier		btnModifier;
 		};
 
 

@@ -7,16 +7,19 @@ VulkanExample5::Line::Line ()
 {
     gpu = NULL;
     localAllocator = gos::getSysHeapAllocator();
-    list.setup (localAllocator, 1024);
+    vtxList.setup (localAllocator, 1024);
+    idxList.setup (localAllocator, 1024*16);
     bNeedUpdate = false;
 }
 
 //*****************************
 VulkanExample5::Line::~Line ()
 {
-    list.unsetup();
+    vtxList.unsetup();
+    idxList.unsetup();
 
     gpu->deleteResource (hVtxBuffer);
+    gpu->deleteResource (hIdxBuffer);
     gpu->deleteResource (hVtxShader);
     gpu->deleteResource (hFragShader);
     gpu->deleteResource (hDescrSetInstance);
@@ -133,7 +136,8 @@ bool VulkanExample5::Line::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPool
 void VulkanExample5::Line::begin()
 {
     bNeedUpdate = true;
-    list.reset();
+    vtxList.reset();
+    idxList.reset();
     curColor.set (1,1,1);
 }
 
@@ -144,27 +148,46 @@ void VulkanExample5::Line::setColor (const gos::vec3f &color)
 }
 
 //*****************************
-void VulkanExample5::Line::addLine (const gos::vec3f &p1, const gos::vec3f &p2)
+u16 VulkanExample5::Line::addVtx (const gos::vec3f &p)
 {
     sVertex v;
-    v.pos = p1;
+    v.pos = p;
     v.col = curColor;
-    list.append(v);
 
-    v.pos = p2;
-    v.col = curColor;
-    list.append(v);
+    const u32 n = vtxList.getNElem();
+    vtxList[n] = v;
+    return n;
+}
+
+//*****************************
+void VulkanExample5::Line::line (u16 v0, u16 v1)
+{
+    assert (v0 < vtxList.getNElem());
+    assert (v1 < vtxList.getNElem());
+    idxList.append (v0);
+    idxList.append (v1);
+}
+
+//*****************************
+void VulkanExample5::Line::addLine (const gos::vec3f &p1, const gos::vec3f &p2)
+{
+    const u16 i1 = addVtx(p1);
+    const u16 i2 = addVtx(p2);
+    line (i1, i2);
 }
 
 //*****************************
 void VulkanExample5::Line::end()
 {
+    printf ("VulkanExample5::Line() => num vertex=%d, numLine=%d\n", vtxList.getNElem(), idxList.getNElem() / 2);
 }
 
 //*****************************
 bool VulkanExample5::Line::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam)
 {
-    if (list.getNElem() == 0)
+    if (vtxList.getNElem() == 0)
+        return false;
+    if (idxList.getNElem() == 0)
         return false;
 
     if (bNeedUpdate)
@@ -172,17 +195,31 @@ bool VulkanExample5::Line::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStg
         bNeedUpdate = false;
 
         gpu->deleteResource (hVtxBuffer);
-        if (!gpu->vertexBuffer_create (sizeof(Vertex) * list.getNElem(), eVIBufferMode::onGPU, &hVtxBuffer))
+        if (!gpu->vertexBuffer_create (sizeof(Vertex) * vtxList.getNElem(), eVIBufferMode::onGPU, &hVtxBuffer))
         {
             gos::logger::err ("VulkanExample5::Line::recordCommandBuffer() => gpu->vertexBuffer_create() failed\n");
             return false;
         }
 
-        if (!gpu->stagingBuffer_uploadToGPUBuffer (hStgBuffer, list._queryPointer(), hVtxBuffer, 0, sizeof(Vertex) * list.getNElem()))
+        if (!gpu->stagingBuffer_uploadToGPUBuffer (hStgBuffer, vtxList._queryPointer(), hVtxBuffer, 0, sizeof(Vertex) * vtxList.getNElem()))
         {
             gos::logger::err ("VulkanExample5::Line::recordCommandBuffer() => gpu->stagingBuffer_uploadToGPUBuffer() failed\n");
             return false;
         }        
+
+        gpu->deleteResource (hIdxBuffer);
+        if (!gpu->indexBuffer_create (sizeof(u16) * idxList.getNElem(), eVIBufferMode::onGPU, &hIdxBuffer))
+        {
+            gos::logger::err ("VulkanExample5::Line::recordCommandBuffer() => gpu->indexBuffer_create() failed\n");
+            return false;
+        }
+
+        if (!gpu->stagingBuffer_uploadToGPUBuffer (hStgBuffer, idxList._queryPointer(), hIdxBuffer, 0, sizeof(u16) * idxList.getNElem()))
+        {
+            gos::logger::err ("VulkanExample5::Line::recordCommandBuffer() => gpu->stagingBuffer_uploadToGPUBuffer() failed\n");
+            return false;
+        }        
+
     }
 
     //upload di UBO su GPU
@@ -201,7 +238,8 @@ bool VulkanExample5::Line::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStg
         .setClearColor (0, gos::ColorHDR(0.1f, 0.1f, 0.3f))
         .renderPass_begin (hRenderLayout, hFrameBuffer)
             .bindVtxBuffer (hVtxBuffer)
-            .draw (list.getNElem(), 1, 0, 0)
+            .bindIdxBufferU16 (hIdxBuffer)
+            .drawIndexed (idxList.getNElem(), 1, 0, 0, 0)
         .renderPass_end();
 
     return true;

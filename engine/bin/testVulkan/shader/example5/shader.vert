@@ -12,8 +12,10 @@ layout(set = 0, binding = 0) uniform UniformBufferObject
 //Input
 layout(location = 0) in vec3 in_position;
 layout(location = 1) in vec3 in_normal;
-layout(location = 2) in vec3 in_worldPos;
-layout(location = 3) in vec3 in_color;
+
+layout(location = 2) in vec3 in_worldPos;   //per instance
+layout(location = 3) in vec3 in_color;      //per instance
+layout(location = 4) in vec3 in_scale;      //per instance
 
 //output
 layout(location = 0) out vec3 out_colorRGB;
@@ -24,7 +26,7 @@ layout(location = 2) out vec3 out_lightDir;
 void main() 
 {
     //[gl_Position] esiste automaticamente nei VertexShader e rappresenta le coordinate in clip space da passare al FragmentShader
-	gl_Position = vec4(in_position + in_worldPos, 1.0) * ubo.view * ubo.proj;
+	gl_Position = vec4(in_position * in_scale + in_worldPos, 1.0) * ubo.view * ubo.proj;
     out_normal = in_normal;
     out_colorRGB = in_color;
     out_lightDir.xyz = ubo.lightDir.xyz;

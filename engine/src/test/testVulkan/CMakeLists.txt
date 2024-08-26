@@ -39,6 +39,8 @@ VulkanExample3.h
 VulkanExample4.cpp
 VulkanExample4.h
 VulkanExample5_line.cpp
+VulkanExample5_marchingSquare.cpp
+VulkanExample5_world.cpp
 VulkanExample5.cpp
 VulkanExample5.h
  )

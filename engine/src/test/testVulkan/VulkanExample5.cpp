@@ -4,197 +4,7 @@
 
 using namespace gos;
 
-/************************************************************************************************************
- * 
- * WORLD
- * 
- *************************************************************************************************************/
-VulkanExample5::World::World (gos::GPU *gpuIN)
-{
-    localAllocator = gos::getSysHeapAllocator();
-    gpu = gpuIN;
-    map = NULL;
-    dimx = dimy = 0;
-}
-
-VulkanExample5::World::~World()
-{
-    priv_freeMap();
-    gpu->deleteResource (hVBInstance);
-}
-
-void VulkanExample5::World::priv_freeMap()
-{
-    if (NULL != map)
-    {
-        GOSFREE(localAllocator, map);
-        map = NULL;
-        dimx = dimy = 0;
-    }
-}
-
-void VulkanExample5::World::setup (u32 gridSizeX, u32 gridSizeY)
-{
-    priv_freeMap();
-    dimx = gridSizeX;
-    dimy = gridSizeY;
-    map = GOSALLOCT(u8*, localAllocator, dimx*dimy);
-    memset (map, 0, dimx*dimy);
-}
-void VulkanExample5::World::set (u32 x, u32 y, bool b)
-{
-    if (x >= dimx || y >= dimy)
-        return;
-
-    bNeedUpdate = true;
-    const u32 ct = y*dimy+x;
-    if (b)
-        map[ct] = 1;
-    else
-        map[ct] = 0;
-}
-void VulkanExample5::World::toggle (u32 x, u32 y)
-{
-    if (x >= dimx || y >= dimy)
-        return;
-
-    bNeedUpdate = true;
-    const u32 ct = y*dimx+x;
-    if (map[ct] == 1)
-        map[ct] = 0;
-    else
-        map[ct] = 1;
-}
-void VulkanExample5::World::set (const gos::vec3f &p, bool b)
-{
-    const i16 x = (i16) (floorf(p.x + 0.5f) + (f32)dimx/2);
-    const i16 y = (i16) ((f32)dimy/2 - floorf(p.z + 0.5f));
-    if (x >=0 && x < (i16)dimx)
-        set ((u32)x, (u32)y, b);
-}
-
-void VulkanExample5::World::updateInstanceVB (GPUStgBufferHandle hStgBuffer)
-{
-    if (!bNeedUpdate)
-        return;
-    bNeedUpdate = false;
-    gpu->deleteResource (hVBInstance);
-
-    const u32 numInstances = dimx*dimy;
-    //vtx buffer (stream 1)
-    if (!gpu->vertexBuffer_create (sizeof(sPerInstanceData) * numInstances, eVIBufferMode::onGPU, &hVBInstance))
-    {
-        gos::logger::err ("VulkanExample5::World::updateInstanceVB() => gpu->vertexBuffer_create() failed\n");
-        return;
-    }    
-
-    sPerInstanceData *perInstanceData = GOSALLOCT(sPerInstanceData*, gos::getScrapAllocator(), sizeof(sPerInstanceData) * numInstances);
-    u32 ct = 0;
-    const f32 startX = -((dimx/2) * SPACE);
-    f32 zz = (dimy/2) * SPACE;
-
-    for (u32 y=0; y<dimy; y++)
-    {
-        f32 xx = startX;
-        for (u32 x=0; x<dimx; x++)
-        {
-            perInstanceData[ct].pos.set (xx, 0, zz);
-            if (map[ct] == 0)
-                perInstanceData[ct].color.set (1,0,0);
-            else
-                perInstanceData[ct].color.set (0,1,0);
-            ct++;
-            xx += SPACE;
-        }
-        zz -= SPACE;
-    }
-
-    if (!gpu->stagingBuffer_uploadToGPUBuffer (hStgBuffer, perInstanceData, hVBInstance, 0, sizeof(sPerInstanceData) * numInstances))
-    {
-        gos::logger::err ("VulkanExample5::World::updateInstanceVB() => can't upload to VtxBuffer\n");
-    }
-
-    GOSFREE(gos::getScrapAllocator(), perInstanceData);
-}
-
-void VulkanExample5::World::computeAndDrawPerimeter (Line &line)
-{
-    line.begin();
-
-    //marching square
-    const f32 HALF_SPACE = SPACE * 0.5f;
-    const f32 startX = -((dimx/2) * SPACE) + HALF_SPACE;
-    f32 zz = (dimy/2) * SPACE - HALF_SPACE;
-
-
-    for (u32 y=0; y<dimy-1; y++)
-    {
-        f32 xx = startX;
-        for (u32 x=0; x<dimx-1; x++)
-        {
-            /*
-                       a
-                0x08---------0x04
-                   |         |
-                 d |         | b
-                   |         |
-                0x01---------0x02
-                        c
-            */
-            u8 mask = 0;
-            if (get(x,y) != 0)
-                mask |= 0x08;
-            if (get(x+1,y) != 0)
-                mask |= 0x04;
-            if (get(x+1,y+1) != 0)
-                mask |= 0x02;
-            if (get(x,y+1) != 0)
-                mask |= 0x01;
-
-            const vec3f a(xx, 0, zz + HALF_SPACE); 
-            const vec3f b(xx + HALF_SPACE, 0, zz);
-            const vec3f c(xx, 0, zz - HALF_SPACE);
-            const vec3f d(xx - HALF_SPACE, 0, zz);
-
-            switch (mask)
-            {
-            case 0:     break;
-            case 1:     line.addLine (c, d); break;
-            case 2:     line.addLine (b, c); break;
-            case 3:     line.addLine (b, d); break;
-            case 4:     line.addLine (a, b); break;
-            case 5:     line.addLine (a, d); line.addLine (b, c); break;
-            case 6:     line.addLine (a, c); break;
-            case 7:     line.addLine (a, d); break;
-            case 8:     line.addLine (a, d); break;
-            case 9:     line.addLine (a, c); break;
-            case 10:    line.addLine (a, b); line.addLine (c, d); break;
-            case 11:    line.addLine (a, b); break;
-            case 12:    line.addLine (b, d); break;
-            case 13:    line.addLine (b, c); break;
-            case 14:    line.addLine (c, d); break;
-            case 15:    break;
-
-            default:
-                //errore, qui non ci dobbiamo mai arrivare
-                DBGBREAK;
-                break;
-            }
-
-            xx += SPACE;
-        }
-        zz -= SPACE;
-    }
-
-    line.end();
-}
-
-
-/************************************************************************************************************
- * 
- * VULKAN 5
- * 
- *************************************************************************************************************/
+//************************************************************************************************************
 VulkanExample5::VulkanExample5()
 {
     world = NULL;
@@ -206,7 +16,8 @@ void VulkanExample5::virtual_explain()
 {
     gos::logger::log ("Marching cube\n");
     gos::logger::incIndent();
-    gos::logger::log ("LMB accende spegne i nodi\n");
+    gos::logger::log ("LMB accende i nodi\n");
+    gos::logger::log ("RMB spegne i nodi\n");
     gos::logger::log ("ENTER crea il contorno\n");
     gos::logger::decIndent();
 }
@@ -248,6 +59,9 @@ bool VulkanExample5::virtual_onInit ()
     inputMap.action_bindToAxleABS ("game", "mouse_move",  input::eOrigin::mouse, input::eAxle::y);
     inputMap.action_bindToAxleABS ("game", "mouse_move",  input::eOrigin::mouse, input::eAxle::x);
 
+    inputMap.action_add ("game","inc_dec_ScaleXZ");
+    inputMap.action_bindToAxleREL ("game", "inc_dec_ScaleXZ",  input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::both);
+
 
     //creo una sfera
     {
@@ -259,7 +73,8 @@ bool VulkanExample5::virtual_onInit ()
 
         gos::shape::Writer writer;
         writer.setup (vtxMap, vertexList, sizeof(Vertex), NUM_MAX_VERTEX, indexList, NUM_MAX_INDEX);
-        gos::shape::buildSphere (vec3f(0,0,0), vec3f(0.4f,0.4f,0.4f), 16, 6, &writer, &sphereInfo);
+        const f32 radius = 1.0f;
+        gos::shape::buildSphere (vec3f(0,0,0), vec3f(radius, radius, radius), 16, 6, &writer, &sphereInfo);
         //gos::shape::buildCylinder (vec3f(0,0,0), 0.8f, 6, 15, 3, true, true, &writer, &sphereInfo);
         //gos::shape::buildCube24 (vec3f(0,0,0), vec3f(1,1,1), &writer, &info);
     }    
@@ -310,6 +125,7 @@ bool VulkanExample5::virtual_onInit ()
         .addStream (eVtxStreamInputRate::perInstance)
             .addLayout (2, offsetof(sPerInstanceData, pos), eDataFormat::_3f32)       //position
             .addLayout (3, offsetof(sPerInstanceData, color), eDataFormat::_3f32)
+            .addLayout (4, offsetof(sPerInstanceData, scale), eDataFormat::_3f32)
         .end();
     if (vtxDeclHandle.isInvalid())
     {
@@ -424,27 +240,21 @@ bool VulkanExample5::virtual_onInit ()
 
     line = new Line();
     line->setup (gpu, descrPoolHandle);
-    line->begin ();
-    line->addLine (gos::vec3f(0,0,0), gos::vec3f(10,0,0));
-    line->addLine (gos::vec3f(0,0,0), gos::vec3f(-10,0,0));
-    line->addLine (gos::vec3f(0,0,0), gos::vec3f(0,0,10));
-    line->addLine (gos::vec3f(0,0,0), gos::vec3f(0,0,-10));
-    line->end();
 
     world = new World(gpu);
     world->setup (21, 21);
     
     u32 r=1;
-    world->set (10,r);
-    r++; world->set (10,r); world->set (9,r); world->set (11,r);
-    r++; world->set (10,r); world->set (9,r); world->set (11,r); world->set (8,r); world->set (12,r);
-    r++; world->set (10,r); world->set (9,r); world->set (11,r); world->set (8,r); world->set (12,r); world->set (7,r); world->set (13,r);
-    r++; world->set (10,r); world->set (9,r); world->set (11,r); world->set (8,r); world->set (12,r);
-    r++; world->set (10,r); world->set (9,r); world->set (11,r);
-    r++; world->set (10,r);
+    world->set_ON_OFF (10,r);
+    r++; world->set_ON_OFF (10,r); world->set_ON_OFF (9,r); world->set_ON_OFF (11,r);
+    r++; world->set_ON_OFF (10,r); world->set_ON_OFF (9,r); world->set_ON_OFF (11,r); world->set_ON_OFF (8,r); world->set_ON_OFF (12,r);
+    r++; world->set_ON_OFF (10,r); world->set_ON_OFF (9,r); world->set_ON_OFF (11,r); world->set_ON_OFF (8,r); world->set_ON_OFF (12,r); world->set_ON_OFF (7,r); world->set_ON_OFF (13,r);
+    r++; world->set_ON_OFF (10,r); world->set_ON_OFF (9,r); world->set_ON_OFF (11,r); world->set_ON_OFF (8,r); world->set_ON_OFF (12,r);
+    r++; world->set_ON_OFF (10,r); world->set_ON_OFF (9,r); world->set_ON_OFF (11,r);
+    r++; world->set_ON_OFF (10,r);
     world->updateInstanceVB (stgBufferHandle);
 
-
+    priv_runMarchingSquare();
 
     
     return true;
@@ -458,8 +268,8 @@ bool VulkanExample5::priv_recordCommandBuffer (gpu::CmdBufferWriter &cw)
     //upload di UBO su GPU
     ubo.camView = cam.getMatV();
     ubo.camProj = cam.getMatP();
-    ubo.lightDir.set (-0.4f, -1, 0.2f, 0);
-    //ubo.lightDir.set (-0, -1, 0, 0);
+    //ubo.lightDir.set (-0.4f, -1, 0.2f, 0);
+    ubo.lightDir.set (0, -1, 0, 0);
     ubo.lightDir.normalize();
     gpu->uniformBuffer_mapCopyUnmap (uboHandle, 0, sizeof(sUniformBufferObject), &ubo);            
 
@@ -484,16 +294,37 @@ bool VulkanExample5::priv_recordCommandBuffer (gpu::CmdBufferWriter &cw)
 }
 
 //**********************************
-void VulkanExample5::priv_setSphere (const gos::vec2f &mouseXY, bool b)
+void VulkanExample5::priv_setSphere_ON_OFF (i16 mouseX, i16 mouseY, bool b)
 {
-    gos::vec3f dir;
-    cam.unproject (gpu->swapChain_getWidth(), gpu->swapChain_getHeight(), &mouseXY, &dir, 1);
+    u16 x, y;
+    if (world->mouseToGrid (gpu, cam, mouseX, mouseY, &x, &y))
+        world->set_ON_OFF (x, y, b);
+}
 
-    //cam.o.z + dir.z * t = 0
-    const f32 t = -cam.pos.o.y / dir.y;
-    gos::vec3f pp = cam.pos.o + dir*t;
-    //printf ("POINT (%d,%d) to 3d: %.2f %.2f %.2f\n", inputMap.resolve_getMouseX(), inputMap.resolve_getMouseY(), pp.x, pp.y, pp.z);
-    world->set (pp, b);
+//**********************************
+void VulkanExample5::priv_drawGrid ()
+{
+    line->setColor (gos::vec3f(0.3f, 0.3f, 0.3f));
+
+    const f32 x1 = -((world->getDimX()/2) * World::SPACE);
+    const f32 x2 = x1 + world->getDimX() * World::SPACE;
+    const f32 z1 = (world->getDimY()/2) * World::SPACE;
+    const f32 z2 = z1 - world->getDimY() * World::SPACE;
+
+    f32 zz = z1;
+    for (u32 z=0; z<world->getDimY(); z++)
+    {
+        line->addLine (gos::vec3f(x1,0,zz), gos::vec3f(x2,0,zz));
+        zz -= World::SPACE;
+    }
+
+    f32 xx = x1;
+    for (u32 x=0; x<world->getDimX(); x++)
+    {
+        line->addLine (gos::vec3f(xx,0,z1), gos::vec3f(xx,0,z2));
+        xx += World::SPACE;
+    }
+
 }
 
 //**********************************
@@ -517,18 +348,54 @@ void VulkanExample5::virtual_onInputEvent (u32 actionID, i16 value)
     case COMPILE_TIME_STR_CRC32("game.LMB"):
     case COMPILE_TIME_STR_CRC32("game.RMB"):
         if (inputMap.resolve_getMouse().isLMBPressed())
-            priv_setSphere (gos::vec2f(inputMap.resolve_getMouse().x, inputMap.resolve_getMouse().y), true);
+            priv_setSphere_ON_OFF (inputMap.resolve_getMouse().x, inputMap.resolve_getMouse().y, true);
         else if (inputMap.resolve_getMouse().isRMBPressed())
-            priv_setSphere (gos::vec2f(inputMap.resolve_getMouse().x, inputMap.resolve_getMouse().y), false);
+            priv_setSphere_ON_OFF (inputMap.resolve_getMouse().x, inputMap.resolve_getMouse().y, false);
         break;
 
 
     case COMPILE_TIME_STR_CRC32("game.run.marching.square"):
-        world->computeAndDrawPerimeter(*line);
+        priv_runMarchingSquare();
+        break;
+
+    case COMPILE_TIME_STR_CRC32("game.inc_dec_ScaleXZ"):
+        {
+            u16 x, y;
+            if (world->mouseToGrid (gpu, cam, inputMap.resolve_getMouse().x, inputMap.resolve_getMouse().y, &x, &y))
+            {
+                if (inputMap.resolve_getBtnModifier().isSHIFT())
+                {
+                    if (value > 0)
+                        world->inc_scaleZ (x,y);
+                    else
+                        world->dec_scaleZ (x,y);
+                }
+                else
+                {
+                    if (value > 0)
+                        world->inc_scaleX (x,y);
+                    else
+                        world->dec_scaleX (x,y);
+                }                
+            }
+        }
         break;
     }
 }
 
+//************************************
+void VulkanExample5::priv_runMarchingSquare()
+{
+    line->begin();
+
+    MarchingSquare msq;
+    //msq.algo1 (*world, *line);
+    //msq.algo2 (*world, *line);
+    msq.algo3 (*world, *line);
+
+    priv_drawGrid();
+    line->end();
+}
 
 //************************************
 void VulkanExample5::virtual_onRun()

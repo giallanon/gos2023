@@ -455,6 +455,7 @@ u32 Mapper::resolve_getNextActionID (i16 *out_value)
 	input::EventID eventID;
 	while (evtList->next (iter, &eventID))
 	{
+        //tengo traccia dello stato attuale del mouse
         if (eOrigin::mouse == input::event_getOrigin(eventID))
         {
             switch (input::event_getType(eventID))
@@ -485,6 +486,17 @@ u32 Mapper::resolve_getNextActionID (i16 *out_value)
                 break;
             }
         }
+        if (eOrigin::keyboard == input::event_getOrigin(eventID))
+        {
+            //tengo traccia dello stato dei modifier (SHIFT, CTRL...)
+            if (input::eType::button == input::event_getType(eventID))
+            {
+                sBtnEvent info;
+                if (input::event_toButtonEvent (eventID, &info))
+                    btnModifier = info.modifier;
+            }
+        }
+
         for (u32 i=0; i<nCtx; i++)
         {
             const u32 actionID = contextList(i)->resolveEvent (eventID, out_value);
