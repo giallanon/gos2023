@@ -1,15 +1,15 @@
-#ifndef _VulkanExample4_h_
-#define _VulkanExample4_h_
+#ifndef _VulkanExample6_h_
+#define _VulkanExample6_h_
 #include "VulkanApp.h"
 
 /************************************
- *  VulkanExample4
+ *  VulkanExample6
  */
-class VulkanExample4 : public VulkanApp
+class VulkanExample6 : public VulkanApp
 {
 public:
     
-                VulkanExample4();
+                VulkanExample6();
 
     bool        virtual_onInit ();
     void        virtual_explain();
@@ -20,10 +20,7 @@ private:
     struct Vertex 
     {
         gos::vec3f  pos;
-        gos::vec3f  colorRGB;
         gos::vec3f  normal;
-
-        void set (f32 x, f32 y, f32 z, f32 r, f32 g, f32 b)    { pos.set(x,y,z); colorRGB.set(r,g,b); }
     };
 
     struct sUniformBufferObject 
@@ -36,16 +33,6 @@ private:
     };
 
 
-    struct sAnimation
-    {
-        u64 nextTimeRotate_msec;
-        f32 rotation_grad;
-        f32 zPos;
-        f32 zInc;
-
-        void reset () { nextTimeRotate_msec = 0; rotation_grad = 0; zPos = 0; zInc = 0.1f; }
-    };
-
 private:
     bool        createVertexIndexStageBuffer();
     bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle);
@@ -56,9 +43,8 @@ private:
 private:
     gos::shape::Shape       myShape;
     sUniformBufferObject    ubo;
-    sAnimation              anim;
     gos::geom::Camera3      cam;
-    FPSMovement            movement;
+    FPSMovement             movement;
 
 
     GPUVtxBufferHandle      vtxBufferHandle;
@@ -78,4 +64,4 @@ private:
 };
 
 
-#endif //_VulkanExample4_h_
+#endif //_VulkanExample6_h_

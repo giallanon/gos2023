@@ -11,8 +11,7 @@ layout(set = 0, binding = 0) uniform UniformBufferObject
 
 //Input
 layout(location = 0) in vec3 in_position;
-layout(location = 1) in vec3 in_colorRGB;
-layout(location = 2) in vec3 in_normal;
+layout(location = 1) in vec3 in_normal;
 
 //output
 layout(location = 0) out vec3 out_colorRGB;
@@ -29,5 +28,5 @@ void main()
     c += 0.1f;
 
 
-    out_colorRGB = in_colorRGB * c;
+    out_colorRGB = vec3(c,c,c);
 }

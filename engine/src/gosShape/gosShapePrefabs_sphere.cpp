@@ -1,11 +1,12 @@
 #include "gosShapePrefabs.h"
+#include "gosShape.h"
 #include "../gos/gos.h"
 
 using namespace gos;
 using namespace gos::shape;
 
 //*************************************************************
-u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 rx, f32 rz, u32 numPointPerCirconferenza, shape::VtxWriter::Elem<vec3f> &vtx)
+u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 rx, f32 rz, u32 numPointPerCirconferenza, shape::VtxArrayWriter::Elem<vec3f> &vtx)
 {
 	f32 alfa = 0;
 	f32 alfaINC = math::DUEPI / numPointPerCirconferenza;
@@ -24,7 +25,7 @@ u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 rx, f32 rz, u32 numPoin
 }
 
 //*************************************************************
-void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza, shape::VtxWriter *writer)
+void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza, shape::VtxArrayWriter &writer)
 {
 	u16 i0 = vtxStart;
 	u16 i1 = i0+1;
@@ -37,8 +38,8 @@ void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza,
 			i1 = vtxStart;
 			iUP1 = vtxAlto;
 		}
-		writer->addTris (i0, iUP0, iUP1);
-		writer->addTris (iUP1, i1, i0);
+		writer.addTris (i0, iUP0, iUP1);
+		writer.addTris (iUP1, i1, i0);
 
 		i0++;
 		iUP0++;
@@ -48,7 +49,7 @@ void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza,
 }
 
 //*************************************************************
-void shape_buildTrisDOWN (u32 vtxStart, u32 vtxBasso, u32 numPointPerCirconferenza, shape::VtxWriter *writer)
+void shape_buildTrisDOWN (u32 vtxStart, u32 vtxBasso, u32 numPointPerCirconferenza, shape::VtxArrayWriter &writer)
 {
 	u16 i0 = vtxStart;
 	u16 i1 = vtxStart+1;
@@ -61,8 +62,8 @@ void shape_buildTrisDOWN (u32 vtxStart, u32 vtxBasso, u32 numPointPerCirconferen
 			i1 = vtxStart;
 			iDOWN1 = vtxBasso;
 		}
-		writer->addTris (iDOWN0, i0, i1);
-		writer->addTris (i1, iDOWN1, iDOWN0);
+		writer.addTris (iDOWN0, i0, i1);
+		writer.addTris (i1, iDOWN1, iDOWN0);
 
 		i0++;
 		iDOWN0++;
@@ -72,46 +73,35 @@ void shape_buildTrisDOWN (u32 vtxStart, u32 vtxBasso, u32 numPointPerCirconferen
 }
 
 //*************************************************************
-bool shape::buildSphere (const vec3f &center, const vec3f &radius, u32 numPointPerCirconferenza, u32 numHalfStack, VtxWriter *writer, Info *out_info)
+bool shape::buildSphere (const vec3f &center, const vec3f &radius, u32 numPointPerCirconferenza, u32 numHalfStack, gos::Allocator *allocator, Shape *shapeIN)
 {
-	assert (NULL != out_info);
+	assert (NULL != allocator);
+	assert (NULL != shapeIN);
 	
 	if (numHalfStack < 1)
 		numHalfStack = 1;
 	if (numPointPerCirconferenza<3)
 		numPointPerCirconferenza = 3;
 
-	out_info->numVertex = 	numPointPerCirconferenza +
-							(numPointPerCirconferenza * numHalfStack) * 2 +
-							2;
+	const u32 totNumVertex = 	numPointPerCirconferenza +
+								(numPointPerCirconferenza * numHalfStack) * 2 +
+								2;
 	
-	const u32 numTris = (numPointPerCirconferenza * numHalfStack) * 4 + numPointPerCirconferenza*2;
-	out_info->numIndex = numTris*3;
+	const u32 totNumTris = (numPointPerCirconferenza * numHalfStack) * 4 + numPointPerCirconferenza*2;
+	const u32 totNumIndex = totNumTris*3;
 
-	//se writer e' NULL, ritorno in out le info sul num di vtx/idx necessari alla shape
-	if (NULL == writer)
-		return true;
 
-	if (writer->getNumMaxVertex() < out_info->numVertex)
-	{
-		logger::err ("shape::buildSphere() => not enough vertex in vtxBuffer\n");
+	if (!shape::shapeAlloc (allocator, totNumVertex, totNumIndex, shapeIN))
 		return false;
-	}
-
-	if (writer->hasIdxBuffer())
-	{
-		if (writer->getNumMaxIndex() < out_info->numIndex)
-		{
-			logger::err ("shape::buildSphere() => not enough index in idxBuffer\n");
-			return false;
-		}		
-	}
 
 
-	VtxWriter::Elem<vec3f> vtx;
-	VtxWriter::Elem<vec3f> norm;
-	writer->getPos3 (&vtx);
-	writer->getNorm3 (&norm);
+	VtxArrayWriter writer;
+	writer.setup (shapeIN);
+
+	VtxArrayWriter::Elem<vec3f> vtx;
+	VtxArrayWriter::Elem<vec3f> norm;
+	writer.getPos3 (&vtx);
+	writer.getNorm3 (&norm);
 
 
 	u32 nv = 0;
@@ -133,7 +123,7 @@ bool shape::buildSphere (const vec3f &center, const vec3f &radius, u32 numPointP
 	}
 
 	//triangolarizzo
-	if (writer->hasIdxBuffer())
+	if (writer.hasIdxBuffer())
 	{
 		u16 idx1 = 0;
 		u16 idx2 = numPointPerCirconferenza;
@@ -161,7 +151,7 @@ bool shape::buildSphere (const vec3f &center, const vec3f &radius, u32 numPointP
 	vtx.next();
 	nv += 2;
 
-	if (writer->hasIdxBuffer())
+	if (writer.hasIdxBuffer())
 	{
 		//coperchio top
 		u16 idxTOP = nv-2;
@@ -169,10 +159,10 @@ bool shape::buildSphere (const vec3f &center, const vec3f &radius, u32 numPointP
 		u16 i1 = idxBase;
 		for (u32 nStack = 0; nStack < numPointPerCirconferenza-1; nStack++)
 		{
-			writer->addTris (idxTOP, i1+1, i1);
+			writer.addTris (idxTOP, i1+1, i1);
 			i1++;
 		}
-		writer->addTris (idxTOP, idxBase, i1);
+		writer.addTris (idxTOP, idxBase, i1);
 
 		//coperchio bottom
 		u16 idxBOTTOM = nv-1;
@@ -180,19 +170,19 @@ bool shape::buildSphere (const vec3f &center, const vec3f &radius, u32 numPointP
 		i1 = idxBase;
 		for (u32 nStack = 0; nStack < numPointPerCirconferenza-1; nStack++)
 		{
-			writer->addTris (idxBOTTOM, i1, i1+1);
+			writer.addTris (idxBOTTOM, i1, i1+1);
 			i1++;
 		}
-		writer->addTris (idxBOTTOM, i1, idxBase);
+		writer.addTris (idxBOTTOM, i1, idxBase);
 	}
 
-	assert(out_info->numVertex == nv);
-	assert(!writer->hasIdxBuffer()  || (writer->hasIdxBuffer() && out_info->numIndex == writer->getNumCurIndex()));
+	assert(shapeIN->numVtx == nv);
+	assert(!writer.hasIdxBuffer()  || (writer.hasIdxBuffer() && shapeIN->numIdx == writer.getNumCurIndex()));
 
 	if (norm.isValid())
 	{
-		writer->getPos3 (&vtx);
-		for (u32 i=0; i<out_info->numVertex; i++)
+		writer.getPos3 (&vtx);
+		for (u32 i=0; i<shapeIN->numVtx; i++)
 		{
 			vec3f n = vtx() - center;
 			vtx.next();

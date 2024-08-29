@@ -1,45 +1,33 @@
 #include "gosShapePrefabs.h"
-#include "../gos/gos.h"
+#include "gosShape.h"
+
 
 using namespace gos;
 using namespace gos::shape;
 
 
 //*************************************************************
-bool shape::buildCube24 (const vec3f &center, const vec3f &size, VtxWriter *writer, Info *out_info)
+//bool shape::buildCube24 (const vec3f &center, const vec3f &size, VtxArrayWriter *writer, Info *out_info)
+bool shape::buildCube24 (const vec3f &center, const vec3f &size, gos::Allocator *allocator, Shape *shapeIN)
 {
-	assert (NULL != out_info);
+	assert (NULL != allocator);
+	assert (NULL != shapeIN);
 
-	out_info->numVertex = 24;
-	out_info->numIndex = 36;
 
-	//se writer e' NULL, ritorno in out le info sul num di vtx/idx necessari alla shape
-	if (NULL == writer)
-		return true;
-
-	//considerando che creo 24 vtx, verifico che ci sia abb spazio nell'array di output
-	if (writer->getNumMaxVertex() < 24)
-	{
-		logger::err ("shape::buildCube24() => not enough vertex in vtxBuffer\n");
+	if (!shape::shapeAlloc (allocator, 24, 36, shapeIN))
 		return false;
-	}
-
-	if (writer->hasIdxBuffer())
-	{
-		if (writer->getNumMaxIndex() < 36)
-		{
-			logger::err ("shape::buildCube24() => not enough index in idxBuffer\n");
-			return false;
-		}		
-	}
 
 
-	VtxWriter::Elem<vec3f> vtx;
-	VtxWriter::Elem<vec3f> norm;
-	VtxWriter::Elem<vec2f> tex;
-	writer->getPos3 (&vtx);
-	writer->getNorm3 (&norm);
-	writer->getTexCoord (&tex, 0);
+	shape::VtxArrayWriter writer;
+	writer.setup (shapeIN);
+
+
+	VtxArrayWriter::Elem<vec3f> vtx;
+	VtxArrayWriter::Elem<vec3f> norm;
+	VtxArrayWriter::Elem<vec2f> tex;
+	writer.getPos3 (&vtx);
+	writer.getNorm3 (&norm);
+	writer.getTexCoord (&tex, 0);
 
 
 	const f32 x = center.x + (size.x / 2.0f);
@@ -51,11 +39,11 @@ bool shape::buildCube24 (const vec3f &center, const vec3f &size, VtxWriter *writ
 	vtx().set( x, y,-z);	vtx.next();
 	vtx().set( x,-y,-z);	vtx.next();
 	vtx().set(-x,-y,-z);	vtx.next();
-	if (writer->hasIdxBuffer())
+	if (writer.hasIdxBuffer())
 	{
 		const u32 nv = vtx.getcurElemNum();
-		writer->addTris ((nv - 4), (nv - 3), (nv - 2));
-		writer->addTris ((nv - 2), (nv - 1), (nv - 4));
+		writer.addTris ((nv - 4), (nv - 3), (nv - 2));
+		writer.addTris ((nv - 2), (nv - 1), (nv - 4));
 	}
 	if (norm.isValid())
 	{
@@ -77,11 +65,11 @@ bool shape::buildCube24 (const vec3f &center, const vec3f &size, VtxWriter *writ
 	vtx().set(-x, y, z);	vtx.next();
 	vtx().set(-x,-y, z);	vtx.next();
 	vtx().set( x,-y, z);	vtx.next();
-	if (writer->hasIdxBuffer())
+	if (writer.hasIdxBuffer())
 	{
 		const u32 nv = vtx.getcurElemNum();
-		writer->addTris ((nv - 4), (nv - 3), (nv - 2));
-		writer->addTris ((nv - 2), (nv - 1), (nv - 4));
+		writer.addTris ((nv - 4), (nv - 3), (nv - 2));
+		writer.addTris ((nv - 2), (nv - 1), (nv - 4));
 	}
 	if (norm.isValid())
 	{
@@ -103,11 +91,11 @@ bool shape::buildCube24 (const vec3f &center, const vec3f &size, VtxWriter *writ
 	vtx().set( x, y, z);	vtx.next();
 	vtx().set( x,-y, z);	vtx.next();
 	vtx().set( x,-y,-z);	vtx.next();
-	if (writer->hasIdxBuffer())
+	if (writer.hasIdxBuffer())
 	{
 		const u32 nv = vtx.getcurElemNum();
-		writer->addTris ((nv - 4), (nv - 3), (nv - 2));
-		writer->addTris ((nv - 2), (nv - 1), (nv - 4));
+		writer.addTris ((nv - 4), (nv - 3), (nv - 2));
+		writer.addTris ((nv - 2), (nv - 1), (nv - 4));
 	}
 	if (norm.isValid())
 	{
@@ -129,11 +117,11 @@ bool shape::buildCube24 (const vec3f &center, const vec3f &size, VtxWriter *writ
 	vtx().set(-x, y,-z);	vtx.next();
 	vtx().set(-x,-y,-z);	vtx.next();
 	vtx().set(-x,-y, z);	vtx.next();
-	if (writer->hasIdxBuffer())
+	if (writer.hasIdxBuffer())
 	{
 		const u32 nv = vtx.getcurElemNum();
-		writer->addTris ((nv - 4), (nv - 3), (nv - 2));
-		writer->addTris ((nv - 2), (nv - 1), (nv - 4));
+		writer.addTris ((nv - 4), (nv - 3), (nv - 2));
+		writer.addTris ((nv - 2), (nv - 1), (nv - 4));
 	}
 	if (norm.isValid())
 	{
@@ -155,11 +143,11 @@ bool shape::buildCube24 (const vec3f &center, const vec3f &size, VtxWriter *writ
 	vtx().set(-x, y, z);	vtx.next();
 	vtx().set( x, y, z);	vtx.next();
 	vtx().set( x, y,-z);	vtx.next();
-	if (writer->hasIdxBuffer())
+	if (writer.hasIdxBuffer())
 	{
 		const u32 nv = vtx.getcurElemNum();
-		writer->addTris ((nv - 4), (nv - 3), (nv - 2));
-		writer->addTris ((nv - 2), (nv - 1), (nv - 4));
+		writer.addTris ((nv - 4), (nv - 3), (nv - 2));
+		writer.addTris ((nv - 2), (nv - 1), (nv - 4));
 	}
 	if (norm.isValid())
 	{
@@ -181,11 +169,11 @@ bool shape::buildCube24 (const vec3f &center, const vec3f &size, VtxWriter *writ
 	vtx().set( x,-y,-z);	vtx.next();
 	vtx().set( x,-y, z);	vtx.next();
 	vtx().set(-x,-y, z);	vtx.next();
-	if (writer->hasIdxBuffer())
+	if (writer.hasIdxBuffer())
 	{
 		const u32 nv = vtx.getcurElemNum();
-		writer->addTris ((nv - 4), (nv - 3), (nv - 2));
-		writer->addTris ((nv - 2), (nv - 1), (nv - 4));
+		writer.addTris ((nv - 4), (nv - 3), (nv - 2));
+		writer.addTris ((nv - 2), (nv - 1), (nv - 4));
 	}
 	if (norm.isValid())
 	{
@@ -202,5 +190,8 @@ bool shape::buildCube24 (const vec3f &center, const vec3f &size, VtxWriter *writ
 		tex().set (0,1);	tex.next();
 	}
 
+
+	assert (vtx.getcurElemNum() == shapeIN->numVtx);
+	assert (writer.getNumCurIndex() == shapeIN->numIdx);
 	return true;
 }

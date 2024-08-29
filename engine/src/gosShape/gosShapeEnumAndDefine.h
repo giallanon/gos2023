@@ -1,8 +1,7 @@
 #ifndef _gosShapeEnumAndDefine_h_
 #define _gosShapeEnumAndDefine_h_
 #include "../gos/gosEnumAndDefine.h"
-
-
+#include "../gosGeom/gosGeomPos3.h"
 
 namespace gos
 { 
@@ -15,7 +14,8 @@ namespace gos
 		tangent = 4,
 		bitangent = 5,
 		blendIndices = 6,
-		blendWeight = 7
+		blendWeight = 7,
+		custom = 8
 		//max 16 elementi
 	};
 
@@ -38,6 +38,40 @@ namespace gos
 
 		//max 16 elementi
 	};
+
+	namespace shape
+	{
+		struct VtxLayout
+		{
+		public:
+			static constexpr u32 NUM_MAX_ELEM = 11;
+
+		public:
+			u32		numElem;
+			u32 	elemList[NUM_MAX_ELEM];
+
+		public:
+			void 	reset()		{ numElem = 0; }
+		};
+
+		struct Shape
+		{
+		public:
+			static constexpr u32 MAGIC = 0xA7320001;
+
+		public:
+			u32			magic;
+			u32 		numVtx;
+			u32 		numIdx;
+			VtxLayout	vtxLayout;
+			u8 			*vtxBuffer;
+			u16 		*idxBuffer;
+
+		public:
+			void 		reset()		{ magic=Shape::MAGIC; numVtx = numIdx = 0; vtxBuffer=NULL; idxBuffer=NULL; vtxLayout.reset(); }
+		};
+	} //namespace shape
+
  } //namespace gos
 
 #endif //_gosShapeEnumAndDefine_h_

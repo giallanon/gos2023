@@ -5,6 +5,7 @@
 #include "VulkanExample3.h"
 #include "VulkanExample4.h"
 #include "VulkanExample5.h"
+#include "VulkanExample6.h"
 
 //******************************** 
 template<class VKAPP>
@@ -29,19 +30,12 @@ void test1 (GOSWinHandle &mainWin)
         //runExample<VulkanExample2>(&gpu, "VulkanExample2");
         //runExample<VulkanExample3>(&gpu, "VulkanExample3");
         //runExample<VulkanExample4>(&gpu, "VulkanExample4");
-        runExample<VulkanExample5>(&gpu, "VulkanExample5");
+        //runExample<VulkanExample5>(&gpu, "VulkanExample5");
+        runExample<VulkanExample6>(&gpu, "VulkanExample6");
         gpu.deinit();
     }
 }
 
-//******************************** 
-#include "../gosShape/gosShapeColladaImporter.h"
-void test2 (GOSWinHandle &mainWin)
-{
-    gos::shape::ColladaImporter imp;
-    //imp.importFromFile ("shader/example6/esempio.dae");
-    imp.importFromFile ("shader/example6/omino.dae");
-}
 
 //******************************** 
 int main()
@@ -59,7 +53,6 @@ int main()
             {
                 //gos::input::window_toggleFullscreen(mainWin);
                 test1 (mainWin);
-                //test2 (mainWin);
                 gos::input::window_destroy (mainWin);
             }
             gos::input::deinit();

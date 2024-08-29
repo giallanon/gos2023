@@ -1,4 +1,5 @@
-#include "gosShapeColladaImporter.h"
+#include "gosShapeImport_Collada.h"
+#include "gosShapeImport_arrays.h"
 #include "../gos/gos.h"
 #include "../external/tinyxml/tinyxml2.h"
 
@@ -10,19 +11,19 @@ using namespace tinyxml2;
 ColladaImporter::ColladaImporter()
 {
 	localAllocator = gos::getScrapAllocator();
-	sourceVtx.setup (localAllocator, 1024);
+	sourcePos.setup (localAllocator, 1024);
 	sourceNorm.setup (localAllocator, 1024);
 	sourceTexCoord0.setup (localAllocator, 1024);
-	idxBuffer.setup (localAllocator, 1024);
+	faceList.setup (localAllocator, 1024);
 }
 
 //********************************************
 ColladaImporter::~ColladaImporter()
 {
-	sourceVtx.unsetup ();
+	sourcePos.unsetup ();
 	sourceNorm.unsetup ();
 	sourceTexCoord0.unsetup ();
-	idxBuffer.unsetup ();
+	faceList.unsetup ();
 }
 
 //********************************************
@@ -31,7 +32,7 @@ void ColladaImporter::priv_free()
 }
 
 //********************************************
-bool ColladaImporter::importFromFile (const char *filename)
+bool ColladaImporter::importFromFile (const char *filename, gos::Allocator *allocator, Shape *out)
 {
 	priv_free();
 
@@ -43,7 +44,7 @@ bool ColladaImporter::importFromFile (const char *filename)
 		return false;
 	}
 
-	const bool ret = importFromMemory (buffer, fsize);
+	const bool ret = importFromMemory (buffer, fsize, allocator,out);
 	GOSFREE(localAllocator, buffer);
 	return ret;
 }
@@ -93,33 +94,37 @@ u32 ColladaImporter::priv_extractFloatArray2 (const XMLElement *floatArrayElem, 
 }
 
 //********************************************
-u32  ColladaImporter::priv_extractTriangles (tinyxml2::XMLElement *trianglesElem, gos::FastArray<u16> *dst)
+void  ColladaImporter::priv_parseInputSemantic (tinyxml2::XMLElement *inputElem, sFaceInfo *out_info) const
 {
-	const u32 count = gos::string::ansi::toU32 (trianglesElem->Attribute("count", NULL));
-	if (0 == count)
-		return 0;
-
-	u32 numElemPerTris = 0;
-	u32 offsetVtx = 0;
-	u32 offsetNorm = 0;
-	u32 offsetTexCoord = 0;
-	XMLElement *inputElem = trianglesElem->FirstChildElement("input");
+	out_info->numIdxPerTupla = 0;
 	while (inputElem)
 	{
 		const char *semantic =inputElem->Attribute("semantic", NULL);
 		const u32 offset = gos::string::ansi::toU32 (inputElem->Attribute("offset", NULL));
 
-		if (offset > numElemPerTris)
-			numElemPerTris = offset;
+		if (offset > out_info->numIdxPerTupla)
+			out_info->numIdxPerTupla = offset;
 
-		if (strcmp (semantic, "VERTEX") == 0)			offsetVtx = offset;
-		else if (strcmp (semantic, "NORMAL") == 0)		offsetNorm = offset;
-		else if (strcmp (semantic, "TEXCOORD") == 0)	offsetTexCoord = offset;
+		if (strcmp (semantic, "VERTEX") == 0)			out_info->offset_pos = offset;
+		else if (strcmp (semantic, "NORMAL") == 0)		out_info->offset_norm = offset;
+		else if (strcmp (semantic, "TEXCOORD") == 0)	out_info->offset_tutv0 = offset;
 
 
 		inputElem = inputElem->NextSiblingElement("input");
 	}
-	numElemPerTris++;
+	out_info->numIdxPerTupla++;	
+}
+
+//********************************************
+u32  ColladaImporter::priv_extractFaceInfo (tinyxml2::XMLElement *trianglesElem, sFaceInfo *out_info, gos::FastArray<u16> *dst)
+{
+	out_info->reset();
+	const u32 numTris = gos::string::ansi::toU32 (trianglesElem->Attribute("count", NULL));
+	if (0 == numTris)
+		return 0;
+
+	//decodifica il significato dell'elenco di tuple
+	priv_parseInputSemantic (trianglesElem->FirstChildElement("input"), out_info);
 
 
 	XMLElement *pElem = trianglesElem->FirstChildElement("p");
@@ -128,50 +133,40 @@ u32  ColladaImporter::priv_extractTriangles (tinyxml2::XMLElement *trianglesElem
 
 	gos::string::utf8::Iter iter;
 	iter.setup (pElem->GetText());
-	for (u32 i=0; i<count; i++)
+	for (u32 i=0; i<numTris; i++)
 	{
 		u32 v[16];
-		u32 n = numElemPerTris;
-		if (gos::string::utf8::extractU32Array (iter, v, &n, " "))
-			dst->append (v[offsetVtx]);
-		if (gos::string::utf8::extractU32Array (iter, v, &n, " "))
-			dst->append (v[offsetVtx]);
-		if (gos::string::utf8::extractU32Array (iter, v, &n, " "))
-			dst->append (v[offsetVtx]);
+
+		u32 numV = out_info->numIdxPerTupla;
+		gos::string::utf8::extractU32Array (iter, v, &numV, " ");
+		for (u32 i2=0; i2<out_info->numIdxPerTupla; i2++)
+			dst->append (v[i2]);
+
+		numV = out_info->numIdxPerTupla;
+		gos::string::utf8::extractU32Array (iter, v, &numV, " ");
+		for (u32 i2=0; i2<out_info->numIdxPerTupla; i2++)
+			dst->append (v[i2]);
+
+		numV = out_info->numIdxPerTupla;
+		gos::string::utf8::extractU32Array (iter, v, &numV, " ");
+		for (u32 i2=0; i2<out_info->numIdxPerTupla; i2++)
+			dst->append (v[i2]);
 	}
 	
 
-	return count;
+	return numTris;
 }
 
 //********************************************
-u32  ColladaImporter::priv_extractPolylist (tinyxml2::XMLElement *polylistElem, gos::FastArray<u16> *dst)
+u32  ColladaImporter::priv_extractFromPolylist (tinyxml2::XMLElement *polylistElem, sFaceInfo *out_info, gos::FastArray<u16> *dst)
 {
-	const u32 count = gos::string::ansi::toU32 (polylistElem->Attribute("count", NULL));
-	if (0 == count)
+	out_info->reset();
+	const u32 numPoly = gos::string::ansi::toU32 (polylistElem->Attribute("count", NULL));
+	if (0 == numPoly)
 		return 0;
 
-	u32 numElemPerTris = 0;
-	u32 offsetVtx = 0;
-	u32 offsetNorm = 0;
-	u32 offsetTexCoord = 0;
-	XMLElement *inputElem = polylistElem->FirstChildElement("input");
-	while (inputElem)
-	{
-		const char *semantic =inputElem->Attribute("semantic", NULL);
-		const u32 offset = gos::string::ansi::toU32 (inputElem->Attribute("offset", NULL));
-
-		if (offset > numElemPerTris)
-			numElemPerTris = offset;
-
-		if (strcmp (semantic, "VERTEX") == 0)			offsetVtx = offset;
-		else if (strcmp (semantic, "NORMAL") == 0)		offsetNorm = offset;
-		else if (strcmp (semantic, "TEXCOORD") == 0)	offsetTexCoord = offset;
-
-
-		inputElem = inputElem->NextSiblingElement("input");
-	}
-	numElemPerTris++;
+	//decodifica il significato dell'elenco di tuple
+	priv_parseInputSemantic (polylistElem->FirstChildElement("input"), out_info);
 
 
 	XMLElement *vcountElem = polylistElem->FirstChildElement("vcount");
@@ -188,13 +183,13 @@ u32  ColladaImporter::priv_extractPolylist (tinyxml2::XMLElement *polylistElem, 
 	gos::string::utf8::Iter iterP;
 	iterP.setup (pElem->GetText());
 
-	for (u32 i=0; i<count; i++)
+	for (u32 i=0; i<numPoly; i++)
 	{
 		u32 numVtx;
 		if (gos::string::utf8::extractU32 (iterV, &numVtx))
 		{
 			u32 v[16];
-			u32 n = numElemPerTris;
+			u32 numV;
 			switch (numVtx)
 			{
 			default:
@@ -202,23 +197,31 @@ u32  ColladaImporter::priv_extractPolylist (tinyxml2::XMLElement *polylistElem, 
 				break;
 
 			case 3:
-				if (gos::string::utf8::extractU32Array (iterP, v, &n, " "))
-					dst->append (v[offsetVtx]);
-				if (gos::string::utf8::extractU32Array (iterP, v, &n, " "))
-					dst->append (v[offsetVtx]);
-				if (gos::string::utf8::extractU32Array (iterP, v, &n, " "))
-					dst->append (v[offsetVtx]);
+				numV = out_info->numIdxPerTupla;
+				gos::string::utf8::extractU32Array (iterP, v, &numV, " ");
+				for (u32 i2=0; i2<out_info->numIdxPerTupla; i2++)
+					dst->append (v[i2]);
+
+				numV = out_info->numIdxPerTupla;
+				gos::string::utf8::extractU32Array (iterP, v, &numV, " ");
+				for (u32 i2=0; i2<out_info->numIdxPerTupla; i2++)
+					dst->append (v[i2]);
+
+				numV = out_info->numIdxPerTupla;
+				gos::string::utf8::extractU32Array (iterP, v, &numV, " ");
+				for (u32 i2=0; i2<out_info->numIdxPerTupla; i2++)
+					dst->append (v[i2]);
 				break;
 			}
 		}
 	}
 	
 
-	return count;
+	return numPoly;
 }
 
 //********************************************
-bool ColladaImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer)
+bool ColladaImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer, gos::Allocator *shapeAllocator, Shape *out)
 {
 	tinyxml2::XMLDocument doc;
 	if (tinyxml2::XMLError::XML_SUCCESS != doc.Parse (reinterpret_cast<const char*>(buffer), sizeof_buffer))
@@ -247,10 +250,10 @@ bool ColladaImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer)
 		XMLElement *meshElem = geomElem->FirstChildElement ("mesh");
 		if (NULL != meshElem)
 		{
-			sourceVtx.reset ();
+			sourcePos.reset ();
 			sourceNorm.reset ();
 			sourceTexCoord0.reset ();
-			idxBuffer.reset ();
+			faceList.reset ();
 
 
 			//cerco i <source> per recuperare vtx, norm e tutv
@@ -263,7 +266,7 @@ bool ColladaImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer)
 
 				sprintf_s (s, sizeof(s), "%s-positions", geomElemID);
 				if (strcmp (sourceID, s) == 0)
-					priv_extractFloatArray3 (sourceElem->FirstChildElement ("float_array"), &sourceVtx);
+					priv_extractFloatArray3 (sourceElem->FirstChildElement ("float_array"), &sourcePos);
 
 				sprintf_s (s, sizeof(s), "%s-normals", geomElemID);
 				if (strcmp (sourceID, s) == 0)
@@ -278,21 +281,24 @@ bool ColladaImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer)
 			}
 
 			//cerco <triangles>
+			sFaceInfo faceInfo;
+			faceInfo.reset();
+
 			XMLElement *elem = meshElem->FirstChildElement ("triangles");
 			if (NULL != elem)
-				priv_extractTriangles (elem, &idxBuffer);
+				priv_extractFaceInfo (elem, &faceInfo, &faceList);
 			else 
 			{
 				elem = meshElem->FirstChildElement ("polylist");
 				if (NULL != elem)
-					priv_extractPolylist (elem, &idxBuffer);
+					priv_extractFromPolylist (elem, &faceInfo, &faceList);
 			}
 
 
 			//report
 			printf ("VERTEX\n");
-			for (u32 i=0; i<sourceVtx.getNElem(); i++)
-				printf ("  %03d %.3f %.3f %.3f\n", i, sourceVtx(i).x, sourceVtx(i).y, sourceVtx(i).z);
+			for (u32 i=0; i<sourcePos.getNElem(); i++)
+				printf ("  %03d %.3f %.3f %.3f\n", i, sourcePos(i).x, sourcePos(i).y, sourcePos(i).z);
 
 			printf ("NORMALS\n");
 			for (u32 i=0; i<sourceNorm.getNElem(); i++)
@@ -302,9 +308,43 @@ bool ColladaImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer)
 			for (u32 i=0; i<sourceTexCoord0.getNElem(); i++)
 				printf ("  %03d %.3f %.3f\n", i, sourceTexCoord0(i).x, sourceTexCoord0(i).y);
 
-			printf ("TRIS\n");
-			for (u32 i=0; i<idxBuffer.getNElem(); i+=3)
-				printf ("  %03d %d %d %d\n", i/3, idxBuffer(i), idxBuffer(i+1), idxBuffer(i+2));
+			printf ("FACE\n");
+			{
+				u32 ct = 0;
+				for (u32 i=0; i<faceList.getNElem(); )
+				{
+					printf ("  %03d   ", ct++);
+					for (u32 i2=0; i2<3; i2++)
+					{
+						printf ("(%0d", faceList(i++));
+						for (u32 i3=1; i3<faceInfo.numIdxPerTupla; i3++)
+						{
+							printf (", %0d", faceList(i++));
+						}
+						printf (") ");
+					}
+					printf ("\n");
+				}
+			}
+
+			//creo la shape
+			{
+				VtxLayout vtxLayout;
+				VtxLayoutWriter writer(&vtxLayout);
+				writer.begin()
+					.addPos3(0)
+					.addNorm3(12)
+				.end();
+
+				shape::ArraysImporter imp;
+				imp.create (vtxLayout, shapeAllocator, out, 
+							&faceList, faceInfo.numIdxPerTupla,
+							&sourcePos, faceInfo.offset_pos,
+							&sourceNorm, faceInfo.offset_norm,
+							NULL, faceInfo.offset_tutv0);
+
+				shape::debug_shapePrint (out);
+			}
 
 		} // mesh Elem
 

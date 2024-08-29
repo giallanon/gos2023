@@ -26,14 +26,24 @@ include_directories(${PROJECT_SOURCE_DIR}/../../gos)
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC
+gosShape.cpp
 gosShape.h
-gosShapeColladaImporter.cpp
-gosShapeColladaImporter.h
 gosShapeEnumAndDefine.h
+gosShapeImport_arrays.cpp
+gosShapeImport_arrays.h
+gosShapeImport_Collada.cpp
+gosShapeImport_Collada.h
+gosShapeImport.cpp
+gosShapeImport.h
 gosShapePrefabs_cube.cpp
 gosShapePrefabs_cylinder.cpp
 gosShapePrefabs_sphere.cpp
 gosShapePrefabs.h
+gosShapeVtxArrayWriter.cpp
+gosShapeVtxArrayWriter.h
+gosShapeVtxElem.cpp
+gosShapeVtxElem.h
+gosShapeVtxLayout.h
 gosShapeVtxLayout.cpp
 
 ../external/tinyxml/tinyxml2.cpp

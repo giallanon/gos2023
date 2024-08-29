@@ -224,6 +224,8 @@ private:
     void        priv_setSphere_ON_OFF (i16 mouseX, i16 mouseY, bool b);
     void        priv_drawGrid ();
     void        priv_runMarchingSquare();
+    void        priv_createSfera();
+    bool        priv_loadSfera();
 
 private:
     static const u32     NUM_MAX_VERTEX = 1024;
@@ -233,9 +235,7 @@ private:
 private:
     gos::geom::Camera3      cam;
     FreeMovement            movement;
-    Vertex                  vertexList[NUM_MAX_VERTEX];
-    u16                     indexList[NUM_MAX_INDEX];
-    gos::shape::Info        sphereInfo;
+    gos::shape::Shape       myShape;
     World                   *world;
     Line                    *line;
 

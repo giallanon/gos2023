@@ -1,25 +1,25 @@
-#include "VulkanExample4.h"
-#include "../gosShape/gosShapePrefabs.h"
+#include "VulkanExample6.h"
+#include "../gosShape/gosShapeImport.h"
+
 
 using namespace gos;
 
 
 //************************************
-VulkanExample4::VulkanExample4()
+VulkanExample6::VulkanExample6()
 {
-    anim.reset();
 }
 
 //************************************
-void VulkanExample4::virtual_explain()
+void VulkanExample6::virtual_explain()
 {
-    gos::logger::log ("Esperimenti con Uniform buffer, gestione dell'input da KB/mouse, movimento camera in 3d\n");
+    gos::logger::log ("import da .dae\n");
     gos::logger::log (eTextColor::white, "TAB = toggle mouse mode\n");
 }
 
 
 //************************************
-void VulkanExample4::virtual_onCleanup() 
+void VulkanExample6::virtual_onCleanup() 
 {
     shape::shapeFree (gos::getSysHeapAllocator(), &myShape);
     gpu->deleteResource (idxBufferHandle);
@@ -38,84 +38,11 @@ void VulkanExample4::virtual_onCleanup()
 
 
 //************************************
-bool VulkanExample4::virtual_onInit ()
+bool VulkanExample6::virtual_onInit ()
 {
-    /*
-    * 
-    * TODO: Sto cercando di capire come funzionano i descriptr
-    * 
-    * [descriptor] è un puntatore ad una risorsa
-    *       Per esempio, un "buffer descriptor" punta a un UBO, mentre un "image descriptor" punta ad una texture
-    * 
-    * 
-    * [descriptor-set] è semplicemente una collezione di [descriptor] che vengono uppati/aggiornati tutti in un colpo solo
-    * 
-    * In linea di massima, crea un [descriptor-set] per ogni livello di complessita. Un classico esempio è:
-    *   [descriptor-set 1] uniform buffer con dentro matV e matP    (unico upload per tutta l'intera scena)
-    *   [descriptor-set 2] texture per material                     (cambiano ogni volta che cambia il materiale)
-    *   [descriptor-set 3] world matrix dell'instanza del modello   (cambia ad ogni oggetto che renderizziamo)
-    * 
-    * 
-    * 
-    * [descriptor-set-layout] è un insieme di [descriptor-set].
-    *       All'interno del set, bisogna indicare un "binding number" per ogni risorsa del set, a partire da 0.
-    * 
-    *       N [descriptor-set-layout] vanno poi bindati alla pipeline. Il primo set sara' il set 0, il secondo il set 1 e via dicendo.
-    *       Esempio di pipeline con 3 set e vari binding per set:
-    *           set #0 con matV @binding 0  e matP @binding 1
-    *           set #1 con diffuse texture @binding 0  e specular-texture @binding 1 
-    *           set #3 con model matW @ binding 0
-    * 
-    *  
-    * 
-    * [descriptor-pool] servono per allocare [descriptor-set]
-    *   VkDescriptorPoolCreateInfo.maxSets = numero massimo di [descriptor-set] allocabili dal pool
-    *   VkDescriptorPoolCreateInfo.poolSizeCount = num di elementi in pPoolSizes
-    *   VkDescriptorPoolCreateInfo.pPoolSizes = array di VkDescriptorPoolSize ognuno dei quali indica che tipo di descriptor posso allocare (uniform, texture..) e quanti
-    *                                           descriptor di quel tipo posso allocare
-    * 
-    */
-
-
-    //creo un cubo
-    {
-        myShape.reset();
-        gos::shape::VtxLayoutWriter vtxLayoutW (&myShape.vtxLayout);
-        vtxLayoutW.begin()
-            .addPos3 (offsetof(Vertex,pos))
-            .addColor3 (offsetof(Vertex,pos))
-            .addNorm3 (offsetof(Vertex,normal))
-        .end();
-
-        gos::shape::buildCube24 (vec3f(0,0,0), vec3f(4,2,3), gos::getSysHeapAllocator(), &myShape);
-        Vertex *vertexList = reinterpret_cast<Vertex*>(myShape.vtxBuffer);
-
-        //front face (green)
-        vertexList[0].colorRGB.set (0, 1, 0);
-        vertexList[1].colorRGB = vertexList[2].colorRGB = vertexList[3].colorRGB = vertexList[0].colorRGB;
-
-        //back face (red)
-        vertexList[4].colorRGB.set (1, 0, 0);
-        vertexList[5].colorRGB = vertexList[6].colorRGB = vertexList[7].colorRGB = vertexList[4].colorRGB;
-
-        ///right face (blue)
-        vertexList[8].colorRGB.set (0, 0, 1);
-        vertexList[9].colorRGB = vertexList[10].colorRGB = vertexList[11].colorRGB = vertexList[8].colorRGB;
-
-        //left face (white)
-        vertexList[12].colorRGB.set (1, 1, 1);
-        vertexList[13].colorRGB = vertexList[14].colorRGB = vertexList[15].colorRGB = vertexList[12].colorRGB;
-
-        //top face (yellow)
-        vertexList[16].colorRGB.set (1, 1, 0);
-        vertexList[17].colorRGB = vertexList[18].colorRGB = vertexList[19].colorRGB = vertexList[16].colorRGB;
-
-        //bottom face (azzurro)
-        vertexList[20].colorRGB.set (0, 1, 1);
-        vertexList[21].colorRGB = vertexList[22].colorRGB = vertexList[23].colorRGB = vertexList[20].colorRGB;
-    }
-
-    
+    //importazione .dae
+    //gos::shape::importFromCollada ("shader/example6/esempio.dae", gos::getSysHeapAllocator(), &myShape);
+    gos::shape::importFromCollada ("shader/example6/omino2.dae", gos::getSysHeapAllocator(), &myShape);
 
 
     //creo vtx/idx/staging buffer
@@ -148,8 +75,7 @@ bool VulkanExample4::virtual_onInit ()
     gpu->vtxDecl_createNew (&vtxDeclHandle)
         .addStream(eVtxStreamInputRate::perVertex)
         .addLayout (0, offsetof(Vertex, pos), eDataFormat::_3f32)        //position
-        .addLayout (1, offsetof(Vertex, colorRGB), eDataFormat::_3f32)   //color
-        .addLayout (2, offsetof(Vertex, normal), eDataFormat::_3f32)   //color
+        .addLayout (1, offsetof(Vertex, normal), eDataFormat::_3f32)   //color
         .end();
     if (vtxDeclHandle.isInvalid())
     {
@@ -186,7 +112,7 @@ bool VulkanExample4::virtual_onInit ()
 
 
     //carico gli shader
-    fs::addAlias ("@shader", "shader/example4", eAliasPathMode::relativeToAppFolder);
+    fs::addAlias ("@shader", "shader/example6", eAliasPathMode::relativeToAppFolder);
     if (!gpu->vtxshader_createFromFile ("@shader/shader.vert.spv", "main", &vtxShaderHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create vert shader\n");
@@ -217,7 +143,6 @@ bool VulkanExample4::virtual_onInit ()
             .zbuffer_enable(true)
             .zbuffer_enableWrite(true)
             .zbuffer_setFn (eZFunc::LESS)
-            .stencil_enable(false)
         .end() //depth stencil
         .setCullMode (eCullMode::CCW)
         .setDrawPrimitive (eDrawPrimitive::trisList)
@@ -266,7 +191,7 @@ bool VulkanExample4::virtual_onInit ()
 
 
 //************************************
-bool VulkanExample4::createVertexIndexStageBuffer()
+bool VulkanExample6::createVertexIndexStageBuffer()
 {
     const u32 sizeInByte = sizeof(Vertex) * myShape.numVtx;
     if (!gpu->vertexBuffer_create (sizeInByte, eVIBufferMode::onGPU, &vtxBufferHandle))
@@ -294,9 +219,18 @@ bool VulkanExample4::createVertexIndexStageBuffer()
 
 
 //************************************
-bool VulkanExample4::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
+bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
 {
     //aggiorno UBO
+    ubo.objWorld.identity();
+    ubo.camView = cam.getMatV();
+    ubo.camProj = cam.getMatP();
+
+    //ubo.lightDir.set (-1, -0.3f, 0, 0);
+    ubo.lightDir.set (0, -0.5f, 1, 0);
+    ubo.lightDir.normalize();
+    gpu->uniformBuffer_mapCopyUnmap (uboHandle, 0, sizeof(sUniformBufferObject), &ubo);
+
     gos::gpu::DescrSetInstanceWriter descrWriter;
     descrWriter.begin (gpu, descrSetInstancerHandle)
         .updateUniformBuffer (0, uboHandle)
@@ -322,7 +256,7 @@ bool VulkanExample4::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
  * renderizza inviando command buffer a GPU e poi aspettando che questa
  * abbia finito il suo lavoro
  */
-void VulkanExample4::virtual_onRun()
+void VulkanExample6::virtual_onRun()
 {
     cam.setPerspectiveFovLH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
     cam.pos.identity();
@@ -335,7 +269,7 @@ void VulkanExample4::virtual_onRun()
 }
 
 //**********************************
-void VulkanExample4::virtual_onInputEvent (u32 actionID, i16 value)
+void VulkanExample6::virtual_onInputEvent (u32 actionID, i16 value)
 {
     switch (actionID)
     {
@@ -355,56 +289,11 @@ void VulkanExample4::virtual_onInputEvent (u32 actionID, i16 value)
 }
 
 //**********************************
-void VulkanExample4::doCPUStuff ()
+void VulkanExample6::doCPUStuff ()
 {
     fpsMegaTimer.onFrameBegin(FPSTIMER_CPU);
 
     handleInput();
-
-    //prepare frame
-    {
-        const u64 timeNow_msec = gos::getTimeSinceStart_msec();
-        if (timeNow_msec >= anim.nextTimeRotate_msec)
-        {
-            mat4x4f matT;
-            mat4x4f matR;
-
-            anim.nextTimeRotate_msec = timeNow_msec + 16;
-            anim.rotation_grad+=1.0f;
-            //anim.zPos += anim.zInc;
-            if (anim.zPos >= 10 || anim.zPos < 0)
-                anim.zInc = -anim.zInc;
-            
-            matR.buildRotationAboutY (math::gradToRad(anim.rotation_grad));
-            matT.buildTranslation (0,0,anim.zPos);
-            ubo.objWorld = matT * matR;
-//            ubo.world.identity();
-
-
-            //camera
-            ubo.camView = cam.getMatV();
-            ubo.camProj = cam.getMatP();
-            //ubo.lightDir.set (-1, -0.3f, 0, 0);
-            ubo.lightDir.set (-1, -0, 0, 0);
-            ubo.lightDir.normalize();
-
-
-            /*vec4f vIN[4];
-            vIN[0].set (0,0,0,1);
-            vIN[1].set (0,0,1,1);
-            vIN[2].set (0,0,10,1);
-            vIN[3].set (0,0,100,1);
-            vec4f vOUT[4];
-            for (u32 i = 0; i < 4; i++)
-            {
-                vOUT[i] = math::vecTransform (ubo.proj, vIN[i]);
-            }
-            vOUT[0].w = 1;
-*/
-
-        }
-        gpu->uniformBuffer_mapCopyUnmap (uboHandle, 0, sizeof(sUniformBufferObject), &ubo);
-    }
 
     //do some stuff
     i32 tot = 0;
@@ -433,7 +322,7 @@ void VulkanExample4::doCPUStuff ()
 
 
 //**********************************
-void VulkanExample4::mainLoop()
+void VulkanExample6::mainLoop()
 {
     GPUMainLoop gpuLoop;
     gpuLoop.setup (gpu, &fpsMegaTimer);

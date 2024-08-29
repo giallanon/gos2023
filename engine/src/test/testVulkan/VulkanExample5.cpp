@@ -26,6 +26,7 @@ void VulkanExample5::virtual_explain()
 //************************************
 void VulkanExample5::virtual_onCleanup() 
 {
+    shape::shapeFree (gos::getSysHeapAllocator(), &myShape);
     delete world;
     delete line;
     gpu->deleteResource (idxBufferHandle);
@@ -41,6 +42,31 @@ void VulkanExample5::virtual_onCleanup()
     gpu->deleteResource (descrSetLayoutHandle);
     gpu->deleteResource (descrPoolHandle);    
 }    
+
+//************************************
+void VulkanExample5::priv_createSfera()
+{
+    myShape.reset();
+
+    gos::shape::VtxLayoutWriter vtxLayoutW(&myShape.vtxLayout);
+    vtxLayoutW.begin()
+        .addPos3 (offsetof(Vertex,pos))
+        .addNorm3 (offsetof(Vertex,norm))
+    .end();
+
+    const f32 radius = 1.0f;
+    gos::shape::buildSphere (vec3f(0,0,0), vec3f(radius, radius, radius), 16, 6, gos::getSysHeapAllocator(), &myShape);
+    //gos::shape::buildCylinder (vec3f(0,0,0), 0.8f, 6, 15, 3, true, true, gos::getSysHeapAllocator(), &myShape);
+    //gos::shape::buildCube24 (vec3f(0,0,0), vec3f(1,1,1), gos::getSysHeapAllocator(), &myShape);
+
+    shape::shapeSave ("@w/vulkanExample5_shape.gosshape", &myShape);
+}   
+
+//************************************
+bool VulkanExample5::priv_loadSfera()
+{
+    return gos::shape::shapeLoad ("@w/vulkanExample5_shape.gosshape", gos::getSysHeapAllocator(), &myShape);
+}
 
 //************************************
 bool VulkanExample5::virtual_onInit ()
@@ -64,30 +90,20 @@ bool VulkanExample5::virtual_onInit ()
 
 
     //creo una sfera
-    {
-        gos::shape::VtxLayout vtxMap;
-        vtxMap.begin()
-            .addPos3 (offsetof(Vertex,pos))
-            .addNorm3 (offsetof(Vertex,norm))
-        .end();
-
-        gos::shape::VtxWriter writer;
-        writer.setup (vtxMap, vertexList, sizeof(Vertex), NUM_MAX_VERTEX, indexList, NUM_MAX_INDEX);
-        const f32 radius = 1.0f;
-        gos::shape::buildSphere (vec3f(0,0,0), vec3f(radius, radius, radius), 16, 6, &writer, &sphereInfo);
-        //gos::shape::buildCylinder (vec3f(0,0,0), 0.8f, 6, 15, 3, true, true, &writer, &sphereInfo);
-        //gos::shape::buildCube24 (vec3f(0,0,0), vec3f(1,1,1), &writer, &info);
-    }    
+    //priv_createSfera();
+    if (!priv_loadSfera())
+        return false;
+ 
 
     //vtx buffer (stream 0)
-    if (!gpu->vertexBuffer_create (sizeof(Vertex) * sphereInfo.numVertex, eVIBufferMode::onGPU, &vtxBufferHandle))
+    if (!gpu->vertexBuffer_create (sizeof(Vertex) * myShape.numVtx, eVIBufferMode::onGPU, &vtxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->vertexBuffer_create() failed\n");
         return false;
     }
 
     //index buffer
-    if (!gpu->indexBuffer_create (sizeof(u16)*sphereInfo.numIndex, eVIBufferMode::onGPU, &idxBufferHandle))
+    if (!gpu->indexBuffer_create (sizeof(u16)*myShape.numIdx, eVIBufferMode::onGPU, &idxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->indexBuffer_create() failed\n");
         return false;
@@ -102,14 +118,14 @@ bool VulkanExample5::virtual_onInit ()
 
     //copio i Vtx in vtxBuffer e idx in idxBuffer tramite lo staging buffer
     {
-        if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, vertexList, vtxBufferHandle, 0, sizeof(Vertex) * sphereInfo.numVertex))
+        if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, myShape.vtxBuffer, vtxBufferHandle, 0, sizeof(Vertex) * myShape.numVtx))
         {
             gos::logger::err ("VulkanApp::init() => can't upload to VtxBuffer\n");
             return false;
         }
 
 
-        if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, indexList, idxBufferHandle, 0, sizeof(u16) * sphereInfo.numIndex))
+        if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, myShape.idxBuffer, idxBufferHandle, 0, sizeof(u16) * myShape.numIdx))
         {
             gos::logger::err ("VulkanApp::init() => can't upload to IdxBuffer\n");
             return false;
@@ -288,7 +304,7 @@ bool VulkanExample5::priv_recordCommandBuffer (gpu::CmdBufferWriter &cw)
             .bindVtxBuffers(vtxBufferHandle, world->hVBInstance)
             .bindIdxBufferU16(idxBufferHandle)
             //.drawIndexed (NUM_INDEX, 1, 0, 0, 0)
-            .drawIndexed (sphereInfo.numIndex, world->getNumInstances(), 0, 0, 0)
+            .drawIndexed (myShape.numIdx, world->getNumInstances(), 0, 0, 0)
         .renderPass_end();
     return true;
 }
