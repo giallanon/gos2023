@@ -1,0 +1,43 @@
+#ifndef _gosShapeEnumAndDefine_h_
+#define _gosShapeEnumAndDefine_h_
+#include "../gos/gosEnumAndDefine.h"
+
+
+
+namespace gos
+{ 
+	enum class eVtxLayoutSemantic : u8
+	{
+		position = 0,
+		normal = 1,
+		texCoord = 2,
+		color = 3,
+		tangent = 4,
+		bitangent = 5,
+		blendIndices = 6,
+		blendWeight = 7
+		//max 16 elementi
+	};
+
+	enum class eVtxLayoutFormat : u8
+	{
+		_1f32 = 0,
+		_2f32 = 1,
+		_3f32 = 2,
+		_4f32 = 3,
+		
+		_1i32 = 4,
+		_2i32 = 5,
+		_3i32 = 6,
+		_4i32 = 7,
+
+		_1u32 = 8,
+		_2u32 = 9,
+		_3u32 = 10,
+		_4u32 = 11
+
+		//max 16 elementi
+	};
+ } //namespace gos
+
+#endif //_gosShapeEnumAndDefine_h_

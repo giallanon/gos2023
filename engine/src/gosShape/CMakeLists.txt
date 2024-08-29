@@ -1,12 +1,12 @@
 #[[====================================================
 #
-#  PROJECT: gosGeom
+#  PROJECT: gosShape
 #
 =====================================================]]
 cmake_minimum_required(VERSION 3.20)
 
 #project name and version
-project(gosGeom VERSION 1.0.0 LANGUAGES C CXX)
+project(gosShape VERSION 1.0.0 LANGUAGES C CXX)
 
 #====================================================
 # path di output di questo progetto
@@ -26,18 +26,18 @@ include_directories(${PROJECT_SOURCE_DIR}/../../gos)
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC
-gosGeomAABB3.cpp
-gosGeomAABB3.h
-gosGeomCamera3.cpp
-gosGeomCamera3.h
-gosGeomEnumAndDefine.h
-gosGeomFrustum3.cpp
-gosGeomFrustum3.h
-gosGeomKDop.h
-gosGeomPlane3.cpp
-gosGeomPlane3.h
-gosGeomPos3.cpp
-gosGeomPos3.h
+gosShape.h
+gosShapeColladaImporter.cpp
+gosShapeColladaImporter.h
+gosShapeEnumAndDefine.h
+gosShapePrefabs_cube.cpp
+gosShapePrefabs_cylinder.cpp
+gosShapePrefabs_sphere.cpp
+gosShapePrefabs.h
+gosShapeVtxLayout.cpp
+
+../external/tinyxml/tinyxml2.cpp
+../external/tinyxml/tinyxml2.h
 )
 
 #====================================================

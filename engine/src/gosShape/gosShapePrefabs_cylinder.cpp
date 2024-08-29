@@ -1,11 +1,11 @@
-#include "gosGeomShapes.h"
+#include "gosShapePrefabs.h"
 #include "../gos/gos.h"
 
 using namespace gos;
-using namespace gos::geom;
+using namespace gos::shape;
 
 //*************************************************************
-u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 radius, u32 numPointPerCirconferenza, shape::Writer::ElemWriter<vec3f> &vtx)
+u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 radius, u32 numPointPerCirconferenza, shape::VtxWriter::Elem<vec3f> &vtx)
 {
 	f32 alfa = 0;
 	f32 alfaINC = math::DUEPI / numPointPerCirconferenza;
@@ -24,7 +24,7 @@ u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 radius, u32 numPointPer
 }
 
 //*************************************************************
-void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza, shape::Writer *writer)
+void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza, shape::VtxWriter *writer)
 {
 	u16 i0 = vtxStart;
 	u16 i1 = i0+1;
@@ -48,7 +48,7 @@ void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza,
 }
 
 //*************************************************************
-bool shape::buildCylinder (const vec3f &center, f32 radius, f32 heightIN, u32 numPointPerCirconferenza, u32 numStack, bool bCloseTop, bool bCloseBottom, Writer *writer, Info *out_info)
+bool shape::buildCylinder (const vec3f &center, f32 radius, f32 heightIN, u32 numPointPerCirconferenza, u32 numStack, bool bCloseTop, bool bCloseBottom, VtxWriter *writer, Info *out_info)
 {
 	assert (NULL != out_info);
 	
@@ -91,8 +91,8 @@ bool shape::buildCylinder (const vec3f &center, f32 radius, f32 heightIN, u32 nu
 	}
 
 
-	Writer::ElemWriter<vec3f> vtx;
-	Writer::ElemWriter<vec3f> norm;
+	VtxWriter::Elem<vec3f> vtx;
+	VtxWriter::Elem<vec3f> norm;
 	writer->getPos3 (&vtx);
 	writer->getNorm3 (&norm);
 
@@ -180,7 +180,7 @@ bool shape::buildCylinder (const vec3f &center, f32 radius, f32 heightIN, u32 nu
 
 		for (u32 nStack = 1; nStack < numStack; nStack++)
 		{
-			Writer::ElemWriter<vec3f> normBase;
+			VtxWriter::Elem<vec3f> normBase;
 			writer->getPos3 (&normBase);
 			for (u32 i = 0; i < numPointPerCirconferenza; i++)
 			{

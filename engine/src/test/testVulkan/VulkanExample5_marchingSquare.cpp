@@ -319,8 +319,8 @@ void VulkanExample5::MarchingSquare::algo2 (const World &world, Line &line)
     //aggiungo un po' di noise random ai vertici
     for (u32 i=0; i<helper.vtxList.getNElem(); i++)
     {
-        f32 x = 0;//(gos::random01() - 0.5f) * 0.1f;
-        f32 z = 0;//(gos::random01() - 0.5f) * 0.1f;
+        f32 x = (gos::random01() - 0.5f) * 0.1f;
+        f32 z = (gos::random01() - 0.5f) * 0.1f;
         helper.vtxList[i].x += x;
         helper.vtxList[i].z += z;
 

@@ -1,12 +1,12 @@
-#include "gosGeomShapes.h"
+#include "gosShapePrefabs.h"
 #include "../gos/gos.h"
 
 using namespace gos;
-using namespace gos::geom;
+using namespace gos::shape;
 
 
 //*************************************************************
-bool shape::buildCube24 (const vec3f &center, const vec3f &size, Writer *writer, Info *out_info)
+bool shape::buildCube24 (const vec3f &center, const vec3f &size, VtxWriter *writer, Info *out_info)
 {
 	assert (NULL != out_info);
 
@@ -34,9 +34,9 @@ bool shape::buildCube24 (const vec3f &center, const vec3f &size, Writer *writer,
 	}
 
 
-	Writer::ElemWriter<vec3f> vtx;
-	Writer::ElemWriter<vec3f> norm;
-	Writer::ElemWriter<vec2f> tex;
+	VtxWriter::Elem<vec3f> vtx;
+	VtxWriter::Elem<vec3f> norm;
+	VtxWriter::Elem<vec2f> tex;
 	writer->getPos3 (&vtx);
 	writer->getNorm3 (&norm);
 	writer->getTexCoord (&tex, 0);

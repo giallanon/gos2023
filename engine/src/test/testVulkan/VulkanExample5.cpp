@@ -1,6 +1,6 @@
 #include "VulkanExample5.h"
 #include "../gosGeom/gosGeomCamera3.h"
-
+#include "../gosShape/gosShapePrefabs.h"
 
 using namespace gos;
 
@@ -46,32 +46,32 @@ void VulkanExample5::virtual_onCleanup()
 bool VulkanExample5::virtual_onInit ()
 {
     //input binding
-    inputMap.action_add ("game", "LMB");
-    inputMap.action_bindToBtn ("game", "LMB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
+    input::map().action_add ("game", "LMB");
+    input::map().action_bindToBtn ("game", "LMB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
 
-    inputMap.action_add ("game", "RMB");
-    inputMap.action_bindToBtn ("game", "RMB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_RIGHT, input::eButtonStatus::pressed);
+    input::map().action_add ("game", "RMB");
+    input::map().action_bindToBtn ("game", "RMB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_RIGHT, input::eButtonStatus::pressed);
 
-    inputMap.action_add ("game", "run.marching.square");
-    inputMap.action_bindToBtn ("game", "run.marching.square", input::eOrigin::keyboard, GLFW_KEY_ENTER, input::eButtonStatus::pressed);
+    input::map().action_add ("game", "run.marching.square");
+    input::map().action_bindToBtn ("game", "run.marching.square", input::eOrigin::keyboard, GLFW_KEY_ENTER, input::eButtonStatus::pressed);
 
-    inputMap.action_add ("game","mouse_move");
-    inputMap.action_bindToAxleABS ("game", "mouse_move",  input::eOrigin::mouse, input::eAxle::y);
-    inputMap.action_bindToAxleABS ("game", "mouse_move",  input::eOrigin::mouse, input::eAxle::x);
+    input::map().action_add ("game","mouse_move");
+    input::map().action_bindToAxleABS ("game", "mouse_move",  input::eOrigin::mouse, input::eAxle::y);
+    input::map().action_bindToAxleABS ("game", "mouse_move",  input::eOrigin::mouse, input::eAxle::x);
 
-    inputMap.action_add ("game","inc_dec_ScaleXZ");
-    inputMap.action_bindToAxleREL ("game", "inc_dec_ScaleXZ",  input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::both);
+    input::map().action_add ("game","inc_dec_ScaleXZ");
+    input::map().action_bindToAxleREL ("game", "inc_dec_ScaleXZ",  input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::both);
 
 
     //creo una sfera
     {
-        gos::shape::VtxMap vtxMap;
+        gos::shape::VtxLayout vtxMap;
         vtxMap.begin()
             .addPos3 (offsetof(Vertex,pos))
             .addNorm3 (offsetof(Vertex,norm))
         .end();
 
-        gos::shape::Writer writer;
+        gos::shape::VtxWriter writer;
         writer.setup (vtxMap, vertexList, sizeof(Vertex), NUM_MAX_VERTEX, indexList, NUM_MAX_INDEX);
         const f32 radius = 1.0f;
         gos::shape::buildSphere (vec3f(0,0,0), vec3f(radius, radius, radius), 16, 6, &writer, &sphereInfo);
@@ -347,10 +347,10 @@ void VulkanExample5::virtual_onInputEvent (u32 actionID, i16 value)
     case COMPILE_TIME_STR_CRC32("game.mouse_move"):
     case COMPILE_TIME_STR_CRC32("game.LMB"):
     case COMPILE_TIME_STR_CRC32("game.RMB"):
-        if (inputMap.resolve_getMouse().isLMBPressed())
-            priv_setSphere_ON_OFF (inputMap.resolve_getMouse().x, inputMap.resolve_getMouse().y, true);
-        else if (inputMap.resolve_getMouse().isRMBPressed())
-            priv_setSphere_ON_OFF (inputMap.resolve_getMouse().x, inputMap.resolve_getMouse().y, false);
+        if (input::map().resolve_getMouse().isLMBPressed())
+            priv_setSphere_ON_OFF (input::map().resolve_getMouse().x, input::map().resolve_getMouse().y, true);
+        else if (input::map().resolve_getMouse().isRMBPressed())
+            priv_setSphere_ON_OFF (input::map().resolve_getMouse().x, input::map().resolve_getMouse().y, false);
         break;
 
 
@@ -361,9 +361,9 @@ void VulkanExample5::virtual_onInputEvent (u32 actionID, i16 value)
     case COMPILE_TIME_STR_CRC32("game.inc_dec_ScaleXZ"):
         {
             u16 x, y;
-            if (world->mouseToGrid (gpu, cam, inputMap.resolve_getMouse().x, inputMap.resolve_getMouse().y, &x, &y))
+            if (world->mouseToGrid (gpu, cam, input::map().resolve_getMouse().x, input::map().resolve_getMouse().y, &x, &y))
             {
-                if (inputMap.resolve_getBtnModifier().isSHIFT())
+                if (input::map().resolve_getBtnModifier().isSHIFT())
                 {
                     if (value > 0)
                         world->inc_scaleZ (x,y);
@@ -390,8 +390,8 @@ void VulkanExample5::priv_runMarchingSquare()
 
     MarchingSquare msq;
     //msq.algo1 (*world, *line);
-    //msq.algo2 (*world, *line);
-    msq.algo3 (*world, *line);
+    msq.algo2 (*world, *line);
+    //msq.algo3 (*world, *line);
 
     priv_drawGrid();
     line->end();

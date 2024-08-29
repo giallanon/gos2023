@@ -1,5 +1,5 @@
 #include "VulkanExample4.h"
-#include "../gosGeom/gosGeomShapes.h"
+#include "../gosShape/gosShapePrefabs.h"
 
 using namespace gos;
 
@@ -78,13 +78,13 @@ bool VulkanExample4::virtual_onInit ()
 
     //creo un cubo
     {
-        gos::shape::VtxMap vtxMap;
+        gos::shape::VtxLayout vtxMap;
         vtxMap.begin()
             .addPos3 (offsetof(Vertex,pos))
             .addNorm3 (offsetof(Vertex,normal))
         .end();
 
-        gos::shape::Writer writer;
+        gos::shape::VtxWriter writer;
         writer.setup (vtxMap, vertexList, sizeof(Vertex), NUM_VERTEX, indexList, NUM_INDEX);
 
         gos::shape::Info info;

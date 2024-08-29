@@ -14,6 +14,8 @@ namespace gos
 		void			pollEvents();
 						//da chiamare periodicamente, tipicamente nel main loop, per recuperare gli eventi di input
 
+		Mapper&			map();
+
 		const char* 	enumToString (input::eType e);
 		const char* 	enumToString (input::eOrigin e);
 		const char* 	enumToString (input::eAxle e);

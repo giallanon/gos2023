@@ -1,11 +1,11 @@
-#include "gosGeomShapes.h"
+#include "gosShapePrefabs.h"
 #include "../gos/gos.h"
 
 using namespace gos;
-using namespace gos::geom;
+using namespace gos::shape;
 
 //*************************************************************
-u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 rx, f32 rz, u32 numPointPerCirconferenza, shape::Writer::ElemWriter<vec3f> &vtx)
+u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 rx, f32 rz, u32 numPointPerCirconferenza, shape::VtxWriter::Elem<vec3f> &vtx)
 {
 	f32 alfa = 0;
 	f32 alfaINC = math::DUEPI / numPointPerCirconferenza;
@@ -24,7 +24,7 @@ u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 rx, f32 rz, u32 numPoin
 }
 
 //*************************************************************
-void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza, shape::Writer *writer)
+void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza, shape::VtxWriter *writer)
 {
 	u16 i0 = vtxStart;
 	u16 i1 = i0+1;
@@ -48,7 +48,7 @@ void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza,
 }
 
 //*************************************************************
-void shape_buildTrisDOWN (u32 vtxStart, u32 vtxBasso, u32 numPointPerCirconferenza, shape::Writer *writer)
+void shape_buildTrisDOWN (u32 vtxStart, u32 vtxBasso, u32 numPointPerCirconferenza, shape::VtxWriter *writer)
 {
 	u16 i0 = vtxStart;
 	u16 i1 = vtxStart+1;
@@ -72,7 +72,7 @@ void shape_buildTrisDOWN (u32 vtxStart, u32 vtxBasso, u32 numPointPerCirconferen
 }
 
 //*************************************************************
-bool shape::buildSphere (const vec3f &center, const vec3f &radius, u32 numPointPerCirconferenza, u32 numHalfStack, Writer *writer, Info *out_info)
+bool shape::buildSphere (const vec3f &center, const vec3f &radius, u32 numPointPerCirconferenza, u32 numHalfStack, VtxWriter *writer, Info *out_info)
 {
 	assert (NULL != out_info);
 	
@@ -108,8 +108,8 @@ bool shape::buildSphere (const vec3f &center, const vec3f &radius, u32 numPointP
 	}
 
 
-	Writer::ElemWriter<vec3f> vtx;
-	Writer::ElemWriter<vec3f> norm;
+	VtxWriter::Elem<vec3f> vtx;
+	VtxWriter::Elem<vec3f> norm;
 	writer->getPos3 (&vtx);
 	writer->getNorm3 (&norm);
 

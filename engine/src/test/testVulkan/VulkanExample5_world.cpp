@@ -39,8 +39,8 @@ void VulkanExample5::World::setup (u32 gridSizeX, u32 gridSizeY)
     for (u32 ct=0; ct<dimx*dimy; ct++)
     {
         map2[ct].bIsON = false;
-        map2[ct].sx = 0.2f + gos::random01() * 0.6f;
-        map2[ct].sz = 0.2f + gos::random01() * 0.6f;
+        map2[ct].sx = 0.4f; //0.2f + gos::random01() * 0.6f;
+        map2[ct].sz = 0.4f; //0.2f + gos::random01() * 0.6f;
     }
 }
 
@@ -155,7 +155,7 @@ bool VulkanExample5::World::mouseToGrid (const GPU *gpu, gos::geom::Camera3 &cam
     //cam.o.z + dir.z * t = 0
     const f32 t = -cam.pos.o.y / dir.y;
     const gos::vec3f p = cam.pos.o + dir*t;
-    //printf ("POINT (%d,%d) to 3d: %.2f %.2f %.2f\n", inputMap.resolve_getMouseX(), inputMap.resolve_getMouseY(), pp.x, pp.y, pp.z);
+    //printf ("POINT (%d,%d) to 3d: %.2f %.2f %.2f\n", input::map().resolve_getMouseX(), input::map().resolve_getMouseY(), pp.x, pp.y, pp.z);
 
 
     const i16 x = (i16) (floorf(p.x + 0.5f) + (f32)dimx/2);

@@ -2,7 +2,7 @@
 #define _VulkanApp_h_
 #include "gosGPU.h"
 #include "../gosGeom/gosGeomCamera3.h"
-#include "../gosGeom/gosGeomShapes.h"
+#include "../gosShape/gosShape.h"
 #include "FPSMegaTimer.h"
 #include "GPUMainLoop.h"
 #include "FPSMovement.h"
@@ -31,7 +31,6 @@ protected:
     gos::GPU                *gpu;
     bool                    bQuitApp;
     FPSMegaTimer            fpsMegaTimer;
-    gos::input::Mapper      inputMap;
 
 protected:
     void            handleInput();

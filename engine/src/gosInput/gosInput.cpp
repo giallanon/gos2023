@@ -17,6 +17,7 @@ namespace gos
         public:
             gos::HandleList<GOSWinHandle, input::Window*>   windowList;
             input::EvtList                                  voidEvtList;
+            input::Mapper                                   *mapper;
         };
 
     } //namespace input
@@ -36,6 +37,7 @@ bool input::init()
     
     module = GOSNEW(gos::getSysHeapAllocator(), Module)();
     module->windowList.setup (gos::getSysHeapAllocator());
+    module->mapper = GOSNEW(gos::getSysHeapAllocator(), input::Mapper)();
     
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -56,7 +58,8 @@ void input::deinit()
     {
         glfwTerminate();
 
-        module->windowList.unsetup();        
+        module->windowList.unsetup();
+        GOSDELETE(gos::getSysHeapAllocator(), module->mapper);
         GOSDELETE(gos::getSysHeapAllocator(), module);
         module = NULL;
     }
@@ -65,6 +68,11 @@ void input::deinit()
     gos::logger::decIndent();
 }
 
+//*****************************************
+input::Mapper& input::map()
+{
+    return *module->mapper;
+}
 
 //*****************************************
 bool input::window_create (int w, int h, const char *title, GOSWinHandle *out_handle)

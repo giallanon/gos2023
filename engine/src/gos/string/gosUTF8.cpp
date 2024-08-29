@@ -92,14 +92,7 @@ u32 string::utf8::lengthInByte (const char *utf8_str)
 	//il primo 0x00 che trovo...
 	u32 i = 0;
 	while (utf8_str[i] != 0x00)
-	{
 		i++;
-#ifdef _DEBUG
-		//se siamo arrivati cos� avanti, prob � un errore
-		if (i >= 16384)
-			DBGBREAK;
-#endif
-	}
 	return i;
 }
 
@@ -941,7 +934,7 @@ bool string::utf8::extractI32Array (Iter &srcIN, i32 *out, u32 *maxIntIN_Out, co
 bool string::utf8::extractU32Array (Iter &srcIN, u32 *out, u32 *maxIntIN_Out, const UTF8Char &arraySeparator)
 {
 	assert (*maxIntIN_Out > 0);
-	assert (arraySeparator!=' ');
+	//assert (arraySeparator!=' ');
 	
 	u32 nOUT = 0;
 	Iter src = srcIN;

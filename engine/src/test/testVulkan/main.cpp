@@ -34,12 +34,21 @@ void test1 (GOSWinHandle &mainWin)
     }
 }
 
+//******************************** 
+#include "../gosShape/gosShapeColladaImporter.h"
+void test2 (GOSWinHandle &mainWin)
+{
+    gos::shape::ColladaImporter imp;
+    //imp.importFromFile ("shader/example6/esempio.dae");
+    imp.importFromFile ("shader/example6/omino.dae");
+}
 
 //******************************** 
 int main()
 {
     gos::sGOSInit init;
     init.memory_setDefaultForGame();
+
     init.setLogMode (gos::sGOSInit::eLogMode::both_console_and_file);
     if (gos::init (init, "testVulkan"))
     {
@@ -50,6 +59,7 @@ int main()
             {
                 //gos::input::window_toggleFullscreen(mainWin);
                 test1 (mainWin);
+                //test2 (mainWin);
                 gos::input::window_destroy (mainWin);
             }
             gos::input::deinit();

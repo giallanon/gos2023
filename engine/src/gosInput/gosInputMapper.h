@@ -11,6 +11,17 @@ namespace gos
 	namespace input
 	{
 		/*********************************
+		 * Mapper
+		 * 
+		 * Mantiene una lista di "action" associate ad una stringa della quale calcola il CRC32.
+		 * 	action_add() => aggiunge una "action" all'elenco e verifica che sia univoca
+		 * 
+		 * Mantiene un elenco di context ognuno dei quali mantiene un elenco di associazioni tra un certo input e una action.
+		 * Per input si intende un bottone premuto/rilasciato e/o un asse mosso
+		 * Per bindare una input ad una action:
+		 * 	action_bindToBtn()
+		 * 	action_bindToAxleABS()
+		 * 	action_bindToAxleAREL()
 		 */
 		class Mapper
 		{
