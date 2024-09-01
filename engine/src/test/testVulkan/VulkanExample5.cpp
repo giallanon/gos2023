@@ -48,14 +48,15 @@ void VulkanExample5::priv_createSfera()
 {
     myShape.reset();
 
-    gos::shape::VtxLayoutWriter vtxLayoutW(&myShape.vtxLayout);
+    gos::shape::VtxLayout vtxLayout;
+    gos::shape::VtxLayoutWriter vtxLayoutW(&vtxLayout);
     vtxLayoutW.begin()
         .addPos3 (offsetof(Vertex,pos))
         .addNorm3 (offsetof(Vertex,norm))
     .end();
 
     const f32 radius = 1.0f;
-    gos::shape::buildSphere (vec3f(0,0,0), vec3f(radius, radius, radius), 16, 6, gos::getSysHeapAllocator(), &myShape);
+    gos::shape::buildSphere (vec3f(0,0,0), vec3f(radius, radius, radius), 16, 6, vtxLayout, gos::getSysHeapAllocator(), &myShape);
     //gos::shape::buildCylinder (vec3f(0,0,0), 0.8f, 6, 15, 3, true, true, gos::getSysHeapAllocator(), &myShape);
     //gos::shape::buildCube24 (vec3f(0,0,0), vec3f(1,1,1), gos::getSysHeapAllocator(), &myShape);
 
@@ -92,7 +93,10 @@ bool VulkanExample5::virtual_onInit ()
     //creo una sfera
     //priv_createSfera();
     if (!priv_loadSfera())
+    {
+        gos::logger::err ("VulkanApp::virtual_onInit() => error loading shape\n");
         return false;
+    }
  
 
     //vtx buffer (stream 0)

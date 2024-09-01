@@ -8,191 +8,247 @@ using namespace gos::shape;
 ArraysImporter::ArraysImporter()
 {
 	finalVtxList.setup (gos::getScrapAllocator(), 1024);
+	sortedFinalVtxList.setup (gos::getScrapAllocator(), 1024);
 	finalIdxList.setup (gos::getScrapAllocator(), 1024);
 }
 
 //********************************************
 ArraysImporter::~ArraysImporter()
 {
+	sortedFinalVtxList.unsetup();
 	finalVtxList.unsetup();
 	finalIdxList.unsetup();
 }
 
 //********************************************
-bool ArraysImporter::priv_extractTupla (const FastArray<u16> *trisList, u32 iStart, u32 numIdxPerTupla, sTupla *out) const
+bool ArraysImporter::priv_extractTupla (u32 iStart, u32 numIdxPerTupla, sTupla *out) const
 {
-	if (iStart + numIdxPerTupla > trisList->getNElem())
+	if (iStart + numIdxPerTupla > totNumOfIdxInTupleList)
 		return false;
 
 	for (u32 i=0;i<numIdxPerTupla; i++)
-		out->idx[i] = trisList->queryElem(iStart++);
+		out->idx[i] = tupleList[iStart++];
 	return true;
 }
 
 //********************************************
-void ArraysImporter::priv_extractVertex (const sTupla &tupla, const sImportData &importData, sVertex *out) const
+void ArraysImporter::priv_extractVertex (const sTupla &tupla, sVertex *out) const
 {
-	out->numIndices = 0;
-	if (importData.position.isValid())		{ out->numIndices++; out->idx[importData.position.offsetInVtx] = tupla.idx[importData.position.offsetInTupla]; }
-	if (importData.norm.isValid())			{ out->numIndices++; out->idx[importData.norm.offsetInVtx] = tupla.idx[importData.norm.offsetInTupla]; }
-	if (importData.tutv0.isValid())			{ out->numIndices++; out->idx[importData.tutv0.offsetInVtx] = tupla.idx[importData.tutv0.offsetInTupla]; }
+	out->reset();
+
+	const u32 n = importData.channels.getNElem();
+	for (u32 i=0; i<n; i++)
+	{
+		if (importData.channels(i)->isValid())
+		{
+			//out->numIndices++;
+			//out->idx[importData.channels(i)->getOffsetInVtx()] = tupla.idx[importData.channels(i)->getOffsetInTupla()];
+			out->add (importData.channels(i)->getOffsetInVtx(), tupla.idx[importData.channels(i)->getOffsetInTupla()]);
+		}
+	}
 }
 
 //********************************************
-u32 ArraysImporter::priv_findOrCreateVtx (const sVertex &vIN, const sImportData &importData)
+u32 ArraysImporter::priv_findOrCreateVtx (const sVertex &vIN)
 {
-	const u32 n = finalVtxList.getNElem();
+	/*const u32 n = finalVtxList.getNElem();
 	for (u32 i=0; i<n; i++)
 	{
 		if (vIN == finalVtxList(i))
-			return i;
-	}
+			return i;	}
 
 	//devo creare un nuovo vtx
 	finalVtxList.append (vIN);
 	return n;
+*/
+
+	SortedFastArray<sVertex, u32>::Position pos;
+	u32 vtxIndex;
+	if (sortedFinalVtxList.find(vIN, &vtxIndex, &pos))
+		return vtxIndex;
+
+	const u32 n = finalVtxList.getNElem();
+	finalVtxList.append (vIN);
+	//sortedFinalVtxList.insertIfNotExists (vIN, n);
+	sortedFinalVtxList.insertInPosition (pos, n);
+	return n;
 }
 
-
-
-
-
 //********************************************
-bool ArraysImporter::create (const VtxLayout &desiredLayout, gos::Allocator *allocator, Shape *out,
-							const FastArray<u16> *trisList, u8 numIdxPerOgniVtxDiTrisList,
-							const FastArray<vec3f> *posListIN, u8 indexOffsetForPosition,
-							const FastArray<vec3f> *normListIN, u8 indexOffsetForNormal,
-							const FastArray<vec2f> *tutv0ListIN, u8 indexOffsetForTutv0)
+void ArraysImporter::priv_reset (eMode modeIN, const VtxLayout &desiredLayout)
 {
-	assert (NULL != allocator);
-	assert (NULL != out);
-	assert (NULL != trisList);
-
+	importData.reset();
+	shapeVtxLayout = desiredLayout;
 	finalVtxList.reset();
 	finalIdxList.reset();
+	sortedFinalVtxList.reset();
+	nextValidOffsetInVtx = 0;
+	tupleList = NULL;
+	numIdxPerOgniTupla = 0;
 
-	//[trisList] e' un elenco di tuple, ciascuna composta da [numIdxPerOgniVtxDiTrisList] indici.
-	//3 tuple consecutive sono un triangolo
-	//Ogni tupla contiene informazioni su posizione, normale, texCoeord e via dicendo
-	//Gli indici [indexOffsetForPosition], [indexOffsetForNormal].. se diversi da 0xFF, indicano la posizione all'interno della tupla
-	if (numIdxPerOgniVtxDiTrisList > NUM_MAX_INDEX_PER_TUPLA)
+	errorCode = 0;
+	mode = modeIN;
+}
+
+//************************************************************
+ArraysImporter&	ArraysImporter::beginUsingFaceList (const VtxLayout &desiredLayout, const u16 *tupleListIN, u32 totNumOfIdxInTupleListIN, u8 numIdxPerOgniTuplaIN)
+{
+	priv_reset (eMode::importFromFaceList, desiredLayout);
+	tupleList = tupleListIN;
+	numIdxPerOgniTupla = numIdxPerOgniTuplaIN;
+	totNumOfIdxInTupleList = totNumOfIdxInTupleListIN;
+
+	if (numIdxPerOgniTupla > NUM_MAX_INDEX_PER_TUPLA)
 	{
-		gos::logger::verbose ("shape::ArraysImporter::create() => too many indices per tupla. Max supported is %d\n", NUM_MAX_INDEX_PER_TUPLA);
-		return false;
+		gos::logger::verbose ("shape::ArraysImporter::begin() => too many indices per tupla. Max supported is %d\n", NUM_MAX_INDEX_PER_TUPLA);
+		errorCode = 2;
+		return *this;
 	}	
-	if (0 == numIdxPerOgniVtxDiTrisList)
+	if (0 == numIdxPerOgniTupla)
 	{
-		gos::logger::verbose ("shape::ArraysImporter::create() => too few indices per tupla (%d)\n", numIdxPerOgniVtxDiTrisList);
-		return false;
-	}	
-
-	//verifichiamo che ci sia compatibilta' tra il VtxLayout e gli array in input
-	sImportData importData;
-	{
-		VtxLayoutReader vxtLayoutR(&desiredLayout);
-		u8 nextValidOffsetInVtx = 0;
-
-		if (NULL != posListIN)
-		{
-			if (!vxtLayoutR.exists (eVtxLayoutSemantic::position, 0, eVtxLayoutFormat::_3f32))
-			{
-				gos::logger::verbose ("shape::ArraysImporter::create() => VtxLayout does not contains 'position'\n");
-				return false;
-			}
-			if (indexOffsetForPosition >= numIdxPerOgniVtxDiTrisList)
-			{
-				gos::logger::verbose ("shape::ArraysImporter::create() => index for 'position' is out of range\n");
-				return false;
-			}
-
-			importData.position.setup (posListIN, indexOffsetForPosition, nextValidOffsetInVtx++);
-		}
-
-		if (NULL != normListIN)
-		{
-			if (!vxtLayoutR.exists (eVtxLayoutSemantic::normal, 0, eVtxLayoutFormat::_3f32))
-			{
-				gos::logger::verbose ("shape::ArraysImporter::create() => VtxLayout does not contains 'normal'\n");
-				return false;
-			}
-			if (indexOffsetForNormal >= numIdxPerOgniVtxDiTrisList)
-			{
-				gos::logger::verbose ("shape::ArraysImporter::create() => index for 'normal' is out of range\n");
-				return false;
-			}
-
-			importData.norm.setup (normListIN, indexOffsetForNormal, nextValidOffsetInVtx++);
-		}
-
-		if (NULL != tutv0ListIN)
-		{
-			if (!vxtLayoutR.exists (eVtxLayoutSemantic::texCoord, 0, eVtxLayoutFormat::_2f32))
-			{
-				gos::logger::verbose ("shape::ArraysImporter::create() => VtxLayout does not contains 'texCoord0'\n");
-				return false;
-			}
-			if (indexOffsetForTutv0 >= numIdxPerOgniVtxDiTrisList)
-			{
-				gos::logger::verbose ("shape::ArraysImporter::create() => index for 'texCoord0' is out of range\n");
-				return false;
-			}
-
-			importData.tutv0.setup (tutv0ListIN, indexOffsetForTutv0, nextValidOffsetInVtx++);
-		}
+		gos::logger::verbose ("shape::ArraysImporter::begin() => too few indices per tupla (%d)\n", numIdxPerOgniTupla);
+		errorCode = 3;
+		return *this;
 	}
 
-	//devo combinare pos/norm/texcoord in vertici univoci
-	const u32 numIndices = trisList->getNElem();
-	for (u32 i=0; i<numIndices;)
+	if ((totNumOfIdxInTupleList % numIdxPerOgniTupla) != 0)
 	{
-		sVertex v[3];
+		gos::logger::verbose ("shape::ArraysImporter::begin() => tupleList has %d elements. A single tuple is %d elements. %s is not perfectly divisible by %d\n", totNumOfIdxInTupleList, numIdxPerOgniTupla, numIdxPerOgniTupla);
+		errorCode = 4;
+		return *this;
+	}
+
+	return *this;
+}
+
+//************************************************************
+ArraysImporter&	ArraysImporter::beginUsingRealIdxBuffer (const VtxLayout &desiredLayout, const u16 *idxBuffer, u32 totNumOfIdxInIdxBuffer)
+{
+	priv_reset (eMode::importFromRealIdxBuffer, desiredLayout);
+	tupleList = idxBuffer;
+	numIdxPerOgniTupla = 1;
+	totNumOfIdxInTupleList = totNumOfIdxInIdxBuffer;
+	return *this;
+}
+
+//************************************************************
+bool ArraysImporter::end (gos::Allocator *shapeAllocator, Shape *out_shape)
+{
+	assert (NULL != shapeAllocator);
+	assert (NULL != out_shape);
+
+	if (errorCode)
+	{
+		gos::logger::err ("shape::ArraysImporter::end() => there was an errore before callind end(). ErrorCode = %d\n", errorCode);
+		return false;
+	}
+
+	switch (mode)
+	{
+	default:
+		DBGBREAK;
+		return false;
+
+	case eMode::importFromFaceList:
+		return priv_endWithTuplaList (shapeAllocator, out_shape);
+
+	case eMode::importFromRealIdxBuffer:
+		return priv_endWithRealIdxBuffer (shapeAllocator, out_shape);
+	}		
+}
+
+//************************************************************
+bool ArraysImporter::priv_endWithTuplaList (gos::Allocator *shapeAllocator, Shape *out_shape)
+{
+	//devo combinare pos/norm/texcoord in vertici univoci
+	for (u32 i=0; i<totNumOfIdxInTupleList;)
+	{
+		//estraggo 3 tuple e le trasformo in 3 vertici univoci
 		for (u32 i2=0; i2<3; i2++)
 		{
 			sTupla tupla;
-			if (!priv_extractTupla (trisList, i, numIdxPerOgniVtxDiTrisList, &tupla))
+			if (!priv_extractTupla (i, numIdxPerOgniTupla, &tupla))
 			{
-				gos::logger::verbose ("shape::ArraysImporter::create() => error extracting tupla num %d (not enough indices)\n", i);
+				errorCode = 100;
+				gos::logger::verbose ("shape::ArraysImporter::end() => error extracting tupla num %d (not enough indices)\n", i);
 				return false;
 			}
-		
-			priv_extractVertex (tupla, importData, &v[i2]);
-			i += numIdxPerOgniVtxDiTrisList;
+			i += numIdxPerOgniTupla;
+
+
+			sVertex v;
+			priv_extractVertex (tupla, &v);
+			const u32 vtxIndex = priv_findOrCreateVtx (v);
+			finalIdxList.append (vtxIndex);
 		}
-
-		//ora ho i 3 vertici del tris.
-		//Devo verificare se esistono di gia' nel mio elenco globale di vtx che sto creando
-		const u32 vtx1 = priv_findOrCreateVtx (v[0], importData);
-		const u32 vtx2 = priv_findOrCreateVtx (v[1], importData);
-		const u32 vtx3 = priv_findOrCreateVtx (v[2], importData);
-
-		finalIdxList.append (vtx1);
-		finalIdxList.append (vtx2);
-		finalIdxList.append (vtx3);
 	}
 
+	return priv_buildFinalShape (shapeAllocator, out_shape);
+}
 
-	//creo la shape
-	out->reset();
-	out->vtxLayout = desiredLayout;
-	if (!shape::shapeAlloc (allocator, finalVtxList.getNElem(), finalIdxList.getNElem(), out))
+//************************************************************
+bool ArraysImporter::priv_endWithRealIdxBuffer (gos::Allocator *shapeAllocator, Shape *out_shape)
+{
+	const u8 numElemInVtx = static_cast<u8>(importData.channels.getNElem());
+
+	for (u32 i=0; i<totNumOfIdxInTupleList; i++)
 	{
-		gos::logger::err ("shape::ArraysImporter::create() => error allocating shape with %d vtx and %d indices\n", finalVtxList.getNElem(), finalIdxList.getNElem());
+		const u16 idx = tupleList[i];
+
+		sVertex v;
+		v.reset();
+
+		for (u8 i2=0; i2<numElemInVtx; i2++)
+			v.add(i2, idx);
+
+		finalVtxList[idx] = v;
+		finalIdxList.append (idx);		
+	}		
+
+	return priv_buildFinalShape (shapeAllocator, out_shape);
+}
+
+/************************************************************
+ * si basa su [finalVtxList] e [finalIdxList] e crea la shape
+ */
+bool ArraysImporter::priv_buildFinalShape (gos::Allocator *shapeAllocator, Shape *out_shape)
+{
+	out_shape->reset();
+	if (!shape::shapeAlloc (shapeAllocator, shapeVtxLayout, finalVtxList.getNElem(), finalIdxList.getNElem(), out_shape))
+	{
+		errorCode = 101;
+		gos::logger::err ("shape::ArraysImporter::priv_buildFinalShape() => error allocating shape with %d vtx and %d indices\n", finalVtxList.getNElem(), finalIdxList.getNElem());
 		return false;
 	}
 
 	//copio idx buffer
-	memcpy (out->idxBuffer, finalIdxList._queryPointer(), sizeof(u16) * out->numIdx);
+	memcpy (out_shape->idxBuffer, finalIdxList._queryPointer(), sizeof(u16) * out_shape->numIdx);
 
 	//creo il vtxBuffer
 	VtxArrayWriter writer;
-	writer.setup (out);
-	priv_finalizeShapeVtxBuffer (writer, importData, importData.position, eVtxLayoutSemantic::position, 0, eVtxLayoutFormat::_3f32);
-	priv_finalizeShapeVtxBuffer (writer, importData, importData.norm, eVtxLayoutSemantic::normal, 0, eVtxLayoutFormat::_3f32);
-	priv_finalizeShapeVtxBuffer (writer, importData, importData.tutv0, eVtxLayoutSemantic::texCoord, 0, eVtxLayoutFormat::_2f32);
+	writer.setup (out_shape);
 
+	for (u32 i=0; i<importData.channels.getNElem(); i++)
+	{
+		const DataArrayInterface *da = importData.channels(i);
+		switch (da->getFormat())
+		{
+		default:
+			errorCode = 102;
+			gos::logger::err ("shape::ArraysImporter::priv_buildFinalShape() => unsupported vtxFormat (%s)\n", shape::enumToString(da->getFormat()));
+			break;
+
+		case eVtxLayoutFormat::_2f32:
+			priv_finalizeShapeVtxBuffer<vec2f> (writer, da);
+			break;
+
+		case eVtxLayoutFormat::_3f32:
+			priv_finalizeShapeVtxBuffer<vec3f> (writer, da);
+			break;
+		}
+	}
 
 
 	return true;
 
 }
-

@@ -49,10 +49,10 @@ void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza,
 }
 
 //*************************************************************
-bool shape::buildCylinder (const vec3f &center, f32 radius, f32 heightIN, u32 numPointPerCirconferenza, u32 numStack, bool bCloseTop, bool bCloseBottom, gos::Allocator *allocator, Shape *shapeIN)
+bool shape::buildCylinder (const vec3f &center, f32 radius, f32 heightIN, u32 numPointPerCirconferenza, u32 numStack, bool bCloseTop, bool bCloseBottom, const VtxLayout &vtxLayout, gos::Allocator *shapeAllocator, Shape *out_shape)
 {
-	assert (NULL != shapeIN);
-	assert (NULL != allocator);
+	assert (NULL != out_shape);
+	assert (NULL != shapeAllocator);
 	
 	if (numStack < 2)
 		numStack = 2;
@@ -73,11 +73,11 @@ bool shape::buildCylinder (const vec3f &center, f32 radius, f32 heightIN, u32 nu
 	const u32 totNumIndex = totNumTris*3;
 
 
-	if (!shape::shapeAlloc (allocator, totNumVertex, totNumIndex, shapeIN))
+	if (!shape::shapeAlloc (shapeAllocator, vtxLayout, totNumVertex, totNumIndex, out_shape))
 		return false;
 	
 	VtxArrayWriter writer;
-	writer.setup (shapeIN);
+	writer.setup (out_shape);
 
 	VtxArrayWriter::Elem<vec3f> vtx;
 	VtxArrayWriter::Elem<vec3f> norm;
@@ -151,8 +151,8 @@ bool shape::buildCylinder (const vec3f &center, f32 radius, f32 heightIN, u32 nu
 	}
 
 
-	assert(shapeIN->numVtx == nv);
-	assert(!writer.hasIdxBuffer()  || (writer.hasIdxBuffer() && shapeIN->numIdx == writer.getNumCurIndex()));
+	assert(out_shape->numVtx == nv);
+	assert(!writer.hasIdxBuffer()  || (writer.hasIdxBuffer() && out_shape->numIdx == writer.getNumCurIndex()));
 
 	if (norm.isValid())
 	{

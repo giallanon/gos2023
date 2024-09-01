@@ -126,6 +126,7 @@ namespace gos
 		public:
 									Vec4 ()																	{ }
 									Vec4 (const T &xIN, const T &yIN, const T &zIN, const T &wIN)			{ set(xIN, yIN, zIN, wIN); }
+									Vec4 (const Vec3<T> &vIN, const T &wIN)									{ set(vIN, wIN); }
 
 			T						operator [] (const i32 i)												{ assert( i>=0 && i<4 ); return values[i]; }
 			const T&				operator [] (const i32 i) const											{ assert( i>=0 && i<4 ); return values[i]; }

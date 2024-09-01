@@ -1,5 +1,6 @@
 #include "gosShape.h"
 #include "gosShapeVtxLayout.h"
+#include "gosShapeVtxArrayWriter.h"
 #include "../gos/gos.h"
 #include "../gos/gosUtils.h"
 
@@ -34,14 +35,36 @@ const char*	shape::enumToString (eVtxLayoutFormat e)
 	case eVtxLayoutFormat::_2f32: return "2f32";
 	case eVtxLayoutFormat::_3f32: return "3f32";
 	case eVtxLayoutFormat::_4f32: return "4f32";
+
 	case eVtxLayoutFormat::_1i32: return "1i32";
 	case eVtxLayoutFormat::_2i32: return "2i32";
 	case eVtxLayoutFormat::_3i32: return "3i32";
 	case eVtxLayoutFormat::_4i32: return "4i32";
+	
 	case eVtxLayoutFormat::_1u32: return "1u32";
 	case eVtxLayoutFormat::_2u32: return "2u32";
 	case eVtxLayoutFormat::_3u32: return "3u32";
 	case eVtxLayoutFormat::_4u32: return "4u32";
+
+	case eVtxLayoutFormat::_1i16: return "1i16";
+	case eVtxLayoutFormat::_2i16: return "2i16";
+	case eVtxLayoutFormat::_3i16: return "3i16";
+	case eVtxLayoutFormat::_4i16: return "4i16";
+
+	case eVtxLayoutFormat::_1u16: return "1u16";
+	case eVtxLayoutFormat::_2u16: return "2u16";
+	case eVtxLayoutFormat::_3u16: return "3u16";
+	case eVtxLayoutFormat::_4u16: return "4u16";
+
+	case eVtxLayoutFormat::_1i8: return "1i8";
+	case eVtxLayoutFormat::_2i8: return "2i8";
+	case eVtxLayoutFormat::_3i8: return "3i8";
+	case eVtxLayoutFormat::_4i8: return "4i8";
+	
+	case eVtxLayoutFormat::_1u8: return "1u8";
+	case eVtxLayoutFormat::_2u8: return "2u8";
+	case eVtxLayoutFormat::_3u8: return "3u8";
+	case eVtxLayoutFormat::_4u8: return "4u8";	
 	}
 }
 
@@ -137,35 +160,35 @@ u32 shape::deserialize (VtxLayout *out, const u8 *buffer, u32 sizeof_buffer)
 
 
 //********************************************************
-bool shape::shapeAlloc (gos::Allocator *allocator, u32 numVtx, u32 numIdx, Shape *shapeIN)
+bool shape::shapeAlloc (gos::Allocator *allocator, const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, Shape *out_shape)
 {
 	assert (NULL != allocator);
-	assert (NULL != shapeIN);
+	assert (NULL != out_shape);
 
-	if (shapeIN->vtxLayout.numElem == 0)
+	if (vtxLayout.numElem == 0)
 	{
-		logger::err ("shape::shapeAlloc() => shape->vtxLayout has 0 elements!\n");
+		logger::err ("shape::shapeAlloc() => vtxLayout has 0 elements!\n");
 		return false;
 	}
 
-	if (shapeIN->magic != Shape::MAGIC ||
-		NULL != shapeIN->idxBuffer ||
-		NULL != shapeIN->vtxBuffer||
-		0 != shapeIN->numVtx ||
-		0 != shapeIN->numIdx)
+	if (out_shape->magic != Shape::MAGIC ||
+		NULL != out_shape->idxBuffer ||
+		NULL != out_shape->vtxBuffer||
+		0 != out_shape->numVtx ||
+		0 != out_shape->numIdx)
 	{
 		logger::err ("shape::shapeAlloc() => shape must be 'resetted'\n");
 		return false;
 	}
 
-	shapeIN->numVtx = numVtx;
-	shapeIN->vtxBuffer = GOSALLOCT(u8*, allocator, shape::calcSizeOfAVertex(shapeIN->vtxLayout) * numVtx);
+	out_shape->vtxLayout = vtxLayout;
+	out_shape->numVtx = numVtx;
+	out_shape->vtxBuffer = GOSALLOCT(u8*, allocator, shape::calcSizeOfAVertex(vtxLayout) * numVtx);
 
-	shapeIN->numIdx = numIdx;
-	shapeIN->idxBuffer = GOSALLOCT(u16*, allocator, sizeof(u16) * numIdx);
+	out_shape->numIdx = numIdx;
+	out_shape->idxBuffer = GOSALLOCT(u16*, allocator, sizeof(u16) * numIdx);
 
 	return true;
-
 }
 
 //********************************************************
@@ -206,7 +229,7 @@ bool shape::shapeLoad (const char *filename, gos::Allocator *allocator, Shape *o
 }
 
 //********************************************************
-u32 shape::shapeLoadFromMemory (const u8 *mem, u32 sizeof_mem, gos::Allocator *allocator, Shape *out)
+u32 shape::shapeLoadFromMemory (const u8 *mem, u32 sizeof_mem, gos::Allocator *allocator, Shape *out_shape)
 {
 	if (sizeof_mem < 12)
 	{
@@ -215,10 +238,10 @@ u32 shape::shapeLoadFromMemory (const u8 *mem, u32 sizeof_mem, gos::Allocator *a
 	}
 
 	u32 ct = 0;
-	out->reset();
+	out_shape->reset();
 
-	out->magic = gos::utils::bufferReadU32 (&mem[ct]);		ct+=4;
-	if (out->magic != Shape::MAGIC)
+	out_shape->magic = gos::utils::bufferReadU32 (&mem[ct]);		ct+=4;
+	if (out_shape->magic != Shape::MAGIC)
 	{
 		gos::logger::err ("shape::shapeLoadFromMemory() => inavlid MAGIC\n");
 		return 0;
@@ -227,7 +250,8 @@ u32 shape::shapeLoadFromMemory (const u8 *mem, u32 sizeof_mem, gos::Allocator *a
 	const u32 numVtx = gos::utils::bufferReadU32 (&mem[ct]);			ct+=4;
 	const u32 numIdx = gos::utils::bufferReadU32 (&mem[ct]);			ct+=4;
 	
-	const u32 n = shape::deserialize (&out->vtxLayout, &mem[ct], sizeof_mem - ct);
+	shape::VtxLayout vtxLayout;
+	const u32 n = shape::deserialize (&vtxLayout, &mem[ct], sizeof_mem - ct);
 	if (0 == n)
 	{
 		gos::logger::err ("shape::shapeLoadFromMemory() => failed to deserialize VtxLayout\n");
@@ -236,7 +260,7 @@ u32 shape::shapeLoadFromMemory (const u8 *mem, u32 sizeof_mem, gos::Allocator *a
 	ct += n;
 
 
-	const u32 vtxBufferSize = shape::calcSizeOfAVertex(out->vtxLayout) * numVtx;
+	const u32 vtxBufferSize = shape::calcSizeOfAVertex(vtxLayout) * numVtx;
 	const u32 idxBufferSize = sizeof(u16) * numIdx;
 	if (sizeof_mem < ct +vtxBufferSize +idxBufferSize)
 	{
@@ -244,7 +268,7 @@ u32 shape::shapeLoadFromMemory (const u8 *mem, u32 sizeof_mem, gos::Allocator *a
 		return 0;
 	}	
 
-	if (!shape::shapeAlloc (allocator, numVtx, numIdx, out))
+	if (!shape::shapeAlloc (allocator, vtxLayout, numVtx, numIdx, out_shape))
 	{
 		gos::logger::err ("shape::shapeLoadFromMemory() => failed to alloc shape (numVtx=%d, numIdx=%d)\n", numVtx, numIdx);
 		return 0;
@@ -253,13 +277,13 @@ u32 shape::shapeLoadFromMemory (const u8 *mem, u32 sizeof_mem, gos::Allocator *a
 	//vtxBuffer
 	if (vtxBufferSize)
 	{
-		memcpy (out->vtxBuffer, &mem[ct], vtxBufferSize);
+		memcpy (out_shape->vtxBuffer, &mem[ct], vtxBufferSize);
 		ct += vtxBufferSize;
 	}
 
 	if (idxBufferSize)
 	{
-		memcpy (out->idxBuffer, &mem[ct], idxBufferSize);
+		memcpy (out_shape->idxBuffer, &mem[ct], idxBufferSize);
 		ct += idxBufferSize;
 	}
 
@@ -402,3 +426,226 @@ void shape::debug_shapePrint (const Shape *s)
 
 	gos::logger::decIndent();
 }
+
+//********************************************************
+void shape::shapeRightHandedToLeftHanded (Shape *shape)
+{
+	VtxArrayWriter writer;
+	writer.setup (shape);
+
+	VtxArrayWriter::Elem<vec3f> elem;
+	if (!writer.getPos3(&elem))
+		return;
+
+	for (u32 i=0; i<shape->numVtx; i++)
+	{
+		vec3f v = elem();
+		v.z = -v.z;
+		elem() = v;
+		elem.next();
+	}
+
+	if (writer.getNorm3(&elem))
+	{
+		for (u32 i=0; i<shape->numVtx; i++)
+		{
+			vec3f v = elem();
+			v.z = -v.z;
+			elem() = v;
+			elem.next();
+		}	
+	}
+
+	if (writer.getTan3(&elem))
+	{
+		for (u32 i=0; i<shape->numVtx; i++)
+		{
+			vec3f v = elem();
+			v.z = -v.z;
+			elem() = v;
+			elem.next();
+		}	
+	}
+
+	if (writer.getBitan3(&elem))
+	{
+		for (u32 i=0; i<shape->numVtx; i++)
+		{
+			vec3f v = elem();
+			v.z = -v.z;
+			elem() = v;
+			elem.next();
+		}	
+	}
+
+
+	for (u32 i=0; i<shape->numIdx; i+=3)
+	{
+		const u16 i1 = shape->idxBuffer[i+1];
+		const u16 i2 = shape->idxBuffer[i+2];
+		shape->idxBuffer[i+1] = i2;
+		shape->idxBuffer[i+2] = i1;
+	}
+
+
+}
+
+//********************************************************
+void shape::shapeTranslate (Shape *shape, const vec3f &tr)
+{
+	VtxArrayWriter writer;
+	writer.setup (shape);
+
+	VtxArrayWriter::Elem<vec3f> elem;
+	if (!writer.getPos3(&elem))
+		return;
+
+	for (u32 i=0; i<shape->numVtx; i++)
+	{
+		elem() += tr;
+		elem.next();
+	}
+}
+
+//********************************************************
+void shape::shapeTransformPos (Shape *shape, const mat4x4f &mat)
+{
+	VtxArrayWriter writer;
+	writer.setup (shape);
+
+	VtxArrayWriter::Elem<vec3f> elem;
+	if (!writer.getPos3(&elem))
+		return;
+
+	for (u32 i=0; i<shape->numVtx; i++)
+	{
+		const vec3f v = gos::math::vecTransform (mat, elem());
+		elem() = v;
+		elem.next();
+	}
+}
+
+//********************************************************
+void shape::shapeTransformPos (Shape *shape, const mat3x3f &mat)
+{
+	VtxArrayWriter writer;
+	writer.setup (shape);
+
+	VtxArrayWriter::Elem<vec3f> elem;
+	if (!writer.getPos3(&elem))
+		return;
+
+	for (u32 i=0; i<shape->numVtx; i++)
+	{
+		const vec3f v = gos::math::vecTransform (mat, elem());
+		elem() = v;
+		elem.next();
+	}
+}
+
+//********************************************************
+void shape::shapeRotateNormals (Shape *shape, const mat3x3f &mat)
+{
+	VtxArrayWriter writer;
+	writer.setup (shape);
+
+	VtxArrayWriter::Elem<vec3f> elem;
+	if (writer.getNorm3(&elem))
+	{
+		for (u32 i=0; i<shape->numVtx; i++)
+		{
+			const vec3f v = gos::math::vecTransform (mat, elem());
+			elem() = v;
+			elem.next();
+		}
+	}
+
+	if (writer.getTan3(&elem))
+	{
+		for (u32 i=0; i<shape->numVtx; i++)
+		{
+			const vec3f v = gos::math::vecTransform (mat, elem());
+			elem() = v;
+			elem.next();
+		}
+	}	
+
+	if (writer.getBitan3(&elem))
+	{
+		for (u32 i=0; i<shape->numVtx; i++)
+		{
+			const vec3f v = gos::math::vecTransform (mat, elem());
+			elem() = v;
+			elem.next();
+		}
+	}	
+}
+
+//********************************************************
+void shape::shapeRotateNormals (Shape *shape, const Quat &quat)
+{
+	VtxArrayWriter writer;
+	writer.setup (shape);
+
+	VtxArrayWriter::Elem<vec3f> elem;
+	if (writer.getNorm3(&elem))
+	{
+		for (u32 i=0; i<shape->numVtx; i++)
+		{
+			const vec3f v = gos::math::vecTransform (quat, elem());
+			elem() = v;
+			elem.next();
+		}
+	}
+
+	if (writer.getTan3(&elem))
+	{
+		for (u32 i=0; i<shape->numVtx; i++)
+		{
+			const vec3f v = gos::math::vecTransform (quat, elem());
+			elem() = v;
+			elem.next();
+		}
+	}	
+
+	if (writer.getBitan3(&elem))
+	{
+		for (u32 i=0; i<shape->numVtx; i++)
+		{
+			const vec3f v = gos::math::vecTransform (quat, elem());
+			elem() = v;
+			elem.next();
+		}
+	}	
+}
+
+
+//********************************************************
+void shape::shapeCalcAABB (Shape *shape, vec3f *out_min, vec3f *out_max)
+{
+	VtxArrayWriter writer;
+	writer.setup (shape);
+
+	VtxArrayWriter::Elem<vec3f> elem;
+	if (!writer.getPos3(&elem))
+		return;
+
+	*out_min = *out_max = elem();
+	elem.next();
+
+	for (u32 i=1; i<shape->numVtx; i++)
+	{
+		vec3f v = elem();
+
+		if (v.x < out_min->x) 	out_min->x = v.x;
+		if (v.y < out_min->y) 	out_min->y = v.y;
+		if (v.z < out_min->z) 	out_min->z = v.z;
+
+		if (v.x > out_max->x) 	out_max->x = v.x;
+		if (v.y > out_max->y) 	out_max->y = v.y;
+		if (v.z > out_max->z) 	out_max->z = v.z;
+
+		elem.next();
+	}
+}
+

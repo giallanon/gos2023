@@ -18,8 +18,8 @@ namespace gos
 					ColladaImporter();
 					~ColladaImporter();
 
-			bool	importFromFile (const char *filename, gos::Allocator *allocator, Shape *out);
-			bool	importFromMemory (const u8 *buffer, u32 sizeof_buffer, gos::Allocator *allocator, Shape *out);
+			bool	importFromFile (const char *filename, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, FastArray<Shape> &out_shapeList);
+			bool	importFromMemory (const u8 *buffer, u32 sizeof_buffer, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, FastArray<Shape> &out_shapeList);
 
 		private:
 			struct sFaceInfo
@@ -32,17 +32,36 @@ namespace gos
 				void reset()	{ numIdxPerTupla=offset_pos=offset_norm=offset_tutv0= 0; }
 			};
 
+			struct sTechiqueIndices
+			{
+			public:
+				void 	reset()	{ numIndices = 0; indexX=indexY=indexZ=indexW=0xff; }
+
+			public:
+				u8 	numIndices;
+				u8	indexX;
+				u8	indexY;
+				u8	indexZ;
+				u8	indexW;
+			};
+
 		private:
 			void 	priv_free();
-			u32 	priv_extractFloatArray3 (const tinyxml2::XMLElement *floatArrayElem, gos::FastArray<vec3f> *dst);
-			u32 	priv_extractFloatArray2 (const tinyxml2::XMLElement *floatArrayElem, gos::FastArray<vec2f> *dst);
+			bool 	priv_checkSourceElem (const tinyxml2::XMLElement *sourceElem, u8 NUM_ELEM_PER_ENTRY, sTechiqueIndices *out, const tinyxml2::XMLElement **out_floatArrayElem, u32 *out_count) const;
+			bool 	priv_parse_technique_common (const tinyxml2::XMLElement *technique_commonElem, sTechiqueIndices *out) const;
+			bool 	priv_extractSourceElem2 (const tinyxml2::XMLElement *sourceElem, gos::FastArray<vec2f> *dst);
+			bool 	priv_extractSourceElem3 (const tinyxml2::XMLElement *sourceElem, gos::FastArray<vec3f> *dst);
+			bool 	priv_extractSourceElem4 (const tinyxml2::XMLElement *sourceElem, gos::FastArray<vec4f> *dst);
 			
-			void	priv_parseInputSemantic (tinyxml2::XMLElement *inputElem, sFaceInfo *out_info) const;
-			u32 	priv_extractFaceInfo (tinyxml2::XMLElement *trianglesElem, sFaceInfo *out_info, gos::FastArray<u16> *dst);
-			u32 	priv_extractFromPolylist (tinyxml2::XMLElement *polylistElem, sFaceInfo *out_info, gos::FastArray<u16> *dst);
+			bool 	priv_parse_geometry (const tinyxml2::XMLElement *geometryElem, gos::Allocator *shapeAllocator, Shape *out_shape);
+
+			void	priv_parseInputSemantic (const tinyxml2::XMLElement *inputElem, sFaceInfo *out_info) const;
+			u32 	priv_extractFaceInfo (const tinyxml2::XMLElement *trianglesElem, sFaceInfo *out_info, gos::FastArray<u16> *dst);
+			u32 	priv_extractFromPolylist (const tinyxml2::XMLElement *polylistElem, sFaceInfo *out_info, gos::FastArray<u16> *dst);
 
 		private:
 			gos::Allocator 			*localAllocator;
+			VtxLayout				shapeVtxLayout;
 			gos::FastArray<vec3f>	sourcePos;
 			gos::FastArray<vec3f>	sourceNorm;
 			gos::FastArray<vec2f>	sourceTexCoord0;

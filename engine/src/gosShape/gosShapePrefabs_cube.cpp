@@ -8,18 +8,18 @@ using namespace gos::shape;
 
 //*************************************************************
 //bool shape::buildCube24 (const vec3f &center, const vec3f &size, VtxArrayWriter *writer, Info *out_info)
-bool shape::buildCube24 (const vec3f &center, const vec3f &size, gos::Allocator *allocator, Shape *shapeIN)
+bool shape::buildCube24 (const vec3f &center, const vec3f &size, const VtxLayout &vtxLayout, gos::Allocator *shapeAllocator, Shape *out_shape)
 {
-	assert (NULL != allocator);
-	assert (NULL != shapeIN);
+	assert (NULL != shapeAllocator);
+	assert (NULL != out_shape);
 
 
-	if (!shape::shapeAlloc (allocator, 24, 36, shapeIN))
+	if (!shape::shapeAlloc (shapeAllocator, vtxLayout, 24, 36, out_shape))
 		return false;
 
 
 	shape::VtxArrayWriter writer;
-	writer.setup (shapeIN);
+	writer.setup (out_shape);
 
 
 	VtxArrayWriter::Elem<vec3f> vtx;
@@ -191,7 +191,7 @@ bool shape::buildCube24 (const vec3f &center, const vec3f &size, gos::Allocator 
 	}
 
 
-	assert (vtx.getcurElemNum() == shapeIN->numVtx);
-	assert (writer.getNumCurIndex() == shapeIN->numIdx);
+	assert (vtx.getcurElemNum() == out_shape->numVtx);
+	assert (writer.getNumCurIndex() == out_shape->numIdx);
 	return true;
 }

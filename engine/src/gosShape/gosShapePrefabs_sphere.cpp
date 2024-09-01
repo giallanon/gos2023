@@ -73,10 +73,10 @@ void shape_buildTrisDOWN (u32 vtxStart, u32 vtxBasso, u32 numPointPerCirconferen
 }
 
 //*************************************************************
-bool shape::buildSphere (const vec3f &center, const vec3f &radius, u32 numPointPerCirconferenza, u32 numHalfStack, gos::Allocator *allocator, Shape *shapeIN)
+bool shape::buildSphere (const vec3f &center, const vec3f &radius, u32 numPointPerCirconferenza, u32 numHalfStack, const VtxLayout &vtxLayout, gos::Allocator *shapeAllocator, Shape *out_shape)
 {
-	assert (NULL != allocator);
-	assert (NULL != shapeIN);
+	assert (NULL != shapeAllocator);
+	assert (NULL != out_shape);
 	
 	if (numHalfStack < 1)
 		numHalfStack = 1;
@@ -91,12 +91,12 @@ bool shape::buildSphere (const vec3f &center, const vec3f &radius, u32 numPointP
 	const u32 totNumIndex = totNumTris*3;
 
 
-	if (!shape::shapeAlloc (allocator, totNumVertex, totNumIndex, shapeIN))
+	if (!shape::shapeAlloc (shapeAllocator, vtxLayout, totNumVertex, totNumIndex, out_shape))
 		return false;
 
 
 	VtxArrayWriter writer;
-	writer.setup (shapeIN);
+	writer.setup (out_shape);
 
 	VtxArrayWriter::Elem<vec3f> vtx;
 	VtxArrayWriter::Elem<vec3f> norm;
@@ -176,13 +176,13 @@ bool shape::buildSphere (const vec3f &center, const vec3f &radius, u32 numPointP
 		writer.addTris (idxBOTTOM, i1, idxBase);
 	}
 
-	assert(shapeIN->numVtx == nv);
-	assert(!writer.hasIdxBuffer()  || (writer.hasIdxBuffer() && shapeIN->numIdx == writer.getNumCurIndex()));
+	assert(out_shape->numVtx == nv);
+	assert(!writer.hasIdxBuffer()  || (writer.hasIdxBuffer() && out_shape->numIdx == writer.getNumCurIndex()));
 
 	if (norm.isValid())
 	{
 		writer.getPos3 (&vtx);
-		for (u32 i=0; i<shapeIN->numVtx; i++)
+		for (u32 i=0; i<out_shape->numVtx; i++)
 		{
 			vec3f n = vtx() - center;
 			vtx.next();

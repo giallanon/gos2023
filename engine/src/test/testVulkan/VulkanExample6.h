@@ -20,6 +20,7 @@ private:
     struct Vertex 
     {
         gos::vec3f  pos;
+        gos::vec2f  tutv0;
         gos::vec3f  normal;
     };
 
@@ -41,7 +42,7 @@ private:
     void        virtual_onInputEvent (u32 event32, i16 value);
 
 private:
-    gos::shape::Shape       myShape;
+    gos::FastArray<gos::shape::Shape> shapeList;
     sUniformBufferObject    ubo;
     gos::geom::Camera3      cam;
     FPSMovement             movement;

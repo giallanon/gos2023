@@ -79,15 +79,16 @@ bool VulkanExample4::virtual_onInit ()
 
     //creo un cubo
     {
-        myShape.reset();
-        gos::shape::VtxLayoutWriter vtxLayoutW (&myShape.vtxLayout);
+        gos::shape::VtxLayout vtxLayout;
+        gos::shape::VtxLayoutWriter vtxLayoutW (&vtxLayout);
         vtxLayoutW.begin()
             .addPos3 (offsetof(Vertex,pos))
             .addColor3 (offsetof(Vertex,pos))
             .addNorm3 (offsetof(Vertex,normal))
         .end();
 
-        gos::shape::buildCube24 (vec3f(0,0,0), vec3f(4,2,3), gos::getSysHeapAllocator(), &myShape);
+        myShape.reset();
+        gos::shape::buildCube24 (vec3f(0,0,0), vec3f(4,2,3), vtxLayout, gos::getSysHeapAllocator(), &myShape);
         Vertex *vertexList = reinterpret_cast<Vertex*>(myShape.vtxBuffer);
 
         //front face (green)

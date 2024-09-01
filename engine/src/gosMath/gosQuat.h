@@ -57,6 +57,7 @@ namespace gos
 								/* si intendono i canonici assi (1,0,0) (0,1,0) (0,0,1) */
 
 		void				toMatrix3x3 (mat3x3f *out_m) const;
+		void 				toMatrix4x4 (mat4x4f *out_m) const;
 		void				toAxis (vec3f *out_ax, vec3f *out_ay, vec3f *out_az) const;
 		void				toEuler (f32 *rad_ax, f32 *rad_ay, f32 *rad_az) const;
 

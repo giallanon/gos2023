@@ -104,6 +104,8 @@ string/gosStringList.h
 string/gosStringList.cpp
 string/gosUTF8.cpp 
 string/gosUTF8Char.cpp 
+string/gosUTF8String.cpp
+string/gosUTF8String.h
 string/gosUTF16.cpp
 string/gosUTF32.cpp 
 
@@ -124,10 +126,14 @@ gosFS_FSSpecialPathResolver.cpp
 gosFS_FSSpecialPathResolver.h
 gosFS.cpp
 gosHandle.h
+gosIniFile_section.cpp
+gosIniFile.cpp
+gosIniFile.h
 gosLIFOFixedSize.h
 gosRandom.h
 gosServerTCP.cpp
 gosServerTCP.h
+gosSortedFastArray.h
 gosString.h
 gosThreadMsgQ.h
 gosThreadMsgQ.cpp

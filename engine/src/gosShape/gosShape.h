@@ -27,10 +27,12 @@ namespace gos
 
 		//======================================= Shape
 
-				//ShapeAlloc()
-				//[in_out] deve avere gia' un valido VtxFormat.
-				//Questa fn alloca il numero di vtx e idx indicati rispettando il VtxFormat di [in_out]
-		bool	shapeAlloc (gos::Allocator *allocator, u32 numVtx, u32 numIdx, Shape *in_out);
+		/**
+		 * @brief inizializza una shape
+		 * 
+		 * Alloca il numero di vtx e idx indicati rispettando @vtxLayout
+		 */
+		bool	shapeAlloc (gos::Allocator *allocator, const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, Shape *out_shape);
 		void	shapeFree (gos::Allocator *allocator, Shape *shape);
 
 		bool	shapeLoad (const char *filename, gos::Allocator *allocator, Shape *out);
@@ -38,6 +40,15 @@ namespace gos
 
 		bool 	shapeSave (const char *filename, const Shape *shape);
 		bool 	shapeSave (gos::File &hFile, const Shape *shape);
+
+		void 	shapeRightHandedToLeftHanded (Shape *shape);
+		void 	shapeTranslate (Shape *shape, const vec3f &tr);
+		void 	shapeCalcAABB (Shape *shape, vec3f *out_min, vec3f *out_max);
+		void 	shapeTransformPos (Shape *shape, const mat4x4f &mat);
+		void 	shapeTransformPos (Shape *shape, const mat3x3f &mat);
+		
+		void 	shapeRotateNormals (Shape *shape, const mat3x3f &mat);
+		void 	shapeRotateNormals (Shape *shape, const Quat &quat);
 
 		void	debug_shapePrint (const Shape *shape);
 

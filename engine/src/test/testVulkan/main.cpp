@@ -36,7 +36,6 @@ void test1 (GOSWinHandle &mainWin)
     }
 }
 
-
 //******************************** 
 int main()
 {
@@ -53,6 +52,7 @@ int main()
             {
                 //gos::input::window_toggleFullscreen(mainWin);
                 test1 (mainWin);
+                //test2();
                 gos::input::window_destroy (mainWin);
             }
             gos::input::deinit();

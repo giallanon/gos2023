@@ -202,6 +202,7 @@ namespace gos
         u32				getNAllocatedElem() const								{ assert (nallocati*sizeof(T) <= memBlock.getTotalSizeAllocated()); return nallocati; }
         Allocator*      getAllocator() const									{ return memBlock.getAllocator(); }
         const void*		_queryPointer () const									{ return memBlock._getPointer(0); }
+        const T*        _queryTypedPointer () const								{ return reinterpret_cast<const T*>(memBlock._getPointer(0)); }
 
     private:
         void			_grow (u32 nuovoNumMaxDiElementi)

@@ -33,6 +33,8 @@ gosShapeImport_arrays.cpp
 gosShapeImport_arrays.h
 gosShapeImport_Collada.cpp
 gosShapeImport_Collada.h
+gosShapeImport_glTF.cpp
+gosShapeImport_glTF.h
 gosShapeImport.cpp
 gosShapeImport.h
 gosShapePrefabs_cube.cpp

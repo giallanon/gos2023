@@ -107,6 +107,8 @@ namespace gos
 			bool 	getPos3 (Elem<vec3f> *out)							{ return get<vec3f> (eVtxLayoutSemantic::position, 0, eVtxLayoutFormat::_3f32, out); }
 			bool 	getNorm3 (Elem<vec3f> *out)							{ return get<vec3f> (eVtxLayoutSemantic::normal, 0, eVtxLayoutFormat::_3f32, out); }
 			bool 	getTexCoord (Elem<vec2f> *out, u8 index=0)			{ return get<vec2f> (eVtxLayoutSemantic::texCoord, index, eVtxLayoutFormat::_2f32, out); }
+			bool 	getTan3 (Elem<vec3f> *out)							{ return get<vec3f> (eVtxLayoutSemantic::tangent, 0, eVtxLayoutFormat::_3f32, out); }
+			bool 	getBitan3 (Elem<vec3f> *out)						{ return get<vec3f> (eVtxLayoutSemantic::bitangent, 0, eVtxLayoutFormat::_3f32, out); }
 
 			bool	hasIdxBuffer() const 								{ return (NULL != idxBuffer); }
 			void 	addTris (u16 i0, u16 i1, u16 i2)					{ assert(curIdx<=numIdx-3);idxBuffer[curIdx++]=i0; idxBuffer[curIdx++]=i1; idxBuffer[curIdx++]=i2; }
@@ -128,11 +130,6 @@ namespace gos
 		};
 
 
-		struct Info
-		{
-			u32	numVertex;
-			u32 numIndex;
-		};
 	} //namespace shape
  } //namespace gos
 

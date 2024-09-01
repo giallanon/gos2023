@@ -34,13 +34,38 @@ namespace gos
 		_1u32 = 8,
 		_2u32 = 9,
 		_3u32 = 10,
-		_4u32 = 11
+		_4u32 = 11,
 
-		//max 16 elementi
+		_1u8 = 12,
+		_2u8 = 13,
+		_3u8 = 14,
+		_4u8 = 15,		
+
+		_1i8 = 16,
+		_2i8 = 17,
+		_3i8 = 18,
+		_4i8 = 19,		
+
+		_1u16 = 20,
+		_2u16 = 21,
+		_3u16 = 22,
+		_4u16 = 23,		
+
+		_1i16 = 24,
+		_2i16 = 25,
+		_3i16 = 26,
+		_4i16 = 27,
+
+
+		unknown = 31
+		//max 32 elementi
 	};
 
 	namespace shape
 	{
+		/*********************************
+		 * VtxLayout
+		 */
 		struct VtxLayout
 		{
 		public:
@@ -54,6 +79,9 @@ namespace gos
 			void 	reset()		{ numElem = 0; }
 		};
 
+		/*********************************
+		 * Shape
+		 */
 		struct Shape
 		{
 		public:
@@ -70,6 +98,7 @@ namespace gos
 		public:
 			void 		reset()		{ magic=Shape::MAGIC; numVtx = numIdx = 0; vtxBuffer=NULL; idxBuffer=NULL; vtxLayout.reset(); }
 		};
+
 	} //namespace shape
 
  } //namespace gos

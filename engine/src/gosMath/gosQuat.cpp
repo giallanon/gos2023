@@ -124,7 +124,43 @@ void Quat::toMatrix3x3 (mat3x3f *out_m) const
     (*out_m)(0,2) = fTxz-fTwy;
     (*out_m)(1,2) = fTyz+fTwx;
     (*out_m)(2,2) = 1.0f-(fTxx+fTyy);
+}
 
+//*******************************************************************
+void Quat::toMatrix4x4 (mat4x4f *out_m) const
+{
+    const f32 fTx  = 2.0f*x;
+    const f32 fTy  = 2.0f*y;
+    const f32 fTz  = 2.0f*z;
+    const f32 fTwx = fTx*w;
+    const f32 fTwy = fTy*w;
+    const f32 fTwz = fTz*w;
+    const f32 fTxx = fTx*x;
+    const f32 fTxy = fTy*x;
+    const f32 fTxz = fTz*x;
+    const f32 fTyy = fTy*y;
+    const f32 fTyz = fTz*y;
+    const f32 fTzz = fTz*z;
+
+    (*out_m)(0,0) = 1.0f-(fTyy+fTzz);
+    (*out_m)(1,0) = fTxy-fTwz;
+    (*out_m)(2,0) = fTxz+fTwy;
+	(*out_m)(3,0) = 0;
+
+    (*out_m)(0,1) = fTxy+fTwz;
+    (*out_m)(1,1) = 1.0f-(fTxx+fTzz);
+    (*out_m)(2,1) = fTyz-fTwx;
+	(*out_m)(3,1) = 0;
+
+    (*out_m)(0,2) = fTxz-fTwy;
+    (*out_m)(1,2) = fTyz+fTwx;
+    (*out_m)(2,2) = 1.0f-(fTxx+fTyy);
+	(*out_m)(3,2) = 0;
+
+	(*out_m)(0,3) = 0;
+	(*out_m)(1,3) = 0;
+	(*out_m)(2,3) = 0;
+	(*out_m)(3,3) = 1;
 }
 
 //*******************************************************************

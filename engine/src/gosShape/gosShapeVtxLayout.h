@@ -12,15 +12,15 @@ namespace gos
 		 * 
 		 * template di comodo per la lettura di un VtxLayout
 		 */
-		template <class T>
+		template <class VTXLAYOUT>
 		class VtxLayoutReaderInterface
 		{
 		public:
 								VtxLayoutReaderInterface ()																		{ }
-								VtxLayoutReaderInterface (T v)																	{ setup(v); }
+								VtxLayoutReaderInterface (VTXLAYOUT v)																	{ setup(v); }
 								~VtxLayoutReaderInterface ()																	{ }
 
-			void 				setup (T v)																						{ vl = v; }
+			void 				setup (VTXLAYOUT v)																						{ vl = v; }
 
 			bool				find (eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt, u32 *out_offset) const		{ assert (NULL != out_offset); *out_offset = priv_findOffset(semantic, index, fmt); return (*out_offset != u32MAX); }
 			bool 				exists  (eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt) const						{ return (priv_findOffset(semantic, index, fmt) != u32MAX); }
@@ -32,7 +32,7 @@ namespace gos
 			eVtxLayoutFormat	getFormat (u32 elemNum)	const																	{ assert(elemNum<getNumElem()); return VtxElem::getFormat(vl->elemList[elemNum]); }
 
 		protected:
-			T 					vl;
+			VTXLAYOUT			vl;
 
 		private:
 			u32					priv_findOffset (eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt) const

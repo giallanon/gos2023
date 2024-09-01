@@ -152,7 +152,7 @@ u32 string::utf8::Iter::copyAllStr (char *out, u32 sizeofOut) const
 //**************************************************
 u32 string::utf8::Iter::copyStrFromCurrentPositionToEnd (char *utf8_out, u32 sizeofOut) const
 {
-	assert (NULL != utf8_out && sizeofOut > 0);
+	assert (NULL != utf8_out && sizeofOut > 1);
 	u32 nToCopy = getBytesLeft();
 	if (0 == nToCopy)
 	{
@@ -161,11 +161,8 @@ u32 string::utf8::Iter::copyStrFromCurrentPositionToEnd (char *utf8_out, u32 siz
 	}
 
 	if (nToCopy+1 >= sizeofOut)
-	{
-		DBGBREAK;
-		utf8_out[0] = 0;
-		return 0;
-	}
+		nToCopy = sizeofOut -1;
+
 	memcpy (utf8_out, getPointerToCurrentPosition(), nToCopy);
 	utf8_out[nToCopy] = 0;
 	return nToCopy;

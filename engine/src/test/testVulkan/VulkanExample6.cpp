@@ -8,12 +8,13 @@ using namespace gos;
 //************************************
 VulkanExample6::VulkanExample6()
 {
+    shapeList.setup (gos::getSysHeapAllocator(), 64);
 }
 
 //************************************
 void VulkanExample6::virtual_explain()
 {
-    gos::logger::log ("import da .dae\n");
+    gos::logger::log ("import da .glTF\n");
     gos::logger::log (eTextColor::white, "TAB = toggle mouse mode\n");
 }
 
@@ -21,7 +22,12 @@ void VulkanExample6::virtual_explain()
 //************************************
 void VulkanExample6::virtual_onCleanup() 
 {
-    shape::shapeFree (gos::getSysHeapAllocator(), &myShape);
+    for (u32 i=0; i<shapeList.getNElem(); i++)
+    {
+        shape::shapeFree (gos::getSysHeapAllocator(), &shapeList[i]);
+    }
+    shapeList.unsetup();
+
     gpu->deleteResource (idxBufferHandle);
     gpu->deleteResource (stgBufferHandle);
     gpu->deleteResource (vtxBufferHandle);
@@ -40,10 +46,31 @@ void VulkanExample6::virtual_onCleanup()
 //************************************
 bool VulkanExample6::virtual_onInit ()
 {
-    //importazione .dae
-    //gos::shape::importFromCollada ("shader/example6/esempio.dae", gos::getSysHeapAllocator(), &myShape);
-    gos::shape::importFromCollada ("shader/example6/omino2.dae", gos::getSysHeapAllocator(), &myShape);
-
+    //importazione modello
+    {
+        shape::VtxLayout vtxLayot;
+        shape::VtxLayoutWriter writer(&vtxLayot);
+        writer.begin()
+            .addPos3(offsetof(Vertex, pos))
+            .addTexCoord(offsetof(Vertex, tutv0))
+            .addNorm3(offsetof(Vertex, normal))
+        .end();
+    
+        //gos::shape::importFrom_dae ("shader/example6/esempio.dae", vtxLayot, gos::getSysHeapAllocator(), shapeList);
+        //gos::shape::importFrom_dae ("shader/example6/omino/omino2.dae", vtxLayot, gos::getSysHeapAllocator(), shapeList);
+        //gos::shape::importFrom_dae ("shader/example6/sponza/sponza.dae", vtxLayot, gos::getSysHeapAllocator(), shapeList);
+        
+        //if (!gos::shape::importFrom_glTF ("shader/example6/cubo-normal.mapped/cubo.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        if (!gos::shape::importFrom_glTF ("shader/example6/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        //if (!gos::shape::importFrom_glTF ("shader/example6/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        //if (!gos::shape::importFrom_glTF ("shader/example6/esempio2.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        
+        //if (!gos::shape::importFrom_glTF ("shader/example6/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/DamagedHelmet/glTF/DamagedHelmet.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Duck/glTF-Binary/Duck.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/BrainStem/glTF-Binary/BrainStem.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        
+    }
 
     //creo vtx/idx/staging buffer
     if (!createVertexIndexStageBuffer())
@@ -54,16 +81,25 @@ bool VulkanExample6::virtual_onInit ()
 
     //copio i Vtx in vtxBuffer e idx in idxBuffer tramite lo staging array
     {
-        if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, myShape.vtxBuffer, vtxBufferHandle, 0, sizeof(Vertex) * myShape.numVtx))
+        u32 vtxBufferSize = 0;
+        u32 idxBufferSize = 0;
+        for (u32 i=0; i<shapeList.getNElem(); i++)
         {
-            gos::logger::err ("VulkanApp::init() => can't upload to VtxBuffer\n");
-            return false;
-        }
+            const shape::Shape *myShape = &shapeList(i);
 
-        if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, myShape.idxBuffer, idxBufferHandle, 0, sizeof(u16) * myShape.numIdx))
-        {
-            gos::logger::err ("VulkanApp::init() => can't upload to IdxBuffer\n");
-            return false;
+            if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, myShape->vtxBuffer, vtxBufferHandle, vtxBufferSize, sizeof(Vertex) * myShape->numVtx))
+            {
+                gos::logger::err ("VulkanApp::init() => can't upload to VtxBuffer\n");
+                return false;
+            }
+            vtxBufferSize += sizeof(Vertex) * myShape->numVtx;
+
+            if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, myShape->idxBuffer, idxBufferHandle, idxBufferSize, sizeof(u16) * myShape->numIdx))
+            {
+                gos::logger::err ("VulkanApp::init() => can't upload to IdxBuffer\n");
+                return false;
+            }
+            idxBufferSize += sizeof(u16) * myShape->numIdx;
         }
     }
 
@@ -74,8 +110,9 @@ bool VulkanExample6::virtual_onInit ()
     GPUVtxDeclHandle vtxDeclHandle;
     gpu->vtxDecl_createNew (&vtxDeclHandle)
         .addStream(eVtxStreamInputRate::perVertex)
-        .addLayout (0, offsetof(Vertex, pos), eDataFormat::_3f32)        //position
-        .addLayout (1, offsetof(Vertex, normal), eDataFormat::_3f32)   //color
+        .addLayout (0, offsetof(Vertex, pos), eDataFormat::_3f32)
+        .addLayout (1, offsetof(Vertex, tutv0), eDataFormat::_2f32)
+        .addLayout (2, offsetof(Vertex, normal), eDataFormat::_3f32)
         .end();
     if (vtxDeclHandle.isInvalid())
     {
@@ -139,6 +176,7 @@ bool VulkanExample6::virtual_onInit ()
         .addShader (vtxShaderHandle)
         .addShader (fragShaderHandle)
         .setVtxDecl (vtxDeclHandle)
+        //.setWireframe(true)
         .depthStencil()
             .zbuffer_enable(true)
             .zbuffer_enableWrite(true)
@@ -193,22 +231,31 @@ bool VulkanExample6::virtual_onInit ()
 //************************************
 bool VulkanExample6::createVertexIndexStageBuffer()
 {
-    const u32 sizeInByte = sizeof(Vertex) * myShape.numVtx;
-    if (!gpu->vertexBuffer_create (sizeInByte, eVIBufferMode::onGPU, &vtxBufferHandle))
+    u32 totNumVtx = 0;
+    u32 totNumIdx = 0;
+
+    for (u32 i=0; i<shapeList.getNElem(); i++)
+    {
+        const shape::Shape *myShape = &shapeList(i);
+        totNumVtx += myShape->numVtx;
+        totNumIdx += myShape->numIdx;
+    }
+
+    if (!gpu->vertexBuffer_create (totNumVtx * sizeof(Vertex), eVIBufferMode::onGPU, &vtxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->vertexBuffer_create() failed\n");
         return false;
     }
 
     //INDEX BUFFER
-    if (!gpu->indexBuffer_create (sizeof(u16)*myShape.numIdx, eVIBufferMode::onGPU, &idxBufferHandle))
+    if (!gpu->indexBuffer_create (totNumIdx * sizeof(u16), eVIBufferMode::onGPU, &idxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->indexBuffer_create() failed\n");
         return false;
     }
 
     //Creo anche uno staging buffer
-    if (!gpu->stagingBuffer_create (sizeInByte, &stgBufferHandle))
+    if (!gpu->stagingBuffer_create (totNumVtx * sizeof(Vertex), &stgBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->stagingBuffer_create() failed\n");
         return false;
@@ -227,7 +274,8 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
     ubo.camProj = cam.getMatP();
 
     //ubo.lightDir.set (-1, -0.3f, 0, 0);
-    ubo.lightDir.set (0, -0.5f, 1, 0);
+    //ubo.lightDir.set (0, -0.5f, 1, 0);
+    ubo.lightDir = vec4f (cam.pos.getAsseZ(), 0);
     ubo.lightDir.normalize();
     gpu->uniformBuffer_mapCopyUnmap (uboHandle, 0, sizeof(sUniformBufferObject), &ubo);
 
@@ -238,7 +286,7 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
 
 
     gos::gpu::CmdBufferWriter cw;
-    return cw.begin (gpu, cmdBufferHandle)
+    cw.begin (gpu, cmdBufferHandle)
         .setViewport (gpu->viewport_getDefault())
         .bindPipeline (pipelineHandle)
         .bindDescriptorSet (descrSetInstancerHandle)
@@ -246,10 +294,22 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
         .setDepthBufferColor(1, 0)
         .renderPass_begin (renderLayoutHandle, frameBufferHandle)
             .bindVtxBuffer(vtxBufferHandle)
-            .bindIdxBufferU16(idxBufferHandle)
-            .drawIndexed (myShape.numIdx, 1, 0, 0, 0)
-        .renderPass_end()
-        .end();
+            .bindIdxBufferU16(idxBufferHandle);
+
+
+            u32 firstIndex = 0;
+            u32 firstVtx = 0;
+            for (u32 i=0; i<shapeList.getNElem(); i++)
+            {
+                const shape::Shape *myShape = &shapeList(i);
+                cw.drawIndexed (myShape->numIdx, 1, firstIndex, firstVtx, 0);
+
+                firstIndex += myShape->numIdx;
+                firstVtx += myShape->numVtx;
+            }
+
+        cw.renderPass_end();
+        return cw.end();
 }
 
 /************************************

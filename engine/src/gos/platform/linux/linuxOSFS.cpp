@@ -167,6 +167,11 @@ bool platform::FS_fileOpen  (OSFile *out_h, const char *utf8_filePathAndName, eF
 
     if (bAppend)
         flag |= O_APPEND;
+    else
+    {
+        if (eFileMode::writeOnly == openMode)
+            flag |= O_TRUNC;
+    }
 
     flag |= O_CLOEXEC;
     *out_h = open (reinterpret_cast<const char*>(utf8_filePathAndName), flag, mode);

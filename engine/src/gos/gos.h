@@ -72,6 +72,7 @@ namespace gos
         void	log (const eTextColor col, const char *format, ...);
 		void	err (const char *format, ...);
 		void	verbose (const char *format, ...);
+		void	warn (const char *format, ...);
         void	logWithPrefix (const char *prefix, const char *format, ...);
         void	logWithPrefix (const eTextColor col, const char *prefix, const char *format, ...);
 	} //namespace logger
