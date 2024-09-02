@@ -29,3 +29,7 @@ engine/aaCMakePresets.json
 *.goslog
 *.exe
 *.manifest
+
+engine/bin/testVulkan/shader/example6/angolo.glb
+
+engine/bin/testVulkan/writable/

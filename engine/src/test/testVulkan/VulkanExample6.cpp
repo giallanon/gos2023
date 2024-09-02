@@ -61,7 +61,8 @@ bool VulkanExample6::virtual_onInit ()
         //gos::shape::importFrom_dae ("shader/example6/sponza/sponza.dae", vtxLayot, gos::getSysHeapAllocator(), shapeList);
         
         //if (!gos::shape::importFrom_glTF ("shader/example6/cubo-normal.mapped/cubo.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-        if (!gos::shape::importFrom_glTF ("shader/example6/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        //if (!gos::shape::importFrom_glTF ("shader/example6/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        if (!gos::shape::importFrom_glTF ("shader/example6/angolo.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("shader/example6/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("shader/example6/esempio2.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         
