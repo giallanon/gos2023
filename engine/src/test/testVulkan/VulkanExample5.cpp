@@ -91,12 +91,12 @@ bool VulkanExample5::virtual_onInit ()
 
 
     //creo una sfera
-    //priv_createSfera();
-    if (!priv_loadSfera())
+    priv_createSfera();
+    /*if (!priv_loadSfera())
     {
         gos::logger::err ("VulkanApp::virtual_onInit() => error loading shape\n");
         return false;
-    }
+    }*/
  
 
     //vtx buffer (stream 0)

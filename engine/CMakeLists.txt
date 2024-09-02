@@ -61,6 +61,10 @@ if(BUILD_IS_DEBUG)
 elseif(BUILD_IS_RELEASE)
     add_compile_definitions(_NDEBUG)
     add_compile_options(-O3)
+
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        add_compile_options(-Wno-maybe-uninitialized)
+    endif()
 endif()
 
 
