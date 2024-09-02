@@ -340,7 +340,7 @@ u32 string::utf8::concatStr (char *dst, u32 sizeof_dst, const char *src)
 			nSRC = sizeof_dst -1 - nDST;
 		if (nSRC)
 		{
-			mempcpy (&dst[nDST], src, nSRC);
+			memcpy (&dst[nDST], src, nSRC);
 			nDST += nSRC;
 			dst[nDST] = 0;
 		}

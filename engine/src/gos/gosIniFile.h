@@ -5,6 +5,10 @@
 #include "gosString.h"
 #include "string/gosUTF8String.h"
 
+#ifdef GOS_COMPILER__MSVC
+	#pragma warning(disable:4458)
+#endif
+
 namespace gos
 {
 	class IniFileSection;
@@ -124,15 +128,15 @@ namespace gos
 								//============================= set / get
 								// identifier usa la notazione "." per indicare le sottosezioni
 		void					set (const char *identifier, const char* value, bool bCreateIfNotFound = true);
-		void					set (const char *identifier, u32 value, bool bCreateIfNotFound)					{ char s[32]; sprintf_s (s, sizeof(s), "%d", value); set (identifier, s, bCreateIfNotFound); }
-		void					set (const char *identifier, i32 value, bool bCreateIfNotFound)					{ char s[32]; sprintf_s (s, sizeof(s), "%d", value); set (identifier, s, bCreateIfNotFound); }
-		void					set (const char *identifier, f32 value, bool bCreateIfNotFound)					{ char s[32]; sprintf_s (s, sizeof(s), "%f", value); set (identifier, s, bCreateIfNotFound); }
-		void					set (const char *identifier, bool value, bool bCreateIfNotFound)				{ if (true == value) set (identifier, "1", bCreateIfNotFound); else set (identifier, "0", bCreateIfNotFound); }
+		void					set (const char *identifierIN, u32 value, bool bCreateIfNotFound)					{ char s[32]; sprintf_s (s, sizeof(s), "%d", value); set (identifierIN, s, bCreateIfNotFound); }
+		void					set (const char *identifierIN, i32 value, bool bCreateIfNotFound)					{ char s[32]; sprintf_s (s, sizeof(s), "%d", value); set (identifierIN, s, bCreateIfNotFound); }
+		void					set (const char *identifierIN, f32 value, bool bCreateIfNotFound)					{ char s[32]; sprintf_s (s, sizeof(s), "%f", value); set (identifierIN, s, bCreateIfNotFound); }
+		void					set (const char *identifierIN, bool value, bool bCreateIfNotFound)					{ if (true == value) set (identifierIN, "1", bCreateIfNotFound); else set (identifierIN, "0", bCreateIfNotFound); }
 
 
 		bool 					exists  (const char *identifier) const;
 		bool					get (const char *identifier, char *out, u32 sizeofout) const;
-		bool					get (const char *identifier, UTF8String &out) const								{ const char *pstr = priv_get (identifier); if (NULL == pstr) return false; out = pstr; return true; }
+		bool					get (const char *identifierIN, UTF8String &out) const								{ const char *pstr = priv_get (identifierIN); if (NULL == pstr) return false; out = pstr; return true; }
 
 		bool					checkString (const char *identifier, const char *valueToCmp, bool bCaseSensitive=false) const;
 									//ritorna true se identifier esiste ed � = a valueToCmp

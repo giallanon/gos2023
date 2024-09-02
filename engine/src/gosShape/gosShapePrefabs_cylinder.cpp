@@ -6,7 +6,7 @@ using namespace gos;
 using namespace gos::shape;
 
 //*************************************************************
-u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 radius, u32 numPointPerCirconferenza, shape::VtxArrayWriter::Elem<vec3f> &vtx)
+static u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 radius, u32 numPointPerCirconferenza, shape::VtxArrayWriter::Elem<vec3f> &vtx)
 {
 	f32 alfa = 0;
 	f32 alfaINC = math::DUEPI / numPointPerCirconferenza;
@@ -25,7 +25,7 @@ u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 radius, u32 numPointPer
 }
 
 //*************************************************************
-void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza, shape::VtxArrayWriter &writer)
+static void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza, shape::VtxArrayWriter &writer)
 {
 	u16 i0 = vtxStart;
 	u16 i1 = i0+1;

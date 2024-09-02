@@ -121,7 +121,7 @@ namespace gos
 					assert(index < 0xFFFF); 
 					assert(position < NUM_MAX_INDEX_PER_TUPLA); 
 					numIndices++; 
-					data.asU16.idx[position] = index; 
+					data.asU16.idx[position] = static_cast<u16>(index); 
 				}
 				
 				bool 	operator== (const sVertex &b) const

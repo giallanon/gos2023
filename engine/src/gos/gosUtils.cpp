@@ -1,4 +1,5 @@
 #include "gosUtils.h"
+#include "gosString.h"
 #include "string/gosCompileTimeHashedString.h"
 
 using namespace gos;
@@ -299,6 +300,5 @@ u32 utils::crc32 (const void *buffer, u32 sizeOfBuffer)
 u32 utils::crc32 (const char *str)
 {
 	assert (NULL != str);
-	const int len = strlen(str);
-	return crc32(str, len);
+	return crc32(str, gos::string::utf8::lengthInByte(str));
 }

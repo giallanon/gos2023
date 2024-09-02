@@ -1,6 +1,10 @@
 #include "gosIniFile.h"
 #include "gos.h"
 
+#ifdef GOS_COMPILER__MSVC
+	#pragma warning(disable:4456)
+#endif
+
 using namespace gos;
 
 

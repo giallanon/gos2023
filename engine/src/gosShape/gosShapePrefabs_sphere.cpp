@@ -6,7 +6,7 @@ using namespace gos;
 using namespace gos::shape;
 
 //*************************************************************
-u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 rx, f32 rz, u32 numPointPerCirconferenza, shape::VtxArrayWriter::Elem<vec3f> &vtx)
+static u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 rx, f32 rz, u32 numPointPerCirconferenza, shape::VtxArrayWriter::Elem<vec3f> &vtx)
 {
 	f32 alfa = 0;
 	f32 alfaINC = math::DUEPI / numPointPerCirconferenza;
@@ -25,7 +25,7 @@ u32 shape_buildCirconferenzaXZ (const vec3f &center, f32 rx, f32 rz, u32 numPoin
 }
 
 //*************************************************************
-void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza, shape::VtxArrayWriter &writer)
+static void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza, shape::VtxArrayWriter &writer)
 {
 	u16 i0 = vtxStart;
 	u16 i1 = i0+1;
@@ -49,7 +49,7 @@ void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconferenza,
 }
 
 //*************************************************************
-void shape_buildTrisDOWN (u32 vtxStart, u32 vtxBasso, u32 numPointPerCirconferenza, shape::VtxArrayWriter &writer)
+static void shape_buildTrisDOWN (u32 vtxStart, u32 vtxBasso, u32 numPointPerCirconferenza, shape::VtxArrayWriter &writer)
 {
 	u16 i0 = vtxStart;
 	u16 i1 = vtxStart+1;

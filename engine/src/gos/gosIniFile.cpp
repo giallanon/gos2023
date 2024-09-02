@@ -486,7 +486,7 @@ u32				IniFile::getNSubsection () const							{ if (NULL == root) return 0; retu
 IniFileSection*	IniFile::getSubsectionByIndex (u32 i) const					{ if (NULL == root) return NULL; return root->getSubsectionByIndex(i); }
 
 //********************************************
-char* IniFile::toJSon (Allocator *allocator, u32 *out_allocatedSize) const
+char* IniFile::toJSon (Allocator *allocatorIN, u32 *out_allocatedSize) const
 {
 	if (NULL == root)
 	{
@@ -497,7 +497,7 @@ char* IniFile::toJSon (Allocator *allocator, u32 *out_allocatedSize) const
 	const u32 nSubsection = root->subSection.getNElem();
 
 	BufferLinear buffer;
-	buffer.setup (allocator, 2 + nSubsection);
+	buffer.setup (allocatorIN, 2 + nSubsection);
 
 
 	u32 ct = 0;
@@ -516,7 +516,7 @@ char* IniFile::toJSon (Allocator *allocator, u32 *out_allocatedSize) const
 		}
 	c='}'; buffer.write (&c, ct, 1); ct++;
 
-	char *ret = GOSALLOCT(char*, allocator, ct);
+	char *ret = GOSALLOCT(char*, allocatorIN, ct);
 	memcpy (ret, buffer._getPointer(0), ct);
 	*out_allocatedSize = ct;
 	return ret;	

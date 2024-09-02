@@ -60,9 +60,9 @@ static constexpr u32 crc_table[256] = {
         0x2d02ef8dL
 };
 
-
+/*
 template<size_t idx>
-constexpr u32 compile_time_crc32 (const char *str)
+constexpr uint32_t compile_time_crc32 (char const *str)
 {
     //printf("x");
     return (compile_time_crc32<idx-1>(str) >> 8) ^ crc_table[(compile_time_crc32<idx-1>(str) ^ str[idx]) & 0x000000FF];
@@ -70,14 +70,14 @@ constexpr u32 compile_time_crc32 (const char *str)
 
 // This is the stop-recursion function
 template<>
-constexpr u32 compile_time_crc32<size_t(-1)>(UNUSED_PARAM(const char *str))
+constexpr uint32_t compile_time_crc32<size_t(-1)> (char const *str)
 {
     return 0xFFFFFFFF;
 }
 
 // This is the stop-recursion function
-template<u32 N>
-constexpr u32 compile_time_crc32INLINE()
+template<size_t N>
+constexpr uint32_t compile_time_crc32INLINE()
 {
     return N;
 }
@@ -86,7 +86,32 @@ constexpr u32 compile_time_crc32INLINE()
 //#define STR_HASH(x) (crc32<sizeof(x) - 2>(x) ^ 0xFFFFFFFF)
 #define COMPILE_TIME_STR_CRC32(x) (    compile_time_crc32INLINE<  (compile_time_crc32<sizeof(x) - 1>(x) ^ 0xFFFFFFFF)     >() )
 
+*/
 
 
+
+
+
+namespace inline_crc32_str 
+{
+    template<size_t idx>
+    constexpr uint32_t combine_crc32 (char const *str, uint32_t part)           { return (part >> 8) ^ crc_table[(part ^ str[idx]) & 0x000000FF]; }
+
+    template<size_t idx>
+    constexpr uint32_t crc32 (char const *str)                                  { return combine_crc32<idx>(str, crc32<idx - 1>(str)); }
+
+    // This is the stop-recursion function
+    template<>
+    constexpr uint32_t crc32<size_t(-1)> (char const *str)                      { return 0xFFFFFFFF; }
+
+} //namespace detail
+
+template <size_t len>
+constexpr uint32_t compile_time_crc32INLINE (const char (&str)[len])
+{
+    return inline_crc32_str::crc32<len - 1>(str) ^ 0xFFFFFFFF;
+}
+
+#define COMPILE_TIME_STR_CRC32(x) (compile_time_crc32INLINE(x))
 
 #endif //_gosCompileTimeHashedString_h_

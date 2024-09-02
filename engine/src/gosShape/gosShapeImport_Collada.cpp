@@ -296,7 +296,7 @@ void  ColladaImporter::priv_parseInputSemantic (const tinyxml2::XMLElement *inpu
 	while (inputElem)
 	{
 		const char *semantic =inputElem->Attribute("semantic", NULL);
-		const u32 offset = gos::string::ansi::toU32 (inputElem->Attribute("offset", NULL));
+		const u8 offset = static_cast<u8> (gos::string::ansi::toU32 (inputElem->Attribute("offset", NULL)));
 
 		if (offset > out_info->numIdxPerTupla)
 			out_info->numIdxPerTupla = offset;

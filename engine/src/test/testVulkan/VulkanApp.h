@@ -38,7 +38,7 @@ protected:
     virtual void    virtual_explain() = 0;
     virtual void    virtual_onRun() = 0;
     virtual void    virtual_onCleanup() = 0;
-    virtual void    virtual_onInputEvent (u32 event32, i16 value)   { }
+    virtual void    virtual_onInputEvent (UNUSED_PARAM(u32 event32), UNUSED_PARAM(i16 value))   { }
 };
 
 #endif //_VulkanApp_h_

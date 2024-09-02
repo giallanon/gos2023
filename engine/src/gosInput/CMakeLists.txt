@@ -49,3 +49,15 @@ message("         compiler flags: ${MAIN_CFLAGS}")
 # GLFW-3.38 library
 set(PATH_TO_GLFW "${PROJECT_SOURCE_DIR}/../external/glfw-3.3.8")
 include_directories(${PATH_TO_GLFW}/include)
+
+#===================================
+# vulkan library (richiesto da glFW)
+find_package(Vulkan REQUIRED)
+if (NOT Vulkan_FOUND)
+    message(FATAL_ERROR "Vulkan development package not found")
+else()
+    message("         vulkan include path ${Vulkan_INCLUDE_DIRS}")
+endif()
+#target_include_directories(${BINARY_OUTPUT_FILENAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
+#target_link_libraries(${BINARY_OUTPUT_FILENAME} "${Vulkan_LIBRARIES}")
+include_directories(${Vulkan_INCLUDE_DIRS})

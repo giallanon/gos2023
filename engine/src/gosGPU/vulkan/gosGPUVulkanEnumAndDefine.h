@@ -1,10 +1,6 @@
 #ifndef _gosGPUVulkanEnumAndDefine_h_
 #define _gosGPUVulkanEnumAndDefine_h_
-#define _GLFW_X11
-#define GLFW_INCLUDE_VULKAN
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define VK_ENABLE_BETA_EXTENSIONS
-#include "GLFW/glfw3.h"
+#include "GLFW/gosGLFWInclude.h"
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
 #include "../../gos/gosEnumAndDefine.h"

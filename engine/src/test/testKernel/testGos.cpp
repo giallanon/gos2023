@@ -670,6 +670,22 @@ namespace test8
         TEST_ASSERT(gos::utils::crc32("stack-overflow") == CrcVal01);
         TEST_ASSERT(gos::utils::crc32("stack-overflow") == COMPILE_TIME_STR_CRC32("stack-overflow"));
         TEST_ASSERT(gos::utils::crc32("pippo fa la pizza") == COMPILE_TIME_STR_CRC32("pippo fa la pizza"));
+
+
+        switch (gos::utils::crc32("stack-overflow"))
+        {
+        case COMPILE_TIME_STR_CRC32("stack-overflow"):
+            break;
+
+        case COMPILE_TIME_STR_CRC32("pippo fa la pizza"):
+            break;
+
+        case COMPILE_TIME_STR_CRC32("altro caso che non trigghera"):
+            break;
+
+        default:
+            TEST_ASSERT(0);
+        }
         return 0;
     }    
 }

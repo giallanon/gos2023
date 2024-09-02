@@ -179,7 +179,8 @@ bool ArraysImporter::priv_endWithTuplaList (gos::Allocator *shapeAllocator, Shap
 			sVertex v;
 			priv_extractVertex (tupla, &v);
 			const u32 vtxIndex = priv_findOrCreateVtx (v);
-			finalIdxList.append (vtxIndex);
+			assert (vtxIndex < 0xffff);
+			finalIdxList.append (static_cast<u16>(vtxIndex));
 		}
 	}
 

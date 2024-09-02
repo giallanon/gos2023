@@ -49,9 +49,9 @@ void runAllTest()
 {
     Tester tester;
     {
-        //testGos (tester);
-        //testMath(tester);
-        //testThread (tester);
+        testGos (tester);
+        testMath(tester);
+        testThread (tester);
         testIniFile (tester);
     }
     tester.printReport();

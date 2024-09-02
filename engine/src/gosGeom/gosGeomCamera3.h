@@ -27,10 +27,15 @@ namespace gos
 			void					setOrthoLH (f32 width, f32 height, f32 nearplane, f32 farplane, f32 zoom);
 
 			void					projectI (f32 viewportDimx, f32 viewportDimy, const vec3f *points3D, vec2i *point2D, u32 nPoints);
-			void					projectF (f32 viewportDimx, f32 viewportDimy, const vec3f *points3D, vec2f *point2D, u32 nPoints);
-			void					unproject (f32 viewportDimx, f32 viewportDimy, const vec2f *points2D, vec3f *OUTpoints3D, u32 nPoints);
+			void					projectI (u32 viewportDimx, u32 viewportDimy, const vec3f *points3D, vec2i *point2D, u32 nPoints)				{ projectI (static_cast<f32>(viewportDimx), static_cast<f32>(viewportDimy), points3D, point2D, nPoints); }
 
-			void					changeAspectRatioPerspectiveFovLH (f32 newAspect)					{ setPerspectiveFovLH (newAspect, getFOV_y_rad(), getNearDistance(), getFarDistance()); }
+			void					projectF (f32 viewportDimx, f32 viewportDimy, const vec3f *points3D, vec2f *point2D, u32 nPoints);
+			void					projectF (u32 viewportDimx, u32 viewportDimy, const vec3f *points3D, vec2f *point2D, u32 nPoints)				{ projectF (static_cast<f32>(viewportDimx), static_cast<f32>(viewportDimy), points3D, point2D, nPoints); }
+			
+			void					unproject (f32 viewportDimx, f32 viewportDimy, const vec2f *points2D, vec3f *OUTpoints3D, u32 nPoints);
+			void					unproject (u32 viewportDimx, u32 viewportDimy, const vec2f *points2D, vec3f *OUTpoints3D, u32 nPoints)			{ unproject (static_cast<f32>(viewportDimx), static_cast<f32>(viewportDimy), points2D, OUTpoints3D, nPoints); }
+
+			void					changeAspectRatioPerspectiveFovLH (f32 newAspect)																{ setPerspectiveFovLH (newAspect, getFOV_y_rad(), getNearDistance(), getFarDistance()); }
 
 									//========================== position
 			Pos3					pos;

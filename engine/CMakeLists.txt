@@ -47,7 +47,7 @@ endif()
 #====================================================
 # opzioni di compilazione
 if (MSVC)
-    add_compile_options(/W4)
+    add_compile_options(/W3)
     add_compile_definitions(UNICODE)
     add_compile_definitions(_UNICODE)
     add_compile_definitions(GOS_COMPILER__MSVC)

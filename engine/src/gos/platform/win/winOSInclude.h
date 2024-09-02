@@ -87,8 +87,8 @@ namespace platform
 	{
 		HANDLE			h;
 		WIN32_FIND_DATA	findData;
-		u8				utf8_jolly[64];
-		u8				utf8_curFilename[512];
+		char			utf8_jolly[64];
+		char			utf8_curFilename[512];
 
 						sOSFileFind()					{h = INVALID_HANDLE_VALUE; }
 	} OSFileFind;
@@ -117,8 +117,8 @@ namespace platform
 
 namespace win32
 {
-	bool			utf8_towchar (const u8 *utf8_string, u32 nBytesToUse, wchar_t* out, u32 sizeInBytesOfOut);
-	bool			wchar_to_utf8 (const wchar_t* wstring, u32 nBytesToUse, u8* out, u32 sizeInBytesOfOut);
+	bool			utf8_towchar (const char *utf8_string, u32 nBytesToUse, wchar_t* out, u32 sizeInBytesOfOut);
+	bool			wchar_to_utf8 (const wchar_t* wstring, u32 nBytesToUse, char* out, u32 sizeInBytesOfOut);
 } //namespace win32
 
 

@@ -49,7 +49,7 @@ void platform::console_trap_CTRL_C (GOS_ConsoleTrap_CTRL_C trapFn, void *userPar
 void platform::console_setTitle (const char *title)
 {
 	wchar_t wTitle[512];
-	win32::utf8_towchar (reinterpret_cast<const u8*>(title), (u32)strlen(title), wTitle, sizeof(wTitle));
+	win32::utf8_towchar (title, (u32)strlen(title), wTitle, sizeof(wTitle));
 	::SetConsoleTitle (wTitle);
 }
 
