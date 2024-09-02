@@ -1,0 +1,231 @@
+asset
+{
+	generator : "Khronos glTF Blender I/O v4.2.57"
+	version : 2.0
+}
+
+
+scene : 0
+[scenes]
+{
+	name : Scene
+	[nodes] : 0
+	[nodes] : 1
+}
+
+
+[nodes]
+{
+	mesh : 0
+	name : Cylinder
+	[rotation] : 0
+	[rotation] : 0.015707
+	[rotation] : 0
+	[rotation] : 0.999877
+}
+
+
+[nodes]
+{
+	mesh : 1
+	name : Icosphere
+	[translation] : 0
+	[translation] : 3.840000
+	[translation] : 0
+}
+
+
+[meshes]
+{
+	name : Cylinder
+	[primitives]
+	{
+		attributes
+		{
+			POSITION : 0
+			NORMAL : 1
+			TEXCOORD_0 : 2
+		}
+		indices : 3
+	}
+}
+
+
+[meshes]
+{
+	name : Icosphere
+	[primitives]
+	{
+		attributes
+		{
+			POSITION : 4
+			NORMAL : 5
+			TEXCOORD_0 : 6
+		}
+		indices : 7
+	}
+}
+
+
+[accessors]
+{
+	bufferView : 0
+	componentType : 5126
+	count : 352
+	[max] : 1.325680
+	[max] : 3.152716
+	[max] : 0.510000
+	[min] : -0.510000
+	[min] : 0.022717
+	[min] : -0.510000
+	type : VEC3
+}
+
+
+[accessors]
+{
+	bufferView : 1
+	componentType : 5126
+	count : 352
+	type : VEC3
+}
+
+
+[accessors]
+{
+	bufferView : 2
+	componentType : 5126
+	count : 352
+	type : VEC2
+}
+
+
+[accessors]
+{
+	bufferView : 3
+	componentType : 5123
+	count : 792
+	type : SCALAR
+}
+
+
+[accessors]
+{
+	bufferView : 4
+	componentType : 5126
+	count : 270
+	[max] : 0.951058
+	[max] : 1
+	[max] : 1.000000
+	[min] : -0.951058
+	[min] : -1
+	[min] : -2.176463
+	type : VEC3
+}
+
+
+[accessors]
+{
+	bufferView : 5
+	componentType : 5126
+	count : 270
+	type : VEC3
+}
+
+
+[accessors]
+{
+	bufferView : 6
+	componentType : 5126
+	count : 270
+	type : VEC2
+}
+
+
+[accessors]
+{
+	bufferView : 7
+	componentType : 5123
+	count : 300
+	type : SCALAR
+}
+
+
+[bufferViews]
+{
+	buffer : 0
+	byteLength : 4224
+	byteOffset : 0
+	target : 34962
+}
+
+
+[bufferViews]
+{
+	buffer : 0
+	byteLength : 4224
+	byteOffset : 4224
+	target : 34962
+}
+
+
+[bufferViews]
+{
+	buffer : 0
+	byteLength : 2816
+	byteOffset : 8448
+	target : 34962
+}
+
+
+[bufferViews]
+{
+	buffer : 0
+	byteLength : 1584
+	byteOffset : 11264
+	target : 34963
+}
+
+
+[bufferViews]
+{
+	buffer : 0
+	byteLength : 3240
+	byteOffset : 12848
+	target : 34962
+}
+
+
+[bufferViews]
+{
+	buffer : 0
+	byteLength : 3240
+	byteOffset : 16088
+	target : 34962
+}
+
+
+[bufferViews]
+{
+	buffer : 0
+	byteLength : 2160
+	byteOffset : 19328
+	target : 34962
+}
+
+
+[bufferViews]
+{
+	buffer : 0
+	byteLength : 600
+	byteOffset : 21488
+	target : 34963
+}
+
+
+[buffers]
+{
+	byteLength : 22088
+}
+
+

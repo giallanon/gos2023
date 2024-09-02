@@ -1,0 +1,46 @@
+[accessors]
+{
+	bufferView : 0
+	componentType : 5126
+	count : 24
+	name : pippo
+	type : VEC3
+}
+
+
+[accessors]
+{
+	bufferView : 1
+	componentType : 5126
+	count : 24
+	type : VEC3
+}
+
+
+[accessors]
+{
+	bufferView : 2
+	componentType : 5126
+	count : 24
+	type : VEC2
+}
+
+
+[accessors]
+{
+	bufferView : 3
+	componentType : 5126
+	count : 24
+	type : VEC4
+}
+
+
+[accessors]
+{
+	bufferView : 4
+	componentType : 5123
+	count : 36
+	type : SCALAR
+}
+
+
