@@ -7,6 +7,8 @@ namespace gos
 {
 	namespace input
 	{
+		class Context; //fwd
+
 		/**************************************************
 		 * Window
 		 */
@@ -15,6 +17,12 @@ namespace gos
 		public:
 							Window (GLFWwindow *glfwHandle);
 							~Window();
+
+			void 					resolveEvents_begin (const Context *ctx);
+			u32 					resolveEvents_nextActionID (i16 *out_value);
+			const MouseStatus&		resolveEvents_getMouse() const																{ return resolving.mouseStatus; }
+			const sButtonModifier&	resolveEvents_getBtnModifier() const														{ return resolving.btnModifier; }
+
 
 			void			addButtonEvt (input::eOrigin origin, int buttonId, eButtonStatus status)							{ curEvtList->addButtonEvt (origin, buttonId, status, curBtnModifier); }
 			void			addAxleAbsEvt (input::eOrigin origin, input::eAxle axle, i16 pos)									{ curEvtList->addAxleAbsEvt (origin, axle, pos); }
@@ -25,8 +33,7 @@ namespace gos
 			eMouseMode		getMouseMode() const	 												{ return mouseMode; }
 
 			GLFWwindow*		getGLFWHandle() const 													{ return glfwHandle; }
-			const EvtList*	swapEvtList();
-
+			
             void            storeCurrentPosAndSize()
                             {
 								glfwGetWindowPos (glfwHandle, &storedX, &storedY);
@@ -41,7 +48,20 @@ namespace gos
             int 			storedX;
             int 			storedY;
             int 			storedW;
-            int 			storedH;			
+            int 			storedH;
+
+		private:
+			struct sResolving
+			{
+				const EvtList 	*list;
+				EvtList::Iter 	iter;
+				const Context 	*ctx;
+				MouseStatus		mouseStatus;
+				sButtonModifier	btnModifier;
+			};
+
+		private:
+			const EvtList*	priv_swapEvtList();
 
 		private:
             GLFWwindow  	*glfwHandle;
@@ -49,7 +69,7 @@ namespace gos
 			eMouseMode		mouseMode;
 			EvtList			evtList1;
 			EvtList			evtList2;
-			
+			sResolving		resolving;
 		};
 		
 	} //namespace input

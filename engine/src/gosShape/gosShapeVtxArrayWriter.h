@@ -7,11 +7,10 @@ namespace gos
 { 
 	namespace shape
 	{
-		/****************************
-		 * VtxArrayWriter
-		 * 
-		 * Da usarsi per scrivere in un array di vtx precedentemente definito tramite un VtxLayout
-		 * In sostanza prende un VatLayout e un buffer generico e ci scrive dentro rispettando la struttura inidicata da VtxLayout		 
+		/**
+		 * @brief 	VtxArrayWriter
+		 * 	 		Da usarsi per scrivere/leggere in un generico buffer che si suppone essere formattato secondo la descrizione fornita
+		 * 			da un VtxLayout
 		 */
 		class VtxArrayWriter
 		{

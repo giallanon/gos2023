@@ -62,11 +62,11 @@ bool VulkanExample6::virtual_onInit ()
         
         //if (!gos::shape::importFrom_glTF ("shader/example6/cubo-normal.mapped/cubo.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("shader/example6/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-        if (!gos::shape::importFrom_glTF ("shader/example6/angolo.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        //if (!gos::shape::importFrom_glTF ("shader/example6/angolo.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("shader/example6/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("shader/example6/esempio2.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         
-        //if (!gos::shape::importFrom_glTF ("shader/example6/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        if (!gos::shape::importFrom_glTF ("shader/example6/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/DamagedHelmet/glTF/DamagedHelmet.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Duck/glTF-Binary/Duck.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/BrainStem/glTF-Binary/BrainStem.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
@@ -330,21 +330,21 @@ void VulkanExample6::virtual_onRun()
 }
 
 //**********************************
-void VulkanExample6::virtual_onInputEvent (u32 actionID, i16 value)
+void VulkanExample6::virtual_onInputEvent (u32 actionID, i16 value, const gos::input::MouseStatus &mouseStatus, const gos::input::sButtonModifier &btnModifier)
 {
     switch (actionID)
     {
     default:
         break;
 
-    case COMPILE_TIME_STR_CRC32("game.move_forward"):           movement.moveForward ((value == 1));break;
-    case COMPILE_TIME_STR_CRC32("game.move_backward"):          movement.moveBackward ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.strafe_left"):            movement.strafeLeft ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.strafe_right"):           movement.strafeRight ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.strafe_up"):              movement.strafeUp ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.strafe_down"):            movement.strafeDown ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.rotateY"):                movement.rotateY ((value<0)); break;
-    case COMPILE_TIME_STR_CRC32("game.rotateX"):                movement.rotateX ((value<0)); break;
+    case COMPILE_TIME_STR_CRC32("move_forward"):           movement.moveForward ((value == 1));break;
+    case COMPILE_TIME_STR_CRC32("move_backward"):          movement.moveBackward ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("strafe_left"):            movement.strafeLeft ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("strafe_right"):           movement.strafeRight ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("strafe_up"):              movement.strafeUp ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("strafe_down"):            movement.strafeDown ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("rotateY"):                movement.rotateY ((value<0)); break;
+    case COMPILE_TIME_STR_CRC32("rotateX"):                movement.rotateX ((value<0)); break;
     
     }
 }
@@ -352,8 +352,6 @@ void VulkanExample6::virtual_onInputEvent (u32 actionID, i16 value)
 //**********************************
 void VulkanExample6::doCPUStuff ()
 {
-    fpsMegaTimer.onFrameBegin(FPSTIMER_CPU);
-
     handleInput();
 
     //do some stuff
@@ -376,17 +374,14 @@ void VulkanExample6::doCPUStuff ()
     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
     movement.update(timeNow_msec);
     cam.markUpdated();
-
-    fpsMegaTimer.onFrameEnd(FPSTIMER_CPU);
-    fpsMegaTimer.printReport();
 }
 
 
 //**********************************
 void VulkanExample6::mainLoop()
 {
-    GPUMainLoop gpuLoop;
-    gpuLoop.setup (gpu, &fpsMegaTimer);
+    gpu::MainLoop gpuLoop;
+    gpuLoop.setup (gpu);
 
     //command buffer 
     GPUCmdBufferHandle  cmdBufferHandle;
@@ -395,7 +390,10 @@ void VulkanExample6::mainLoop()
     //main loop
     while (bQuitApp == false)
     {
+        gpuLoop.stat_onCPUFrameBegin();
         doCPUStuff ();
+        gpuLoop.stat_onCPUFrameEnd();
+        gpuLoop.stat_printReport();
 
 
         gpuLoop.run ();

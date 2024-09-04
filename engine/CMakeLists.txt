@@ -98,4 +98,5 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosInput)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGPU)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/simpleWorld)
 

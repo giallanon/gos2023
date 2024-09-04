@@ -41,6 +41,7 @@ private:
     static const u8     NUM_INDEX = 6;
 
 private:
+    gos::FPSMegaTimer<3>    fpsMegaTimer;
     Vertex                  vertexList[NUM_VERTEX];
     u16                     indexList[NUM_INDEX];
 

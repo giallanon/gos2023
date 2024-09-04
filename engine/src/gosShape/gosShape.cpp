@@ -1,6 +1,7 @@
 #include "gosShape.h"
 #include "gosShapeVtxLayout.h"
 #include "gosShapeVtxArrayWriter.h"
+#include "gosShapeVtxArrayReader.h"
 #include "../gos/gos.h"
 #include "../gos/gosUtils.h"
 
@@ -621,12 +622,12 @@ void shape::shapeRotateNormals (Shape *shape, const Quat &quat)
 
 
 //********************************************************
-void shape::shapeCalcAABB (Shape *shape, vec3f *out_min, vec3f *out_max)
+void shape::shapeCalcAABB (const Shape *shape, vec3f *out_min, vec3f *out_max)
 {
-	VtxArrayWriter writer;
+	VtxArrayReader writer;
 	writer.setup (shape);
 
-	VtxArrayWriter::Elem<vec3f> elem;
+	VtxArrayReader::Elem<vec3f> elem;
 	if (!writer.getPos3(&elem))
 		return;
 

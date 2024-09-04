@@ -148,6 +148,32 @@ namespace gos
             u16             strength;
         };
 
+        struct sAction
+        {
+            u32	actionID;
+            u32 offsetToActionName;
+        };
+
+        struct sMappedAction
+        {
+            EventID		eventID;
+            u32			actionID;
+        };				
+
+        struct MouseStatus
+        {
+            i16 	x;
+            i16 	y;
+            u8 		btnPressed[16];
+
+            void 	reset()							{ x=y=0; memset(btnPressed,0,sizeof(btnPressed)); }
+
+            bool 	isLMBPressed() const 			{ return (btnPressed[0] != 0); }
+            bool 	isRMBPressed() const 			{ return (btnPressed[1] != 0); }
+            bool 	isMMBPressed() const 			{ return (btnPressed[2] != 0); }
+            bool 	isPressed (u8 btnNum) const 	{ assert(btnNum<16); return (btnPressed[btnNum]!=0); }
+        };
+
 
     } //namespace input
 } //namespace gos

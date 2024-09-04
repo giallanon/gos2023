@@ -39,6 +39,10 @@ void VulkanExample2::virtual_onCleanup()
 //************************************
 bool VulkanExample2::virtual_onInit ()
 {
+    fpsMegaTimer.addTimer ("CPU");
+    fpsMegaTimer.addTimer ("GPU");
+    fpsMegaTimer.addTimer ("FPS");
+
     //vertici
     vertexList[0].pos.set (0.0f, -0.5f);
     vertexList[0].colorRGB.set (1.0f, 0.0f, 0.0f);
@@ -292,7 +296,7 @@ void VulkanExample2::virtual_onRun()
 //**********************************
 void VulkanExample2::doCPUStuff ()
 {
-    fpsMegaTimer.onFrameBegin(FPSTIMER_CPU);
+    fpsMegaTimer.onFrameBegin(0);
 
     handleInput();
 
@@ -314,7 +318,7 @@ void VulkanExample2::doCPUStuff ()
         printf ("A\n");
 
 
-    fpsMegaTimer.onFrameEnd(FPSTIMER_CPU);
+    fpsMegaTimer.onFrameEnd(0);
     fpsMegaTimer.printReport();
 }
 
@@ -344,7 +348,7 @@ void VulkanExample2::mainLoop_3()
         //attende che il precedente batch sia terminato
         if (gpu->fence_wait (inFlightFence, 0))
         {
-            fpsMegaTimer.onFrameEnd (FPSTIMER_GPU);
+            fpsMegaTimer.onFrameEnd (1);
             //Chiedo a GPU una immagine dalla swap chain, non attendo nemmeno 1 attimo e indico [semaphore_imageReady] come
             //semaforo che GPU deve segnalare quando questa operazione e' ok. Indico inoltre [fenceSwapChainReady] come fence da segnalre
             //quando l'immagine e' disponibile
@@ -363,11 +367,11 @@ void VulkanExample2::mainLoop_3()
                     doCPUStuff ();
                 }
 
-                fpsMegaTimer.onFrameEnd(FPSTIMER_FPS);
-                fpsMegaTimer.onFrameBegin(FPSTIMER_FPS);
+                fpsMegaTimer.onFrameEnd(2);
+                fpsMegaTimer.onFrameBegin(2);
 
                 //arrivo qui quando GPU mi ha finalmente dato l'immagine
-                fpsMegaTimer.onFrameBegin(FPSTIMER_GPU);
+                fpsMegaTimer.onFrameBegin(1);
 
                 gpu->fence_reset (fenceSwapChainReady);
                 gpu->fence_reset (inFlightFence);

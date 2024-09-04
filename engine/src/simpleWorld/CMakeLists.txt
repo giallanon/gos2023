@@ -6,11 +6,11 @@
 cmake_minimum_required(VERSION 3.20)
 
 #project name and version
-project(testVulkan VERSION 1.0.0 LANGUAGES C CXX)
+project(simpleWorld VERSION 1.0.0 LANGUAGES C CXX)
 
 #====================================================
 # path di output di questo progetto
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../../bin/${PROJECT_NAME})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../bin/${PROJECT_NAME})
 
 #====================================================
 # nome del file di output
@@ -20,38 +20,17 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 #====================================================
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
-FPSMovement.cpp
-FPSMovement.h
-FreeMovement.cpp
-FreeMovement.h
 main.cpp
-VulkanApp.cpp
-VulkanApp.h
-VulkanExample1.cpp
-VulkanExample1.h
-VulkanExample2.cpp
-VulkanExample2.h
-VulkanExample3.cpp
-VulkanExample3.h
-VulkanExample4.cpp
-VulkanExample4.h
-VulkanExample5_line.cpp
-VulkanExample5_marchingSquare.cpp
-VulkanExample5_world.cpp
-VulkanExample5.cpp
-VulkanExample5.h
-VulkanExample6.cpp
-VulkanExample6.h
- )
+)
 
 #====================================================
 # additional include path
-include_directories(${PROJECT_SOURCE_DIR}/../../gos)
-include_directories(${PROJECT_SOURCE_DIR}/../../gosMath)
-include_directories(${PROJECT_SOURCE_DIR}/../../gosGeom)
-include_directories(${PROJECT_SOURCE_DIR}/../../gosShape)
-include_directories(${PROJECT_SOURCE_DIR}/../../gosInput)
-include_directories(${PROJECT_SOURCE_DIR}/../../gosGPU)
+include_directories(${PROJECT_SOURCE_DIR}/../gos)
+include_directories(${PROJECT_SOURCE_DIR}/../gosMath)
+include_directories(${PROJECT_SOURCE_DIR}/../gosGeom)
+include_directories(${PROJECT_SOURCE_DIR}/../gosShape)
+include_directories(${PROJECT_SOURCE_DIR}/../gosInput)
+include_directories(${PROJECT_SOURCE_DIR}/../gosGPU)
 
 #====================================================
 # info a video
@@ -76,7 +55,7 @@ endforeach()
 
 #===================================
 # GLFW-3.38 library
-set(PATH_TO_GLFW "${PROJECT_SOURCE_DIR}/../../external/glfw-3.3.8")
+set(PATH_TO_GLFW "${PROJECT_SOURCE_DIR}/../external/glfw-3.3.8")
 include_directories(${PATH_TO_GLFW}/include)
 makeLibraryName(glfwLibraryFilename glfw3)
 target_link_libraries(${BINARY_OUTPUT_FILENAME} "${glfwLibraryFilename}")

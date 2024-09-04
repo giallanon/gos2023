@@ -1,17 +1,25 @@
-#include "GPUMainLoop.h"
+#include "gosGPUMainLoop.h"
+#include "gosGPU.h"
+#include "../gos/gosUtils.h"
+
+using namespace gos;
+using namespace gos::gpu;
 
 //************************************************
-GPUMainLoop::GPUMainLoop()
+MainLoop::MainLoop()
 {
     stato = eStato::askingNewFrame;
     canAccept_GFXJob = false;
+
+    fpsMegaTimer.addTimer ("CPU");
+    fpsMegaTimer.addTimer ("GPU");
+    fpsMegaTimer.addTimer ("FPS");
 }
 
 //************************************************
-void GPUMainLoop::setup (gos::GPU *gpuIN, FPSMegaTimer *fpsMegaTimerIN)
+void MainLoop::setup (gos::GPU *gpuIN)
 {
     gpu = gpuIN;
-    fpsMegaTimer = fpsMegaTimerIN;
 
     //I semafori sono oggetti di sync tra GPU & GPU (non e' un errore e' proprio GPU-GPU)
     //Fence sono oggetti di sync tra GPU & CPU (a differenza dei semafori che riguardano solo la CPU)
@@ -21,7 +29,7 @@ void GPUMainLoop::setup (gos::GPU *gpuIN, FPSMegaTimer *fpsMegaTimerIN)
 }
 
 //************************************************
-void GPUMainLoop::unsetup()
+void MainLoop::unsetup()
 {
     gpu->semaphore_destroy (semaphore_renderFinished);
     gpu->fence_destroy (fenceSwapChainReady);
@@ -30,13 +38,13 @@ void GPUMainLoop::unsetup()
 
 
 //************************************************
-bool GPUMainLoop::canSubmitGFXJob () const
+bool MainLoop::canSubmitGFXJob () const
 {
     return canAccept_GFXJob;
 }
 
 //************************************************
-void GPUMainLoop::submitGFXJob (const GPUCmdBufferHandle &cmdBufferHandle)
+void MainLoop::submitGFXJob (const GPUCmdBufferHandle &cmdBufferHandle)
 {
     assert (canAccept_GFXJob);
     
@@ -49,7 +57,7 @@ void GPUMainLoop::submitGFXJob (const GPUCmdBufferHandle &cmdBufferHandle)
 
 
 //************************************************
-bool GPUMainLoop::run ()
+bool MainLoop::run ()
 {
     bSwapchainRecreated = false;
     if (eStato::waitingOnFence_inFlight == stato)
@@ -58,7 +66,7 @@ bool GPUMainLoop::run ()
         if (!gpu->fence_wait (fence_inFlight, 0))
             return false;
         gpu->fence_reset (fence_inFlight);
-        fpsMegaTimer->onFrameEnd (FPSTIMER_GPU);
+        fpsMegaTimer.onFrameEnd (1);
         stato = eStato::askingNewFrame;
     }
 
@@ -100,11 +108,11 @@ bool GPUMainLoop::run ()
         //se arriviamo qui vuol dire che un job e' stato schedulato
         stato = eStato::waitingOnFence_inFlight;
 
-        fpsMegaTimer->onFrameEnd (FPSTIMER_FPS);
-        fpsMegaTimer->onFrameBegin(FPSTIMER_FPS);
+        fpsMegaTimer.onFrameEnd (2);
+        fpsMegaTimer.onFrameBegin(2);
 
         //arrivo qui quando GPU mi ha finalmente dato l'immagine
-        fpsMegaTimer->onFrameBegin(FPSTIMER_GPU);
+        fpsMegaTimer.onFrameBegin(1);
 
 
         //submit del command buffer

@@ -6,6 +6,11 @@ namespace gos
 {
 	namespace input
 	{
+		class Context; //fwd
+
+		/**
+		 * @brief EvtList
+		 */
 		class EvtList
 		{
 		public:

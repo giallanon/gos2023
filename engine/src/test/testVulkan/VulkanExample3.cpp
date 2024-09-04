@@ -329,13 +329,17 @@ bool VulkanExample3::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
  */
 void VulkanExample3::virtual_onRun()
 {
+    fpsMegaTimer.addTimer ("CPU");
+    fpsMegaTimer.addTimer ("GPU");
+    fpsMegaTimer.addTimer ("FPS");
+
     mainLoop();
 }
 
 //**********************************
 void VulkanExample3::doCPUStuff ()
 {
-    fpsMegaTimer.onFrameBegin(FPSTIMER_CPU);
+    fpsMegaTimer.onFrameBegin(0);
 
     handleInput();
 
@@ -358,7 +362,7 @@ void VulkanExample3::doCPUStuff ()
         printf ("A\n");
 
 
-    fpsMegaTimer.onFrameEnd(FPSTIMER_CPU);
+    fpsMegaTimer.onFrameEnd(0);
     fpsMegaTimer.printReport();
 }
 
@@ -366,8 +370,8 @@ void VulkanExample3::doCPUStuff ()
 //**********************************
 void VulkanExample3::mainLoop()
 {
-    GPUMainLoop gpuLoop;
-    gpuLoop.setup (gpu, &fpsMegaTimer);
+    gpu::MainLoop gpuLoop;
+    gpuLoop.setup (gpu);
 
     //command buffer 
     GPUCmdBufferHandle  cmdBufferHandle;

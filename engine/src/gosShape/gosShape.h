@@ -11,11 +11,19 @@ namespace gos
 		const char*		enumToString (eVtxLayoutSemantic e);
 		const char*		enumToString (eVtxLayoutFormat e);
 
-		//======================================= VtxLayoutFormat
+		/*============================================================================== 
+		 *
+		 *	VtxLayoutFormat
+		 *
+		 *==============================================================================*/
 		u32 	getSizeInByte (eVtxLayoutFormat fmt);
 
 
-		//======================================= VtxLayout
+		/*============================================================================== 
+		 *
+		 *	VtxLayout
+		 *
+		 *==============================================================================*/
 		bool 	areEqual (const VtxLayout &a, const VtxLayout &b);
 		u32 	calcSizeOfAVertex (const VtxLayout &a);
 		
@@ -25,12 +33,15 @@ namespace gos
 
 		u32 	deserialize (VtxLayout *out, const u8 *buffer, u32 sizeof_buffer);	
 
-		//======================================= Shape
-
+		/*============================================================================== 
+		 *
+		 *	Shape
+		 *
+		 *==============================================================================*/
+		
 		/**
-		 * @brief inizializza una shape
-		 * 
-		 * Alloca il numero di vtx e idx indicati rispettando @vtxLayout
+		 * @brief 	inizializza una shape 
+		 * 			Alloca il numero di vtx e idx indicati rispettando @vtxLayout
 		 */
 		bool	shapeAlloc (gos::Allocator *allocator, const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, Shape *out_shape);
 		void	shapeFree (gos::Allocator *allocator, Shape *shape);
@@ -41,17 +52,17 @@ namespace gos
 		bool 	shapeSave (const char *filename, const Shape *shape);
 		bool 	shapeSave (gos::File &hFile, const Shape *shape);
 
+		void	debug_shapePrint (const Shape *shape);
+
+		void 	shapeCalcAABB (const Shape *shape, vec3f *out_min, vec3f *out_max);
+
 		void 	shapeRightHandedToLeftHanded (Shape *shape);
 		void 	shapeTranslate (Shape *shape, const vec3f &tr);
-		void 	shapeCalcAABB (Shape *shape, vec3f *out_min, vec3f *out_max);
 		void 	shapeTransformPos (Shape *shape, const mat4x4f &mat);
 		void 	shapeTransformPos (Shape *shape, const mat3x3f &mat);
 		
 		void 	shapeRotateNormals (Shape *shape, const mat3x3f &mat);
 		void 	shapeRotateNormals (Shape *shape, const Quat &quat);
-
-		void	debug_shapePrint (const Shape *shape);
-
 
 	} //namespace shape
  } //namespace gos

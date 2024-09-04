@@ -17,10 +17,10 @@ namespace gos
 		{
 		public:
 								VtxLayoutReaderInterface ()																		{ }
-								VtxLayoutReaderInterface (VTXLAYOUT v)																	{ setup(v); }
+								VtxLayoutReaderInterface (VTXLAYOUT v)															{ setup(v); }
 								~VtxLayoutReaderInterface ()																	{ }
 
-			void 				setup (VTXLAYOUT v)																						{ vl = v; }
+			void 				setup (VTXLAYOUT v)																				{ vl = v; }
 
 			bool				find (eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt, u32 *out_offset) const		{ assert (NULL != out_offset); *out_offset = priv_findOffset(semantic, index, fmt); return (*out_offset != u32MAX); }
 			bool 				exists  (eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt) const						{ return (priv_findOffset(semantic, index, fmt) != u32MAX); }

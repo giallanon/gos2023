@@ -77,5 +77,3 @@ bool EvtList::next (Iter &iter, EventID *out) const
 	iter.i++;
 	return true;
 }
-
-

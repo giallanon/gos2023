@@ -1,29 +1,11 @@
 #include "gosInput.h"
-#include "gosInputWindow.h"
+#include "gosInputModule.h"
 #include "../gos/gos.h"
+#include "../gos/memory/gosAllocatorHeap.h"
 
-namespace gos
-{
-    namespace input
-    {
-        //****************************************
-        class Module
-        {
-        public:
-                Module() : voidEvtList(1)
-                {
-                }
+typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Unsafe>		GOSInputMemAllocatorTS;
 
-        public:
-            gos::HandleList<GOSWinHandle, input::Window*>   windowList;
-            input::EvtList                                  voidEvtList;
-            input::Mapper                                   *mapper;
-        };
-
-    } //namespace input
-} //namespace gos
-
-
+static GOSInputMemAllocatorTS *localAllocator;
 static gos::input::Module *module = NULL;
 
 using namespace gos;
@@ -34,11 +16,12 @@ bool input::init()
     gos::logger::log ("INPUT::init\n");
     gos::logger::incIndent();
     
+    localAllocator = GOSNEW(gos::getSysHeapAllocator(), GOSInputMemAllocatorTS)("INPUT");
+    localAllocator->setup (1024 * 1024);
     
-    module = GOSNEW(gos::getSysHeapAllocator(), Module)();
-    module->windowList.setup (gos::getSysHeapAllocator());
-    module->mapper = GOSNEW(gos::getSysHeapAllocator(), input::Mapper)();
+    module = GOSNEW (localAllocator, Module)(localAllocator);
     
+
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -58,10 +41,10 @@ void input::deinit()
     {
         glfwTerminate();
 
-        module->windowList.unsetup();
-        GOSDELETE(gos::getSysHeapAllocator(), module->mapper);
-        GOSDELETE(gos::getSysHeapAllocator(), module);
+        GOSDELETE(localAllocator, module);
         module = NULL;
+
+        GOSDELETE(gos::getSysHeapAllocator(), localAllocator);
     }
 
     gos::logger::log ("finished\n");
@@ -69,9 +52,21 @@ void input::deinit()
 }
 
 //*****************************************
-input::Mapper& input::map()
+u32 input::priv_action_addName (const char *name)
 {
-    return *module->mapper;
+    return module->action_addName(name);
+}
+
+//*****************************************
+const char*	input::priv_action_getNameByOffset (u32 offset)
+{
+    return module->action_getNameByOffset (offset);
+}
+
+//*****************************************
+input::Context* input::context_create (const char *name)
+{
+    return module->context_create (name);
 }
 
 //*****************************************
@@ -325,13 +320,16 @@ void input::window_toggleFullscreen(const GOSWinHandle &handle)
 }
 
 //*****************************************
-const input::EvtList* input::window_getEventList (const GOSWinHandle &handle)
+void input::resolveEvents (const GOSWinHandle &handle, const Context *ctx, ResolvedEvtList *out)
 {
     input::Window *win = gos_input_getWindowFromHandle (handle);
     if (NULL != win)
-        return win->swapEvtList();
-    
-    return &module->voidEvtList;
+    {
+        win->resolveEvents_begin (ctx);
+        out->setup (win);
+    }
+    else
+        out->setup (NULL);
 }
 
 //*****************************************

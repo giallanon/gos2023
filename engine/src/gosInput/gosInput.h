@@ -2,7 +2,8 @@
 #define _gosInput_h_
 #include "gosInputEnumAndDefine.h"
 #include "gosInputEvtList.h"
-#include "gosInputMapper.h"
+#include "gosInputContext.h"
+#include "gosInputResolvedEvtList.h"
 
 namespace gos
 {
@@ -11,15 +12,31 @@ namespace gos
 		bool			init();
 		void			deinit();
 
-		void			pollEvents();
-						//da chiamare periodicamente, tipicamente nel main loop, per recuperare gli eventi di input
-
-		Mapper&			map();
-
 		const char* 	enumToString (input::eType e);
 		const char* 	enumToString (input::eOrigin e);
 		const char* 	enumToString (input::eAxle e);
 		const char* 	enumToString (input::eAxleDirection e);
+
+
+		/**
+		 * @brief pollEvents()
+		 * da chiamare periodicamente, tipicamente nel main loop, per recuperare gli eventi di input
+		 */
+		void			pollEvents();
+
+		/**
+		 * @brief resolveEvents()
+		 * dopo una chiamata pollEvent, le [windows] contengono una lista degli eventi di input.
+		 * Utilizzare resolveEvents() per recuperare tale lista e tradurla in [actionID]
+		 * Questa fn valorizza [out] che poi diventa l'interfaccia principale per il recupero delle actionID
+		 * scatenate dagli input recuperati dalla finestra
+		 * 
+		 * Gli input della finestra vengono confrontati con il [context] per produrre delle [actionID]
+		 */
+		void 			resolveEvents (const GOSWinHandle &handle, const Context *ctx, ResolvedEvtList *out);
+
+		Context*		context_create (const char *name);
+
 
 		/************************************************************************************************************
 		 *
@@ -42,7 +59,6 @@ namespace gos
 		void			window_setMouseMode (const GOSWinHandle &handle, eMouseMode mode);
 		void			window_toggleMouseMode (const GOSWinHandle &handle);
 		void			window_toggleFullscreen(const GOSWinHandle &handle);
-		const EvtList*	window_getEventList (const GOSWinHandle &handle);
 
 		/************************************************************************************************************
 		 *
@@ -72,7 +88,18 @@ namespace gos
 		
 						//event_getEventName
 						//Filla [out] con il nome "umano" della combinazione di tasti/assi (es: ALT + Q)
-		void			event_getEventName (const EventID &eventID, char *out, u32 sizeof_out); 
+		void			event_getEventName (const EventID &eventID, char *out, u32 sizeof_out);
+
+
+
+		/************************************************************************************************************
+		 *
+		 * uso interno
+		 *
+		 */
+		u32 			priv_action_addName (const char *name);
+		const char*		priv_action_getNameByOffset (u32 offset);
+
 
 	} //namespace input
 } //namespace gos

@@ -4,9 +4,22 @@
 
 namespace gos
 {
-    /**************************************************
-     * SortedFastArray
+    template<class T>
+    inline int SortedFastArray_compareFn (const T &t1, const T &t2)        { return t1.compare(t2); }
+
+    template<>
+    inline int SortedFastArray_compareFn (const u32 &t1, const u32 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+
+    template<>
+    inline int SortedFastArray_compareFn (const i32 &t1, const i32 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+
+    /**
+     * @brief SortedFastArray
+     * E' una hash map dove TKEY e' l'hash e TVALUE e' il value
      * 
+     * TKEY deve essere una classe con un metodo compare (const TKEY &b) che ritorna 0 se a==b, 1 se a>b, -1 se a<<b
+     * Per i tipi piu' comuni (come u32), ho definito una specializzazione del template SortedFastArray_compareFn<>
+     * in modo da non dover implementare una classe "u32" con dentro un meotodo compare
     */
     template<class TKEY, class TVALUE>
     class SortedFastArray
@@ -177,7 +190,8 @@ namespace gos
                             *out_index = search.start;
                             for (u32 i=search.start; i<(search.start+numElem); i++)
                             {
-                                switch (key.compare(list(i).key))
+                                //switch (key.compare(list(i).key))
+                                switch (SortedFastArray_compareFn<TKEY>(key, list(i).key))
                                 {
                                 default:
                                     break;
@@ -197,7 +211,8 @@ namespace gos
 
 
                         const u32 middle = search.start + numElem / 2;
-                        switch (key.compare(list(middle).key))
+                        //switch (key.compare(list(middle).key))
+                        switch (SortedFastArray_compareFn<TKEY>(key, list(middle).key))
                         {
                         case 0: //sono uguali
                             *out_index = middle;

@@ -39,7 +39,8 @@ gosGPUCmdBufferWriter.h
 gosGPUDescrSetInstanceWriter.cpp
 gosGPUDescrSetInstanceWriter.h
 gosGPUEnumAndDefine.h
-
+gosGPUMainLoop.cpp
+gosGPUMainLoop.h
 gosGPUResCommandBuffer.h
 gosGPUResDepthStencil.h
 gosGPUResDescrPool.h

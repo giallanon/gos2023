@@ -7,6 +7,7 @@
 #include "../gosInput/gosInput.h"
 #include "gosGPUDescrSetInstanceWriter.h"
 #include "gosGPUCmdBufferWriter.h"
+#include "gosGPUMainLoop.h"
 #include "gosGPUResCommandBuffer.h"
 #include "gosGPUResDepthStencil.h"
 #include "gosGPUResDescrPool.h"

@@ -3,8 +3,6 @@
 #include "gosGPU.h"
 #include "../gosGeom/gosGeomCamera3.h"
 #include "../gosShape/gosShape.h"
-#include "FPSMegaTimer.h"
-#include "GPUMainLoop.h"
 #include "FPSMovement.h"
 #include "FreeMovement.h"
 
@@ -29,16 +27,20 @@ public:
 
 protected:
     gos::GPU                *gpu;
+    gos::input::Context  *inputCtx;
     bool                    bQuitApp;
-    FPSMegaTimer            fpsMegaTimer;
-
+    
 protected:
     void            handleInput();
     virtual bool    virtual_onInit() = 0;    
     virtual void    virtual_explain() = 0;
     virtual void    virtual_onRun() = 0;
     virtual void    virtual_onCleanup() = 0;
-    virtual void    virtual_onInputEvent (UNUSED_PARAM(u32 event32), UNUSED_PARAM(i16 value))   { }
+    virtual void    virtual_onInputEvent (  UNUSED_PARAM(u32 event32),
+                                            UNUSED_PARAM(i16 value), 
+                                            UNUSED_PARAM(const gos::input::MouseStatus &mouseStatus), 
+                                            UNUSED_PARAM(const gos::input::sButtonModifier &btnModifier))   { }
+
 };
 
 #endif //_VulkanApp_h_

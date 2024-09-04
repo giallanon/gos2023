@@ -17,7 +17,7 @@ protected:
     void        virtual_explain();
     void        virtual_onRun();
     void        virtual_onCleanup();
-    void        virtual_onInputEvent (u32 actionID, i16 value);
+    void        virtual_onInputEvent (u32 actionID, i16 value, const gos::input::MouseStatus &mouseStatus, const gos::input::sButtonModifier &btnModifier);
 
 private:
     struct sPerInstanceData

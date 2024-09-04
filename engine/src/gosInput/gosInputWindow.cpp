@@ -1,4 +1,6 @@
 #include "gosInputWindow.h"
+#include "gosInput.h"
+#include "gosInputContext.h"
 
 using namespace gos;
 using namespace gos::input;
@@ -22,6 +24,9 @@ Window::Window (GLFWwindow *glfwHandleIN) : evtList1(1024), evtList2(1024)
     mouseMode = eMouseMode::absolute;
 	curEvtList = &evtList2;
 	curBtnModifier.reset();
+    
+    resolving.list = NULL;
+    resolving.mouseStatus.reset();
 
 	glfwSetWindowUserPointer (glfwHandle, this);
     glfwSetWindowCloseCallback (glfwHandle, GOSInputWindow_close_callback);
@@ -58,7 +63,7 @@ void Window::setMouseMode (eMouseMode mode)
 }
 
 //************************************
-const input::EvtList* Window::swapEvtList()
+const input::EvtList* Window::priv_swapEvtList()
 {
 	if (curEvtList == &evtList1)
 	{
@@ -70,6 +75,71 @@ const input::EvtList* Window::swapEvtList()
 	curEvtList = &evtList1;
     evtList1.reset();
 	return &evtList2;
+}
+
+//************************************
+void Window::resolveEvents_begin (const Context *ctx)
+{
+    resolving.list = priv_swapEvtList();
+    resolving.list->toStart (resolving.iter);
+    resolving.ctx = ctx;
+}
+
+//************************************
+u32 Window::resolveEvents_nextActionID (i16 *out_value)
+{
+	input::EventID eventID;
+	while (resolving.list->next (resolving.iter, &eventID))
+	{
+        //tengo traccia dello stato attuale del mouse
+        if (eOrigin::mouse == input::event_getOrigin(eventID))
+        {
+            switch (input::event_getType(eventID))
+            {
+            default:
+                break;
+
+            case eType::axleABS:
+                {
+                    sAxleAbsEvent info;
+                    input::event_toAxleAbsEvent (eventID, &info);
+                    if (eAxle::x == info.axle)
+                        resolving.mouseStatus.x = info.pos;
+                    else if (eAxle::y == info.axle)
+                        resolving.mouseStatus.y = info.pos;
+                }
+                break;
+
+            case eType::button:
+                {
+                    sBtnEvent info;
+                    input::event_toButtonEvent (eventID, &info);
+                    if (eButtonStatus::pressed == info.status)
+                        resolving.mouseStatus.btnPressed[info.id] = 1;
+                    else
+                        resolving.mouseStatus.btnPressed[info.id] = 0;
+                }
+                break;
+            }
+        }
+        if (eOrigin::keyboard == input::event_getOrigin(eventID))
+        {
+            //tengo traccia dello stato dei modifier (SHIFT, CTRL...)
+            if (input::eType::button == input::event_getType(eventID))
+            {
+                sBtnEvent info;
+                if (input::event_toButtonEvent (eventID, &info))
+                    resolving.btnModifier = info.modifier;
+            }
+        }
+
+        //risolvo rispetto al context
+        const u32 actionID = resolving.ctx->resolveEvent (eventID, out_value);
+        if (0 != actionID)
+            return actionID;
+	}
+
+	return 0;
 }
 
 //************************************

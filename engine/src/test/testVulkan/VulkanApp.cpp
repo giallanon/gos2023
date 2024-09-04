@@ -6,39 +6,42 @@ using namespace gos;
 VulkanApp::VulkanApp()
 { 
     gpu = NULL; 
+    inputCtx = input::context_create ("global");
 
-    ///////////////////////
-    input::map().action_add ("global", "app_terminate");
-    input::map().action_add ("global", "toggle_fullscreen");
-    input::map().action_add ("global", "toggle_vsync");
-    input::map().action_add ("global", "show_all_actions");
-
-    input::map().action_add ("game", "toggle_mouse_mode");
-    input::map().action_add ("game", "move_forward");
-    input::map().action_add ("game", "move_backward");
-    input::map().action_add ("game", "strafe_left");
-    input::map().action_add ("game", "strafe_right");
-    input::map().action_add ("game", "strafe_up");
-    input::map().action_add ("game", "strafe_down");
-    input::map().action_add ("game", "rotateX");
-    input::map().action_add ("game", "rotateY");
-
-    input::map().action_bindToBtn ("global", "app_terminate", input::eOrigin::keyboard, GLFW_KEY_Q, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LCTRL));
-    input::map().action_bindToBtn ("global", "app_terminate", input::eOrigin::window, GOS_BUTTON_WINDOW_CLOSE, input::eButtonStatus::pressed);
-    input::map().action_bindToBtn ("global", "toggle_fullscreen", input::eOrigin::keyboard, GLFW_KEY_ENTER, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LALT));
-    input::map().action_bindToBtn ("global", "toggle_vsync", input::eOrigin::keyboard, GLFW_KEY_BACKSPACE, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LALT));
-    input::map().action_bindToBtn ("global", "show_all_actions", input::eOrigin::keyboard, GLFW_KEY_F1, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LCTRL, input::eButtonModifier::LSHIFT));
     
-    input::map().action_bindToBtn ("game", "toggle_mouse_mode", input::eOrigin::keyboard, GLFW_KEY_TAB, input::eButtonStatus::pressed);
-    input::map().action_bindToBtn ("game", "move_forward", input::eOrigin::keyboard, GLFW_KEY_W, input::eButtonStatus::both);
-    input::map().action_bindToBtn ("game", "move_backward", input::eOrigin::keyboard, GLFW_KEY_S, input::eButtonStatus::both);
-    input::map().action_bindToBtn ("game", "strafe_left", input::eOrigin::keyboard, GLFW_KEY_A, input::eButtonStatus::both);
-    input::map().action_bindToBtn ("game", "strafe_right", input::eOrigin::keyboard, GLFW_KEY_D, input::eButtonStatus::both);
-    input::map().action_bindToBtn ("game", "strafe_up", input::eOrigin::keyboard, GLFW_KEY_Q, input::eButtonStatus::both);
-    input::map().action_bindToBtn ("game", "strafe_down", input::eOrigin::keyboard, GLFW_KEY_Z, input::eButtonStatus::both);
+    ///////////////////////
+    inputCtx->action_add ("app_terminate");
+    inputCtx->action_add ("toggle_fullscreen");
+    inputCtx->action_add ("toggle_vsync");
+    inputCtx->action_add ("show_all_actions");
 
-    input::map().action_bindToAxleREL ("game", "rotateX",  input::eOrigin::mouse, input::eAxle::y, input::eAxleDirection::both);
-    input::map().action_bindToAxleREL ("game", "rotateY",  input::eOrigin::mouse, input::eAxle::x, input::eAxleDirection::both);
+    inputCtx->action_add ("toggle_mouse_mode");
+    inputCtx->action_add ("move_forward");
+    inputCtx->action_add ("move_backward");
+    inputCtx->action_add ("strafe_left");
+    inputCtx->action_add ("strafe_right");
+    inputCtx->action_add ("strafe_up");
+    inputCtx->action_add ("strafe_down");
+    inputCtx->action_add ("rotateX");
+    inputCtx->action_add ("rotateY");
+
+
+    inputCtx->action_bindToBtn ("app_terminate", input::eOrigin::keyboard, GLFW_KEY_Q, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LCTRL));
+    inputCtx->action_bindToBtn ("app_terminate", input::eOrigin::window, GOS_BUTTON_WINDOW_CLOSE, input::eButtonStatus::pressed);
+    inputCtx->action_bindToBtn ("toggle_fullscreen", input::eOrigin::keyboard, GLFW_KEY_ENTER, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LALT));
+    inputCtx->action_bindToBtn ("toggle_vsync", input::eOrigin::keyboard, GLFW_KEY_BACKSPACE, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LALT));
+    inputCtx->action_bindToBtn ("show_all_actions", input::eOrigin::keyboard, GLFW_KEY_F1, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LCTRL, input::eButtonModifier::LSHIFT));
+    
+    inputCtx->action_bindToBtn ("toggle_mouse_mode", input::eOrigin::keyboard, GLFW_KEY_TAB, input::eButtonStatus::pressed);
+    inputCtx->action_bindToBtn ("move_forward", input::eOrigin::keyboard, GLFW_KEY_W, input::eButtonStatus::both);
+    inputCtx->action_bindToBtn ("move_backward", input::eOrigin::keyboard, GLFW_KEY_S, input::eButtonStatus::both);
+    inputCtx->action_bindToBtn ("strafe_left", input::eOrigin::keyboard, GLFW_KEY_A, input::eButtonStatus::both);
+    inputCtx->action_bindToBtn ("strafe_right", input::eOrigin::keyboard, GLFW_KEY_D, input::eButtonStatus::both);
+    inputCtx->action_bindToBtn ("strafe_up", input::eOrigin::keyboard, GLFW_KEY_Q, input::eButtonStatus::both);
+    inputCtx->action_bindToBtn ("strafe_down", input::eOrigin::keyboard, GLFW_KEY_Z, input::eButtonStatus::both);
+
+    inputCtx->action_bindToAxleREL ("rotateX",  input::eOrigin::mouse, input::eAxle::y, input::eAxleDirection::both);
+    inputCtx->action_bindToAxleREL ("rotateY",  input::eOrigin::mouse, input::eAxle::x, input::eAxleDirection::both);
 
 }
 
@@ -88,39 +91,39 @@ void VulkanApp::handleInput()
 {
     gos::input::pollEvents();
 
-    const gos::input::EvtList *evtList = gos::input::window_getEventList (gpu->getWindow());
 
+    input::ResolvedEvtList evtList;
+    input::resolveEvents (gpu->getWindow(), inputCtx, &evtList);
 
     i16 value;
-    input::map().resolve_begin (evtList);
     while (1)
     {
-        const u32 actionID = input::map().resolve_getNextActionID(&value);
+        const u32 actionID = evtList.nextActionID(&value);
         if (0 == actionID)
             break;
         switch (actionID)
         {
         default:
-            virtual_onInputEvent (actionID, value);
+            virtual_onInputEvent (actionID, value, evtList.getMouseStatus(), evtList.getBtnModifier());
             break;
 
-        case COMPILE_TIME_STR_CRC32("global.show_all_actions"):
-            input::map().logAllMappedInput();
+        case COMPILE_TIME_STR_CRC32("show_all_actions"):
+            inputCtx->logAllMappedInput();
             break;
 
-        case COMPILE_TIME_STR_CRC32("global.app_terminate"):
+        case COMPILE_TIME_STR_CRC32("app_terminate"):
             bQuitApp = true;
             break;
 
-        case COMPILE_TIME_STR_CRC32("global.toggle_fullscreen"):
+        case COMPILE_TIME_STR_CRC32("toggle_fullscreen"):
             this->toggleFullscreen();
             break;
 
-        case COMPILE_TIME_STR_CRC32("global.toggle_vsync"):
+        case COMPILE_TIME_STR_CRC32("toggle_vsync"):
             this->toggleVSync();
             break;
 
-        case COMPILE_TIME_STR_CRC32("game.toggle_mouse_mode"):
+        case COMPILE_TIME_STR_CRC32("toggle_mouse_mode"):
             input::window_toggleMouseMode(gpu->getWindow());
             break;
         }

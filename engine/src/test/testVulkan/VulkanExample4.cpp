@@ -336,21 +336,21 @@ void VulkanExample4::virtual_onRun()
 }
 
 //**********************************
-void VulkanExample4::virtual_onInputEvent (u32 actionID, i16 value)
+void VulkanExample4::virtual_onInputEvent (u32 actionID, i16 value, const gos::input::MouseStatus &mouseStatus, const gos::input::sButtonModifier &btnModifier)
 {
     switch (actionID)
     {
     default:
         break;
 
-    case COMPILE_TIME_STR_CRC32("game.move_forward"):           movement.moveForward ((value == 1));break;
-    case COMPILE_TIME_STR_CRC32("game.move_backward"):          movement.moveBackward ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.strafe_left"):            movement.strafeLeft ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.strafe_right"):           movement.strafeRight ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.strafe_up"):              movement.strafeUp ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.strafe_down"):            movement.strafeDown ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.rotateY"):                movement.rotateY ((value<0)); break;
-    case COMPILE_TIME_STR_CRC32("game.rotateX"):                movement.rotateX ((value<0)); break;
+    case COMPILE_TIME_STR_CRC32("move_forward"):           movement.moveForward ((value == 1));break;
+    case COMPILE_TIME_STR_CRC32("move_backward"):          movement.moveBackward ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("strafe_left"):            movement.strafeLeft ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("strafe_right"):           movement.strafeRight ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("strafe_up"):              movement.strafeUp ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("strafe_down"):            movement.strafeDown ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("rotateY"):                movement.rotateY ((value<0)); break;
+    case COMPILE_TIME_STR_CRC32("rotateX"):                movement.rotateX ((value<0)); break;
     
     }
 }
@@ -358,8 +358,6 @@ void VulkanExample4::virtual_onInputEvent (u32 actionID, i16 value)
 //**********************************
 void VulkanExample4::doCPUStuff ()
 {
-    fpsMegaTimer.onFrameBegin(FPSTIMER_CPU);
-
     handleInput();
 
     //prepare frame
@@ -427,17 +425,14 @@ void VulkanExample4::doCPUStuff ()
     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
     movement.update(timeNow_msec);
     cam.markUpdated();
-
-    fpsMegaTimer.onFrameEnd(FPSTIMER_CPU);
-    fpsMegaTimer.printReport();
 }
 
 
 //**********************************
 void VulkanExample4::mainLoop()
 {
-    GPUMainLoop gpuLoop;
-    gpuLoop.setup (gpu, &fpsMegaTimer);
+    gpu::MainLoop gpuLoop;
+    gpuLoop.setup (gpu);
 
     //command buffer 
     GPUCmdBufferHandle  cmdBufferHandle;
@@ -446,7 +441,10 @@ void VulkanExample4::mainLoop()
     //main loop
     while (bQuitApp == false)
     {
+        gpuLoop.stat_onCPUFrameBegin();
         doCPUStuff ();
+        gpuLoop.stat_onCPUFrameEnd();
+        gpuLoop.stat_printReport();
 
 
         gpuLoop.run ();

@@ -51,7 +51,7 @@ private:
     bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle);
     void        doCPUStuff ();
     void        mainLoop();
-    void        virtual_onInputEvent (u32 event32, i16 value);
+    void        virtual_onInputEvent (u32 event32, i16 value, const gos::input::MouseStatus &mouseStatus, const gos::input::sButtonModifier &btnModifier);
 
 private:
     gos::shape::Shape       myShape;

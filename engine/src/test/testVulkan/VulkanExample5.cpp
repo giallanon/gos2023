@@ -73,21 +73,21 @@ bool VulkanExample5::priv_loadSfera()
 bool VulkanExample5::virtual_onInit ()
 {
     //input binding
-    input::map().action_add ("game", "LMB");
-    input::map().action_bindToBtn ("game", "LMB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
+    inputCtx->action_add ("LMB");
+    inputCtx->action_bindToBtn ("LMB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
 
-    input::map().action_add ("game", "RMB");
-    input::map().action_bindToBtn ("game", "RMB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_RIGHT, input::eButtonStatus::pressed);
+    inputCtx->action_add ("RMB");
+    inputCtx->action_bindToBtn ("RMB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_RIGHT, input::eButtonStatus::pressed);
 
-    input::map().action_add ("game", "run.marching.square");
-    input::map().action_bindToBtn ("game", "run.marching.square", input::eOrigin::keyboard, GLFW_KEY_ENTER, input::eButtonStatus::pressed);
+    inputCtx->action_add ("run.marching.square");
+    inputCtx->action_bindToBtn ("run.marching.square", input::eOrigin::keyboard, GLFW_KEY_ENTER, input::eButtonStatus::pressed);
 
-    input::map().action_add ("game","mouse_move");
-    input::map().action_bindToAxleABS ("game", "mouse_move",  input::eOrigin::mouse, input::eAxle::y);
-    input::map().action_bindToAxleABS ("game", "mouse_move",  input::eOrigin::mouse, input::eAxle::x);
+    inputCtx->action_add ("mouse_move");
+    inputCtx->action_bindToAxleABS ("mouse_move",  input::eOrigin::mouse, input::eAxle::y);
+    inputCtx->action_bindToAxleABS ("mouse_move",  input::eOrigin::mouse, input::eAxle::x);
 
-    input::map().action_add ("game","inc_dec_ScaleXZ");
-    input::map().action_bindToAxleREL ("game", "inc_dec_ScaleXZ",  input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::both);
+    inputCtx->action_add ("inc_dec_ScaleXZ");
+    inputCtx->action_bindToAxleREL ("inc_dec_ScaleXZ",  input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::both);
 
 
     //creo una sfera
@@ -348,42 +348,42 @@ void VulkanExample5::priv_drawGrid ()
 }
 
 //**********************************
-void VulkanExample5::virtual_onInputEvent (u32 actionID, i16 value)
+void VulkanExample5::virtual_onInputEvent (u32 actionID, i16 value, const gos::input::MouseStatus &mouseStatus, const gos::input::sButtonModifier &btnModifier)
 {
     switch (actionID)
     {
     default:
         break;
 
-    case COMPILE_TIME_STR_CRC32("game.move_forward"):           movement.moveForward ((value == 1));break;
-    case COMPILE_TIME_STR_CRC32("game.move_backward"):          movement.moveBackward ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.strafe_left"):            movement.strafeLeft ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.strafe_right"):           movement.strafeRight ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.strafe_up"):              movement.strafeUp ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.strafe_down"):            movement.strafeDown ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("game.rotateY"):                movement.rotateY ((value<0)); break;
-    case COMPILE_TIME_STR_CRC32("game.rotateX"):                movement.rotateX ((value<0)); break;
+    case COMPILE_TIME_STR_CRC32("move_forward"):           movement.moveForward ((value == 1));break;
+    case COMPILE_TIME_STR_CRC32("move_backward"):          movement.moveBackward ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("strafe_left"):            movement.strafeLeft ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("strafe_right"):           movement.strafeRight ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("strafe_up"):              movement.strafeUp ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("strafe_down"):            movement.strafeDown ((value == 1));    break;
+    case COMPILE_TIME_STR_CRC32("rotateY"):                movement.rotateY ((value<0)); break;
+    case COMPILE_TIME_STR_CRC32("rotateX"):                movement.rotateX ((value<0)); break;
 
-    case COMPILE_TIME_STR_CRC32("game.mouse_move"):
-    case COMPILE_TIME_STR_CRC32("game.LMB"):
-    case COMPILE_TIME_STR_CRC32("game.RMB"):
-        if (input::map().resolve_getMouse().isLMBPressed())
-            priv_setSphere_ON_OFF (input::map().resolve_getMouse().x, input::map().resolve_getMouse().y, true);
-        else if (input::map().resolve_getMouse().isRMBPressed())
-            priv_setSphere_ON_OFF (input::map().resolve_getMouse().x, input::map().resolve_getMouse().y, false);
+    case COMPILE_TIME_STR_CRC32("mouse_move"):
+    case COMPILE_TIME_STR_CRC32("LMB"):
+    case COMPILE_TIME_STR_CRC32("RMB"):
+        if (mouseStatus.isLMBPressed())
+            priv_setSphere_ON_OFF (mouseStatus.x, mouseStatus.y, true);
+        else if (mouseStatus.isRMBPressed())
+            priv_setSphere_ON_OFF (mouseStatus.x, mouseStatus.y, false);
         break;
 
 
-    case COMPILE_TIME_STR_CRC32("game.run.marching.square"):
+    case COMPILE_TIME_STR_CRC32("run.marching.square"):
         priv_runMarchingSquare();
         break;
 
-    case COMPILE_TIME_STR_CRC32("game.inc_dec_ScaleXZ"):
+    case COMPILE_TIME_STR_CRC32("inc_dec_ScaleXZ"):
         {
             u16 x, y;
-            if (world->mouseToGrid (gpu, cam, input::map().resolve_getMouse().x, input::map().resolve_getMouse().y, &x, &y))
+            if (world->mouseToGrid (gpu, cam, mouseStatus.x, mouseStatus.y, &x, &y))
             {
-                if (input::map().resolve_getBtnModifier().isSHIFT())
+                if (btnModifier.isSHIFT())
                 {
                     if (value > 0)
                         world->inc_scaleZ (x,y);
@@ -420,8 +420,6 @@ void VulkanExample5::priv_runMarchingSquare()
 //************************************
 void VulkanExample5::virtual_onRun()
 {
-    fpsMegaTimer.setPrintReportEvery (10000);
-
     //camera
     cam.setPerspectiveFovLH (gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
     //cam.pos.identity(); cam.pos.warp (0, 0, -19); cam.pos.lookAt (vec3f(0,0,0));
@@ -436,25 +434,22 @@ void VulkanExample5::virtual_onRun()
 //**********************************
 void VulkanExample5::priv_doCPUStuff ()
 {
-    fpsMegaTimer.onFrameBegin(FPSTIMER_CPU);
-
     handleInput();
 
     //gestione del movimento
     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
     movement.update(timeNow_msec);
     cam.markUpdated();
-
-    fpsMegaTimer.onFrameEnd(FPSTIMER_CPU);
-    fpsMegaTimer.printReport();
 }
 
 
 //**********************************
 void VulkanExample5::priv_mainLoop()
 {
-    GPUMainLoop gpuLoop;
-    gpuLoop.setup (gpu, &fpsMegaTimer);
+    gpu::MainLoop gpuLoop;
+    gpuLoop.setup (gpu);
+    gpuLoop.stat_setPrintReportEvery (10000);
+
 
     //command buffer 
     GPUCmdBufferHandle  cmdBufferHandle;
@@ -465,7 +460,10 @@ void VulkanExample5::priv_mainLoop()
     //main loop
     while (bQuitApp == false)
     {
+        gpuLoop.stat_onCPUFrameBegin();
         priv_doCPUStuff ();
+        gpuLoop.stat_onCPUFrameEnd();
+        gpuLoop.stat_printReport();
 
 
         gpuLoop.run ();

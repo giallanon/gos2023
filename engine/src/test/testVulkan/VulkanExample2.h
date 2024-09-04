@@ -44,6 +44,7 @@ private:
     static const u8     NUM_VERTEX = 3;
 
 private:
+    gos::FPSMegaTimer<3>    fpsMegaTimer;
     Vertex                  vertexList[NUM_VERTEX];
     u64                     nextTimeMoveVtx_msec;
     f32                     direction;

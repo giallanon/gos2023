@@ -41,6 +41,8 @@ gosShapePrefabs_cube.cpp
 gosShapePrefabs_cylinder.cpp
 gosShapePrefabs_sphere.cpp
 gosShapePrefabs.h
+gosShapeVtxArrayReader.cpp
+gosShapeVtxArrayReader.h
 gosShapeVtxArrayWriter.cpp
 gosShapeVtxArrayWriter.h
 gosShapeVtxElem.cpp
