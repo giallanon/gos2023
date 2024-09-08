@@ -20,10 +20,9 @@ GPUCMDWR& gpu::CmdBufferWriter::begin (GPU *gpuIN, const GPUCmdBufferHandle hand
     assert (NULL == vkCommandBuffer);
     gpu = gpuIN;
     flag = 0;
-    vkPipelineHandle = VK_NULL_HANDLE;
-    vkPipelineLayoutHandle = VK_NULL_HANDLE;
     depthClearColor = 1.0f;
     stencilClearColor = 0;
+    curPipeline = NULL;
 
 
     if (!gpu->toVulkan (handle, &vkCommandBuffer))
@@ -73,14 +72,14 @@ GPUCMDWR& gpu::CmdBufferWriter::bindPipeline (const GPUPipelineHandle pipelineHa
         return *this;
 
     //recupero vulkan pipeline
-    if (gpu->toVulkan (pipelineHandle, &vkPipelineHandle, &vkPipelineLayoutHandle))
+    if (gpu->toVulkan (pipelineHandle, &curPipeline))
     {
-        vkCmdBindPipeline (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineHandle);
+        vkCmdBindPipeline (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curPipeline->vkPipelineHandle);
         gos::utils::bitSET (&flag, FLAG__PIPELINE_IS_BOUND);
     }
     else
     {
-        gos::logger::err ("gpu::CmdBufferWriter::renderPass_begin() => invalid pipelineHandle\n");
+        gos::logger::err ("gpu::CmdBufferWriter::bindPipeline() => invalid pipelineHandle\n");
         priv_setError();
     }
 
@@ -88,7 +87,155 @@ GPUCMDWR& gpu::CmdBufferWriter::bindPipeline (const GPUPipelineHandle pipelineHa
 }
 
 //***********************************************
-GPUCMDWR& gpu::CmdBufferWriter::bindDescriptorSet (const GPUDescrSetInstanceHandle handle)
+GPUCMDWR& gpu::CmdBufferWriter::pushConstant (u8 whichOne, const void *data, u32 sizeof_data)
+{
+    while (1)
+    {
+        if (NULL == curPipeline)
+        {
+            gos::logger::err ("gpu::CmdBufferWriter::pushConstant(%d) => no current pipeline set\n", whichOne);
+            priv_setError();
+            break;
+        }
+
+        if (whichOne >= GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE)
+        {
+            gos::logger::err ("gpu::CmdBufferWriter::pushConstant(%d) => invalid index\n", whichOne);
+            priv_setError();
+            break;
+        }
+
+        if (curPipeline->pushContantList[whichOne].size != sizeof_data)
+        {
+            gos::logger::err ("gpu::CmdBufferWriter::pushConstant(%d) => size does not match\n", whichOne);
+            priv_setError();
+            break;
+        }
+
+        vkCmdPushConstants (vkCommandBuffer, curPipeline->vkPipelineLayoutHandle, 
+                            curPipeline->pushContantList[whichOne].stageFlags,
+                            curPipeline->pushContantList[whichOne].offset,
+                            curPipeline->pushContantList[whichOne].size,
+                            data);
+        break;
+    }
+
+    return *this;
+}
+
+//***********************************************
+GPUCMDWR& gpu::CmdBufferWriter::pushDescriptor_begin (u8 set)
+{
+    while (1)
+    {
+        if (anyError())
+            break;
+
+        if (gos::utils::isBitSET (&flag, FLAG__PUSH_DESCRIPTOR_BEGIN))
+        {
+            gos::logger::err ("gpu::CmdBufferWriter::pushDescriptor_begin() => a 'pushDescriptor_begin' is already in progress\n");
+            priv_setError();
+            break;
+        }
+
+        gos::utils::bitSET (&flag, FLAG__PUSH_DESCRIPTOR_BEGIN);
+        writeDescr.num = 0;
+        writeDescr.set = set;
+
+        break;
+    }
+
+    return *this;
+}
+
+//***********************************************
+GPUCMDWR& gpu::CmdBufferWriter::pushDescriptor_UBO (const GPUUniformBufferHandle &handle, u8 binding)
+{
+    while (1)
+    {
+        if (anyError())
+            break;
+
+        if (!gos::utils::isBitSET (&flag, FLAG__PUSH_DESCRIPTOR_BEGIN))
+        {
+            gos::logger::err ("gpu::CmdBufferWriter::pushDescriptor_UBO() => you need to call 'pushDescriptor_begin'\n");
+            priv_setError();
+            break;
+        }
+
+        if (writeDescr.num >= GOSGPU__NUM_MAX_WRITE_DESCRIPTORS_PER_CMDBUFFER)
+        {
+            gos::logger::err ("gpu::CmdBufferWriter::pushDescriptor_UBO() => too many write descriptors'\n");
+            priv_setError();
+            break;
+        }
+
+        VkBuffer vkBufferHandle;
+        u32 bufferSize;
+        if (!gpu->toVulkan (handle, &vkBufferHandle, &bufferSize))
+        {
+            gos::logger::err ("CmdBufferWriter::pushDescriptor_UBO() => invalid uniform buffer handle\n");
+            return *this;
+        }
+        
+
+        const u8 n = writeDescr.num;
+
+        memset (&writeDescr.bufferInfo[n], 0, sizeof(VkDescriptorBufferInfo));
+        writeDescr.bufferInfo[n].buffer = vkBufferHandle;
+        writeDescr.bufferInfo[n].offset = 0;
+        writeDescr.bufferInfo[n].range = bufferSize;
+
+
+        memset (&writeDescr.descr[n], 0, sizeof(VkWriteDescriptorSet));
+        writeDescr.descr[n].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        //writeDescr.descr[n].dstSet = 0; //ignorato dall'estensione "vkCmdPushDescriptorSetKHR
+        writeDescr.descr[n].dstBinding = binding;
+        writeDescr.descr[n].descriptorCount = 1;
+        writeDescr.descr[n].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writeDescr.descr[n].pBufferInfo = &writeDescr.bufferInfo[n];
+
+        writeDescr.num++;
+        break;
+    }
+
+
+    return *this;
+}
+
+//***********************************************
+GPUCMDWR& gpu::CmdBufferWriter::pushDescriptor_end ()
+{
+    while (1)
+    {
+        if (anyError())
+            break;
+
+        if (!gos::utils::isBitSET (&flag, FLAG__PUSH_DESCRIPTOR_BEGIN))
+        {
+            gos::logger::err ("gpu::CmdBufferWriter::pushDescriptor_end() => you need to call 'pushDescriptor_begin'\n");
+            priv_setError();
+            break;
+        }
+
+        if (0 != writeDescr.num)
+        {
+            GPU::vkCmdPushDescriptorSetKHR (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curPipeline->vkPipelineLayoutHandle, 
+                writeDescr.set, 
+                writeDescr.num,
+                writeDescr.descr);
+        }
+
+        gos::utils::bitCLEAR (&flag, FLAG__PUSH_DESCRIPTOR_BEGIN);
+        break;
+    }
+
+
+    return *this;
+}
+
+//***********************************************
+GPUCMDWR& gpu::CmdBufferWriter::bindDescriptorSet (const GPUDescrSetInstanceHandle handle, u8 set)
 {
     while (1)
     {
@@ -111,7 +258,7 @@ GPUCMDWR& gpu::CmdBufferWriter::bindDescriptorSet (const GPUDescrSetInstanceHand
             break;
         }           
 
-        vkCmdBindDescriptorSets (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineLayoutHandle, 0, 1, &vkDescrSetHandle, 0, nullptr);
+        vkCmdBindDescriptorSets (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curPipeline->vkPipelineLayoutHandle, set, 1, &vkDescrSetHandle, 0, nullptr);
         break;
     }
 
@@ -301,7 +448,10 @@ GPUCMDWR& gpu::CmdBufferWriter::renderPass_begin (const GPURenderLayoutHandle re
 
         //vulkan begin render pass
         if (0xFF != renderLayout->indexOfDepthStencilBuffer)
+        {
+            assert (renderLayout->indexOfDepthStencilBuffer < GOSGPU__NUM_MAX_ATTACHMENT);
             clearColorList[renderLayout->indexOfDepthStencilBuffer].depthStencil = {depthClearColor, stencilClearColor};
+        }
 
         VkRenderPassBeginInfo renderPassInfo{};
             renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -397,7 +547,14 @@ bool gpu::CmdBufferWriter::end()
             gos::logger::err ("gpu::CmdBufferWriter::end() => a render pass in still in progress, call renderPass_end()\n");
             priv_setError();
             break;
-        }    
+        }
+
+        if (gos::utils::isBitSET(&flag, FLAG__PUSH_DESCRIPTOR_BEGIN))
+        {
+            gos::logger::err ("gpu::CmdBufferWriter::end() => a 'pushDescriptor_begin' in still in progress, call 'pushDescriptor_end'\n");
+            priv_setError();
+            break;
+        }
 
 
         const VkResult result = vkEndCommandBuffer (vkCommandBuffer);

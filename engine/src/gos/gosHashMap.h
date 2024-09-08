@@ -1,28 +1,31 @@
-#ifndef _gosSortedFastArray_h_
-#define _gosSortedFastArray_h_
+#ifndef _gosHashMap_h_
+#define _gosHashMap_h_
 #include "gosFastArray.h"
 
 namespace gos
 {
     template<class T>
-    inline int SortedFastArray_compareFn (const T &t1, const T &t2)        { return t1.compare(t2); }
+    inline int HashMap_compareFn (const T &t1, const T &t2)        { return t1.compare(t2); }
 
     template<>
-    inline int SortedFastArray_compareFn (const u32 &t1, const u32 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+    inline int HashMap_compareFn (const u64 &t1, const u64 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
 
     template<>
-    inline int SortedFastArray_compareFn (const i32 &t1, const i32 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+    inline int HashMap_compareFn (const i32 &t1, const i32 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+
+    template<>
+    inline int HashMap_compareFn (const u32 &t1, const u32 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
 
     /**
-     * @brief SortedFastArray
+     * @brief HashMap
      * E' una hash map dove TKEY e' l'hash e TVALUE e' il value
      * 
-     * TKEY deve essere una classe con un metodo compare (const TKEY &b) che ritorna 0 se a==b, 1 se a>b, -1 se a<<b
-     * Per i tipi piu' comuni (come u32), ho definito una specializzazione del template SortedFastArray_compareFn<>
+     * TKEY deve essere una classe con un metodo "int compare (const TKEY &b) const" che ritorna 0 se a==b, 1 se a>b, -1 se a<<b
+     * Per i tipi piu' comuni (come u64 e u32), ho definito una specializzazione del template HashMap_compareFn<>
      * in modo da non dover implementare una classe "u32" con dentro un meotodo compare
     */
     template<class TKEY, class TVALUE>
-    class SortedFastArray
+    class HashMap
     {
     public:
         struct Position
@@ -31,12 +34,12 @@ namespace gos
             TKEY    _key;
             u32     _index;
 
-        friend SortedFastArray<TKEY, TVALUE>;
+        friend HashMap<TKEY, TVALUE>;
         };
 
     public:
-                SortedFastArray ()                                                      { }
-                ~SortedFastArray ()                                                     { list.unsetup (); }
+                HashMap ()                                                      { }
+                ~HashMap ()                                                     { list.unsetup (); }
 
                 //======================================= memory
         void	setup (Allocator *backingallocator, u32 preallocNumElem=0)              { list.setup (backingallocator, preallocNumElem); }
@@ -77,7 +80,7 @@ namespace gos
                 }    
 
         /**
-         * @brief   inserisce (value) nella giusta posizione. [pos] e' ottenibile chiamando find()
+         * @brief   inserisce (value) nella giusta posizione mantenendo l'array ordinato. [pos] e' ottenibile chiamando findWithPos()
          */
         void    insertInPosition (const Position &pos, const TVALUE &value)
                 {
@@ -139,7 +142,7 @@ namespace gos
          * @return  true se (key) esiste, false altrimenti.
          *          Se (key) esiste, ritorna in *out_value il valore associato a key
          */
-        bool    find (const TKEY &key, TVALUE *out_value, Position *out_position) const
+        bool    findWithPos (const TKEY &key, TVALUE *out_value, Position *out_position) const
                 {
                     if (list.getNElem() == 0)
                     {
@@ -191,7 +194,7 @@ namespace gos
                             for (u32 i=search.start; i<(search.start+numElem); i++)
                             {
                                 //switch (key.compare(list(i).key))
-                                switch (SortedFastArray_compareFn<TKEY>(key, list(i).key))
+                                switch (HashMap_compareFn<TKEY>(key, list(i).key))
                                 {
                                 default:
                                     break;
@@ -212,7 +215,7 @@ namespace gos
 
                         const u32 middle = search.start + numElem / 2;
                         //switch (key.compare(list(middle).key))
-                        switch (SortedFastArray_compareFn<TKEY>(key, list(middle).key))
+                        switch (HashMap_compareFn<TKEY>(key, list(middle).key))
                         {
                         case 0: //sono uguali
                             *out_index = middle;
@@ -234,4 +237,4 @@ namespace gos
     };
 } //namespace gos
 
-#endif // _gosSortedFastArray_h_
+#endif // _gosHashMap_h_

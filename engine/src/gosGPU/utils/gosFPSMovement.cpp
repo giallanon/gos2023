@@ -1,24 +1,32 @@
-#include "FreeMovement.h"
+#include "gosFPSMovement.h"
 #include "../../gos/gosUtils.h"
 
+using namespace gos;
+
 //**************************************
-FreeMovement::FreeMovement ()
+FPSMovement::FPSMovement ()
 {
     targetPos = NULL;
     status = 0;
     setLinearSpeed (4);
     setRotationalSpeed (0.5f);
     lastTimeUpdated_msec = 0;
+    rotX_rad = rotY_rad = 0;
 }
 
 //**************************************
-void FreeMovement::bind (gos::geom::Pos3 *posIN)
+void FPSMovement::bind (gos::geom::Pos3 *posIN)
 { 
     targetPos = posIN;
+
+    gos::vec3f p = posIN->o + (posIN->getAsseZ() * 4.0f);
+    pos.identity();
+    pos.warp (posIN->o);
+    pos.lookAt (p);
 }
 
 //**************************************
-void FreeMovement::priv_setStatus (u16 MASK, bool b)
+void FPSMovement::priv_setStatus (u16 MASK, bool b)
 {
     if (b)
         gos::utils::bitSET (&status, MASK);
@@ -27,25 +35,33 @@ void FreeMovement::priv_setStatus (u16 MASK, bool b)
 }
 
 //**************************************
-void FreeMovement::rotateX (bool bClockwise)
+void FPSMovement::rotateX (bool bClockwise)
 {
     if (bClockwise)
-        targetPos->rotateMeAboutMyX (rotationalSpeed_rad);
+    {
+        rotX_rad += rotationalSpeed_rad;
+        if (rotX_rad > gos::math::gradToRad(80))
+            rotX_rad = gos::math::gradToRad(80);
+    }
     else
-        targetPos->rotateMeAboutMyX (-rotationalSpeed_rad);
+    {
+        rotX_rad -= rotationalSpeed_rad;
+        if (rotX_rad < -gos::math::gradToRad(60))
+            rotX_rad = -gos::math::gradToRad(60);
+    }
 }
 
 //**************************************
-void FreeMovement::rotateY (bool bClockwise)
+void FPSMovement::rotateY (bool bClockwise)
 {
     if (bClockwise)
-        targetPos->rotateMeAboutMyY (rotationalSpeed_rad);
+        rotY_rad += rotationalSpeed_rad;
     else
-        targetPos->rotateMeAboutMyY (-rotationalSpeed_rad);
+        rotY_rad -= rotationalSpeed_rad;
 }
 
 //**************************************
-void FreeMovement::update (u64 timenow_msec)
+void FPSMovement::update (u64 timenow_msec)
 {
     if (NULL == targetPos)
         return;
@@ -55,20 +71,24 @@ void FreeMovement::update (u64 timenow_msec)
     const f32 linearSpeed = speed_msec * timeElapsed_sec;
     lastTimeUpdated_msec = timenow_msec;
 
+    pos.setFromEulerAngles_YXZ (rotY_rad, 0, 0);
     if (gos::utils::isBitSET (&status, STATUS_MOVING_FORWARD))
-        targetPos->moveRelAlongZ (linearSpeed);
+        pos.moveRelAlongZ (linearSpeed);
     else if (gos::utils::isBitSET (&status, STATUS_MOVING_BACKWARD))
-        targetPos->moveRelAlongZ (-linearSpeed);
+        pos.moveRelAlongZ (-linearSpeed);
 
     if (gos::utils::isBitSET (&status, STATUS_MOVING_RIGHT))
-        targetPos->moveRelAlongX (linearSpeed);
+        pos.moveRelAlongX (linearSpeed);
     else if (gos::utils::isBitSET (&status, STATUS_MOVING_LEFT))
-        targetPos->moveRelAlongX (-linearSpeed);
+        pos.moveRelAlongX (-linearSpeed);
 
     if (gos::utils::isBitSET (&status, STATUS_MOVING_UP))
-        targetPos->moveRelAlongY (linearSpeed);
+        pos.moveRelAlongY (linearSpeed);
     else if (gos::utils::isBitSET (&status, STATUS_MOVING_DOWN))
-        targetPos->moveRelAlongY (-linearSpeed);
+        pos.moveRelAlongY (-linearSpeed);
+   
 
+    targetPos->setFromEulerAngles_YXZ (rotY_rad, rotX_rad, 0);
+    targetPos->warp (pos.o);
 }
 

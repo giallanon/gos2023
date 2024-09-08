@@ -110,7 +110,7 @@ u16 VulkanExample5::MarchingSquare::VtxHelper2::priv_vtxAddIfNeeded (u16 wx, u16
 }
 
 //*******************************************************
-VulkanExample5::MarchingSquare::VtxHelper2::sEdge VulkanExample5::MarchingSquare::VtxHelper2::addEdge (u16 wx, u16 wy, ePos pos1, ePos pos2)
+VulkanExample5::MarchingSquare::sEdge VulkanExample5::MarchingSquare::VtxHelper2::addEdge (u16 wx, u16 wy, ePos pos1, ePos pos2)
 {
     sEdge edge;
     edge.i0 = priv_vtxAddIfNeeded (wx, wy, pos1);
@@ -205,6 +205,30 @@ void VulkanExample5::MarchingSquare::algo1 (const World &world, Line &line)
 }
 
 
+//*******************************************************
+void VulkanExample5::MarchingSquare::priv_moveVtx (gos::FastArray<sEdge> *from, gos::FastArray<sEdge> *to, u32 i) const
+{
+    assert (i <from->getNElem());
+    to->append (from->queryElem(i));
+    from->removeAndSwapWithLast(i);
+}
+
+//*******************************************************
+u32 VulkanExample5::MarchingSquare::priv_findVtxWithEdge (const gos::FastArray<sEdge> *list, const sEdge *edge) const
+{
+    for (u32 i=0; i<list->getNElem(); i++)
+    {
+        if (list->queryElem(i).i0 == edge->i0 ||
+            list->queryElem(i).i0 == edge->i1 ||
+            list->queryElem(i).i1 == edge->i0 ||
+            list->queryElem(i).i1 == edge->i1)
+            return i;
+    }
+
+    return u32MAX;
+}
+
+
 /*******************************************************
  * Disegna solo il perimetro, share dei vtx
  */
@@ -217,7 +241,7 @@ void VulkanExample5::MarchingSquare::algo2 (const World &world, Line &line)
                 edge = helper.addEdge (x,y, vtxPlacement1, vtxPlacement2);\
 
 
-    VtxHelper2::sEdge edge;
+    sEdge edge;
     for (u32 y=0; y<world.getDimY()-1; y++)
     {
         for (u32 x=0; x<world.getDimX()-1; x++)
@@ -319,18 +343,64 @@ void VulkanExample5::MarchingSquare::algo2 (const World &world, Line &line)
     //aggiungo un po' di noise random ai vertici
     for (u32 i=0; i<helper.vtxList.getNElem(); i++)
     {
-        f32 x = (gos::random01() - 0.5f) * 0.1f;
-        f32 z = (gos::random01() - 0.5f) * 0.1f;
-        helper.vtxList[i].x += x;
-        helper.vtxList[i].z += z;
+        //helper.vtxList[i].x += (gos::random01() - 0.5f) * 0.1f;
+        //helper.vtxList[i].z += (gos::random01() - 0.5f) * 0.1f;
 
         line.addVtx (helper.vtxList(i));
     }
 
     // aggiungo le linee
-    for (u32 i=0; i<helper.edgeList.getNElem(); i++)
-        line.line (helper.edgeList(i).i0, helper.edgeList(i).i1);
+    //for (u32 i=0; i<helper.edgeList.getNElem(); i++)
+    //    line.line (helper.edgeList(i).i0, helper.edgeList(i).i1);
 
+    priv_renderLine (line, helper.edgeList);
+
+
+    static constexpr u8 NCOLOR = 4;
+    vec3f colors[NCOLOR] = {
+        vec3f(1,1,1),
+        vec3f(1,0,0),
+        vec3f(0,1,0),
+        vec3f(0,0,1),
+    };
+    u8 curColor = 0;
+
+
+    //cerco di separare le linee
+    FastArray<sEdge> aLine (gos::getSysHeapAllocator(), helper.edgeList.getNElem());
+
+    FastArray<sEdge> *listSRC = &helper.edgeList;
+    FastArray<sEdge> *listDST = &aLine;
+    while (listSRC->getNElem())
+    {
+        listDST->reset();
+        priv_moveVtx (listSRC, listDST, 0);
+
+        while (1)
+        {
+            const sEdge *edge = &listDST->queryElem( listDST->getNElem() - 1);
+        
+            u32 nextEdge = priv_findVtxWithEdge (listSRC, edge);
+            if (u32MAX == nextEdge)
+                break;
+
+            priv_moveVtx (listSRC, listDST, nextEdge);
+        }
+
+        line.setColor (colors[curColor++]);
+        if (curColor >= NCOLOR)
+            curColor = 0;
+        priv_renderLine (line, *listDST);
+    }
+
+
+}
+
+//*******************************************************
+void VulkanExample5::MarchingSquare::priv_renderLine (Line &line, gos::FastArray<sEdge> &edgeList) const
+{
+    for (u32 i=0; i<edgeList.getNElem(); i++)
+        line.line (edgeList(i).i0, edgeList(i).i1);
 }
 
 

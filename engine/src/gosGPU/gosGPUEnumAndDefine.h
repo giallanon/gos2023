@@ -10,6 +10,8 @@
 #define 	GOSGPU__NUM_MAX_ATTACHMENT						16
 #define 	GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET				32
 #define 	GOSGPU__NUM_MAX_DESCRIPTOR_POOL_SIZE_PER_POOL	16
+#define 	GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE		16
+#define 	GOSGPU__NUM_MAX_WRITE_DESCRIPTORS_PER_CMDBUFFER	8
 
 
 //A per "num max di handle", B per "num di chunk", C per "counter"
@@ -114,15 +116,28 @@ enum class eVIBufferMode : u8
 };
 
 
-struct sVtxDescriptor
+namespace gos
 {
-	u8              streamIndex;
-	u8              bindingLocation;
-	eDataFormat     format;
-	u8              offset;
-};
+	namespace gpu
+	{
+		struct sVtxDescriptor
+		{
+			u8              streamIndex;
+			u8              bindingLocation;
+			eDataFormat     format;
+			u8              offset;
+		};
 
+		struct sPipeline
+		{
+			void    reset ()                        { vkPipelineLayoutHandle = VK_NULL_HANDLE; vkPipelineHandle = VK_NULL_HANDLE; memset (pushContantList, 0, sizeof(pushContantList)); }
 
+			VkPipelineLayout    vkPipelineLayoutHandle;
+			VkPipeline          vkPipelineHandle;
+			VkPushConstantRange pushContantList[GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE];
+		};  
+	} //namespace gpu
+} //namespace gos
 
 
 #endif//_gosGPUEnumAndDefine_h_

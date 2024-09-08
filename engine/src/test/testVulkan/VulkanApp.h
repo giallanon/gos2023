@@ -3,8 +3,8 @@
 #include "gosGPU.h"
 #include "../gosGeom/gosGeomCamera3.h"
 #include "../gosShape/gosShape.h"
-#include "FPSMovement.h"
-#include "FreeMovement.h"
+#include "../gosGPU/utils/gosFreeMovement.h"
+#include "../gosGPU/utils/gosFPSMovement.h"
 
 /*************************************************
  *  VulkanApp
@@ -27,7 +27,7 @@ public:
 
 protected:
     gos::GPU                *gpu;
-    gos::input::Context  *inputCtx;
+    gos::input::Context     inputCtx;
     bool                    bQuitApp;
     
 protected:

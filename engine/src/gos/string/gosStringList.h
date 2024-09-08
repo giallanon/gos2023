@@ -14,7 +14,7 @@ namespace gos
     {
     public:
                     StringList ()                                           { cursor=0; count=0; }
-                    StringList (gos::Allocator *allocatorIN, u32 size=512)  { setup (allocatorIN, size); }
+                    StringList (gos::Allocator *allocatorIN, u32 size=512)  { cursor=0; count=0; setup (allocatorIN, size); }
                     ~StringList ()                                          { unsetup(); }
 
         void        setup (gos::Allocator *allocatorIN, u32 size)           { buffer.setup(allocatorIN, size); reset(); }

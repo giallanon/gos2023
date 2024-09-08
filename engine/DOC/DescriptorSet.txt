@@ -1,0 +1,23 @@
+DescriptorSet-layout
+    Definisce i [binding] per un certo [Descriptor-set]
+    For example, we define 
+        at binding 0 a constant buffer used by both vertex and fragment stages
+        at binding 1 a storage buffer
+        at binding 2 an image only for fragment stage.
+        
+
+Pipeline-layout
+As a [pipeline] can have multiple [Descriptor-set], this object defines 
+which [DescriptorSet-layout] are used with each set binding number
+
+
+[Descriptor-set]
+This is the object that we will later use to bind the resources, therefore it will contain the actual data we reference. Image, Sampler or Buffers are referenced.
+
+[Descriptor-Pool]
+The DescriptorSets are allocated from the pool. Which layouts and how many sets for each can be allocated is defined by the developer at creation time of the pool.
+
+
+NB: alread bound [Descriptor-Sets] stay active as long as the PipelineLayout for that binding slot is matching.
+Ovvero, puoi cambiare pipeline senza bisogno di ribindare i [descriptor-set] e quindi
+e' possibile condividere i [descriptor-set] su + pipeline senza upparli ogni volta

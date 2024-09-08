@@ -26,6 +26,14 @@ vulkan/gosGPUVulkan.cpp
 vulkan/gosGPUVulkan.h
 vulkan/gosGPUVulkanEnumAndDefine.h
 
+utils/gosFPSMovement.cpp
+utils/gosFPSMovement.h
+utils/gosFreeMovement.cpp
+utils/gosFreeMovement.h
+utils/gosGPUMainLoop.cpp
+utils/gosGPUMainLoop.h
+
+
 gosGPU_DescriptorPoolBuilder.cpp
 gosGPU_DescriptorSetLayoutBuilder.cpp
 gosGPU_FrameBuffersBuilder.cpp
@@ -39,8 +47,6 @@ gosGPUCmdBufferWriter.h
 gosGPUDescrSetInstanceWriter.cpp
 gosGPUDescrSetInstanceWriter.h
 gosGPUEnumAndDefine.h
-gosGPUMainLoop.cpp
-gosGPUMainLoop.h
 gosGPUResCommandBuffer.h
 gosGPUResDepthStencil.h
 gosGPUResDescrPool.h
@@ -84,6 +90,7 @@ find_package(Vulkan REQUIRED)
 if (NOT Vulkan_FOUND)
     message(FATAL_ERROR "Vulkan development package not found")
 else()
+    message("         vulkan version ${Vulkan_VERSION}")
     message("         vulkan include path ${Vulkan_INCLUDE_DIRS}")
 endif()
 #target_include_directories(${BINARY_OUTPUT_FILENAME} PUBLIC ${Vulkan_INCLUDE_DIRS})

@@ -7,7 +7,7 @@
 #include "../gosInput/gosInput.h"
 #include "gosGPUDescrSetInstanceWriter.h"
 #include "gosGPUCmdBufferWriter.h"
-#include "gosGPUMainLoop.h"
+#include "utils/gosGPUMainLoop.h"
 #include "gosGPUResCommandBuffer.h"
 #include "gosGPUResDepthStencil.h"
 #include "gosGPUResDescrPool.h"
@@ -32,6 +32,11 @@ namespace gos
      */
     class GPU
     {
+    public:
+        //vulkan extensions
+        static PFN_vkCmdPushDescriptorSetKHR   vkCmdPushDescriptorSetKHR;
+
+
     public:
         /*****************************************************
          * TempBuilder
@@ -84,7 +89,7 @@ namespace gos
             u8                      numStreamIndex;
             u8                      numAttributeDesc;
             eVtxStreamInputRate     inputRatePerStream[GOSGPU__NUM_MAX_VXTDECL_STREAM];
-            sVtxDescriptor          attributeDesc[GOSGPU__NUM_MAX_VTXDECL_ATTR];
+            gpu::sVtxDescriptor     attributeDesc[GOSGPU__NUM_MAX_VTXDECL_ATTR];
 
         friend class GPU;
         }; //class VtxDeclBuilder     
@@ -301,10 +306,19 @@ namespace gos
 			PipelineBuilder&    setCullMode (eCullMode m)							            { cullMode = m; return *this; }
 			PipelineBuilder&    setWireframe (bool b)								            { bWireframe = b; return *this; }
             PipelineBuilder&    descriptor_add (const GPUDescrSetLayoutHandle handle)           { descrSetLayoutList.append (handle); return *this; }
+            PipelineBuilder&    pushConstant_add (eShaderType whichShader, u16 offset, u16 sizeInByte, u8 *out_whichOne);
 
             bool                end ();
 
             bool                anyError() const                                                { return bAnyError; }
+
+        private:
+            struct sPushConstant
+            {
+                eShaderType whichShader;
+                u16 offset;
+                u16 size;
+            };
 
         private:
             bool                priv_buildVulkan ();
@@ -314,6 +328,7 @@ namespace gos
             gos::Allocator                      *allocator;
             gos::FastArray<GPUShaderHandle>     shaderList;
             gos::FastArray<GPUDescrSetLayoutHandle> descrSetLayoutList;
+            gos::FastArray<VkPushConstantRange> pushConstantList;
             eDrawPrimitive                      drawPrimitive;
             GPUVtxDeclHandle                    vtxDeclHandle;
             DepthStencilParam                   depthStencilParam;
@@ -373,18 +388,23 @@ namespace gos
         class DescriptorSetLayoutBuilder : public TempBuilder
         {
         public:
-                                            DescriptorSetLayoutBuilder (GPU *gpu, GPUDescrSetLayoutHandle *out_handle);
+                                            DescriptorSetLayoutBuilder (GPU *gpu, VkDescriptorSetLayoutCreateFlags createFlag, GPUDescrSetLayoutHandle *out_handle);
             virtual                         ~DescriptorSetLayoutBuilder();
 
             //aggiunge un descriptor al set.
             //  [stageFlags], vedi anche gos::ShaderStageFlag che contiene i flag utilizzabili
-            DescriptorSetLayoutBuilder&     add (VkDescriptorType descrType, VkShaderStageFlagBits stageFlags, u32 count=1);
+            DescriptorSetLayoutBuilder&     add_uniformBuffer (VkShaderStageFlagBits stageFlags, u32 count=1)       { return priv_add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, stageFlags, count); }
+            DescriptorSetLayoutBuilder&     add_storageBuffer (VkShaderStageFlagBits stageFlags, u32 count=1)       { return priv_add (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, stageFlags, count); }
             bool                            end();
 
             bool                            anyError() const        { return bAnyError; }
 
         private:
+            DescriptorSetLayoutBuilder&     priv_add (VkDescriptorType descrType, VkShaderStageFlagBits stageFlags, u32 count=1);
+
+        private:
             bool    bAnyError;
+            VkDescriptorSetLayoutCreateFlags createFlag;
             u32     nextBindingNumber;
             u32     numDescriptor;
             VkDescriptorSetLayoutBinding   list[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
@@ -520,7 +540,7 @@ namespace gos
         //================ Pipeline
         PipelineBuilder&    pipeline_createNew (const GPURenderLayoutHandle &enderLayoutHandle, GPUPipelineHandle *out_handle);
         void                deleteResource (GPUPipelineHandle &handle);
-        bool                toVulkan (const GPUPipelineHandle handle, VkPipeline *out, VkPipelineLayout *out_layout) const;
+        bool                toVulkan (const GPUPipelineHandle handle, const gpu::sPipeline **out) const;
 
 
         //================ depth buffer
@@ -597,7 +617,8 @@ namespace gos
 
 
         //================ descriptorSet layout
-        DescriptorSetLayoutBuilder&    descrSetLayout_createNew (GPUDescrSetLayoutHandle *out_handle);
+        DescriptorSetLayoutBuilder&    descrSetLayout_createStatic (GPUDescrSetLayoutHandle *out_handle);
+        DescriptorSetLayoutBuilder&    descrSetLayout_createPushable (GPUDescrSetLayoutHandle *out_handle);
         void                deleteResource (GPUDescrSetLayoutHandle &handle);
         bool                toVulkan (const GPUDescrSetLayoutHandle handle, VkDescriptorSetLayout *out) const;
 
@@ -643,14 +664,6 @@ namespace gos
         };
 
         
-        struct sPipeline
-        {
-            void    reset ()                        { vkPipelineLayoutHandle = VK_NULL_HANDLE; vkPipelineHandle = VK_NULL_HANDLE; }
-
-            VkPipelineLayout    vkPipelineLayoutHandle;
-            VkPipeline          vkPipelineHandle;
-        };        
-
         struct sDefaultDepthStencil
         {
             GPUDepthStencilHandle   handle;
@@ -751,7 +764,7 @@ namespace gos
         gos::FastArray<GPUDepthStencilHandle>                       depthStencilHandleList;
         HandleList<GPURenderTargetHandle, gpu::RenderTarget>        renderTargetList;
         HandleList<GPURenderLayoutHandle,gpu::RenderLayout>         renderLayoutList;
-        HandleList<GPUPipelineHandle,sPipeline>                     pipelineList;
+        HandleList<GPUPipelineHandle,gpu::sPipeline>                pipelineList;
         HandleList<GPUFrameBufferHandle, gpu::FrameBuffer>          frameBufferList;
         gos::FastArray<GPUFrameBufferHandle>                        frameBufferDependentOnSwapChainList;
         HandleList<GPUVtxBufferHandle,gpu::VtxBuffer>               vtxBufferList;

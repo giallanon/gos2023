@@ -21,6 +21,10 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
 main.cpp
+Renderer1.cpp
+Renderer1.h
+TheApp.cpp
+TheApp.h
 )
 
 #====================================================

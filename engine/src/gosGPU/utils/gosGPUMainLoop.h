@@ -1,7 +1,7 @@
 #ifndef _gosGPUMainLoop_h_
 #define _gosGPUMainLoop_h_
-#include "gosGPUEnumAndDefine.h"
-#include "../gos/dataTypes/gosTimer.h"
+#include "../gosGPUEnumAndDefine.h"
+#include "../../gos/dataTypes/gosTimer.h"
 
 
 
@@ -26,7 +26,8 @@ namespace gos
 
         public:
                     MainLoop ();
-
+                    ~MainLoop();
+                    
             void    setup (gos::GPU *gpuIN);
             void    unsetup();
         

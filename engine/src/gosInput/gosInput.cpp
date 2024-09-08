@@ -52,21 +52,9 @@ void input::deinit()
 }
 
 //*****************************************
-u32 input::priv_action_addName (const char *name)
+gos::Allocator* input::getAllocator()
 {
-    return module->action_addName(name);
-}
-
-//*****************************************
-const char*	input::priv_action_getNameByOffset (u32 offset)
-{
-    return module->action_getNameByOffset (offset);
-}
-
-//*****************************************
-input::Context* input::context_create (const char *name)
-{
-    return module->context_create (name);
+    return module->getAllocator();
 }
 
 //*****************************************

@@ -11,6 +11,7 @@ namespace gos
 	{
 		bool			init();
 		void			deinit();
+		Allocator* 		getAllocator();
 
 		const char* 	enumToString (input::eType e);
 		const char* 	enumToString (input::eOrigin e);
@@ -34,8 +35,6 @@ namespace gos
 		 * Gli input della finestra vengono confrontati con il [context] per produrre delle [actionID]
 		 */
 		void 			resolveEvents (const GOSWinHandle &handle, const Context *ctx, ResolvedEvtList *out);
-
-		Context*		context_create (const char *name);
 
 
 		/************************************************************************************************************
@@ -89,17 +88,6 @@ namespace gos
 						//event_getEventName
 						//Filla [out] con il nome "umano" della combinazione di tasti/assi (es: ALT + Q)
 		void			event_getEventName (const EventID &eventID, char *out, u32 sizeof_out);
-
-
-
-		/************************************************************************************************************
-		 *
-		 * uso interno
-		 *
-		 */
-		u32 			priv_action_addName (const char *name);
-		const char*		priv_action_getNameByOffset (u32 offset);
-
 
 	} //namespace input
 } //namespace gos

@@ -159,6 +159,12 @@ private:
             d = 3
         };
 
+        struct sEdge
+        {
+            u16 i0;
+            u16 i1;
+        };
+
     public:
         void    algo1 (const World &world, Line &line);
         void    algo2 (const World &world, Line &line);
@@ -167,13 +173,6 @@ private:
     private:
         class VtxHelper2
         {
-        public:
-            struct sEdge
-            {
-                u16 i0;
-                u16 i1;
-            };
-
 
         public:
                     VtxHelper2 (gos::Allocator *allocator, const World &world);
@@ -199,6 +198,12 @@ private:
             
 
         };
+
+    private:
+        void    priv_renderLine (Line &line, gos::FastArray<sEdge> &edgeList) const;
+        void    priv_moveVtx (gos::FastArray<sEdge> *from, gos::FastArray<sEdge> *to, u32 i) const;
+        u32     priv_findVtxWithEdge (const gos::FastArray<sEdge> *list, const sEdge *edge) const;
+           
     };
  
 private:
@@ -234,7 +239,7 @@ private:
 
 private:
     gos::geom::Camera3      cam;
-    FreeMovement            movement;
+    gos::FreeMovement       movement;
     gos::shape::Shape       myShape;
     World                   *world;
     Line                    *line;

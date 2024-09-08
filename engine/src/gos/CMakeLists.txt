@@ -100,8 +100,9 @@ string/gosStringANSI.cpp
 string/gosStringEnumAndDefine.h
 string/gosStringFormat.cpp
 string/gosStringIter.cpp
-string/gosStringList.h
 string/gosStringList.cpp
+string/gosStringList.h
+string/gosUniqueStringList.h
 string/gosUTF8.cpp 
 string/gosUTF8Char.cpp 
 string/gosUTF8String.cpp
@@ -126,6 +127,7 @@ gosFS_FSSpecialPathResolver.cpp
 gosFS_FSSpecialPathResolver.h
 gosFS.cpp
 gosHandle.h
+gosHashMap.h
 gosIniFile_section.cpp
 gosIniFile.cpp
 gosIniFile.h
@@ -133,7 +135,6 @@ gosLIFOFixedSize.h
 gosRandom.h
 gosServerTCP.cpp
 gosServerTCP.h
-gosSortedFastArray.h
 gosString.h
 gosThreadMsgQ.h
 gosThreadMsgQ.cpp

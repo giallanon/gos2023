@@ -73,21 +73,21 @@ bool VulkanExample5::priv_loadSfera()
 bool VulkanExample5::virtual_onInit ()
 {
     //input binding
-    inputCtx->action_add ("LMB");
-    inputCtx->action_bindToBtn ("LMB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
+    inputCtx.action_add ("LMB");
+    inputCtx.action_bindToBtn ("LMB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
 
-    inputCtx->action_add ("RMB");
-    inputCtx->action_bindToBtn ("RMB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_RIGHT, input::eButtonStatus::pressed);
+    inputCtx.action_add ("RMB");
+    inputCtx.action_bindToBtn ("RMB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_RIGHT, input::eButtonStatus::pressed);
 
-    inputCtx->action_add ("run.marching.square");
-    inputCtx->action_bindToBtn ("run.marching.square", input::eOrigin::keyboard, GLFW_KEY_ENTER, input::eButtonStatus::pressed);
+    inputCtx.action_add ("run.marching.square");
+    inputCtx.action_bindToBtn ("run.marching.square", input::eOrigin::keyboard, GLFW_KEY_ENTER, input::eButtonStatus::pressed);
 
-    inputCtx->action_add ("mouse_move");
-    inputCtx->action_bindToAxleABS ("mouse_move",  input::eOrigin::mouse, input::eAxle::y);
-    inputCtx->action_bindToAxleABS ("mouse_move",  input::eOrigin::mouse, input::eAxle::x);
+    inputCtx.action_add ("mouse_move");
+    inputCtx.action_bindToAxleABS ("mouse_move",  input::eOrigin::mouse, input::eAxle::y);
+    inputCtx.action_bindToAxleABS ("mouse_move",  input::eOrigin::mouse, input::eAxle::x);
 
-    inputCtx->action_add ("inc_dec_ScaleXZ");
-    inputCtx->action_bindToAxleREL ("inc_dec_ScaleXZ",  input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::both);
+    inputCtx.action_add ("inc_dec_ScaleXZ");
+    inputCtx.action_bindToAxleREL ("inc_dec_ScaleXZ",  input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::both);
 
 
     //creo una sfera
@@ -195,8 +195,8 @@ bool VulkanExample5::virtual_onInit ()
     }
 
     //Creo il descriptorSet layout  con un solo UNIFORM BUFFER per il VTX SHADER
-    gpu->descrSetLayout_createNew (&descrSetLayoutHandle)
-        .add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+    gpu->descrSetLayout_createStatic (&descrSetLayoutHandle)
+        .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT)
         .end();
     if (descrSetLayoutHandle.isInvalid())
     {
@@ -301,13 +301,12 @@ bool VulkanExample5::priv_recordCommandBuffer (gpu::CmdBufferWriter &cw)
 
     cw.setViewport (gpu->viewport_getDefault())
         .bindPipeline (pipelineHandle)
-        .bindDescriptorSet (descrSetInstancerHandle)
+        .bindDescriptorSet (descrSetInstancerHandle, 0)
         .setClearColor (0, gos::ColorHDR(0, 0.1f, 0.3f))
         .setDepthBufferColor(1, 0)
         .renderPass_begin (renderLayoutHandle, frameBufferHandle)
             .bindVtxBuffers(vtxBufferHandle, world->hVBInstance)
             .bindIdxBufferU16(idxBufferHandle)
-            //.drawIndexed (NUM_INDEX, 1, 0, 0, 0)
             .drawIndexed (myShape.numIdx, world->getNumInstances(), 0, 0, 0)
         .renderPass_end();
     return true;

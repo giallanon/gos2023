@@ -7,6 +7,7 @@
 
 using namespace gos;
 
+PFN_vkCmdPushDescriptorSetKHR   GPU::vkCmdPushDescriptorSetKHR = VK_NULL_HANDLE;
 
 typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Safe>		GOSGPUMemAllocatorTS;
 
@@ -165,7 +166,7 @@ bool GPU::priv_initVulkan ()
     gos::Allocator *scrapAllocator = gos::getScrapAllocator();
 
     gos::StringList requiredVulkanExtensionList(scrapAllocator);
-    gos::StringList requiredVulkanValidaionLayerList(scrapAllocator);
+    gos::StringList requiredVulkanValidationLayerList(scrapAllocator);
 
     //GLFW ha bisogno di un po' di estensioni di vulkan, le recupero e le addo all'elenco delle estensioni necessarie
     {
@@ -175,15 +176,17 @@ bool GPU::priv_initVulkan ()
         for (u32 i=0; i<glfwExtensionCount; i++)
             requiredVulkanExtensionList.add (glfwExtensions[i]);
     }
+    requiredVulkanExtensionList.add (VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+
 
 #ifdef _DEBUG
-    requiredVulkanValidaionLayerList.add ("VK_LAYER_KHRONOS_validation");
+    requiredVulkanValidationLayerList.add ("VK_LAYER_KHRONOS_validation");
     requiredVulkanExtensionList.add (VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     
 #endif
 
     //creazione dell'istanza di vulkan
-    if (!vulkanCreateInstance (&vkInstance, requiredVulkanValidaionLayerList, requiredVulkanExtensionList))
+    if (!vulkanCreateInstance (&vkInstance, requiredVulkanValidationLayerList, requiredVulkanExtensionList))
     {
         gos::logger::err ("problem creating vulkan instance\n");
         return false;
@@ -208,6 +211,7 @@ bool GPU::priv_initVulkan ()
     sPhyDeviceInfo vkPhysicalDevInfo;
     requiredVulkanExtensionList.reset();
     requiredVulkanExtensionList.add (VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    requiredVulkanExtensionList.add (VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
     if (!vulkanScanAndSelectAPhysicalDevices(vkInstance, vkSurface, requiredVulkanExtensionList, &vkPhysicalDevInfo))
     {
         gos::logger::err ("\ncan't find a good enough vulkan device\n");
@@ -223,6 +227,7 @@ bool GPU::priv_initVulkan ()
     }
     gos::logger::log("\n");
 
+
     //creazione del device logico di vulkan
     if (!vulkanCreateDevice (vkPhysicalDevInfo, requiredVulkanExtensionList, &vulkan))
     {
@@ -231,6 +236,17 @@ bool GPU::priv_initVulkan ()
     }
     gos::logger::log("\n");
     
+
+    vkCmdPushDescriptorSetKHR = (PFN_vkCmdPushDescriptorSetKHR)vkGetDeviceProcAddr(vulkan.dev, "vkCmdPushDescriptorSetKHR");
+    if (!vkCmdPushDescriptorSetKHR) 
+    {
+        gos::logger::err ("Could not get a valid function pointer for vkCmdPushDescriptorSetKHR\n");
+        return false;
+    }
+
+
+
+
     //initVulkan:: creazione swap chain
     if (!vulkanCreateSwapChain (vulkan, vkSurface, vSync, &vulkan.swapChainInfo))
     {
@@ -1359,6 +1375,10 @@ bool GPU::priv_renderLayout_onBuilderEnds (RenderTaskLayoutBuilder *builder)
         s->numAttachment++;
         s->indexOfDepthStencilBuffer = builder->depthBuffer.indexOfDepthStencilAttachment;
     }
+    else
+    {
+        s->indexOfDepthStencilBuffer = 0xff;
+    }
     return true;
 }
 
@@ -1425,22 +1445,25 @@ bool GPU::priv_pipeline_onBuilderEnds (PipelineBuilder *builder)
     if (builder->anyError())
         return false;
         
-    sPipeline *s = pipelineList.reserve (builder->out_handle);
+    gpu::sPipeline *s = pipelineList.reserve (builder->out_handle);
     if (NULL == s)
     {
         gos::logger::err ("GPU::priv_pipeline_onBuilderEnds() => can't reserve a handle!\n");
         return false;
     }
 
+    s->reset();
     s->vkPipelineLayoutHandle = builder->vkPipelineLayoutHandle;
     s->vkPipelineHandle = builder->vkPipelineHandle;
+    if (builder->pushConstantList.getNElem())
+        memcpy (s->pushContantList, builder->pushConstantList._queryPointer(), sizeof(VkPushConstantRange) * builder->pushConstantList.getNElem());
     return true;
 }
 
 //************************************
 void GPU::deleteResource (GPUPipelineHandle &handle)
 {
-    sPipeline *s;
+    gpu::sPipeline *s;
     if (pipelineList.fromHandleToPointer (handle, &s))
     {
         vkDestroyPipelineLayout (vulkan.dev, s->vkPipelineLayoutHandle, nullptr);
@@ -1453,18 +1476,16 @@ void GPU::deleteResource (GPUPipelineHandle &handle)
 }
 
 //************************************
-bool GPU::toVulkan (const GPUPipelineHandle handle, VkPipeline *out, VkPipelineLayout *out_layout) const
+bool GPU::toVulkan (const GPUPipelineHandle handle, const gpu::sPipeline **out) const
 {
-    sPipeline *s;
+    gpu::sPipeline *s;
     if (pipelineList.fromHandleToPointer (handle, &s))
     {
-        *out = s->vkPipelineHandle;
-        *out_layout = s->vkPipelineLayoutHandle;
+        *out = s;
         return true;
     }
 
-    *out = VK_NULL_HANDLE;
-    *out_layout = VK_NULL_HANDLE;
+    *out = NULL;
     gos::logger::err ("GPU::pipeline_toVulkan() => invalid handle\n");
     DBGBREAK;
     return false;
@@ -2205,14 +2226,23 @@ bool GPU::uniformBuffer_mapCopyUnmap (const GPUUniformBufferHandle handle, u32 o
  * 
  * 
  *************************************************************************************************************/
-GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_createNew (GPUDescrSetLayoutHandle *out_handle)
+GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_createStatic (GPUDescrSetLayoutHandle *out_handle)
 {
     assert (NULL != out_handle);
     out_handle->setInvalid();
 
-    DescriptorSetLayoutBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::DescriptorSetLayoutBuilder) (this, out_handle);
+    DescriptorSetLayoutBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::DescriptorSetLayoutBuilder) (this, 0, out_handle);
     return *builder;
-}    
+}
+
+GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_createPushable (GPUDescrSetLayoutHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+    DescriptorSetLayoutBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::DescriptorSetLayoutBuilder) (this, VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR, out_handle);
+    return *builder;
+}
 
 //************************************
 bool GPU::priv_descrSetLayout_onBuilderEnds (DescriptorSetLayoutBuilder *builder)
@@ -2228,6 +2258,7 @@ bool GPU::priv_descrSetLayout_onBuilderEnds (DescriptorSetLayoutBuilder *builder
     //      crearne N diversi che descrivono la stessa cosa
     VkDescriptorSetLayoutCreateInfo creatInfo{};
     creatInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    creatInfo.flags = builder->createFlag;
     creatInfo.bindingCount = builder->numDescriptor;
     creatInfo.pBindings = builder->list;
 

@@ -110,9 +110,8 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
     }
 
     //recupero vulkan pipeline
-    VkPipeline          vkPipelineHandle;
-    VkPipelineLayout    vkPipelineLayoutHandle;
-    if (!gpuIN->toVulkan (pipelineHandle, &vkPipelineHandle, &vkPipelineLayoutHandle))
+    const gpu::sPipeline *pipelineInfo;
+    if (!gpuIN->toVulkan (pipelineHandle, &pipelineInfo))
     {
         gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid pipelineHandle\n");
         return false;
@@ -143,7 +142,7 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
         renderPassInfo.pClearValues = &clearColor;    
 
     vkCmdBeginRenderPass (*out_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline (*out_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineHandle);
+    vkCmdBindPipeline (*out_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineInfo->vkPipelineHandle);
 
     //setto la viewport
     const gos::gpu::Viewport *viewport = gpuIN->viewport_get (gpuIN->viewport_getDefault());

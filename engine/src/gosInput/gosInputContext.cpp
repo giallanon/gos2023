@@ -6,26 +6,29 @@
 using namespace gos;
 using namespace gos::input;
 
-/***************************************************************************************************************************************
- * 
- *      Context
- * 
- ****************************************************************************************************************************************/
-Context::Context (gos::Allocator *allocator, const char *contextName)
+//***************************
+void Context::priv_init (const char *contextName)
 {
-    sprintf_s (name, sizeof(name), "%s", contextName);
-
-    actionList.setup (allocator, 128);
-	btnEventList.setup (allocator, 256);
-	axleEventList.setup (allocator, 64);    
+    setContextName (contextName);
+    actionNameList.setup (input::getAllocator(), 16*1204);
+    actionList.setup (input::getAllocator(), 128);
+	btnEventList.setup (input::getAllocator(), 256);
+	axleEventList.setup (input::getAllocator(), 64);    
 }
 
 //***************************
 Context::~Context()
 {
+    actionNameList.unsetup();
     actionList.unsetup();
 	btnEventList.unsetup();
 	axleEventList.unsetup();    
+}
+
+//***************************
+void Context::setContextName (const char *contextName)
+{
+    sprintf_s (name, sizeof(name), "%s", contextName);
 }
 
 //***************************
@@ -47,21 +50,18 @@ const sAction* Context::priv_action_existsByID (u32 actionID) const
 }
 
 //***************************
-u32 Context::action_add (const char *actionName)
+Context& Context::action_add (const char *actionName)
 {
-    const u32 actionID = priv_makeActionID(actionName); 
-    if (priv_action_existsByID (actionID))
+    const u32 actionID = priv_makeActionID (actionName); 
+    if (!priv_action_existsByID (actionID))
     {
-        DBGBREAK;
-        return 0;
+        sAction action;
+        action.actionID = actionID;
+        action.offsetToActionName = actionNameList.add (actionName);
+        
+        actionList.append (action);
     }
-
-    sAction action;
-    action.actionID = actionID;
-    action.offsetToActionName = input::priv_action_addName (actionName);
-    
-    actionList.append (action);
-    return actionID;
+    return *this;
 }
 
 //************************************
@@ -186,7 +186,7 @@ void Context::logAllMappedInput() const
     for (u32 i2=0; i2<actionList.getNElem(); i2++)
     {
         const sAction *action = &actionList(i2);
-        gos::logger::log ("%s\t\t\t\t", priv_action_getNameByOffset(action->offsetToActionName));
+        gos::logger::log ("%s\t\t\t\t", actionNameList.getStringAtOffset (action->offsetToActionName));
         
         //mostro il key binding se esiste
         if (priv_getAllMappedInputEvent (action->actionID, eventIDList))

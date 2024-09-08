@@ -62,8 +62,8 @@ bool VulkanExample5::Line::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPool
     }
 
     //Creo il descriptorSet layout  con un solo UNIFORM BUFFER per il VTX SHADER
-    gpu->descrSetLayout_createNew (&hDescrSetLayout)
-        .add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+    gpu->descrSetLayout_createStatic (&hDescrSetLayout)
+        .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT)
         .end();
     if (hDescrSetLayout.isInvalid())
     {
@@ -234,7 +234,7 @@ bool VulkanExample5::Line::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStg
 
     cw.setViewport (gpu->viewport_getDefault())
         .bindPipeline (hPipeline)
-        .bindDescriptorSet (hDescrSetInstance)
+        .bindDescriptorSet (hDescrSetInstance, 0)
         .setClearColor (0, gos::ColorHDR(0.1f, 0.1f, 0.3f))
         .renderPass_begin (hRenderLayout, hFrameBuffer)
             .bindVtxBuffer (hVtxBuffer)

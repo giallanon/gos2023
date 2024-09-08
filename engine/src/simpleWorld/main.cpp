@@ -1,5 +1,5 @@
-#include "gosGPU.h"
-#include "gosInput.h"
+#include "TheApp.h"
+
 
 using namespace gos;
 
@@ -7,31 +7,10 @@ using namespace gos;
 //********************************** */
 void foreverLoop (gos::GPU *gpu)
 {
-    gpu::MainLoop gpuLoop;
-    gpuLoop.setup (gpu);
+    TheApp app;
 
-    while (1)
-    {
-        gpuLoop.stat_onCPUFrameBegin();
-        input::pollEvents();
-        gpuLoop.stat_onCPUFrameEnd();
-        gpuLoop.stat_printReport();
-
-
-        gpuLoop.run ();
-        /*if (gpuLoop.swapchainRecreated())
-            cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
-        if (gpuLoop.canSubmitGFXJob())
-        {
-            recordCommandBuffer (cmdBufferHandle);
-            gpuLoop.submitGFXJob (cmdBufferHandle);
-        }*/
-
-    }
-
-    //aspetto che GPU abbia finito tutto cio' che ha in coda
-    gpu->waitIdle();
-
+    app.setup (gpu);
+    app.run();
 }
 
 

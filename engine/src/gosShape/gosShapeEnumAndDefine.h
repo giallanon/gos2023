@@ -1,6 +1,7 @@
 #ifndef _gosShapeEnumAndDefine_h_
 #define _gosShapeEnumAndDefine_h_
 #include "../gos/gosEnumAndDefine.h"
+#include "../gos/gosFastArray.h"
 #include "../gosGeom/gosGeomPos3.h"
 
 namespace gos
@@ -100,6 +101,9 @@ namespace gos
 		};
 
 	} //namespace shape
+
+
+	typedef gos::FastArray<gos::shape::Shape> ShapeList;
 
  } //namespace gos
 

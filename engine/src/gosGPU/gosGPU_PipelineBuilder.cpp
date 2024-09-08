@@ -20,6 +20,7 @@ GPU::PipelineBuilder::PipelineBuilder (GPU *gpuIN, const GPURenderLayoutHandle &
     bAnyError = false;
     shaderList.setup (allocator, 8);
     descrSetLayoutList.setup (allocator, 8);
+    pushConstantList.setup (allocator, 8);
 
     setDrawPrimitive (eDrawPrimitive::trisList);
     vtxDeclHandle.setInvalid();
@@ -35,7 +36,50 @@ GPU::PipelineBuilder::~PipelineBuilder()
 {
     shaderList.unsetup ();
     descrSetLayoutList.unsetup ();
+    pushConstantList.unsetup ();
 }    
+
+
+//******************************** 
+GPU::PipelineBuilder& GPU::PipelineBuilder::pushConstant_add (eShaderType whichShader, u16 offset, u16 sizeInByte, u8 *out_whichOne)
+{
+    assert (NULL != out_whichOne);
+
+    if (pushConstantList.getNElem() >= GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE)
+    {
+        *out_whichOne = 0xff;
+        bAnyError = true;
+        gos::logger::err ("PipelineBuilder::pushConstant_add() => too many push constant\n");
+    }
+    else
+    {
+        VkPushConstantRange s;
+        s.offset = offset;
+        s.size = sizeInByte;
+
+        switch (whichShader)
+        {
+        default:
+            bAnyError = true;
+            gos::logger::err ("PipelineBuilder::pushConstant_add() => invalid shader type\n");
+            break;
+
+        case eShaderType::vertexShader:
+            s.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+            break;
+
+        case eShaderType::fragmentShader:
+            s.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            break;
+        }
+
+        *out_whichOne = pushConstantList.getNElem();
+        pushConstantList.append (s);
+    }
+
+
+    return *this;
+}
 
 
 //******************************** 
@@ -85,8 +129,8 @@ bool GPU::PipelineBuilder::priv_buildVulkan ()
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = numDescrLayput;
         pipelineLayoutInfo.pSetLayouts = vkElencoDescrLayout;
-        pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-        pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+        pipelineLayoutInfo.pushConstantRangeCount = pushConstantList.getNElem();
+        pipelineLayoutInfo.pPushConstantRanges = pushConstantList._queryTypedPointer();    
 
         result = vkCreatePipelineLayout (gpu->REMOVE_getVkDevice(), &pipelineLayoutInfo, nullptr, &vkPipelineLayoutHandle);
         if (VK_SUCCESS != result)

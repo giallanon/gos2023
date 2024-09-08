@@ -205,9 +205,8 @@ bool VulkanExample2::recordCommandBuffer (gos::GPU *gpuIN,
     }
 
     //recupero vulkan pipeline
-    VkPipeline          vkPipelineHandle;
-    VkPipelineLayout    vkPipelineLayoutHandle;
-    if (!gpuIN->toVulkan (pipelineHandle, &vkPipelineHandle, &vkPipelineLayoutHandle))
+    const gpu::sPipeline *pipelineInfo;
+    if (!gpuIN->toVulkan (pipelineHandle, &pipelineInfo))
     {
         gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid pipelineHandle\n");
         return false;
@@ -249,7 +248,7 @@ bool VulkanExample2::recordCommandBuffer (gos::GPU *gpuIN,
     vkCmdBeginRenderPass (*out_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     
     //bindo la pipeline
-    vkCmdBindPipeline (*out_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineHandle);
+    vkCmdBindPipeline (*out_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineInfo->vkPipelineHandle);
 
     //bindo il vtx buffer a partire dal layout=0
     static const u8 VTXBUFFER__FIRST_VTX_STREAM_INDEX = 0;

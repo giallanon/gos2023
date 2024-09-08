@@ -36,3 +36,5 @@ engine/bin/testKernel/testKernel__linux_Debug
 engine/bin/testKernel/testKernel__linux_Release
 
 engine/bin/simpleWorld/simpleWorld__linux_Debug
+
+*.spv

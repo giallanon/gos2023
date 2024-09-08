@@ -695,7 +695,7 @@ void glTFImporter::priv_applySkeleton (Bone *me)
 }
 
 //********************************************
-bool glTFImporter::importFromFile (const char *filename, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, FastArray<Shape> &out_shapeList)
+bool glTFImporter::importFromFile (const char *filename, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, gos::ShapeList &out_shapeList)
 {
 	u32 fsize;
 	u8 *buffer = fs::fileLoadInMemory (localAllocator, filename, &fsize);
@@ -711,7 +711,7 @@ bool glTFImporter::importFromFile (const char *filename, const VtxLayout &desire
 }
 
 //********************************************
-bool glTFImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, FastArray<Shape> &out_shapeList)
+bool glTFImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, gos::ShapeList &out_shapeList)
 {
 	priv_free();
 	timeStarted_msec = gos::getTimeSinceStart_msec();

@@ -3,7 +3,7 @@
 #include "gosShape.h"
 #include "gosShapeVtxArrayWriter.h"
 #include "../gos/gosFastArray.h"
-#include "../gos/gosSortedFastArray.h"
+#include "../gos/gosHashMap.h"
 
 
 namespace gos
@@ -299,7 +299,7 @@ namespace gos
 			eMode					mode;
 			VtxLayout 				shapeVtxLayout;
 			FastArray<sVertex>		finalVtxList;
-			SortedFastArray<sVertex, u32>	sortedFinalVtxList;
+			HashMap<sVertex, u32>	sortedFinalVtxList;
 			FastArray<u16>			finalIdxList;
 			const u16 				*tupleList;
 			u32 					totNumOfIdxInTupleList;

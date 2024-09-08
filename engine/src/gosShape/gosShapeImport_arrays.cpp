@@ -62,9 +62,9 @@ u32 ArraysImporter::priv_findOrCreateVtx (const sVertex &vIN)
 	return n;
 */
 
-	SortedFastArray<sVertex, u32>::Position pos;
+	HashMap<sVertex, u32>::Position pos;
 	u32 vtxIndex;
-	if (sortedFinalVtxList.find(vIN, &vtxIndex, &pos))
+	if (sortedFinalVtxList.findWithPos (vIN, &vtxIndex, &pos))
 		return vtxIndex;
 
 	const u32 n = finalVtxList.getNElem();

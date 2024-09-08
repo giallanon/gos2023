@@ -11,6 +11,20 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
     gos::logger::log ("vulkanCreateInstance()\n");
     gos::logger::incIndent();
 
+
+    //recupero la versione di vulkan installata
+    auto FN_vkEnumerateInstanceVersion = PFN_vkEnumerateInstanceVersion(vkGetInstanceProcAddr(nullptr, "vkEnumerateInstanceVersion"));
+    if(FN_vkEnumerateInstanceVersion == nullptr)
+        gos::logger::log ("Vulkan version is 1.0\n");
+    else
+    {
+        uint32_t instanceVersion;
+        FN_vkEnumerateInstanceVersion (&instanceVersion);
+        gos::logger::log ("Vulkan version is %d.%d.%d\n", VK_API_VERSION_MAJOR(instanceVersion), VK_API_VERSION_MINOR(instanceVersion), VK_API_VERSION_PATCH(instanceVersion));
+    }
+
+
+
     bool ret = true;
     gos::Allocator *allocator = gos::getScrapAllocator();
     UTF8Char virgola(',');
@@ -23,7 +37,7 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "GOSEngine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+    appInfo.apiVersion = VK_API_VERSION_1_3;
 
 
     VkInstanceCreateInfo createInfo{};

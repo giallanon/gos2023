@@ -1,6 +1,6 @@
 #include "gosGPUMainLoop.h"
-#include "gosGPU.h"
-#include "../gos/gosUtils.h"
+#include "../gosGPU.h"
+#include "../../gos/gosUtils.h"
 
 using namespace gos;
 using namespace gos::gpu;
@@ -8,12 +8,22 @@ using namespace gos::gpu;
 //************************************************
 MainLoop::MainLoop()
 {
+    gpu = NULL;
     stato = eStato::askingNewFrame;
     canAccept_GFXJob = false;
 
     fpsMegaTimer.addTimer ("CPU");
     fpsMegaTimer.addTimer ("GPU");
     fpsMegaTimer.addTimer ("FPS");
+}
+
+//************************************************
+MainLoop::~MainLoop()
+{
+    if (NULL == gpu)
+        return;
+    unsetup();
+    gpu = NULL;
 }
 
 //************************************************

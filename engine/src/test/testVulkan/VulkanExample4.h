@@ -58,7 +58,7 @@ private:
     sUniformBufferObject    ubo;
     sAnimation              anim;
     gos::geom::Camera3      cam;
-    FPSMovement            movement;
+    gos::FPSMovement        movement;
 
 
     GPUVtxBufferHandle      vtxBufferHandle;

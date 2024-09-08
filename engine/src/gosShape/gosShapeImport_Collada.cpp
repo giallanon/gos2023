@@ -32,7 +32,7 @@ void ColladaImporter::priv_free()
 }
 
 //********************************************
-bool ColladaImporter::importFromFile (const char *filename, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, FastArray<Shape> &out_shapeList)
+bool ColladaImporter::importFromFile (const char *filename, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, gos::ShapeList &out_shapeList)
 {
 	priv_free();
 
@@ -567,7 +567,7 @@ bool ColladaImporter::priv_parse_geometry (const tinyxml2::XMLElement *geomElem,
 }
 
 //********************************************
-bool ColladaImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, FastArray<Shape> &out_shapeList)
+bool ColladaImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, gos::ShapeList &out_shapeList)
 {
 	shapeVtxLayout = desiredLayout;
 

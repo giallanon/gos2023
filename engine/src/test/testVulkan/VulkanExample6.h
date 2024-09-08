@@ -45,7 +45,7 @@ private:
     gos::FastArray<gos::shape::Shape> shapeList;
     sUniformBufferObject    ubo;
     gos::geom::Camera3      cam;
-    FPSMovement             movement;
+    gos::FPSMovement        movement;
 
 
     GPUVtxBufferHandle      vtxBufferHandle;

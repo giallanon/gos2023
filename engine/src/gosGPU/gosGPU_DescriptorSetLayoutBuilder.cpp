@@ -6,13 +6,14 @@ using namespace gos;
 typedef GPU::DescriptorSetLayoutBuilder  GPUDSLB;   //di comodo
 
 //*********************************************** 
-GPU::DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder (GPU *gpuIN, GPUDescrSetLayoutHandle *out_handleIN) :
+GPU::DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder (GPU *gpuIN, VkDescriptorSetLayoutCreateFlags createFlagIN, GPUDescrSetLayoutHandle *out_handleIN) :
     GPU::TempBuilder(gpuIN)
 {
     out_handle = out_handleIN;
     bAnyError = false;
     nextBindingNumber = 0;
     numDescriptor = 0;
+    createFlag = createFlagIN;
 }
 
 //*********************************************** 
@@ -22,7 +23,7 @@ GPU::DescriptorSetLayoutBuilder::~DescriptorSetLayoutBuilder()
 
 
 //*********************************************** 
-GPUDSLB& GPU::DescriptorSetLayoutBuilder::add (VkDescriptorType descrType, VkShaderStageFlagBits stageFlags, u32 count)
+GPUDSLB& GPU::DescriptorSetLayoutBuilder::priv_add (VkDescriptorType descrType, VkShaderStageFlagBits stageFlags, u32 count)
 {
     if (numDescriptor >= GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET)
     {
