@@ -178,11 +178,9 @@ bool GPU::priv_initVulkan ()
     }
     requiredVulkanExtensionList.add (VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
-
 #ifdef _DEBUG
     requiredVulkanValidationLayerList.add ("VK_LAYER_KHRONOS_validation");
     requiredVulkanExtensionList.add (VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    
 #endif
 
     //creazione dell'istanza di vulkan
@@ -212,6 +210,8 @@ bool GPU::priv_initVulkan ()
     requiredVulkanExtensionList.reset();
     requiredVulkanExtensionList.add (VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     requiredVulkanExtensionList.add (VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+    //requiredVulkanExtensionList.add (VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+
     if (!vulkanScanAndSelectAPhysicalDevices(vkInstance, vkSurface, requiredVulkanExtensionList, &vkPhysicalDevInfo))
     {
         gos::logger::err ("\ncan't find a good enough vulkan device\n");

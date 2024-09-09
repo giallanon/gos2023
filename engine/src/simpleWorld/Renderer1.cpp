@@ -77,7 +77,7 @@ bool Renderer1::priv_setupVulkan()
 {
     //creo il render layout
     gpu->renderLayout_createNew (&hRenderLayout)
-        .requireRendertarget (eRenderTargetUsage::presentation, gpu->swapChain_getImageFormat(), true)
+        .requireRendertarget (gpu->swapChain_getImageFormat(), eRenderTargetUsage::dont_care, eRenderTargetUsage::presentation, true)
         .requireDepthStencil (gpu->depthStencil_getDefaultFormat(), false, true)
         .addSubpass_GFX()
             .useRenderTarget(0)

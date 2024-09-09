@@ -103,9 +103,11 @@ enum class eCullMode : u8
 
 enum class eRenderTargetUsage : u8
 {
-	presentation = 0,   	//usato per essere present() a video
-	storage,             	//viene renderizzato e, al termine del rendering,  il suo contenuto deve essere preservato
-	storage_discard     	//viene renderizzato ma, al termine del rendering, il suo contenuto non ci interessa piu'
+	presentation = 0,   		//usato per essere present() a video
+	storage_readonly,		//viene renderizzato e, al termine del rendering,  il suo contenuto deve essere preservato per shader futuri
+	storage_color_attachment_optimal,
+	storage_discard,     	//viene renderizzato ma, al termine del rendering, il suo contenuto non ci interessa piu'
+	dont_care
 };
 
 enum class eVIBufferMode : u8

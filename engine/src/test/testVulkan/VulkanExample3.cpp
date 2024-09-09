@@ -80,7 +80,7 @@ bool VulkanExample3::virtual_onInit ()
 
     //creo il render pass
     gpu->renderLayout_createNew (&renderLayoutHandle)
-        .requireRendertarget (eRenderTargetUsage::presentation, gpu->swapChain_getImageFormat(), true)
+        .requireRendertarget (gpu->swapChain_getImageFormat(), eRenderTargetUsage::dont_care, eRenderTargetUsage::presentation, true)
         .addSubpass_GFX()
             .useRenderTarget(0)
         .end()

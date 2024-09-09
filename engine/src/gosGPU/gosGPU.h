@@ -148,8 +148,10 @@ namespace gos
                             RenderTaskLayoutBuilder (GPU *gpuIN, GPURenderLayoutHandle *out_handle);
             virtual         ~RenderTaskLayoutBuilder();
 
-            RTLB&           requireRendertarget (eRenderTargetUsage usage, VkFormat imageFormat, bool bClearOnLoad);
+            RTLB&           requireRendertarget (VkFormat imageFormat, eRenderTargetUsage initialState,  eRenderTargetUsage finalState, bool bClearOnLoad);
             RTLB&           requireDepthStencil (VkFormat imageFormat, bool bWithStencil, bool bClearOnLoad);
+
+            
 
             SubPassInfo&    addSubpass_GFX ();
             SubPassInfo&    addSubpass_COMPUTE ();
@@ -160,7 +162,8 @@ namespace gos
         private:
             struct sRenderTargetInfo
             {
-                eRenderTargetUsage  usage;
+                eRenderTargetUsage  initialState;
+                eRenderTargetUsage  finaleState;
                 VkFormat            imageFormat;
                 bool                bClear;
             };
@@ -178,6 +181,7 @@ namespace gos
 
         private:
             bool                    priv_buildVulkan();
+            VkImageLayout           priv_toVulkan (eRenderTargetUsage s) const;
 
         private:
             GPURenderLayoutHandle   *out_handle;

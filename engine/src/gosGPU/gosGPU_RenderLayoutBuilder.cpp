@@ -50,12 +50,13 @@ GPU::RenderTaskLayoutBuilder::~RenderTaskLayoutBuilder()
 }
 
 //***********************************************************
-RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (eRenderTargetUsage usage, VkFormat imageFormat, bool bClear)
+RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (VkFormat imageFormat, eRenderTargetUsage initialState,  eRenderTargetUsage finalState, bool bClearOnLoad)
 {
     if (numRenderTargetInfo < GOSGPU__NUM_MAX_ATTACHMENT)
     {
-        rtInfoList[numRenderTargetInfo].usage = usage;
-        rtInfoList[numRenderTargetInfo].bClear = bClear;
+        rtInfoList[numRenderTargetInfo].initialState = initialState;
+        rtInfoList[numRenderTargetInfo].finaleState = finalState;
+        rtInfoList[numRenderTargetInfo].bClear = bClearOnLoad;
         rtInfoList[numRenderTargetInfo].imageFormat = imageFormat;
         numRenderTargetInfo++;
     }
@@ -125,6 +126,23 @@ bool GPU::RenderTaskLayoutBuilder::end()
 }
 
 //***********************************************************
+VkImageLayout GPU::RenderTaskLayoutBuilder::priv_toVulkan (eRenderTargetUsage s) const
+{
+    switch (s)
+    {
+    default:
+        DBGBREAK;
+        return VK_IMAGE_LAYOUT_GENERAL;
+
+    case eRenderTargetUsage::presentation:                  return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    case eRenderTargetUsage::storage_readonly:              return VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+    case eRenderTargetUsage::storage_color_attachment_optimal:    return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    case eRenderTargetUsage::storage_discard:               return VK_IMAGE_LAYOUT_UNDEFINED;
+    case eRenderTargetUsage::dont_care:                     return VK_IMAGE_LAYOUT_UNDEFINED;
+    }
+}
+
+//***********************************************************
 bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
 {
     //elenco degli attachment
@@ -139,32 +157,31 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
         
         attachmentList[numAttachment].format = rtInfoList[i].imageFormat;
         attachmentList[numAttachment].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachmentList[numAttachment].loadOp = rtInfoList[i].bClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         
-        attachmentList[numAttachment].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;              //non mi interessa lo stato del buffer all'inizio, tanto lo pulisco
+        if (rtInfoList[i].bClear)
+            attachmentList[numAttachment].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        else
+            attachmentList[numAttachment].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 
-        switch (rtInfoList[i].usage)
+        attachmentList[numAttachment].initialLayout = priv_toVulkan(rtInfoList[i].initialState);
+        
+        
+        attachmentList[numAttachment].finalLayout = priv_toVulkan(rtInfoList[i].finaleState);
+        switch (rtInfoList[i].finaleState)
         {
         default:
             gos::logger::err ("RenderTaskLayout::end() => invalid [usage] for RenderTarget %d\n", i);
             return false;
 
-        case eRenderTargetUsage::presentation:
-            //Lo uso per essere presentato a video
-            attachmentList[numAttachment].storeOp = VK_ATTACHMENT_STORE_OP_STORE;                  //mantiene le info scritte in questo buffer
-            attachmentList[numAttachment].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;          //il formato finale deve essere prensentabile
-            break;
-
-        case eRenderTargetUsage::storage:
-            //Lo uso durante il rendering e, alla fine, devo conservarne i risultati
-            attachmentList[numAttachment].storeOp = VK_ATTACHMENT_STORE_OP_STORE;                  //mantiene le info scritte in questo buffer
-            attachmentList[numAttachment].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;  //leggibile dagli shader
-            break;
-
+        case eRenderTargetUsage::dont_care:
         case eRenderTargetUsage::storage_discard:
-            //Lo uso durante il rendering, ma alla fine lo posso buttare via
-            attachmentList[numAttachment].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;              //alla fine del rendering, puoi buttare via il contenuto
-            attachmentList[numAttachment].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;  //leggibile dagli shader
+            attachmentList[numAttachment].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            break;
+
+        case eRenderTargetUsage::presentation:
+        case eRenderTargetUsage::storage_readonly:
+        case eRenderTargetUsage::storage_color_attachment_optimal:
+            attachmentList[numAttachment].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             break;
         }
 

@@ -1,2 +1,2 @@
-glslc shader.vert -o shader.vert.spv
-glslc shader.frag -o shader.frag.spv
+glslc phong.vert -o phong.vert.spv
+glslc phong.frag -o phong.frag.spv

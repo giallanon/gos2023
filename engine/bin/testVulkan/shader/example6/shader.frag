@@ -9,7 +9,7 @@ layout(location = 2) in vec3 in_lightDir;
 layout(location = 0) out vec4 out_colorRGBA;
 
 void main() 
-
+{
     float c = max(-dot(in_lightDir.xyz, in_normal), 0);
     c += 0.1f;
     c = min(max(c, 0), 1);

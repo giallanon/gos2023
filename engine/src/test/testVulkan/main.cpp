@@ -50,19 +50,8 @@ int main()
             GOSWinHandle mainWin;
             if (gos::input::window_create (1024, 768, gos::getAppName(), &mainWin))
             {
-//                test1 (mainWin);
+                test1 (mainWin);
 
-                    gos::GPU gpu;
-                    if (gpu.init (mainWin, false))
-                    {
-                        //runExample<VulkanExample1>(&gpu, "VulkanExample1");
-                        //runExample<VulkanExample2>(&gpu, "VulkanExample2");
-                        //runExample<VulkanExample3>(&gpu, "VulkanExample3");
-                        //runExample<VulkanExample4>(&gpu, "VulkanExample4");
-                        runExample<VulkanExample5>(&gpu, "VulkanExample5");
-                        //runExample<VulkanExample6>(&gpu, "VulkanExample6");
-                        gpu.deinit();
-                    }
                 gos::input::window_destroy (mainWin);
             }
             gos::input::deinit();

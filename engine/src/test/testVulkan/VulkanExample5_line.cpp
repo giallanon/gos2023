@@ -74,7 +74,7 @@ bool VulkanExample5::Line::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPool
 
     //creo il render pass
     gpu->renderLayout_createNew (&hRenderLayout)
-        .requireRendertarget (eRenderTargetUsage::presentation, gpu->swapChain_getImageFormat(), false)
+        .requireRendertarget (gpu->swapChain_getImageFormat(), eRenderTargetUsage::storage_color_attachment_optimal, eRenderTargetUsage::presentation, false)
         .addSubpass_GFX()
             .useRenderTarget(0)
         .end()
@@ -232,15 +232,18 @@ bool VulkanExample5::Line::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStg
         .end();
 
 
-    cw.setViewport (gpu->viewport_getDefault())
+    cw
+        //.setViewport (gpu->viewport_getDefault())
         .bindPipeline (hPipeline)
         .bindDescriptorSet (hDescrSetInstance, 0)
-        .setClearColor (0, gos::ColorHDR(0.1f, 0.1f, 0.3f))
+        //.setClearColor (0, gos::ColorHDR(0.1f, 1.0f, 0.0f))
         .renderPass_begin (hRenderLayout, hFrameBuffer)
             .bindVtxBuffer (hVtxBuffer)
             .bindIdxBufferU16 (hIdxBuffer)
             .drawIndexed (idxList.getNElem(), 1, 0, 0, 0)
-        .renderPass_end();
+        .renderPass_end()
+
+        ;
 
     return true;
 }    
