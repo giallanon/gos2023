@@ -942,7 +942,7 @@ bool GPU::depthStencil_create (const gos::Dim2D &widthIN, const gos::Dim2D &heig
     if (bWithStencil)
         b = gos::vulkanFindBestDepthStencilFormat (vulkan.phyDevInfo, &depthStencilFormat);
     else
-        b = gos::vulkanFindBestDepthFormat (vulkan.phyDevInfo, &depthStencilFormat);
+        b = gos::vulkanFindBestDepthOnlyFormat (vulkan.phyDevInfo, &depthStencilFormat);
     if (!b)
     {
         gos::logger::err ("GPU::depthStencil_create() => can't find a suitabile format\n");

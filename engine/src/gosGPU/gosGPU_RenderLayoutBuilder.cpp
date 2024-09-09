@@ -55,7 +55,7 @@ RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (VkFormat imageForm
     if (numRenderTargetInfo < GOSGPU__NUM_MAX_ATTACHMENT)
     {
         rtInfoList[numRenderTargetInfo].initialState = initialState;
-        rtInfoList[numRenderTargetInfo].finaleState = finalState;
+        rtInfoList[numRenderTargetInfo].finalState = finalState;
         rtInfoList[numRenderTargetInfo].bClear = bClearOnLoad;
         rtInfoList[numRenderTargetInfo].imageFormat = imageFormat;
         numRenderTargetInfo++;
@@ -70,13 +70,58 @@ RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (VkFormat imageForm
 }
 
 //***********************************************************
-RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireDepthStencil (VkFormat imageFormat, bool bWithStencil, bool bClear)
+RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireZBuffer (VkFormat imageFormat, eZBufferUsage initialState, eZBufferUsage finalState, bool bClearOnLoad)
 {
     depthBuffer.isRequired = true;
-    depthBuffer.bWithStencil = bWithStencil;
-    depthBuffer.bClear = bClear;
+    depthBuffer.bWithStencil = false;
+    depthBuffer.bClear = bClearOnLoad;
     depthBuffer.imageFormat = imageFormat;
+    depthBuffer.initialState = initialState;
+    depthBuffer.finalState = finalState;
+
+    u8 n = static_cast<u8>(initialState);
+    if (n >= 100)
+    {
+        bAnyError = true;
+        gos::logger::err ("RenderTaskLayout::requireZBuffer() => invalid 'initial state'\n");
+    }
+
+    n = static_cast<u8>(finalState);
+    if (n >= 100)
+    {
+        bAnyError = true;
+        gos::logger::err ("RenderTaskLayout::requireZBuffer() => invalid 'finale state'\n");
+    }
+
     return *this;
+}
+
+//***********************************************************
+RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireZBufferAndStencil (VkFormat imageFormat, eZBufferUsage initialState, eZBufferUsage finalState, bool bClearOnLoad)
+{
+    depthBuffer.isRequired = true;
+    depthBuffer.bWithStencil = false;
+    depthBuffer.bClear = bClearOnLoad;
+    depthBuffer.imageFormat = imageFormat;
+    depthBuffer.initialState = initialState;
+    depthBuffer.finalState = finalState;
+
+    u8 n = static_cast<u8>(initialState);
+    if (n < 100 && n != 0)
+    {
+        bAnyError = true;
+        gos::logger::err ("RenderTaskLayout::requireZBufferAndStencil() => invalid 'initial state'\n");
+    }
+
+    n = static_cast<u8>(finalState);
+    if (n < 100 && n != 0)
+    {
+        bAnyError = true;
+        gos::logger::err ("RenderTaskLayout::requireZBufferAndStencil() => invalid 'finale state'\n");
+    }
+
+    return *this;
+
 }
 
 //***********************************************************
@@ -132,7 +177,7 @@ VkImageLayout GPU::RenderTaskLayoutBuilder::priv_toVulkan (eRenderTargetUsage s)
     {
     default:
         DBGBREAK;
-        return VK_IMAGE_LAYOUT_GENERAL;
+        return VK_IMAGE_LAYOUT_UNDEFINED;
 
     case eRenderTargetUsage::presentation:                  return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     case eRenderTargetUsage::storage_readonly:              return VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
@@ -141,6 +186,24 @@ VkImageLayout GPU::RenderTaskLayoutBuilder::priv_toVulkan (eRenderTargetUsage s)
     case eRenderTargetUsage::dont_care:                     return VK_IMAGE_LAYOUT_UNDEFINED;
     }
 }
+
+//***********************************************************
+VkImageLayout GPU::RenderTaskLayoutBuilder::priv_toVulkan (eZBufferUsage s) const
+{
+    switch (s)
+    {
+    default:
+        DBGBREAK;
+        return VK_IMAGE_LAYOUT_GENERAL;
+
+    case eZBufferUsage::depthOnly_RW:               return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    case eZBufferUsage::depthOnly_readonly:         return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    case eZBufferUsage::depth_stencil_RW:           return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    case eZBufferUsage::depth_stencil_readonly:     return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    case eZBufferUsage::dont_care:                  return VK_IMAGE_LAYOUT_UNDEFINED;
+    }
+}
+
 
 //***********************************************************
 bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
@@ -157,17 +220,20 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
         
         attachmentList[numAttachment].format = rtInfoList[i].imageFormat;
         attachmentList[numAttachment].samples = VK_SAMPLE_COUNT_1_BIT;
+        attachmentList[numAttachment].initialLayout = priv_toVulkan(rtInfoList[i].initialState);
+        attachmentList[numAttachment].finalLayout = priv_toVulkan(rtInfoList[i].finalState);
         
         if (rtInfoList[i].bClear)
             attachmentList[numAttachment].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         else
-            attachmentList[numAttachment].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        {
+            if (eRenderTargetUsage::dont_care == rtInfoList[i].initialState)
+                attachmentList[numAttachment].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            else
+                attachmentList[numAttachment].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        }
 
-        attachmentList[numAttachment].initialLayout = priv_toVulkan(rtInfoList[i].initialState);
-        
-        
-        attachmentList[numAttachment].finalLayout = priv_toVulkan(rtInfoList[i].finaleState);
-        switch (rtInfoList[i].finaleState)
+        switch (rtInfoList[i].finalState)
         {
         default:
             gos::logger::err ("RenderTaskLayout::end() => invalid [usage] for RenderTarget %d\n", i);
@@ -202,12 +268,57 @@ bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
 
         attachmentList[numAttachment].format = depthBuffer.imageFormat;
         attachmentList[numAttachment].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachmentList[numAttachment].loadOp = depthBuffer.bClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentList[numAttachment].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentList[numAttachment].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentList[numAttachment].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentList[numAttachment].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentList[numAttachment].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachmentList[numAttachment].initialLayout = priv_toVulkan(depthBuffer.initialState);
+
+        //Vulkan non accetta che il depthStencil abbia come stato finale "unknown".
+        //Il meno peggio che posso fare e' impostarlo in readonly
+        if (eZBufferUsage::dont_care == depthBuffer.finalState)
+            depthBuffer.finalState = eZBufferUsage::depth_stencil_readonly;
+        attachmentList[numAttachment].finalLayout = priv_toVulkan(depthBuffer.finalState);
+
+        if (depthBuffer.bClear)
+        {
+            attachmentList[numAttachment].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            attachmentList[numAttachment].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        }
+        else
+        {
+            if (eZBufferUsage::dont_care == depthBuffer.initialState)
+            {
+                attachmentList[numAttachment].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                attachmentList[numAttachment].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            }
+            else
+            {
+                attachmentList[numAttachment].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                attachmentList[numAttachment].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+            }
+        }
+
+        switch (depthBuffer.finalState)
+        {
+        default:
+            gos::logger::err ("RenderTaskLayout::end() => invalid [usage] for Depth buffer\n");
+            return false;
+
+        case eZBufferUsage::dont_care:
+            attachmentList[numAttachment].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            attachmentList[numAttachment].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            break;
+
+        case eZBufferUsage::depthOnly_RW:
+        case eZBufferUsage::depthOnly_readonly:
+            attachmentList[numAttachment].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            attachmentList[numAttachment].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            break;
+
+        case eZBufferUsage::depth_stencil_RW:
+        case eZBufferUsage::depth_stencil_readonly:
+            attachmentList[numAttachment].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            attachmentList[numAttachment].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+            break;
+        }
+
         numAttachment++;
     }
 

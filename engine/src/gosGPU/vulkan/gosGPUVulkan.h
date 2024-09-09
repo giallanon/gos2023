@@ -22,7 +22,7 @@ namespace gos
 
     bool    vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurface, bool bVSync, sSwapChainInfo *out);
 
-    bool    vulkanFindBestDepthFormat (const sPhyDeviceInfo &vkPhyDevInfo, VkFormat *out_depthFormat);
+    bool    vulkanFindBestDepthOnlyFormat (const sPhyDeviceInfo &vkPhyDevInfo, VkFormat *out_depthFormat);
 
     bool    vulkanFindBestDepthStencilFormat (const sPhyDeviceInfo &vkPhyDevInfo, VkFormat* out_depthStencilFormat);
 

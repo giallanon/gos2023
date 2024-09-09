@@ -162,7 +162,7 @@ bool VulkanExample4::virtual_onInit ()
     //creo il render pass
     gpu->renderLayout_createNew (&renderLayoutHandle)
         .requireRendertarget (gpu->swapChain_getImageFormat(), eRenderTargetUsage::dont_care, eRenderTargetUsage::presentation, true)
-        .requireDepthStencil (gpu->depthStencil_getDefaultFormat(), false, true)
+        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eZBufferUsage::dont_care, eZBufferUsage::dont_care, true)
         .addSubpass_GFX()
             .useRenderTarget(0)
             .useDepthStencil()

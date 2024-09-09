@@ -149,7 +149,9 @@ namespace gos
             virtual         ~RenderTaskLayoutBuilder();
 
             RTLB&           requireRendertarget (VkFormat imageFormat, eRenderTargetUsage initialState,  eRenderTargetUsage finalState, bool bClearOnLoad);
-            RTLB&           requireDepthStencil (VkFormat imageFormat, bool bWithStencil, bool bClearOnLoad);
+            //RTLB&           requireDepthStencil (VkFormat imageFormat, bool bWithStencil, bool bClearOnLoad);
+            RTLB&           requireZBuffer (VkFormat imageFormat, eZBufferUsage initialState, eZBufferUsage finalState, bool bClearOnLoad);
+            RTLB&           requireZBufferAndStencil (VkFormat imageFormat, eZBufferUsage initialState, eZBufferUsage finalState, bool bClearOnLoad);
 
             
 
@@ -163,7 +165,7 @@ namespace gos
             struct sRenderTargetInfo
             {
                 eRenderTargetUsage  initialState;
-                eRenderTargetUsage  finaleState;
+                eRenderTargetUsage  finalState;
                 VkFormat            imageFormat;
                 bool                bClear;
             };
@@ -177,11 +179,14 @@ namespace gos
                 bool    bClear;
                 u8      indexOfDepthStencilAttachment;
                 VkFormat imageFormat;
+                eZBufferUsage initialState;
+                eZBufferUsage finalState;
             };
 
         private:
             bool                    priv_buildVulkan();
             VkImageLayout           priv_toVulkan (eRenderTargetUsage s) const;
+            VkImageLayout           priv_toVulkan (eZBufferUsage s) const;
 
         private:
             GPURenderLayoutHandle   *out_handle;

@@ -103,11 +103,23 @@ enum class eCullMode : u8
 
 enum class eRenderTargetUsage : u8
 {
-	presentation = 0,   		//usato per essere present() a video
-	storage_readonly,		//viene renderizzato e, al termine del rendering,  il suo contenuto deve essere preservato per shader futuri
+	presentation = 0,   			//usato per essere present() a video
+	storage_readonly,				//viene renderizzato e, al termine del rendering,  il suo contenuto deve essere preservato per shader futuri
 	storage_color_attachment_optimal,
-	storage_discard,     	//viene renderizzato ma, al termine del rendering, il suo contenuto non ci interessa piu'
+	storage_discard,     			//viene renderizzato ma, al termine del rendering, il suo contenuto non ci interessa piu'
 	dont_care
+};
+
+enum class eZBufferUsage : u8
+{
+	dont_care = 0,
+
+	depthOnly_RW = 1,				//VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL
+	depthOnly_readonly = 2,			//VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL
+
+	depth_stencil_RW = 100,			//VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+	depth_stencil_readonly = 101 	//VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+	
 };
 
 enum class eVIBufferMode : u8
