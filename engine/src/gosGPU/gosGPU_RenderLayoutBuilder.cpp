@@ -196,8 +196,8 @@ VkImageLayout GPU::RenderTaskLayoutBuilder::priv_toVulkan (eZBufferUsage s) cons
         DBGBREAK;
         return VK_IMAGE_LAYOUT_GENERAL;
 
-    case eZBufferUsage::depthOnly_RW:               return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    case eZBufferUsage::depthOnly_readonly:         return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    case eZBufferUsage::depthOnly_RW:               return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+    case eZBufferUsage::depthOnly_readonly:         return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
     case eZBufferUsage::depth_stencil_RW:           return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     case eZBufferUsage::depth_stencil_readonly:     return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     case eZBufferUsage::dont_care:                  return VK_IMAGE_LAYOUT_UNDEFINED;

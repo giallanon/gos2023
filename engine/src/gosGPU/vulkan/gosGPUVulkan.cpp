@@ -5,6 +5,8 @@
 
 using namespace gos;
 
+static constexpr u32 TARGET_VULKAN_API_VERSION = VK_API_VERSION_1_3;
+
 //*********************************************
 bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &requiredValidationLayerList, const gos::StringList &requiredExtensionList)
 {
@@ -37,7 +39,7 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "GOSEngine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_3;
+    appInfo.apiVersion = TARGET_VULKAN_API_VERSION;
 
 
     VkInstanceCreateInfo createInfo{};
@@ -50,6 +52,20 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
     createInfo.enabledExtensionCount = 0;
     createInfo.ppEnabledExtensionNames = foundExtensions;
 
+#ifdef DEBUG_VULKAN_SYNC
+	VkValidationFeatureEnableEXT enabledValidationFeatures[] =
+	{
+		VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
+        VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+        VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT
+	};
+
+	VkValidationFeaturesEXT validationFeatures = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
+	validationFeatures.enabledValidationFeatureCount = sizeof(enabledValidationFeatures) / sizeof(enabledValidationFeatures[0]);
+	validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures;
+
+	createInfo.pNext = &validationFeatures;
+#endif
 
     //elenco dei validation layer disponibili per la instance
     VkInstanceValidationLayersList vkAvailValidationLayerList;
@@ -164,6 +180,13 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
         gos::logger::log ("dev name: %s\n", deviceProperties.deviceName);
         gos::logger::log ("dev index: %d\n", i);
         gos::logger::log ("dev type: %s\n", string_VkPhysicalDeviceType(deviceProperties.deviceType));
+        gos::logger::log ("dev api version is %d.%d.%d\n", VK_API_VERSION_MAJOR(deviceProperties.apiVersion), VK_API_VERSION_MINOR(deviceProperties.apiVersion), VK_API_VERSION_PATCH(deviceProperties.apiVersion));
+
+        if (deviceProperties.apiVersion < TARGET_VULKAN_API_VERSION)
+        {
+            gos::logger::log (eTextColor::red, "DISCARDED! does not mach minimun API version required\n");
+            continue;
+        }
 
         //deve assolutamente essere una GPU dedicata, a meno che non sia la sola e unica GPU presente
         if (1 == nDevices)
@@ -181,11 +204,6 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
                 continue;
             }
         }
-
-        //feature del device
-        //VkPhysicalDeviceFeatures deviceFeatures;
-        //vkGetPhysicalDeviceFeatures(deviceList[i], &deviceFeatures);
-        
 
         //enumerazione delle estensioni supportate da questo device
         VkPhyDeviceExtensionList extList;
@@ -425,17 +443,38 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
     }
 
     //quali feature voglio usare?
-    VkPhysicalDeviceFeatures deviceFeatures{};
+	VkPhysicalDeviceVulkan13Features features13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+	features13.synchronization2 = true;
+	features13.maintenance4 = true;
+
+	VkPhysicalDeviceVulkan12Features features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    features12.pNext = &features13;
+	features12.separateDepthStencilLayouts = true;
+
+	VkPhysicalDeviceVulkan11Features features11 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
+    features11.pNext = &features12;
+	//features11.storageBuffer16BitAccess = true;
+	//features11.shaderDrawParameters = true;
+
+    VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+    features.pNext = &features11;
+	features.features.imageCubeArray = true;
+	features.features.geometryShader = true;
+	features.features.tessellationShader = true;
+	features.features.depthClamp = true;
+    features.features.fillModeNonSolid = true;
+    features.features.samplerAnisotropy = true;
+
 
     //creo il device
     const char *foundExtensions[128];
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.pQueueCreateInfos = queueCreateInfo;
     createInfo.queueCreateInfoCount = numOfQueue;
-    createInfo.pEnabledFeatures = &deviceFeatures;        
+    createInfo.pQueueCreateInfos = queueCreateInfo;
     createInfo.enabledExtensionCount = 0;
     createInfo.ppEnabledExtensionNames = foundExtensions;
+    createInfo.pNext = &features;
 
 
     //aggiungo le etensioni richieste
