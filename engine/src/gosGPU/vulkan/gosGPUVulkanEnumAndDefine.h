@@ -11,6 +11,14 @@ static constexpr u8 SWAPCHAIN_NUM_MAX_IMAGES = 8;
 
 namespace gos
 {
+    enum class eVulkanVersion : u8
+    {
+        v1_0 = 10,
+        v1_1 = 11,
+        v1_2 = 12,
+        v1_3 = 13,
+    };
+
     enum class eGPUQueueType : u8
     {
         gfx = 0,

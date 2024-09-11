@@ -5,10 +5,26 @@
 
 using namespace gos;
 
-static constexpr u32 TARGET_VULKAN_API_VERSION = VK_API_VERSION_1_3;
+//static constexpr u32 TARGET_VULKAN_API_VERSION = VK_API_VERSION_1_3;
+
 
 //*********************************************
-bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &requiredValidationLayerList, const gos::StringList &requiredExtensionList)
+static u32 toVulkanVersion (eVulkanVersion v)
+{
+    switch (v)
+    {
+    default:
+        DBGBREAK;
+        return VK_API_VERSION_1_0;
+    case eVulkanVersion::v1_0:  return VK_API_VERSION_1_0;
+    case eVulkanVersion::v1_1:  return VK_API_VERSION_1_1;
+    case eVulkanVersion::v1_2:  return VK_API_VERSION_1_2;
+    case eVulkanVersion::v1_3:  return VK_API_VERSION_1_3;
+    }
+}
+
+//*********************************************
+bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &requiredValidationLayerList, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion)
 {
     gos::logger::log ("vulkanCreateInstance()\n");
     gos::logger::incIndent();
@@ -17,14 +33,14 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
     //recupero la versione di vulkan installata
     auto FN_vkEnumerateInstanceVersion = PFN_vkEnumerateInstanceVersion(vkGetInstanceProcAddr(nullptr, "vkEnumerateInstanceVersion"));
     if(FN_vkEnumerateInstanceVersion == nullptr)
-        gos::logger::log ("Vulkan version is 1.0\n");
+        gos::logger::log ("Installed Vulkan version is 1.0\n");
     else
     {
         uint32_t instanceVersion;
         FN_vkEnumerateInstanceVersion (&instanceVersion);
-        gos::logger::log ("Vulkan version is %d.%d.%d\n", VK_API_VERSION_MAJOR(instanceVersion), VK_API_VERSION_MINOR(instanceVersion), VK_API_VERSION_PATCH(instanceVersion));
+        gos::logger::log ("Installed Vulkan version is %d.%d.%d\n", VK_API_VERSION_MAJOR(instanceVersion), VK_API_VERSION_MINOR(instanceVersion), VK_API_VERSION_PATCH(instanceVersion));
     }
-
+    gos::logger::log ("Target Vulkan version is %d.%d.%d\n", VK_API_VERSION_MAJOR(toVulkanVersion(vulkanVersion)), VK_API_VERSION_MINOR(toVulkanVersion(vulkanVersion)), VK_API_VERSION_PATCH(toVulkanVersion(vulkanVersion)));
 
 
     bool ret = true;
@@ -39,7 +55,7 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "GOSEngine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = TARGET_VULKAN_API_VERSION;
+    appInfo.apiVersion = toVulkanVersion (vulkanVersion);
 
 
     VkInstanceCreateInfo createInfo{};
@@ -148,7 +164,7 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
 
 
 //*********************************************
-bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, const VkSurfaceKHR &vkSurface, const gos::StringList &requiredExtensionList, sPhyDeviceInfo *out)
+bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, const VkSurfaceKHR &vkSurface, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion, sPhyDeviceInfo *out)
 {
     gos::Allocator *allocator = gos::getScrapAllocator();
     gos::logger::log ("vulkanScanPhysicalDevices\n");
@@ -182,7 +198,7 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
         gos::logger::log ("dev type: %s\n", string_VkPhysicalDeviceType(deviceProperties.deviceType));
         gos::logger::log ("dev api version is %d.%d.%d\n", VK_API_VERSION_MAJOR(deviceProperties.apiVersion), VK_API_VERSION_MINOR(deviceProperties.apiVersion), VK_API_VERSION_PATCH(deviceProperties.apiVersion));
 
-        if (deviceProperties.apiVersion < TARGET_VULKAN_API_VERSION)
+        if (deviceProperties.apiVersion < toVulkanVersion(vulkanVersion))
         {
             gos::logger::log (eTextColor::red, "DISCARDED! does not mach minimun API version required\n");
             continue;
@@ -397,7 +413,7 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
  * Dato il [vkPhyDevice] e una lista di estensioni richieste [requiredExtensionList], crea il device logico
  * create le queue e filla out_vulkan con queste informazioni
  */
-bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringList &requiredExtensionList, sVkDevice *out_vulkan)
+bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion, sVkDevice *out_vulkan)
 {
     assert (NULL != out_vulkan);
 
@@ -448,16 +464,19 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
 	features13.maintenance4 = true;
 
 	VkPhysicalDeviceVulkan12Features features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-    features12.pNext = &features13;
+    if (vulkanVersion >= eVulkanVersion::v1_3)
+        features12.pNext = &features13;
 	features12.separateDepthStencilLayouts = true;
 
 	VkPhysicalDeviceVulkan11Features features11 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
-    features11.pNext = &features12;
+    if (vulkanVersion >= eVulkanVersion::v1_2)
+        features11.pNext = &features12;
 	//features11.storageBuffer16BitAccess = true;
 	//features11.shaderDrawParameters = true;
 
     VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-    features.pNext = &features11;
+    if (vulkanVersion >= eVulkanVersion::v1_1)
+        features.pNext = &features11;
 	features.features.imageCubeArray = true;
 	features.features.geometryShader = true;
 	features.features.tessellationShader = true;

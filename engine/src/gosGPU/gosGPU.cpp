@@ -119,7 +119,7 @@ bool GPU::init (GOSWinHandle mainWin, bool vSyncIN)
 
         if (!priv_initHandleLists())
             break;
-        if (!priv_initVulkan())
+        if (!priv_initVulkan(eVulkanVersion::v1_2))
             break;
         bSuccess = true;
         break;
@@ -160,7 +160,7 @@ bool GPU::init (GOSWinHandle mainWin, bool vSyncIN)
 }
 
 //**********************************************************
-bool GPU::priv_initVulkan ()
+bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
 {
     gos::logger::log ("GPU::priv_initVulkan()\n");
     gos::Allocator *scrapAllocator = gos::getScrapAllocator();
@@ -184,7 +184,7 @@ bool GPU::priv_initVulkan ()
 #endif
 
     //creazione dell'istanza di vulkan
-    if (!vulkanCreateInstance (&vkInstance, requiredVulkanValidationLayerList, requiredVulkanExtensionList))
+    if (!vulkanCreateInstance (&vkInstance, requiredVulkanValidationLayerList, requiredVulkanExtensionList, vulkanVersion))
     {
         gos::logger::err ("problem creating vulkan instance\n");
         return false;
@@ -212,7 +212,7 @@ bool GPU::priv_initVulkan ()
     requiredVulkanExtensionList.add (VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
     //requiredVulkanExtensionList.add (VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 
-    if (!vulkanScanAndSelectAPhysicalDevices(vkInstance, vkSurface, requiredVulkanExtensionList, &vkPhysicalDevInfo))
+    if (!vulkanScanAndSelectAPhysicalDevices(vkInstance, vkSurface, requiredVulkanExtensionList, vulkanVersion, &vkPhysicalDevInfo))
     {
         gos::logger::err ("\ncan't find a good enough vulkan device\n");
         return false;
@@ -229,7 +229,7 @@ bool GPU::priv_initVulkan ()
 
 
     //creazione del device logico di vulkan
-    if (!vulkanCreateDevice (vkPhysicalDevInfo, requiredVulkanExtensionList, &vulkan))
+    if (!vulkanCreateDevice (vkPhysicalDevInfo, requiredVulkanExtensionList, vulkanVersion, &vulkan))
     {
         gos::logger::err ("can't create a logical device\n");
         return false;

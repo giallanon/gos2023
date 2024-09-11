@@ -707,7 +707,7 @@ namespace gos
         };
 
     private:
-        bool                priv_initVulkan ();
+        bool                priv_initVulkan (eVulkanVersion vulkanVersion);
         void                priv_deinitVulkan();
 
         bool                priv_initHandleLists();
