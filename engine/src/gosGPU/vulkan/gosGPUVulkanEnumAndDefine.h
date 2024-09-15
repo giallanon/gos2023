@@ -89,6 +89,7 @@ namespace gos
         sQueueInfo          queue_compute;
         sQueueInfo          queue_transfer;
         VkPhysicalDeviceMemoryProperties vkMemoryProperties;
+        VkPhysicalDeviceProperties deviceProperties;
     };
 
     struct sVkDevice

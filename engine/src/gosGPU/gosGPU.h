@@ -5,6 +5,8 @@
 #include "../gos/gosFastArray.h"
 #include "../gosMath/gosMath.h"
 #include "../gosInput/gosInput.h"
+#include "../gos/gosHashMap.h"
+#include "../gosImage/gosImage.h"
 #include "gosGPUDescrSetInstanceWriter.h"
 #include "gosGPUCmdBufferWriter.h"
 #include "utils/gosGPUMainLoop.h"
@@ -23,7 +25,8 @@
 #include "gosGPUResViewport.h"
 #include "gosGPUResVtxBuffer.h"
 #include "gosGPUResVtxDecl.h"
-
+#include "gosGPUResTexture.h"
+#include "gosGPUResSampler.h"
 
 namespace gos
 {
@@ -404,6 +407,7 @@ namespace gos
             //  [stageFlags], vedi anche gos::ShaderStageFlag che contiene i flag utilizzabili
             DescriptorSetLayoutBuilder&     add_uniformBuffer (VkShaderStageFlagBits stageFlags, u32 count=1)       { return priv_add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, stageFlags, count); }
             DescriptorSetLayoutBuilder&     add_storageBuffer (VkShaderStageFlagBits stageFlags, u32 count=1)       { return priv_add (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, stageFlags, count); }
+            DescriptorSetLayoutBuilder&     add_textureSampler (VkShaderStageFlagBits stageFlags, u32 count=1)      { return priv_add (VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, stageFlags, count); }
             bool                            end();
 
             bool                            anyError() const        { return bAnyError; }
@@ -438,6 +442,7 @@ namespace gos
             DescriptorPoolBuilder&      setMaxNumDescriptorSet (u32 n)              { numMaxDescriptorSets = n; return *this; }
             DescriptorPoolBuilder&      addPool_uniformBuffer ();
             DescriptorPoolBuilder&      addPool_storageBuffer ();
+            DescriptorPoolBuilder&      addPool_textureSampler();
             bool                        end();
 
             bool                        anyError() const                            { return bAnyError; }
@@ -457,8 +462,6 @@ namespace gos
         friend class GPU;
         }; //class DescriptorPoolBuilder
 
-   
- 
    
 
     public:
@@ -570,14 +573,14 @@ namespace gos
         //================ staging buffer
         bool                stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle);
         void                deleteResource (GPUStgBufferHandle &handle);
+        
+            /**
+             * @brief stagingBuffer_uploadToGPUBuffer()
+             * copia [dataSRC] in [handleDST] usando [handleSRC] come buffer di appoggio.
+             * I passaggi sono:  [datSRC] viene memcpy in [handleSRC] e poi [handleSRC] viene pushato in [handleDST]
+             */
         bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
         bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
-        //bool                toVulkan (const GPUStgBufferHandle handle, VkBuffer *out) const;
-        //bool                stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
-        //bool                stagingBuffer_unmap  (const GPUStgBufferHandle handle);
-        //bool                stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUVtxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
-        //bool                stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUIdxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
-
 
         //================ vertex buffer
         bool                vertexBuffer_create (u32 sizeInByte, eVIBufferMode mode, GPUVtxBufferHandle *out_handle);
@@ -636,7 +639,18 @@ namespace gos
         void                deleteResource (GPUDescrSetInstanceHandle &handle);
         bool                toVulkan (const GPUDescrSetInstanceHandle handle, VkDescriptorSet *out) const;
 
+							
+        //================ texture
+		bool				texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, const void *srcDATA, GPUTextureHandle *out_handle);
+        void                deleteResource (GPUTextureHandle &handle);
+        bool                toVulkan (const GPUTextureHandle handle, VkImageView *out) const;
 
+        //================ sampler
+        bool                sampler_create (const gpu::SamplerDesc &desc, GPUSamplerHandle *out_handle);
+        bool                toVulkan (const GPUSamplerHandle handle, VkSampler *out) const;
+        //void                deleteResource (GPUSamplerHandle &handle);
+        //                      delete resource NON esiste perche' i Sampler sono mantenuti per sempre da GPU e sharati nel caso
+        //                      in cui si richiedano N sampler con le stesse caratteristiche
 
         //================ da rimuovere
         VkDevice           REMOVE_getVkDevice() const               { return vulkan.dev; }
@@ -706,6 +720,33 @@ namespace gos
             u64 timeToCheckIfPurgeIsNeeded_msec;
         };
 
+    
+        /**
+         * @brief classe di comodo per effettuare comandi di trasferimento generalmente da staging buffer
+         * ad altri tipi di buffer.
+         * Laddove possibile, usa una transferQ invece che una gfxQ
+         */
+        class ImmediateTransferCmd
+        {
+        public:
+                    ImmediateTransferCmd();
+
+            void    setup (sVkDevice *vkDevice, gos::eGPUQueueType queueType);
+            void    unsetup ();
+            void    begin();
+            void    copyBuffer (const VkBuffer srcBuffer, const VkBuffer dstBuffer, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
+            void    transitionImageLayout (VkImage image, u8 numMipMap, VkImageLayout oldLayout, VkImageLayout newLayout);
+            void    end();
+
+
+        public:
+            VkCommandBuffer vkCmdBuffer;
+
+        private:
+            gos::eGPUQueueType  queueType;
+            sVkDevice           *vkDevice;
+        };
+
     private:
         bool                priv_initVulkan (eVulkanVersion vulkanVersion);
         void                priv_deinitVulkan();
@@ -740,10 +781,14 @@ namespace gos
         void                priv_frameBuffer_deleteFromStruct (gpu::FrameBuffer *s);
         bool                priv_frameBuffer_recreate (gpu::FrameBuffer *s);
         
-        bool                priv_copyVulkanBuffer (const VkBuffer srcBuffer, const VkBuffer dstBuffer, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
-
         bool                priv_descrSetLayout_onBuilderEnds (DescriptorSetLayoutBuilder *builder);
         bool                priv_descrPool_onBuilderEnds (DescriptorPoolBuilder *builder);
+
+        void                priv_samplerDelete (GPUSamplerHandle &handle);
+
+        void                priv_createHelperStagingBuffer (u32 size);
+        bool                immediateTransferCmd_begin();
+        bool                immediateTransferCmd_end();
 
     private:
         gos::Allocator              *allocator;
@@ -763,7 +808,9 @@ namespace gos
         GPUViewportHandle           defaultViewportHandle;
         GPURenderTargetHandle       defaultRTHandle;
         sDefaultDepthStencil        defaultDepthStencil;
-        VkCommandBuffer             vkCommandBufferForStagingCopy;
+
+        ImmediateTransferCmd        helperImmediateTransferCmd;
+        GPUStgBufferHandle          helperStagingBuffer;
 
         HandleList<GPUShaderHandle, gpu::Shader>                    shaderList;
         HandleList<GPUVtxDeclHandle, gpu::VtxDecl>                  vtxDeclList;
@@ -784,6 +831,9 @@ namespace gos
         HandleList<GPUDescrPoolHandle, gpu::DescrPool>              descrPoolList;
         HandleList<GPUDescrSetInstanceHandle, gpu::DescrSetInstance> descrSetInstanceList;
         HandleList<GPUCmdBufferHandle, gpu::CommandBuffer>          cmdBufferList;
+        HandleList<GPUTextureHandle,gpu::Texture>                   textureList;
+        HandleList<GPUSamplerHandle, gpu::Sampler>                  samplerList;
+        gos::HashMap<u32, GPUSamplerHandle>                         samplerDescrHashMap;
         
     };
 } //namespace gos

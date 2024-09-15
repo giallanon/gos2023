@@ -49,7 +49,7 @@ message("         compiler flags: ${MAIN_CFLAGS}")
 
 #====================================================
 # additional library to be linked
-set(LIBRARY_LIST "gosGPU;gosShape;gosInput;gosMath;gosGeom;gos")
+set(LIBRARY_LIST "gosGPU;gosImage;gosShape;gosInput;gosMath;gosGeom;gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
     message("         linkling libray [${libName}] => ${finalLibNameAndPath}")

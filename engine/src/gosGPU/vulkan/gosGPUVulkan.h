@@ -37,6 +37,10 @@ namespace gos
     bool    vulkanCreateCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer *out_handle);
     bool    vulkanDeleteCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer &vkHandle);
 
+    bool    vulkanCreateImage2D (const sVkDevice &vulkan, u32 dimx, u32 dimy, u8 numMipMap, VkFormat fmt, VkMemoryPropertyFlags memProps, 
+                                VkImageUsageFlags usage, VkImageTiling tiling,
+                                VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte);
+
 } //namespace gos
 
 #endif //_gosGPUVulkan_h_

@@ -1,5 +1,6 @@
 #include "VulkanExample4.h"
 #include "../gosShape/gosShapePrefabs.h"
+#include "../gosImage/gosImageBuilder.h"
 
 using namespace gos;
 
@@ -34,6 +35,7 @@ void VulkanExample4::virtual_onCleanup()
     gpu->deleteResource (descrSetInstancerHandle);
     gpu->deleteResource (descrSetLayoutHandle);
     gpu->deleteResource (descrPoolHandle);
+    gpu->deleteResource (texHandle);
 }    
 
 
@@ -83,8 +85,9 @@ bool VulkanExample4::virtual_onInit ()
         gos::shape::VtxLayoutWriter vtxLayoutW (&vtxLayout);
         vtxLayoutW.begin()
             .addPos3 (offsetof(Vertex,pos))
-            .addColor3 (offsetof(Vertex,pos))
+            .addColor3 (offsetof(Vertex,colorRGB))
             .addNorm3 (offsetof(Vertex,normal))
+            .addTexCoord (offsetof(Vertex,tutv0))
         .end();
 
         myShape.reset();
@@ -116,6 +119,74 @@ bool VulkanExample4::virtual_onInit ()
         vertexList[21].colorRGB = vertexList[22].colorRGB = vertexList[23].colorRGB = vertexList[20].colorRGB;
     }
 
+
+    //carico una texture
+    {
+        gos::Image im;
+/*        gos::image::Builder builder;
+
+        builder.begin (gos::getScrapAllocator(), &im)
+            .beginTexture (gos::eImageFormat::U8_RGBA_sRGB, 512, 512, 2)
+            .setMipMapDataFromFile (0, "texture/faccia512x512.jpg")
+            .setMipMapDataFromFile (1, "texture/faccia256x256.png")
+            .endTexture()
+        .end();
+        if (builder.anyError())
+        {
+            gos::logger::err ("VulkanApp::init() => can't build image'\n");
+            return false;
+        }
+        image::save (im, "texture/faccia_2mipmap.gosimage");
+*/
+        image::load (gos::getScrapAllocator(), "texture/faccia_2mipmap.gosimage", &im);
+
+
+        image::sTextureData data;
+        image::getTextureData (im, 0, 0, &data);
+        gpu->texture_create2D (512, 512, 2, eImageFormat::U8_RGBA_sRGB, data.textureData, &texHandle);
+        image::free (gos::getScrapAllocator(), im);
+
+/*
+        u32 fsize;
+        u8 *buffer512 = fs::fileLoadInMemory (gos::getScrapAllocator(), "texture/faccia512x512.jpg", &fsize);
+        if (NULL == buffer512)
+        {
+            gos::logger::err ("VulkanApp::init() => can't load 'texture/faccia512x512.jpg'\n");
+            return false;
+        }
+
+        int w,h,comp;
+        stbi_uc *textureInMem512 = stbi_load_from_memory (buffer512, fsize, &w, &h, &comp, STBI_rgb_alpha);
+        GOSFREE(gos::getScrapAllocator(), buffer512);
+        
+
+        u8 *buffer256 = fs::fileLoadInMemory (gos::getScrapAllocator(), "texture/faccia256x256.png", &fsize);
+        if (NULL == buffer256)
+        {
+            gos::logger::err ("VulkanApp::init() => can't load 'texture/faccia256x256.png'\n");
+            return false;
+        }
+
+        w = h = comp = 0;
+        stbi_uc *textureInMem256 = stbi_load_from_memory (buffer256, fsize, &w, &h, &comp, STBI_rgb_alpha);
+        GOSFREE(gos::getScrapAllocator(), buffer256);
+
+
+
+        u8 *textureConMipMap = GOSALLOCT(u8*, gos::getScrapAllocator(), 512*512*4 + 256*256*4);
+        memcpy (textureConMipMap, textureInMem512, 512*512*4);
+        memcpy (&textureConMipMap[512*512*4], textureInMem256, 256*256*4);
+        stbi_image_free (textureInMem512);
+        stbi_image_free (textureInMem256);
+
+
+        gpu->texture_create2D (512, 512, 2, eImageFormat::U8_RGBA_sRGB, textureConMipMap, &texHandle);
+        GOSFREE(gos::getScrapAllocator(), textureConMipMap);      
+*/
+    }
+
+    //creo il sampler
+    gpu->sampler_create (gpu::SamplerDesc(), &samplerHandle);
     
 
 
@@ -150,7 +221,8 @@ bool VulkanExample4::virtual_onInit ()
         .addStream(eVtxStreamInputRate::perVertex)
         .addLayout (0, offsetof(Vertex, pos), eDataFormat::_3f32)        //position
         .addLayout (1, offsetof(Vertex, colorRGB), eDataFormat::_3f32)   //color
-        .addLayout (2, offsetof(Vertex, normal), eDataFormat::_3f32)   //color
+        .addLayout (2, offsetof(Vertex, normal), eDataFormat::_3f32)    //color
+        .addLayout (3, offsetof(Vertex, tutv0), eDataFormat::_2f32)     //texCoord
         .end();
     if (vtxDeclHandle.isInvalid())
     {
@@ -199,9 +271,11 @@ bool VulkanExample4::virtual_onInit ()
         return false;
     }
 
-    //Creo il descriptorSet layout  con un solo UNIFORM BUFFER per il VTX SHADER
-    gpu->descrSetLayout_createStatic(&descrSetLayoutHandle)
+    //Creo il descriptorSet layout  con un UNIFORM BUFFER per il VTX SHADER
+    //e un texture sampler per FRAG SHADER
+    gpu->descrSetLayout_createStatic (&descrSetLayoutHandle)
         .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT)
+        .add_textureSampler (VK_SHADER_STAGE_FRAGMENT_BIT)
         .end();
     if (descrSetLayoutHandle.isInvalid())
     {
@@ -247,6 +321,7 @@ bool VulkanExample4::virtual_onInit ()
     gpu->descrPool_createNew (&descrPoolHandle)
         .setMaxNumDescriptorSet(4)
         .addPool_uniformBuffer()
+        .addPool_textureSampler()
         .end();
     if (descrPoolHandle.isInvalid())
     {
@@ -298,10 +373,17 @@ bool VulkanExample4::createVertexIndexStageBuffer()
 bool VulkanExample4::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
 {
     //aggiorno UBO
-    gos::gpu::DescrSetInstanceWriter descrWriter;
-    descrWriter.begin (gpu, descrSetInstancerHandle)
-        .updateUniformBuffer (0, uboHandle)
-        .end();
+    static u8 bind_once = 0;
+    if (0 == bind_once)
+    {
+        bind_once = 1;
+
+        gos::gpu::DescrSetInstanceWriter descrWriter;
+        descrWriter.begin (gpu, descrSetInstancerHandle)
+            .bindUniformBuffer (0, uboHandle)
+            .bindTextureAndSampler (1, texHandle, samplerHandle)
+            .end();
+    }
 
 
     gos::gpu::CmdBufferWriter cw;

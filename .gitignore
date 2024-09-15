@@ -38,3 +38,7 @@ engine/bin/testKernel/testKernel__linux_Release
 engine/bin/simpleWorld/simpleWorld__linux_Debug
 
 *.spv
+
+engine/bin/testVulkan/texture/faccia256x256.png
+
+engine/bin/testVulkan/texture/faccia512x512.jpg

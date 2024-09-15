@@ -315,7 +315,7 @@ bool Renderer1::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Camera
         gpu->uniformBuffer_mapCopyUnmap (hDescrset0_ubo, 0, sizeof(descrset0_ubo), &descrset0_ubo);            
 
         descrWriter.begin (gpu, hDescrSetInstance_0)
-            .updateUniformBuffer (0, hDescrset0_ubo)
+            .bindUniformBuffer (0, hDescrset0_ubo)
             .end();
     }
 

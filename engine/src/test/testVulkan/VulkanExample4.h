@@ -2,6 +2,7 @@
 #define _VulkanExample4_h_
 #include "VulkanApp.h"
 
+
 /************************************
  *  VulkanExample4
  */
@@ -22,6 +23,7 @@ private:
         gos::vec3f  pos;
         gos::vec3f  colorRGB;
         gos::vec3f  normal;
+        gos::vec2f  tutv0;
 
         void set (f32 x, f32 y, f32 z, f32 r, f32 g, f32 b)    { pos.set(x,y,z); colorRGB.set(r,g,b); }
     };
@@ -75,6 +77,8 @@ private:
     GPUDescrSetLayoutHandle descrSetLayoutHandle;
     GPUDescrSetInstanceHandle descrSetInstancerHandle;
     GPUUniformBufferHandle  uboHandle;
+    GPUTextureHandle        texHandle;
+    GPUSamplerHandle        samplerHandle;
 };
 
 

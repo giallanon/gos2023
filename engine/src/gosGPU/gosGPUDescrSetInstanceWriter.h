@@ -22,15 +22,30 @@ namespace gos
                                         DescrSetInstanceWriter();
 
             DescrSetInstanceWriter&     begin (gos::GPU *gpu, const GPUDescrSetInstanceHandle &descrSetInstanceHandle);
-            DescrSetInstanceWriter&     updateUniformBuffer (u32 binding, const GPUUniformBufferHandle &handle);
+            DescrSetInstanceWriter&     bindUniformBuffer (u32 binding, const GPUUniformBufferHandle &handle);
+            DescrSetInstanceWriter&     bindTextureAndSampler (u32 binding, const GPUTextureHandle &texHandle, const GPUSamplerHandle &samplerHandle);
             bool                        end();
 
 
         private:
+            struct sBufferInfo
+            {
+                u32                             num;
+                VkDescriptorBufferInfo          list[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
+            };
+
+            struct sImageInfo
+            {
+                u32                             num;
+                VkDescriptorImageInfo          list[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
+            };            
+
+        private:
             gos::GPU                        *gpu;
             VkDescriptorSet                 vkDescrSetHandle;
-            u32                             numDescrBufferInfo;
-            VkDescriptorBufferInfo          descrBufferInfoList[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
+
+            sBufferInfo                     bufferList;
+            sImageInfo                      imageList;
 
             u32                             numWriteDescr;
             VkWriteDescriptorSet            writeDescrList[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];

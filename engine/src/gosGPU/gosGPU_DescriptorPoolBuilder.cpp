@@ -58,7 +58,27 @@ GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_uniformBuffer()
 //*********************************************** 
 GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_storageBuffer()
 {
+    VkDescriptorPoolSize *p = priv_findOrAddByDescrType (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    if (p)
+    {
+        p->descriptorCount++;
+    }
+
     return *this;
+}
+
+//*********************************************** 
+GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_textureSampler()
+{
+{
+    VkDescriptorPoolSize *p = priv_findOrAddByDescrType (VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    if (p)
+    {
+        p->descriptorCount++;
+    }
+
+    return *this;
+}
 }
 
 //*********************************************** 

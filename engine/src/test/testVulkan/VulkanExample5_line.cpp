@@ -228,7 +228,7 @@ bool VulkanExample5::Line::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStg
     gpu->uniformBuffer_mapCopyUnmap (hUBO, 0, sizeof(sUniformBufferObject), &ubo);            
     gos::gpu::DescrSetInstanceWriter descrWriter;
     descrWriter.begin (gpu, hDescrSetInstance)
-        .updateUniformBuffer (0, hUBO)
+        .bindUniformBuffer (0, hUBO)
         .end();
 
 

@@ -37,6 +37,7 @@ utils/gosGPUMainLoop.h
 gosGPU_DescriptorPoolBuilder.cpp
 gosGPU_DescriptorSetLayoutBuilder.cpp
 gosGPU_FrameBuffersBuilder.cpp
+gosGPU_ImmediateTransferCmd.cpp
 gosGPU_PipelineBuilder.cpp
 gosGPU_RenderLayoutBuilder.cpp
 gosGPU_VtxDeclBuilder.cpp
@@ -56,8 +57,10 @@ gosGPUResFrameBuffer.h
 gosGPUResIdxBuffer.h
 gosGPUResRenderLayout.h
 gosGPUResRenderTarget.h
+gosGPUResSampler.h
 gosGPUResShader.h
 gosGPUResStagingBuffer.h
+gosGPUResTexture.h
 gosGPUResUniformBuffer.h
 gosGPUResViewport.h
 gosGPUResVtxBuffer.h

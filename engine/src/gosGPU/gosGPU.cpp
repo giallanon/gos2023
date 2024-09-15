@@ -31,6 +31,49 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL GOS_vulkanDebugCallback (VkDebugUtilsMessa
 }
 
 
+//**********************************************************
+static VkFormat gos_gpu_toVulkan (const eImageFormat fmt)
+{
+    switch (fmt)
+    {
+    default:
+        DBGBREAK;
+        return VK_FORMAT_UNDEFINED;
+
+    case eImageFormat::U8_RGBA_sRGB: return VK_FORMAT_R8G8B8A8_SRGB;
+    case eImageFormat::U8_RGBA: return VK_FORMAT_R8G8B8A8_UNORM;
+    case eImageFormat::U8_RGB: return VK_FORMAT_R8G8B8_UNORM;
+    case eImageFormat::U8_R: return VK_FORMAT_R8_UNORM;
+
+    case eImageFormat::U16_RGBA: return VK_FORMAT_R16G16B16A16_UNORM;
+    case eImageFormat::U16_RGB: return VK_FORMAT_R16G16B16_UNORM;
+    case eImageFormat::U16_R: return VK_FORMAT_R16_UNORM;
+
+    case eImageFormat::U32_RGBA: return VK_FORMAT_R32G32B32A32_UINT;
+    case eImageFormat::U32_RGB: return VK_FORMAT_R32G32B32_UINT;
+    case eImageFormat::U32_R: return VK_FORMAT_R32_UINT;
+
+    case eImageFormat::F32_RGBA: return VK_FORMAT_R32G32B32A32_SFLOAT;
+    case eImageFormat::F32_RGB: return VK_FORMAT_R32G32B32_SFLOAT;
+    case eImageFormat::F32_R: return VK_FORMAT_R32_SFLOAT;
+    }
+}
+
+//**********************************************************
+static VkFilter gos_gpu_toVulkan (const eSamplerFilter s)
+{
+    switch (s)
+    {
+    default:
+        DBGBREAK;
+        return VK_FILTER_NEAREST;
+
+    case eSamplerFilter::point: return VK_FILTER_NEAREST;
+    case eSamplerFilter::linear: return VK_FILTER_LINEAR;
+    }
+
+}
+
 //********************************************************** 
 GPU::GPU()
 {
@@ -38,13 +81,13 @@ GPU::GPU()
     vkInstance = VK_NULL_HANDLE;
     vkSurface = VK_NULL_HANDLE;
     vkDebugMessenger = VK_NULL_HANDLE;
-    vkCommandBufferForStagingCopy = VK_NULL_HANDLE;
     defaultViewportHandle.setInvalid();
     defaultRTHandle.setInvalid();
     defaultDepthStencil.handle.setInvalid();
     currentSwapChainImageIndex = 0;
     bRecreateSwapChainOnNextFrame = false;
     bSwapChainRecreatedDuringThisFrame = false;
+    helperStagingBuffer.setInvalid();
 }
 
 //********************************************************** 
@@ -62,10 +105,17 @@ void GPU::deinit()
     gos::logger::log ("GPU::deinit()\n");
     gos::logger::incIndent();
 
-        if (VK_NULL_HANDLE != vkCommandBufferForStagingCopy)
+        deleteResource (helperStagingBuffer);
+        helperImmediateTransferCmd.unsetup();
+
+        //delete dei Sampler
         {
-            vulkanDeleteCommandBuffer (vulkan, gos::eGPUQueueType::transfer, vkCommandBufferForStagingCopy);
-            vkCommandBufferForStagingCopy = VK_NULL_HANDLE;
+            auto list = samplerDescrHashMap._queryList();
+            for (u32 i=0; i<list->getNElem(); i++)
+            {
+                GPUSamplerHandle h = list->queryElem(i).value;
+                priv_samplerDelete (h);
+            }
         }
         
         toBeDeletedBuilder.deleteAll();
@@ -257,6 +307,9 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
 
     //tutto ok
     gos::logger::log("\n");
+
+
+    helperImmediateTransferCmd.setup (&vulkan, eGPUQueueType::transfer);
     return true;
 }
 
@@ -309,6 +362,9 @@ bool GPU::priv_initHandleLists()
     descrPoolList.setup (allocator);
     descrSetInstanceList.setup (allocator);
     cmdBufferList.setup (allocator);
+    textureList.setup (allocator);
+    samplerList.setup (allocator);
+    samplerDescrHashMap.setup (allocator, 128);
     return true;
 }
 
@@ -338,6 +394,9 @@ void  GPU::priv_deinitandleLists()
     descrPoolList.unsetup();
     descrSetInstanceList.unsetup();
     cmdBufferList.unsetup();
+    textureList.unsetup();
+    samplerList.unsetup();
+    samplerDescrHashMap.unsetup();
 }
 
 //************************************
@@ -647,43 +706,16 @@ void GPU::vsync_enable (bool b)
 
 
 //************************************
-bool GPU::priv_copyVulkanBuffer (const VkBuffer srcBuffer, const VkBuffer dstBuffer, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
+void GPU::priv_createHelperStagingBuffer (u32 size)
 {
-    //perparo un command buffer per il trasferimento dei dati
-    if (VK_NULL_HANDLE == vkCommandBufferForStagingCopy)
+    if (helperStagingBuffer.isValid())
     {
-        if (!vulkanCreateCommandBuffer (vulkan, gos::eGPUQueueType::transfer, &vkCommandBufferForStagingCopy))
-        {
-            gos::logger::err ("GPU::priv_copyVulkanBuffer() => createCommandBuffer failed\n");
-            return false;
-        }
+        DBGBREAK;
+        return;
     }
 
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer (vkCommandBufferForStagingCopy, &beginInfo);    
+    stagingBuffer_create (size, &helperStagingBuffer);
 
-    VkBufferCopy copyRegion{};
-    copyRegion.srcOffset = offsetSRC;
-    copyRegion.dstOffset = offsetDST;
-    copyRegion.size = howManyByteToCopy;
-    vkCmdCopyBuffer(vkCommandBufferForStagingCopy, srcBuffer, dstBuffer, 1, &copyRegion);    
-
-    vkEndCommandBuffer(vkCommandBufferForStagingCopy);
-
-    //submit
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &vkCommandBufferForStagingCopy;
-    vkQueueSubmit (vulkan.getQueueInfo(eGPUQueueType::transfer)->vkQueueHandle, 1, &submitInfo, VK_NULL_HANDLE);
-    
-    //attendo
-    waitIdle (eGPUQueueType::transfer);
-
-    //deleteCommandBuffer (gos::eGPUQueueType::transfer, vkCommandBufferForStagingCopy);
-    return true;    
 }
 
 
@@ -1492,8 +1524,6 @@ bool GPU::toVulkan (const GPUPipelineHandle handle, const gpu::sPipeline **out) 
 }
 
 
-
-
 /************************************************************************************************************
  * Vertex buffer
  * 
@@ -1785,9 +1815,15 @@ bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, c
         return false;
     }
 
+    //memcpy di dataSRC nello stagin buffer
     assert (s->mapped_size >= howManyByteToCopy);
     memcpy (s->mapped_pt, dataSRC, howManyByteToCopy);
-    return priv_copyVulkanBuffer (s->vkHandle, dstBuffer, 0, offsetDST, howManyByteToCopy);
+
+    //copio lo staging buffer nel buffer in GPU
+    helperImmediateTransferCmd.begin();
+    helperImmediateTransferCmd.copyBuffer (s->vkHandle, dstBuffer, 0, offsetDST, howManyByteToCopy);
+    helperImmediateTransferCmd.end();
+    return true;
 }
 
 //************************************
@@ -1807,136 +1843,16 @@ bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, c
         return false;
     }
 
+    //memcpy di dataSRC nello stgBuffer
     assert (s->mapped_size >= howManyByteToCopy);
     memcpy (s->mapped_pt, dataSRC, howManyByteToCopy);
-    return priv_copyVulkanBuffer (s->vkHandle, dstBuffer, 0, offsetDST, howManyByteToCopy);
-}
 
-
-/************************************
-bool GPU::toVulkan (const GPUStgBufferHandle handle, VkBuffer *out) const
-{
-    gpu::StagingBuffer *s;
-    if (priv_fromHandleToPointer(staginBufferList, handle, &s))
-    {
-        *out = s->vkHandle;
-        return true;
-    }
-
-    *out = VK_NULL_HANDLE;
-    gos::logger::err ("GPU::stagingBuffer_toVulkan() => invalid handle\n");
-    return false;    
-}
-*/
-
-/************************************
-bool GPU::stagingBuffer_map (const GPUStgBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const
-{
-    assert (NULL != out);
-
-    gpu::StagingBuffer *s;
-    if (!priv_fromHandleToPointer(staginBufferList, handle, &s))
-    {
-        gos::logger::err ("GPU::stagingBuffer_map() => invalid handle\n");
-        return false;
-    }
-
-    if (NULL == s->mapped_pt)
-    {
-
-        VkResult result = vkMapMemory (vulkan.dev, s->vkMemHandle, offsetDST, sizeInByte, 0, &s->mapped_pt);
-        if (VK_SUCCESS != result)
-        {
-            *out = NULL;
-            gos::logger::err ("GPU::stagingBuffer_map(d) => vkMapMemory() => %s\n", string_VkResult(result));
-            return false;
-        }
-        s->mapped_offset = offsetDST;
-        s->mapped_size = sizeInByte;
-    }
-
-    //gli staging sono sempre mappati in memoria CPU, lo faccio durante la create
-    if (sizeInByte > s->mapped_size)
-    {
-        gos::logger::err ("GPU::uniformBuffer_map() => invalid params1 (%d, %d). Buffer size is %d\n", offsetDST, sizeInByte, s->mapped_size);
-        return false;
-    }
-
-    if (offsetDST + sizeInByte > s->mapped_size)
-    {
-        gos::logger::err ("GPU::uniformBuffer_map() => invalid params2 (%d, %d). Buffer size is %d, mapped from %d\n", offsetDST, sizeInByte, s->mapped_size, s->mapped_offset);
-        return false;
-    }
-
-    *out = s->mapped_pt;
-
+    //copia di stgBuffer nel buffer in GPU
+    helperImmediateTransferCmd.begin();
+    helperImmediateTransferCmd.copyBuffer (s->vkHandle, dstBuffer, 0, offsetDST, howManyByteToCopy);
+    helperImmediateTransferCmd.end();
     return true;
 }
-*/
-
-/************************************
-bool GPU::stagingBuffer_unmap  (const GPUStgBufferHandle handle)
-{
-    gpu::StagingBuffer *s;
-    if (!priv_fromHandleToPointer(staginBufferList, handle, &s))
-    {
-        gos::logger::err ("GPU::stagingBuffer_unmap() => invalid handle\n");
-        return false;
-    }
-
-    s->mapped_pt = NULL;
-    s->mapped_offset = 0;
-    s->mapped_size = 0;
-
-    vkUnmapMemory(vulkan.dev, s->vkMemHandle);
-    return true;
-}
-*/
-
-
-/************************************
-bool GPU::stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUVtxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
-{
-    //ora creo un job per copiare via GPU il buffer di staging nel vxtBuffer
-    VkBuffer srcBuffer;
-    if (!toVulkan (handleSRC, &srcBuffer))
-    {
-        gos::logger::err ("GPU::stagingBuffer_copyToVtxBuffer() => invalid handleSRC\n");
-        return false;
-    }    
-
-    VkBuffer dstBuffer;
-    if (!toVulkan (handleDST, &dstBuffer))
-    {
-        gos::logger::err ("GPU::stagingBuffer_copyToVtxBuffer() => invalid handleDST\n");
-        return false;
-    }    
-
-    return priv_copyVulkanBuffer (srcBuffer, dstBuffer, offsetSRC, offsetDST, howManyByteToCopy);
-}
-*/
-
-/************************************
-bool GPU::stagingBuffer_copyToBuffer (const GPUStgBufferHandle handleSRC, const GPUIdxBufferHandle handleDST, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
-{
-    //ora creo un job per copiare via GPU il buffer di staging nel vxtBuffer
-    VkBuffer srcBuffer;
-    if (!toVulkan (handleSRC, &srcBuffer))
-    {
-        gos::logger::err ("GPU::stagingBuffer_copyToIdxBuffer() => invalid handleSRC\n");
-        return false;
-    }    
-
-    VkBuffer dstBuffer;
-    if (!toVulkan (handleDST, &dstBuffer))
-    {
-        gos::logger::err ("GPU::stagingBuffer_copyToIdxBuffer() => invalid handleDST\n");
-        return false;
-    }    
-
-    return priv_copyVulkanBuffer (srcBuffer, dstBuffer, offsetSRC, offsetDST, howManyByteToCopy);
-}
-*/
 
 
 
@@ -2485,3 +2401,311 @@ bool GPU::toVulkan (const GPUDescrSetInstanceHandle handle, VkDescriptorSet *out
 
 
 
+/************************************************************************************************************
+ * Texture
+ * 
+ * 
+ *************************************************************************************************************/
+bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, const void *srcDATA, GPUTextureHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    assert (nMipMap >= 1);
+    out_handle->setInvalid();
+
+
+
+    //chiedo a Vulkan di creare img
+    VkImage         vkImageHandle;
+    VkDeviceMemory  vkMemHandle = VK_NULL_HANDLE;
+    u32             imageMemSize = 0;
+
+    if (!vulkanCreateImage2D (vulkan, dimx, dimy, nMipMap, gos_gpu_toVulkan(fmt),
+                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+                                VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                                VK_IMAGE_TILING_OPTIMAL,
+                                &vkImageHandle, &vkMemHandle, &imageMemSize))
+    {
+        gos::logger::err ("GPU::texture_create2D() => failed\n");
+        return false;
+    }
+
+    //srcData non lo posso usare "as-is", lo devo copiare in uno staging buffer
+    if (helperStagingBuffer.isInvalid())
+        priv_createHelperStagingBuffer(4096 * 4096);
+    
+    gpu::StagingBuffer *stg;
+    if (!staginBufferList.fromHandleToPointer (helperStagingBuffer, &stg))
+    {
+        gos::logger::err ("GPU::texture_create2D() => unable to access the 'helperStaginBuffer'\n");
+        return false;
+    }
+    assert (stg->mapped_size >= imageMemSize);
+    memcpy (stg->mapped_pt, srcDATA, imageMemSize);
+
+
+#ifdef _DEBUG
+    {
+        u32 totalImgSize = 0;
+        u32 w = dimx;
+        u32 h = dimy;
+        for (u8 i=0; i<nMipMap; i++)
+        {
+            totalImgSize += image::getFormatSize(fmt) * w * h;
+            w/=2;
+            h/=2;
+        }
+        assert (totalImgSize == imageMemSize);
+    }
+#endif
+
+
+    //L'immagine appena creata ha il layout VK_IMAGE_LAYOUT_UNDEFINED
+    //Per poterci copiare dentro srcDATA, devo trasformarla in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+    helperImmediateTransferCmd.begin();
+    helperImmediateTransferCmd.transitionImageLayout (vkImageHandle, nMipMap, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    helperImmediateTransferCmd.end();
+
+    //una volta che immagine è in stato VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, ci posso copiare dentro il contenuto dello stgBuffer
+    helperImmediateTransferCmd.begin();
+    {
+        assert (nMipMap < 32);
+        VkBufferImageCopy regionList[32];
+        u32 w = dimx;
+        u32 h = dimy;
+        u32 offset = 0;
+        for (u8 i=0; i<nMipMap; i++)
+        {
+            regionList[i].bufferOffset = offset;
+            regionList[i].bufferRowLength = 0;
+            regionList[i].bufferImageHeight = 0;
+
+            regionList[i].imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            regionList[i].imageSubresource.mipLevel = i;
+            regionList[i].imageSubresource.baseArrayLayer = 0;
+            regionList[i].imageSubresource.layerCount = 1;
+
+            regionList[i].imageOffset = {0, 0, 0};
+            regionList[i].imageExtent = { w, h, 1};
+
+            offset += w * h * image::getFormatSize(fmt);
+            w/=2;
+            h/=2;
+        }
+
+        vkCmdCopyBufferToImage(
+            helperImmediateTransferCmd.vkCmdBuffer,
+            stg->vkHandle,
+            vkImageHandle,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            nMipMap,
+            regionList
+        );        
+    }
+    helperImmediateTransferCmd.end();
+
+
+    //infine, devo transizionare l'immagine da VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL a VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    helperImmediateTransferCmd.begin();
+    helperImmediateTransferCmd.transitionImageLayout (vkImageHandle, nMipMap, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    helperImmediateTransferCmd.end();
+
+
+    //pare tutto ok, creo un nuovo handle
+    gpu::Texture *s = textureList.reserve (out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::texture_create2D() => can't reserve a handle!\n");
+        return false;
+    }
+    
+    s->reset();
+    s->dimx = dimx;
+    s->dimy = dimy;
+    s->nMipMap = nMipMap;
+    s->nArray = 1;
+    s->vkHandle = vkImageHandle;
+    s->vkMemHandle = vkMemHandle;
+
+
+    //creo una view per la texture
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = vkImageHandle;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = gos_gpu_toVulkan(fmt);
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = nMipMap;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;    
+
+
+    VkResult result = vkCreateImageView(vulkan.dev, &viewInfo, nullptr, &s->view);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::texture_create2D () => vkCreateImageView failed => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    return true;
+}
+
+//************************************
+void GPU::deleteResource (GPUTextureHandle &handle)
+{
+    gpu::Texture *s;
+    if (textureList.fromHandleToPointer (handle, &s))
+    {
+        if (VK_NULL_HANDLE != s->view)
+            vkDestroyImageView (vulkan.dev, s->view, nullptr);
+
+        if (VK_NULL_HANDLE != s->vkHandle)
+            vkDestroyImage (vulkan.dev, s->vkHandle, nullptr);
+
+        if (VK_NULL_HANDLE != s->vkMemHandle)
+            vkFreeMemory (vulkan.dev, s->vkMemHandle, nullptr);
+
+        s->reset();
+        textureList.release (handle);
+    }
+
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::toVulkan (const GPUTextureHandle handle, VkImageView *out) const
+{
+    gpu::Texture *s;
+    if (priv_fromHandleToPointer(textureList,handle, &s))
+    {
+        *out = s->view;
+        return true;
+    }
+
+    *out = VK_NULL_HANDLE;
+    gos::logger::err ("GPU::texture_toVulkan() => invalid handle\n");
+    return false;    
+}
+
+
+/************************************************************************************************************
+ * sampler
+ * 
+ * 
+ *************************************************************************************************************/
+bool GPU::sampler_create (const gpu::SamplerDesc &desc, GPUSamplerHandle *out_handle)
+{
+    //prima di tutto cerco se esiste gia' un sampler con gli stessi parametri
+    HashMap<u32, GPUSamplerHandle>::Position insertPosition;
+    if (samplerDescrHashMap.findWithPos (desc.toU32(), out_handle, & insertPosition))
+        return true;
+
+
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+
+    samplerInfo.minFilter = gos_gpu_toVulkan(desc.minFilter);
+    samplerInfo.magFilter = gos_gpu_toVulkan(desc.magFilter);
+    if (desc.bAnisotropic)
+    {
+        samplerInfo.anisotropyEnable = VK_TRUE;
+        samplerInfo.maxAnisotropy = vulkan.phyDevInfo.deviceProperties.limits.maxSamplerAnisotropy;
+    }
+    else
+    {
+        samplerInfo.anisotropyEnable = VK_FALSE;
+        samplerInfo.maxAnisotropy = 1.0f;
+    }
+
+    samplerInfo.addressModeU = static_cast<VkSamplerAddressMode>(desc.addressModeU);
+    samplerInfo.addressModeV = static_cast<VkSamplerAddressMode>(desc.addressModeV);
+    samplerInfo.addressModeW = static_cast<VkSamplerAddressMode>(desc.addressModeW);
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+
+    if (eSamplerCompFunc::DISABLED == desc.compareFn)
+    {
+        samplerInfo.compareEnable = VK_FALSE;
+        samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    }
+    else
+    {
+        samplerInfo.compareEnable = VK_TRUE;
+        samplerInfo.compareOp = static_cast<VkCompareOp>(desc.compareFn);
+    }
+
+    switch (desc.mipFilter)
+    {
+    default:
+        gos::logger::err ("gpu::sampler_create() => invalid mipFilter\n");
+        return false;
+
+    case eSamplerMipFilter::nearest:
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        break;
+
+    case eSamplerMipFilter::linear:
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        break;
+    }
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
+
+    VkSampler vkHandle;
+    VkResult result = vkCreateSampler(vulkan.dev, &samplerInfo, nullptr, &vkHandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::sampler_create () => vkCreateSampler failed => %s\n", string_VkResult(result));
+        return false;
+    }
+
+
+   //pare tutto ok, creo un nuovo handle
+    gpu::Sampler *s = samplerList.reserve (out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::sampler_create() => can't reserve a handle!\n");
+        return false;
+    }
+    
+    s->reset();
+    s->vkHandle = vkHandle;
+    s->desc = desc;
+
+    samplerDescrHashMap.insertInPosition (insertPosition, *out_handle);
+    return true;
+}
+
+//************************************
+void GPU::priv_samplerDelete (GPUSamplerHandle &handle)
+{
+    gpu::Sampler *s;
+    if (samplerList.fromHandleToPointer (handle, &s))
+    {
+        if (VK_NULL_HANDLE != s->vkHandle)
+            vkDestroySampler (vulkan.dev, s->vkHandle, nullptr);
+
+        s->reset();
+        samplerList.release (handle);
+    }
+
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::toVulkan (const GPUSamplerHandle handle, VkSampler *out) const
+{
+    gpu::Sampler *s;
+    if (priv_fromHandleToPointer(samplerList,handle, &s))
+    {
+        *out = s->vkHandle;
+        return true;
+    }
+
+    *out = VK_NULL_HANDLE;
+    gos::logger::err ("GPU::sampler_toVulkan() => invalid handle\n");
+    return false;    
+}

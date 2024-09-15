@@ -282,7 +282,7 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
 
     gos::gpu::DescrSetInstanceWriter descrWriter;
     descrWriter.begin (gpu, descrSetInstancerHandle)
-        .updateUniformBuffer (0, uboHandle)
+        .bindUniformBuffer (0, uboHandle)
         .end();
 
 

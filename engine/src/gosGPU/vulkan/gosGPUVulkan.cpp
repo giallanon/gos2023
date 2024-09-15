@@ -349,6 +349,8 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
     //recupero alcune props del device
     if (out->isValid())
     {
+        vkGetPhysicalDeviceProperties (out->vkDev, &out->deviceProperties);
+
         gos::logger::log ("GetPhysicalDeviceMemoryProperties\n");
         gos::logger::incIndent();
         vkGetPhysicalDeviceMemoryProperties (out->vkDev, &out->vkMemoryProperties);
@@ -465,7 +467,9 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
 
 	VkPhysicalDeviceVulkan12Features features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
     if (vulkanVersion >= eVulkanVersion::v1_3)
+    {
         features12.pNext = &features13;
+    }
 	features12.separateDepthStencilLayouts = true;
 
 	VkPhysicalDeviceVulkan11Features features11 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
@@ -476,7 +480,9 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
 
     VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
     if (vulkanVersion >= eVulkanVersion::v1_1)
+    {
         features.pNext = &features11;
+    }
 	features.features.imageCubeArray = true;
 	features.features.geometryShader = true;
 	features.features.tessellationShader = true;
@@ -920,4 +926,69 @@ bool gos::vulkanDeleteCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whic
 
     vkFreeCommandBuffers (vulkan.dev, vulkan.getQueueInfo(whichQ)->vkPoolHandle, 1, vkCmdBufferList);
     return true;
+}
+
+//*********************************************
+bool gos::vulkanCreateImage2D (const sVkDevice &vulkan, u32 dimx, u32 dimy, u8 nMipMap, VkFormat fmt, VkMemoryPropertyFlags memProps, 
+                                VkImageUsageFlags usage, VkImageTiling tiling, VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte)
+{
+    assert (NULL != out_imagehandle);
+    assert (NULL != out_vkMemHandle);
+    assert (NULL != out_sizeInByte);
+    assert (nMipMap >= 1);
+    *out_imagehandle = VK_NULL_HANDLE;
+    *out_vkMemHandle = VK_NULL_HANDLE;
+    *out_sizeInByte = 0;
+
+    
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = static_cast<uint32_t>(dimx);
+    imageInfo.extent.height = static_cast<uint32_t>(dimy);
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = nMipMap;
+    imageInfo.arrayLayers = 1;
+    imageInfo.tiling = tiling;
+    imageInfo.format = fmt;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = usage;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.flags = 0; // Optional
+
+    //creo immagine
+    VkResult result = vkCreateImage(vulkan.dev, &imageInfo, nullptr, out_imagehandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::vulkanCreateImage2D () => vkCreateImage failed => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    //alloco memoria
+    VkMemoryRequirements memReqs;
+    vkGetImageMemoryRequirements (vulkan.dev, *out_imagehandle, &memReqs);       
+    *out_sizeInByte= memReqs.size;
+
+    VkMemoryAllocateInfo memAllloc{};
+	memAllloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	memAllloc.allocationSize = memReqs.size;
+    vulkanGetMemoryType (vulkan.phyDevInfo, memReqs.memoryTypeBits, memProps, &memAllloc.memoryTypeIndex);
+
+	result = vkAllocateMemory (vulkan.dev, &memAllloc, nullptr, out_vkMemHandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("gos::vulkanCreateImage2D() => vkAllocateMemory() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    //bindo il buffer alla memoria allocata
+    result = vkBindImageMemory (vulkan.dev, *out_imagehandle, *out_vkMemHandle, 0);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("gos::vulkanCreateImage2D() => vkBindBufferMemory() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    return true;    
 }

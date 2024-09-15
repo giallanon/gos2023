@@ -37,6 +37,12 @@ namespace gos
         friend HashMap<TKEY, TVALUE>;
         };
 
+        struct sElem
+        {
+            TKEY    key;
+            TVALUE  value;
+        };
+
     public:
                 HashMap ()                                                      { }
                 ~HashMap ()                                                     { list.unsetup (); }
@@ -166,17 +172,17 @@ namespace gos
                 }
 
 
+        /**
+         * @brief   ritorna l'array lineare nel quale sono memorizzati i dati
+         *
+         */
+        const gos::FastArray<sElem>*    _queryList() const { return &list; }
+
     private:
         struct sSearchRange
         {
             u32 start;
             u32 end_incluso;
-        };
-
-        struct sElem
-        {
-            TKEY    key;
-            TVALUE  value;
         };
 
     private:
