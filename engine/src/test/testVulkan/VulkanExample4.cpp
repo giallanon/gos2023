@@ -139,50 +139,8 @@ bool VulkanExample4::virtual_onInit ()
         image::save (im, "texture/faccia_2mipmap.gosimage");
 */
         image::load (gos::getScrapAllocator(), "texture/faccia_2mipmap.gosimage", &im);
-
-
-        image::sTextureData data;
-        image::getTextureData (im, 0, 0, &data);
-        gpu->texture_create2D (512, 512, 2, eImageFormat::U8_RGBA_sRGB, data.textureData, &texHandle);
+        gpu->texture_create2D (&im, 0, &texHandle);
         image::free (gos::getScrapAllocator(), im);
-
-/*
-        u32 fsize;
-        u8 *buffer512 = fs::fileLoadInMemory (gos::getScrapAllocator(), "texture/faccia512x512.jpg", &fsize);
-        if (NULL == buffer512)
-        {
-            gos::logger::err ("VulkanApp::init() => can't load 'texture/faccia512x512.jpg'\n");
-            return false;
-        }
-
-        int w,h,comp;
-        stbi_uc *textureInMem512 = stbi_load_from_memory (buffer512, fsize, &w, &h, &comp, STBI_rgb_alpha);
-        GOSFREE(gos::getScrapAllocator(), buffer512);
-        
-
-        u8 *buffer256 = fs::fileLoadInMemory (gos::getScrapAllocator(), "texture/faccia256x256.png", &fsize);
-        if (NULL == buffer256)
-        {
-            gos::logger::err ("VulkanApp::init() => can't load 'texture/faccia256x256.png'\n");
-            return false;
-        }
-
-        w = h = comp = 0;
-        stbi_uc *textureInMem256 = stbi_load_from_memory (buffer256, fsize, &w, &h, &comp, STBI_rgb_alpha);
-        GOSFREE(gos::getScrapAllocator(), buffer256);
-
-
-
-        u8 *textureConMipMap = GOSALLOCT(u8*, gos::getScrapAllocator(), 512*512*4 + 256*256*4);
-        memcpy (textureConMipMap, textureInMem512, 512*512*4);
-        memcpy (&textureConMipMap[512*512*4], textureInMem256, 256*256*4);
-        stbi_image_free (textureInMem512);
-        stbi_image_free (textureInMem256);
-
-
-        gpu->texture_create2D (512, 512, 2, eImageFormat::U8_RGBA_sRGB, textureConMipMap, &texHandle);
-        GOSFREE(gos::getScrapAllocator(), textureConMipMap);      
-*/
     }
 
     //creo il sampler

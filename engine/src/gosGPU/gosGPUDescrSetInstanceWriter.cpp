@@ -31,7 +31,7 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::begin (gos::GPU *gpuIN
 }
 
 //***************************** 
-gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindUniformBuffer (u32 binding, const GPUUniformBufferHandle &handle)
+gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindUniformBuffer (u32 binding, const GPUUniformBufferHandle &handle, u32 dstArrayElem)
 {
     if (bAnyError)
         return *this;
@@ -65,7 +65,7 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindUniformBuffer (u32
     d->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     d->dstSet = vkDescrSetHandle;
     d->dstBinding = binding;
-    d->dstArrayElement = 0;
+    d->dstArrayElement = dstArrayElem;
 
     d->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     d->descriptorCount = 1;    
@@ -75,7 +75,7 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindUniformBuffer (u32
 }
 
 //***************************** 
-gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindTextureAndSampler (u32 binding, const GPUTextureHandle &texHandle, const GPUSamplerHandle &samplerHandle)
+gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindTextureAndSampler (u32 binding, const GPUTextureHandle &texHandle, const GPUSamplerHandle &samplerHandle, u32 dstArrayElem)
 {
     if (bAnyError)
         return *this;
@@ -114,7 +114,7 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindTextureAndSampler 
     d->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     d->dstSet = vkDescrSetHandle;
     d->dstBinding = binding;
-    d->dstArrayElement = 0;
+    d->dstArrayElement = dstArrayElem;
 
     d->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     d->descriptorCount = 1;    

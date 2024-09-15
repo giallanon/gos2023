@@ -23,7 +23,7 @@ GPU::DescriptorSetLayoutBuilder::~DescriptorSetLayoutBuilder()
 
 
 //*********************************************** 
-GPUDSLB& GPU::DescriptorSetLayoutBuilder::priv_add (VkDescriptorType descrType, VkShaderStageFlagBits stageFlags, u32 count)
+GPUDSLB& GPU::DescriptorSetLayoutBuilder::priv_add (VkDescriptorType descrType, VkShaderStageFlags stageFlags, u32 count)
 {
     if (numDescriptor >= GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET)
     {

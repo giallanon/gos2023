@@ -51,7 +51,8 @@ private:
 
     struct sMaterialData
     {
-        gos::vec3f                  color;
+        gos::vec3f  color;
+        u32         textureIndex;
     };
 
     struct sMaterial
@@ -65,6 +66,7 @@ private:
     bool    priv_createPipeline();
     bool    priv_createVBIB();
     bool    priv_createSfera();
+    bool    priv_createCubo();
 
 private:
     gos::GPU                *gpu;
@@ -90,10 +92,17 @@ private:
     GPUUniformBufferHandle      hDescrset0_ubo;
 
     GPUDescrSetLayoutHandle     hDescrSetLayout_1;
+    GPUDescrSetInstanceHandle   hDescrSetInstance_1;
+
+    GPUDescrSetLayoutHandle     hDescrSetLayout_2;
+
     sMaterial                   material1;
     sMaterial                   material2;
 
-    gos::shape::Shape       shapeSfera;
+    GPUSamplerHandle            hSampler_diffuse;
+    GPUTextureHandle            hTex_checker;
+    GPUTextureHandle            hTex_stone003;
+    gos::shape::Shape           shapeSfera;
 
 };
 

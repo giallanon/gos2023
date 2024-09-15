@@ -41,12 +41,17 @@ Renderer1::~Renderer1()
         gpu->deleteResource (hDescrSetLayout_0);
         gpu->deleteResource (hDescrset0_ubo);
 
-//gpu->deleteResource (hDescrSetInstance_1);
+        gpu->deleteResource (hDescrSetInstance_1);
         gpu->deleteResource (hDescrSetLayout_1);
         gpu->deleteResource (material1.hUBO);
         gpu->deleteResource (material2.hUBO);
 
+        gpu->deleteResource (hDescrSetLayout_2);
+
         gpu->deleteResource (hDescrPool);
+
+        gpu->deleteResource (hTex_checker);
+        gpu->deleteResource (hTex_stone003);
 
         gpu = NULL;
     }
@@ -66,7 +71,8 @@ bool Renderer1::setup (gos::GPU *gpuIN)
         return false;
 
     //test 1
-    priv_createSfera();
+    //priv_createSfera();
+    priv_createCubo();
 
 
     return true;
@@ -103,23 +109,33 @@ bool Renderer1::priv_setupVulkan()
     
     //Creo il descriptorSet layout 0
     gpu->descrSetLayout_createStatic (&hDescrSetLayout_0)
-        .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT) //set 0, binding 0
+        .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT) //set 0, binding 0
         .end();
     if (hDescrSetLayout_0.isInvalid())
     {
-        gos::logger::err ("Renderer1::setup() => can't create descriptor set\n");
+        gos::logger::err ("Renderer1::setup() => can't create descriptor set 0\n");
         return false;
     }
 
     //Creo il descriptorSet layout 1
-    gpu->descrSetLayout_createPushable (&hDescrSetLayout_1)
-        .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT) //set 1, binding 0
+    gpu->descrSetLayout_createDynamic (&hDescrSetLayout_1)
+        .add_textureSampler (VK_SHADER_STAGE_FRAGMENT_BIT, 1024) //set 1, binding 0
         .end();
     if (hDescrSetLayout_1.isInvalid())
     {
-        gos::logger::err ("Renderer1::setup() => can't create descriptor set\n");
+        gos::logger::err ("Renderer1::setup() => can't create descriptor set 1\n");
         return false;
-    }     
+    }
+
+    //Creo il descriptorSet layout 2
+    gpu->descrSetLayout_createPushable (&hDescrSetLayout_2)
+        .add_uniformBuffer (VK_SHADER_STAGE_FRAGMENT_BIT) //set 2, binding 0
+        .end();
+    if (hDescrSetLayout_2.isInvalid())
+    {
+        gos::logger::err ("Renderer1::setup() => can't create descriptor set 2\n");
+        return false;
+    }       
 
     if (!priv_createPipeline())
     {
@@ -130,9 +146,9 @@ bool Renderer1::priv_setupVulkan()
 
     //creo un descriptor pool
     gpu->descrPool_createNew (&hDescrPool)
-        .setMaxNumDescriptorSet(4)
+        .setMaxNumDescriptorSet(3)
         .addPool_uniformBuffer()
-        .addPool_uniformBuffer()
+        .addPool_textureSampler(1024)
         .end();
     if (hDescrPool.isInvalid())
     {
@@ -147,13 +163,24 @@ bool Renderer1::priv_setupVulkan()
         return false;
     }
 
-/*    if (!gpu->descrSetInstance_createNew (hDescrPool, hDescrSetLayout_1, &hDescrSetInstance_1))
+    if (!gpu->descrSetInstance_createNew (hDescrPool, hDescrSetLayout_1, &hDescrSetInstance_1))
     {
         gos::logger::err ("VulkanApp::init() => can't create descriptorSet instance\n");
         return false;
     }
-*/
+    gpu->sampler_create (gpu::SamplerDesc(), &hSampler_diffuse);
 
+    //texture
+    {
+        gos::Image im;
+        image::load (gos::getScrapAllocator(), "texture/checker_color_1k.gosimage", &im);
+        gpu->texture_create2D (&im, 0, &hTex_checker);
+        image::free (gos::getScrapAllocator(), im);
+
+        image::load (gos::getScrapAllocator(), "texture/stonetiles_003.gosimage", &im);
+        gpu->texture_create2D (&im, 0, &hTex_stone003);
+        image::free (gos::getScrapAllocator(), im);
+    }
 
     //creo un buffer per UBO
     if (!gpu->uniformBuffer_create (sizeof(sDescrSet0_UBO), &hDescrset0_ubo))
@@ -221,7 +248,8 @@ bool Renderer1::priv_createPipeline()
         .setDrawPrimitive (eDrawPrimitive::trisList)
         .descriptor_add (hDescrSetLayout_0)
         .descriptor_add (hDescrSetLayout_1)
-        .pushConstant_add (eShaderType::vertexShader, 0, sizeof(gos::mat4x4f), &pc_objWorldPos)
+        .descriptor_add (hDescrSetLayout_2)
+        .pushConstant_add (VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(gos::mat4x4f), &pc_objWorldPos)
         //.setWireframe(true)
     .end ();
 
@@ -300,6 +328,39 @@ bool Renderer1::priv_createSfera()
     return true;
 }   
 
+bool Renderer1::priv_createCubo()
+{
+    shapeSfera.reset();
+
+    gos::shape::VtxLayout vtxLayout;
+    gos::shape::VtxLayoutWriter vtxLayoutW(&vtxLayout);
+    vtxLayoutW.begin()
+        .addPos3 (offsetof(sVertex,pos))
+        .addNorm3 (offsetof(sVertex,norm))
+        .addTexCoord (offsetof(sVertex,tutv0))
+    .end();
+
+    const f32 radius = 1.0f;
+    gos::shape::buildCube24 (vec3f(0,0,0), vec3f(radius, radius, radius), vtxLayout, gos::getSysHeapAllocator(), &shapeSfera);
+
+
+    //copio i Vtx in vtxBuffer e idx in idxBuffer tramite lo staging buffer
+    if (!gpu->stagingBuffer_uploadToGPUBuffer (hStgBuffer, shapeSfera.vtxBuffer, hVtxBuffer, 0, sizeof(sVertex) * shapeSfera.numVtx))
+    {
+        gos::logger::err ("Renderer1::priv_createSfera() => can't upload to VtxBuffer\n");
+        return false;
+    }
+
+
+    if (!gpu->stagingBuffer_uploadToGPUBuffer (hStgBuffer, shapeSfera.idxBuffer, hIdxBuffer, 0, sizeof(u16) * shapeSfera.numIdx))
+    {
+        gos::logger::err ("Renderer1::priv_createSfera() => can't upload to IdxBuffer\n");
+        return false;
+    }
+
+    return true;
+}   
+
 //************************************
 bool Renderer1::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Camera3 *cam)
 {
@@ -321,16 +382,22 @@ bool Renderer1::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Camera
 
     //descriptor set 1
     {
+        descrWriter.begin (gpu, hDescrSetInstance_1)
+            .bindTextureAndSampler (0, hTex_stone003, hSampler_diffuse, 0)
+            .bindTextureAndSampler (0, hTex_checker, hSampler_diffuse, 1)
+            .end();
+    }
+
+    //descriptor set 2
+    {
         material1.data.color.set (0,1,0);
+        material1.data.textureIndex = 1;
         gpu->uniformBuffer_mapCopyUnmap (material1.hUBO, 0, sizeof(sMaterialData), &material1.data);            
 
 
         material2.data.color.set (0,0,1);
+        material2.data.textureIndex = 0;
         gpu->uniformBuffer_mapCopyUnmap (material2.hUBO, 0, sizeof(sMaterialData), &material2.data);            
-
-        //descrWriter.begin (gpu, hDescrSetInstance_1)
-        //    .updateUniformBuffer (0, hDescrset1_ubo)
-        //    .end();
     }
 
     //world position dell'obj
@@ -349,17 +416,17 @@ bool Renderer1::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Camera
         .setDepthBufferColor(1, 0)
         .renderPass_begin (hRenderLayout, hFrameBuffer)
             .bindDescriptorSet (hDescrSetInstance_0, 0)
-//.bindDescriptorSet (hDescrSetInstance_1, 1)
+            .bindDescriptorSet (hDescrSetInstance_1, 1)
             .bindVtxBuffer(hVtxBuffer)
             .bindIdxBufferU16(hIdxBuffer)
             
-            .pushDescriptor_begin (1)
+            .pushDescriptor_begin (2)
                 .pushDescriptor_UBO (material1.hUBO, 0)
             .pushDescriptor_end()
             .pushConstant (pc_objWorldPos, &objW, sizeof(objW))
             .drawIndexed (shapeSfera.numIdx, 1, 0, 0, 0)
             
-            .pushDescriptor_begin (1)
+            .pushDescriptor_begin (2)
                 .pushDescriptor_UBO (material2.hUBO, 0)
             .pushDescriptor_end()
             .pushConstant (pc_objWorldPos, &objW2, sizeof(objW))

@@ -22,7 +22,7 @@ GPU::DescriptorPoolBuilder::~DescriptorPoolBuilder()
 }
 
 //*********************************************** 
-VkDescriptorPoolSize* GPU::DescriptorPoolBuilder::priv_findOrAddByDescrType (VkDescriptorType descrType)
+VkDescriptorPoolSize* GPU::DescriptorPoolBuilder::priv_findOrAddByDescrType (VkDescriptorType descrType, u32 howMany)
 {
     for (u32 i=0; i<numPool; i++)
     {
@@ -38,14 +38,14 @@ VkDescriptorPoolSize* GPU::DescriptorPoolBuilder::priv_findOrAddByDescrType (VkD
     }
 
     list[numPool].type = descrType;
-    list[numPool].descriptorCount = 0;
+    list[numPool].descriptorCount = howMany;
     return &list[numPool++];
 }
 
 //*********************************************** 
-GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_uniformBuffer()
+GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_uniformBuffer(u32 howMany)
 {
-    VkDescriptorPoolSize *p = priv_findOrAddByDescrType (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    VkDescriptorPoolSize *p = priv_findOrAddByDescrType (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, howMany);
     if (p)
     {
         p->descriptorCount++;
@@ -56,9 +56,9 @@ GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_uniformBuffer()
 
 
 //*********************************************** 
-GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_storageBuffer()
+GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_storageBuffer(u32 howMany)
 {
-    VkDescriptorPoolSize *p = priv_findOrAddByDescrType (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    VkDescriptorPoolSize *p = priv_findOrAddByDescrType (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, howMany);
     if (p)
     {
         p->descriptorCount++;
@@ -68,10 +68,10 @@ GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_storageBuffer()
 }
 
 //*********************************************** 
-GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_textureSampler()
+GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_textureSampler(u32 howMany)
 {
 {
-    VkDescriptorPoolSize *p = priv_findOrAddByDescrType (VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    VkDescriptorPoolSize *p = priv_findOrAddByDescrType (VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, howMany);
     if (p)
     {
         p->descriptorCount++;

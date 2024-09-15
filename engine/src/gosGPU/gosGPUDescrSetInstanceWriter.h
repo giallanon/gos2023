@@ -22,8 +22,8 @@ namespace gos
                                         DescrSetInstanceWriter();
 
             DescrSetInstanceWriter&     begin (gos::GPU *gpu, const GPUDescrSetInstanceHandle &descrSetInstanceHandle);
-            DescrSetInstanceWriter&     bindUniformBuffer (u32 binding, const GPUUniformBufferHandle &handle);
-            DescrSetInstanceWriter&     bindTextureAndSampler (u32 binding, const GPUTextureHandle &texHandle, const GPUSamplerHandle &samplerHandle);
+            DescrSetInstanceWriter&     bindUniformBuffer (u32 binding, const GPUUniformBufferHandle &handle, u32 dstArrayElem = 0);
+            DescrSetInstanceWriter&     bindTextureAndSampler (u32 binding, const GPUTextureHandle &texHandle, const GPUSamplerHandle &samplerHandle, u32 dstArrayElem = 0);
             bool                        end();
 
 

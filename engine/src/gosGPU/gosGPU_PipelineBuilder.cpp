@@ -41,7 +41,7 @@ GPU::PipelineBuilder::~PipelineBuilder()
 
 
 //******************************** 
-GPU::PipelineBuilder& GPU::PipelineBuilder::pushConstant_add (eShaderType whichShader, u16 offset, u16 sizeInByte, u8 *out_whichOne)
+GPU::PipelineBuilder& GPU::PipelineBuilder::pushConstant_add (VkShaderStageFlags stageFlags, u16 offset, u16 sizeInByte, u8 *out_whichOne)
 {
     assert (NULL != out_whichOne);
 
@@ -56,8 +56,9 @@ GPU::PipelineBuilder& GPU::PipelineBuilder::pushConstant_add (eShaderType whichS
         VkPushConstantRange s;
         s.offset = offset;
         s.size = sizeInByte;
+        s.stageFlags = stageFlags;
 
-        switch (whichShader)
+        /*switch (whichShader)
         {
         default:
             bAnyError = true;
@@ -72,7 +73,7 @@ GPU::PipelineBuilder& GPU::PipelineBuilder::pushConstant_add (eShaderType whichS
             s.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
             break;
         }
-
+*/
         *out_whichOne = pushConstantList.getNElem();
         pushConstantList.append (s);
     }

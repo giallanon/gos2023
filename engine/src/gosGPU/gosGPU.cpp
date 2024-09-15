@@ -256,12 +256,14 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
     }
 
     //cerco un physical device che sia appropriato
-    sPhyDeviceInfo vkPhysicalDevInfo;
     requiredVulkanExtensionList.reset();
     requiredVulkanExtensionList.add (VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     requiredVulkanExtensionList.add (VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
     //requiredVulkanExtensionList.add (VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+    requiredVulkanExtensionList.add (VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+    requiredVulkanExtensionList.add (VK_KHR_MAINTENANCE3_EXTENSION_NAME);
 
+    sPhyDeviceInfo vkPhysicalDevInfo;
     if (!vulkanScanAndSelectAPhysicalDevices(vkInstance, vkSurface, requiredVulkanExtensionList, vulkanVersion, &vkPhysicalDevInfo))
     {
         gos::logger::err ("\ncan't find a good enough vulkan device\n");
@@ -2160,6 +2162,15 @@ GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_createPushable (GPUDescrSet
     return *builder;
 }
 
+GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_createDynamic (GPUDescrSetLayoutHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+    DescriptorSetLayoutBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::DescriptorSetLayoutBuilder) (this, VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT, out_handle);
+    return *builder;
+}
+
 //************************************
 bool GPU::priv_descrSetLayout_onBuilderEnds (DescriptorSetLayoutBuilder *builder)
 {
@@ -2169,6 +2180,8 @@ bool GPU::priv_descrSetLayout_onBuilderEnds (DescriptorSetLayoutBuilder *builder
     if (builder->anyError())
         return false;
 
+    VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsCreateInfo {};
+    VkDescriptorBindingFlags bindingFlags[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
 
     //TODO: cachare i descriptor-set ed eventualmente riutilizzarli visto che sono dei descrittori, non e' necessario
     //      crearne N diversi che descrivono la stessa cosa
@@ -2177,6 +2190,25 @@ bool GPU::priv_descrSetLayout_onBuilderEnds (DescriptorSetLayoutBuilder *builder
     creatInfo.flags = builder->createFlag;
     creatInfo.bindingCount = builder->numDescriptor;
     creatInfo.pBindings = builder->list;
+
+    if ((creatInfo.flags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT) != 0)
+    {
+        for (u32 i=0; i<builder->numDescriptor; i++)
+        {
+            bindingFlags[i] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
+        }
+
+        bindingFlagsCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+        bindingFlagsCreateInfo.pNext = nullptr;
+        bindingFlagsCreateInfo.bindingCount = builder->numDescriptor;
+        bindingFlagsCreateInfo.pBindingFlags = bindingFlags;
+
+        creatInfo.pNext = &bindingFlagsCreateInfo;
+    }
+    else
+    {
+        creatInfo.pNext = NULL;
+    }
 
     VkDescriptorSetLayout vkHandle;
     VkResult result = vkCreateDescriptorSetLayout (vulkan.dev, &creatInfo, nullptr, &vkHandle);
@@ -2257,6 +2289,7 @@ bool GPU::priv_descrPool_onBuilderEnds (DescriptorPoolBuilder *builder)
     creatInfo.poolSizeCount = builder->numPool;
     creatInfo.pPoolSizes = builder->list;
     creatInfo.maxSets = builder->numMaxDescriptorSets;
+    creatInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
 
     VkDescriptorPool vkHandle;
     VkResult result = vkCreateDescriptorPool (vulkan.dev, &creatInfo, nullptr, &vkHandle);
@@ -2548,6 +2581,26 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, co
     }
 
     return true;
+}
+
+//************************************
+bool GPU::texture_create2D (const gos::Image *im, u8 srcTextureNum, GPUTextureHandle *out_handle)
+{
+    const image::sTextureHeader *header = image::getTextureInfo (*im, srcTextureNum);
+    if (NULL == header)
+    {
+        gos::logger::err ("GPU::texture_create2D() => invalid image, can't extract header\n");
+        return false;
+    }
+
+    image::sTextureData texData;
+    if (!image::getTextureData (*im, srcTextureNum, 0, &texData))
+    {
+        gos::logger::err ("GPU::texture_create2D() => invalid image, can't extract texture data\n");
+        return false;
+    }
+
+    return texture_create2D (header->width, header->height, header->numMipMap, header->fmt, texData.textureData, out_handle);
 }
 
 //************************************

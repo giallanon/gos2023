@@ -318,7 +318,7 @@ namespace gos
 			PipelineBuilder&    setCullMode (eCullMode m)							            { cullMode = m; return *this; }
 			PipelineBuilder&    setWireframe (bool b)								            { bWireframe = b; return *this; }
             PipelineBuilder&    descriptor_add (const GPUDescrSetLayoutHandle handle)           { descrSetLayoutList.append (handle); return *this; }
-            PipelineBuilder&    pushConstant_add (eShaderType whichShader, u16 offset, u16 sizeInByte, u8 *out_whichOne);
+            PipelineBuilder&    pushConstant_add (VkShaderStageFlags stageFlags, u16 offset, u16 sizeInByte, u8 *out_whichOne);
 
             bool                end ();
 
@@ -405,15 +405,15 @@ namespace gos
 
             //aggiunge un descriptor al set.
             //  [stageFlags], vedi anche gos::ShaderStageFlag che contiene i flag utilizzabili
-            DescriptorSetLayoutBuilder&     add_uniformBuffer (VkShaderStageFlagBits stageFlags, u32 count=1)       { return priv_add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, stageFlags, count); }
-            DescriptorSetLayoutBuilder&     add_storageBuffer (VkShaderStageFlagBits stageFlags, u32 count=1)       { return priv_add (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, stageFlags, count); }
-            DescriptorSetLayoutBuilder&     add_textureSampler (VkShaderStageFlagBits stageFlags, u32 count=1)      { return priv_add (VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, stageFlags, count); }
+            DescriptorSetLayoutBuilder&     add_uniformBuffer (VkShaderStageFlags stageFlags, u32 count=1)       { return priv_add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, stageFlags, count); }
+            DescriptorSetLayoutBuilder&     add_storageBuffer (VkShaderStageFlags stageFlags, u32 count=1)       { return priv_add (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, stageFlags, count); }
+            DescriptorSetLayoutBuilder&     add_textureSampler (VkShaderStageFlags stageFlags, u32 count=1)      { return priv_add (VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, stageFlags, count); }
             bool                            end();
 
             bool                            anyError() const        { return bAnyError; }
 
         private:
-            DescriptorSetLayoutBuilder&     priv_add (VkDescriptorType descrType, VkShaderStageFlagBits stageFlags, u32 count=1);
+            DescriptorSetLayoutBuilder&     priv_add (VkDescriptorType descrType, VkShaderStageFlags stageFlags, u32 count=1);
 
         private:
             bool    bAnyError;
@@ -440,15 +440,15 @@ namespace gos
             virtual                     ~DescriptorPoolBuilder();
 
             DescriptorPoolBuilder&      setMaxNumDescriptorSet (u32 n)              { numMaxDescriptorSets = n; return *this; }
-            DescriptorPoolBuilder&      addPool_uniformBuffer ();
-            DescriptorPoolBuilder&      addPool_storageBuffer ();
-            DescriptorPoolBuilder&      addPool_textureSampler();
+            DescriptorPoolBuilder&      addPool_uniformBuffer (u32 howMany = 8);
+            DescriptorPoolBuilder&      addPool_storageBuffer (u32 howMany = 8);
+            DescriptorPoolBuilder&      addPool_textureSampler(u32 howMany = 8);
             bool                        end();
 
             bool                        anyError() const                            { return bAnyError; }
 
         private:
-            VkDescriptorPoolSize*       priv_findOrAddByDescrType (VkDescriptorType descrType);
+            VkDescriptorPoolSize*       priv_findOrAddByDescrType (VkDescriptorType descrType, u32 howMany);
 
         private:
             bool    bAnyError;
@@ -630,6 +630,7 @@ namespace gos
 
         //================ descriptorSet layout
         DescriptorSetLayoutBuilder&    descrSetLayout_createStatic (GPUDescrSetLayoutHandle *out_handle);
+        DescriptorSetLayoutBuilder&    descrSetLayout_createDynamic (GPUDescrSetLayoutHandle *out_handle);
         DescriptorSetLayoutBuilder&    descrSetLayout_createPushable (GPUDescrSetLayoutHandle *out_handle);
         void                deleteResource (GPUDescrSetLayoutHandle &handle);
         bool                toVulkan (const GPUDescrSetLayoutHandle handle, VkDescriptorSetLayout *out) const;
@@ -642,6 +643,7 @@ namespace gos
 							
         //================ texture
 		bool				texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, const void *srcDATA, GPUTextureHandle *out_handle);
+        bool				texture_create2D (const gos::Image *im, u8 srcTextureNum, GPUTextureHandle *out_handle);
         void                deleteResource (GPUTextureHandle &handle);
         bool                toVulkan (const GPUTextureHandle handle, VkImageView *out) const;
 

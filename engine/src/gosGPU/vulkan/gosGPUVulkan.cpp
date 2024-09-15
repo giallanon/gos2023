@@ -471,6 +471,17 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
         features12.pNext = &features13;
     }
 	features12.separateDepthStencilLayouts = true;
+    features12.descriptorBindingPartiallyBound = true;
+    features12.descriptorBindingVariableDescriptorCount = true;
+    features12.descriptorBindingUpdateUnusedWhilePending = true;
+    features12.runtimeDescriptorArray = true;
+    features12.shaderSampledImageArrayNonUniformIndexing = true;
+    features12.descriptorBindingSampledImageUpdateAfterBind = true;
+    features12.shaderUniformBufferArrayNonUniformIndexing = true;
+    features12.descriptorBindingUniformBufferUpdateAfterBind = true;
+    features12.shaderStorageBufferArrayNonUniformIndexing = true;
+    features12.descriptorBindingStorageBufferUpdateAfterBind = true;
+
 
 	VkPhysicalDeviceVulkan11Features features11 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
     if (vulkanVersion >= eVulkanVersion::v1_2)
