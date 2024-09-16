@@ -145,6 +145,29 @@ namespace gos
         VkVertexInputBindingDescription vxtBindingDescrList[8];
         VkVertexInputAttributeDescription vtxAttributeDescrList[64];
     };
+
+
+    class VkPhyDeviceFeatures
+    {
+    public:        
+        /**
+        * @brief verifica che il device in questione supporti tutte le feature richieste.
+        * Se ritorna true, allora [features] e' fillata con tutte le features richieste
+        */
+        bool    checkPhysicalDeviceFeatures (VkPhysicalDevice &vkDev, eVulkanVersion vulkanVersion);
+
+    public:
+        VkPhysicalDeviceVulkan13Features    features13;
+        VkPhysicalDeviceVulkan12Features    features12;
+        VkPhysicalDeviceVulkan11Features    features11;
+        VkPhysicalDeviceFeatures2           features;
+
+
+    private:
+        void    priv_reset (eVulkanVersion vulkanVersion);
+        void    priv_getAllPhysicalDeviceFeatures (VkPhysicalDevice &vkDev, eVulkanVersion vulkanVersion);
+    };
+
 } //namespace gos
 
 

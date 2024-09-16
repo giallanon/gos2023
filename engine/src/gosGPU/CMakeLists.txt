@@ -25,6 +25,7 @@ vulkan/gosGPUVukanHelpers.h
 vulkan/gosGPUVulkan.cpp
 vulkan/gosGPUVulkan.h
 vulkan/gosGPUVulkanEnumAndDefine.h
+vulkan/gosGPUVulkanFeatures.cpp
 
 utils/gosFPSMovement.cpp
 utils/gosFPSMovement.h

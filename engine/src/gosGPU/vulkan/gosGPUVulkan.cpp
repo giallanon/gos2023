@@ -5,13 +5,6 @@
 
 using namespace gos;
 
-struct VkDeviceFeatures
-{
-    VkPhysicalDeviceVulkan13Features    features13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
-    VkPhysicalDeviceVulkan12Features    features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-    VkPhysicalDeviceVulkan11Features    features11 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
-    VkPhysicalDeviceFeatures2           features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-};
 
 //*********************************************
 static u32 toVulkanVersion (eVulkanVersion v)
@@ -167,64 +160,6 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
     return ret;
 }
 
-/*********************************************
-* recupera tutte le features del device fisico
-*/
-static void getAllPhysicalDeviceFeatures (VkPhysicalDevice &vkDev, eVulkanVersion vulkanVersion, VkDeviceFeatures *out)
-{
-    assert (NULL != out);
-
-    out->features13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
-    out->features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-    out->features11 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
-    out->features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-            
-    if (vulkanVersion >= eVulkanVersion::v1_3)  out->features12.pNext = &out->features13;
-    if (vulkanVersion >= eVulkanVersion::v1_2)  out->features11.pNext = &out->features12;
-    if (vulkanVersion >= eVulkanVersion::v1_1)  out->features.pNext = &out->features11;
-    vkGetPhysicalDeviceFeatures2 (vkDev, &out->features);
-}
-
-/*********************************************
-* verifica che il device in questioni supporti tutte le feature richieste
-*/
-static bool checkPhysicalDeviceFeatures (VkPhysicalDevice &vkDev, eVulkanVersion vulkanVersion)
-{
-    //recupero tutte le feature del device fisico
-    VkDeviceFeatures f;
-    getAllPhysicalDeviceFeatures (vkDev, vulkanVersion, &f);
-
-
-#define CHECK(propName) if (!propName) { gos::logger::warn ("feature not supported: " #propName "\n"); return false; }
-
-	CHECK(f.features12.separateDepthStencilLayouts);
-    CHECK(f.features12.runtimeDescriptorArray);
-    CHECK(f.features12.descriptorBindingPartiallyBound);
-    CHECK(f.features12.descriptorBindingVariableDescriptorCount);
-    CHECK(f.features12.descriptorBindingUpdateUnusedWhilePending);
-    CHECK(f.features12.descriptorBindingUniformBufferUpdateAfterBind);
-    CHECK(f.features12.descriptorBindingSampledImageUpdateAfterBind);
-    CHECK(f.features12.descriptorBindingStorageBufferUpdateAfterBind);
-    CHECK(f.features12.shaderSampledImageArrayNonUniformIndexing);
-    CHECK(f.features12.shaderStorageBufferArrayNonUniformIndexing);
-    //CHECK(f.features12.shaderUniformBufferArrayNonUniformIndexing);
-
-	//CHECK(f.features11.storageBuffer16BitAccess);
-	//CHECK(f.features11.shaderDrawParameters);
-
-	CHECK(f.features.features.imageCubeArray);
-	CHECK(f.features.features.geometryShader);
-	CHECK(f.features.features.tessellationShader);
-	CHECK(f.features.features.depthClamp);
-    CHECK(f.features.features.fillModeNonSolid);
-    CHECK(f.features.features.samplerAnisotropy);
-
-#undef CHECK
-
-    return true;
-
-}
-
 //*********************************************
 bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, const VkSurfaceKHR &vkSurface, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion, sPhyDeviceInfo *out)
 {
@@ -308,7 +243,8 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
         }
 
         //verifica del supporto a tutte le feature richieste
-        if (!checkPhysicalDeviceFeatures(deviceList[i], vulkanVersion))
+        VkPhyDeviceFeatures devFeatures;
+        if (!devFeatures.checkPhysicalDeviceFeatures(deviceList[i], vulkanVersion))
         {
             bIsGoodDevice = false;
         }
@@ -532,10 +468,9 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
         numOfQueue++;
     }
 
-    //attivo tutte le feature disponibili in questo device fisico
-    //L'elenco delle feature minime necessarie l'ho gia' verificato in checkPhysicalDeviceFeatures()
-    VkDeviceFeatures allFeatures;
-    getAllPhysicalDeviceFeatures (vkPhyDevInfo.vkDev, vulkanVersion, &allFeatures);
+    //Creo l'elenco delle features che voglio attivare
+    VkPhyDeviceFeatures devFeatures;
+    devFeatures.checkPhysicalDeviceFeatures (vkPhyDevInfo.vkDev, vulkanVersion);
 
 
 
@@ -547,7 +482,7 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
     createInfo.pQueueCreateInfos = queueCreateInfo;
     createInfo.enabledExtensionCount = 0;
     createInfo.ppEnabledExtensionNames = foundExtensions;
-    createInfo.pNext = &allFeatures.features;
+    createInfo.pNext = &devFeatures.features;
 
 
     //aggiungo le etensioni richieste
