@@ -5,8 +5,13 @@
 
 using namespace gos;
 
-//static constexpr u32 TARGET_VULKAN_API_VERSION = VK_API_VERSION_1_3;
-
+struct VkDeviceFeatures
+{
+    VkPhysicalDeviceVulkan13Features    features13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+    VkPhysicalDeviceVulkan12Features    features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    VkPhysicalDeviceVulkan11Features    features11 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
+    VkPhysicalDeviceFeatures2           features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+};
 
 //*********************************************
 static u32 toVulkanVersion (eVulkanVersion v)
@@ -162,6 +167,63 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
     return ret;
 }
 
+/*********************************************
+* recupera tutte le features del device fisico
+*/
+static void getAllPhysicalDeviceFeatures (VkPhysicalDevice &vkDev, eVulkanVersion vulkanVersion, VkDeviceFeatures *out)
+{
+    assert (NULL != out);
+
+    out->features13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+    out->features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    out->features11 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
+    out->features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+            
+    if (vulkanVersion >= eVulkanVersion::v1_3)  out->features12.pNext = &out->features13;
+    if (vulkanVersion >= eVulkanVersion::v1_2)  out->features11.pNext = &out->features12;
+    if (vulkanVersion >= eVulkanVersion::v1_1)  out->features.pNext = &out->features11;
+    vkGetPhysicalDeviceFeatures2 (vkDev, &out->features);
+}
+
+/*********************************************
+* verifica che il device in questioni supporti tutte le feature richieste
+*/
+static bool checkPhysicalDeviceFeatures (VkPhysicalDevice &vkDev, eVulkanVersion vulkanVersion)
+{
+    //recupero tutte le feature del device fisico
+    VkDeviceFeatures f;
+    getAllPhysicalDeviceFeatures (vkDev, vulkanVersion, &f);
+
+
+#define CHECK(propName) if (!propName) { gos::logger::warn ("feature not supported: " #propName "\n"); return false; }
+
+	CHECK(f.features12.separateDepthStencilLayouts);
+    CHECK(f.features12.runtimeDescriptorArray);
+    CHECK(f.features12.descriptorBindingPartiallyBound);
+    CHECK(f.features12.descriptorBindingVariableDescriptorCount);
+    CHECK(f.features12.descriptorBindingUpdateUnusedWhilePending);
+    CHECK(f.features12.descriptorBindingUniformBufferUpdateAfterBind);
+    CHECK(f.features12.descriptorBindingSampledImageUpdateAfterBind);
+    CHECK(f.features12.descriptorBindingStorageBufferUpdateAfterBind);
+    CHECK(f.features12.shaderSampledImageArrayNonUniformIndexing);
+    CHECK(f.features12.shaderStorageBufferArrayNonUniformIndexing);
+    //CHECK(f.features12.shaderUniformBufferArrayNonUniformIndexing);
+
+	//CHECK(f.features11.storageBuffer16BitAccess);
+	//CHECK(f.features11.shaderDrawParameters);
+
+	CHECK(f.features.features.imageCubeArray);
+	CHECK(f.features.features.geometryShader);
+	CHECK(f.features.features.tessellationShader);
+	CHECK(f.features.features.depthClamp);
+    CHECK(f.features.features.fillModeNonSolid);
+    CHECK(f.features.features.samplerAnisotropy);
+
+#undef CHECK
+
+    return true;
+
+}
 
 //*********************************************
 bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, const VkSurfaceKHR &vkSurface, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion, sPhyDeviceInfo *out)
@@ -243,94 +305,104 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
             {
                 gos::logger::log (eTextColor::green, "extension %s is available\n", identifier);
             }
-        }    
+        }
+
+        //verifica del supporto a tutte le feature richieste
+        if (!checkPhysicalDeviceFeatures(deviceList[i], vulkanVersion))
+        {
+            bIsGoodDevice = false;
+        }
+
 
         //enumerazione delle queue di questo device
         sPhyDeviceInfo::sQueueInfo selectedQueue_gfx;
         sPhyDeviceInfo::sQueueInfo selectedQueue_compute;
         sPhyDeviceInfo::sQueueInfo selectedQueue_transfer;
-        gos::logger::log ("available family queues:\n");
-        gos::logger::incIndent();
+        if (bIsGoodDevice)
         {
-            //vediamo quali queue sono supportate da questo device
-            VkPhyDeviceQueueList list;
-            list.build(allocator, deviceList[i]);
-            for (u32 i2=0; i2<list.getCount(); i2++)
+            gos::logger::log ("available family queues:\n");
+            gos::logger::incIndent();
             {
-                gos::logger::log ("queue family %d:\n", i2);
-                gos::logger::incIndent();
-                list.printQueueFamilyInfo(i2);
-
-                //deve assolutamente supoprtare la fn di PRESENT
-                VkBool32 bIsSupportedKHR = false;
-                vkGetPhysicalDeviceSurfaceSupportKHR (deviceList[i], i2, vkSurface, &bIsSupportedKHR);
-                if (!bIsSupportedKHR)
-                    gos::logger::log (eTextColor::red, "does NOT support PRESENT to KHR surface\n");
-                else
+                VkPhyDeviceQueueList list;
+                list.build(allocator, deviceList[i]);
+                for (u32 i2 = 0; i2 < list.getCount(); i2++)
                 {
-                    if (u32MAX == selectedQueue_gfx.familyIndex)
-                    {
-                        if (list.support_VK_QUEUE_GRAPHICS_BIT(i2))
-                        {
-                            selectedQueue_gfx.familyIndex = i2;
-                            selectedQueue_gfx.count = list.get(i2)->queueCount;
-                        }
-                    }
+                    gos::logger::log ("queue family %d:\n", i2);
+                    gos::logger::incIndent();
+                    list.printQueueFamilyInfo(i2);
 
-                    if (list.support_VK_QUEUE_COMPUTE_BIT(i2))
+                    //deve assolutamente supoprtare la fn di PRESENT
+                    VkBool32 bIsSupportedKHR = false;
+                    vkGetPhysicalDeviceSurfaceSupportKHR (deviceList[i], i2, vkSurface, &bIsSupportedKHR);
+                    if (!bIsSupportedKHR)
+                        gos::logger::log (eTextColor::red, "does NOT support PRESENT to KHR surface\n");
+                    else
                     {
-                        if (u32MAX == selectedQueue_compute.familyIndex)
+                        //determino il tipo di Q supportate
+                        if (u32MAX == selectedQueue_gfx.familyIndex)
                         {
-                            selectedQueue_compute.familyIndex = i2;
-                            selectedQueue_compute.count = list.get(i2)->queueCount;
+                            if (list.support_VK_QUEUE_GRAPHICS_BIT(i2))
+                            {
+                                selectedQueue_gfx.familyIndex = i2;
+                                selectedQueue_gfx.count = list.get(i2)->queueCount;
+                            }
                         }
-                        else
+
+                        if (list.support_VK_QUEUE_COMPUTE_BIT(i2))
                         {
-                            //preferisco una Q che supporti COMPUTE ma non supporti GFX, nella speranza di avere
-                            //una Q di compute pura, preferibilmente diversa da quella gfx
-                            if (!list.support_VK_QUEUE_GRAPHICS_BIT(i2))
+                            if (u32MAX == selectedQueue_compute.familyIndex)
                             {
                                 selectedQueue_compute.familyIndex = i2;
                                 selectedQueue_compute.count = list.get(i2)->queueCount;
                             }
+                            else
+                            {
+                                //preferisco una Q che supporti COMPUTE ma non supporti GFX, nella speranza di avere
+                                //una Q di compute pura, preferibilmente diversa da quella gfx
+                                if (!list.support_VK_QUEUE_GRAPHICS_BIT(i2))
+                                {
+                                    selectedQueue_compute.familyIndex = i2;
+                                    selectedQueue_compute.count = list.get(i2)->queueCount;
+                                }
+                            }
                         }
-                    }
 
-                    
-                    //cerco di trovare una Q dedicata al transfer che supporti espressamente solo quello
-                    if (list.support_VK_QVK_QUEUE_TRANSFER_BIT(i2) && !list.support_VK_QUEUE_GRAPHICS_BIT(i2) && !list.support_VK_QUEUE_COMPUTE_BIT(i2))
-                    {
-                        if (u32MAX == selectedQueue_transfer.familyIndex)                        
+
+                        //cerco di trovare una Q dedicata al transfer che supporti espressamente solo quello
+                        if (list.support_VK_QVK_QUEUE_TRANSFER_BIT(i2) && !list.support_VK_QUEUE_GRAPHICS_BIT(i2) && !list.support_VK_QUEUE_COMPUTE_BIT(i2))
                         {
-                            selectedQueue_transfer.familyIndex = i2;
-                            selectedQueue_transfer.count = list.get(i2)->queueCount;
-                        }
-                        else
-                        {
-                            if (list.get(i2)->queueCount > selectedQueue_transfer.count)
+                            if (u32MAX == selectedQueue_transfer.familyIndex)
                             {
                                 selectedQueue_transfer.familyIndex = i2;
                                 selectedQueue_transfer.count = list.get(i2)->queueCount;
                             }
+                            else
+                            {
+                                if (list.get(i2)->queueCount > selectedQueue_transfer.count)
+                                {
+                                    selectedQueue_transfer.familyIndex = i2;
+                                    selectedQueue_transfer.count = list.get(i2)->queueCount;
+                                }
+                            }
                         }
-                    }
-                    
-                }
-                gos::logger::decIndent();
-            }
 
-            //Per la transferQ... se non ne ho trovata una dedicata allora uso la GFX o la COMPUTER che
-            //sono garantite supportare la fn di transfer anche se non espressamente indicato
-            if (u32MAX == selectedQueue_transfer.familyIndex)
-            {
-                //tra le 2, scelgo quella con il maggior numero di code
-                if (selectedQueue_gfx.count > selectedQueue_compute.count)
-                    selectedQueue_transfer = selectedQueue_gfx;
-                else
-                    selectedQueue_transfer = selectedQueue_compute;
+                    }
+                    gos::logger::decIndent();
+                }
+
+                //Per la transferQ... se non ne ho trovata una dedicata allora uso la GFX o la COMPUTER che
+                //sono garantite supportare la fn di transfer anche se non espressamente indicato
+                if (u32MAX == selectedQueue_transfer.familyIndex)
+                {
+                    //tra le 2, scelgo quella con il maggior numero di code
+                    if (selectedQueue_gfx.count > selectedQueue_compute.count)
+                        selectedQueue_transfer = selectedQueue_gfx;
+                    else
+                        selectedQueue_transfer = selectedQueue_compute;
+                }
             }
+            gos::logger::decIndent();
         }
-        gos::logger::decIndent();
 
 
         if (bIsGoodDevice && u32MAX != selectedQueue_gfx.familyIndex && u32MAX != selectedQueue_compute.familyIndex && u32MAX != selectedQueue_transfer.familyIndex)
@@ -460,46 +532,11 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
         numOfQueue++;
     }
 
-    //quali feature voglio usare?
-	VkPhysicalDeviceVulkan13Features features13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
-	features13.synchronization2 = true;
-	features13.maintenance4 = true;
+    //attivo tutte le feature disponibili in questo device fisico
+    //L'elenco delle feature minime necessarie l'ho gia' verificato in checkPhysicalDeviceFeatures()
+    VkDeviceFeatures allFeatures;
+    getAllPhysicalDeviceFeatures (vkPhyDevInfo.vkDev, vulkanVersion, &allFeatures);
 
-	VkPhysicalDeviceVulkan12Features features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-    if (vulkanVersion >= eVulkanVersion::v1_3)
-    {
-        features12.pNext = &features13;
-    }
-	features12.separateDepthStencilLayouts = true;
-    features12.descriptorBindingPartiallyBound = true;
-    features12.descriptorBindingVariableDescriptorCount = true;
-    features12.descriptorBindingUpdateUnusedWhilePending = true;
-    features12.runtimeDescriptorArray = true;
-    features12.shaderSampledImageArrayNonUniformIndexing = true;
-    features12.descriptorBindingSampledImageUpdateAfterBind = true;
-    features12.shaderUniformBufferArrayNonUniformIndexing = true;
-    features12.descriptorBindingUniformBufferUpdateAfterBind = true;
-    features12.shaderStorageBufferArrayNonUniformIndexing = true;
-    features12.descriptorBindingStorageBufferUpdateAfterBind = true;
-
-
-	VkPhysicalDeviceVulkan11Features features11 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
-    if (vulkanVersion >= eVulkanVersion::v1_2)
-        features11.pNext = &features12;
-	//features11.storageBuffer16BitAccess = true;
-	//features11.shaderDrawParameters = true;
-
-    VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-    if (vulkanVersion >= eVulkanVersion::v1_1)
-    {
-        features.pNext = &features11;
-    }
-	features.features.imageCubeArray = true;
-	features.features.geometryShader = true;
-	features.features.tessellationShader = true;
-	features.features.depthClamp = true;
-    features.features.fillModeNonSolid = true;
-    features.features.samplerAnisotropy = true;
 
 
     //creo il device
@@ -510,7 +547,7 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
     createInfo.pQueueCreateInfos = queueCreateInfo;
     createInfo.enabledExtensionCount = 0;
     createInfo.ppEnabledExtensionNames = foundExtensions;
-    createInfo.pNext = &features;
+    createInfo.pNext = &allFeatures.features;
 
 
     //aggiungo le etensioni richieste
@@ -979,7 +1016,7 @@ bool gos::vulkanCreateImage2D (const sVkDevice &vulkan, u32 dimx, u32 dimy, u8 n
     //alloco memoria
     VkMemoryRequirements memReqs;
     vkGetImageMemoryRequirements (vulkan.dev, *out_imagehandle, &memReqs);       
-    *out_sizeInByte= memReqs.size;
+    *out_sizeInByte= static_cast<u32>(memReqs.size);
 
     VkMemoryAllocateInfo memAllloc{};
 	memAllloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;

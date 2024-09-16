@@ -215,29 +215,32 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
     gos::logger::log ("GPU::priv_initVulkan()\n");
     gos::Allocator *scrapAllocator = gos::getScrapAllocator();
 
-    gos::StringList requiredVulkanExtensionList(scrapAllocator);
-    gos::StringList requiredVulkanValidationLayerList(scrapAllocator);
-
-    //GLFW ha bisogno di un po' di estensioni di vulkan, le recupero e le addo all'elenco delle estensioni necessarie
+    //creazione di Vulkan instance
     {
-        u32 glfwExtensionCount = 0;
-        const char **glfwExtensions;
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        for (u32 i=0; i<glfwExtensionCount; i++)
-            requiredVulkanExtensionList.add (glfwExtensions[i]);
-    }
-    requiredVulkanExtensionList.add (VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        gos::StringList vkInstance_requiredExtensionList(scrapAllocator);
+        gos::StringList vkInstance_requiredValidationLayerList(scrapAllocator);
+
+        //GLFW ha bisogno di un po' di estensioni di vulkan, le recupero e le addo all'elenco delle estensioni necessarie
+        {
+            u32 glfwExtensionCount = 0;
+            const char **glfwExtensions;
+            glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+            for (u32 i = 0; i < glfwExtensionCount; i++)
+                vkInstance_requiredExtensionList.add (glfwExtensions[i]);
+        }
+        vkInstance_requiredExtensionList.add (VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
 #ifdef _DEBUG
-    requiredVulkanValidationLayerList.add ("VK_LAYER_KHRONOS_validation");
-    requiredVulkanExtensionList.add (VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        vkInstance_requiredValidationLayerList.add ("VK_LAYER_KHRONOS_validation");
+        vkInstance_requiredExtensionList.add (VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
 
-    //creazione dell'istanza di vulkan
-    if (!vulkanCreateInstance (&vkInstance, requiredVulkanValidationLayerList, requiredVulkanExtensionList, vulkanVersion))
-    {
-        gos::logger::err ("problem creating vulkan instance\n");
-        return false;
+        //creazione dell'istanza di vulkan
+        if (!vulkanCreateInstance (&vkInstance, vkInstance_requiredValidationLayerList, vkInstance_requiredExtensionList, vulkanVersion))
+        {
+            gos::logger::err ("problem creating vulkan instance\n");
+            return false;
+        }
     }
     
     //aggiungo una callback per il layer di debug, giusto per printare i msg di vulkan in un bel colore rosa
@@ -256,38 +259,39 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
     }
 
     //cerco un physical device che sia appropriato
-    requiredVulkanExtensionList.reset();
-    requiredVulkanExtensionList.add (VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    requiredVulkanExtensionList.add (VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
-    //requiredVulkanExtensionList.add (VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
-    requiredVulkanExtensionList.add (VK_KHR_MAINTENANCE1_EXTENSION_NAME);
-    requiredVulkanExtensionList.add (VK_KHR_MAINTENANCE3_EXTENSION_NAME);
-
-    sPhyDeviceInfo vkPhysicalDevInfo;
-    if (!vulkanScanAndSelectAPhysicalDevices(vkInstance, vkSurface, requiredVulkanExtensionList, vulkanVersion, &vkPhysicalDevInfo))
     {
-        gos::logger::err ("\ncan't find a good enough vulkan device\n");
-        return false;
-    }
-    else
-    {
-        gos::logger::log (eTextColor::green, "\nselected device is at index %d\n   gfxQ familyIndex=%d, count=%d\n   computeQ familyIndex=%d, count=%d\n   transferQ familyIndex=%d, count=%d\n", 
-                                vkPhysicalDevInfo.devIndex, 
-                                vkPhysicalDevInfo.queue_gfx.familyIndex, vkPhysicalDevInfo.queue_gfx.count,
-                                vkPhysicalDevInfo.queue_compute.familyIndex, vkPhysicalDevInfo.queue_compute.count,
-                                vkPhysicalDevInfo.queue_transfer.familyIndex, vkPhysicalDevInfo.queue_compute.count);
-    }
-    gos::logger::log("\n");
+        gos::StringList vkDevice_requiredExtensionList(scrapAllocator);
+        vkDevice_requiredExtensionList.add (VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        vkDevice_requiredExtensionList.add (VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+        //vkDevice_requiredExtensionList.add (VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+        //vkDevice_requiredExtensionList.add (VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+        //vkDevice_requiredExtensionList.add (VK_KHR_MAINTENANCE3_EXTENSION_NAME);
+
+        sPhyDeviceInfo vkPhysicalDevInfo;
+        if (!vulkanScanAndSelectAPhysicalDevices(vkInstance, vkSurface, vkDevice_requiredExtensionList, vulkanVersion, &vkPhysicalDevInfo))
+        {
+            gos::logger::err ("\ncan't find a good enough vulkan device\n");
+            return false;
+        }
+        else
+        {
+            gos::logger::log (eTextColor::green, "\nselected device is at index %d\n   gfxQ familyIndex=%d, count=%d\n   computeQ familyIndex=%d, count=%d\n   transferQ familyIndex=%d, count=%d\n",
+                vkPhysicalDevInfo.devIndex,
+                vkPhysicalDevInfo.queue_gfx.familyIndex, vkPhysicalDevInfo.queue_gfx.count,
+                vkPhysicalDevInfo.queue_compute.familyIndex, vkPhysicalDevInfo.queue_compute.count,
+                vkPhysicalDevInfo.queue_transfer.familyIndex, vkPhysicalDevInfo.queue_compute.count);
+        }
+        gos::logger::log("\n");
 
 
-    //creazione del device logico di vulkan
-    if (!vulkanCreateDevice (vkPhysicalDevInfo, requiredVulkanExtensionList, vulkanVersion, &vulkan))
-    {
-        gos::logger::err ("can't create a logical device\n");
-        return false;
+        //creazione del device logico di vulkan
+        if (!vulkanCreateDevice (vkPhysicalDevInfo, vkDevice_requiredExtensionList, vulkanVersion, &vulkan))
+        {
+            gos::logger::err ("can't create a logical device\n");
+            return false;
+        }
+        gos::logger::log("\n");
     }
-    gos::logger::log("\n");
-    
 
     vkCmdPushDescriptorSetKHR = (PFN_vkCmdPushDescriptorSetKHR)vkGetDeviceProcAddr(vulkan.dev, "vkCmdPushDescriptorSetKHR");
     if (!vkCmdPushDescriptorSetKHR) 
@@ -2487,7 +2491,7 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, co
             w/=2;
             h/=2;
         }
-        assert (totalImgSize == imageMemSize);
+        assert (totalImgSize <= imageMemSize);
     }
 #endif
 
