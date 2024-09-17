@@ -440,7 +440,7 @@ bool Renderer1::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Camera
 }
 
 //************************************
-bool Renderer1::addModelFrom_glTF (const char *filename, hModel *out)
+bool Renderer1::model_addFrom_glTF (const char *filename, ModelH *out)
 {
     assert (NULL != out);
 
@@ -452,11 +452,11 @@ bool Renderer1::addModelFrom_glTF (const char *filename, hModel *out)
         return false;
     }
 
-    return addModel (shapeList, out);
+    return model_add (shapeList, out);
 }
 
 //************************************
-bool Renderer1::addModel (const gos::ShapeList &shapeList, hModel *out)
+bool Renderer1::model_add (const gos::ShapeList &shapeList, ModelH *out)
 {
     assert (NULL != out);
     out->setInvalid();
@@ -465,7 +465,7 @@ bool Renderer1::addModel (const gos::ShapeList &shapeList, hModel *out)
 }
 
 //************************************
-bool Renderer1::addInstance (const hModel &hModel, const gos::geom::Pos3 &pos)
+bool Renderer1::instance_add (const ModelH &hModel, const MaterialH &hMaterial, const gos::geom::Pos3 &worldPos)
 {
     /*
     una instance è composta da

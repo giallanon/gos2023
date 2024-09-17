@@ -1,59 +1,52 @@
-#ifndef _Renderer1_h_
-#define _Renderer1_h_
+#ifndef _Scene_h_
+#define _Scene_h_
 #include "gosGPU.h"
 #include "../gos/memory/gosAllocatorHeap.h"
 #include "../gos/gosHandle.h"
 #include "../gosShape/gosShape.h"
 #include "../gosGeom/gosGeomCamera3.h"
-#include "MaterialList.h"
+
+
+
+typedef gos::HandleT<16,10,4, 0,2>	ModelH;		//2^16=65536 => num totale di oggetti, divisi in chunk da 2^10=1024
+
+struct Shape
+{
+    GPUVtxBufferHandle  hVB;
+    GPUIDxBufferHandle  hIB;
+    u32                 fistVtx;
+    u32                 firstIdx;
+    u16                 numVtx
+    u16                 numTris;
+};
+
+struct Model
+{
+    ShapeList<u32>   shapeList;          //lista di handle a shape
+    gos::mat4x4f     localTransfor;      //ogni shape ha la sua local transform rispetto alla posizione di root
+};
 
 /**
- * @brief Renderer1
+ * @brief Scene
  *  
  */
-class Renderer1
+class Scene
 {
-private:
-    typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Unsafe>		LocalAllocator;
-
 public:
-    typedef gos::HandleT<16,10,4, 0,2>	ModelH;		//2^16=65536 => num totale di oggetti, divisi in chunk da 2^10=1024
-    typedef gos::HandleT<13,10,4, 0,5>	MaterialH;	//2^10=8129 => num totale di oggetti, divisi in chunk da 2^10=1024
-
-public:
-    struct Material
-    {
-        GPUTextureHandle    texDiffuse;
-        GPUTextureHandle    texAO;
-        gos::vec3f          diffuseColor;
-    };
-
-public:
-            Renderer1();
-            ~Renderer1();
-
-    bool    setup (gos::GPU *gpu);
-    bool    recordCommandBuffer (gos::gpu::CmdBufferWriter &cw, gos::geom::Camera3 *cam);
+            Scene();
+            ~Scene();
 
     //============= gestione modelli
+    //Model e' una collezione di shape
     bool    model_addFrom_glTF (const char *filename, ModelH *out_handle);
     bool    model_add (const gos::ShapeList &shapeList, ModelH *out_handle);
 
-    bool    shape_add (const gos::Shape *shape);
-    
-    //============= gestione materiali
-    bool    material_create (const GPUTextureHandle &hTexDiffuse, const GPUTextureHandle &hTexAO, const gos::vec3f &colDiffuse, MaterialH *out_handle)
-    {
-        Material m;
-        m.texDiffuse = hTexDiffuse;
-        m.texAO = hTexAO;
-        m.diffuseColor = colDiffuse;
-        return materialList.add (m, out_handle);
-    }
 
+    bool    shape_add (const gos::Shape *shape, ShapeH *out_handle);
 
     //============= gestione instance
     bool    instance_add (const ModelH &hModel, const MaterialH &hMaterial, const gos::geom::Pos3 &worldPos);
+
 
 
 private:
@@ -138,4 +131,4 @@ private:
 
 
 
-#endif //_Renderer1_h_
+#endif //_Scene_h_
