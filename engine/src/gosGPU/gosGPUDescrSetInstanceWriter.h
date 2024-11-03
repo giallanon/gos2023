@@ -23,7 +23,11 @@ namespace gos
 
             DescrSetInstanceWriter&     begin (gos::GPU *gpu, const GPUDescrSetInstanceHandle &descrSetInstanceHandle);
             DescrSetInstanceWriter&     bindUniformBuffer (u32 binding, const GPUUniformBufferHandle &handle, u32 dstArrayElem = 0);
-            DescrSetInstanceWriter&     bindTextureAndSampler (u32 binding, const GPUTextureHandle &texHandle, const GPUSamplerHandle &samplerHandle, u32 dstArrayElem = 0);
+            DescrSetInstanceWriter&     bindStorageBuffer (u32 binding, const GPUStorageBufferHandle &handle, u32 dstArrayElem = 0);
+            DescrSetInstanceWriter&     bindDynamicStorageBuffer (u32 binding, const GPUStorageBufferHandle &handle, u32 sizeOfOneElement);
+            DescrSetInstanceWriter&     bindCombinedTextureAndSampler (u32 binding, const GPUTextureHandle &texHandle, const GPUSamplerHandle &samplerHandle, u32 dstArrayElem = 0);
+            DescrSetInstanceWriter&     bindSamplerInArray  (u32 binding, const GPUSamplerHandle &handle, u32 dstArrayElem);
+            DescrSetInstanceWriter&     bindTextureInArray (u32 binding, const GPUTextureHandle &handle, u32 dstArrayElem);
             bool                        end();
 
 
@@ -37,8 +41,11 @@ namespace gos
             struct sImageInfo
             {
                 u32                             num;
-                VkDescriptorImageInfo          list[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
-            };            
+                VkDescriptorImageInfo           list[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
+            };
+            
+        private:
+            DescrSetInstanceWriter&     priv_bindBuffer (u32 binding, const VkBuffer &vkBufferHandle, u32 bufferSize, VkDescriptorType descriptorType, u32 dstArrayElem);
 
         private:
             gos::GPU                        *gpu;

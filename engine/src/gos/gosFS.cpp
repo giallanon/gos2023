@@ -627,6 +627,75 @@ bool fs::fileOpenForAppend (gos::File *out_h, const char *utf8_filePathAndNameRE
 }
 
 //**************************************************************************
+u32 fs::fileWriteU16 (gos::File &h, u16 val)
+{
+	u8 buffer[2];
+	buffer[0] = (u8)((val & 0xFF00) >> 8);
+	buffer[1] = (u8)(val & 0x00FF);
+	return fileWrite (h, buffer, 2);
+}
+
+//**************************************************************************
+u32 fs::fileWriteU32 (gos::File &h, u32 val)
+{
+	u8 buffer[4];
+	buffer[0] = (u8)((val & 0xFF000000) >> 24);
+	buffer[1] = (u8)((val & 0x00FF0000) >> 16);
+	buffer[2] = (u8)((val & 0x0000FF00) >> 8);
+	buffer[3] = (u8)(val & 0x000000FF);
+	return fileWrite (h, buffer, 4);
+}
+
+//**************************************************************************
+u32 fs::fileWriteU64 (gos::File &h, u64 val)
+{
+	u8 buffer[8];
+	buffer[0] = (u8)((val & 0xFF00000000000000) >> 56); 
+	buffer[1] = (u8)((val & 0x00FF000000000000) >> 48); 
+	buffer[2] = (u8)((val & 0x0000FF0000000000) >> 40); 
+	buffer[3] = (u8)((val & 0x000000FF00000000) >> 32);  
+	buffer[4] = (u8)((val & 0x00000000FF000000) >> 24); 
+	buffer[5] = (u8)((val & 0x0000000000FF0000) >> 16); 
+	buffer[6] = (u8)((val & 0x000000000000FF00) >> 8); 
+	buffer[7] = (u8) (val & 0x00000000000000FF); 
+	return fileWrite (h, buffer, 8);
+}
+
+//**************************************************************************
+u32 fs::fileReadU16 (gos::File &h, u16 *out)
+{
+	u8 buffer[2];
+	const u32 ret = fileRead (h, buffer, 2);
+	*out = (((u16)buffer[0]) << 8) | ((u16)buffer[1]); 
+	return ret;
+}
+
+//**************************************************************************
+u32 fs::fileReadU32 (gos::File &h, u32 *out)
+{
+	u8 buffer[4];
+	const u32 ret = fileRead (h, buffer, 4);
+	*out = (((u32)buffer[0]) << 24) | (((u32)buffer[1]) << 16) | (((u32)buffer[2]) << 8) | ((u32)buffer[3]);
+	return ret;
+}
+
+//**************************************************************************
+u32 fs::fileReadU64 (gos::File &h, u64 *out)
+{
+	u8 buffer[8];
+	const u32 ret = fileRead (h, buffer, 8);
+	*out = (((u64)buffer[0]) << 56) | 
+           (((u64)buffer[1]) << 48) | 
+           (((u64)buffer[2]) << 40) | 
+           (((u64)buffer[3]) << 32) | 
+           (((u64)buffer[4]) << 24) | 
+           (((u64)buffer[5]) << 16) | 
+           (((u64)buffer[6]) << 8) | 
+           ((u64)buffer[7]); 
+	return ret;
+}
+
+//**************************************************************************
 void fs::fpf_valist (gos::File &h, const char *format, va_list argptr)
 {
 	static char buffer[2048];

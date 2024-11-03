@@ -2,6 +2,7 @@
 #define _gosGPUResVtxDecl_h_
 #include "gosGPUEnumAndDefine.h"
 #include "gosGPUUtils.h"
+#include "../gos/gosBit.h"
 #include "../gos/gosUtils.h"
 
 namespace gos
@@ -19,12 +20,12 @@ namespace gos
         class VtxDecl
         {
         public:
-            u8                      stream_getNum() const                                                   { return gos::utils::byteGET (&streamInfo, 3); }
+            u8                      stream_getNum() const                                                   { return gos::byte32GET (streamInfo, 3); }
             eVtxStreamInputRate     stream_getInputRate (u8 streamIndex) const
                                     {
                                         if (streamIndex < stream_getNum())
                                         {
-                                            if (gos::utils::isBitSET (&streamInfo, streamIndex))
+                                            if (gos::isBit32SET (streamInfo, streamIndex))
                                                 return eVtxStreamInputRate::perInstance;
                                             return eVtxStreamInputRate::perVertex;
                                         }
@@ -42,11 +43,11 @@ namespace gos
                                         return attr_getOffset(pos) + gos::utils::getFormatSize (attr_getDataFormat(pos));
                                     }
 
-            u8                      attr_getNum() const                                                     { return gos::utils::byteGET (&streamInfo, 2); }
-            u8                      attr_getStreamIndex (u8 declNum) const                                  { assert(declNum < attr_getNum()); return gos::utils::byteGET (&packedAttrDescrList[declNum], 3); }
-            u8                      attr_getBindingLocation (u8 declNum) const                              { assert(declNum < attr_getNum()); return gos::utils::byteGET (&packedAttrDescrList[declNum], 2); }
-            eDataFormat             attr_getDataFormat (u8 declNum) const                                   { assert(declNum < attr_getNum()); return static_cast<eDataFormat>(gos::utils::byteGET (&packedAttrDescrList[declNum], 1)); }
-            u8                      attr_getOffset (u8 declNum) const                                       { assert(declNum < attr_getNum()); return gos::utils::byteGET (&packedAttrDescrList[declNum], 0); }
+            u8                      attr_getNum() const                                                     { return gos::byte32GET (streamInfo, 2); }
+            u8                      attr_getStreamIndex (u8 declNum) const                                  { assert(declNum < attr_getNum()); return gos::byte32GET (packedAttrDescrList[declNum], 3); }
+            u8                      attr_getBindingLocation (u8 declNum) const                              { assert(declNum < attr_getNum()); return gos::byte32GET (packedAttrDescrList[declNum], 2); }
+            eDataFormat             attr_getDataFormat (u8 declNum) const                                   { assert(declNum < attr_getNum()); return static_cast<eDataFormat>(gos::byte32GET (packedAttrDescrList[declNum], 1)); }
+            u8                      attr_getOffset (u8 declNum) const                                       { assert(declNum < attr_getNum()); return gos::byte32GET (packedAttrDescrList[declNum], 0); }
             bool                    attr_getList (u8 streamIndex, u8 *out_firstIndex, u8 *out_numDecl) const
                                     {
                                         assert (NULL != out_firstIndex);
@@ -79,23 +80,23 @@ namespace gos
 
         private:
             void                    reset()                                                                 { streamInfo=0; memset(packedAttrDescrList, 0, sizeof(packedAttrDescrList)); }
-            void                    stream_setNum (u8 n)                                                    { gos::utils::byteSET (&streamInfo, n, 3); }
+            void                    stream_setNum (u8 n)                                                    { gos::byte32SET (&streamInfo, n, 3); }
             void                    stream_setInputRate (u8 streamIndex, eVtxStreamInputRate inputRate)
                                     {
                                         assert (streamIndex < stream_getNum());
                                         assert (streamIndex < 16);
                                         
                                         if (inputRate == eVtxStreamInputRate::perInstance)
-                                            gos::utils::bitSET (&streamInfo, streamIndex);
+                                            gos::bit32SET (&streamInfo, streamIndex);
                                         else
-                                            gos::utils::bitCLEAR (&streamInfo, streamIndex);
+                                            gos::bit32CLEAR (&streamInfo, streamIndex);
                                     }
 
-            void                    attr_setNum (u8 n)                                                      { assert(n<GOSGPU__NUM_MAX_VTXDECL_ATTR); gos::utils::byteSET (&streamInfo, n, 2); }
-            void                    attr_setStreamIndex (u8 declNum, u8 streamIndex)                        { assert(declNum < attr_getNum()); gos::utils::byteSET (&packedAttrDescrList[declNum], streamIndex, 3); }
-            void                    attr_setBindingLocation(u8 declNum, u8 loc)                             { assert(declNum < attr_getNum()); gos::utils::byteSET (&packedAttrDescrList[declNum], loc, 2); }
-            void                    attr_setDataFormat(u8 declNum, eDataFormat df)                          { assert(declNum < attr_getNum()); gos::utils::byteSET (&packedAttrDescrList[declNum], static_cast<u8>(df), 1); }
-            void                    attr_setOffset(u8 declNum, u8 offset)                                   { assert(declNum < attr_getNum()); gos::utils::byteSET (&packedAttrDescrList[declNum], offset, 0); }
+            void                    attr_setNum (u8 n)                                                      { assert(n<GOSGPU__NUM_MAX_VTXDECL_ATTR); gos::byte32SET (&streamInfo, n, 2); }
+            void                    attr_setStreamIndex (u8 declNum, u8 streamIndex)                        { assert(declNum < attr_getNum()); gos::byte32SET (&packedAttrDescrList[declNum], streamIndex, 3); }
+            void                    attr_setBindingLocation(u8 declNum, u8 loc)                             { assert(declNum < attr_getNum()); gos::byte32SET (&packedAttrDescrList[declNum], loc, 2); }
+            void                    attr_setDataFormat(u8 declNum, eDataFormat df)                          { assert(declNum < attr_getNum()); gos::byte32SET (&packedAttrDescrList[declNum], static_cast<u8>(df), 1); }
+            void                    attr_setOffset(u8 declNum, u8 offset)                                   { assert(declNum < attr_getNum()); gos::byte32SET (&packedAttrDescrList[declNum], offset, 0); }
 
 
         private:

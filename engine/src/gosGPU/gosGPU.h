@@ -16,14 +16,11 @@
 #include "gosGPUResDescrSetInstance.h"
 #include "gosGPUResDescrSetLayout.h"
 #include "gosGPUResFrameBuffer.h"
-#include "gosGPUResIdxBuffer.h"
 #include "gosGPUResRenderLayout.h"
 #include "gosGPUResRenderTarget.h"
 #include "gosGPUResShader.h"
-#include "gosGPUResStagingBuffer.h"
-#include "gosGPUResUniformBuffer.h"
+#include "gosGPUResBuffer.h"
 #include "gosGPUResViewport.h"
-#include "gosGPUResVtxBuffer.h"
 #include "gosGPUResVtxDecl.h"
 #include "gosGPUResTexture.h"
 #include "gosGPUResSampler.h"
@@ -405,9 +402,13 @@ namespace gos
 
             //aggiunge un descriptor al set.
             //  [stageFlags], vedi anche gos::ShaderStageFlag che contiene i flag utilizzabili
-            DescriptorSetLayoutBuilder&     add_uniformBuffer (VkShaderStageFlags stageFlags, u32 count=1)       { return priv_add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, stageFlags, count); }
-            DescriptorSetLayoutBuilder&     add_storageBuffer (VkShaderStageFlags stageFlags, u32 count=1)       { return priv_add (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, stageFlags, count); }
-            DescriptorSetLayoutBuilder&     add_textureSampler (VkShaderStageFlags stageFlags, u32 count=1)      { return priv_add (VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, stageFlags, count); }
+            DescriptorSetLayoutBuilder&     add_uniformBuffer (VkShaderStageFlags stageFlags, u32 count=1)                  { return priv_add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, stageFlags, count); }
+            DescriptorSetLayoutBuilder&     add_dynamicUniformBuffer (VkShaderStageFlags stageFlags, u32 count=1)           { return priv_add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, stageFlags, count); }
+            DescriptorSetLayoutBuilder&     add_storageBuffer (VkShaderStageFlags stageFlags, u32 count=1)                  { return priv_add (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, stageFlags, count); }
+            DescriptorSetLayoutBuilder&     add_dynamicStorageBuffer (VkShaderStageFlags stageFlags, u32 count=1)           { return priv_add (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, stageFlags, count); }
+            DescriptorSetLayoutBuilder&     add_combinedTextureAndSampler (VkShaderStageFlags stageFlags, u32 count=1)      { return priv_add (VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, stageFlags, count); }
+            DescriptorSetLayoutBuilder&     add_sampler (VkShaderStageFlags stageFlags, u32 count=1)                        { return priv_add (VK_DESCRIPTOR_TYPE_SAMPLER, stageFlags, count); }
+            DescriptorSetLayoutBuilder&     add_texture (VkShaderStageFlags stageFlags, u32 count=1)                        { return priv_add (VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, stageFlags, count); }
             bool                            end();
 
             bool                            anyError() const        { return bAnyError; }
@@ -442,7 +443,9 @@ namespace gos
             DescriptorPoolBuilder&      setMaxNumDescriptorSet (u32 n)              { numMaxDescriptorSets = n; return *this; }
             DescriptorPoolBuilder&      addPool_uniformBuffer (u32 howMany = 8);
             DescriptorPoolBuilder&      addPool_storageBuffer (u32 howMany = 8);
-            DescriptorPoolBuilder&      addPool_textureSampler(u32 howMany = 8);
+            DescriptorPoolBuilder&      addPool_combinedTextureAndSampler(u32 howMany = 8);
+            DescriptorPoolBuilder&      addPool_sampler(u32 howMany = 8);
+            DescriptorPoolBuilder&      addPool_texture(u32 howMany = 8);
             bool                        end();
 
             bool                        anyError() const                            { return bAnyError; }
@@ -574,40 +577,50 @@ namespace gos
         bool                stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle);
         void                deleteResource (GPUStgBufferHandle &handle);
         
-            /**
-             * @brief stagingBuffer_uploadToGPUBuffer()
-             * copia [dataSRC] in [handleDST] usando [handleSRC] come buffer di appoggio.
-             * I passaggi sono:  [datSRC] viene memcpy in [handleSRC] e poi [handleSRC] viene pushato in [handleDST]
-             */
+        /**
+         * @brief stagingBuffer_uploadToGPUBuffer()
+         * copia [dataSRC] in [handleDST] usando [handleSRC] come buffer di appoggio.
+         * I passaggi sono:  [datSRC] viene memcpy in [handleSRC] e poi [handleSRC] viene pushato in [handleDST]
+         */
         bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
         bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
 
+        //================ buffer unmapping / manualSync
+        void                buffer_unmap (gpu::sMappedBuffer &m);
+        void                buffer_manualSync (const gpu::sMappedBuffer *list, u32 numElemInList);
+
+
+
         //================ vertex buffer
         bool                vertexBuffer_create (u32 sizeInByte, eVIBufferMode mode, GPUVtxBufferHandle *out_handle);
-        void                deleteResource (GPUVtxBufferHandle &handle);
+        void                deleteResource (GPUVtxBufferHandle &handle)                                                             { priv_bufferDestroy (vtxBufferList, handle); }
         bool                toVulkan (const GPUVtxBufferHandle handle, VkBuffer *out) const;
-        
-        //map/unmap sono validi sono per i buffer creati con eVUBufferMode::mappale
-        bool                vertexBuffer_map (const GPUVtxBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
-        bool                vertexBuffer_unmap  (const GPUVtxBufferHandle handle);
+        bool                writeAndSync (const GPUVtxBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (vtxBufferList, handle, offsetDST, src, sizeInByte); }
+        bool                map (const GPUVtxBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (vtxBufferList, handle, offsetDST, sizeInByte, out); }
 
         
         //================ index buffer
         bool                indexBuffer_create (u32 sizeInByte, eVIBufferMode mode, GPUIdxBufferHandle *out_handle);
-        void                deleteResource (GPUIdxBufferHandle &handle);
+        void                deleteResource (GPUIdxBufferHandle &handle)                                                             { priv_bufferDestroy (idxBufferList, handle); }
         bool                toVulkan (const GPUIdxBufferHandle handle, VkBuffer *out) const;
-        
-        //map/unmap sono validi sono per i buffer creati con eVUBufferMode::mappale
-        bool                indexBuffer_map (const GPUIdxBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
-        bool                indexBuffer_unmap  (const GPUIdxBufferHandle handle);
+        bool                writeAndSync (const GPUIdxBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (idxBufferList, handle, offsetDST, src, sizeInByte); }
+        bool                map (const GPUIdxBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (idxBufferList, handle, offsetDST, sizeInByte, out); }
 
         //================ uniform buffer
-        bool                uniformBuffer_create (u32 sizeInByte, GPUUniformBufferHandle *out_handle);
-        void                deleteResource (GPUUniformBufferHandle &handle);
+        bool                uniformBuffer_create (u32 sizeInByte, eVIBufferMode mode, GPUUniformBufferHandle *out_handle);
+        void                deleteResource (GPUUniformBufferHandle &handle)                                                             { priv_bufferDestroy (uniformBufferList, handle); }
         bool                toVulkan (const GPUUniformBufferHandle handle, VkBuffer *out, u32 *out_bufferSize) const;
-        bool                uniformBuffer_map (const GPUUniformBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
-        //bool                uniformBuffer_unmap  (const GPUUniformBufferHandle handle);
-        bool                uniformBuffer_mapCopyUnmap (const GPUUniformBufferHandle handle, u32 offsetDST, u32 sizeInByte, const void *src) const;
+        bool                writeAndSync (const GPUUniformBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (uniformBufferList, handle, offsetDST, src, sizeInByte); }
+        bool                map (const GPUUniformBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (uniformBufferList, handle, offsetDST, sizeInByte, out); }
+
+        //================ storage buffer
+        bool                storageBuffer_create (u32 sizeInByte, eVIBufferMode mode, GPUStorageBufferHandle *out_handle);
+        void                deleteResource (GPUStorageBufferHandle &handle)                                                             { priv_bufferDestroy (storageBufferList, handle); }
+        bool                toVulkan (const GPUStorageBufferHandle handle, VkBuffer *out, u32 *out_bufferSize) const;
+        bool                writeAndSync (const GPUStorageBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (storageBufferList, handle, offsetDST, src, sizeInByte); }
+        bool                map (const GPUStorageBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (storageBufferList, handle, offsetDST, sizeInByte, out); }
+
+
 
 
         //================ shader
@@ -792,6 +805,109 @@ namespace gos
         bool                immediateTransferCmd_begin();
         bool                immediateTransferCmd_end();
 
+        bool                priv_bufferCreate (VkBufferUsageFlags vkUsage, u32 sizeInByte, bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ, eVIBufferMode mode, gpu::Buffer *out);
+        bool                priv_bufferMap (const GPUVtxBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
+
+                            template<class THandleList, class THandle>
+        void                priv_bufferDestroy (THandleList &list, THandle &handle)
+                            {
+                                gpu::Buffer *s;
+                                if (list.fromHandleToPointer (handle, &s))
+                                {
+                                    vkDestroyBuffer (vulkan.dev, s->vkHandle, nullptr);
+                                    vkFreeMemory (vulkan.dev, s->vkMemHandle, nullptr);
+                                    s->reset();
+                                    list.release (handle);
+                                }
+                                handle.setInvalid();
+                            }
+
+                            
+        /**
+         * @brief valido solo per i buffer creati con eVIBufferMode::shared_cpuW_autoSync
+         * <out> viene memcpiato nel buffer a partire da <offsetDST> per un totale di <sizeInByte> byte.
+         * La sincronizzazione con GPU e' automatica
+         */
+                            template<class THandleList, class THandle>
+        bool                priv_bufferWriteAndSync (const THandleList &list, const THandle &handle, u32 offsetDST, const void *src, u32 sizeInByte) const
+                            {
+                                assert (NULL != src);
+                                assert (sizeInByte > 0);
+
+                                gpu::Buffer *s;
+                                if (!priv_fromHandleToPointer(list, handle, &s))
+                                {
+                                    gos::logger::err ("GPU::priv_bufferWriteAndSync() => invalid handle\n");
+                                    return false;
+                                }
+
+                                if (eVIBufferMode::shared_cpuW_autoSync != s->mode)
+                                {
+                                    gos::logger::err ("GPU::priv_bufferWriteAndSync() => invalid buffer mode [%s]\n", gpu::enumToString(s->mode));
+                                    return false;
+                                }
+
+                                //i buffer eVIBufferMode::shared_cpuW_autoSync sono sempre totalmente mappati all'atto della creazione
+                                if (sizeInByte > s->bufferSize)
+                                {
+                                    gos::logger::err ("GPU::priv_bufferWriteAndSync() => invalid params1 (%d, %d). Buffer size is %d\n", offsetDST, sizeInByte, s->bufferSize);
+                                    return false;
+                                }
+
+                                if (offsetDST + sizeInByte > s->bufferSize)
+                                {
+                                    gos::logger::err ("GPU::priv_bufferWriteAndSync() => invalid params2 (%d, %d). Buffer size is %d, mapped from %d\n", offsetDST, sizeInByte, s->bufferSize, s->mapped_offset);
+                                    return false;
+                                }
+
+                                memcpy (&s->mapped_host_pt[offsetDST], src, sizeInByte);
+                                return true;
+                            }    
+
+                            
+                            template<class THandleList, class THandle>
+        bool                priv_bufferMap (const THandleList &list, const THandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const
+                            {
+                                memset (out, 0, sizeof(gpu::sMappedBuffer));
+
+                                gpu::Buffer *s;
+                                if (!priv_fromHandleToPointer(list, handle, &s))
+                                {
+                                    gos::logger::err ("GPU::priv_bufferMap() => invalid handle\n");
+                                    return false;
+                                }
+
+                                if (eVIBufferMode::shared_cpuW_manualSync != s->mode)
+                                {
+                                    gos::logger::err ("GPU::priv_bufferMap() => invalid buffer mode. Buffer mode must be [shared_cpuW_manualSync], current mode is %s\n", gpu::enumToString(s->mode));
+                                    return false;
+                                }
+
+                                if (NULL != s->mapped_host_pt)
+                                {
+                                    gos::logger::err ("GPU::priv_bufferMap(d) => buffer is already mapped\n");
+                                    return false;
+                                }
+
+                                //size deve essere un multipo di out->deviceProperties.limits.nonCoherentAtomSize
+                                const u32 minSize = vulkan.phyDevInfo.deviceProperties.limits.nonCoherentAtomSize;
+                                const u32 aa = sizeInByte % minSize;
+                                sizeInByte += minSize - aa;                                
+
+                                VkResult result = vkMapMemory (vulkan.dev, s->vkMemHandle, offsetDST, sizeInByte, 0, &out->host_pt);
+                                if (VK_SUCCESS != result)
+                                {
+                                    out->host_pt = NULL;
+                                    gos::logger::err ("GPU::priv_bufferMap(d) => vkMapMemory() => %s\n", string_VkResult(result));
+                                    return false;
+                                }
+
+                                out->offset = offsetDST;
+                                out->size = sizeInByte;
+                                out->_vkMemHandle = s->vkMemHandle;
+                                return true;
+                            }
+
     private:
         gos::Allocator              *allocator;
         sWindow                     window;
@@ -825,10 +941,11 @@ namespace gos
         HandleList<GPUPipelineHandle,gpu::sPipeline>                pipelineList;
         HandleList<GPUFrameBufferHandle, gpu::FrameBuffer>          frameBufferList;
         gos::FastArray<GPUFrameBufferHandle>                        frameBufferDependentOnSwapChainList;
-        HandleList<GPUVtxBufferHandle,gpu::VtxBuffer>               vtxBufferList;
-        HandleList<GPUStgBufferHandle,gpu::StagingBuffer>           staginBufferList;
-        HandleList<GPUIdxBufferHandle,gpu::IdxBuffer>               idxBufferList;
-        HandleList<GPUUniformBufferHandle, gpu::UniformBuffer>      uniformBufferList;
+        HandleList<GPUVtxBufferHandle,gpu::Buffer>                  vtxBufferList;
+        HandleList<GPUStgBufferHandle,gpu::Buffer>                  staginBufferList;
+        HandleList<GPUIdxBufferHandle,gpu::Buffer>                  idxBufferList;
+        HandleList<GPUUniformBufferHandle, gpu::Buffer>             uniformBufferList;
+        HandleList<GPUStorageBufferHandle, gpu::Buffer>             storageBufferList;
         HandleList<GPUDescrSetLayoutHandle, gpu::DescrSetLayout>    descrSetLayoutList;
         HandleList<GPUDescrPoolHandle, gpu::DescrPool>              descrPoolList;
         HandleList<GPUDescrSetInstanceHandle, gpu::DescrSetInstance> descrSetInstanceList;

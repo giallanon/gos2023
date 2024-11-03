@@ -10,10 +10,11 @@ const char* gpu::enumToString (eVIBufferMode s)
 {
     switch (s)
     {
-    default:                        return "??INVALID-VALUE??";
-    case eVIBufferMode::onGPU:      return "onGPU";
-    case eVIBufferMode::mappale:    return "mappale";
-    case eVIBufferMode::unknown:    return "unknown";
+    default:                                        return "??INVALID-VALUE??";
+    case eVIBufferMode::onGPU:                      return "onGPU";
+    case eVIBufferMode::shared_cpuW_autoSync:       return "shared_cpuW_autoSync";
+    case eVIBufferMode::shared_cpuW_manualSync:     return "shared_cpuW_manualSync";
+    case eVIBufferMode::unknown:                    return "unknown";
     }
 }
 

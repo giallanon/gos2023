@@ -81,7 +81,7 @@ bool VulkanExample4::virtual_onInit ()
 
     //creo un cubo
     {
-        gos::shape::VtxLayout vtxLayout;
+        gos::VtxLayout vtxLayout;
         gos::shape::VtxLayoutWriter vtxLayoutW (&vtxLayout);
         vtxLayoutW.begin()
             .addPos3 (offsetof(Vertex,pos))
@@ -233,7 +233,7 @@ bool VulkanExample4::virtual_onInit ()
     //e un texture sampler per FRAG SHADER
     gpu->descrSetLayout_createStatic (&descrSetLayoutHandle)
         .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT)
-        .add_textureSampler (VK_SHADER_STAGE_FRAGMENT_BIT)
+        .add_combinedTextureAndSampler (VK_SHADER_STAGE_FRAGMENT_BIT)
         .end();
     if (descrSetLayoutHandle.isInvalid())
     {
@@ -268,7 +268,7 @@ bool VulkanExample4::virtual_onInit ()
 
 
     //creo un buffer per UBO
-    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), &uboHandle))
+    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eVIBufferMode::shared_cpuW_autoSync, &uboHandle))
     {
         gos::logger::err ("VulkanApp::init() => GPU::uniformBuffer_create\n");
         return false;
@@ -279,7 +279,7 @@ bool VulkanExample4::virtual_onInit ()
     gpu->descrPool_createNew (&descrPoolHandle)
         .setMaxNumDescriptorSet(4)
         .addPool_uniformBuffer()
-        .addPool_textureSampler()
+        .addPool_combinedTextureAndSampler()
         .end();
     if (descrPoolHandle.isInvalid())
     {
@@ -339,7 +339,7 @@ bool VulkanExample4::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
         gos::gpu::DescrSetInstanceWriter descrWriter;
         descrWriter.begin (gpu, descrSetInstancerHandle)
             .bindUniformBuffer (0, uboHandle)
-            .bindTextureAndSampler (1, texHandle, samplerHandle)
+            .bindCombinedTextureAndSampler (1, texHandle, samplerHandle)
             .end();
     }
 
@@ -442,7 +442,7 @@ void VulkanExample4::doCPUStuff ()
 */
 
         }
-        gpu->uniformBuffer_mapCopyUnmap (uboHandle, 0, sizeof(sUniformBufferObject), &ubo);
+        gpu->writeAndSync (uboHandle, 0, &ubo, sizeof(sUniformBufferObject));
     }
 
     //do some stuff

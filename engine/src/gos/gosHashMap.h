@@ -99,6 +99,29 @@ namespace gos
                 }
 
         /**
+         * @brief   cerca key e la rimuove
+         * 
+         * @return  true se (key) esiste ed e' stata rimossa, false altrimenti
+         */
+        bool    remove (const TKEY &key)
+                {
+                    if (list.getNElem() == 0)
+                        return false;
+
+                    sSearchRange s;
+                    s.start = 0;
+                    s.end_incluso = list.getNElem() - 1;
+
+                    u32 index;
+                    if (!priv_binarySearch (s, key, &index))
+                        return false;
+
+                    list.remove (index);
+                    return true;
+                }
+
+
+        /**
          * @brief   cerca key
          * 
          * @return  true se (key) esiste, false altrimenti.

@@ -453,12 +453,22 @@ bool glTFImporter::priv_parseMesh (const gos::IniFileSection *sec)
 		}
 		shapeOut.shapeList->append(myShape);
 
-		//shape::shapeRightHandedToLeftHanded (&myShape);
-
-
-
 		//registro la primitiva nella mesh
 		meshesList[meshNum].addShapeIndex (shapeOut.shapeList->getNElem() -1);
+
+
+
+		//materiale
+		{
+			const u32 material_index = prim->getOrDefaultAsU32 ("material", u32MAX);
+			if (u32MAX == material_index)
+			{
+				gos::logger::err ("glTFImporter::priv_parseMesh(%d) => missing 'material' in [primitive] section\n", index);
+				return false;
+			}
+		}
+
+
 
 		//prossimo nodo 'primitives'
 		index++;
@@ -871,7 +881,7 @@ bool glTFImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 		//glTF e' right handed, devo convertire tutto
 		for (u32 i=0; i<out_shapeList.getNElem(); i++)
 		{
-			shape::Shape *myShape = &out_shapeList[i];
+			gos::Shape *myShape = &out_shapeList[i];
 			shape::shapeRightHandedToLeftHanded (myShape);
 		}
 
@@ -919,7 +929,7 @@ bool glTFImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 	/*glTF e' right handed, devo convertire tutto
 	for (u32 i=0; i<out_shapeList.getNElem(); i++)
 	{
-		shape::Shape *myShape = &out_shapeList[i];
+		gos::Shape *myShape = &out_shapeList[i];
 		shape::shapeRightHandedToLeftHanded (myShape);
 	}
 	*/

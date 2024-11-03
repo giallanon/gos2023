@@ -42,7 +42,7 @@ private:
     void        virtual_onInputEvent (u32 event32, i16 value, const gos::input::MouseStatus &mouseStatus, const gos::input::sButtonModifier &btnModifier);
 
 private:
-    gos::FastArray<gos::shape::Shape> shapeList;
+    gos::FastArray<gos::Shape> shapeList;
     sUniformBufferObject    ubo;
     gos::geom::Camera3      cam;
     gos::FPSMovement        movement;

@@ -2,6 +2,7 @@
 #include "gosHandle.h"
 #include "string/gosStringList.h"
 #include "gosUtils.h"
+#include "gosBit.h"
 
 namespace test_gos
 {
@@ -451,7 +452,7 @@ namespace test6
             static const u32    NUM_BIT = BUFFER_SIZE_BYTE * 8;
             u8 dst[BUFFER_SIZE_BYTE];
 
-            gos::utils::bitZERO (dst, sizeof(dst));
+            gos::bitZERO (dst, sizeof(dst));
             for (u32 i=0; i<BUFFER_SIZE_BYTE; i++)
             {
                 TEST_ASSERT(dst[i] == 0);
@@ -460,45 +461,104 @@ namespace test6
             for (u32 i=0; i<NUM_BIT; i++)
             {
                 //setto 1 bit alla volta
-                gos::utils::bitSET (dst, BUFFER_SIZE_BYTE, i);
+                gos::bitSET (dst, BUFFER_SIZE_BYTE, i);
 
                 //verifico che tutti i primi [i] bit siano a 1
                 for (u32 i2=0; i2<(i+1); i2++)
                 {
-                    TEST_ASSERT(gos::utils::isBitSET(dst, BUFFER_SIZE_BYTE, i2));
+                    TEST_ASSERT(gos::isBitSET(dst, BUFFER_SIZE_BYTE, i2));
                 }
                 
                 //e che tutti i successivi siano a 0
                 for (u32 i2=(i+1); i2<NUM_BIT; i2++)
                 {
-                    TEST_ASSERT(!gos::utils::isBitSET(dst, BUFFER_SIZE_BYTE, i2));
+                    TEST_ASSERT(!gos::isBitSET(dst, BUFFER_SIZE_BYTE, i2));
                 }            
             }
+        }
+
+        {
+            static const u8     BUFFER_SIZE_BYTE = 32;
+            static const u32    NUM_BIT = BUFFER_SIZE_BYTE * 8;
+
+            gos::Bitfield bf;
+
+            bf.setup (gos::getSysHeapAllocator(), NUM_BIT);
+            bf.zero();
+
+            const u8 *dst = reinterpret_cast<const u8*>(bf.getBuffer());
+            for (u32 i=0; i<BUFFER_SIZE_BYTE; i++)
+            {
+                TEST_ASSERT(dst[i] == 0);
+            }
+
+            for (u32 i=0; i<NUM_BIT; i++)
+            {
+                //setto 1 bit alla volta
+                bf.set (i);
+
+                //verifico che tutti i primi [i] bit siano a 1
+                for (u32 i2=0; i2<(i+1); i2++)
+                {
+                    TEST_ASSERT(bf.isBitSet(i2));
+                    TEST_ASSERT(gos::isBitSET(dst, BUFFER_SIZE_BYTE, i2));
+                }
+                
+                //e che tutti i successivi siano a 0
+                for (u32 i2=(i+1); i2<NUM_BIT; i2++)
+                {
+                    TEST_ASSERT(!bf.isBitSet(i2));
+                    TEST_ASSERT(!gos::isBitSET(dst, BUFFER_SIZE_BYTE, i2));
+                }            
+            }
+
+            bf.zero();
+            for (u32 i=0; i<NUM_BIT; i++)
+            {
+                u32 index;
+                TEST_ASSERT(bf.findAndSetFirstFreeBit(&index));
+                TEST_ASSERT(index == i);
+
+                if (i == NUM_BIT-1)
+                {
+                    TEST_ASSERT(false == bf.findFirstFreeBit (0, &index));
+                }
+                else
+                {
+                    TEST_ASSERT(bf.findFirstFreeBit (i+1, &index));
+                    TEST_ASSERT(index == i+1);
+
+                    TEST_ASSERT (bf.findFirstSetBit(i, &index));
+                    TEST_ASSERT(index == i);
+                }
+            }
+
+            u32 index;
+            TEST_ASSERT(false == bf.findAndSetFirstFreeBit(&index));
+
+            bf.unsetup (gos::getSysHeapAllocator());
         }
 
         //ripeto quanto fatto sopra ma per il caso u32
         {
             static const u8 NUM_BIT = 32;
             
-            u32 dst;
-            gos::utils::bitZERO (&dst);
-            TEST_ASSERT(dst == 0);
-
+            u32 dst = 0;
             for (u32 i=0; i<NUM_BIT; i++)
             {
                 //setto 1 bit alla volta
-                gos::utils::bitSET (&dst, i);
+                gos::bit32SET (&dst, i);
 
                 //verifico che tutti i primi [i] bit siano a 1
                 for (u32 i2=0; i2<(i+1); i2++)
                 {
-                    TEST_ASSERT(gos::utils::isBitSET(&dst, i2));
+                    TEST_ASSERT(gos::isBit32SET(dst, i2));
                 }
                 
                 //e che tutti i successivi siano a 0
                 for (u32 i2=(i+1); i2<NUM_BIT; i2++)
                 {
-                    TEST_ASSERT(!gos::utils::isBitSET(&dst, i2));
+                    TEST_ASSERT(!gos::isBit32SET(dst, i2));
                 }            
             }
         }
@@ -507,29 +567,110 @@ namespace test6
         //ripeto quanto fatto sopra ma per il caso u8
         {
             static const u8 NUM_BIT = 8;
+            gos::Flag8 flag;
             
-            u8 dst;
-            gos::utils::bitZERO (&dst);
-            TEST_ASSERT(dst == 0);
+            flag.zero();
+            TEST_ASSERT(flag.getBitmask() == 0);
 
             for (u32 i=0; i<NUM_BIT; i++)
             {
                 //setto 1 bit alla volta
-                gos::utils::bitSET (&dst, i);
+                flag.set(i);
 
                 //verifico che tutti i primi [i] bit siano a 1
                 for (u32 i2=0; i2<(i+1); i2++)
                 {
-                    TEST_ASSERT(gos::utils::isBitSET(&dst, i2));
+                    TEST_ASSERT(flag.isBitSet(i2));
                 }
                 
                 //e che tutti i successivi siano a 0
                 for (u32 i2=(i+1); i2<NUM_BIT; i2++)
                 {
-                    TEST_ASSERT(!gos::utils::isBitSET(&dst, i2));
+                    TEST_ASSERT(!flag.isBitSet(i2));
                 }            
             }
         }
+
+        //ripeto quanto fatto sopra ma per il caso u16
+        {
+            static const u8 NUM_BIT = 16;
+            gos::Flag16 flag;
+            
+            flag.zero();
+            TEST_ASSERT(flag.getBitmask() == 0);
+
+            for (u32 i=0; i<NUM_BIT; i++)
+            {
+                //setto 1 bit alla volta
+                flag.set(i);
+
+                //verifico che tutti i primi [i] bit siano a 1
+                for (u32 i2=0; i2<(i+1); i2++)
+                {
+                    TEST_ASSERT(flag.isBitSet(i2));
+                }
+                
+                //e che tutti i successivi siano a 0
+                for (u32 i2=(i+1); i2<NUM_BIT; i2++)
+                {
+                    TEST_ASSERT(!flag.isBitSet(i2));
+                }            
+            }
+        }
+
+        //ripeto quanto fatto sopra ma per il caso u32
+        {
+            static const u8 NUM_BIT = 32;
+            gos::Flag32 flag;
+            
+            flag.zero();
+            TEST_ASSERT(flag.getBitmask() == 0);
+
+            for (u32 i=0; i<NUM_BIT; i++)
+            {
+                //setto 1 bit alla volta
+                flag.set(i);
+
+                //verifico che tutti i primi [i] bit siano a 1
+                for (u32 i2=0; i2<(i+1); i2++)
+                {
+                    TEST_ASSERT(flag.isBitSet(i2));
+                }
+                
+                //e che tutti i successivi siano a 0
+                for (u32 i2=(i+1); i2<NUM_BIT; i2++)
+                {
+                    TEST_ASSERT(!flag.isBitSet(i2));
+                }            
+            }
+        }       
+
+        //ripeto quanto fatto sopra ma per il caso u64
+        {
+            static const u8 NUM_BIT = 64;
+            gos::Flag64 flag;
+            
+            flag.zero();
+            TEST_ASSERT(flag.getBitmask() == 0);
+
+            for (u32 i=0; i<NUM_BIT; i++)
+            {
+                //setto 1 bit alla volta
+                flag.set(i);
+
+                //verifico che tutti i primi [i] bit siano a 1
+                for (u32 i2=0; i2<(i+1); i2++)
+                {
+                    TEST_ASSERT(flag.isBitSet(i2));
+                }
+
+                //e che tutti i successivi siano a 0
+                for (u32 i2=(i+1); i2<NUM_BIT; i2++)
+                {
+                    TEST_ASSERT(!flag.isBitSet(i2));
+                }            
+            }
+        }         
         
 
         //test per il set di fn byteSET/GET
@@ -545,17 +686,17 @@ namespace test6
 
             for (u32 i=0; i<NUM_BYTE; i++)
             {
-                gos::utils::byteSET (&dst, byteValueList[i], i);
+                gos::byte32SET (&dst, byteValueList[i], i);
 
                 for (u32 i2=0; i2<(i+1); i2++)
                 {
-                    TEST_ASSERT(gos::utils::byteGET(&dst, i2) == byteValueList[i2]);
+                    TEST_ASSERT(gos::byte32GET(dst, i2) == byteValueList[i2]);
                 }
                 
                 //e che tutti i successivi siano a 0
                 for (u32 i2=(i+1); i2<NUM_BYTE; i2++)
                 {
-                    TEST_ASSERT(gos::utils::byteGET(&dst, i2) == 0);
+                    TEST_ASSERT(gos::byte32GET(dst, i2) == 0);
                 }      
             }
         }

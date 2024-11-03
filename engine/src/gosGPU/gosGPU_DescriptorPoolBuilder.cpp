@@ -68,8 +68,7 @@ GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_storageBuffer(u32 howMany)
 }
 
 //*********************************************** 
-GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_textureSampler(u32 howMany)
-{
+GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_combinedTextureAndSampler(u32 howMany)
 {
     VkDescriptorPoolSize *p = priv_findOrAddByDescrType (VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, howMany);
     if (p)
@@ -79,7 +78,31 @@ GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_textureSampler(u32 howMany)
 
     return *this;
 }
+
+//*********************************************** 
+GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_sampler(u32 howMany)
+{
+    VkDescriptorPoolSize *p = priv_findOrAddByDescrType (VK_DESCRIPTOR_TYPE_SAMPLER, howMany);
+    if (p)
+    {
+        p->descriptorCount++;
+    }
+
+    return *this;
 }
+
+//*********************************************** 
+GPUDPOOLB& GPU::DescriptorPoolBuilder::addPool_texture(u32 howMany)
+{
+    VkDescriptorPoolSize *p = priv_findOrAddByDescrType (VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, howMany);
+    if (p)
+    {
+        p->descriptorCount++;
+    }
+
+    return *this;
+}
+
 
 //*********************************************** 
 bool GPU::DescriptorPoolBuilder::end()

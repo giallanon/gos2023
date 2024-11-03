@@ -116,7 +116,7 @@ bool VulkanExample5::Line::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPool
 
 
     //creo un buffer per UBO
-    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), &hUBO))
+    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eVIBufferMode::shared_cpuW_autoSync, &hUBO))
     {
         gos::logger::err ("VulkanExample5::Line::setup() => GPU::uniformBuffer_create\n");
         return false;
@@ -195,13 +195,13 @@ bool VulkanExample5::Line::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStg
         bNeedUpdate = false;
 
         gpu->deleteResource (hVtxBuffer);
-        if (!gpu->vertexBuffer_create (sizeof(Vertex) * vtxList.getNElem(), eVIBufferMode::onGPU, &hVtxBuffer))
+        if (!gpu->vertexBuffer_create (sizeof(sVertex) * vtxList.getNElem(), eVIBufferMode::onGPU, &hVtxBuffer))
         {
             gos::logger::err ("VulkanExample5::Line::recordCommandBuffer() => gpu->vertexBuffer_create() failed\n");
             return false;
         }
 
-        if (!gpu->stagingBuffer_uploadToGPUBuffer (hStgBuffer, vtxList._queryPointer(), hVtxBuffer, 0, sizeof(Vertex) * vtxList.getNElem()))
+        if (!gpu->stagingBuffer_uploadToGPUBuffer (hStgBuffer, vtxList._queryPointer(), hVtxBuffer, 0, sizeof(sVertex) * vtxList.getNElem()))
         {
             gos::logger::err ("VulkanExample5::Line::recordCommandBuffer() => gpu->stagingBuffer_uploadToGPUBuffer() failed\n");
             return false;
@@ -225,7 +225,7 @@ bool VulkanExample5::Line::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStg
     //upload di UBO su GPU
     ubo.camProj = cam.getMatP();
     ubo.camView = cam.getMatV();
-    gpu->uniformBuffer_mapCopyUnmap (hUBO, 0, sizeof(sUniformBufferObject), &ubo);            
+    gpu->writeAndSync (hUBO, 0, &ubo, sizeof(sUniformBufferObject));            
     gos::gpu::DescrSetInstanceWriter descrWriter;
     descrWriter.begin (gpu, hDescrSetInstance)
         .bindUniformBuffer (0, hUBO)
@@ -241,9 +241,7 @@ bool VulkanExample5::Line::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStg
             .bindVtxBuffer (hVtxBuffer)
             .bindIdxBufferU16 (hIdxBuffer)
             .drawIndexed (idxList.getNElem(), 1, 0, 0, 0)
-        .renderPass_end()
-
-        ;
+        .renderPass_end();
 
     return true;
 }    

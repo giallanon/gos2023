@@ -113,6 +113,8 @@ string/gosUTF32.cpp
 gos.cpp
 gos.h
 gosArray.h
+gosBit.cpp
+gosBit.h
 gosBufferLinear.cpp 
 gosBufferLinear.h
 gosBufferSparse.h

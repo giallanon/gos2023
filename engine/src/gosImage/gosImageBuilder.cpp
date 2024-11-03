@@ -52,13 +52,14 @@ Builder& Builder::begin (gos::Allocator *allocatorIN, Image *out_imgIN)
 }
 
 //************************************************************
-Builder& Builder::beginTexture (eImageFormat format, u16 width, u16 height, u8 nMipMap)
+Builder& Builder::beginTexture2D (eImageFormat format, u16 width, u16 height, u8 nMipMap)
 {
 	if (anyError())
 		return *this;
 	
 	if (nMipMap < 1 || width < 1 || height < 1 || NULL != textureData)
 	{
+		gos::logger::err ("Builder::beginTexture2D => invalid parameter\n");
 		error = 1;
 		return *this;
 	}
@@ -89,6 +90,7 @@ Builder& Builder::setMipMapDataMemory (u8 mipMapNum_0toN, const void *imgData, u
 
 	if (mipMapNum_0toN >= texHeader.numMipMap)
 	{
+		gos::logger::err ("Builder::setMipMapDataMemory => mipMapNum_0toN >= texHeader.numMipMap\n");
 		error = 2;
 		return *this;
 	}
@@ -96,6 +98,7 @@ Builder& Builder::setMipMapDataMemory (u8 mipMapNum_0toN, const void *imgData, u
 	const u32 expectedDataSize = image::calcSurfaceSize (texHeader.width, texHeader.height, texHeader.fmt, mipMapNum_0toN);
 	if (expectedDataSize != sizeOfImgData)
 	{
+		gos::logger::err ("Builder::setMipMapDataMemory => expectedDataSize != sizeOfImgData\n");
 		error = 3;
 		return *this;
 	}
@@ -122,6 +125,7 @@ Builder& Builder::setMipMapDataFromFile (u8 mipMapNum_0toN, const char *filename
 
 	if (mipMapNum_0toN >= texHeader.numMipMap)
 	{
+		gos::logger::err ("Builder::setMipMapDataFromFile => mipMapNum_0toN >= texHeader.numMipMap\n");
 		error = 4;
 		return *this;
 	}
@@ -130,6 +134,7 @@ Builder& Builder::setMipMapDataFromFile (u8 mipMapNum_0toN, const char *filename
 	u8 *buffer = fs::fileLoadInMemory (gos::getScrapAllocator(), filename, &fsize);
 	if (NULL == buffer)
 	{
+		gos::logger::err ("Builder::setMipMapDataFromFile => file '%s' not found\n", filename);
 		error = 5;
 		return *this;
 	}
@@ -140,6 +145,7 @@ Builder& Builder::setMipMapDataFromFile (u8 mipMapNum_0toN, const char *filename
 		u8 *rgba = stbi_load_from_memory (buffer, fsize, &width, &height, &comp, 4);
 		if (NULL == rgba)
 		{
+			gos::logger::err ("Builder::setMipMapDataFromFile => invalid file format '%s'\n");
 			error = 6;
 		}	
 		else
@@ -154,7 +160,7 @@ Builder& Builder::setMipMapDataFromFile (u8 mipMapNum_0toN, const char *filename
 }
 
 //************************************************************
-Builder& Builder::endTexture()
+Builder& Builder::endTexture2D()
 {
 	if (!anyError())
 	{
@@ -173,6 +179,42 @@ Builder& Builder::endTexture()
 	}
 
 	return *this;	
+}
+
+//************************************************************
+Builder& Builder::buildTexture2DFromFile (eImageFormat format, const char *filename)
+{
+	if (anyError())
+		return *this;
+
+	u32 fsize;
+	u8 *buffer = fs::fileLoadInMemory (gos::getScrapAllocator(), filename, &fsize);
+	if (NULL == buffer)
+	{
+		gos::logger::err ("Builder::buildTexture2DFromFile => file '%s' not found\n", filename);
+		error = 5;
+		return *this;
+	}
+
+	//vediamo se abbiamo un formato TGA, BMP, JPG, PNG
+	{
+		int width, height, comp;
+		u8 *rgba = stbi_load_from_memory (buffer, fsize, &width, &height, &comp, 4);
+		if (NULL == rgba)
+		{
+			gos::logger::err ("Builder::buildTexture2DFromFile => invalid file format '%s'\n");
+			error = 6;
+		}	
+		else
+		{
+			beginTexture2D (format, width, height, 1);
+			setMipMapDataMemory (0, rgba, width * height * 4);
+			stbi_image_free (rgba);
+		}
+	}	
+
+	GOSFREE(gos::getScrapAllocator(), buffer);
+	return *this;
 }
 
 //************************************************************

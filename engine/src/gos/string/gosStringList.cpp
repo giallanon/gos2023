@@ -1,7 +1,76 @@
 #include "gosStringList.h"
 #include "../gosString.h"
+#include "../gos.h"
+#include "../gosUtils.h"
 
 using namespace gos;
+
+//***************************************
+u32 StringList::serialize_calcSizeNeeded() const
+{
+    return 8 + cursor;
+}
+
+//***************************************
+u32 StringList::serialize_toMemory (u8 *mem, u32 sizeof_mem) const
+{
+    const u32 needed = serialize_calcSizeNeeded();
+
+    if (sizeof_mem < needed)
+    {
+        DBGBREAK;
+        return 0;
+    }
+
+    u32 ct = 0;
+    ct += gos::utils::bufferWriteU32 (&mem[ct], cursor);
+    ct += gos::utils::bufferWriteU32 (&mem[ct], count);
+
+    if (cursor)
+    {
+        memcpy (&mem[ct], buffer._getPointer(0), cursor);
+        ct += cursor;
+    }
+
+    assert (ct == needed);
+    return needed;
+}
+
+//***************************************
+u32 StringList::serialize_fromMemory (gos::Allocator *allocatorIN, const u8 *mem, u32 sizeof_mem)
+{
+    unsetup();
+
+    if (sizeof_mem < 8)
+    {
+        DBGBREAK;
+        return 0;
+    }
+
+    u32 ct = 0;
+    u32 read_cursor, read_count;
+    ct += gos::utils::bufferReadU32 (&mem[ct], &read_cursor);
+    ct += gos::utils::bufferReadU32 (&mem[ct], &read_count);
+
+    if (sizeof_mem < ct + read_cursor)
+    {
+        DBGBREAK;
+        return 0;
+    }
+
+    setup (allocatorIN, 8 + read_cursor);
+    cursor = read_cursor;
+    count = read_count;
+    if (cursor)
+    {
+        memcpy (buffer._getPointer(0), &mem[ct], cursor);
+        ct += cursor;
+    }
+
+    assert (ct == serialize_calcSizeNeeded());
+    return ct;
+}
+
 
 //***************************************
 u32 StringList::add (const char *m)

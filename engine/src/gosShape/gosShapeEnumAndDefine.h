@@ -57,53 +57,50 @@ namespace gos
 		_3i16 = 26,
 		_4i16 = 27,
 
-
 		unknown = 31
 		//max 32 elementi
 	};
 
-	namespace shape
+
+	/**
+	 * @brief VtxLayout
+	 */
+	struct VtxLayout
 	{
-		/*********************************
-		 * VtxLayout
-		 */
-		struct VtxLayout
-		{
-		public:
-			static constexpr u32 NUM_MAX_ELEM = 11;
+	public:
+		static constexpr u32 NUM_MAX_ELEM = 11;
 
-		public:
-			u32		numElem;
-			u32 	elemList[NUM_MAX_ELEM];
+	public:
+		u32		numElem;
+		u32 	elemList[NUM_MAX_ELEM];
 
-		public:
-			void 	reset()		{ numElem = 0; }
-		};
+	public:
+		void 	reset()		{ numElem = 0; }
+	};
+	
+	
+	/**
+	 * @brief Shape
+	 */
+	struct Shape
+	{
+	public:
+		static constexpr u32 MAGIC = 0xA7320001;
 
-		/*********************************
-		 * Shape
-		 */
-		struct Shape
-		{
-		public:
-			static constexpr u32 MAGIC = 0xA7320001;
+	public:
+		u32			magic;
+		u32 		numVtx;
+		u32 		numIdx;
+		VtxLayout	vtxLayout;
+		u8 			*vtxBuffer;
+		u16 		*idxBuffer;
 
-		public:
-			u32			magic;
-			u32 		numVtx;
-			u32 		numIdx;
-			VtxLayout	vtxLayout;
-			u8 			*vtxBuffer;
-			u16 		*idxBuffer;
-
-		public:
-			void 		reset()		{ magic=Shape::MAGIC; numVtx = numIdx = 0; vtxBuffer=NULL; idxBuffer=NULL; vtxLayout.reset(); }
-		};
-
-	} //namespace shape
+	public:
+		void 		reset()		{ magic=Shape::MAGIC; numVtx = numIdx = 0; vtxBuffer=NULL; idxBuffer=NULL; vtxLayout.reset(); }
+	};
 
 
-	typedef gos::FastArray<gos::shape::Shape> ShapeList;
+	typedef gos::FastArray<gos::Shape> ShapeList;
 
  } //namespace gos
 

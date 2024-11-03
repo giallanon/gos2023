@@ -13,13 +13,13 @@ namespace gos
 
 
 		/*=======================================================================================
-		*	Image e' un contenitore di texture, ne puo' contenere N e ognuna di queste pu� essere di tipo diverso
+		*	Image e' un contenitore di texture, ne puo' contenere N e ognuna di queste puo' essere di tipo diverso
 		*	Ogni texture ha un eImageFormat, un numero di mipMap (da 1 a n) e una width/height
 		*	
-		* Image � un generico buffer in memoria che deve essere formattato come segue:
+		* Image e' un generico buffer in memoria che deve essere formattato come segue:
 		*		start	size	value
 		*		0		2		signature	(aka GOSIMAGE_IMAGE_SIGNATURE)
-		*		2		1		numTexture		//numero di texture contenute in questa image. Ogni texture poi a sua volta pu� essere composta da n MipMap
+		*		2		1		numTexture		//numero di texture contenute in questa image. Ogni texture poi a sua volta puo' essere composta da n MipMap
 		*		3		1		pad1
 				
 				4		4		totalSizeOfImage	//numero tot di bytes allocati da questa image e tutte le sue texture

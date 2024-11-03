@@ -12,6 +12,17 @@ TheApp::TheApp()
 //********************************
 TheApp::~TheApp()
 {
+    unsetup();
+}
+
+//********************************
+void TheApp::unsetup()
+{
+    if (NULL == gpu)
+        return;
+
+    vbibstBuffer.unsetup();
+    gpu = NULL;
 }
 
 //********************************
@@ -55,6 +66,11 @@ bool TheApp::setup (gos::GPU *gpuIN)
 
     inputCtx.action_bindToAxleREL ("rotateX",  input::eOrigin::mouse, input::eAxle::y, input::eAxleDirection::both);
     inputCtx.action_bindToAxleREL ("rotateY",  input::eOrigin::mouse, input::eAxle::x, input::eAxleDirection::both);
+
+
+    //vtx idx e stage buffer
+    vbibstBuffer.setup (gpu, sizeof(sVertex)); 
+
 
     if (!renderer.setup(gpu))
         return false;
@@ -145,14 +161,176 @@ void TheApp::priv_doCPUStuff ()
     cam.markUpdated();
 }
 
+//********************************
+#include "../gosShape/gosShapePrefabs.h"
+bool TheApp::priv_buildScene1()
+{
+    //carico delle texture
+    GPUTextureHandle hTex_checker;
+    GPUTextureHandle hTex_stone003;
+    {    
+        gos::Image im;
+        image::load (gos::getScrapAllocator(), "texture/checker_color_1k.gosimage", &im);
+        gpu->texture_create2D (&im, 0, &hTex_checker);
+        image::free (gos::getScrapAllocator(), im);
+
+        image::load (gos::getScrapAllocator(), "texture/stonetiles_003.gosimage", &im);
+        gpu->texture_create2D (&im, 0, &hTex_stone003);
+        image::free (gos::getScrapAllocator(), im);
+    }
+
+
+    //creo una shape
+    VBIBSTBuffer::sUploadInfo uploadedShapeCubo1;
+    {
+        gos::Shape sh;
+        sh.reset();
+        gos::VtxLayout vtxLayout;
+        gos::shape::VtxLayoutWriter vtxLayoutW(&vtxLayout);
+        vtxLayoutW.begin()
+            .addPos3 (offsetof(sVertex,pos))
+            .addNorm3 (offsetof(sVertex,norm))
+            .addTexCoord (offsetof(sVertex,tutv0))
+        .end();
+
+        const f32 lato = 1;
+        gos::shape::buildCube24 (vec3f(0,0,0), vec3f(lato, lato, lato), vtxLayout, gos::getSysHeapAllocator(), &sh);
+
+        if (!vbibstBuffer.upload (&sh, &uploadedShapeCubo1))
+        {
+            gos::logger::err ("TheApp::priv_buildScene1() => can't upload to VtxBuffer\n");
+            return false;
+        }
+
+        shape::shapeFree (gos::getSysHeapAllocator(), &sh);
+    }
+
+    //creo il pavimento
+    VBIBSTBuffer::sUploadInfo uploadedShapePlane1;
+    {
+        gos::Shape sh;
+        sh.reset();
+        gos::VtxLayout vtxLayout;
+        gos::shape::VtxLayoutWriter vtxLayoutW(&vtxLayout);
+        vtxLayoutW.begin()
+            .addPos3 (offsetof(sVertex,pos))
+            .addNorm3 (offsetof(sVertex,norm))
+            .addTexCoord (offsetof(sVertex,tutv0))
+        .end();
+
+        gos::shape::buildCube24 (vec3f(0,0,0), vec3f(40, 0.1f, 40), vtxLayout, gos::getSysHeapAllocator(), &sh);
+
+        if (!vbibstBuffer.upload (&sh, &uploadedShapePlane1))
+        {
+            gos::logger::err ("TheApp::priv_buildScene1() => can't upload to VtxBuffer\n");
+            return false;
+        }
+
+        shape::shapeFree (gos::getSysHeapAllocator(), &sh);
+    }    
+
+
+    //creo dei materiali
+    u16 material1, material2, material3, material4;
+    renderer.material_create (hTex_checker, gos::vec3f(1,0,0), &material1);
+    renderer.material_create (hTex_stone003, gos::vec3f(0,1,0), &material2);
+    renderer.material_create (hTex_stone003, gos::vec3f(1,1,1), &material3);
+    renderer.material_create (hTex_checker, gos::vec3f(1,1,1), &material4);
+
+    //aggiungo la shape al renderer
+    u16 shapeCubo1;         renderer.shape_add (uploadedShapeCubo1, &shapeCubo1);
+    u16 shapePavimento;     renderer.shape_add (uploadedShapePlane1, &shapePavimento);
+
+    //creo un po' di istanze
+    renderer.instance_add (shapeCubo1, material1, geom::Pos3(0,0.5f,0));
+    renderer.instance_add (shapeCubo1, material2, geom::Pos3(1,0.5f,0));
+    renderer.instance_add (shapeCubo1, material3, geom::Pos3(2,0.5f,0));
+    renderer.instance_add (shapeCubo1, material1, geom::Pos3(2,1.5f,0));
+    renderer.instance_add (shapePavimento, material4, geom::Pos3(0,-0.05f,0));
+
+    return true;
+}
+
+
+//********************************
+bool TheApp::priv_buildScene2()
+{
+    gos::VtxLayout vtxLayout;
+    gos::shape::VtxLayoutWriter vtxLayoutW(&vtxLayout);
+    vtxLayoutW.begin()
+        .addPos3 (offsetof(sVertex,pos))
+        .addNorm3 (offsetof(sVertex,norm))
+        .addTexCoord (offsetof(sVertex,tutv0))
+    .end();
+
+
+    //carico delle texture
+    GPUTextureHandle hTex_stone003;
+    {    
+        gos::Image im;
+        image::load (gos::getScrapAllocator(), "texture/stonetiles_003.gosimage", &im);
+        gpu->texture_create2D (&im, 0, &hTex_stone003);
+        image::free (gos::getScrapAllocator(), im);
+    }
+
+    //creo dei materiali
+    u16 material1;
+    renderer.material_create (hTex_stone003, gos::vec3f(1,1,1), &material1);
+
+
+    //shape
+    gos::ShapeList shapeList;
+    shapeList.setup (gos::getScrapAllocator(), 16 * 1024);
+    if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Sponza/glTF/Sponza.glb", vtxLayout, gos::getSysHeapAllocator(), shapeList)) 
+        return false;
+    
+    
+    //instances
+    const u32 n = shapeList.getNElem();
+    for (u32 i=0; i<n; i++)
+    {
+        VBIBSTBuffer::sUploadInfo uploadedShapeInfo;
+        if (!vbibstBuffer.upload (&shapeList(i), &uploadedShapeInfo))
+        {
+            gos::logger::err ("TheApp::priv_buildScene2() => can't upload to VtxBuffer\n");
+            return false;
+        }
+
+        u16 shapeIndex;
+        if (!renderer.shape_add (uploadedShapeInfo, &shapeIndex))
+        {
+            gos::logger::err ("TheApp::priv_buildScene2() => can't shape_add()\n");
+            return false;
+        }
+        
+        renderer.instance_add (shapeIndex, material1, geom::Pos3(0,0,0));
+    }
+    
+
+    //free delle shape
+    for (u32 i=0; i<shapeList.getNElem(); i++)
+    {
+        shape::shapeFree (gos::getSysHeapAllocator(), &shapeList[i]);
+    }
+    shapeList.unsetup();
+    
+    return true;
+}
 
 //********************************
 void TheApp::run()
 {
+    if (!priv_buildScene1())
+    //if (!priv_buildScene2())
+    {
+        gos::logger::err ("TheApp::run() => cant build scene\n");
+        return;
+    }
+
+
     //posizione inziale della camera
     cam.setPerspectiveFovLH (gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
-    //cam.pos.identity(); cam.pos.warp (0, 0, -19); cam.pos.lookAt (vec3f(0,0,0));
-    cam.pos.identity(); cam.pos.warp (0, 30, 0); cam.pos.rotateMeAboutMyX (-math::PIMEZZI);
+    cam.pos.identity(); cam.pos.warp (0, 1.8f, -10);
     cam.markUpdated();
     movement.bind (&cam.pos);
 

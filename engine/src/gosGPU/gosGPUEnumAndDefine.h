@@ -31,6 +31,7 @@ typedef gos::HandleT<10,7,13, 0,2>	GPUStgBufferHandle;			//2^10=1024 => num tota
 typedef gos::HandleT<10,8,12, 0,2>	GPUDescrSetLayoutHandle;	//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
 typedef gos::HandleT<10,8,12, 1,1>	GPUDescrSetInstanceHandle;	//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
 typedef gos::HandleT<10,8,12, 2,0>	GPUUniformBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
+typedef gos::HandleT<14,8,8,  0,2>	GPUStorageBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
 typedef gos::HandleT<14,8,10, 0,0>	GPUShaderHandle;			//2^14=16384 => num totale di oggetti, divisi in chunk da 2^8=256
 typedef gos::HandleT<16,10,6, 0,0>	GPUTextureHandle;			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^10=1024
 
@@ -126,9 +127,13 @@ enum class eZBufferUsage : u8
 
 enum class eVIBufferMode : u8
 {
-	onGPU			= 0,	//risiede in memoria GPU quindi per essere updatato necessita di uno stagin buffer e di una transferQ
-	mappale			= 1,	//puo' essere updatato (trampite map/unmpa), ma da non farsi molto di frequente
-	unknown			= 0xff
+	onGPU					= 0,	//risiede in memoria GPU quindi per essere updatato necessita di uno stagin buffer e di una transferQ
+	shared_cpuW_autoSync	= 1,	//cpu puo' scrivere nel buffer tramite writeAndSync()
+									//Questa modalita' e' buona per buffer piccoli, tipo gli uniform
+
+	shared_cpuW_manualSync	= 2,	//cpu puo' scrivere nel buffer ma deve prima map()/unmap() e infine chiamare manualSync()
+									//Utile per buffer di grosse dimensioni che vengono (raramente) aggiornati a "pezzi"
+	unknown					= 0xff
 };
 
 enum class eSamplerFilter : u8
@@ -185,6 +190,15 @@ namespace gos
 			VkPipeline          vkPipelineHandle;
 			VkPushConstantRange pushContantList[GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE];
 		};  
+
+
+		struct sMappedBuffer
+		{
+            void            *host_pt;
+			VkDeviceMemory  _vkMemHandle;
+            u32             offset;
+            u32             size;
+		};
 	} //namespace gpu
 } //namespace gos
 

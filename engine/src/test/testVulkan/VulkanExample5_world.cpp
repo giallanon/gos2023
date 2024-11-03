@@ -205,9 +205,9 @@ void VulkanExample5::World::updateInstanceVB (GPUStgBufferHandle hStgBuffer)
         {
             perInstanceData[ct].pos.set (xx, 0, zz);
             if (map2[ct].bIsON)
-                perInstanceData[ct].color.set (0,1,0);
+                perInstanceData[ct].color.set (0,0.1f,0);
             else
-                perInstanceData[ct].color.set (1,0,0);
+                perInstanceData[ct].color.set (0.1f,0,0);
 
             perInstanceData[ct].scale.set (map2[ct].sx, 0.1f, map2[ct].sz);
             ct++;

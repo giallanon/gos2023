@@ -10,7 +10,7 @@ typedef gpu::CmdBufferWriter    GPUCMDWR;   //di comodo
 //***********************************************
 gpu::CmdBufferWriter::CmdBufferWriter()
 {
-    flag = u32MAX;
+    flag.setAll();
     vkCommandBuffer = VK_NULL_HANDLE;
 }
 
@@ -19,7 +19,7 @@ GPUCMDWR& gpu::CmdBufferWriter::begin (GPU *gpuIN, const GPUCmdBufferHandle hand
 {
     assert (NULL == vkCommandBuffer);
     gpu = gpuIN;
-    flag = 0;
+    flag.zero();
     depthClearColor = 1.0f;
     stencilClearColor = 0;
     curPipeline = NULL;
@@ -75,7 +75,7 @@ GPUCMDWR& gpu::CmdBufferWriter::bindPipeline (const GPUPipelineHandle pipelineHa
     if (gpu->toVulkan (pipelineHandle, &curPipeline))
     {
         vkCmdBindPipeline (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curPipeline->vkPipelineHandle);
-        gos::utils::bitSET (&flag, FLAG__PIPELINE_IS_BOUND);
+        flag.set (FLAG__PIPELINE_IS_BOUND);
     }
     else
     {
@@ -131,14 +131,14 @@ GPUCMDWR& gpu::CmdBufferWriter::pushDescriptor_begin (u8 set)
         if (anyError())
             break;
 
-        if (gos::utils::isBitSET (&flag, FLAG__PUSH_DESCRIPTOR_BEGIN))
+        if (flag.isBitSet (FLAG__PUSH_DESCRIPTOR_BEGIN))
         {
             gos::logger::err ("gpu::CmdBufferWriter::pushDescriptor_begin() => a 'pushDescriptor_begin' is already in progress\n");
             priv_setError();
             break;
         }
 
-        gos::utils::bitSET (&flag, FLAG__PUSH_DESCRIPTOR_BEGIN);
+        flag.set (FLAG__PUSH_DESCRIPTOR_BEGIN);
         writeDescr.num = 0;
         writeDescr.set = set;
 
@@ -156,7 +156,7 @@ GPUCMDWR& gpu::CmdBufferWriter::pushDescriptor_UBO (const GPUUniformBufferHandle
         if (anyError())
             break;
 
-        if (!gos::utils::isBitSET (&flag, FLAG__PUSH_DESCRIPTOR_BEGIN))
+        if (!flag.isBitSet (FLAG__PUSH_DESCRIPTOR_BEGIN))
         {
             gos::logger::err ("gpu::CmdBufferWriter::pushDescriptor_UBO() => you need to call 'pushDescriptor_begin'\n");
             priv_setError();
@@ -211,7 +211,7 @@ GPUCMDWR& gpu::CmdBufferWriter::pushDescriptor_end ()
         if (anyError())
             break;
 
-        if (!gos::utils::isBitSET (&flag, FLAG__PUSH_DESCRIPTOR_BEGIN))
+        if (!flag.isBitSet (FLAG__PUSH_DESCRIPTOR_BEGIN))
         {
             gos::logger::err ("gpu::CmdBufferWriter::pushDescriptor_end() => you need to call 'pushDescriptor_begin'\n");
             priv_setError();
@@ -226,7 +226,7 @@ GPUCMDWR& gpu::CmdBufferWriter::pushDescriptor_end ()
                 writeDescr.descr);
         }
 
-        gos::utils::bitCLEAR (&flag, FLAG__PUSH_DESCRIPTOR_BEGIN);
+        flag.clear (FLAG__PUSH_DESCRIPTOR_BEGIN);
         break;
     }
 
@@ -235,14 +235,14 @@ GPUCMDWR& gpu::CmdBufferWriter::pushDescriptor_end ()
 }
 
 //***********************************************
-GPUCMDWR& gpu::CmdBufferWriter::bindDescriptorSet (const GPUDescrSetInstanceHandle handle, u8 set)
+GPUCMDWR& gpu::CmdBufferWriter::bindDescriptorSet (const GPUDescrSetInstanceHandle handle, u8 set, u32 dynamicOffset)
 {
     while (1)
     {
         if (anyError())
             break;
 
-        if (!gos::utils::isBitSET (&flag, FLAG__PIPELINE_IS_BOUND))
+        if (!flag.isBitSet (FLAG__PIPELINE_IS_BOUND))
         {
             gos::logger::err ("gpu::CmdBufferWriter::bindDescriptorSet() => you need to have a pipeline bound\n");
             priv_setError();
@@ -258,7 +258,11 @@ GPUCMDWR& gpu::CmdBufferWriter::bindDescriptorSet (const GPUDescrSetInstanceHand
             break;
         }           
 
-        vkCmdBindDescriptorSets (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curPipeline->vkPipelineLayoutHandle, set, 1, &vkDescrSetHandle, 0, nullptr);
+        if (u32MAX == dynamicOffset)
+            vkCmdBindDescriptorSets (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curPipeline->vkPipelineLayoutHandle, set, 1, &vkDescrSetHandle, 0, nullptr);
+        else
+            vkCmdBindDescriptorSets (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curPipeline->vkPipelineLayoutHandle, set, 1, &vkDescrSetHandle, 1, &dynamicOffset);
+            
         break;
     }
 
@@ -361,7 +365,7 @@ GPUCMDWR& gpu::CmdBufferWriter::setClearColor (u8 colorAttachmentIndex, const go
         if (anyError())
             break;
 
-        if (gos::utils::isBitSET(&flag, FLAG__RENDER_PASS_BEGIN))
+        if (flag.isBitSet (FLAG__RENDER_PASS_BEGIN))
         {
             gos::logger::err ("gpu::CmdBufferWriter::setClearColor() => a render pass is already in progress. You must set clear color before renderPass_begin()\n");
             priv_setError();
@@ -393,7 +397,7 @@ GPUCMDWR& gpu::CmdBufferWriter::setDepthBufferColor (f32 depth, u32 stencil)
         if (anyError())
             break;
 
-        if (gos::utils::isBitSET(&flag, FLAG__RENDER_PASS_BEGIN))
+        if (flag.isBitSet (FLAG__RENDER_PASS_BEGIN))
         {
             gos::logger::err ("gpu::CmdBufferWriter::setDepthBufferColor() => a render pass is already in progress. You must set clear color before renderPass_begin()\n");
             priv_setError();
@@ -417,13 +421,13 @@ GPUCMDWR& gpu::CmdBufferWriter::renderPass_begin (const GPURenderLayoutHandle re
         if (anyError())
             break;
 
-        if (gos::utils::isBitSET(&flag, FLAG__RENDER_PASS_BEGIN))
+        if (flag.isBitSet (FLAG__RENDER_PASS_BEGIN))
         {
             gos::logger::err ("gpu::CmdBufferWriter::renderPass_begin() => a render pass is already in progress\n");
             priv_setError();
             break;
         }
-        gos::utils::bitSET (&flag, FLAG__RENDER_PASS_BEGIN);
+        flag.set (FLAG__RENDER_PASS_BEGIN);
 
         //recupero il vulkan render pass
         const gpu::RenderLayout *renderLayout = gpu->getInfo (renderLayoutHandle);
@@ -477,7 +481,7 @@ GPUCMDWR& gpu::CmdBufferWriter::drawIndexed (u32 indexCount, u32 instanceCount, 
         if (anyError())
             break;
 
-        if (!gos::utils::isBitSET(&flag, FLAG__RENDER_PASS_BEGIN))
+        if (!flag.isBitSet (FLAG__RENDER_PASS_BEGIN))
         {
             gos::logger::err ("gpu::CmdBufferWriter::drawIndexd() => you need to call renderPass_begin() first\n");
             priv_setError();
@@ -498,7 +502,7 @@ GPUCMDWR& gpu::CmdBufferWriter::draw (u32 vtxCount, u32 instanceCount, u32 first
         if (anyError())
             break;
 
-        if (!gos::utils::isBitSET(&flag, FLAG__RENDER_PASS_BEGIN))
+        if (!flag.isBitSet (FLAG__RENDER_PASS_BEGIN))
         {
             gos::logger::err ("gpu::CmdBufferWriter::draw() => you need to call renderPass_begin() first\n");
             priv_setError();
@@ -520,13 +524,13 @@ GPUCMDWR& gpu::CmdBufferWriter::renderPass_end()
         if (anyError())
             break;
 
-        if (!gos::utils::isBitSET(&flag, FLAG__RENDER_PASS_BEGIN))
+        if (!flag.isBitSet (FLAG__RENDER_PASS_BEGIN))
         {
             gos::logger::err ("gpu::CmdBufferWriter::renderPass_end() => you need to call renderPass_begin() first\n");
             priv_setError();
             break;
         }
-        gos::utils::bitCLEAR (&flag, FLAG__RENDER_PASS_BEGIN);
+        flag.clear (FLAG__RENDER_PASS_BEGIN);
 
         vkCmdEndRenderPass (vkCommandBuffer);
         break;
@@ -542,14 +546,14 @@ bool gpu::CmdBufferWriter::end()
         if (anyError())
             break;
 
-        if (gos::utils::isBitSET(&flag, FLAG__RENDER_PASS_BEGIN))
+        if (flag.isBitSet (FLAG__RENDER_PASS_BEGIN))
         {
             gos::logger::err ("gpu::CmdBufferWriter::end() => a render pass in still in progress, call renderPass_end()\n");
             priv_setError();
             break;
         }
 
-        if (gos::utils::isBitSET(&flag, FLAG__PUSH_DESCRIPTOR_BEGIN))
+        if (flag.isBitSet (FLAG__PUSH_DESCRIPTOR_BEGIN))
         {
             gos::logger::err ("gpu::CmdBufferWriter::end() => a 'pushDescriptor_begin' in still in progress, call 'pushDescriptor_end'\n");
             priv_setError();

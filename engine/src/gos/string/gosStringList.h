@@ -18,7 +18,11 @@ namespace gos
                     ~StringList ()                                          { unsetup(); }
 
         void        setup (gos::Allocator *allocatorIN, u32 size)           { buffer.setup(allocatorIN, size); reset(); }
-        void        unsetup()                                               { buffer.unsetup(); }
+        void        unsetup()                                               { buffer.unsetup(); cursor=0; count=0; }
+
+        u32         serialize_calcSizeNeeded() const;
+        u32         serialize_toMemory (u8 *mem, u32 sizeof_mem) const;
+        u32         serialize_fromMemory (gos::Allocator *allocatorIN, const u8 *mem, u32 sizeof_mem);
 
         void        reset()                                                 { cursor=0; count=0; buffer.zero(); }
         u32         add (const char *m);
@@ -28,6 +32,8 @@ namespace gos
         const char* getStringAtOffset (u32 offset) const;
 
         u32         getNumString() const                                    { return count; }
+        u32         getUsedMemSize() const                                  { return cursor; }
+
         void        toStart (u32 *iter) const                               { (*iter) = 0;};
         const char* next (u32 *iter) const;
 

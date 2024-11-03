@@ -152,8 +152,19 @@ namespace gos
 		inline bool		fileOpenForR (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE)							{ return fs::fileOpen (out_h, utf8_filePathAndNameRESOLVABLE, eFileMode::readOnly, false, false, true, true); }
 		bool			fileOpenForW (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders=false);
 		bool			fileOpenForAppend (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders=false);
+		
 		inline u32		fileRead (gos::File &h, void *buffer, u32 numMaxBytesToRead)										{ return platform::FS_fileRead(h.osFile, buffer, numMaxBytesToRead); }
+		inline u32		fileReadU8 (gos::File &h, u8 *out)																	{ return fileRead (h, out, 1); }
+			   u32		fileReadU16 (gos::File &h, u16 *out);
+			   u32		fileReadU32 (gos::File &h, u32 *out);
+			   u32		fileReadU64 (gos::File &h, u64 *out);
+
 		inline u32		fileWrite (gos::File &h, const void *buffer, u32 numBytesToWrite)									{ return platform::FS_fileWrite(h.osFile, buffer, numBytesToWrite); }
+		inline u32 		fileWriteU8 (gos::File &h, u8 data)																	{ return fileWrite (h, &data, 1); }
+			   u32 		fileWriteU16 (gos::File &h, u16 data);
+			   u32 		fileWriteU32 (gos::File &h, u32 data);
+			   u32 		fileWriteU64 (gos::File &h, u64 data);
+		
 		void			fpf (gos::File &h, const char *format, ...);
 		void			fpf_valist (gos::File &h, const char *format, va_list argptr);
 		inline void		fileClose (gos::File  &h)																			{ platform::FS_fileClose(h.osFile); }

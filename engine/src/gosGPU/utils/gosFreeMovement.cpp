@@ -7,7 +7,8 @@ using namespace gos;
 FreeMovement::FreeMovement ()
 {
     targetPos = NULL;
-    status = 0;
+    status.zero();
+    rotX_rad = rotY_rad = rotZ_rad = 0;
     setLinearSpeed (4);
     setRotationalSpeed (0.5f);
     lastTimeUpdated_msec = 0;
@@ -17,33 +18,45 @@ FreeMovement::FreeMovement ()
 void FreeMovement::bind (gos::geom::Pos3 *posIN)
 { 
     targetPos = posIN;
+    targetPos->getEulerAngles_YXZ (&rotY_rad, &rotX_rad, &rotZ_rad);
+    rotZ_rad = 0;
 }
 
 //**************************************
 void FreeMovement::priv_setStatus (u16 MASK, bool b)
 {
     if (b)
-        gos::utils::bitSET (&status, MASK);
+        status.set (MASK);
     else
-        gos::utils::bitCLEAR (&status, MASK);
+        status.clear (MASK);
 }
 
 //**************************************
 void FreeMovement::rotateX (bool bClockwise)
 {
+    static constexpr f32 LIMIT = gos::math::gradToRad(179);
     if (bClockwise)
-        targetPos->rotateMeAboutMyX (rotationalSpeed_rad);
+    {
+        rotX_rad += rotationalSpeed_rad;
+        if (rotX_rad > LIMIT)
+            rotX_rad = LIMIT;
+    }
     else
-        targetPos->rotateMeAboutMyX (-rotationalSpeed_rad);
-}
+    {
+        rotX_rad -= rotationalSpeed_rad;
+        if (rotX_rad < -LIMIT)
+            rotX_rad = -LIMIT;
+    }
+}        
+
 
 //**************************************
 void FreeMovement::rotateY (bool bClockwise)
 {
     if (bClockwise)
-        targetPos->rotateMeAboutMyY (rotationalSpeed_rad);
+        rotY_rad += rotationalSpeed_rad;
     else
-        targetPos->rotateMeAboutMyY (-rotationalSpeed_rad);
+        rotY_rad -= rotationalSpeed_rad;        
 }
 
 //**************************************
@@ -57,19 +70,21 @@ void FreeMovement::update (u64 timenow_msec)
     const f32 linearSpeed = speed_msec * timeElapsed_sec;
     lastTimeUpdated_msec = timenow_msec;
 
-    if (gos::utils::isBitSET (&status, STATUS_MOVING_FORWARD))
+
+    targetPos->setFromEulerAngles_YXZ (rotY_rad, rotX_rad, rotZ_rad);
+    if (status.isBitSet (STATUS_MOVING_FORWARD))
         targetPos->moveRelAlongZ (linearSpeed);
-    else if (gos::utils::isBitSET (&status, STATUS_MOVING_BACKWARD))
+    else if (status.isBitSet (STATUS_MOVING_BACKWARD))
         targetPos->moveRelAlongZ (-linearSpeed);
 
-    if (gos::utils::isBitSET (&status, STATUS_MOVING_RIGHT))
+    if (status.isBitSet (STATUS_MOVING_RIGHT))
         targetPos->moveRelAlongX (linearSpeed);
-    else if (gos::utils::isBitSET (&status, STATUS_MOVING_LEFT))
+    else if (status.isBitSet (STATUS_MOVING_LEFT))
         targetPos->moveRelAlongX (-linearSpeed);
 
-    if (gos::utils::isBitSET (&status, STATUS_MOVING_UP))
+    if (status.isBitSet (STATUS_MOVING_UP))
         targetPos->moveRelAlongY (linearSpeed);
-    else if (gos::utils::isBitSET (&status, STATUS_MOVING_DOWN))
+    else if (status.isBitSet (STATUS_MOVING_DOWN))
         targetPos->moveRelAlongY (-linearSpeed);
 
 }

@@ -16,6 +16,7 @@ namespace gos
 		public:
 									Pos3()																		{ }
 									Pos3(const Pos3 &b)															{ priv_copyFrom(b); }
+									Pos3(f32 x, f32 y, f32 z)													{ identity(); warp(x,y,z); }
 
 			Pos3&					operator= (const Pos3 &b)													{ priv_copyFrom(b); return *this; }
 
@@ -24,6 +25,8 @@ namespace gos
 			void					setFromMatrix3x4 (const mat3x4f &m);
 			void					setFromXYZAxes (const vec3f &ax, const vec3f &ay, const vec3f &az)			{ rot.buildFromXYZAxes (ax, ay, az); }
 			void					setFromEulerAngles_YXZ (f32 rad_y, f32 rad_x, f32 rad_z)					{ rot.buildFromEulerAngles_YXZ (rad_y, rad_x, rad_z); }
+			void					getEulerAngles_YXZ (f32 *out_rad_y, f32 *out_rad_x, f32 *out_rad_z) const   { rot.getEulerAngles_YXZ (out_rad_y, out_rad_x, out_rad_z); }
+			
 			void					setRotationFromMatrix3x3 (const mat3x3f &r)									{ rot=r; }
 			void					setFromQuat (const Quat &q)													{ q.toMatrix3x3(&rot);}
 			void					warp (f32 x, f32 y, f32 z)													{ warp(vec3f(x,y,z)); }

@@ -48,7 +48,7 @@ bool VulkanExample6::virtual_onInit ()
 {
     //importazione modello
     {
-        shape::VtxLayout vtxLayot;
+        gos::VtxLayout vtxLayot;
         shape::VtxLayoutWriter writer(&vtxLayot);
         writer.begin()
             .addPos3(offsetof(Vertex, pos))
@@ -66,7 +66,8 @@ bool VulkanExample6::virtual_onInit ()
         //if (!gos::shape::importFrom_glTF ("shader/example6/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("shader/example6/esempio2.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         
-        if (!gos::shape::importFrom_glTF ("shader/example6/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        //if (!gos::shape::importFrom_glTF ("shader/example6/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Sponza/glTF/Sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/DamagedHelmet/glTF/DamagedHelmet.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Duck/glTF-Binary/Duck.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/BrainStem/glTF-Binary/BrainStem.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
@@ -86,7 +87,7 @@ bool VulkanExample6::virtual_onInit ()
         u32 idxBufferSize = 0;
         for (u32 i=0; i<shapeList.getNElem(); i++)
         {
-            const shape::Shape *myShape = &shapeList(i);
+            const gos::Shape *myShape = &shapeList(i);
 
             if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, myShape->vtxBuffer, vtxBufferHandle, vtxBufferSize, sizeof(Vertex) * myShape->numVtx))
             {
@@ -199,7 +200,7 @@ bool VulkanExample6::virtual_onInit ()
 
 
     //creo un buffer per UBO
-    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), &uboHandle))
+    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eVIBufferMode::shared_cpuW_autoSync, &uboHandle))
     {
         gos::logger::err ("VulkanApp::init() => GPU::uniformBuffer_create\n");
         return false;
@@ -237,7 +238,7 @@ bool VulkanExample6::createVertexIndexStageBuffer()
 
     for (u32 i=0; i<shapeList.getNElem(); i++)
     {
-        const shape::Shape *myShape = &shapeList(i);
+        const gos::Shape *myShape = &shapeList(i);
         totNumVtx += myShape->numVtx;
         totNumIdx += myShape->numIdx;
     }
@@ -278,7 +279,7 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
     //ubo.lightDir.set (0, -0.5f, 1, 0);
     ubo.lightDir = vec4f (cam.pos.getAsseZ(), 0);
     ubo.lightDir.normalize();
-    gpu->uniformBuffer_mapCopyUnmap (uboHandle, 0, sizeof(sUniformBufferObject), &ubo);
+    gpu->writeAndSync (uboHandle, 0, &ubo, sizeof(sUniformBufferObject));
 
     gos::gpu::DescrSetInstanceWriter descrWriter;
     descrWriter.begin (gpu, descrSetInstancerHandle)
@@ -302,7 +303,7 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
             u32 firstVtx = 0;
             for (u32 i=0; i<shapeList.getNElem(); i++)
             {
-                const shape::Shape *myShape = &shapeList(i);
+                const gos::Shape *myShape = &shapeList(i);
                 cw.drawIndexed (myShape->numIdx, 1, firstIndex, firstVtx, 0);
 
                 firstIndex += myShape->numIdx;

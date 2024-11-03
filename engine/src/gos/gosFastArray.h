@@ -1,7 +1,7 @@
 #ifndef _gosFastArray_h_
 #define _gosFastArray_h_
 #include "gosBufferLinear.h"
-
+#include "gosUtils.h"
 
 namespace gos
 {
@@ -27,6 +27,47 @@ namespace gos
         void			setup (Allocator *backingallocator, u32 preallocNumElem=0)                                      { memBlock.setup (backingallocator, preallocNumElem*sizeof(T)); nallocati=preallocNumElem; }
         void			unsetup ()																						{ memBlock.unsetup(); nElem = nallocati = 0; }
         void			prealloc (u32 n)																				{ _grow (n); }
+
+                        //======================================= serialize
+        u32             serialize_calcSizeNeeded() const                                                                { return 4 + sizeof(T) * nElem; }
+        
+        u32             serialize_toMemory (u8 *mem, u32 sizeof_mem) const
+                        {
+                            const u32 needed = serialize_calcSizeNeeded();
+                            if (sizeof_mem < needed)
+                            {
+                                DBGBREAK;
+                                return 0;
+                            }
+
+                            gos::utils::bufferWriteU32 (mem, nElem);
+                            if (nElem)
+                                memcpy (&mem[4], memBlock._getPointer(0), sizeof(T) * nElem);
+                                
+                            return needed;
+                        }
+
+        u32             serialize_fromMemory (Allocator *backingallocator, const u8 *mem, u32 sizeof_mem)
+                        {
+                            unsetup();
+                            if (sizeof_mem < 4)
+                            {
+                                DBGBREAK;
+                                return 0;
+                            }
+
+                            const u32 read_nElem = gos::utils::bufferReadU32 (mem);
+                            if (0 == read_nElem)
+                                setup (backingallocator, 4);
+                            else
+                            {
+                                setup (backingallocator, read_nElem);
+                                nElem = read_nElem;
+                                memBlock.write (&mem[4], 0, read_nElem * sizeof(T));
+                            }
+
+                            return 4 + read_nElem * sizeof(T);
+                        }
 
 
                         //======================================= get / set

@@ -34,45 +34,9 @@ namespace gos
 
         u32         crc32 (const void *buffer, u32 sizeOfBuffer);
         u32         crc32 (const char *str);
+
+        inline u32  calcNextMultipleOf4 (u32 num)                                                   { const u32 pad = (num % 4); if (0 == pad) return num; return num + 4-pad; }
                     
-        /**********************************************************
-         * Manipolazione di BIT 
-         * 
-         * Settano/resettano il bit in posizione [pos].
-         * [pos] == 0  => LSBit
-        */        
-        void    bitZERO  (void *dst, u32 sizeof_dst);
-        void    bitSET (void *dst, u32 sizeof_dst, u32 pos);
-        void    bitCLEAR (void *dst, u32 sizeof_dst, u32 pos);
-        bool    isBitSET (const void *dst, u32 sizeof_dst, u32 pos);
-
-        //versioni ottimizzare per u32
-        void    bitZERO  (u32 *dst);
-        void    bitSET (u32 *dst, u32 pos);
-        void    bitCLEAR (u32 *dst, u32 pos);
-        bool    isBitSET (const u32 *dst, u32 pos);
-
-        //versioni ottimizzare per u16
-        void    bitZERO  (u16 *dst);
-        void    bitSET (u16 *dst, u32 pos);
-        void    bitCLEAR (u16 *dst, u32 pos);
-        bool    isBitSET (const u16 *dst, u32 pos);
-
-        //versioni ottimizzare per u8
-        void    bitZERO  (u8 *dst);
-        void    bitSET (u8 *dst, u32 pos);
-        void    bitCLEAR (u8 *dst, u32 pos);
-        bool    isBitSET (const u8 *dst, u32 pos);
-
-        /**********************************************************
-         * Manipolazione di BYTE
-         * 
-         * setta/resetta il byte posizione [pos].
-         * [pos] == 0  => LSB
-        */        
-        void    byteSET (u32 *dst, u8 value, u32 pos);
-        u8      byteGET (const u32 *dst, u32 pos);        
-
 
 
         /**********************************************************
@@ -102,10 +66,12 @@ namespace gos
 
 		u64	        bufferReadU64(const u8 *buffer);
         u64	        bufferReadU64_LSB_MSB (const u8 *buffer);
+        inline u32	bufferReadU64(const u8 *buffer, u64 *out)                   { *out=bufferReadU64(buffer); return 8; }
         inline i64	bufferReadI64(const u8 *buffer)				                { return static_cast<i64>(bufferReadU64(buffer)); }
 		inline i64	bufferReadI64_LSB_MSB(const u8 *buffer)		                { return static_cast<i64>(bufferReadU64_LSB_MSB(buffer)); }
 
         inline u32	bufferReadU32(const u8 *buffer)				                { return (((u32)buffer[0]) << 24) | (((u32)buffer[1]) << 16) | (((u32)buffer[2]) << 8) | ((u32)buffer[3]); }
+        inline u32	bufferReadU32(const u8 *buffer, u32 *out)                   { *out=bufferReadU32(buffer); return 4; }
         inline u32	bufferReadU32_LSB_MSB(const u8 *buffer)                     { return (((u32)buffer[3]) << 24) | (((u32)buffer[2]) << 16) | (((u32)buffer[1]) << 8) | ((u32)buffer[0]); }
         inline i32	bufferReadI32(const u8 *buffer)				                { return static_cast<i32>(bufferReadU32(buffer)); }
 		inline i32	bufferReadI32_LSB_MSB(const u8 *buffer)		                { return static_cast<i32>(bufferReadU32_LSB_MSB(buffer)); }
@@ -114,6 +80,7 @@ namespace gos
         inline u32	bufferReadU24_LSB_MSB(const u8 *buffer)                     { return (((u32)buffer[2]) << 16) | (((u32)buffer[1]) << 8) | ((u32)buffer[0]); }
 
         inline u16	bufferReadU16(const u8 *buffer)				                { return (((u16)buffer[0]) << 8) | ((u16)buffer[1]); }
+        inline u32	bufferReadU16(const u8 *buffer, u16 *out)                   { *out=bufferReadU16(buffer); return 2; }
 		inline u16	bufferReadU16_LSB_MSB(const u8 *buffer)		                { return (((u16)buffer[1]) << 8) | ((u16)buffer[0]); }
         inline i16	bufferReadI16(const u8 *buffer)				                { return static_cast<i16>(bufferReadU16(buffer)); }
 		inline i16	bufferReadI16_LSB_MSB(const u8 *buffer)		                { return static_cast<i16>(bufferReadU16_LSB_MSB(buffer)); }

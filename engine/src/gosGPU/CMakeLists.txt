@@ -33,6 +33,8 @@ utils/gosFreeMovement.cpp
 utils/gosFreeMovement.h
 utils/gosGPUMainLoop.cpp
 utils/gosGPUMainLoop.h
+utils/gosGPUVBIBManager.cpp
+utils/gosGPUVBIBManager.h
 
 
 gosGPU_DescriptorPoolBuilder.cpp
@@ -49,22 +51,19 @@ gosGPUCmdBufferWriter.h
 gosGPUDescrSetInstanceWriter.cpp
 gosGPUDescrSetInstanceWriter.h
 gosGPUEnumAndDefine.h
+gosGPUResBuffer.h
 gosGPUResCommandBuffer.h
 gosGPUResDepthStencil.h
 gosGPUResDescrPool.h
 gosGPUResDescrSetInstance.h
 gosGPUResDescrSetLayout.h
 gosGPUResFrameBuffer.h
-gosGPUResIdxBuffer.h
 gosGPUResRenderLayout.h
 gosGPUResRenderTarget.h
 gosGPUResSampler.h
 gosGPUResShader.h
-gosGPUResStagingBuffer.h
 gosGPUResTexture.h
-gosGPUResUniformBuffer.h
 gosGPUResViewport.h
-gosGPUResVtxBuffer.h
 gosGPUResVtxDecl.h
 
 gosGPUUtils.cpp

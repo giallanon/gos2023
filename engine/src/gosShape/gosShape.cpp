@@ -95,7 +95,7 @@ u32 shape::getSizeInByte (eVtxLayoutFormat fmt)
 }
 
 //*************************************************************
-bool shape::areEqual (const shape::VtxLayout &a, const shape::VtxLayout &b)
+bool shape::areEqual (const gos::VtxLayout &a, const gos::VtxLayout &b)
 {
 	if (a.numElem != b.numElem) return false;
 	if (a.numElem == 0) return true;
@@ -251,7 +251,7 @@ u32 shape::shapeLoadFromMemory (const u8 *mem, u32 sizeof_mem, gos::Allocator *a
 	const u32 numVtx = gos::utils::bufferReadU32 (&mem[ct]);			ct+=4;
 	const u32 numIdx = gos::utils::bufferReadU32 (&mem[ct]);			ct+=4;
 	
-	shape::VtxLayout vtxLayout;
+	gos::VtxLayout vtxLayout;
 	const u32 n = shape::deserialize (&vtxLayout, &mem[ct], sizeof_mem - ct);
 	if (0 == n)
 	{

@@ -1,6 +1,7 @@
 #ifndef _gosFreeMovement_h_
 #define _gosFreeMovement_h_
 #include "../../gosGeom/gosGeomPos3.h"
+#include "../../gos/gosBit.h"
 
 namespace gos
 {
@@ -17,7 +18,7 @@ namespace gos
         void    setLinearSpeed (f32 m_sec)              { speed_msec = m_sec; }
         void    setRotationalSpeed (f32 grad)           { rotationalSpeed_rad = gos::math::gradToRad(grad); }
 
-        void    halt()                                  { status = 0; }
+        void    halt()                                  { status.zero(); }
         void    moveForward (bool b)                    { priv_setStatus (STATUS_MOVING_FORWARD, b); }
         void    moveBackward (bool b)                   { priv_setStatus (STATUS_MOVING_BACKWARD, b); }
         void    strafeLeft (bool b)                     { priv_setStatus (STATUS_MOVING_LEFT, b); }
@@ -45,7 +46,10 @@ namespace gos
         f32                 speed_msec;
         f32                 rotationalSpeed_rad;
         u64                 lastTimeUpdated_msec;
-        u16                 status;
+        f32                 rotX_rad;
+        f32                 rotY_rad;        
+        f32                 rotZ_rad;        
+        gos::Flag16         status;
     };
 } //namespace gos
 

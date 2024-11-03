@@ -48,7 +48,7 @@ void VulkanExample5::priv_createSfera()
 {
     myShape.reset();
 
-    gos::shape::VtxLayout vtxLayout;
+    gos::VtxLayout vtxLayout;
     gos::shape::VtxLayoutWriter vtxLayoutW(&vtxLayout);
     vtxLayoutW.begin()
         .addPos3 (offsetof(Vertex,pos))
@@ -114,7 +114,7 @@ bool VulkanExample5::virtual_onInit ()
     }
 
     //Creo anche uno staging buffer
-    if (!gpu->stagingBuffer_create (1024*16, &stgBufferHandle))
+    if (!gpu->stagingBuffer_create (1024*64, &stgBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->stagingBuffer_create() failed\n");
         return false;
@@ -232,7 +232,7 @@ bool VulkanExample5::virtual_onInit ()
 
     
     //creo un buffer per UBO
-    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), &uboHandle))
+    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eVIBufferMode::shared_cpuW_autoSync, &uboHandle))
     {
         gos::logger::err ("VulkanApp::init() => GPU::uniformBuffer_create\n");
         return false;
@@ -291,7 +291,7 @@ bool VulkanExample5::priv_recordCommandBuffer (gpu::CmdBufferWriter &cw)
     //ubo.lightDir.set (-0.4f, -1, 0.2f, 0);
     ubo.lightDir.set (0, -1, 0, 0);
     ubo.lightDir.normalize();
-    gpu->uniformBuffer_mapCopyUnmap (uboHandle, 0, sizeof(sUniformBufferObject), &ubo);            
+    gpu->writeAndSync (uboHandle, 0, &ubo, sizeof(sUniformBufferObject));            
 
     gos::gpu::DescrSetInstanceWriter descrWriter;
     descrWriter.begin (gpu, descrSetInstancerHandle)
@@ -302,7 +302,7 @@ bool VulkanExample5::priv_recordCommandBuffer (gpu::CmdBufferWriter &cw)
     cw.setViewport (gpu->viewport_getDefault())
         .bindPipeline (pipelineHandle)
         .bindDescriptorSet (descrSetInstancerHandle, 0)
-        .setClearColor (0, gos::ColorHDR(0, 0.1f, 0.3f))
+        .setClearColor (0, gos::ColorHDR(0, 0, 0))
         .setDepthBufferColor(1, 0)
         .renderPass_begin (renderLayoutHandle, frameBufferHandle)
             .bindVtxBuffers(vtxBufferHandle, world->hVBInstance)
@@ -323,7 +323,7 @@ void VulkanExample5::priv_setSphere_ON_OFF (i16 mouseX, i16 mouseY, bool b)
 //**********************************
 void VulkanExample5::priv_drawGrid ()
 {
-    line->setColor (gos::vec3f(0.3f, 0.3f, 0.3f));
+    line->setColor (gos::vec3f(0.1f, 0.1f, 0.1f));
 
     const f32 x1 = -((world->getDimX()/2) * World::SPACE);
     const f32 x2 = x1 + world->getDimX() * World::SPACE;
@@ -406,13 +406,13 @@ void VulkanExample5::virtual_onInputEvent (u32 actionID, i16 value, const gos::i
 void VulkanExample5::priv_runMarchingSquare()
 {
     line->begin();
+    priv_drawGrid();
 
     MarchingSquare msq;
     //msq.algo1 (*world, *line);
     msq.algo2 (*world, *line);
     //msq.algo3 (*world, *line);
 
-    priv_drawGrid();
     line->end();
 }
 
@@ -422,7 +422,7 @@ void VulkanExample5::virtual_onRun()
     //camera
     cam.setPerspectiveFovLH (gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
     //cam.pos.identity(); cam.pos.warp (0, 0, -19); cam.pos.lookAt (vec3f(0,0,0));
-    cam.pos.identity(); cam.pos.warp (0, 30, 0); cam.pos.rotateMeAboutMyX (-math::PIMEZZI);
+    cam.pos.identity(); cam.pos.warp (0, 30, 0); cam.pos.rotateMeAboutMyX (math::gradToRad(-90));
     
     cam.markUpdated();
 

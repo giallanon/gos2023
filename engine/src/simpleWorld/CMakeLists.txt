@@ -20,13 +20,18 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 #====================================================
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
+BitmaskedFixedArray.h
+DynamicTextureArray.cpp
+DynamicTextureArray.h
 main.cpp
-MaterialList.h
+Model.cpp
+Model.h
 Renderer1.cpp
 Renderer1.h
-Scene.h
 TheApp.cpp
 TheApp.h
+VBIBSTBuffer.cpp 
+VBIBSTBuffer.h
 )
 
 #====================================================

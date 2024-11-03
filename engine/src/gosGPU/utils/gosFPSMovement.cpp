@@ -7,7 +7,7 @@ using namespace gos;
 FPSMovement::FPSMovement ()
 {
     targetPos = NULL;
-    status = 0;
+    status.zero();
     setLinearSpeed (4);
     setRotationalSpeed (0.5f);
     lastTimeUpdated_msec = 0;
@@ -29,9 +29,9 @@ void FPSMovement::bind (gos::geom::Pos3 *posIN)
 void FPSMovement::priv_setStatus (u16 MASK, bool b)
 {
     if (b)
-        gos::utils::bitSET (&status, MASK);
+        status.set (MASK);
     else
-        gos::utils::bitCLEAR (&status, MASK);
+        status.clear (MASK);
 }
 
 //**************************************
@@ -72,19 +72,19 @@ void FPSMovement::update (u64 timenow_msec)
     lastTimeUpdated_msec = timenow_msec;
 
     pos.setFromEulerAngles_YXZ (rotY_rad, 0, 0);
-    if (gos::utils::isBitSET (&status, STATUS_MOVING_FORWARD))
+    if (status.isBitSet (STATUS_MOVING_FORWARD))
         pos.moveRelAlongZ (linearSpeed);
-    else if (gos::utils::isBitSET (&status, STATUS_MOVING_BACKWARD))
+    else if (status.isBitSet (STATUS_MOVING_BACKWARD))
         pos.moveRelAlongZ (-linearSpeed);
 
-    if (gos::utils::isBitSET (&status, STATUS_MOVING_RIGHT))
+    if (status.isBitSet (STATUS_MOVING_RIGHT))
         pos.moveRelAlongX (linearSpeed);
-    else if (gos::utils::isBitSET (&status, STATUS_MOVING_LEFT))
+    else if (status.isBitSet (STATUS_MOVING_LEFT))
         pos.moveRelAlongX (-linearSpeed);
 
-    if (gos::utils::isBitSET (&status, STATUS_MOVING_UP))
+    if (status.isBitSet (STATUS_MOVING_UP))
         pos.moveRelAlongY (linearSpeed);
-    else if (gos::utils::isBitSET (&status, STATUS_MOVING_DOWN))
+    else if (status.isBitSet (STATUS_MOVING_DOWN))
         pos.moveRelAlongY (-linearSpeed);
    
 

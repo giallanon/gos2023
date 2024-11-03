@@ -9,7 +9,6 @@ VulkanExample2::VulkanExample2()
 {
     nextTimeMoveVtx_msec = 0;
     direction = -1;
-    ptToMappedMemory = NULL;
 }
 
 //************************************
@@ -22,11 +21,6 @@ void VulkanExample2::virtual_explain()
 //************************************
 void VulkanExample2::virtual_onCleanup() 
 {
-    if (NULL != ptToMappedMemory)
-    {
-        gpu->vertexBuffer_unmap (vtxBufferHandle);
-        ptToMappedMemory = NULL;
-    }
     gpu->deleteResource (vtxBufferHandle);
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
@@ -139,20 +133,11 @@ bool VulkanExample2::virtual_onInit ()
 bool VulkanExample2::createVertexBuffer()
 {
     const u32 sizeInByte = sizeof(Vertex) * NUM_VERTEX;
-    if (!gpu->vertexBuffer_create (sizeInByte, eVIBufferMode::mappale, &vtxBufferHandle))
+    if (!gpu->vertexBuffer_create (sizeInByte, eVIBufferMode::shared_cpuW_autoSync, &vtxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexBuffer() => gpu->vertexBuffer_create() failed\n");
         return false;
     }
-
-    //mappo il vtxBuffer in una regione di spazio accessibile a CPU
-    //Se memcopio roba qui dentro, GPU se ne accorge (vedi moveVertex())
-    if (!gpu->vertexBuffer_map (vtxBufferHandle, 0, sizeInByte, &ptToMappedMemory))
-    {
-        gos::logger::err ("VulkanApp::createVertexBuffer() => gpu->vertexBuffer_Map() failed\n");
-        return false;
-    }
-
     return true;
 }
 
@@ -173,7 +158,7 @@ void VulkanExample2::moveVertex()
 
     //copio i vtx modificati nella zona mappata del vtxBuffer
     const u32 sizeInByte = sizeof(Vertex) * NUM_VERTEX;
-    memcpy (ptToMappedMemory, vertexList, sizeInByte);
+    gpu->writeAndSync (vtxBufferHandle, 0, vertexList, sizeInByte);
 }
 
 //************************************

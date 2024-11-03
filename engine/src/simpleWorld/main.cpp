@@ -11,9 +11,9 @@ void importTexture (u16 w, u16 h, const char *fname)
     gos::image::Builder builder;
 
     builder.begin (gos::getScrapAllocator(), &im)
-        .beginTexture (gos::eImageFormat::U8_RGBA_sRGB, w, h, 1)
+        .beginTexture2D (gos::eImageFormat::U8_RGBA_sRGB, w, h, 1)
         .setMipMapDataFromFile (0, fname)
-        .endTexture()
+        .endTexture2D()
     .end();
     if (builder.anyError())
         gos::logger::err ("importAssets => can't build image %s'\n", fname);

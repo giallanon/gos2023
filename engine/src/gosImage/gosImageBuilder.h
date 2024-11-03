@@ -9,7 +9,7 @@ namespace gos
 	{
 		/**
 		 * @brief Builder
-		 * classe di comodo da utilizzarsi per la creazione di image::Image
+		 * classe di comodo da utilizzarsi per la creazione di gos::Image
 		 */
 		class Builder
 		{
@@ -19,10 +19,17 @@ namespace gos
 
 			Builder&	begin (gos::Allocator *allocator, Image *out_img);
 			
-			Builder&	beginTexture (eImageFormat format, u16 width, u16 height, u8 nMipMap);
+			Builder&	beginTexture2D (eImageFormat format, u16 width, u16 height, u8 nMipMap);
 			Builder&		setMipMapDataMemory (u8 mipMapNum_0toN, const void *imgData, u32 sizeOfImgData);
 			Builder&		setMipMapDataFromFile (u8 mipMapNum_0toN, const char *filename);
-			Builder&	endTexture();
+			Builder&	endTexture2D();
+
+			/**
+			 * @brief accetta file di tipo TGA, BMP, JPG, PNG
+			 * Al momento NON crea nessuna mipmap
+			 */
+			Builder&	buildTexture2DFromFile (eImageFormat format, const char *fileName);
+
 
 			bool		end();
 

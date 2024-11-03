@@ -32,7 +32,7 @@ namespace gos
 								Il buffer precedente viene poi freed()
 							*/
 
-		void			unsetup ()																{ priv_FreeCurBuffer(); mem = NULL; allocatedSize = 0; bFreeMemBlock = 0; allocator = NULL; }
+		void			unsetup ();
 
 		bool			copyFrom (const BufferLinear &src, u32 srcOffset, u32 nBytesToCopy, u32 dstOffset, bool bCangrow=true);
 							/*  copia [nBytesToCopy] bytes di [src] a partire da [srcOffset] e li mette in this a partire da [dstOffset].

@@ -42,3 +42,7 @@ engine/bin/simpleWorld/simpleWorld__linux_Debug
 engine/bin/testVulkan/texture/faccia256x256.png
 
 engine/bin/testVulkan/texture/faccia512x512.jpg
+
+engine/bin/simpleWorld/assets/sponza/sponza.glb
+
+engine/bin/simpleWorld/assets/sponza/sponza_glTF.ini

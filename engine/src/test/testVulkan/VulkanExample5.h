@@ -201,8 +201,10 @@ private:
 
     private:
         void    priv_renderLine (Line &line, gos::FastArray<sEdge> &edgeList) const;
-        void    priv_moveVtx (gos::FastArray<sEdge> *from, gos::FastArray<sEdge> *to, u32 i) const;
-        u32     priv_findVtxWithEdge (const gos::FastArray<sEdge> *list, const sEdge *edge) const;
+        void    priv_moveEdge (gos::FastArray<sEdge> *from, gos::FastArray<sEdge> *to, u32 i) const;
+        u32     priv_findEdgeWithVtx (const gos::FastArray<sEdge> *list, const sEdge *edge) const;
+        void    priv_coloredLine (Line &line, const VtxHelper2 &helper, gos::FastArray<sEdge> &edgeList) const;
+        void    priv_smoothLine (Line &line, const VtxHelper2 &helper, gos::FastArray<sEdge> &edgeList) const;
            
     };
  
@@ -240,7 +242,7 @@ private:
 private:
     gos::geom::Camera3      cam;
     gos::FreeMovement       movement;
-    gos::shape::Shape       myShape;
+    gos::Shape              myShape;
     World                   *world;
     Line                    *line;
 

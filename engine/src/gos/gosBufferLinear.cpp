@@ -10,6 +10,18 @@ void BufferLinear::priv_FreeCurBuffer ()
 }
 
 //******************************************
+void BufferLinear::unsetup ()
+{ 
+	if (allocator)
+		priv_FreeCurBuffer(); 
+	mem = NULL; 
+	allocatedSize = 0;
+	bFreeMemBlock = 0;
+	allocator = NULL; 
+}
+
+
+//******************************************
 void BufferLinear::setupWithBase (void *startingBlock, u32 sizeOfStartingBlock, Allocator *backingallocator)
 {
 	assert (NULL == mem);

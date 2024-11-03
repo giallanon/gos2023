@@ -48,7 +48,6 @@ private:
     Vertex                  vertexList[NUM_VERTEX];
     u64                     nextTimeMoveVtx_msec;
     f32                     direction;
-    void                    *ptToMappedMemory;
 
     GPUVtxBufferHandle      vtxBufferHandle;
     GPUPipelineHandle       pipelineHandle;
