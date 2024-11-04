@@ -278,7 +278,7 @@ bool Renderer1::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Camera
     }
 
     static f32 debug_red = 1.0f;
-    static f32 debug_redInc = 0.001f;
+    static f32 debug_redInc = 0.01f;
     {
         Material *m;
         materialList.get (0, &m);

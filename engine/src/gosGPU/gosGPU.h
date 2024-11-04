@@ -890,7 +890,7 @@ namespace gos
                                 }
 
                                 //size deve essere un multipo di out->deviceProperties.limits.nonCoherentAtomSize
-                                const u32 minSize = vulkan.phyDevInfo.deviceProperties.limits.nonCoherentAtomSize;
+                                const u32 minSize = static_cast<u32>(vulkan.phyDevInfo.deviceProperties.limits.nonCoherentAtomSize);
                                 const u32 aa = sizeInByte % minSize;
                                 sizeInByte += minSize - aa;                                
 
