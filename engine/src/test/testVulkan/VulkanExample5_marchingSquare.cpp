@@ -341,21 +341,24 @@ void VulkanExample5::MarchingSquare::algo2 (const World &world, Line &line)
     FastArray<sEdge> *listDST = &aLine;
     while (listSRC->getNElem())
     {
+        //prendo la prima edge di listSRC e la sposto in listDST
         listDST->reset();
         priv_moveEdge (listSRC, listDST, 0);
 
         while (1)
         {
+            //cerco un edge che inizi dove finisce la precedente edge che ho aggiunto a listDST
             const sEdge *edge = &listDST->queryElem( listDST->getNElem() - 1);
         
             u32 nextEdge = priv_findEdgeWithVtx (listSRC, edge);
             if (u32MAX == nextEdge)
                 break;
 
+            //l'ho trovato, la tolgo da listSRC e la metto in listDST e proseguo
             priv_moveEdge (listSRC, listDST, nextEdge);
         }
 
-
+        //disegno lineDST
         priv_smoothLine (line, helper, *listDST);
     }
 }
