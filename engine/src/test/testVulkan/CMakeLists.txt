@@ -21,6 +21,12 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
 main.cpp
+MarchingSquare.cpp
+MarchingSquare.h
+SimpleLineRenderer.cpp
+SimpleLineRenderer.h
+VkEx5MarchingSquare.cpp
+VkEx5MarchingSquare.h
 VulkanApp.cpp
 VulkanApp.h
 VulkanExample1.cpp
@@ -31,8 +37,6 @@ VulkanExample3.cpp
 VulkanExample3.h
 VulkanExample4.cpp
 VulkanExample4.h
-VulkanExample5_line.cpp
-VulkanExample5_marchingSquare.cpp
 VulkanExample5_world.cpp
 VulkanExample5.cpp
 VulkanExample5.h

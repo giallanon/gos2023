@@ -9,6 +9,10 @@ VulkanExample5::VulkanExample5()
 {
     world = NULL;
     line = NULL;
+
+    gpuMSQ2.numIdx = gpuMSQ2.numVtx = 0;
+    gpuMSQ2.idxBufferHandle.setInvalid();
+    gpuMSQ2.vtxBufferHandle.setInvalid();
 }
 
 //************************************
@@ -40,8 +44,28 @@ void VulkanExample5::virtual_onCleanup()
     gpu->deleteResource (uboHandle);
     gpu->deleteResource (descrSetInstancerHandle);
     gpu->deleteResource (descrSetLayoutHandle);
-    gpu->deleteResource (descrPoolHandle);    
+    gpu->deleteResource (descrPoolHandle);
+    priv_freeMSQ2();
 }    
+
+//************************************
+void VulkanExample5::priv_freeMSQ2()
+{
+    if (gpuMSQ2.idxBufferHandle.isValid())
+    {
+        gpu->deleteResource (gpuMSQ2.idxBufferHandle);
+        gpuMSQ2.idxBufferHandle.setInvalid();
+    }
+
+    if (gpuMSQ2.vtxBufferHandle.isValid())
+    {
+        gpu->deleteResource (gpuMSQ2.vtxBufferHandle);
+        gpuMSQ2.vtxBufferHandle.setInvalid();
+    }
+
+    gpuMSQ2.numIdx = 0;
+    gpuMSQ2.numVtx = 0;
+}
 
 //************************************
 void VulkanExample5::priv_createSfera()
@@ -258,7 +282,7 @@ bool VulkanExample5::virtual_onInit ()
     }
 
 
-    line = new Line();
+    line = new SimpleLineRenderer();
     line->setup (gpu, descrPoolHandle);
 
     world = new World(gpu);
@@ -307,8 +331,16 @@ bool VulkanExample5::priv_recordCommandBuffer (gpu::CmdBufferWriter &cw)
         .renderPass_begin (renderLayoutHandle, frameBufferHandle)
             .bindVtxBuffers(vtxBufferHandle, world->hVBInstance)
             .bindIdxBufferU16(idxBufferHandle)
-            .drawIndexed (myShape.numIdx, world->getNumInstances(), 0, 0, 0)
-        .renderPass_end();
+            .drawIndexed (myShape.numIdx, world->getNumInstances(), 0, 0, 0);
+
+        if (gpuMSQ2.numIdx)
+        {
+            cw.bindIdxBufferU16(gpuMSQ2.idxBufferHandle)
+                .bindVtxBuffer(gpuMSQ2.vtxBufferHandle)
+                .drawIndexed (gpuMSQ2.numIdx, 1, 0, 0, 0);
+        }
+
+        cw.renderPass_end();
     return true;
 }
 
@@ -408,12 +440,85 @@ void VulkanExample5::priv_runMarchingSquare()
     line->begin();
     priv_drawGrid();
 
-    MarchingSquare msq;
-    //msq.algo1 (*world, *line);
-    msq.algo2 (*world, *line);
-    //msq.algo3 (*world, *line);
+    //MarchingSquare msq;
+    //VkEx5MarchingSquare msq;    msq.algo2 (*world, *line);
 
+    const f32 world_x1 = -((world->getDimX()/2) * World::SPACE);
+    const f32 world_z1 = (world->getDimY()/2) * World::SPACE;
+
+
+    MarchingSquare msq2;
+    msq2.run (gos::getSysHeapAllocator(), *world);
+    for (u32 i=0; i<msq2.getNumPerimetri(); i++)
+    {
+        const MarchingSquare::sInfo *info = msq2.getPerimetroByIndex (i);
+
+        //disegno i segmenti
+        for (u32 i2=0; i2<info->numVtx-1; i2++)
+        {
+            const gos::vec2f v1 = info->vtxList[i2].pos;
+            const gos::vec2f v2 = info->vtxList[i2+1].pos;
+
+            vec3f vtx1 (world_x1 + v1.x, 0, world_z1 + v1.y);
+            vec3f vtx2 (world_x1 + v2.x, 0, world_z1 + v2.y);
+            
+            line->setColor (vec3f(1,1,1));
+            const u16 idx1 = line->addVtx (vtx1);
+
+            line->setColor (vec3f(1,0,0));
+            const u16 idx2 = line->addVtx (vtx2);
+
+            line->line (idx1, idx2);
+        }
+
+        //disegno le normali
+        line->setColor (vec3f(0,1,0));
+        for (u32 i2=0; i2<info->numVtx; i2++)
+        {
+            const gos::vec2f p1 = info->vtxList[i2].pos;
+            const gos::vec2f p2 = info->vtxList[i2].pos + info->vtxList[i2].norm * 0.2f;
+
+            const vec3f vtx1 (world_x1 + p1.x, 0, world_z1 + p1.y);
+            const vec3f vtx2 (world_x1 + p2.x, 0, world_z1 + p2.y);
+            line->addLine (vtx1, vtx2);
+
+        }        
+    }
     line->end();
+
+    //estraggo le mesh
+    {
+        MarchingSquare::VertexList3 vtxList (gos::getScrapAllocator(), 1024);
+        gos::FastArray<u16> idxList (gos::getScrapAllocator(), 1024);
+        msq2.buildMesh (vtxList, idxList);
+
+        priv_freeMSQ2();
+
+        gpuMSQ2.numVtx = vtxList.getNElem();
+        gpuMSQ2.numIdx = idxList.getNElem();
+        if (gpuMSQ2.numIdx > 0)
+        {
+            const gos::vec3f origin (world_x1, 0, world_z1);
+            Vertex *vtx = GOSALLOCT(Vertex*, gos::getScrapAllocator(), sizeof(Vertex) * gpuMSQ2.numVtx);
+            for (u32 i=0; i<gpuMSQ2.numVtx; i++)
+            {
+                vtx[i].pos = origin + vtxList(i).pos;
+                vtx[i].norm = vtxList(i).norm;
+            }
+
+            gpu->vertexBuffer_create (sizeof(Vertex) * gpuMSQ2.numVtx, eVIBufferMode::onGPU, &gpuMSQ2.vtxBufferHandle);
+            gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, vtx, gpuMSQ2.vtxBufferHandle, 0, sizeof(Vertex) * gpuMSQ2.numVtx);
+            GOSFREE(gos::getScrapAllocator(), vtx);
+
+            gpu->indexBuffer_create (sizeof(u16) * gpuMSQ2.numIdx, eVIBufferMode::onGPU, &gpuMSQ2.idxBufferHandle);
+            gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, idxList._queryPointer() , gpuMSQ2.idxBufferHandle, 0, sizeof(u16) * gpuMSQ2.numIdx);
+        }
+        vtxList.unsetup();
+        idxList.unsetup();
+
+    }
+
+    
 }
 
 //************************************

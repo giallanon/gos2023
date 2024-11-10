@@ -277,9 +277,12 @@ bool Renderer1::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Camera
         gpu->writeAndSync (hDescrset0_ubo, 0, &descrset0_ubo, sizeof(descrset0_ubo));            
     }
 
+    static u64 debug_nextTimeChangeColor_msec = 0;
     static f32 debug_red = 1.0f;
     static f32 debug_redInc = 0.01f;
+    if (gos::getTimeSinceStart_msec() > debug_nextTimeChangeColor_msec)
     {
+        debug_nextTimeChangeColor_msec = gos::getTimeSinceStart_msec() + 10;
         Material *m;
         materialList.get (0, &m);
         m->colorDiffuse.x = debug_red;

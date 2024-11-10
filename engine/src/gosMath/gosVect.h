@@ -40,7 +40,7 @@ namespace gos
 			const T&				operator [] (const i32 i) const				{assert( i>=0 && i<2 ); return values[i];}
 
 			void					set (const T &xIN, const T &yIN)			{x=xIN; y=yIN;}
-			my_type&				operator= (const my_type &b)				{ set(b.x, b.y); return *this; }
+			//my_type&				operator= (const my_type &b)				{ set(b.x, b.y); return *this; }
 			
 			bool					operator== (const my_type &b) const			{ return ( memcmp(values, b.values, sizeof(values)) == 0); }
 			bool					operator!= (const my_type &b) const			{ return ( memcmp(values, b.values, sizeof(values)) != 0); }
@@ -89,7 +89,7 @@ namespace gos
 
 			void					set (const T &xIN, const T &yIN, const T &zIN)						{ x = xIN; y = yIN; z = zIN; }
 			void					setAndNormalize(const T &xIN, const T &yIN, const T &zIN)			{set (xIN, yIN, zIN); normalize(); }
-			my_type&				operator= (const my_type &b)										{ set(b.x, b.y, b.z); return *this; }
+			//my_type&				operator= (const my_type &b)										{ set(b.x, b.y, b.z); return *this; }
 
 			T						length ()	const													{ return sqrtf(x*x +y*y + z*z); }
 			T						length2 ()	const													{ return x*x +y*y + z*z; }
@@ -135,7 +135,7 @@ namespace gos
 
 			void					set (const T &xIN, const T &yIN, const T &zIN, const T &wIN)			{ x = xIN; y = yIN; z = zIN; w = wIN; }
 			void					set (const math::Vec3<T> &v3, const T &p4)								{ x = v3.x; y = v3.y; z = v3.z; w = p4; }
-			my_type&				operator= (const my_type &b)											{ set(b.x, b.y, b.z, b.w); return *this; }
+			//my_type&				operator= (const my_type &b)											{ set(b.x, b.y, b.z, b.w); return *this; }
 
 			T						length ()	const														{ return sqrtf(x*x +y*y + z*z +w*w); }
 			T						length2 ()	const														{ return x*x +y*y + z*z +w*w; }

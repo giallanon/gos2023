@@ -1,9 +1,9 @@
-#include "VulkanExample5.h"
+#include "SimpleLineRenderer.h"
 
 using namespace gos;
 
 //*****************************
-VulkanExample5::Line::Line ()
+SimpleLineRenderer::SimpleLineRenderer ()
 {
     gpu = NULL;
     localAllocator = gos::getSysHeapAllocator();
@@ -13,7 +13,7 @@ VulkanExample5::Line::Line ()
 }
 
 //*****************************
-VulkanExample5::Line::~Line ()
+SimpleLineRenderer::~SimpleLineRenderer ()
 {
     vtxList.unsetup();
     idxList.unsetup();
@@ -31,7 +31,7 @@ VulkanExample5::Line::~Line ()
 }
 
 //*****************************
-bool VulkanExample5::Line::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHandle)
+bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHandle)
 {
     gpu = gpuIN;
 
@@ -44,7 +44,7 @@ bool VulkanExample5::Line::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPool
         .end();
     if (vtxDeclHandle.isInvalid())
     {
-        gos::logger::err ("VulkanExample5::Line::setup() => can't create vtxDeclHandle\n");
+        gos::logger::err ("SimpleLineRenderer::setup() => can't create vtxDeclHandle\n");
         return false;
     }
 
@@ -52,12 +52,12 @@ bool VulkanExample5::Line::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPool
     //carico gli shader
     if (!gpu->vtxshader_createFromFile ("@shader/lineShader.vert.spv", "main", &hVtxShader))
     {
-        gos::logger::err ("VulkanExample5::Line::setup() => can't create vert shader\n");
+        gos::logger::err ("SimpleLineRenderer::setup() => can't create vert shader\n");
         return false;
     }
     if (!gpu->fragshader_createFromFile ("@shader/lineShader.frag.spv", "main", &hFragShader))
     {
-        gos::logger::err ("VulkanExample5::Line::setup() => can't create frag shader\n");
+        gos::logger::err ("SimpleLineRenderer::setup() => can't create frag shader\n");
         return false;
     }
 
@@ -67,7 +67,7 @@ bool VulkanExample5::Line::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPool
         .end();
     if (hDescrSetLayout.isInvalid())
     {
-        gos::logger::err ("VulkanExample5::Line::setup() => can't create descriptor set\n");
+        gos::logger::err ("SimpleLineRenderer::setup() => can't create descriptor set\n");
         return false;
     }
 
@@ -81,7 +81,7 @@ bool VulkanExample5::Line::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPool
     .end();
     if (hRenderLayout.isInvalid())
     {
-        gos::logger::err ("VulkanExample5::Line::setup() => can't create renderTaskLayout\n");
+        gos::logger::err ("SimpleLineRenderer::setup() => can't create renderTaskLayout\n");
         return false;
     }
 
@@ -91,7 +91,7 @@ bool VulkanExample5::Line::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPool
         .end();
     if (hFrameBuffer.isInvalid())
     {
-        gos::logger::err ("VulkanExample5::Line::setup() => can't create frameBufferHandle\n");
+        gos::logger::err ("SimpleLineRenderer::setup() => can't create frameBufferHandle\n");
     }        
 
     //creo la pipeline
@@ -107,7 +107,7 @@ bool VulkanExample5::Line::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPool
 
     if (hPipeline.isInvalid())
     {
-        gos::logger::err ("VulkanExample5::Line::setup() => can't create pipeline\n");
+        gos::logger::err ("SimpleLineRenderer::setup() => can't create pipeline\n");
         return false;
     }
 
@@ -118,14 +118,14 @@ bool VulkanExample5::Line::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPool
     //creo un buffer per UBO
     if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eVIBufferMode::shared_cpuW_autoSync, &hUBO))
     {
-        gos::logger::err ("VulkanExample5::Line::setup() => GPU::uniformBuffer_create\n");
+        gos::logger::err ("SimpleLineRenderer::setup() => GPU::uniformBuffer_create\n");
         return false;
     }
     
     //alloco una istanza del descriptorSet
     if (!gpu->descrSetInstance_createNew (descrPoolHandle, hDescrSetLayout, &hDescrSetInstance))
     {
-        gos::logger::err ("VulkanExample5::Line::setup() => can't create descriptorSet instance\n");
+        gos::logger::err ("SimpleLineRenderer::setup() => can't create descriptorSet instance\n");
         return false;
     }
     return true;
@@ -133,7 +133,7 @@ bool VulkanExample5::Line::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPool
 
 
 //*****************************
-void VulkanExample5::Line::begin()
+void SimpleLineRenderer::begin()
 {
     bNeedUpdate = true;
     vtxList.reset();
@@ -142,13 +142,13 @@ void VulkanExample5::Line::begin()
 }
 
 //*****************************
-void VulkanExample5::Line::setColor (const gos::vec3f &color)
+void SimpleLineRenderer::setColor (const gos::vec3f &color)
 {
     curColor = color;
 }
 
 //*****************************
-u16 VulkanExample5::Line::addVtx (const gos::vec3f &p)
+u16 SimpleLineRenderer::addVtx (const gos::vec3f &p)
 {
     sVertex v;
     v.pos = p;
@@ -160,7 +160,7 @@ u16 VulkanExample5::Line::addVtx (const gos::vec3f &p)
 }
 
 //*****************************
-void VulkanExample5::Line::line (u16 v0, u16 v1)
+void SimpleLineRenderer::line (u16 v0, u16 v1)
 {
     assert (v0 < vtxList.getNElem());
     assert (v1 < vtxList.getNElem());
@@ -169,7 +169,7 @@ void VulkanExample5::Line::line (u16 v0, u16 v1)
 }
 
 //*****************************
-void VulkanExample5::Line::addLine (const gos::vec3f &p1, const gos::vec3f &p2)
+void SimpleLineRenderer::addLine (const gos::vec3f &p1, const gos::vec3f &p2)
 {
     const u16 i1 = addVtx(p1);
     const u16 i2 = addVtx(p2);
@@ -177,13 +177,13 @@ void VulkanExample5::Line::addLine (const gos::vec3f &p1, const gos::vec3f &p2)
 }
 
 //*****************************
-void VulkanExample5::Line::end()
+void SimpleLineRenderer::end()
 {
-    printf ("VulkanExample5::Line() => num vertex=%d, numLine=%d\n", vtxList.getNElem(), idxList.getNElem() / 2);
+    printf ("SimpleLineRenderer() => num vertex=%d, numLine=%d\n", vtxList.getNElem(), idxList.getNElem() / 2);
 }
 
 //*****************************
-bool VulkanExample5::Line::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam)
+bool SimpleLineRenderer::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam)
 {
     if (vtxList.getNElem() == 0)
         return false;
@@ -197,26 +197,26 @@ bool VulkanExample5::Line::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStg
         gpu->deleteResource (hVtxBuffer);
         if (!gpu->vertexBuffer_create (sizeof(sVertex) * vtxList.getNElem(), eVIBufferMode::onGPU, &hVtxBuffer))
         {
-            gos::logger::err ("VulkanExample5::Line::recordCommandBuffer() => gpu->vertexBuffer_create() failed\n");
+            gos::logger::err ("SimpleLineRenderer::recordCommandBuffer() => gpu->vertexBuffer_create() failed\n");
             return false;
         }
 
         if (!gpu->stagingBuffer_uploadToGPUBuffer (hStgBuffer, vtxList._queryPointer(), hVtxBuffer, 0, sizeof(sVertex) * vtxList.getNElem()))
         {
-            gos::logger::err ("VulkanExample5::Line::recordCommandBuffer() => gpu->stagingBuffer_uploadToGPUBuffer() failed\n");
+            gos::logger::err ("SimpleLineRenderer::recordCommandBuffer() => gpu->stagingBuffer_uploadToGPUBuffer() failed\n");
             return false;
         }        
 
         gpu->deleteResource (hIdxBuffer);
         if (!gpu->indexBuffer_create (sizeof(u16) * idxList.getNElem(), eVIBufferMode::onGPU, &hIdxBuffer))
         {
-            gos::logger::err ("VulkanExample5::Line::recordCommandBuffer() => gpu->indexBuffer_create() failed\n");
+            gos::logger::err ("SimpleLineRenderer::recordCommandBuffer() => gpu->indexBuffer_create() failed\n");
             return false;
         }
 
         if (!gpu->stagingBuffer_uploadToGPUBuffer (hStgBuffer, idxList._queryPointer(), hIdxBuffer, 0, sizeof(u16) * idxList.getNElem()))
         {
-            gos::logger::err ("VulkanExample5::Line::recordCommandBuffer() => gpu->stagingBuffer_uploadToGPUBuffer() failed\n");
+            gos::logger::err ("SimpleLineRenderer::recordCommandBuffer() => gpu->stagingBuffer_uploadToGPUBuffer() failed\n");
             return false;
         }        
 

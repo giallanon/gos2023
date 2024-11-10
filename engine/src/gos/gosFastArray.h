@@ -21,6 +21,7 @@ namespace gos
     public:
                         FastArray  ()																					{ nElem = nallocati = 0; }
                         FastArray  (Allocator *backingallocator, u32 preallocNumElem)                                   { nElem = nallocati = 0; setup (backingallocator,preallocNumElem); }
+                        ~FastArray()																	                { unsetup (); }
 
                         //======================================= memory
         void			setupWithBase (void *startingBlock, u32 sizeOfStartingBlock, Allocator *backingallocator)       { memBlock.setupWithBase (startingBlock, sizeOfStartingBlock, backingallocator); nallocati=sizeOfStartingBlock/sizeof(T); }

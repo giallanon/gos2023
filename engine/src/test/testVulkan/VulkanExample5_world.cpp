@@ -123,8 +123,7 @@ void VulkanExample5::World::dec_scaleZ (u32 x, u32 y)
 void VulkanExample5::World::set_ON_OFF (u32 x, u32 y, bool b)
 {
     //i bordi mappa non si toccano
-    if (x==0 || y==0 || x==dimx-1 || y==dimy-1)
-        return;
+    //if (x==0 || y==0 || x==dimx-1 || y==dimy-1) return;
 
     bNeedUpdate = true;
     const u32 ct = y*dimy+x;

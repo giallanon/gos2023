@@ -16,7 +16,7 @@ namespace gos
 	{
 	public:
 						BufferLinear() : allocator(NULL), mem(NULL), allocatedSize(0), bFreeMemBlock(0) { }
-                        ~BufferLinear()			{ priv_FreeCurBuffer (); }
+                        ~BufferLinear()																	{ unsetup (); }
 
 		void			setupWithBase (void *startingBlock, u32 sizeOfStartingBlock, Allocator *backingallocator);
 							/*	utilizza startingBlock come blocco di memoria iniziale. Non ne fa il free.
