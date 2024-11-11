@@ -254,6 +254,19 @@ void VPhyDevicekSurfaceFormatKHRList::build (gos::Allocator *allocatorIN, VkPhys
     }            
 }
 
+
+bool VPhyDevicekSurfaceFormatKHRList::isSupportedFormat (VkFormat fmt) const
+{
+    for (u32 i2=0; i2<getCount(); i2++)
+    {
+        if (fmt == get(i2)->format)
+            return true;
+    }
+
+    return false;
+}
+
+
 void VPhyDevicekSurfaceFormatKHRList::printInfo() const
 {
     gos::logger::log ("supported format:\n");

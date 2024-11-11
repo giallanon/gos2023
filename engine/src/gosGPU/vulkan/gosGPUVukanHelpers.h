@@ -112,6 +112,8 @@ namespace gos
 
         void    build (gos::Allocator *allocatorIN, VkPhysicalDevice &phyDevice, const VkSurfaceKHR &vkSurface);
         void    printInfo() const;
+
+        bool    isSupportedFormat (VkFormat fmt) const;
     };
 
     /*=======1================================================

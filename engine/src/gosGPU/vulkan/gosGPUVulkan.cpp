@@ -666,12 +666,20 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
 
 
     //voglio creare una swap chain che abbia:
-    //  VK_FORMAT_B8G8R8A8_SRGB
+    //  VK_FORMAT_B8G8R8A8_SRGB-
     //  VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
     //  VK_PRESENT_MODE_MAILBOX_KHR oppure VK_PRESENT_MODE_FIFO_RELAXED_KHR oppure VK_PRESENT_MODE_FIFO_KHR (in ordine di priorità)
     //  image count almeno di 2, preferibilmente 3
     //out->imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
-    out->imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
+    const VkFormat desiredFormatList[] = { VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB };
+    for (u32 i=0; i< sizeof(desiredFormatList) / sizeof(VkFormat); i++)
+    {
+        if (listOfSurfaceFormat.isSupportedFormat(desiredFormatList[i]))
+        {
+            out->imageFormat = desiredFormatList[i];
+            break;
+        }
+    }
     out->colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
     out->imageExtent = vkSurfCapabilities.currentExtent;
     out->imageCount = 3;
@@ -705,7 +713,7 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    gos::logger::log ("Attemp to create a swapchain with the following:\n");
+    gos::logger::log ("Attempt to create a swapchain with the following:\n");
     gos::logger::incIndent();
         gos::logger::log ("minImageCount = %d\n", createInfo.minImageCount);
         gos::logger::log ("imageFormat = %s\n", string_VkFormat(createInfo.imageFormat));
