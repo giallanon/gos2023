@@ -25,6 +25,7 @@ namespace gos
                                 dimx = dimy = 0;
                                 nMipMap = 0;
                                 nArray = 0;
+                                memoryAllocated = 0;
                             }
 
 
@@ -32,6 +33,7 @@ namespace gos
             VkImage         vkHandle;
             VkDeviceMemory  vkMemHandle;
             VkImageView     view;
+            u64             memoryAllocated;
             u16             dimx;
             u16             dimy;
             u8              nMipMap;

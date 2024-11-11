@@ -25,19 +25,21 @@ namespace gos
             void            reset ()
                             {
                                 vkHandle = VK_NULL_HANDLE;
-                                vkMemHandle = VK_NULL_HANDLE;
+                                _vkMemHandle = VK_NULL_HANDLE;
                                 mapped_host_pt = NULL;
                                 mapped_offset = 0;
                                 mapped_size = 0;
                                 bufferSize = 0;
                                 mode = eVIBufferMode::unknown;
+                                memoryAllocated = 0;
                             }
 
 
         public:
             VkBuffer        vkHandle;
-            VkDeviceMemory  vkMemHandle;
+            VkDeviceMemory  _vkMemHandle;
             eVIBufferMode   mode;
+            u64             memoryAllocated;
 
             u32             bufferSize;
             u32             mapped_offset;

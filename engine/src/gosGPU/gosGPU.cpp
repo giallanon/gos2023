@@ -1,6 +1,5 @@
 #include "gosGPU.h"
 #include "gosGPUUtils.h"
-#include "vulkan/gosGPUVulkan.h"
 #include "../gos/string/gosStringList.h"
 #include "../gos/gos.h"
 #include "../gos/memory/gosAllocatorHeap.h"
@@ -1061,16 +1060,16 @@ bool GPU::priv_depthStencil_createFromStruct (gos::gpu::DepthStencil &depthStenc
 
     VkMemoryRequirements memReqs{};
 	vkGetImageMemoryRequirements (vulkan.dev, depthStencil.image, &memReqs);
+    depthStencil.memoryAllocated = memReqs.size;
 
     VkMemoryAllocateInfo memAllloc{};
 	memAllloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	memAllloc.allocationSize = memReqs.size;
     vulkanGetMemoryType (vulkan.phyDevInfo, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &memAllloc.memoryTypeIndex);
 
-	result = vkAllocateMemory (vulkan.dev, &memAllloc, nullptr, &depthStencil.vkMemHandle);
-    if (VK_SUCCESS != result)
+    if (!vulkanAllocMemory (vulkan, &memAllloc, nullptr, &depthStencil.vkMemHandle))
     {
-        gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => vkAllocateMemory() => %s\n", string_VkResult(result));
+        gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => error allocating memory\n");
         return false;
     }
 
@@ -1121,7 +1120,7 @@ void GPU::priv_depthStencil_deleteFromStruct (gos::gpu::DepthStencil &depthStenc
 
     if (VK_NULL_HANDLE != depthStencil.vkMemHandle)
     {
-	    vkFreeMemory(vulkan.dev, depthStencil.vkMemHandle, nullptr);
+	    vulkanFreeMemory (vulkan, depthStencil.vkMemHandle, nullptr, depthStencil.memoryAllocated);
         depthStencil.vkMemHandle = VK_NULL_HANDLE;
     }
 }
@@ -1625,12 +1624,13 @@ bool GPU::priv_bufferCreate (VkBufferUsageFlags vkUsage, u32 sizeInByte, bool bC
     //chiedo a Vulkan di creare il buffer
     VkBuffer        vkHandle;
     VkDeviceMemory  vkMemHandle = VK_NULL_HANDLE;
+    u64 realMemAllocated;
     if (!vulkanCreateBuffer (vulkan, sizeInByte, 
                         vkUsage,
                         vkMemProperties,
                         bCanBeUsedBy_gfxQ, bCanBeUsedBy_computeQ, bCanBeUsedBy_transferQ,
                         &vkHandle,
-                        &vkMemHandle))
+                        &vkMemHandle, &realMemAllocated))
     {
         gos::logger::err ("GPU::priv_bufferCreate() => failed to vulkanCreateBuffer()\n");
         return false;
@@ -1639,9 +1639,10 @@ bool GPU::priv_bufferCreate (VkBufferUsageFlags vkUsage, u32 sizeInByte, bool bC
     //pare tutto ok, creo un nuovo handle
     out->reset();
     out->vkHandle = vkHandle;
-    out->vkMemHandle = vkMemHandle;
+    out->_vkMemHandle = vkMemHandle;
     out->mode = mode;
     out->bufferSize = sizeInByte;
+    out->memoryAllocated = realMemAllocated;
     //out->mapped_offset = 0;
     //out->mapped_size = sizeInByte;    
     //out->mapped_host_pt = NULL;
@@ -1657,7 +1658,7 @@ bool GPU::priv_bufferCreate (VkBufferUsageFlags vkUsage, u32 sizeInByte, bool bC
         //mappo la memoria del buffer direttamente qui, visto che questo buffer e' sempre HOST_MAPPABLE e COHERENT
         {
             void *mappedPt;
-            VkResult result = vkMapMemory (vulkan.dev, out->vkMemHandle, 0, sizeInByte, 0, &mappedPt);
+            VkResult result = vkMapMemory (vulkan.dev, out->_vkMemHandle, 0, sizeInByte, 0, &mappedPt);
             if (VK_SUCCESS != result)
             {
                 gos::logger::err ("GPU::priv_bufferCreate() => failed vkMapMemory() => %s\n", string_VkResult(result));
@@ -2419,6 +2420,7 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, co
     s->nArray = 1;
     s->vkHandle = vkImageHandle;
     s->vkMemHandle = vkMemHandle;
+    s->memoryAllocated = imageMemSize;
 
 
     //creo una view per la texture
@@ -2477,7 +2479,7 @@ void GPU::deleteResource (GPUTextureHandle &handle)
             vkDestroyImage (vulkan.dev, s->vkHandle, nullptr);
 
         if (VK_NULL_HANDLE != s->vkMemHandle)
-            vkFreeMemory (vulkan.dev, s->vkMemHandle, nullptr);
+            vulkanFreeMemory (vulkan, s->vkMemHandle, nullptr, s->memoryAllocated);
 
         s->reset();
         textureList.release (handle);

@@ -118,6 +118,7 @@ namespace gos
                         phyDevInfo.reset(); 
                         dev=VK_NULL_HANDLE;
                         swapChainInfo.reset();
+                        memory_maxAllocated = memory_curAllocated = 0;
                         for (u8 i=0; i<NUM_QUEUE; i++)
                             _queueList[i].reset();
                     }
@@ -182,6 +183,8 @@ namespace gos
         sSwapChainInfo      swapChainInfo;
         VkDevice            dev;
         sQueueInfo          _queueList[NUM_QUEUE];
+        u64                 memory_maxAllocated;
+        u64                 memory_curAllocated;
         
     };
 

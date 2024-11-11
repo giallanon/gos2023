@@ -21,6 +21,43 @@ static u32 toVulkanVersion (eVulkanVersion v)
     }
 }
 
+
+/*********************************************
+* funzione di comodo per tenere traccia dei MB di memoria allocati in GPU
+*/
+bool gos::vulkanAllocMemory (sVkDevice &vulkan, const VkMemoryAllocateInfo *pAllocateInfo, const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory)
+{
+    const VkResult result = vkAllocateMemory (vulkan.dev, pAllocateInfo, pAllocator, pMemory);
+    if (VK_SUCCESS == result)
+    {
+        vulkan.memory_curAllocated += pAllocateInfo->allocationSize;
+        if (vulkan.memory_curAllocated > vulkan.memory_maxAllocated)
+            vulkan.memory_maxAllocated = vulkan.memory_curAllocated;
+
+#ifdef _DEBUG
+        char debug_m1[32];
+        char debug_m2[32];
+        gos::string::format::memoryToKB_MB_GB(pAllocateInfo->allocationSize, debug_m1, sizeof(debug_m1));
+        gos::string::format::memoryToKB_MB_GB(vulkan.memory_curAllocated, debug_m2, sizeof(debug_m2));
+        gos::logger::log (eTextColor::cyan, "vulkanAllocMemory(%s), cur allocated:%s\n", debug_m1, debug_m2);
+#endif
+        return true;
+    }
+
+    gos::logger::err ("gos::vulkanAllocMemory() => %s\n", string_VkResult(result));
+    return false;
+}
+
+//*********************************************
+void gos::vulkanFreeMemory (sVkDevice &vulkan, VkDeviceMemory memory, const VkAllocationCallbacks *pAllocator, u64 memSize)
+{
+    if (vulkan.memory_curAllocated >= memSize)
+        vulkan.memory_curAllocated -= memSize;
+    else
+        vulkan.memory_curAllocated = 0;
+    vkFreeMemory(vulkan.dev, memory, pAllocator);
+}
+
 //*********************************************
 bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &requiredValidationLayerList, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion)
 {
@@ -633,7 +670,8 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
     //  VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
     //  VK_PRESENT_MODE_MAILBOX_KHR oppure VK_PRESENT_MODE_FIFO_RELAXED_KHR oppure VK_PRESENT_MODE_FIFO_KHR (in ordine di priorità)
     //  image count almeno di 2, preferibilmente 3
-    out->imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
+    //out->imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
+    out->imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
     out->colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
     out->imageExtent = vkSurfCapabilities.currentExtent;
     out->imageCount = 3;
@@ -805,12 +843,13 @@ bool gos::vulkanGetMemoryType (const sPhyDeviceInfo &vkPhyDevInfo, uint32_t type
 }
 
 //*********************************************
-bool gos::vulkanCreateBuffer (const sVkDevice &vulkan, u32 sizeInByte, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties,
+bool gos::vulkanCreateBuffer (sVkDevice &vulkan, u32 sizeInByte, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties,
                                 bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ,
-                                VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle)
+                                VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle, u64 *out_realMemAllocated)
 {
     assert (NULL != out_vkBufferHandle);
     assert (NULL != out_vkMemHandle);
+    assert (NULL != out_realMemAllocated);
     *out_vkBufferHandle = VK_NULL_HANDLE;
     *out_vkMemHandle = VK_NULL_HANDLE;
 
@@ -871,17 +910,17 @@ bool gos::vulkanCreateBuffer (const sVkDevice &vulkan, u32 sizeInByte, VkBufferU
 
     //alloco memoria
     VkMemoryRequirements memReqs;
-    vkGetBufferMemoryRequirements (vulkan.dev, *out_vkBufferHandle, &memReqs);       
+    vkGetBufferMemoryRequirements (vulkan.dev, *out_vkBufferHandle, &memReqs);
+    *out_realMemAllocated = memReqs.size;
 
     VkMemoryAllocateInfo memAllloc{};
 	memAllloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	memAllloc.allocationSize = memReqs.size;
     vulkanGetMemoryType (vulkan.phyDevInfo, memReqs.memoryTypeBits, memProperties, &memAllloc.memoryTypeIndex);
 
-	result = vkAllocateMemory (vulkan.dev, &memAllloc, nullptr, out_vkMemHandle);
-    if (VK_SUCCESS != result)
+    if (!vulkanAllocMemory (vulkan, &memAllloc, nullptr, out_vkMemHandle))
     {
-        gos::logger::err ("gos::vulkanCreateBuffer() => vkAllocateMemory() => %s\n", string_VkResult(result));
+        gos::logger::err ("gos::vulkanCreateBuffer() => error allocating memory\n");
         return false;
     }
 
@@ -925,7 +964,7 @@ bool gos::vulkanDeleteCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whic
 }
 
 //*********************************************
-bool gos::vulkanCreateImage2D (const sVkDevice &vulkan, u32 dimx, u32 dimy, u8 nMipMap, VkFormat fmt, VkMemoryPropertyFlags memProps, 
+bool gos::vulkanCreateImage2D (sVkDevice &vulkan, u32 dimx, u32 dimy, u8 nMipMap, VkFormat fmt, VkMemoryPropertyFlags memProps, 
                                 VkImageUsageFlags usage, VkImageTiling tiling, VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte)
 {
     assert (NULL != out_imagehandle);
@@ -971,10 +1010,9 @@ bool gos::vulkanCreateImage2D (const sVkDevice &vulkan, u32 dimx, u32 dimy, u8 n
 	memAllloc.allocationSize = memReqs.size;
     vulkanGetMemoryType (vulkan.phyDevInfo, memReqs.memoryTypeBits, memProps, &memAllloc.memoryTypeIndex);
 
-	result = vkAllocateMemory (vulkan.dev, &memAllloc, nullptr, out_vkMemHandle);
-    if (VK_SUCCESS != result)
+    if (!vulkanAllocMemory (vulkan, &memAllloc, nullptr, out_vkMemHandle))
     {
-        gos::logger::err ("gos::vulkanCreateImage2D() => vkAllocateMemory() => %s\n", string_VkResult(result));
+        gos::logger::err ("gos::vulkanCreateImage2D() => error allocating memory\n");
         return false;
     }
 

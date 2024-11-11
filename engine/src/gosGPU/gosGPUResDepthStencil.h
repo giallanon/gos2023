@@ -22,6 +22,7 @@ namespace gos
                             {
                                 resolvedW = resolvedH = 0;
                                 bHasStencil = false;
+                                memoryAllocated = 0;
                                 depthFormat = VK_FORMAT_UNDEFINED;
                                 image = VK_NULL_HANDLE;
                                 vkMemHandle = VK_NULL_HANDLE;
@@ -40,6 +41,7 @@ namespace gos
             gos::Dim2D      height;
             u32             resolvedW;
             u32             resolvedH;
+            u64             memoryAllocated;
 
             bool            bHasStencil;
             VkFormat        depthFormat;

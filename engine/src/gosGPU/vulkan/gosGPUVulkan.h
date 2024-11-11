@@ -28,16 +28,19 @@ namespace gos
 
     bool    vulkanGetMemoryType (const sPhyDeviceInfo &vkPhyDevInfo, uint32_t typeBits, VkMemoryPropertyFlags properties, u32 *out_index);
 
-    bool    vulkanCreateBuffer (const sVkDevice &vulkan, u32 sizeInByte, 
+    bool    vulkanAllocMemory (sVkDevice &vulkan, const VkMemoryAllocateInfo *pAllocateInfo, const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory);
+    void    vulkanFreeMemory (sVkDevice &vulkan, VkDeviceMemory memory, const VkAllocationCallbacks *pAllocator, u64 memSize);
+
+    bool    vulkanCreateBuffer (sVkDevice &vulkan, u32 sizeInByte, 
                                 VkBufferUsageFlags usage, 
                                 VkMemoryPropertyFlags memProperties,
                                 bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ,
-                                VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle);
+                                VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle, u64 *out_realMemAllocated);
 
     bool    vulkanCreateCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer *out_handle);
     bool    vulkanDeleteCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer &vkHandle);
 
-    bool    vulkanCreateImage2D (const sVkDevice &vulkan, u32 dimx, u32 dimy, u8 numMipMap, VkFormat fmt, VkMemoryPropertyFlags memProps, 
+    bool    vulkanCreateImage2D (sVkDevice &vulkan, u32 dimx, u32 dimy, u8 numMipMap, VkFormat fmt, VkMemoryPropertyFlags memProps, 
                                 VkImageUsageFlags usage, VkImageTiling tiling,
                                 VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte);
 

@@ -7,6 +7,7 @@
 #include "../gosInput/gosInput.h"
 #include "../gos/gosHashMap.h"
 #include "../gosImage/gosImage.h"
+#include "vulkan/gosGPUVulkan.h"
 #include "gosGPUDescrSetInstanceWriter.h"
 #include "gosGPUCmdBufferWriter.h"
 #include "utils/gosGPUMainLoop.h"
@@ -815,7 +816,7 @@ namespace gos
                                 if (list.fromHandleToPointer (handle, &s))
                                 {
                                     vkDestroyBuffer (vulkan.dev, s->vkHandle, nullptr);
-                                    vkFreeMemory (vulkan.dev, s->vkMemHandle, nullptr);
+                                    gos::vulkanFreeMemory (vulkan, s->_vkMemHandle, nullptr, s->memoryAllocated);
                                     s->reset();
                                     list.release (handle);
                                 }
@@ -894,7 +895,7 @@ namespace gos
                                 const u32 aa = sizeInByte % minSize;
                                 sizeInByte += minSize - aa;                                
 
-                                VkResult result = vkMapMemory (vulkan.dev, s->vkMemHandle, offsetDST, sizeInByte, 0, &out->host_pt);
+                                VkResult result = vkMapMemory (vulkan.dev, s->_vkMemHandle, offsetDST, sizeInByte, 0, &out->host_pt);
                                 if (VK_SUCCESS != result)
                                 {
                                     out->host_pt = NULL;
@@ -904,7 +905,7 @@ namespace gos
 
                                 out->offset = offsetDST;
                                 out->size = sizeInByte;
-                                out->_vkMemHandle = s->vkMemHandle;
+                                out->_vkMemHandle = s->_vkMemHandle;
                                 return true;
                             }
 
