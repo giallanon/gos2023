@@ -30,6 +30,8 @@ Renderer1.cpp
 Renderer1.h
 TheApp.cpp
 TheApp.h
+ThePipeline.cpp
+ThePipeline.h
 VBIBSTBuffer.cpp 
 VBIBSTBuffer.h
 )

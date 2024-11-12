@@ -46,6 +46,7 @@ private:
     gos::FreeMovement   movement;
 
     VBIBSTBuffer        vbibstBuffer;
+    ThePipeline         thePipeline;
     Renderer1           renderer;
 };
 

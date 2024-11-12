@@ -1,11 +1,9 @@
 #ifndef _Renderer1_h_
 #define _Renderer1_h_
-#include "gosGPU.h"
-#include "../gos/memory/gosAllocatorHeap.h"
+#include "ThePipeline.h"
 #include "../gos/gosHandle.h"
 #include "../gosShape/gosShape.h"
 #include "../gosGeom/gosGeomCamera3.h"
-#include "DynamicTextureArray.h"
 #include "BitmaskedFixedArray.h"
 #include "VBIBSTBuffer.h"
 #include "Model.h"
@@ -16,14 +14,11 @@
  */
 class Renderer1
 {
-private:
-    typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Unsafe>		LocalAllocator;
-
 public:
             Renderer1();
             ~Renderer1();
 
-    bool    setup (gos::GPU *gpu);
+    bool    setup (ThePipeline *thePipeline);
     bool    recordCommandBuffer (gos::gpu::CmdBufferWriter &cw, gos::geom::Camera3 *cam);
 
     //============= gestione materiali
@@ -37,7 +32,6 @@ public:
 
 
 private:
-    static constexpr u32    NUM_MAX_TEXTURE                         = 1024;
     static constexpr u32    NUM_MAX_MATERIAL                        = 1024;
     static constexpr u32    SIZEOF_ONE_ELEMENT_IN_MATERIAL_SSBO     = 64;
 
@@ -69,18 +63,13 @@ private:
 
 
 private:
-    gos::GPU                *gpu;
-    LocalAllocator          *localAllocator;
-
-    GPURenderLayoutHandle   hRenderLayout;
-    GPUFrameBufferHandle    hFrameBuffer;
-    GPUPipelineHandle       hPipeline;
-    GPUShaderHandle         hVtxShader;
-    GPUShaderHandle         hFragShader;
-    u8                      pc_objWorldPos;
-
-
-    GPUDescrPoolHandle          hDescrPool;
+    ThePipeline                 *thePipeline;
+    gos::GPU                    *gpu;
+    gos::Allocator              *localAllocator;
+    GPUPipelineHandle           hPipeline;
+    GPUShaderHandle             hVtxShader;
+    GPUShaderHandle             hFragShader;
+    u8                          pc_objWorldPos;
 
     GPUDescrSetLayoutHandle     hDescrSetLayout_0;
     GPUDescrSetInstanceHandle   hDescrSetInstance_0;
@@ -94,10 +83,6 @@ private:
     GPUDescrSetInstanceHandle   hDescrSetInstance_2;
     GPUStorageBufferHandle      hDescrset2_ssbo;
 
-    GPUSamplerHandle            hSampler_diffuse;
-
-
-    DynamicTextureArray             textureList;
     BitmaskedFixedArray<Material>   materialList;
     BitmaskedFixedArray<VBIBSTBuffer::sUploadInfo>  shapeList;
     gos::FastArray<sInstance>       instanceList;

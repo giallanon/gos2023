@@ -71,8 +71,9 @@ bool TheApp::setup (gos::GPU *gpuIN)
     //vtx idx e stage buffer
     vbibstBuffer.setup (gpu, sizeof(sVertex)); 
 
+    thePipeline.setup (gpu);
 
-    if (!renderer.setup(gpu))
+    if (!renderer.setup(&thePipeline))
         return false;
     
     return true;
