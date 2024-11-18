@@ -73,20 +73,7 @@ bool TheApp::setup (gos::GPU *gpuIN)
     inputCtx.action_bindToBtn ("speedDOWN", input::eOrigin::keyboard, GLFW_KEY_KP_SUBTRACT, input::eButtonStatus::pressed);
     inputCtx.action_bindToBtn ("printCAMPos", input::eOrigin::keyboard, GLFW_KEY_KP_ENTER, input::eButtonStatus::pressed);
 
-    //creo la pipeline
-    if (!thePipeline.setup (gpu))
-        return false;
-
-    //aggiungo un renderer
-    if (!renderer.setup(&thePipeline))
-        return false;
     
-    //map renderer
-    if (!mapRenderer.setup (&thePipeline, "assets/map256.tga"))
-        return false;
-
-
-    //movement.setLinearSpeed (15);
     return true;
 }
 
@@ -198,144 +185,8 @@ void TheApp::priv_doCPUStuff ()
 }
 
 //********************************
-#include "../gosShape/gosShapePrefabs.h"
-bool TheApp::priv_buildScene1()
-{
-    //carico delle texture
-    GPUTextureHandle hTex_checker;
-    GPUTextureHandle hTex_stone003;
-    {    
-        gos::Image im;
-        image::load (gos::getScrapAllocator(), "texture/checker_color_1k.gosimage", &im);
-        gpu->texture_create2D (&im, 0, &hTex_checker);
-        image::free (gos::getScrapAllocator(), im);
-
-        image::load (gos::getScrapAllocator(), "texture/stonetiles_003.gosimage", &im);
-        gpu->texture_create2D (&im, 0, &hTex_stone003);
-        image::free (gos::getScrapAllocator(), im);
-    }
-
-
-    //creo una shape e la bindo a VB/IB
-    tpp::sBoundShapeInfo uploadedShapeCubo1;
-    {
-        gos::Shape sh;
-        sh.reset();
-        const f32 lato = 1;
-        gos::shape::buildCube24 (vec3f(0,0,0), vec3f(lato, lato, lato), thePipeline.vtxLayout, gos::getSysHeapAllocator(), &sh);
-        if (!thePipeline.shape_uploadToVBIB (&sh, &uploadedShapeCubo1))
-        {
-            gos::logger::err ("TheApp::priv_buildScene1() => can't upload to VtxBuffer\n");
-            return false;
-        }
-        shape::shapeFree (gos::getSysHeapAllocator(), &sh);
-    }
-
-    //creo il pavimento e lo bindo a VB/IB
-    tpp::sBoundShapeInfo uploadedShapePlane1;
-    {
-        gos::Shape sh;
-        sh.reset();
-        gos::shape::buildCube24 (vec3f(0,0,0), vec3f(40, 0.1f, 40), thePipeline.vtxLayout, gos::getSysHeapAllocator(), &sh);
-
-        if (!thePipeline.shape_uploadToVBIB (&sh, &uploadedShapePlane1))
-        {
-            gos::logger::err ("TheApp::priv_buildScene1() => can't upload to VtxBuffer\n");
-            return false;
-        }
-        shape::shapeFree (gos::getSysHeapAllocator(), &sh);
-    }    
-
-
-    //creo dei materiali
-    u16 material1, material2, material3, material4;
-    renderer.material_create (hTex_checker, gos::vec3f(1,0,0), &material1);
-    renderer.material_create (hTex_stone003, gos::vec3f(0,1,0), &material2);
-    renderer.material_create (hTex_stone003, gos::vec3f(1,1,1), &material3);
-    renderer.material_create (hTex_checker, gos::vec3f(1,1,1), &material4);
-
-    //aggiungo la shape al renderer
-    u16 shapeCubo1;         renderer.shape_add (uploadedShapeCubo1, &shapeCubo1);
-    u16 shapePavimento;     renderer.shape_add (uploadedShapePlane1, &shapePavimento);
-
-    //creo un po' di istanze
-    renderer.instance_add (shapeCubo1, material1, geom::Pos3(0,0.5f,0));
-    renderer.instance_add (shapeCubo1, material2, geom::Pos3(1,0.5f,0));
-    renderer.instance_add (shapeCubo1, material3, geom::Pos3(2,0.5f,0));
-    renderer.instance_add (shapeCubo1, material1, geom::Pos3(2,1.5f,0));
-    renderer.instance_add (shapePavimento, material4, geom::Pos3(0,-0.05f,0));
-
-    return true;
-}
-
-
-//********************************
-bool TheApp::priv_buildScene2()
-{
-    //carico delle texture
-    GPUTextureHandle hTex_stone003;
-    {    
-        gos::Image im;
-        image::load (gos::getScrapAllocator(), "texture/stonetiles_003.gosimage", &im);
-        gpu->texture_create2D (&im, 0, &hTex_stone003);
-        image::free (gos::getScrapAllocator(), im);
-    }
-
-    //creo dei materiali
-    u16 material1;
-    renderer.material_create (hTex_stone003, gos::vec3f(1,1,1), &material1);
-
-
-    //shape
-    gos::ShapeList shapeList;
-    shapeList.setup (gos::getScrapAllocator(), 16 * 1024);
-    if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Sponza/glTF/Sponza.glb", thePipeline.vtxLayout, gos::getSysHeapAllocator(), shapeList)) 
-        return false;
-    
-    
-    //instances
-    const u32 n = shapeList.getNElem();
-    for (u32 i=0; i<n; i++)
-    {
-        tpp::sBoundShapeInfo uploadedShapeInfo;
-        if (!thePipeline.shape_uploadToVBIB (&shapeList(i), &uploadedShapeInfo))
-        {
-            gos::logger::err ("TheApp::priv_buildScene2() => can't upload to VtxBuffer\n");
-            return false;
-        }
-
-        u16 shapeIndex;
-        if (!renderer.shape_add (uploadedShapeInfo, &shapeIndex))
-        {
-            gos::logger::err ("TheApp::priv_buildScene2() => can't shape_add()\n");
-            return false;
-        }
-        
-        renderer.instance_add (shapeIndex, material1, geom::Pos3(0,0,0));
-    }
-    
-
-    //free delle shape
-    for (u32 i=0; i<shapeList.getNElem(); i++)
-    {
-        shape::shapeFree (gos::getSysHeapAllocator(), &shapeList[i]);
-    }
-    shapeList.unsetup();
-    
-    return true;
-}
-
-//********************************
 void TheApp::run()
 {
-    if (!priv_buildScene1())
-    //if (!priv_buildScene2())
-    {
-        gos::logger::err ("TheApp::run() => cant build scene\n");
-        return;
-    }
-
-
     //posizione inziale della camera
     cam.setPerspectiveFovLH (gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 850.0f);
     cam.pos.identity(); cam.pos.warp (0, 1.8f, -10);
@@ -370,16 +221,10 @@ void TheApp::run()
             cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
         if (gpuLoop.canSubmitGFXJob())
         {
+            /*
             cw.begin (gpu, cmdBufferHandle);
-
-            //aggiornamento dati di scena
-            thePipeline.descritproScene_update (&cam);
-
-            mapRenderer.recordCommandBuffer(cw, &cam);
-            renderer.recordCommandBuffer(cw, &cam);
-
             cw.end();
-            gpuLoop.submitGFXJob (cmdBufferHandle);
+            gpuLoop.submitGFXJob (cmdBufferHandle);*/
         }
 
     }

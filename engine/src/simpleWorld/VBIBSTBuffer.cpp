@@ -62,7 +62,7 @@ bool VBIBSTBuffer::setup (gos::GPU *gpuIN, u32 sizeOfAVertexIN)
 }
 
 //********************************
-bool VBIBSTBuffer::upload (const gos::Shape *shape, sUploadInfo *out_info)
+bool VBIBSTBuffer::upload (const gos::Shape *shape, tpp::sBoundShapeInfo *out_info)
 {
     assert (NULL != gpu);
     assert (NULL != shape);

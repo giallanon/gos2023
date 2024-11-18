@@ -46,3 +46,5 @@ engine/bin/testVulkan/texture/faccia512x512.jpg
 engine/bin/simpleWorld/assets/sponza/sponza.glb
 
 engine/bin/simpleWorld/assets/sponza/sponza_glTF.ini
+
+engine/bin/Renderer2D/Renderer2D__linux_Debug

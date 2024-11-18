@@ -1,12 +1,9 @@
 #ifndef _TheApp_h_
 #define _TheApp_h_
-#include "gosGPU.h"
-#include "../gosShape/gosShape.h"
-#include "../gosShape/gosShapeImport.h"
+#include "../gosGPU/gosGPU.h"
 #include "../gosGeom/gosGeomCamera3.h"
 #include "../gosGPU/utils/gosFreeMovement.h"
-#include "Renderer1.h"
-#include "terrain/MapRenderer.h"
+
 
 /**
  * @brief TheApp
@@ -35,10 +32,6 @@ private:
     gos::input::Context inputCtx;
     gos::geom::Camera3  cam;
     gos::FreeMovement   movement;
-
-    ThePipeline         thePipeline;
-    Renderer1           renderer;
-    MapRenderer         mapRenderer;
 };
 
 

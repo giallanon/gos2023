@@ -34,7 +34,7 @@ void MarchingSquare::priv_free()
 }
 
 //*******************************************************
-u8 MarchingSquare::priv_computeSquareMask (const VkEx5MarchingSquare::Map &map, u32 x, u32 y) const
+u8 MarchingSquare::priv_computeSquareMask (const TheMap::LayerView &map, u32 x, u32 y) const
 {
     u8 mask = 0;
     if (map.isON(x,y))
@@ -83,7 +83,7 @@ bool MarchingSquare::priv_isValidStart (const sQuad *quad) const
 }
 
 //*******************************************************
-void MarchingSquare::run (gos::Allocator  *allocator, const VkEx5MarchingSquare::Map &map)
+void MarchingSquare::run (gos::Allocator  *allocator, const TheMap::LayerView &map)
 {
     priv_free();
 
@@ -122,6 +122,7 @@ void MarchingSquare::run (gos::Allocator  *allocator, const VkEx5MarchingSquare:
     //preparo un array per le posizioni dei quad pieni
     if (numQuadPieni)
         posQuadPieni = GOSALLOCT(gos::vec2u16*, localAllocator, sizeof(gos::vec2u16) * numQuadPieni);
+    numQuadPieni = 0;
 
     //preparo un array che contenga tutti i perimetri che trovo
     FastArray<sPerimetro> listaPerimetri (gos::getScrapAllocator(), stimaNumeroDiPerimetri);
@@ -188,20 +189,14 @@ void MarchingSquare::run (gos::Allocator  *allocator, const VkEx5MarchingSquare:
     }
 
 
-    //report in console
+    /*report in console
     printf ("perimetri: %d\n", getNumPerimetri());
     for (u32 i=0; i<getNumPerimetri(); i++)
     {
         const sInfo *info = getPerimetroByIndex(i);
         printf ("  perimetro #%d, num quad: %d, linea-chiusa:%c, num-vtx:%d\n    ", i, info->numQuad, listaPerimetri(i).bSiChiudeSuSeStesso?'Y':'N', info->numVtx);
-
-        for (u32 i2=0; i2<info->numQuad; i2++)
-        {
-            const sQuad *q = &quadList.buffer[listaPerimetri(i).quadIndexList[i2]];
-            printf ("(%d,%d, t=%d) ", q->x, q->y, info->quadTypeList[i2]);
-        }
-        printf ("\n");
     }
+    */
 
     //free vari
     quadList.unsetup();
@@ -213,6 +208,10 @@ void MarchingSquare::run (gos::Allocator  *allocator, const VkEx5MarchingSquare:
         GOSFREE(gos::getScrapAllocator(), listaPerimetri[i].quadTypeList);
     }
     listaPerimetri.unsetup();
+
+
+    //calcolo di quanto dovro' shiftare i vtx della mesh del perimentro
+    zShift = (f32)(map.getDimY() -1);
 }
 
 //*******************************************************
@@ -533,21 +532,13 @@ void MarchingSquare::priv_perimetro_smooth (const gos::FastArray<gos::vec2f> &sr
                 const f32 t2 = t*t;
                 const f32 t3 = t2*t;
                     
-                //catmull rom
                 dst[nPointOUT++].pos  = 0.5f * (
                                                 2.0f * p1 
                                                 + (-1.0f * p0 + p2) * t
                                                 + (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * t2 
                                                 + (-1.0f * p0 + 3.0f * p1 -3.0f * p2 + p3) * t3
                                             );
-                
 
-                /*bezier
-                dst[nPointOUT++].pos  = p0 * (-t3 +3*t2 -3*t +1) +
-                                        p1 * (3*t3 -6*t2 +3*t) +
-                                        p2 * (-3*t3 +3*t2) +
-                                        p3 * (t3);
-*/
             }
         }
     }
@@ -576,7 +567,7 @@ void MarchingSquare::priv_perimetro_smooth (const gos::FastArray<gos::vec2f> &sr
     for (u32 i=1; i<nPointOUT; i++)
     {
         dst[i].norm = (tmpSegmentNormList(i-1) + tmpSegmentNormList(i)) * 0.5f;
-        //dst[i].norm.normalize();
+        dst[i].norm.normalize();
     }
     dst[0].norm = (tmpSegmentNormList(nPointOUT-1) + tmpSegmentNormList(0)) * 0.5f;
     dst[0].norm.normalize();
@@ -594,22 +585,70 @@ void MarchingSquare::priv_perimetro_smooth (const gos::FastArray<gos::vec2f> &sr
     */
 }
 
+
+//*******************************************************
+void MarchingSquare::buildFullQuadMesh (f32 spessore, VertexList3 &out_vtxList, gos::FastArray<u16> &out_idxList)
+{
+    out_vtxList.reset();
+    out_idxList.reset();
+
+    sVertex3 v;
+    v.norm.set (0,1,0);
+    v.pos.set (0,0,0);      out_vtxList.append (v);
+    v.pos.set (1,0,0);      out_vtxList.append (v);
+    v.pos.set (1,0,1);      out_vtxList.append (v);
+    v.pos.set (0,0,1);      out_vtxList.append (v);
+
+    out_idxList.append (0); out_idxList.append (3); out_idxList.append (2);
+    out_idxList.append (2); out_idxList.append (1); out_idxList.append (0);
+    
+
+    //vtx 4 5 6 7 (front)
+    v.norm.set (0,0,-1);
+    v.pos.set (0,0,0);          out_vtxList.append (v);
+    v.pos.set (1,0,0);          out_vtxList.append (v);
+    v.pos.set (0,-spessore,0);  out_vtxList.append (v);
+    v.pos.set (1,-spessore,0);  out_vtxList.append (v);
+
+    out_idxList.append (4); out_idxList.append (5); out_idxList.append (7);
+    out_idxList.append (7); out_idxList.append (6); out_idxList.append (4);
+
+    //vtx 8 9 10 11 (right)
+    v.norm.set (1,0,0);
+    v.pos.set (1,0,0);      out_vtxList.append (v);
+    v.pos.set (1,0,1);      out_vtxList.append (v);
+    v.pos.set (1,-spessore,0);      out_vtxList.append (v);
+    v.pos.set (1,-spessore,1);      out_vtxList.append (v);
+
+    out_idxList.append (8); out_idxList.append (9); out_idxList.append (11);
+    out_idxList.append (11); out_idxList.append (10); out_idxList.append (8);
+
+    //vtx 12 13 14 15 (back)
+    v.norm.set (0,0,1);
+    v.pos.set (1,0,1);      out_vtxList.append (v);
+    v.pos.set (0,0,1);      out_vtxList.append (v);
+    v.pos.set (1,-spessore,1);      out_vtxList.append (v);
+    v.pos.set (0,-spessore,1);      out_vtxList.append (v);
+
+    out_idxList.append (12); out_idxList.append (13); out_idxList.append (15);
+    out_idxList.append (15); out_idxList.append (14); out_idxList.append (12);
+
+    //vtx 16 17 18 19 (left)
+    v.norm.set (-1,0,0);
+    v.pos.set (0,0,1);      out_vtxList.append (v);
+    v.pos.set (0,0,0);      out_vtxList.append (v);
+    v.pos.set (0,-spessore,1);      out_vtxList.append (v);
+    v.pos.set (0,-spessore,0);      out_vtxList.append (v);
+
+    out_idxList.append (16); out_idxList.append (17); out_idxList.append (19);
+    out_idxList.append (19); out_idxList.append (18); out_idxList.append (16);
+}
+
 //*******************************************************
 void MarchingSquare::buildMesh (f32 spessore, VertexList3 &out_vtxList, gos::FastArray<u16> &out_idxList) const
 {
     out_vtxList.reset();
     out_idxList.reset();
-
-
-    /*mesh del quad pieno
-    out_vtxList.append (vec3f(0,0,0));
-    out_vtxList.append (vec3f(1,0,0));
-    out_vtxList.append (vec3f(1,0,-1));
-    out_vtxList.append (vec3f(0,0,-1));
-    out_idxList.append (0); out_idxList.append (1); out_idxList.append (2);
-    out_idxList.append (2); out_idxList.append (3); out_idxList.append (0);
-*/
-
 
     for (u32 i=0; i<getNumPerimetri(); i++)
     {
@@ -624,6 +663,11 @@ void MarchingSquare::buildMesh (f32 spessore, VertexList3 &out_vtxList, gos::Fas
             priv_mesh_buildSingleQuad (spessore, info, quad, firstVtxSRC, out_vtxList, out_idxList);
             firstVtxSRC += SMOOTH_LEVEL;
         }
+    }
+
+    //devo shiftare verso Z-up
+    for (u32 i=0; i<out_vtxList.getNElem(); i++)
+        out_vtxList[i].pos.z += zShift;
 
         /*printf ("out_vtxList:n=%d, out_idxList:n=%d\n", out_vtxList.getNElem(), out_idxList.getNElem());
         for (u32 i2=0; i2<out_idxList.getNElem();)
@@ -638,7 +682,6 @@ void MarchingSquare::buildMesh (f32 spessore, VertexList3 &out_vtxList, gos::Fas
                 out_vtxList(idx3).x, out_vtxList(idx3).y, out_vtxList(idx3).z);
             
         }*/        
-    }
 }
 
 //*******************************************************
@@ -979,7 +1022,7 @@ void MarchingSquare::priv_mesh_buildSingleQuad (f32 spessore, const sInfo *info,
 //*******************************************************
 void MarchingSquare::priv_mesh_addSpessore (f32 SPESSORE, u32 firstVtx, VertexList3 &out_vtxList, gos::FastArray<u16> &out_idxList) const
 {
-    //static constexpr f32 SPESSORE = 1.5f;
+    //static constexpr f32 SPESSORE = 0.5f;
     
     u32 i1 = out_vtxList.getNElem() - firstVtx;
     sVertex3 vtx1;

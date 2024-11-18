@@ -1,12 +1,12 @@
 #[[====================================================
 #
-#  PROJECT: simpleWorld
+#  PROJECT: Renderer2D
 #
 =====================================================]]
 cmake_minimum_required(VERSION 3.20)
 
 #project name and version
-project(simpleWorld VERSION 1.0.0 LANGUAGES C CXX)
+project(Renderer2D VERSION 1.0.0 LANGUAGES C CXX)
 
 #====================================================
 # path di output di questo progetto
@@ -20,28 +20,11 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 #====================================================
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
-terrain/MapRenderer.cpp
-terrain/MapRenderer.h
-terrain/MarchingSquare.cpp
-terrain/MarchingSquare.h
-terrain/TheMap.cpp
-terrain/TheMap.h
-
-BitmaskedFixedArray.h
-DynamicTextureArray.cpp
-DynamicTextureArray.h
 main.cpp
-Model.cpp
-Model.h
-Renderer1.cpp
-Renderer1.h
+Renderer2D.cpp
+Renderer2D.h
 TheApp.cpp
 TheApp.h
-ThePipeline.cpp
-ThePipeline.h
-ThePipelineEnumAndDefine.h
-VBIBSTBuffer.cpp 
-VBIBSTBuffer.h
 )
 
 #====================================================

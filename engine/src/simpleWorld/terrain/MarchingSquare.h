@@ -2,9 +2,8 @@
 #define _marchingSquare_h_
 #include "../gos/gos.h"
 #include "../gos/gosFastArray.h"
-#include "../gosMath/gosVect.h"
-#include "SimpleLineRenderer.h"
-#include "VkEx5MarchingSquare.h"
+#include "../gosMath/gosMath.h"
+#include "TheMap.h"
 
 /**
  * @brief Marching Square
@@ -48,15 +47,17 @@ public:
     typedef gos::FastArray<sVertex3> VertexList3;
 
 public:
+    static void     buildFullQuadMesh (f32 spessore, VertexList3 &out_vtxList, gos::FastArray<u16> &out_idxList);
+
+public:
                     MarchingSquare()                                                            { numInfo = 0; numQuadPieni=0; localAllocator=NULL; }
                     ~MarchingSquare()                                                           { priv_free(); }
 
-    void            run (gos::Allocator *allocator, const VkEx5MarchingSquare::Map &map);
+    void            run (gos::Allocator *allocator, const TheMap::LayerView &map);
 
     /**
      * @brief posto che run() sia stata eseguita, questa fn ritorna in <out_vtxList> e <out_idxList> una mesh che renderizza
      * tutti i perimetri.
-     * I primi 4 vtx sono deidicati alla mesh del "quad pieno"
      */
     void            buildMesh (f32 spessore, VertexList3 &out_vtxList, gos::FastArray<u16> &out_idxList) const;
 
@@ -152,7 +153,7 @@ private:
 
 private:
     void        priv_free();
-    u8          priv_computeSquareMask (const VkEx5MarchingSquare::Map &map, u32 x, u32 y) const;
+    u8          priv_computeSquareMask (const TheMap::LayerView &map, u32 x, u32 y) const;
 
     void        priv_perimetro_begin (LineaList &linea, u32 ct, gos::FastArray<sPerimetro> &listaPerimetri);
     bool        priv_perimetro_createTemp (LineaList &linea, u32 ct, const sQuad *parent);
@@ -174,6 +175,7 @@ private:
     u8              numInfo;
     sInfo           *infoList;
     
+    f32             zShift;
     u32             numQuadPieni;
     gos::vec2u16    *posQuadPieni;
 };

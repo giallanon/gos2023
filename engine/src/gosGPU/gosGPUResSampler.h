@@ -10,17 +10,8 @@ namespace gos
         class SamplerDesc
         {
         public:
-            SamplerDesc()
-            {
-                minFilter = eSamplerFilter::linear;
-                magFilter = eSamplerFilter::linear;
-                mipFilter = eSamplerMipFilter::linear;
-                compareFn = eSamplerCompFunc::DISABLED;
-                addressModeU = eSamplerAddressMode::REPEAT;
-                addressModeV = eSamplerAddressMode::REPEAT;
-                addressModeW = eSamplerAddressMode::REPEAT;
-                bAnisotropic = true;
-            }
+            SamplerDesc()   { reset(); }
+
 
             bool    operator== (const SamplerDesc &b) const
             {
@@ -35,6 +26,17 @@ namespace gos
                 return true;
             }
 
+            void reset()
+            {
+                minFilter = eSamplerFilter::linear;
+                magFilter = eSamplerFilter::linear;
+                mipFilter = eSamplerMipFilter::linear;
+                compareFn = eSamplerCompFunc::DISABLED;
+                addressModeU = eSamplerAddressMode::REPEAT;
+                addressModeV = eSamplerAddressMode::REPEAT;
+                addressModeW = eSamplerAddressMode::REPEAT;
+                bAnisotropic = true;
+            }
 
             u32     toU32() const
             {

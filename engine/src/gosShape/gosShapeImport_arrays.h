@@ -14,10 +14,10 @@ namespace gos
 		 * @brief crea una Shape a partire da un set di liste di posizioni, normali, texture coord...
 		 * 
 		 * @fn beginUsingFaceList()
-		 * Il fulcro dell'algoritmo si basa tu @tupleList che contiene i vertici dei triangoli da creare.
+		 * Il fulcro dell'algoritmo si basa su @tupleList che contiene i vertici dei triangoli da creare.
 		 * Ogni vertice e' composto da @numIdxPerOgniTupla u16 che a loro volta indicizzano i vari array di pos, norm etc.
 		 * Ad esempio, se abbiamo un @tupleList con @numIdxPerOgniTupla=3, e abbiamo 2 triangoli, ci aspettiamo di avere un totale
-		 * di 6 tuple in @tupleList (ovvero 6 vertici) ognuno compostao da 3 indici, per un totale di 6*3=18 indici in tutto (@tupleList quindi deve contenere 
+		 * di 6 tuple in @tupleList (ovvero 6 vertici) ognuno composto da 3 indici, per un totale di 6*3=18 indici in tutto (@tupleList quindi deve contenere 
 		 * 18 indici).
 		 * Prendiamo la prima, la seconda e la terza tupla per avere i 3 vtx del primo triangolo.
 		 * Una tupla in questo caso e' composta da 3 indici e potrebbe essere una cosa del tipo (10, 3, 14).

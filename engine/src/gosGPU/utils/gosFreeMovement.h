@@ -30,6 +30,8 @@ namespace gos
 
         void    update (u64 timenow_msec);
 
+        f32     getLinearSpeed() const                  { return speed_msec; }
+
     private:
         const u16   STATUS_MOVING_FORWARD  = 0;
         const u16   STATUS_MOVING_BACKWARD = 1;

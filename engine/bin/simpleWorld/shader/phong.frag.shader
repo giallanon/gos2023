@@ -11,15 +11,10 @@ layout(location = 0) out vec4 out_colorRGBA;
 
 void main() 
 {
-    float c = max(-dot(scene.lightDir.xyz, in_normal), 0);
-    c += scene.lightDir.w;
-    c = min(max(c, 0), 1);
+    const float c = calcLight_01 (in_normal);
 
     //const uint ii = nonuniformEXT(material.textureIndex);
     const uint ii = material.textureIndex;
-
-    const vec3 texCol = texture (sampler2D(textureList[ii], samplerList[0]), in_texCoord).rgb;
+    const vec3 texCol = sampleTexture2D_bilinear (textureList[ii], in_texCoord).rgb;
     out_colorRGBA = vec4(material.color.rgb * texCol * c, 1);
-    
-    //out_colorRGBA = vec4((material.color * texture (sampler_diffuse[nonuniformEXT(ii)], in_texCoord).rgb) * c, 1);
 }

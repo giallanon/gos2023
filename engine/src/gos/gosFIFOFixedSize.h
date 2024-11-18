@@ -10,7 +10,7 @@ namespace gos
 	* FIFOFixedSize
 	*
 	* FIFOFixedSize non thread safe
-	* La coda puo' contenere un max di N elementi di tipo T dopodich� si ricicla a partire dal primo elemento
+	* La coda puo' contenere un max di N elementi di tipo T dopodiche' si ricicla a partire dal primo elemento
 	*/
 	template <class T, int N>
 	class FIFOFixedSize

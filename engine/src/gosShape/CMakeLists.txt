@@ -31,8 +31,6 @@ gosShape.h
 gosShapeEnumAndDefine.h
 gosShapeImport_arrays.cpp
 gosShapeImport_arrays.h
-gosShapeImport_Collada.cpp
-gosShapeImport_Collada.h
 gosShapeImport_glTF.cpp
 gosShapeImport_glTF.h
 gosShapeImport.cpp

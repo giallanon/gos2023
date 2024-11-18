@@ -1,7 +1,6 @@
 #ifndef _VBIBSTBuffer_h_
 #define _VBIBSTBuffer_h_
-#include "gosGPU.h"
-#include "../gosShape/gosShape.h"
+#include "ThePipelineEnumAndDefine.h"
 
 /**
  * @brief VBIBSTBuffer
@@ -11,28 +10,18 @@
 class VBIBSTBuffer
 {
 public:
-    struct sUploadInfo
-    {
-        GPUVtxBufferHandle      hVtxBuffer;
-        GPUIdxBufferHandle      hIdxBuffer;
-        u32                     startVtx;
-        u32                     startIdx;
-        u32                     numIdx;        
-    };
-
-public:
             VBIBSTBuffer();
             ~VBIBSTBuffer();
 
     bool    setup (gos::GPU *gpu, u32 sizeOfAVertex);
     void    unsetup ();
 
-    bool    upload (const gos::Shape *shape, sUploadInfo *out_info);
+    bool    upload (const gos::Shape *shape, tpp::sBoundShapeInfo *out_info);
 
 private:
-    static constexpr u32    VTXBUFFER_MAX_NUM_VTX   = 1024*1024;
+    static constexpr u32    VTXBUFFER_MAX_NUM_VTX   = 8*1024*1024;
     static constexpr u32    IDXBUFFER_MAX_NUM_IDX   = VTXBUFFER_MAX_NUM_VTX*3;
-    static constexpr u32    STGBUFFER_SIZE          = 1024*1024;
+    static constexpr u32    STGBUFFER_SIZE          = VTXBUFFER_MAX_NUM_VTX/2;
 
 private:
     gos::GPU                *gpu;

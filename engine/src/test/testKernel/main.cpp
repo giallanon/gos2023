@@ -7,6 +7,7 @@ void testGos (Tester &tester);
 void testMath(Tester &tester);
 void testThread (Tester &tester);
 void testIniFile (Tester &tester);
+void testAllocTracker (Tester &tester);
 
 //********************************
 #include "protocol/gosProtocolChSocketTCP.h"
@@ -53,6 +54,7 @@ void runAllTest()
         testMath(tester);
         testThread (tester);
         testIniFile (tester);
+        testAllocTracker (tester);
     }
     tester.printReport();
 }

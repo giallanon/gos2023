@@ -112,6 +112,8 @@ string/gosUTF32.cpp
 
 gos.cpp
 gos.h
+gosAllocTracker.cpp
+gosAllocTracker.h
 gosArray.h
 gosBit.cpp
 gosBit.h

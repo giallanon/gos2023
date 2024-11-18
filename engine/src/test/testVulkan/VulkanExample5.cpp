@@ -490,7 +490,7 @@ void VulkanExample5::priv_runMarchingSquare()
     {
         MarchingSquare::VertexList3 vtxList (gos::getScrapAllocator(), 1024);
         gos::FastArray<u16> idxList (gos::getScrapAllocator(), 1024);
-        msq2.buildMesh (vtxList, idxList);
+        msq2.buildMesh (1.5f, vtxList, idxList);
 
         priv_freeMSQ2();
 
