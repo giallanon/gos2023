@@ -20,11 +20,12 @@ namespace gos
             void            reset ()
                             {
                                 width = height = 0;
+                                memoryAllocated = 0;
                                 format = VK_FORMAT_UNDEFINED;
                                 image = VK_NULL_HANDLE;
                                 vkMemHandle = VK_NULL_HANDLE;
-                                viewAsRT = VK_NULL_HANDLE;
-                                viewAsTexture = VK_NULL_HANDLE;
+                                view = VK_NULL_HANDLE;
+                                usage = 0;
                             }
 
             void            resolve (i16 w, i16 h)                     
@@ -38,12 +39,13 @@ namespace gos
             gos::Dim2D      height;
             u32             resolvedW;
             u32             resolvedH;
+            u64             memoryAllocated;
 
-            VkFormat        format;
-            VkImage         image;
-            VkDeviceMemory  vkMemHandle;
-            VkImageView     viewAsRT;
-            VkImageView     viewAsTexture;
+            VkFormat            format;
+            VkImage             image;
+            VkDeviceMemory      vkMemHandle;
+            VkImageView         view;
+            VkImageUsageFlags   usage;
         };
 
     } //namespace gpu

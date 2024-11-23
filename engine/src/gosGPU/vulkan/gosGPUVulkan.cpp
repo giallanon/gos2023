@@ -56,6 +56,14 @@ void gos::vulkanFreeMemory (sVkDevice &vulkan, VkDeviceMemory memory, const VkAl
     else
         vulkan.memory_curAllocated = 0;
     vkFreeMemory(vulkan.dev, memory, pAllocator);
+
+#ifdef _DEBUG
+        char debug_m1[32];
+        char debug_m2[32];
+        gos::string::format::memoryToKB_MB_GB(memSize, debug_m1, sizeof(debug_m1));
+        gos::string::format::memoryToKB_MB_GB(vulkan.memory_curAllocated, debug_m2, sizeof(debug_m2));
+        gos::logger::log (eTextColor::cyan, "vulkanFreeMemory(%s), cur allocated:%s\n", debug_m1, debug_m2);
+#endif
 }
 
 //*********************************************
@@ -705,7 +713,7 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
     createInfo.imageColorSpace = out->colorSpace;
     createInfo.imageExtent = out->imageExtent;
     createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     createInfo.preTransform = vkSurfCapabilities.currentTransform;
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -742,6 +750,7 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
 
         vkGetSwapchainImagesKHR (vulkan.dev, out->vkSwapChain, &out->imageCount, out->vkImageList);
         //creo le image view
+
         for (u8 i=0; i<out->imageCount; i++)
         {
             VkImageViewCreateInfo imgViewCreateInfo{};
@@ -783,10 +792,7 @@ bool gos::vulkanFindBestDepthOnlyFormat (const sPhyDeviceInfo &vkPhyDevInfo, VkF
     // Since all depth formats may be optional, we need to find a suitable depth format to use
     // Start with the highest precision packed format
     const VkFormat formatList[] = {
-        //VK_FORMAT_D32_SFLOAT_S8_UINT,
         VK_FORMAT_D32_SFLOAT,
-        //VK_FORMAT_D24_UNORM_S8_UINT,
-        //VK_FORMAT_D16_UNORM_S8_UINT,
         VK_FORMAT_D16_UNORM
     };
 
@@ -1034,3 +1040,6 @@ bool gos::vulkanCreateImage2D (sVkDevice &vulkan, u32 dimx, u32 dimy, u8 nMipMap
 
     return true;    
 }
+
+
+

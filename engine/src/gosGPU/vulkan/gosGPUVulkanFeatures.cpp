@@ -19,6 +19,11 @@ bool VkPhyDeviceFeatures::checkPhysicalDeviceFeatures (VkPhysicalDevice &vkDev, 
 
 #define CHECK(propName) if (!allFeatures.propName) { gos::logger::warn ("feature not supported: " #propName "\n"); ret = false; } else { this->propName = true; }
 
+    if (vulkanVersion >= eVulkanVersion::v1_3)
+    {
+        CHECK(features13.synchronization2);
+    }
+
     CHECK(features12.separateDepthStencilLayouts);
     CHECK(features12.runtimeDescriptorArray);
     CHECK(features12.descriptorBindingPartiallyBound);

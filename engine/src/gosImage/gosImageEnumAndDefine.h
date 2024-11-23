@@ -25,10 +25,20 @@ namespace gos
 		F32_RGBA		= 10,
 		F32_RGB			= 11,
 		F32_R			= 12,
-		
-		DDS_BC3			= 0xf2,
-		DDS_BC4			= 0xf3,
-		DDS_BC5			= 0xf4
+
+		U8_BGRA_sRGB	= 20,
+
+		//depth format	(range 0xE0 - 0xEF)
+    	DEPTH_F32				= 0xE0,			//solo depth float 32bit
+		DEPTH_U16				= 0xE1,			//solo depth 16 bit intero
+    	DEPTH_F32_STENCIL_U8	= 0xEA,			//depth f32 e stencil u8
+    	DEPTH_U16_STENCIL_U8	= 0xEB,			//depth u16 e stencil u8
+    	DEPTH_U24_STENCIL_U8	= 0xEC,			//depth u24 e stencil u8
+
+		//compressed format
+		DDS_BC3			= 0xF2,
+		DDS_BC4			= 0xF3,
+		DDS_BC5			= 0xF4
 	};
 
 	struct Image

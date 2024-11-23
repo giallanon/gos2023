@@ -104,25 +104,36 @@ enum class eCullMode : u8
 	CCW		= 2
 };
 
-enum class eRenderTargetUsage : u8
+enum class eImageLayout : u8
 {
-	presentation = 0,   			//usato per essere present() a video
-	storage_readonly,				//viene renderizzato e, al termine del rendering,  il suo contenuto deve essere preservato per shader futuri
-	storage_color_attachment_optimal,
-	storage_discard,     			//viene renderizzato ma, al termine del rendering, il suo contenuto non ci interessa piu'
-	dont_care
+	undefined = 0,					//VK_IMAGE_LAYOUT_UNDEFINED
+	general,						//VK_IMAGE_LAYOUT_GENERAL
+    color_attachment_optimal, 		//VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    shader_readonly,				//VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	transfer_src,					//VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+    transfer_dst,					//VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+	presentation,					//VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 };
 
-enum class eZBufferUsage : u8
+enum class eAttachmentLoadOp : u8
 {
-	dont_care = 0,
+    load = 0, 		//VK_ATTACHMENT_LOAD_OP_LOAD
+    clear,			//VK_ATTACHMENT_LOAD_OP_CLEAR
+    dont_care		//VK_ATTACHMENT_LOAD_OP_DONT_CARE
+};
 
-	depthOnly_RW = 1,				//VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL
-	depthOnly_readonly = 2,			//VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL
+enum class eAttachmentStoreOp : u8
+{
+	store = 0, 		//VK_ATTACHMENT_STORE_OP_STORE
+	dont_care,		//VK_ATTACHMENT_STORE_OP_DONT_CARE
+    none			//VK_ATTACHMENT_STORE_OP_NONE
+};
 
-	depth_stencil_RW = 100,			//VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-	depth_stencil_readonly = 101 	//VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
-	
+enum class eDepthStencilLayout : u8
+{
+	undefined = 0,						//VK_IMAGE_LAYOUT_UNDEFINED
+    depth_attachment_optimal, 			//VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+    depth_shader_readonly,				//VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
 };
 
 enum class eVIBufferMode : u8

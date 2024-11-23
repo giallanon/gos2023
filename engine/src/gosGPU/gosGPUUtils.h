@@ -1,6 +1,7 @@
 #ifndef _gosGPUUtils_h_
 #define _gosGPUUtils_h_
 #include "gosGPUEnumAndDefine.h"
+#include "../gosImage/gosImageEnumAndDefine.h"
 
 namespace gos
 {
@@ -14,6 +15,13 @@ namespace gos
         VkCompareOp             toVulkan (eZFunc f);
         VkCompareOp             toVulkan (eStencilFunc f);
         VkStencilOp             toVulkan (eStencilOp f);
+        VkFilter                toVulkan (eSamplerFilter s);
+        VkFormat                toVulkan (eImageFormat fmt);
+        eImageFormat            fromVulkan (VkFormat fmt);
+        VkImageLayout           toVulkan (eImageLayout s);
+        VkImageLayout           toVulkan (eDepthStencilLayout s, eImageFormat fmt);
+        VkAttachmentLoadOp      toVulkan (eAttachmentLoadOp s);
+        VkAttachmentStoreOp     toVulkan (eAttachmentStoreOp s);
 
     } //namespace gos
 } //namespace gos

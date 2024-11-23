@@ -119,8 +119,8 @@ namespace gos
             public:
                                 SubPassInfo ()                                          { owner = NULL; }
 
-                SubPassInfo&    useRenderTarget (u8 index);
-                SubPassInfo&    useDepthStencil ()                                      { bUseDepthStencil = true; return *this; }
+                SubPassInfo&    writeToRenderTarget (u8 index);
+                SubPassInfo&    writeToDepthStencil ()                                  { bUseDepthStencil = true; return *this; }
 
                 RTLB&           end()                                                   { return *owner; }
 
@@ -149,13 +149,9 @@ namespace gos
                             RenderTaskLayoutBuilder (GPU *gpuIN, GPURenderLayoutHandle *out_handle);
             virtual         ~RenderTaskLayoutBuilder();
 
-            RTLB&           requireRendertarget (VkFormat imageFormat, eRenderTargetUsage initialState,  eRenderTargetUsage finalState, bool bClearOnLoad);
-            //RTLB&           requireDepthStencil (VkFormat imageFormat, bool bWithStencil, bool bClearOnLoad);
-            RTLB&           requireZBuffer (VkFormat imageFormat, eZBufferUsage initialState, eZBufferUsage finalState, bool bClearOnLoad);
-            RTLB&           requireZBufferAndStencil (VkFormat imageFormat, eZBufferUsage initialState, eZBufferUsage finalState, bool bClearOnLoad);
-
+            RTLB&           requireRendertarget (const gos::eImageFormat imageFormat, const eImageLayout initialLayout, const eImageLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp);
+            RTLB&           requireZBuffer (const gos::eImageFormat imageFormat, const eDepthStencilLayout initialLayout, const eDepthStencilLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp);
             
-
             SubPassInfo&    addSubpass_GFX ();
             SubPassInfo&    addSubpass_COMPUTE ();
             bool            end();
@@ -165,29 +161,28 @@ namespace gos
         private:
             struct sRenderTargetInfo
             {
-                eRenderTargetUsage  initialState;
-                eRenderTargetUsage  finalState;
-                VkFormat            imageFormat;
-                bool                bClear;
+                VkFormat                imageFormat;
+                VkImageLayout           initialLayout;
+                VkImageLayout           finalLayout;
+                VkAttachmentLoadOp      loadOp;
+                VkAttachmentStoreOp     storeOp;
             };
 
             struct sDepthBufferInfo
             {
-                void    reset()                 { isRequired = false; bWithStencil=false; bClear=false; indexOfDepthStencilAttachment=0xFF; }
+                void    reset()                 { isRequired = false; indexOfDepthStencilAttachment=0xFF; }
 
                 bool    isRequired;
-                bool    bWithStencil;
-                bool    bClear;
                 u8      indexOfDepthStencilAttachment;
-                VkFormat imageFormat;
-                eZBufferUsage initialState;
-                eZBufferUsage finalState;
+                eImageFormat            imageFormat;
+                eDepthStencilLayout     initialLayout;
+                eDepthStencilLayout     finalLayout;
+                eAttachmentLoadOp       loadOp;
+                eAttachmentStoreOp      storeOp;
             };
 
         private:
             bool                    priv_buildVulkan();
-            VkImageLayout           priv_toVulkan (eRenderTargetUsage s) const;
-            VkImageLayout           priv_toVulkan (eZBufferUsage s) const;
 
         private:
             GPURenderLayoutHandle   *out_handle;
@@ -484,18 +479,19 @@ namespace gos
 
 
         //================ rendering & presentazione
-        bool                newFrame (u64 timeout_ns=UINT64_MAX, VkSemaphore semaphore=VK_NULL_HANDLE, VkFence fence=VK_NULL_HANDLE);
+        bool                swapChain_acquireImage (u64 timeout_ns=UINT64_MAX, VkSemaphore semaphore=VK_NULL_HANDLE, VkFence fence=VK_NULL_HANDLE);
         bool                swapChain_wasRecreated() const                  { return bSwapChainRecreatedDuringThisFrame; }
-        VkResult            present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount);
+        VkImage             swapChain_getCurImage() const                   { return vulkan.swapChainInfo.vkImageList[currentSwapChainImageIndex]; }
+        VkResult            swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount);
 
         //================ swap chain info
         //La swap chain viene creata automaticamente da GPU::init()
         u32                 swapChain_getWidth() const                      { return vulkan.swapChainInfo.imageExtent.width; }
         u32                 swapChain_getHeight() const                     { return vulkan.swapChainInfo.imageExtent.height; }
         f32                 swapChain_calcAspectRatio() const               { return (f32)swapChain_getWidth() / (f32)swapChain_getHeight(); }
-        VkFormat            swapChain_getImageFormat() const                { return vulkan.swapChainInfo.imageFormat; }
+        gos::eImageFormat   swapChain_getImageFormat() const;
         u8                  swapChain_getImageCount() const                 { return static_cast<u8>(vulkan.swapChainInfo.imageCount); }
-        VkImageView         swapChain_getImageViewHandle(u8 i) const        { assert(i < swapChain_getImageCount()); return vulkan.swapChainInfo.vkImageListView[i]; }
+        VkImageView         swapChain_getImageView(u8 i) const              { assert(i < swapChain_getImageCount()); return vulkan.swapChainInfo.vkImageListView[i]; }
         VkExtent2D          swapChain_getImageExten2D() const               { return vulkan.swapChainInfo.imageExtent; }
 
 
@@ -554,29 +550,33 @@ namespace gos
 
 
         //================ Pipeline
-        PipelineBuilder&    pipeline_createNew (const GPURenderLayoutHandle &enderLayoutHandle, GPUPipelineHandle *out_handle);
-        void                deleteResource (GPUPipelineHandle &handle);
-        bool                toVulkan (const GPUPipelineHandle handle, const gpu::sPipeline **out) const;
+        PipelineBuilder&            pipeline_createNew (const GPURenderLayoutHandle &enderLayoutHandle, GPUPipelineHandle *out_handle);
+        void                        deleteResource (GPUPipelineHandle &handle);
+        bool                        toVulkan (const GPUPipelineHandle handle, const gpu::sPipeline **out) const;
 
 
         //================ depth buffer
-        bool                    depthStencil_create (const gos::Dim2D &w, const gos::Dim2D &h, bool bWithStencil, GPUDepthStencilHandle *out_handle);
-        void                    deleteResource (GPUDepthStencilHandle &handle);
-        GPUDepthStencilHandle   depthStencil_getDefault() const                         { return defaultDepthStencil.handle; }
-        VkFormat                depthStencil_getDefaultFormat() const                   { return defaultDepthStencil.format; }
+        GPUDepthStencilHandle       depthStencil_getDefault() const                         { return defaultDepthStencil.handle; }
+        gos::eImageFormat           depthStencil_getDefaultFormat() const                   { return defaultDepthStencil.gosFormat; }
+        bool                        depthStencil_create (const gos::eImageFormat fmt, const gos::Dim2D &w, const gos::Dim2D &h, bool bWithStencil, GPUDepthStencilHandle *out_handle);
+        void                        deleteResource (GPUDepthStencilHandle &handle);
+        const gpu::DepthStencil*    getInfo (const GPUDepthStencilHandle handle) const;
 
         //================ render target
-        GPURenderTargetHandle   renderTarget_getDefault() const                         { return defaultRTHandle; }
+        GPURenderTargetHandle       renderTarget_getDefault() const                         { return defaultRTHandle; }
+		bool				        renderTarget_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, GPURenderTargetHandle *out_handle);
+        void                        deleteResource (GPURenderTargetHandle &handle);
+        const gpu::RenderTarget*    getInfo (const GPURenderTargetHandle handle) const;
 
         //================ command buffer
-        bool                cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle);
-        void                deleteResource (GPUCmdBufferHandle &handle);
-        bool                toVulkan (const GPUCmdBufferHandle handle, VkCommandBuffer *out) const;
+        bool                        cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle);
+        void                        deleteResource (GPUCmdBufferHandle &handle);
+        bool                        toVulkan (const GPUCmdBufferHandle handle, VkCommandBuffer *out) const;
 
 
         //================ staging buffer
-        bool                stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle);
-        void                deleteResource (GPUStgBufferHandle &handle);
+        bool                        stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle);
+        void                        deleteResource (GPUStgBufferHandle &handle);
         
         /**
          * @brief stagingBuffer_uploadToGPUBuffer()
@@ -706,7 +706,8 @@ namespace gos
         struct sDefaultDepthStencil
         {
             GPUDepthStencilHandle   handle;
-            VkFormat                format;
+            VkFormat                vkFormat;
+            eImageFormat            gosFormat;
         };
 
 
@@ -793,9 +794,13 @@ namespace gos
         bool                priv_depthStencil_createFromStruct (gos::gpu::DepthStencil &depthStencil);
         void                priv_depthStencil_deleteFromStruct (gos::gpu::DepthStencil &depthStencil);
 
+        bool                priv_renderTarget_createFromStruct (gos::gpu::RenderTarget &rt);
+        void                priv_renderTarget_deleteFromStruct (gos::gpu::RenderTarget &rt);
+
         bool                priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder);
         void                priv_frameBuffer_deleteFromStruct (gpu::FrameBuffer *s);
         bool                priv_frameBuffer_recreate (gpu::FrameBuffer *s);
+        bool                priv_frameBuffer_do_recreate (gpu::FrameBuffer *s);
         
         bool                priv_descrSetLayout_onBuilderEnds (DescriptorSetLayoutBuilder *builder);
         bool                priv_descrPool_onBuilderEnds (DescriptorPoolBuilder *builder);
@@ -938,6 +943,8 @@ namespace gos
         HandleList<GPUDepthStencilHandle, gpu::DepthStencil>        depthStencilList;
         gos::FastArray<GPUDepthStencilHandle>                       depthStencilHandleList;
         HandleList<GPURenderTargetHandle, gpu::RenderTarget>        renderTargetList;
+        gos::FastArray<GPURenderTargetHandle>                       renderTargetHandleList;
+
         HandleList<GPURenderLayoutHandle,gpu::RenderLayout>         renderLayoutList;
         HandleList<GPUPipelineHandle,gpu::sPipeline>                pipelineList;
         HandleList<GPUFrameBufferHandle, gpu::FrameBuffer>          frameBufferList;

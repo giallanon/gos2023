@@ -44,6 +44,7 @@ namespace gos
                                 VkImageUsageFlags usage, VkImageTiling tiling,
                                 VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte);
 
+
 } //namespace gos
 
 #endif //_gosGPUVulkan_h_

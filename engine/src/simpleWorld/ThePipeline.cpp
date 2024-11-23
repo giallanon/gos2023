@@ -70,11 +70,11 @@ bool ThePipeline::setup (gos::GPU *gpuIN)
 
     //creo il render layout
     gpu->renderLayout_createNew (&hRenderLayoutClearBuffer)
-        .requireRendertarget (gpu->swapChain_getImageFormat(), eRenderTargetUsage::dont_care, eRenderTargetUsage::storage_color_attachment_optimal, true)
-        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eZBufferUsage::dont_care, eZBufferUsage::depthOnly_RW, true)
+        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::color_attachment_optimal, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
+        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eDepthStencilLayout::undefined, eDepthStencilLayout::depth_attachment_optimal, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
         .addSubpass_GFX()
-            .useRenderTarget(0)
-            .useDepthStencil()
+            .writeToRenderTarget(0)
+            .writeToDepthStencil()
         .end()
     .end();
     if (hRenderLayoutClearBuffer.isInvalid())
@@ -84,11 +84,11 @@ bool ThePipeline::setup (gos::GPU *gpuIN)
     }
 
     gpu->renderLayout_createNew (&hRenderLayout)
-        .requireRendertarget (gpu->swapChain_getImageFormat(), eRenderTargetUsage::storage_color_attachment_optimal, eRenderTargetUsage::presentation, false)
-        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eZBufferUsage::depthOnly_RW, eZBufferUsage::dont_care, false)
+        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::color_attachment_optimal, eImageLayout::presentation, eAttachmentLoadOp::load, eAttachmentStoreOp::store)
+        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eDepthStencilLayout::depth_attachment_optimal, eDepthStencilLayout::depth_attachment_optimal, eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
         .addSubpass_GFX()
-            .useRenderTarget(0)
-            .useDepthStencil()
+            .writeToRenderTarget(0)
+            .writeToDepthStencil()
         .end()
     .end();
 

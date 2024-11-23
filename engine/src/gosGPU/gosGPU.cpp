@@ -30,49 +30,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL GOS_vulkanDebugCallback (VkDebugUtilsMessa
 }
 
 
-//**********************************************************
-static VkFormat gos_gpu_toVulkan (const eImageFormat fmt)
-{
-    switch (fmt)
-    {
-    default:
-        DBGBREAK;
-        return VK_FORMAT_UNDEFINED;
-
-    case eImageFormat::U8_RGBA_sRGB: return VK_FORMAT_R8G8B8A8_SRGB;
-    case eImageFormat::U8_RGBA: return VK_FORMAT_R8G8B8A8_UNORM;
-    case eImageFormat::U8_RGB: return VK_FORMAT_R8G8B8_UNORM;
-    case eImageFormat::U8_R: return VK_FORMAT_R8_UNORM;
-
-    case eImageFormat::U16_RGBA: return VK_FORMAT_R16G16B16A16_UNORM;
-    case eImageFormat::U16_RGB: return VK_FORMAT_R16G16B16_UNORM;
-    case eImageFormat::U16_R: return VK_FORMAT_R16_UNORM;
-
-    case eImageFormat::U32_RGBA: return VK_FORMAT_R32G32B32A32_UINT;
-    case eImageFormat::U32_RGB: return VK_FORMAT_R32G32B32_UINT;
-    case eImageFormat::U32_R: return VK_FORMAT_R32_UINT;
-
-    case eImageFormat::F32_RGBA: return VK_FORMAT_R32G32B32A32_SFLOAT;
-    case eImageFormat::F32_RGB: return VK_FORMAT_R32G32B32_SFLOAT;
-    case eImageFormat::F32_R: return VK_FORMAT_R32_SFLOAT;
-    }
-}
-
-//**********************************************************
-static VkFilter gos_gpu_toVulkan (const eSamplerFilter s)
-{
-    switch (s)
-    {
-    default:
-        DBGBREAK;
-        return VK_FILTER_NEAREST;
-
-    case eSamplerFilter::point: return VK_FILTER_NEAREST;
-    case eSamplerFilter::linear: return VK_FILTER_LINEAR;
-    }
-
-}
-
 //********************************************************** 
 GPU::GPU()
 {
@@ -168,7 +125,7 @@ bool GPU::init (GOSWinHandle mainWin, bool vSyncIN)
 
         if (!priv_initHandleLists())
             break;
-        if (!priv_initVulkan(eVulkanVersion::v1_2))
+        if (!priv_initVulkan(eVulkanVersion::v1_3))
             break;
         bSuccess = true;
         break;
@@ -184,18 +141,29 @@ bool GPU::init (GOSWinHandle mainWin, bool vSyncIN)
         rt->format = vulkan.swapChainInfo.imageFormat;
         rt->image = VK_NULL_HANDLE;
         rt->vkMemHandle = VK_NULL_HANDLE;
-        rt->viewAsRT = NULL;
-        rt->viewAsTexture = NULL;
+        rt->view = NULL;
         rt->width = vulkan.swapChainInfo.imageExtent.width;
         rt->height = vulkan.swapChainInfo.imageExtent.height;
     }
 
     //default depth stencil
     {
-        depthStencil_create ("0-", "0-", false, &defaultDepthStencil.handle);
+        const bool bWithStencil = false;
+        VkFormat depthStencilFormat = VK_FORMAT_UNDEFINED;
+        if (bWithStencil)
+            gos::vulkanFindBestDepthStencilFormat (vulkan.phyDevInfo, &depthStencilFormat);
+        else
+            gos::vulkanFindBestDepthOnlyFormat (vulkan.phyDevInfo, &depthStencilFormat);
+
+        depthStencil_create (gpu::fromVulkan(depthStencilFormat), "0-", "0-", false, &defaultDepthStencil.handle);
         gos::gpu::DepthStencil *s;
         if (depthStencilList.fromHandleToPointer (defaultDepthStencil.handle, &s))
-            defaultDepthStencil.format = s->depthFormat;
+        {
+            defaultDepthStencil.vkFormat = s->depthFormat;
+            defaultDepthStencil.gosFormat = gpu::fromVulkan(s->depthFormat);
+        }
+
+        gos::logger::log ("default zbuffer created with format: %s\n", enumToString(defaultDepthStencil.gosFormat));
     }
 
     //fine
@@ -356,6 +324,8 @@ bool GPU::priv_initHandleLists()
     depthStencilHandleList.setup (allocator, 32);   //questa mi serve per tenere traccia di tutti gli handle creati dato che durante il resize della window, devo andare ad aggiustare tutte i swpth buffer (nel caso che siano bindati alla dimensione della vport)
 
     renderTargetList.setup (allocator);
+    renderTargetHandleList.setup (allocator, 64);   //questa mi serve per tenere traccia di tutti gli handle creati dato che durante il resize della window, devo andare ad aggiustare tutte i rt buffer (nel caso che siano bindati alla dimensione della vport)
+
     renderLayoutList.setup (allocator);
     pipelineList.setup (allocator);
     frameBufferList.setup (allocator);
@@ -389,6 +359,8 @@ void  GPU::priv_deinitandleLists()
     depthStencilHandleList.unsetup();
 
     renderTargetList.unsetup ();
+    renderTargetHandleList.unsetup();
+
     renderLayoutList.unsetup ();
     pipelineList.unsetup();
     frameBufferList.unsetup();
@@ -511,11 +483,14 @@ void GPU::fence_resetMany (const VkFence *fenceHandleList, u32 fenceCount)
     vkResetFences (vulkan.dev, fenceCount, fenceHandleList);
 }
 
-
-
+//************************************
+gos::eImageFormat GPU::swapChain_getImageFormat() const
+{ 
+    return gpu::fromVulkan(vulkan.swapChainInfo.imageFormat); 
+}
 
 //************************************
-bool GPU::newFrame (u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
+bool GPU::swapChain_acquireImage (u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
 {
     bSwapChainRecreatedDuringThisFrame = false;
 
@@ -558,7 +533,7 @@ bool GPU::newFrame (u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
 }
 
 //************************************
-VkResult GPU::present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount)
+VkResult GPU::swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount)
 {
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -589,7 +564,7 @@ bool GPU::priv_swapChain_recreate ()
         glfwWaitEvents();
     }
 
-    //attendo che Vulkan sia in idel
+    //attendo che Vulkan sia in idle
     bool ret = true;
     vkDeviceWaitIdle (vulkan.dev);
 
@@ -624,6 +599,22 @@ bool GPU::priv_swapChain_recreate ()
             v->resolve (vportW, vportH);
     }
 
+    //aggiorno tutti i RT che hanno una dimensione/posizione relativa
+    n = renderTargetHandleList.getNElem();
+    for (u32 i=0; i<n; i++)
+    {
+        gos::gpu::RenderTarget *s;
+        if (renderTargetList.fromHandleToPointer (renderTargetHandleList(i), &s))
+        {
+            if (s->width.isRelative() || s->height.isRelative())
+            {
+                priv_renderTarget_deleteFromStruct (*s);
+                s->resolve (vportW, vportH);
+                priv_renderTarget_createFromStruct (*s);
+            }
+        }
+    }
+
     //aggiorno tutti i depth buffer che hanno una dimensione/posizione relativa
     n = depthStencilHandleList.getNElem();
     for (u32 i=0; i<n; i++)
@@ -640,7 +631,7 @@ bool GPU::priv_swapChain_recreate ()
         }
     }
 
-    //ricredo tutti i FrameBuffer che sono dipendenti dalla swapchain
+    //ricreo tutti i FrameBuffer che sono dipendenti dalla swapchain
     n = frameBufferDependentOnSwapChainList.getNElem();
     for (u32 i=0; i<n; i++)
     {
@@ -963,31 +954,192 @@ const gpu::Viewport* GPU::viewport_get (const GPUViewportHandle &handle) const
 }
 
 
+/************************************************************************************************************
+ * Render target
+ * 
+ * 
+ *************************************************************************************************************/
+bool GPU::renderTarget_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, GPURenderTargetHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
 
 
+    //riservo un handle
+    gos::gpu::RenderTarget *rt = renderTargetList.reserve (out_handle);
+    if (NULL == rt)
+    {
+        gos::logger::err ("GPU::renderTarget_create() => can't reserve a new depthStencil handle!\n");
+        return false;
+    }
+    rt->reset();
+    rt->format = gos::gpu::toVulkan(fmt);
+    rt->width = dimx;
+    rt->height = dimy;
+    rt->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |   //color buffer
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT |      //la posso usare come src di un transfer
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT |      //la posso usare come dst di un transfer
+                VK_IMAGE_USAGE_STORAGE_BIT;            //la posso usare come dst di un compute shader
+
+
+    //alloco le risorse vulkan
+    if (!priv_renderTarget_createFromStruct (*rt))
+        return false;
+
+    renderTargetHandleList.append (*out_handle);
+    return true;
+}
+
+//************************************
+void GPU::deleteResource (GPURenderTargetHandle &handle)
+{
+    gos::gpu::RenderTarget *s;
+    if (renderTargetList.fromHandleToPointer (handle, &s))
+    {
+        priv_renderTarget_deleteFromStruct (*s);
+        s->reset();
+        renderTargetList.release (handle);
+        renderTargetHandleList.findAndRemove (handle);
+    }
+
+    handle.setInvalid();
+}
+
+//************************************
+bool GPU::priv_renderTarget_createFromStruct (gos::gpu::RenderTarget &rt)
+{
+    assert (VK_NULL_HANDLE == rt.image);
+    assert (VK_NULL_HANDLE == rt.vkMemHandle);
+    assert (VK_NULL_HANDLE == rt.view);
+    assert (VK_FORMAT_UNDEFINED != rt.format);
+
+    //risolvo la dimensione
+    rt.resolve ((i16)vulkan.swapChainInfo.imageExtent.width, (i16)vulkan.swapChainInfo.imageExtent.height);
+
+
+	VkImageCreateInfo imageCI{};
+	imageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageCI.imageType = VK_IMAGE_TYPE_2D;
+	imageCI.format = rt.format;
+	imageCI.extent = { rt.resolvedW, rt.resolvedH, 1 };
+	imageCI.mipLevels = 1;
+	imageCI.arrayLayers = 1;
+	imageCI.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
+	imageCI.usage = rt.usage;
+
+	VkResult result = vkCreateImage (vulkan.dev, &imageCI, nullptr, &rt.image);    
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::priv_renderTarget_createFromStruct() => vkCreateImage() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    VkMemoryRequirements memReqs{};
+	vkGetImageMemoryRequirements (vulkan.dev, rt.image, &memReqs);
+    rt.memoryAllocated = memReqs.size;
+
+    VkMemoryAllocateInfo memAllloc{};
+	memAllloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	memAllloc.allocationSize = memReqs.size;
+    vulkanGetMemoryType (vulkan.phyDevInfo, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &memAllloc.memoryTypeIndex);
+
+    if (!vulkanAllocMemory (vulkan, &memAllloc, nullptr, &rt.vkMemHandle))
+    {
+        gos::logger::err ("GPU::priv_renderTarget_createFromStruct() => error allocating memory\n");
+        return false;
+    }
+
+	result = vkBindImageMemory (vulkan.dev, rt.image, rt.vkMemHandle, 0);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::priv_renderTarget_createFromStruct() => vkBindImageMemory() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    VkImageViewCreateInfo imageViewCI{};
+	imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	imageViewCI.image = rt.image;
+	imageViewCI.format = rt.format;
+    imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	imageViewCI.subresourceRange.baseMipLevel = 0;
+	imageViewCI.subresourceRange.levelCount = 1;
+	imageViewCI.subresourceRange.baseArrayLayer = 0;
+    imageViewCI.subresourceRange.layerCount = 1;
+
+	result = vkCreateImageView (vulkan.dev, &imageViewCI, nullptr, &rt.view);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => vkCreateImageView() => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    return true;
+}        
+        
+//************************************
+void GPU::priv_renderTarget_deleteFromStruct (gos::gpu::RenderTarget &rt)
+{
+    if (VK_NULL_HANDLE != rt.view)
+    {
+	    vkDestroyImageView (vulkan.dev, rt.view, nullptr);
+        rt.view = VK_NULL_HANDLE;
+    }
+    
+    if (VK_NULL_HANDLE != rt.image)
+    {
+	    vkDestroyImage(vulkan.dev, rt.image, nullptr);
+        rt.image = VK_NULL_HANDLE;
+    }
+
+    if (VK_NULL_HANDLE != rt.vkMemHandle)
+    {
+	    vulkanFreeMemory (vulkan, rt.vkMemHandle, nullptr, rt.memoryAllocated);
+        rt.vkMemHandle = VK_NULL_HANDLE;
+    }
+}
+
+//************************************
+const gpu::RenderTarget* GPU::getInfo (const GPURenderTargetHandle handle) const
+{
+    gpu::RenderTarget *s;
+    if (priv_fromHandleToPointer (renderTargetList, handle, &s))
+        return s;
+    return NULL;
+}
 
 /************************************************************************************************************
  * DepthStencil
  * 
  * 
  *************************************************************************************************************/
-bool GPU::depthStencil_create (const gos::Dim2D &widthIN, const gos::Dim2D &heightIN, bool bWithStencil, GPUDepthStencilHandle *out_handle)
+bool GPU::depthStencil_create (const gos::eImageFormat fmt, const gos::Dim2D &widthIN, const gos::Dim2D &heightIN, bool bWithStencil, GPUDepthStencilHandle *out_handle)
 {
     assert (NULL != out_handle);
 
-    //cerco il miglior formato disponibile 
-    VkFormat depthStencilFormat;
-    bool b = true;
-    if (bWithStencil)
-        b = gos::vulkanFindBestDepthStencilFormat (vulkan.phyDevInfo, &depthStencilFormat);
-    else
-        b = gos::vulkanFindBestDepthOnlyFormat (vulkan.phyDevInfo, &depthStencilFormat);
-    if (!b)
+    if (!image::isFormatWithDepth(fmt))
     {
-        gos::logger::err ("GPU::depthStencil_create() => can't find a suitabile format\n");
+        gos::logger::err ("GPU::depthStencil_create() => invalid depth format (%s). Must be a valid 'DEPTH_something'\n", gos::enumToString(fmt));
         return false;
     }
 
+    if (bWithStencil)
+    {
+        if (!image::isFormatWithStencil(fmt))
+        {
+            gos::logger::err ("GPU::depthStencil_create() => invalid depth format (%s). Format must include a STENCIL option\n", gos::enumToString(fmt));
+            return false;
+        }
+    }
+    else
+    {
+        if (image::isFormatWithStencil(fmt))
+        {
+            gos::logger::err ("GPU::depthStencil_create() => invalid depth format (%s). Format must NOT include a STENCIL option\n", gos::enumToString(fmt));
+            return false;
+        }
+    }
 
     //riservo un handle
     gos::gpu::DepthStencil *depthStencil = depthStencilList.reserve (out_handle);
@@ -998,7 +1150,7 @@ bool GPU::depthStencil_create (const gos::Dim2D &widthIN, const gos::Dim2D &heig
         return false;
     }
     depthStencil->reset();
-    depthStencil->depthFormat = depthStencilFormat;
+    depthStencil->depthFormat = gpu::toVulkan(fmt);
     depthStencil->bHasStencil = bWithStencil;
 
     //assegno width/height
@@ -1125,15 +1277,14 @@ void GPU::priv_depthStencil_deleteFromStruct (gos::gpu::DepthStencil &depthStenc
     }
 }
 
-
-
-/************************************************************************************************************
- * Render Target
- * 
- * 
- *************************************************************************************************************/
-
-
+//************************************
+const gpu::DepthStencil* GPU::getInfo (const GPUDepthStencilHandle handle) const
+{
+    gpu::DepthStencil *s;
+    if (priv_fromHandleToPointer (depthStencilList, handle, &s))
+        return s;
+    return NULL;
+}
 
 
 /************************************************************************************************************
@@ -1164,7 +1315,7 @@ bool GPU::priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder)
     gpu::FrameBuffer *s = frameBufferList.reserve (&handle);
     if (NULL == s)
     {
-        gos::logger::err ("GPU::priv_renderTarget__onBuilderEnds() => can't reserve a handle!\n");
+        gos::logger::err ("GPU::priv_frameBuffer_onBuilderEnds() => can't reserve a handle!\n");
         return false;
     }
 
@@ -1179,7 +1330,7 @@ bool GPU::priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder)
     gpu::RenderLayout *sRL;
     if (!priv_fromHandleToPointer (renderLayoutList, builder->renderLayoutHandle, &sRL))
     {
-        gos::logger::err ("GPU::priv_renderTarget__onBuilderEnds() => invalid renderLayoutHandle\n");
+        gos::logger::err ("GPU::priv_frameBuffer_onBuilderEnds() => invalid renderLayoutHandle\n");
         frameBufferList.release (handle);
         return false;
     }
@@ -1195,7 +1346,7 @@ bool GPU::priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder)
         gpu::DepthStencil *ds;
         if (!priv_fromHandleToPointer (depthStencilList, s->depthStencilHandle, &ds))
         {
-            gos::logger::err ("GPU::priv_renderTarget__onBuilderEnds() => invalid depthstencil handle\n");
+            gos::logger::err ("GPU::priv_frameBuffer_onBuilderEnds() => invalid depthstencil handle\n");
             frameBufferList.release (handle);
             return false;
         }
@@ -1223,7 +1374,7 @@ bool GPU::priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder)
             gpu::RenderTarget *sRT;
             if (!priv_fromHandleToPointer (renderTargetList, rt, &sRT))
             {
-                gos::logger::err ("GPU::priv_renderTarget__onBuilderEnds() => invalid render target handle at index %d\n", i);
+                gos::logger::err ("GPU::priv_frameBuffer_onBuilderEnds() => invalid render target handle at index %d\n", i);
                 frameBufferList.release (handle);
                 return false;
             }
@@ -1282,12 +1433,20 @@ bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
     s->resolve ((i16)vulkan.swapChainInfo.imageExtent.width, (i16)vulkan.swapChainInfo.imageExtent.height);
 
     gos::logger::verbose ("GPU::priv_frameBuffer_recreate() => frame buffer size: %d %d\n", s->resolvedW, s->resolvedH);
-
+    gos::logger::incIndent();
+    const bool ret = priv_frameBuffer_do_recreate(s);
+    gos::logger::decIndent();
+    return ret;
+}
+bool GPU::priv_frameBuffer_do_recreate (gpu::FrameBuffer *s)
+{
     //render layout
     gpu::RenderLayout *sRL;
     if (!priv_fromHandleToPointer (renderLayoutList, s->renderLayoutHandle, &sRL))
+    {
+        gos::logger::err ("invalid handler\n");
         return false;
-
+    }
 
     //Se sono bindato al mainRT, devo creare N VulkanFrameBuffer, 1 per ogni immagine della swapchain
     s->numFrameBuffer = 1;
@@ -1313,8 +1472,8 @@ bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
                 if (!priv_fromHandleToPointer (renderTargetList, s->renderTargetHandleList[i], &sRT))
                     return false;
 
-                assert (NULL != sRT->viewAsRT);
-                imageViewList[nViewList++] = sRT->viewAsRT;
+                assert (NULL != sRT->view);
+                imageViewList[nViewList++] = sRT->view;
             }
         }
 
@@ -1324,7 +1483,7 @@ bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
             gpu::DepthStencil *zb;
             if (!priv_fromHandleToPointer (depthStencilList, s->depthStencilHandle, &zb))
                 return false;
-            gos::logger::verbose ("GPU::priv_frameBuffer_recreate() => depth stencile size: %d %d\n", zb->resolvedW, zb->resolvedH);
+            gos::logger::log ("depth stencile size: %d %d\n", zb->resolvedW, zb->resolvedH);
             imageViewList[nViewList++] = zb->view;
         }
 
@@ -1340,7 +1499,7 @@ bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
         const VkResult result = vkCreateFramebuffer(vulkan.dev, &framebufferInfo, nullptr, &s->vkFrameBufferList[t]);
         if (VK_SUCCESS != result)
         {
-            gos::logger::err ("GPU::priv_frameBuffer_recreate() => vkCreateFramebuffer => %s\n", string_VkResult(result));
+            gos::logger::err ("vkCreateFramebuffer => %s\n", string_VkResult(result));
             return false;
         }
     }
@@ -2314,7 +2473,7 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, co
     VkDeviceMemory  vkMemHandle = VK_NULL_HANDLE;
     u32             imageMemSize = 0;
 
-    if (!vulkanCreateImage2D (vulkan, dimx, dimy, nMipMap, gos_gpu_toVulkan(fmt),
+    if (!vulkanCreateImage2D (vulkan, dimx, dimy, nMipMap, gos::gpu::toVulkan(fmt),
                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
                                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                                 VK_IMAGE_TILING_OPTIMAL,
@@ -2428,7 +2587,7 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, co
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = vkImageHandle;
     viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = gos_gpu_toVulkan(fmt);
+    viewInfo.format = gos::gpu::toVulkan(fmt);
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.levelCount = nMipMap;
@@ -2521,8 +2680,8 @@ bool GPU::sampler_create (const gpu::SamplerDesc &desc, GPUSamplerHandle *out_ha
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 
-    samplerInfo.minFilter = gos_gpu_toVulkan(desc.minFilter);
-    samplerInfo.magFilter = gos_gpu_toVulkan(desc.magFilter);
+    samplerInfo.minFilter = gos::gpu::toVulkan(desc.minFilter);
+    samplerInfo.magFilter = gos::gpu::toVulkan(desc.magFilter);
     if (desc.bAnisotropic)
     {
         samplerInfo.anisotropyEnable = VK_TRUE;

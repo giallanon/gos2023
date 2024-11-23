@@ -180,11 +180,11 @@ bool VulkanExample5::virtual_onInit ()
 
     //creo il render pass
     gpu->renderLayout_createNew (&renderLayoutHandle)
-        .requireRendertarget (gpu->swapChain_getImageFormat(), eRenderTargetUsage::dont_care, eRenderTargetUsage::storage_color_attachment_optimal, true)
-        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eZBufferUsage::dont_care, eZBufferUsage::depthOnly_readonly, true)
+        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
+        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eDepthStencilLayout::undefined, eDepthStencilLayout::depth_shader_readonly, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
         .addSubpass_GFX()
-            .useRenderTarget(0)
-            .useDepthStencil()
+            .writeToRenderTarget(0)
+            .writeToDepthStencil()
         .end()
     .end();
     if (renderLayoutHandle.isInvalid())

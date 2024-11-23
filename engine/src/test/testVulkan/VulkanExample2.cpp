@@ -68,9 +68,9 @@ bool VulkanExample2::virtual_onInit ()
 
     //creo il render pass
     gpu->renderLayout_createNew (&renderLayoutHandle)
-        .requireRendertarget (gpu->swapChain_getImageFormat(), eRenderTargetUsage::dont_care, eRenderTargetUsage::presentation, true)
+        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
         .addSubpass_GFX()
-            .useRenderTarget(0)
+            .writeToRenderTarget(0)
         .end()
     .end();
     if (renderLayoutHandle.isInvalid())
@@ -333,13 +333,12 @@ void VulkanExample2::mainLoop_3()
         if (gpu->fence_wait (inFlightFence, 0))
         {
             fpsMegaTimer.onFrameEnd (1);
-            //Chiedo a GPU una immagine dalla swap chain, non attendo nemmeno 1 attimo e indico [semaphore_imageReady] come
-            //semaforo che GPU deve segnalare quando questa operazione e' ok. Indico inoltre [fenceSwapChainReady] come fence da segnalre
+            //Chiedo a GPU una immagine dalla swap chain, non attendo nemmeno 1 attimo e indico [fenceSwapChainReady] come fence da segnalare
             //quando l'immagine e' disponibile
-            //Questa fn ritorna quando GPU e' in grado di determinare quale sara' la prossima immagine sulla quale renderizzare.
+            //Questa fn ritorna true quando GPU e' in grado di determinare quale sara' la prossima immagine sulla quale renderizzare.
             //Quando GPU ha questa informazione, non vuol dire pero' che l'immagine e' gia' immediatamente disponibile per l'uso.
-            //E' per questo che si usa [semaphore_imageReady] e [fenceSwapChainReady], per sapere quando davvero l'immagine sara' disponibile
-            if (gpu->newFrame (0, VK_NULL_HANDLE, fenceSwapChainReady))
+            assert (false == gpu->fence_isSignaled(fenceSwapChainReady));
+            if (gpu->swapChain_acquireImage (0, VK_NULL_HANDLE, fenceSwapChainReady))
             {
                 //A questo GPU ha capito quale sara' l'immagine che prima o poi mi dara', ma non e' detto che questa sia gia' disponibile
                 //Lo diventa quando [fenceSwapChainReady] e' segnalata.
@@ -350,6 +349,7 @@ void VulkanExample2::mainLoop_3()
                 {
                     doCPUStuff ();
                 }
+                assert (true == gpu->fence_isSignaled(fenceSwapChainReady));
 
                 fpsMegaTimer.onFrameEnd(2);
                 fpsMegaTimer.onFrameBegin(2);
@@ -397,7 +397,7 @@ void VulkanExample2::mainLoop_3()
 
                 //presentazione
                 //Indico a GPU che deve attendere [renderFinishedSemaphore] prima di presentare
-                gpu->present (&semaphore_renderFinished, 1);
+                gpu->swapChain_present (&semaphore_renderFinished, 1);
             }
         }
     }

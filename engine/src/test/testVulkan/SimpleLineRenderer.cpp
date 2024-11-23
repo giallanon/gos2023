@@ -74,9 +74,10 @@ bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHa
 
     //creo il render pass
     gpu->renderLayout_createNew (&hRenderLayout)
-        .requireRendertarget (gpu->swapChain_getImageFormat(), eRenderTargetUsage::storage_color_attachment_optimal, eRenderTargetUsage::presentation, false)
+        //.requireRendertarget (gpu->swapChain_getImageFormat(), eRenderTargetUsage::storage_color_attachment_optimal, eRenderTargetUsage::presentation, false)
+        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::load, eAttachmentStoreOp::store)
         .addSubpass_GFX()
-            .useRenderTarget(0)
+            .writeToRenderTarget(0)
         .end()
     .end();
     if (hRenderLayout.isInvalid())

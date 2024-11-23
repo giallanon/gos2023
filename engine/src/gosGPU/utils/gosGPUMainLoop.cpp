@@ -89,7 +89,7 @@ bool MainLoop::run ()
         //Questa fn ritorna quando GPU e' in grado di determinare quale sara' la prossima immagine sulla quale renderizzare.
         //Quando GPU ha questa informazione, non vuol dire pero' che l'immagine e' gia' immediatamente disponibile per l'uso.
         //E' per questo che si usa [semaphore_imageReady] e [fenceSwapChainReady], per sapere quando davvero l'immagine sara' disponibile
-        if (!gpu->newFrame (0, VK_NULL_HANDLE, fenceSwapChainReady))
+        if (!gpu->swapChain_acquireImage (0, VK_NULL_HANDLE, fenceSwapChainReady))
             return false;
 
         bSwapchainRecreated = gpu->swapChain_wasRecreated();
@@ -99,7 +99,7 @@ bool MainLoop::run ()
 
     if (eStato::waitingOnFence_swapChainReady == stato)
     {
-        //A questo GPU ha capito quale sara' l'immagine che prima o poi mi dara', ma non e' detto che questa sia gia' disponibile
+        //A questo punto GPU ha capito quale sara' l'immagine che prima o poi mi dara', ma non e' detto che questa sia gia' disponibile
         //Lo diventa quando [fenceSwapChainReady] e' segnalata.
         //Fino ad allora posso farmi i fatti miei
 
@@ -160,7 +160,7 @@ bool MainLoop::run ()
 
         //presentazione
         //Indico a GPU che deve attendere [renderFinishedSemaphore] prima di presentare
-        gpu->present (&semaphore_renderFinished, 1);
+        gpu->swapChain_present (&semaphore_renderFinished, 1);
         return false;
     }
     

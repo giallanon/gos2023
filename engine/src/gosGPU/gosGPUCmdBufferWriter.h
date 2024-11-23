@@ -42,6 +42,9 @@ namespace gos
             CmdBufferWriter&    draw (u32 vtxCount, u32 instanceCount, u32 firstVtx, u32 firstInstance);
             CmdBufferWriter&    renderPass_end();
 
+            CmdBufferWriter&    imageTransition (const VkImage &image, const eImageLayout currentLayout, const eImageLayout newLayout);
+            CmdBufferWriter&    copyImageToImage (const VkImage &source, const VkImage &destination, const VkExtent2D &srcSize, const VkExtent2D &dstSize);
+
             bool                end();    
 
             bool                anyError() const                            { return flag.isBitSet (FLAG__ANY_ERROR); }

@@ -1,32 +1,32 @@
-#include "VulkanExample1.h"
+#include "VulkanExample7.h"
 
 
 using namespace gos;
 
 
 //************************************
-void VulkanExample1::virtual_explain()
+void VulkanExample7::virtual_explain()
 {
 }
 
 //************************************
-void VulkanExample1::virtual_onCleanup() 
+void VulkanExample7::virtual_onCleanup() 
 {
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
     gpu->deleteResource (pipelineHandle);
     gpu->deleteResource (renderLayoutHandle);
     gpu->deleteResource (frameBufferHandle);
+    gpu->deleteResource (rt1);
 }    
 
 
 //************************************
-bool VulkanExample1::virtual_onInit ()
+bool VulkanExample7::virtual_onInit ()
 {
-    //creo il render pass
+    //creo un renderLayout
     gpu->renderLayout_createNew (&renderLayoutHandle)
-        //.requireRendertarget (gpu->swapChain_getImageFormat(), eRenderTargetUsage::dont_care, eRenderTargetUsage::presentation, true)
-        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
+        .requireRendertarget (gos::eImageFormat::U8_RGBA, eImageLayout::undefined, eImageLayout::transfer_src, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
         .addSubpass_GFX()
             .writeToRenderTarget(0)
         .end()
@@ -37,15 +37,26 @@ bool VulkanExample1::virtual_onInit ()
         return false;
     }
 
-    //frame buffers
+
+
+    //creo un RT grosso tanto quanto la swapchain
+    if (!gpu->renderTarget_create ("0-", "0-", gos::eImageFormat::U8_RGBA, &rt1))
+    {
+        gos::logger::err ("VulkanApp::init() => can't create render target\n");
+        return false;
+    }
+
+    //creo un frame buffer per il renderLayout
     gpu->frameBuffer_createNew (renderLayoutHandle, &frameBufferHandle)
-        .bindRenderTarget (gpu->renderTarget_getDefault())
+        //.bindRenderTarget (gpu->renderTarget_getDefault())
+        .bindRenderTarget (rt1)
         .end();
     if (frameBufferHandle.isInvalid())
     {
         gos::logger::err ("VulkanApp::init() => can't create frameBufferHandle\n");
         return false;
-    }        
+    }
+
 
 
     //carico gli shader
@@ -84,89 +95,35 @@ bool VulkanExample1::virtual_onInit ()
 
 
 //************************************
-bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN, 
-                                            const GPURenderLayoutHandle &renderLayoutHandle, 
-                                            const GPUFrameBufferHandle &frameBufferHandle,
-                                            const GPUPipelineHandle &pipelineHandle,
-                                            VkCommandBuffer *out_commandBuffer)
+bool VulkanExample7::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
 {
-    assert (out_commandBuffer);
+    gos::gpu::CmdBufferWriter cw;
 
-    //recupero il vulkan render pass
-    VkRenderPass vkRenderPassHandle = VK_NULL_HANDLE;
-    if (!gpuIN->toVulkan (renderLayoutHandle, &vkRenderPassHandle))
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid renderLayoutHandle\n");
-        return false;
-    }
-
-    //recupero il frame buffer
-    VkFramebuffer vkFrameBufferHandle;
-    u32 renderAreaW;
-    u32 renderAreaH;
-    if (!gpuIN->toVulkan (frameBufferHandle, &vkFrameBufferHandle, &renderAreaW, &renderAreaH))
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid frameBufferHandle\n");
-        return false;
-    }
-
-    //recupero vulkan pipeline
-    const gpu::sPipeline *pipelineInfo;
-    if (!gpuIN->toVulkan (pipelineHandle, &pipelineInfo))
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid pipelineHandle\n");
-        return false;
-    }
+    cw.begin (gpu, cmdBufferHandle)
+        .setViewport (gpu->viewport_getDefault())
+        .bindPipeline (pipelineHandle)
+        .setClearColor (0, gos::ColorHDR(0, 0, 0))
+        .setDepthBufferColor(1, 0)
+        .renderPass_begin (renderLayoutHandle, frameBufferHandle)
+            .draw(3, 1, 0, 0)
+        .renderPass_end();
 
 
-    VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = 0; // Optional
-        beginInfo.pInheritanceInfo = nullptr; // Optional
+    //ora voglio copiare il contenuto di RT1 (che ho appena renderizzato) nella immagine della swap-chain corrente
+    VkImage swapChainImage = gpu->swapChain_getCurImage();
+    const gpu::RenderTarget *rtInfo = gpu->getInfo (rt1);
 
-    VkResult result = vkBeginCommandBuffer (*out_commandBuffer, &beginInfo);
-    if (VK_SUCCESS != result)
-    {
-        gos::logger::err ("recordCommandBuffer() => vkBeginCommandBuffer() => %s\n", string_VkResult(result));
-        return false;
-    }
+    cw  
+        //.imageTransition (rtInfo->image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+        .imageTransition (swapChainImage, eImageLayout::undefined, eImageLayout::transfer_dst)
+        .copyImageToImage (rtInfo->image, swapChainImage, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
+        .imageTransition (swapChainImage, eImageLayout::transfer_dst, eImageLayout::presentation);
+        
+
+    cw.end();    
 
 
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-    VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = vkRenderPassHandle;
-        renderPassInfo.framebuffer = vkFrameBufferHandle;
-        renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = { renderAreaW, renderAreaH };
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues = &clearColor;    
 
-    vkCmdBeginRenderPass (*out_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline (*out_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineInfo->vkPipelineHandle);
-
-    //setto la viewport
-    const gos::gpu::Viewport *viewport = gpuIN->viewport_get (gpuIN->viewport_getDefault());
-    VkViewport vkViewport {0.0f, 0.0f, viewport->getW_f32(), viewport->getH_f32(), 0.0f, 1.0f };
-    vkCmdSetViewport(*out_commandBuffer, 0, 1, &vkViewport);
-
-    VkRect2D scissor { 0, 0, viewport->getW(), viewport->getH() };
-    vkCmdSetScissor (*out_commandBuffer, 0, 1, &scissor);
-
-    //draw primitive
-    vkCmdDraw(*out_commandBuffer, 3, 1, 0, 0);
-
-    //fine del render pass
-    vkCmdEndRenderPass (*out_commandBuffer);
-
-    //fine del command buffer
-    result = vkEndCommandBuffer (*out_commandBuffer);
-    if (VK_SUCCESS != result)
-    {
-        gos::logger::err ("recordCommandBuffer() => vkEndCommandBuffer() => %s\n", string_VkResult(result));
-        return false;
-    }    
-    
     return true;
 }
 
@@ -174,7 +131,7 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
  * renderizza inviando command buffer a GPU e poi aspettando che questa
  * abbia finito il suo lavoro
  */
-void VulkanExample1::virtual_onRun()
+void VulkanExample7::virtual_onRun()
 {
     GPUCmdBufferHandle  cmdBufferHandle;
     gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
@@ -217,12 +174,12 @@ void VulkanExample1::virtual_onRun()
 //printf ("  CPU waited vkAcquireNextImageKHR %ld us\n", acquireImageTimer.elapsed_usec());
         
             //command buffer che opera su [imageIndex]
-            VkCommandBuffer vkCommandBuffer;
-            gpu->toVulkan (cmdBufferHandle, &vkCommandBuffer);
-            //recordCommandBuffer(gpu, renderLayoutHandle, frameBufferHandleList[imageIndex], pipelineHandle, &vkCommandBuffer);
-            recordCommandBuffer(gpu, renderLayoutHandle, frameBufferHandle, pipelineHandle, &vkCommandBuffer);
+            recordCommandBuffer(cmdBufferHandle);
 
             //submit
+            VkCommandBuffer vkCmdBuffer;
+            gpu->toVulkan (cmdBufferHandle, &vkCmdBuffer);
+
             VkSubmitInfo submitInfo{};
             submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -232,8 +189,8 @@ void VulkanExample1::virtual_onRun()
             submitInfo.pWaitSemaphores = semaphoresToBeWaitedBeforeStarting;
             submitInfo.pWaitDstStageMask = waitStages;
 
-            submitInfo.commandBufferCount = 1;        
-            submitInfo.pCommandBuffers = &vkCommandBuffer;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &vkCmdBuffer;
 
             //semaforo che GPU segnalera' al termine dell'esecuzione del command buffer
             submitInfo.signalSemaphoreCount = 1;

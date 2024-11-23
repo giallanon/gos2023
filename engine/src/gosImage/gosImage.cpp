@@ -5,6 +5,58 @@
 using namespace gos;
 
 
+//***********************************************
+const char*	gos::enumToString (const eImageFormat fmt)
+{
+#define HELPER(s)	case eImageFormat::s: return #s;
+
+    switch (fmt)
+    {
+    default:
+        DBGBREAK;
+        return "??INVALID-VALUE??";
+
+		HELPER(U8_RGBA_sRGB)
+		HELPER(U8_RGBA)
+		HELPER(U8_RGB)
+		HELPER(U8_R)
+
+		HELPER(U16_RGBA)
+		HELPER(U16_RGB)
+		HELPER(U16_R)
+
+		HELPER(U32_RGBA)
+		HELPER(U32_RGB)
+		HELPER(U32_R)
+
+		HELPER(F32_RGBA)
+		HELPER(F32_RGB)
+		HELPER(F32_R)
+
+		HELPER(U8_BGRA_sRGB)
+
+		//depth buffer format
+		HELPER(DEPTH_F32)
+		HELPER(DEPTH_U16)
+		HELPER(DEPTH_F32_STENCIL_U8)
+		HELPER(DEPTH_U16_STENCIL_U8)
+		HELPER(DEPTH_U24_STENCIL_U8)
+    }
+
+#undef HELPER
+}
+
+//********************************************************** 
+bool image::isFormatWithDepth (const eImageFormat fmt)
+{
+	return (static_cast<u8>(fmt) >= 0xE0 && static_cast<u8>(fmt)<=0xEF);
+}
+
+//********************************************************** 
+bool image::isFormatWithStencil (const eImageFormat fmt)
+{
+	return (static_cast<u8>(fmt) >= 0xEA && static_cast<u8>(fmt)<=0xEF);
+}
 
 //***********************************************
 u32 image::calcSurfaceSize (u16 width, u16 height, eImageFormat fmt, u8 mipMapNum_0toN)
