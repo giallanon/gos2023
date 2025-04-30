@@ -131,6 +131,9 @@ bool GPU::init (GOSWinHandle mainWin, bool vSyncIN)
         break;
     }
 
+    if (!bSuccess)
+        return false;
+
     //default viewport
     viewport_create ("0", "0", "0-", "0-", &defaultViewportHandle);
 
