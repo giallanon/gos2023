@@ -25,8 +25,8 @@ public:
 
     /**
      * @brief il descriptor0 (aka descriptroBase) contiene tutti i sampler e tutte le texture
-     * Per aggiungere una texturem usare addTextureIfNotExitst()
-     * I sample invece vengono creati da this e non sono modificabili
+     * Per aggiungere una texture usare addTextureIfNotExitst()
+     * I sampler invece vengono creati da this e non sono modificabili
      */
     const tpp::sDescriptor*     descriptorBase_get() const                                                   { return &descriptorBase; }
     bool                        decriptorBase_addTextureIfNotExitst (const GPUTextureHandle &hTexture, u16 *out_index);

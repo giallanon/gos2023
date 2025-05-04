@@ -11,10 +11,9 @@ layout(location = 0) out vec4 out_colorRGBA;
 
 void main() 
 {
-    const float c = calcLight_01 (in_normal);
+    const float c = PIPE_calcLight_01 (in_normal);
 
     //const uint ii = nonuniformEXT(material.textureIndex);
-    const uint ii = material.textureIndex;
-    const vec3 texCol = sampleTexture2D_bilinear (textureList[ii], in_texCoord).rgb;
+    const vec3 texCol = PIPE_sample2D_bilinear (material.textureIndex, in_texCoord).rgb;
     out_colorRGBA = vec4(material.color.rgb * texCol * c, 1);
 }

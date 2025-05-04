@@ -495,6 +495,11 @@ gos::eImageFormat GPU::swapChain_getImageFormat() const
 //************************************
 bool GPU::swapChain_acquireImage (u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
 {
+    //passando a Wayland, se uso timeout==0 spesso vkAcquireNextImageKHR ritorna VK_ERROR_OUT_OF_DEVICE_MEMORY.
+    //Mettendo timeout==1, al posto di VK_ERROR_OUT_OF_DEVICE_MEMORY ho dei VK_TIMEOUT/VK_NOT_READY che tutto sommato mi vanno bene
+    if (0 == timeout_ns)
+        timeout_ns = 1;
+
     bSwapChainRecreatedDuringThisFrame = false;
 
     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
@@ -512,7 +517,7 @@ bool GPU::swapChain_acquireImage (u64 timeout_ns, VkSemaphore semaphore, VkFence
     switch (result)
     {
     default:
-        gos::logger::err ("GPU::beginFrame() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
+        gos::logger::err ("GPU::swapChain_acquireImage() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
         return false;
 
     case VK_SUCCESS:
@@ -520,6 +525,7 @@ bool GPU::swapChain_acquireImage (u64 timeout_ns, VkSemaphore semaphore, VkFence
 
     case VK_SUBOPTIMAL_KHR:
         //posso ancora renderizzare, ma al prossimo newFrame la swapchain verra' ricreata
+        gos::logger::log (eTextColor::darkCyan, "GPU::swapChain_acquireImage() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
         bRecreateSwapChainOnNextFrame = true;
         return true;
 
@@ -528,8 +534,6 @@ bool GPU::swapChain_acquireImage (u64 timeout_ns, VkSemaphore semaphore, VkFence
         return false;
 
     case VK_TIMEOUT:
-        return false;
-
     case VK_NOT_READY:
         return false;
     }

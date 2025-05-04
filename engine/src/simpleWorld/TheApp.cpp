@@ -30,7 +30,7 @@ bool TheApp::setup (gos::GPU *gpuIN)
     gpu = gpuIN;
 
     //fs alias
-    fs::addAlias ("@shader", "shader", eAliasPathMode::relativeToAppFolder);
+    fs::addAlias ("@shader", "shader/compiled", eAliasPathMode::relativeToAppFolder);
 
     //input mapping
     inputCtx.action_add ("quit")

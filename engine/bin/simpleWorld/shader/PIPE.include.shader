@@ -4,8 +4,8 @@
 //Un array di tutti i possibili sampler e un array
 //di tutte le texture
 //Questo layout (set 0) e' condiviso da tutti i renderer
-#define SAMPLER2D_BILINEAR  0
-#define SAMPLER2D_POINT     1
+#define PIPE_SAMPLER2D_BILINEAR  0
+#define PIPE_SAMPLER2D_POINT     1
 layout(set = 0, binding = 0) uniform sampler samplerList[];
 layout(set = 0, binding = 1) uniform texture2D textureList[];
 
@@ -19,19 +19,19 @@ layout(set = 1, binding = 0) uniform LAYOUT_SCENE_DATA
 
 
 //**** sample di una texture 2D con bilinear filtering
-vec4 sampleTexture2D_bilinear (texture2D tex, vec2 texCoord)
+vec4 PIPE_sample2D_bilinear (uint textureIndex, vec2 texCoord)
 {
-    return texture (sampler2D(tex, samplerList[SAMPLER2D_BILINEAR]), texCoord);
+    return texture (sampler2D(textureList[textureIndex], samplerList[PIPE_SAMPLER2D_BILINEAR]), texCoord);
 }
 
 //**** sample di una texture 2D con point filtering
-vec4 sampleTexture2D_point (texture2D tex, vec2 texCoord)
+vec4 PIPE_sample2D_point (uint textureIndex, vec2 texCoord)
 {
-    return texture (sampler2D(tex, samplerList[SAMPLER2D_POINT]), texCoord);
+    return texture (sampler2D(textureList[textureIndex], samplerList[PIPE_SAMPLER2D_POINT]), texCoord);
 }
 
 //**** semplice calcolo luce
-float calcLight_01 (vec3 norm)
+float PIPE_calcLight_01 (vec3 norm)
 {
     //sun light
     float c = max(-dot(scene.lightDir.xyz, norm), 0);

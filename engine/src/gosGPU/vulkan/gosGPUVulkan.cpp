@@ -426,44 +426,54 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
         gos::logger::incIndent();
         for (u32 i = 0; i < info->memoryHeapCount; i++)
         {
-            gos::logger::log ("index:%d\tsize= %" PRIu64 "B ", i, info->memoryHeaps[i].size);
+            char temp[64];
+            gos::string::format::memoryToKB_MB_GB (info->memoryHeaps[i].size, temp, sizeof(temp));
+            //gos::string::format::U64(info->memoryHeaps[i].size, '.', temp, sizeof(temp));
+            gos::logger::log ("index:%d\n  size= %s, flags=0x%08X", i, temp, info->memoryHeaps[i].flags);
+
             if (((info->memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0))
                 gos::logger::log (", HEAP_DEVICE_LOCAL");
             gos::logger::log ("\n");
+
+            gos::logger::log ("  memory type:\n");
+            VkMemoryPropertyFlags prevPropFlag = VK_MEMORY_PROPERTY_FLAG_BITS_MAX_ENUM;
+            for (u32 i2 = 0; i2 < info->memoryTypeCount; i2++)
+            {
+                if (info->memoryTypes[i2].heapIndex == i)
+                {
+                    if (prevPropFlag != info->memoryTypes[i2].propertyFlags)
+                    {
+                        prevPropFlag = info->memoryTypes[i2].propertyFlags;
+                        gos::logger::log ("    0x%08X", info->memoryTypes[i2].propertyFlags);
+            
+                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0)
+                            gos::logger::log (", DEVICE_LOCAL");
+                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT ) != 0)
+                            gos::logger::log (", HOST_VISIBLE");
+                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ) != 0)
+                            gos::logger::log (", HOST_COHERENT");
+                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT ) != 0)
+                            gos::logger::log (", HOST_CACHED");
+                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT ) != 0)
+                            gos::logger::log (", LAZILY_ALLOCATED");
+                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_PROTECTED_BIT  ) != 0)
+                            gos::logger::log (", PROTECTED");
+                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD  ) != 0)
+                            gos::logger::log (", DEVICE_COHERENT_BIT_AMD");
+                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD  ) != 0)
+                            gos::logger::log (", DEVICE_UNCACHED_BIT_AMD");
+                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_RDMA_CAPABLE_BIT_NV  ) != 0)
+                            gos::logger::log (", RDMA_CAPABLE");
+            
+                        gos::logger::log ("\n");
+                    }
+                }
+            }            
         }
         gos::logger::decIndent();
 
         
-        gos::logger::log ("memory type count: %d\n", info->memoryTypeCount);
-        gos::logger::incIndent();
-        for (u32 i = 0; i < info->memoryTypeCount; i++)
-        {
-            gos::logger::log ("heap-index:%d", info->memoryTypes[i].heapIndex);
-
-            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0)
-                gos::logger::log (", DEVICE_LOCAL");
-            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT ) != 0)
-                gos::logger::log (", HOST_VISIBLE");
-            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ) != 0)
-                gos::logger::log (", HOST_COHERENT");
-            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT ) != 0)
-                gos::logger::log (", HOST_CACHED");
-            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT ) != 0)
-                gos::logger::log (", LAZILY_ALLOCATED");
-
-
-            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_PROTECTED_BIT  ) != 0)
-                gos::logger::log (", PROTECTED");
-            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD  ) != 0)
-                gos::logger::log (", DEVICE_COHERENT_BIT_AMD");
-            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD  ) != 0)
-                gos::logger::log (", DEVICE_UNCACHED_BIT_AMD");
-            if ((info->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_RDMA_CAPABLE_BIT_NV  ) != 0)
-                gos::logger::log (", RDMA_CAPABLE");
-
-            gos::logger::log ("\n");
-        }
-        gos::logger::decIndent();
+        
 
             
         gos::logger::decIndent();
@@ -842,8 +852,10 @@ bool gos::vulkanGetMemoryType (const sPhyDeviceInfo &vkPhyDevInfo, uint32_t type
     assert (NULL != out_index);
     for (u32 i = 0; i < vkPhyDevInfo.vkMemoryProperties.memoryTypeCount; i++)
     {
-        if ((typeBits & 1) == 1)
+        if ((typeBits & 1) == 1) //questo vuol dire che la risorsa che voglio allocare puo' essere allocata nel "memory type i-esimo"
         {
+            //posto che il memory-type i-esimo sia un memory type valido per questa risorsa, allora voglio che abbia anche
+            //tutti le "properties" che ho richiesto
             if ((vkPhyDevInfo.vkMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
             {
                 *out_index = i;

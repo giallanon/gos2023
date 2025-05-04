@@ -64,6 +64,9 @@ namespace gos
 
 	/**
 	 * @brief VtxLayout
+	 * E' una collezione di [numElem] elementi di tipo VtxElem::define (ognuno rappresentato da un u32)
+	 * 
+	 * Le classi di comodo per leggere/scrivere un VtxLayout sono shape::VtxLayoutReader e shape::VtxLayoutWriter
 	 */
 	struct VtxLayout
 	{
@@ -72,7 +75,7 @@ namespace gos
 
 	public:
 		u32		numElem;
-		u32 	elemList[NUM_MAX_ELEM];
+		u32 	elemList[NUM_MAX_ELEM]; //ognuno di questi e' creato usando shape::VtxElem::define
 
 	public:
 		void 	reset()		{ numElem = 0; }

@@ -91,12 +91,12 @@ bool ThePipeline::setup (gos::GPU *gpuIN)
             .writeToDepthStencil()
         .end()
     .end();
-
     if (hRenderLayout.isInvalid())
     {
         gos::logger::err ("ThePipeline::setup() => can't create renderTaskLayout\n");
         return false;
     }
+
     //frame buffers
     gpu->frameBuffer_createNew (hRenderLayout, &hFrameBuffer)
         .bindRenderTarget (gpu->renderTarget_getDefault())

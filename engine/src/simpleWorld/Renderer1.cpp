@@ -157,17 +157,18 @@ bool Renderer1::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Camera
     static f32 debug_redInc = 0.01f;
     if (gos::getTimeSinceStart_msec() > debug_nextTimeChangeColor_msec)
     {
+        const u32 INDEX_OF_MATERIAL_TO_CHANGE = 0;
         debug_nextTimeChangeColor_msec = gos::getTimeSinceStart_msec() + 10;
         Material *m;
-        materialList.get (0, &m);
-        m->colorDiffuse.x = debug_red;
+        materialList.get (INDEX_OF_MATERIAL_TO_CHANGE, &m);
+        m->colorDiffuse.y = debug_red;
         
         debug_red += debug_redInc;
         if (debug_red <0 || debug_red > 1.0f)
             debug_redInc = -debug_redInc;
 
         gpu::sMappedBuffer mapped;
-        gpu->map (descriptorMaterial.ssboHandle, SIZEOF_ONE_ELEMENT_IN_MATERIAL_SSBO*1, sizeof(Material), &mapped);
+        gpu->map (descriptorMaterial.ssboHandle, SIZEOF_ONE_ELEMENT_IN_MATERIAL_SSBO*INDEX_OF_MATERIAL_TO_CHANGE, sizeof(Material), &mapped);
         memcpy (mapped.host_pt, m, sizeof(Material));
         gpu->buffer_manualSync (&mapped, 1);
         gpu->buffer_unmap(mapped);
