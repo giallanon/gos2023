@@ -322,7 +322,7 @@ bool GPU::PipelineBuilder::priv_buildVulkan ()
     //finalmente, creazione della pipe
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 2;
+    pipelineInfo.stageCount = numShader;
     pipelineInfo.pStages = shadersCreateInfoArray;
     pipelineInfo.pVertexInputState = &vertexInputInfo.vkVertexInputState;
     pipelineInfo.pInputAssemblyState = &inputAssembly;

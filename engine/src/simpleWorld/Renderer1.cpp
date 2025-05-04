@@ -120,25 +120,13 @@ bool Renderer1::priv_createPipeline()
     }    
 
     //creo la pipeline
-    gpu->pipeline_createNew (thePipeline->hRenderLayout, &hPipeline)
+    thePipeline->createPipeline (&hPipeline)
         .addShader (hVtxShader)
         .addShader (hFragShader)
-        .setVtxDecl (thePipeline->vtxDeclHandle)
-        .depthStencil()
-            .zbuffer_enable(true)
-            .zbuffer_enableWrite(true)
-            .zbuffer_setFn (eZFunc::LESS)
-            .stencil_enable(false)
-        .end() //depth stencil
-        .setCullMode (eCullMode::CCW)
-        .setDrawPrimitive (eDrawPrimitive::trisList)
-        .descriptor_add (thePipeline->descriptorBase_get()->layout)
-        .descriptor_add (thePipeline->descriptorScene_get()->layout)
         .descriptor_add (descriptorMaterial.descr.layout)
         .pushConstant_add (VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(gos::mat4x4f), &pc_objWorldPos)
         //.setWireframe(true)
     .end ();
-
     if (hPipeline.isInvalid())
     {
         gos::logger::err ("Renderer1::priv_createPipeline() => can't create pipeline\n");
@@ -178,10 +166,7 @@ bool Renderer1::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Camera
 
     
     //rendering
-    cw.setViewport (gpu->viewport_getDefault())
-        .bindPipeline (hPipeline)
-        .setClearColor (0, gos::ColorHDR(0, 0.1f, 0.3f))
-        .setDepthBufferColor(1, 0)
+    cw.bindPipeline (hPipeline)
         .renderPass_begin (thePipeline->hRenderLayout, thePipeline->hFrameBuffer)
             .bindDescriptorSet (thePipeline->descriptorBase_get()->instance, 0)
             .bindDescriptorSet (thePipeline->descriptorScene_get()->instance, 1);

@@ -14,6 +14,13 @@ private:
     typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Unsafe>		LocalAllocator;
 
 public:
+    struct Context
+    {
+        gos::gpu::CmdBufferWriter    *cw;
+        gos::geom::Camera3          *cam;
+    };
+
+public:
             ThePipeline();
             ~ThePipeline();
 
@@ -36,13 +43,28 @@ public:
      * la matrice della camera e la direzione della luce del sole
      */
     const tpp::sDescriptor*     descriptorScene_get() const                                                   { return &descriptorScene.descr; }
-    void                        descritproScene_update (gos::geom::Camera3 *cam);
 
 
     /**
      * @brief mette la <shape> in un VB/IB e ritorna le info sul binding
      */
     bool    shape_uploadToVBIB (const gos::Shape *shape, tpp::sBoundShapeInfo *out_info);
+
+
+    /**
+     * @brief ritorna un builder gia' preimpostato con una pipeline compatibile
+     */
+    gos::GPU::PipelineBuilder&   createPipeline (GPUPipelineHandle *out_handle);
+
+    /**
+     * @brief inizio e fine di un frame
+     * beginFrame() aggiorna il descriptorScene e pulisce i buffer
+     * endFrame() presenta la scena a video
+     * 
+     * Tra beginFrame() e endFrame() si possono chiamare tutte le pipeline create con createPipeline()
+     */
+    bool    beginFrame (Context &ctx);
+    void    endFrame (Context &ctx);
 
 public:
     //vertex declaration
@@ -60,7 +82,6 @@ public:
 public:
     gos::GPU                    *gpu;
     LocalAllocator              *localAllocator;
-    GPURenderLayoutHandle       hRenderLayoutClearBuffer;
     GPURenderLayoutHandle       hRenderLayout;
     GPUFrameBufferHandle        hFrameBuffer;
 
@@ -69,6 +90,27 @@ private:
     static constexpr u32        NUM_MAX_TEXTURE                         = 1024;
 
 private:
+    struct sPipeStep
+    {
+    public:
+                sPipeStep()                 { hPipeline.setInvalid(); hRenderLayout.setInvalid(); hVtxShader.setInvalid(); hFragShader.setInvalid(); }
+
+        void    free(gos::GPU *gpu)
+        {
+            gpu->deleteResource (hVtxShader);
+            gpu->deleteResource (hFragShader);
+            gpu->deleteResource (hRenderLayout);
+            gpu->deleteResource (hPipeline);
+        }
+
+
+    public:
+        GPUPipelineHandle       hPipeline;
+        GPURenderLayoutHandle   hRenderLayout;
+        GPUShaderHandle         hVtxShader;
+        GPUShaderHandle         hFragShader;
+    };
+
     struct sSceneData
     {
         gos::mat4x4f    camVP;
@@ -101,6 +143,9 @@ private:
 
     //gestore di VB/IB
     VBIBSTBuffer                vbibstBuffer;
+
+    sPipeStep                   pipeStep_clearBuffer;
+    sPipeStep                   pipeStep_present;
 
 };
 

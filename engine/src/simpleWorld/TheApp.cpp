@@ -372,14 +372,19 @@ void TheApp::run()
         {
             cw.begin (gpu, cmdBufferHandle);
 
-            //aggiornamento dati di scena
-            thePipeline.descritproScene_update (&cam);
+            
+            ThePipeline::Context ctx;
+            ctx.cam = &cam;
+            ctx.cw = &cw;
+            if (thePipeline.beginFrame (ctx))
+            {
+                mapRenderer.recordCommandBuffer(cw, &cam);
+                renderer.recordCommandBuffer(cw, &cam);
+                thePipeline.endFrame(ctx);
 
-            mapRenderer.recordCommandBuffer(cw, &cam);
-            renderer.recordCommandBuffer(cw, &cam);
-
-            cw.end();
-            gpuLoop.submitGFXJob (cmdBufferHandle);
+                
+                gpuLoop.submitGFXJob (cmdBufferHandle);
+            }
         }
 
     }

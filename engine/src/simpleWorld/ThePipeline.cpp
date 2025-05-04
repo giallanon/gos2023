@@ -42,9 +42,11 @@ void ThePipeline::unsetup()
     gpu->deleteResource (descriptorScene.descr.layout);
     gpu->deleteResource (descriptorScene.uboHandle);
 
+    pipeStep_clearBuffer.free (gpu);
+    pipeStep_present.free (gpu);
 
     gpu->deleteResource (hRenderLayout);
-    gpu->deleteResource (hRenderLayoutClearBuffer);
+
     gpu->deleteResource (hFrameBuffer);
     //gpu->deleteResource (hSampler0_bilinearFiltering);
     gpu->deleteResource (hDescrPool);
@@ -65,27 +67,112 @@ bool ThePipeline::setup (gos::GPU *gpuIN)
         return false;
 
     //vtx idx e stage buffer
-    vbibstBuffer.setup (gpu, sizeof(sVertex)); 
+    vbibstBuffer.setup (gpu, sizeof(sVertex));
 
-
-    //creo il render layout
-    gpu->renderLayout_createNew (&hRenderLayoutClearBuffer)
-        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::color_attachment_optimal, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
-        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eDepthStencilLayout::undefined, eDepthStencilLayout::depth_attachment_optimal, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
-        .addSubpass_GFX()
-            .writeToRenderTarget(0)
-            .writeToDepthStencil()
-        .end()
-    .end();
-    if (hRenderLayoutClearBuffer.isInvalid())
+    //creo un descriptor pool
+    if (!gpu->descrPool_createNew (&hDescrPool)
+        .setMaxNumDescriptorSet(32)
+        .addPool_uniformBuffer(8)
+        .addPool_sampler(8)
+        .addPool_texture(NUM_MAX_TEXTURE)
+        .addPool_storageBuffer(8)
+        .end())
     {
-        gos::logger::err ("ThePipeline::setup() => can't create renderTaskLayout\n");
+        gos::logger::err ("ThePipeline::setup() => can't create descriptor pool\n");
         return false;
     }
 
+    if (!priv_createDescriptorBase())
+        return false;
+
+    if (!priv_createDescriptorScene())
+        return false;
+
+    //creo la pipe step di clear-buffer
+    {
+        gpu->renderLayout_createNew (&pipeStep_clearBuffer.hRenderLayout)
+            .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::color_attachment_optimal, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
+            .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eDepthStencilLayout::undefined, eDepthStencilLayout::depth_attachment_optimal, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
+            .addSubpass_GFX()
+                .writeToRenderTarget(0)
+                .writeToDepthStencil()
+            .end()
+        .end();
+        if (pipeStep_clearBuffer.hRenderLayout.isInvalid())
+        {
+            gos::logger::err ("ThePipeline::setup() => can't create hRenderLayout for pipeStep_clearBuffer\n");
+            return false;
+        }
+
+        if (!gpu->vtxshader_createFromFile ("@shader/PIPE_stage_clear.vert.spv", "main", &pipeStep_clearBuffer.hVtxShader))
+        {
+            gos::logger::err ("ThePipeline::setup() => can't create hVtxShader for pipeStep_clearBuffer\n");
+            return false;
+        }        
+
+
+        gpu->pipeline_createNew (pipeStep_clearBuffer.hRenderLayout, &pipeStep_clearBuffer.hPipeline)
+            .addShader (pipeStep_clearBuffer.hVtxShader)
+            .depthStencil()
+                .zbuffer_enable(true)
+                .zbuffer_enableWrite(true)
+                .zbuffer_setFn (eZFunc::LESS)
+                .stencil_enable(false)
+            .end() //depth stencil
+            .setCullMode (eCullMode::CCW)
+            .setDrawPrimitive (eDrawPrimitive::trisList)
+        .end ();
+        if (pipeStep_clearBuffer.hPipeline.isInvalid())
+        {
+            gos::logger::err ("ThePipeline::setup() => can't create hPipeline for pipeStep_clearBuffer\n");
+            return false;
+        }        
+    }
+
+    //creo la pipe step di presentazione
+    {
+        gpu->renderLayout_createNew (&pipeStep_present.hRenderLayout)
+            .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::color_attachment_optimal, eImageLayout::presentation, eAttachmentLoadOp::load, eAttachmentStoreOp::store)
+            .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eDepthStencilLayout::depth_attachment_optimal, eDepthStencilLayout::depth_attachment_optimal, eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
+            .addSubpass_GFX()
+                .writeToRenderTarget(0)
+                .writeToDepthStencil()
+            .end()
+        .end();
+        if (pipeStep_present.hRenderLayout.isInvalid())
+        {
+            gos::logger::err ("ThePipeline::setup() => can't create hRenderLayout for pipeStep_present\n");
+            return false;
+        }
+
+        if (!gpu->vtxshader_createFromFile ("@shader/PIPE_stage_clear.vert.spv", "main", &pipeStep_present.hVtxShader))
+        {
+            gos::logger::err ("ThePipeline::setup() => can't create hVtxShader for pipeStep_present\n");
+            return false;
+        }        
+
+
+        gpu->pipeline_createNew (pipeStep_present.hRenderLayout, &pipeStep_present.hPipeline)
+            .addShader (pipeStep_present.hVtxShader)
+            .depthStencil()
+                .zbuffer_enable(true)
+                .zbuffer_enableWrite(true)
+                .zbuffer_setFn (eZFunc::LESS)
+                .stencil_enable(false)
+            .end() //depth stencil
+        .end ();
+        if (pipeStep_present.hPipeline.isInvalid())
+        {
+            gos::logger::err ("ThePipeline::setup() => can't create hPipeline for pipeStep_present\n");
+            return false;
+        }        
+    }    
+
+
+    //questo invece e' il render layout da utilizzarsi per gli step intermedi di rendering
     gpu->renderLayout_createNew (&hRenderLayout)
-        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::color_attachment_optimal, eImageLayout::presentation, eAttachmentLoadOp::load, eAttachmentStoreOp::store)
-        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eDepthStencilLayout::depth_attachment_optimal, eDepthStencilLayout::depth_attachment_optimal, eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
+        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::color_attachment_optimal, eImageLayout::color_attachment_optimal, eAttachmentLoadOp::load, eAttachmentStoreOp::store)
+        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eDepthStencilLayout::depth_attachment_optimal, eDepthStencilLayout::depth_attachment_optimal, eAttachmentLoadOp::load, eAttachmentStoreOp::store)
         .addSubpass_GFX()
             .writeToRenderTarget(0)
             .writeToDepthStencil()
@@ -107,26 +194,6 @@ bool ThePipeline::setup (gos::GPU *gpuIN)
         gos::logger::err ("ThePipeline::setup() => can't create frameBufferHandle\n");
         return false;
     }
-
-
-    //creo un descriptor pool
-    if (!gpu->descrPool_createNew (&hDescrPool)
-        .setMaxNumDescriptorSet(32)
-        .addPool_uniformBuffer(8)
-        .addPool_sampler(8)
-        .addPool_texture(NUM_MAX_TEXTURE)
-        .addPool_storageBuffer(8)
-        .end())
-    {
-        gos::logger::err ("ThePipeline::setup() => can't create descriptor pool\n");
-        return false;
-    }
-
-    if (!priv_createDescriptorBase())
-        return false;
-
-    if (!priv_createDescriptorScene())
-        return false;
 
     return true;
 }
@@ -289,19 +356,6 @@ bool ThePipeline::priv_createDescriptorScene()
     return true;
 }
 
-//********************************
-void ThePipeline::descritproScene_update (gos::geom::Camera3 *cam)
-{
-    gos::vec3f lightDir (-0.2f, -0.6f, 0.2f);
-    //gos::vec3f lightDir (0, -1, 0);
-    lightDir.normalize();
-
-    const f32 ambientLightIntensity = 0.1f;
-
-    descriptorScene.sceneData.camVP = cam->getMatVP();
-    descriptorScene.sceneData.lightDir.set (lightDir, ambientLightIntensity);
-    gpu->writeAndSync (descriptorScene.uboHandle, 0, &descriptorScene.sceneData, sizeof(descriptorScene.sceneData));            
-}
 
 //********************************
 bool ThePipeline::shape_uploadToVBIB (const gos::Shape *shape, tpp::sBoundShapeInfo *out_info)
@@ -315,3 +369,57 @@ bool ThePipeline::shape_uploadToVBIB (const gos::Shape *shape, tpp::sBoundShapeI
     return true;
 }
 
+//********************************
+gos::GPU::PipelineBuilder& ThePipeline::createPipeline (GPUPipelineHandle *out_handle)
+{
+    return gpu->pipeline_createNew (hRenderLayout, out_handle)
+        .setVtxDecl (vtxDeclHandle)
+        .depthStencil()
+            .zbuffer_enable(true)
+            .zbuffer_enableWrite(true)
+            .zbuffer_setFn (eZFunc::LESS)
+            .stencil_enable(false)
+        .end() //depth stencil
+        .setCullMode (eCullMode::CCW)
+        .setDrawPrimitive (eDrawPrimitive::trisList)
+        .descriptor_add (descriptorBase.layout)
+        .descriptor_add (descriptorScene.descr.layout);        
+}
+
+//********************************
+bool ThePipeline::beginFrame (Context &ctx)
+{
+    //aggiornamento del descrittore con i dati di scena
+    {
+        gos::vec3f lightDir (-0.2f, -0.6f, 0.2f);
+        //gos::vec3f lightDir (0, -1, 0);
+        lightDir.normalize();
+    
+        const f32 ambientLightIntensity = 0.1f;
+    
+        descriptorScene.sceneData.camVP = ctx.cam->getMatVP();
+        descriptorScene.sceneData.lightDir.set (lightDir, ambientLightIntensity);
+        gpu->writeAndSync (descriptorScene.uboHandle, 0, &descriptorScene.sceneData, sizeof(descriptorScene.sceneData));            
+    }
+
+    //rendering: step0, clear buffer
+    ctx.cw->setViewport (gpu->viewport_getDefault())
+        .bindPipeline (pipeStep_clearBuffer.hPipeline)
+        .setClearColor (0, gos::ColorHDR(0, 0.1f, 0.3f))
+        .setDepthBufferColor(1, 0)
+        .renderPass_begin (pipeStep_clearBuffer.hRenderLayout, this->hFrameBuffer)
+        .renderPass_end();
+
+    return true;
+}
+
+//********************************
+void ThePipeline::endFrame(Context &ctx)
+{
+    //rendering: step: preset
+    ctx.cw->bindPipeline (pipeStep_present.hPipeline)
+        .renderPass_begin (pipeStep_present.hRenderLayout, this->hFrameBuffer)
+        .renderPass_end();
+
+    ctx.cw->end();
+}
