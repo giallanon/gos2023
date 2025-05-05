@@ -922,6 +922,7 @@ namespace gos
         VkDebugUtilsMessengerEXT    vkDebugMessenger;
         sVkDevice                   vulkan;
         VkSurfaceCapabilitiesKHR    vkSurfCapabilities;
+        sPhyDeviceInfo vkPhysicalDevInfo;
         VtxDeclBuilder              vtxDeclBuilder;
         u32                         currentSwapChainImageIndex;
         bool                        bRecreateSwapChainOnNextFrame;

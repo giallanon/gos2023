@@ -2122,6 +2122,11 @@ bool GPU::storageBuffer_create (u32 sizeInByte, eVIBufferMode modeIN, GPUStorage
     assert (NULL != out_handle);
     out_handle->setInvalid();
 
+    if (sizeInByte > vulkan.phyDevInfo.deviceProperties.limits.maxStorageBufferRange)
+    {
+        gos::logger::err ("GPU::storageBuffer_create() => too big. Trying to allocate %d when max is %d\n", sizeInByte, vulkan.phyDevInfo.deviceProperties.limits.maxStorageBufferRange);
+        return false;
+    }
 
     gpu::Buffer *s = storageBufferList.reserve (out_handle);
     if (NULL == s)
