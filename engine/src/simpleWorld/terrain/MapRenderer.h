@@ -20,7 +20,7 @@ public:
 
 private:
     static constexpr u32    PER_INSTANCE_SSBO__SIZEOF_ONE_ELEMENT       = 32;
-    static constexpr u32    PER_INSTANCE_SSBO__NUM_MAX_ELEM             = 32*1024*1024;
+    static constexpr u32    PER_INSTANCE_SSBO__NUM_MAX_ELEM             = 31*1024*1024;
 
 private:
     struct sPerInstanceData
