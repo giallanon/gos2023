@@ -20,6 +20,7 @@ LineRenderer::~LineRenderer()
         gpu->deleteResource (hVtxShader);
         gpu->deleteResource (hFragShader);
         gpu->deleteResource (hVtxBuffer);
+        gpu->deleteResource (hIdxBuffer);
         gpu->deleteResource (vtxDeclHandle);
 
         gpu->deleteResource (descr2_ssboHandle);
@@ -75,7 +76,7 @@ bool LineRenderer::priv_setupVulkan()
     }
 
     //vtx buffer
-    if (!gpu->vertexBuffer_create (1024, eVIBufferMode::shared_cpuW_manualSync, &hVtxBuffer))
+    if (!gpu->vertexBuffer_create (128, eVIBufferMode::shared_cpuW_manualSync, &hVtxBuffer))
     {
         gos::logger::err ("LineRenderer::setup() => can't create vtxbuffer\n");
         return false;
@@ -83,10 +84,10 @@ bool LineRenderer::priv_setupVulkan()
     else
     {
         sVertex vtx[4];
-        vtx[0].pos.set (0, 0.5f, -2);
-        vtx[1].pos.set (1, 0.5f, -2);
-        vtx[2].pos.set (1,-0.5f, -2);
-        vtx[3].pos.set (0,-0.5f, -2);
+        vtx[0].pos.set (0, -0.5f, 0);
+        vtx[1].pos.set (1, -0.5f, 0);
+        vtx[2].pos.set (1,  0.5f, 0);
+        vtx[3].pos.set (0,  0.5f, 0);
 
         gpu::sMappedBuffer mapped;
         gpu->map (hVtxBuffer, 0, sizeof(sVertex) * 4, &mapped);
@@ -94,6 +95,24 @@ bool LineRenderer::priv_setupVulkan()
         gpu->buffer_manualSync (&mapped, 1);
         gpu->buffer_unmap(mapped);        
     }
+
+    //idx buffer
+    if (!gpu->indexBuffer_create (128, eVIBufferMode::shared_cpuW_manualSync, &hIdxBuffer))
+    {
+        gos::logger::err ("LineRenderer::setup() => can't create idxBuffer\n");
+        return false;
+    }
+    else
+    {
+        const u16 idx[6] = { 0,1,2, 2,3,0 };
+
+        gpu::sMappedBuffer mapped;
+        gpu->map (hIdxBuffer, 0, sizeof(u16) * 6, &mapped);
+        memcpy (mapped.host_pt, idx, sizeof(u16) * 6);
+        gpu->buffer_manualSync (&mapped, 1);
+        gpu->buffer_unmap(mapped);        
+    }
+    
 
     return true;
 }
@@ -133,13 +152,24 @@ bool LineRenderer::priv_createDescriptor()
 
     //scrivo i SSBO
     {
-        sPerInstanceData    data[2];
-        data[0].pos.set (0,0,0,0);
-        data[1].pos.set (0,3,0,0);
+        u32 ct = 0;
+        sPerInstanceData    data[64];
+        data[ct++].pos.set (0, 0.5f, 0, 0);
+        data[ct++].pos.set (3, 0.5f, 0, 0);
+        data[ct++].pos.set (3, 0.5f, 3.0f, 0);
+        data[ct++].pos.set (0, 0.5f, 3.0f, 0);
+        data[ct++].pos.set (0, 0.5f, 0, 0);
 
+        data[ct++].pos.set (0, 3.5f, 0, 0);
+        data[ct++].pos.set (3, 3.5f, 0, 0);
+        data[ct++].pos.set (3, 3.5f, 3.0f, 0);
+        data[ct++].pos.set (0, 3.5f, 3.0f, 0);
+        data[ct++].pos.set (0, 3.5f, 0, 0);
+
+        const u32 howMuchToCopy = sizeof(sPerInstanceData) * ct;
         gpu::sMappedBuffer mapped;
-        gpu->map (descr2_ssboHandle, 0, sizeof(data), &mapped);
-        memcpy (mapped.host_pt, data, sizeof(data));
+        gpu->map (descr2_ssboHandle, 0,howMuchToCopy, &mapped);
+        memcpy (mapped.host_pt, data, howMuchToCopy);
         gpu->buffer_manualSync (&mapped, 1);
         gpu->buffer_unmap (mapped);
     }
@@ -166,10 +196,12 @@ bool LineRenderer::priv_createPipeline()
 
     //creo la pipeline
     thePipeline->createPipeline (vtxDeclHandle, &hPipeline)
+        .setVtxDecl (vtxDeclHandle)
         .addShader (hVtxShader)
         .addShader (hFragShader)
         .descriptor_add (descr2_layout)
-        .setCullMode (eCullMode::NONE)
+        .pushConstant_add (VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(sLineInfo), &pc_lineInfo)
+        .setCullMode (eCullMode::CCW)
         .setDrawPrimitive (eDrawPrimitive::trisList)
     .end ();
     if (hPipeline.isInvalid())
@@ -190,9 +222,23 @@ bool LineRenderer::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Cam
             .bindDescriptorSet (thePipeline->descriptorBase_get()->instance, 0)
             .bindDescriptorSet (thePipeline->descriptorScene_get()->instance, 1)
             .bindDescriptorSet (descr2_instance, 2)
-
             .bindVtxBuffer(hVtxBuffer)
-            .draw (3, 1, 0, 0);
+            .bindIdxBufferU16(hIdxBuffer);
+
+
+    sLineInfo lineInfo;
+    lineInfo.width = 15;
+            
+    cw.pushConstant (pc_lineInfo, &lineInfo, sizeof(lineInfo));
+
+    u32 firstInstance = 0;
+    u32 nInstanceToDraw = 4;
+    cw.drawIndexed (6,nInstanceToDraw,0,0,firstInstance);
+    firstInstance += (nInstanceToDraw+1);
+
+    nInstanceToDraw = 4;
+    cw.drawIndexed (6,nInstanceToDraw,0,0,firstInstance);
+    firstInstance += (nInstanceToDraw+1);
 
     cw.renderPass_end();
     return true;

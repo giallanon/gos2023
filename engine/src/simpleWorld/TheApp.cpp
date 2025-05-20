@@ -261,11 +261,17 @@ bool TheApp::priv_buildScene1()
     u16 shapePavimento;     renderer.shape_add (uploadedShapePlane1, &shapePavimento);
 
     //creo un po' di istanze
-    renderer.instance_add (shapeCubo1, material1, geom::Pos3(0,0.5f,0));
-    renderer.instance_add (shapeCubo1, material2, geom::Pos3(1,0.5f,0));
-    renderer.instance_add (shapeCubo1, material3, geom::Pos3(2,0.5f,0));
-    renderer.instance_add (shapeCubo1, material1, geom::Pos3(2,1.5f,0));
-    renderer.instance_add (shapePavimento, material4, geom::Pos3(0,-0.05f,0));
+    renderer.instance_add (shapeCubo1, material1, geom::Pos3(-1,0.5f,0));
+    renderer.instance_add (shapeCubo1, material2, geom::Pos3(-2,1.5f,0));
+    renderer.instance_add (shapeCubo1, material3, geom::Pos3(-1,2.5f,0));
+    renderer.instance_add (shapeCubo1, material1, geom::Pos3(-2,3.5f,0));
+
+    /*renderer.instance_add (shapeCubo1, material1, geom::Pos3( 1,0.5f,0));
+    renderer.instance_add (shapeCubo1, material2, geom::Pos3( 2,1.5f,0));
+    renderer.instance_add (shapeCubo1, material3, geom::Pos3( 1,2.5f,0));
+    renderer.instance_add (shapeCubo1, material1, geom::Pos3( 2,3.5f,0));
+    */
+    renderer.instance_add (shapePavimento, material4, geom::Pos3(0,-0.01f,0));
 
     return true;
 }

@@ -33,7 +33,12 @@ private:
     struct sPerInstanceData
     {
         gos::vec4f  pos;
-    };    
+    };
+
+    struct sLineInfo
+    {
+        f32 width;
+    };
 
 private:
     ThePipeline                 *thePipeline;
@@ -44,12 +49,15 @@ private:
     GPUShaderHandle             hFragShader;
 
     GPUVtxBufferHandle          hVtxBuffer;
+    GPUIdxBufferHandle          hIdxBuffer;
     GPUVtxDeclHandle            vtxDeclHandle;
     gos::VtxLayout              vtxLayout; 
 
     GPUDescrSetLayoutHandle     descr2_layout;
     GPUDescrSetInstanceHandle   descr2_instance;       
     GPUStorageBufferHandle      descr2_ssboHandle;
+
+    u8                          pc_lineInfo;
 };
 
 
