@@ -46,29 +46,27 @@ bool LineRenderer::setup (ThePipeline *thePipelineIN)
 bool LineRenderer::priv_setupVulkan()
 {
     //vtx declaration
-    {
-        gpu->vtxDecl_createNew (&vtxDeclHandle)
-            .addStream(eVtxStreamInputRate::perVertex)
-                .addLayout (0, 0, eDataFormat::_3f32)
-            .end();
-        if (vtxDeclHandle.isInvalid())
-        {
-            gos::logger::err ("LineRenderer::priv_setupVulkan() => can't create vtxDeclHandle\n");
-            return false;
-        }
-    
-    
-        gos::shape::VtxLayoutWriter vtxLayoutW(&vtxLayout);
-        vtxLayoutW.begin()
-            .addPos3 (offsetof(sVertex,pos))
+    gpu->vtxDecl_createNew (&vtxDeclHandle)
+        .addStream(eVtxStreamInputRate::perVertex)
+            .addLayout (0, 0, eDataFormat::_3f32)
         .end();
-    }    
-
-
-    if (!priv_createDescriptor())
+    if (vtxDeclHandle.isInvalid())
+    {
+        gos::logger::err ("LineRenderer::priv_setupVulkan() => can't create vtxDeclHandle\n");
         return false;
+    }
+    
 
-
+    //Creo il descriptorSet layout set = 2, binding = 0
+    if (!gpu->descrSetLayout_createStatic (&descr2_layout)
+        .add_storageBuffer (VK_SHADER_STAGE_VERTEX_BIT)
+        .end())
+    {
+        gos::logger::err ("LineRenderer::priv_setupVulkan() => can't create descriptor set 2\n");
+        return false;
+    }       
+    
+    //pipeline
     if (!priv_createPipeline())
     {
         gos::logger::err ("LineRenderer::setup() => can't create pipeline\n");
@@ -114,32 +112,62 @@ bool LineRenderer::priv_setupVulkan()
     }
     
 
+    if (!priv_createDescriptorInstance())
+        return false;
+
+
     return true;
 }
 
 //********************************
-bool LineRenderer::priv_createDescriptor()
+bool LineRenderer::priv_createPipeline()
 {
-    //Creo il descriptorSet layout 2
-    if (!gpu->descrSetLayout_createStatic (&descr2_layout)
-        .add_storageBuffer (VK_SHADER_STAGE_VERTEX_BIT) //set 2, binding 0
-        .end())
+    //carico gli shader
+    if (!gpu->vtxshader_createFromFile ("@shader/lineRenderer.vert.spv", "main", &hVtxShader))
     {
-        gos::logger::err ("LineRenderer::priv_createDescriptor() => can't create descriptor set 2\n");
-        return false;
-    }       
-    
-    if (!thePipeline->createDescriptorInstance (descr2_layout, &descr2_instance))
-    {
-        gos::logger::err ("LineRenderer::priv_createDescriptor() => can't create descriptorSet instance 2\n");
+        gos::logger::err ("LineRenderer::priv_createPipeline() => can't create vert shader\n");
         return false;
     }
-    
-    
+
+    if (!gpu->fragshader_createFromFile ("@shader/lineRenderer.frag.spv", "main", &hFragShader))
+    {
+        gos::logger::err ("LineRenderer::priv_createPipeline() => can't create frag shader\n");
+        return false;
+    }    
+
+    //creo la pipeline
+    thePipeline->createPipeline (vtxDeclHandle, &hPipeline)
+        .setVtxDecl (vtxDeclHandle)
+        .addShader (hVtxShader)
+        .addShader (hFragShader)
+        .descriptor_add (descr2_layout)
+        .pushConstant_add (VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(sLineInfo), &pc_lineInfo)
+        .setCullMode (eCullMode::CCW)
+        .setDrawPrimitive (eDrawPrimitive::trisList)
+    .end ();
+    if (hPipeline.isInvalid())
+    {
+        gos::logger::err ("LineRenderer::priv_createPipeline() => can't create pipeline\n");
+        return false;
+    }
+
+    return true;
+}
+
+//********************************
+bool LineRenderer::priv_createDescriptorInstance()
+{
+    //creo una istanza del descrittore2
+    if (!thePipeline->createDescriptorInstance (descr2_layout, &descr2_instance))
+    {
+        gos::logger::err ("LineRenderer::priv_createDescriptorInstance() => can't create descriptorSet instance 2\n");
+        return false;
+    }
+
     //creo un buffer per SSBO
     if (!gpu->storageBuffer_create (PER_INSTANCE_SSBO__SIZEOF_ONE_ELEMENT * PER_INSTANCE_SSBO__NUM_MAX_ELEM, eVIBufferMode::shared_cpuW_manualSync, &descr2_ssboHandle))
     {
-        gos::logger::err ("LineRenderer::priv_createDescriptor() => GPU::storageBuffer_create\n");
+        gos::logger::err ("LineRenderer::priv_createDescriptorInstance() => GPU::storageBuffer_create\n");
         return false;
     }
 
@@ -178,40 +206,6 @@ bool LineRenderer::priv_createDescriptor()
 }
 
 
-//********************************
-bool LineRenderer::priv_createPipeline()
-{
-    //carico gli shader
-    if (!gpu->vtxshader_createFromFile ("@shader/lineRenderer.vert.spv", "main", &hVtxShader))
-    {
-        gos::logger::err ("LineRenderer::priv_createPipeline() => can't create vert shader\n");
-        return false;
-    }
-
-    if (!gpu->fragshader_createFromFile ("@shader/lineRenderer.frag.spv", "main", &hFragShader))
-    {
-        gos::logger::err ("LineRenderer::priv_createPipeline() => can't create frag shader\n");
-        return false;
-    }    
-
-    //creo la pipeline
-    thePipeline->createPipeline (vtxDeclHandle, &hPipeline)
-        .setVtxDecl (vtxDeclHandle)
-        .addShader (hVtxShader)
-        .addShader (hFragShader)
-        .descriptor_add (descr2_layout)
-        .pushConstant_add (VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(sLineInfo), &pc_lineInfo)
-        .setCullMode (eCullMode::CCW)
-        .setDrawPrimitive (eDrawPrimitive::trisList)
-    .end ();
-    if (hPipeline.isInvalid())
-    {
-        gos::logger::err ("LineRenderer::priv_createPipeline() => can't create pipeline\n");
-        return false;
-    }
-
-    return true;
-}
 
 //************************************
 bool LineRenderer::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Camera3 *cam)

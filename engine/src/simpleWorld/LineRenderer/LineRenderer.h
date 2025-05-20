@@ -22,7 +22,7 @@ private:
 private:
     bool    priv_setupVulkan();
     bool    priv_createPipeline();
-    bool    priv_createDescriptor();
+    bool    priv_createDescriptorInstance();
 
 private:
     struct sVertex
@@ -51,7 +51,6 @@ private:
     GPUVtxBufferHandle          hVtxBuffer;
     GPUIdxBufferHandle          hIdxBuffer;
     GPUVtxDeclHandle            vtxDeclHandle;
-    gos::VtxLayout              vtxLayout; 
 
     GPUDescrSetLayoutHandle     descr2_layout;
     GPUDescrSetInstanceHandle   descr2_instance;       
