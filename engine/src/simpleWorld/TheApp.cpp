@@ -85,6 +85,8 @@ bool TheApp::setup (gos::GPU *gpuIN)
     if (!mapRenderer.setup (&thePipeline, "assets/map256.tga"))
         return false;
 
+    if (!lineRenderer.setup (&thePipeline))
+        return false;
 
     //movement.setLinearSpeed (15);
     return true;
@@ -378,8 +380,10 @@ void TheApp::run()
             ctx.cw = &cw;
             if (thePipeline.beginFrame (ctx))
             {
-                mapRenderer.recordCommandBuffer(cw, &cam);
+                //mapRenderer.recordCommandBuffer(cw, &cam);
                 renderer.recordCommandBuffer(cw, &cam);
+                lineRenderer.recordCommandBuffer(cw, &cam);
+
                 thePipeline.endFrame(ctx);
 
                 

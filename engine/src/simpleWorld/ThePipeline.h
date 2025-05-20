@@ -55,6 +55,7 @@ public:
      * @brief ritorna un builder gia' preimpostato con una pipeline compatibile
      */
     gos::GPU::PipelineBuilder&   createPipeline (GPUPipelineHandle *out_handle);
+    gos::GPU::PipelineBuilder&   createPipeline (const GPUVtxDeclHandle hVtxDeclHandle, GPUPipelineHandle *out_handle);
 
     /**
      * @brief inizio e fine di un frame
@@ -115,6 +116,7 @@ private:
     {
         gos::mat4x4f    camVP;
         gos::vec4f      lightDir;
+        gos::vec2f      screenWH;
     };
 
     struct DescrScene

@@ -7,6 +7,7 @@
 #include "../gosGPU/utils/gosFreeMovement.h"
 #include "Renderer1.h"
 #include "terrain/MapRenderer.h"
+#include "LineRenderer/LineRenderer.h"
 
 /**
  * @brief TheApp
@@ -39,6 +40,7 @@ private:
     ThePipeline         thePipeline;
     Renderer1           renderer;
     MapRenderer         mapRenderer;
+    LineRenderer        lineRenderer;
 };
 
 

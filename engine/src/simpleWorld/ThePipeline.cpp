@@ -372,8 +372,12 @@ bool ThePipeline::shape_uploadToVBIB (const gos::Shape *shape, tpp::sBoundShapeI
 //********************************
 gos::GPU::PipelineBuilder& ThePipeline::createPipeline (GPUPipelineHandle *out_handle)
 {
+    return createPipeline (vtxDeclHandle, out_handle);
+}
+gos::GPU::PipelineBuilder& ThePipeline::createPipeline (const GPUVtxDeclHandle hVtxDeclHandle_IN, GPUPipelineHandle *out_handle)
+{
     return gpu->pipeline_createNew (hRenderLayout, out_handle)
-        .setVtxDecl (vtxDeclHandle)
+        .setVtxDecl (hVtxDeclHandle_IN)
         .depthStencil()
             .zbuffer_enable(true)
             .zbuffer_enableWrite(true)
@@ -399,6 +403,7 @@ bool ThePipeline::beginFrame (Context &ctx)
     
         descriptorScene.sceneData.camVP = ctx.cam->getMatVP();
         descriptorScene.sceneData.lightDir.set (lightDir, ambientLightIntensity);
+        descriptorScene.sceneData.screenWH.set (gpu->swapChain_getWidth(), gpu->swapChain_getHeight());
         gpu->writeAndSync (descriptorScene.uboHandle, 0, &descriptorScene.sceneData, sizeof(descriptorScene.sceneData));            
     }
 

@@ -14,6 +14,7 @@ layout(set = 1, binding = 0) uniform LAYOUT_SCENE_DATA
 {
     mat4 camVP;
     vec4 lightDir;
+    vec2 screenWH;
 } scene;
 
 

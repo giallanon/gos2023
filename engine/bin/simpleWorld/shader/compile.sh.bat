@@ -5,3 +5,6 @@ glslc -fshader-stage=vert --target-env=vulkan1.2 PIPE_stage_clear.vert.shader -O
 
 glslc -fshader-stage=vert --target-env=vulkan1.2 mapRenderer.vert.shader -O -o compiled/mapRenderer.vert.spv
 glslc -fshader-stage=frag --target-env=vulkan1.2 mapRenderer.frag.shader -O -o compiled/mapRenderer.frag.spv
+
+glslc -fshader-stage=vert --target-env=vulkan1.2 lineRenderer.vert.shader -O -o compiled/lineRenderer.vert.spv
+glslc -fshader-stage=frag --target-env=vulkan1.2 lineRenderer.frag.shader -O -o compiled/lineRenderer.frag.spv

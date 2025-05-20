@@ -20,6 +20,8 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 #====================================================
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
+LineRenderer/LineRenderer.h
+LineRenderer/LineRenderer.cpp
 terrain/MapRenderer.cpp
 terrain/MapRenderer.h
 terrain/MarchingSquare.cpp

@@ -30,7 +30,6 @@ Renderer1::~Renderer1()
         shapeList.unsetup();
         instanceList.unsetup();
 
-        thePipeline->unsetup();
         gpu = NULL;
     }
 }
