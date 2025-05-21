@@ -22,7 +22,8 @@ namespace gos
 			absolute = 0,
 			somePixelFromRight = 1,
 			somePixelAfterCenter = 2,
-			someBeforeAfterCenter = 3,
+			somePixelBeforeCenter = 3,
+			perc = 4
 		};
 
 	public:
@@ -54,10 +55,11 @@ namespace gos
 	* Dim2D<from, W>
 	*	Rappresenta una dimensione, fa coppia con Pos<W>
 	*
-	*	dim: 	number  	-> n			//mode=0, n e' un valore assoluto (es : dim = 5)
-	*			number- 	-> W - n		//mode=1, fino a W-n (es: dim = "5-")
-	*			!number  	-> W/2 + n		//mode=2, fino a (W/2) + n (es: pos = "!5")
-	*			!number- 	-> W/2 - n		//mode=3, fino a (W/2) - n (es: pos = "!5-")
+	*	dim: 	number  	-> n				//mode=0, n e' un valore assoluto (es : dim = 5)
+	*			number- 	-> W - n			//mode=1, fino a W-n (es: dim = "5-")
+	*			!number  	-> W/2 + n			//mode=2, fino a (W/2) + n (es: pos = "!5")
+	*			!number- 	-> W/2 - n			//mode=3, fino a (W/2) - n (es: pos = "!5-")
+	*			number%		-> (W * num)/100	//mode=4, n e' una percentuale di W
 	*============================================================*/
 	class Dim2D
 	{
@@ -67,7 +69,8 @@ namespace gos
 			absolute = 0,
 			upToSomePixelFromRight = 1,
 			upToSomePixelAfterCenter = 2,
-			upToSomeBeforeAfterCenter = 3,
+			somePixelBeforeCenter = 3,
+			perc = 4
 		};
 
 	public:

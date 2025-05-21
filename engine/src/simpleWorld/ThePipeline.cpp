@@ -132,7 +132,7 @@ bool ThePipeline::setup (gos::GPU *gpuIN)
     //creo la pipe step di presentazione
     {
         gpu->renderLayout_createNew (&pipeStep_present.hRenderLayout)
-            .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::color_attachment_optimal, eImageLayout::presentation, eAttachmentLoadOp::load, eAttachmentStoreOp::store)
+            .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::color_attachment_optimal, eImageLayout::presentation, eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
             .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eDepthStencilLayout::depth_attachment_optimal, eDepthStencilLayout::depth_attachment_optimal, eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
             .addSubpass_GFX()
                 .writeToRenderTarget(0)
@@ -159,7 +159,7 @@ bool ThePipeline::setup (gos::GPU *gpuIN)
                 .zbuffer_enableWrite(true)
                 .zbuffer_setFn (eZFunc::LESS)
                 .stencil_enable(false)
-            .end() //depth stencil
+            .end() //depth stencil*/
         .end ();
         if (pipeStep_present.hPipeline.isInvalid())
         {
@@ -403,7 +403,7 @@ bool ThePipeline::beginFrame (Context &ctx)
     
         descriptorScene.sceneData.camVP = ctx.cam->getMatVP();
         descriptorScene.sceneData.lightDir.set (lightDir, ambientLightIntensity);
-        descriptorScene.sceneData.screenWH.set (gpu->swapChain_getWidth(), gpu->swapChain_getHeight());
+        descriptorScene.sceneData.screenWH.set ((f32)gpu->swapChain_getWidth(), (f32)gpu->swapChain_getHeight());
         gpu->writeAndSync (descriptorScene.uboHandle, 0, &descriptorScene.sceneData, sizeof(descriptorScene.sceneData));            
     }
 
@@ -425,6 +425,6 @@ void ThePipeline::endFrame(Context &ctx)
     ctx.cw->bindPipeline (pipeStep_present.hPipeline)
         .renderPass_begin (pipeStep_present.hRenderLayout, this->hFrameBuffer)
         .renderPass_end();
-
+        
     ctx.cw->end();
 }

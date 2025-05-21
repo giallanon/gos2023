@@ -8,6 +8,7 @@ layout(location = 1) in vec2 in_texCoord;
 
 //output
 layout(location = 0) out vec4 out_colorRGBA;
+//layout(location = 1) out vec4 out_color2RGBA;
 
 void main() 
 {
@@ -16,4 +17,5 @@ void main()
     //const uint ii = nonuniformEXT(material.textureIndex);
     const vec3 texCol = PIPE_sample2D_bilinear (material.textureIndex, in_texCoord).rgb;
     out_colorRGBA = vec4(material.color.rgb * texCol * c, 1);
+//	out_color2RGBA = vec4(1,0,0,0);
 }

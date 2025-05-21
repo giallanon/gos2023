@@ -98,12 +98,19 @@ bool GPU::PipelineBuilder::end ()
 //******************************** 
 bool GPU::PipelineBuilder::priv_buildVulkan ()
 {
-    VkRenderPass vkRenderPassHandle;
-    if (!gpu->toVulkan (renderLayoutHandle, &vkRenderPassHandle))
+    const gpu::RenderLayout *rendLayout = gpu->getInfo (renderLayoutHandle);
+    if (NULL == rendLayout)
     {
         gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => invalid renderLayoutHandle\n");
         return false;
     }
+
+/*    VkRenderPass vkRenderPassHandle;
+    if (!gpu->toVulkan (renderLayoutHandle, &vkRenderPassHandle))
+    {
+        gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => invalid renderLayoutHandle\n");
+        return false;
+    }*/
 
 
 
@@ -297,22 +304,26 @@ bool GPU::PipelineBuilder::priv_buildVulkan ()
 
         finalColor = finalColor & colorWriteMask;
     */
-    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_FALSE;
-    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
-    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional        
+    VkPipelineColorBlendAttachmentState colorBlendAttachment[16];
+    memset (colorBlendAttachment, 0, sizeof(colorBlendAttachment));
+    for (u32 i = 0; i < rendLayout->numColorBuffer; i++)
+    {
+        colorBlendAttachment[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment[i].blendEnable = VK_FALSE;
+        colorBlendAttachment[i].srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+        colorBlendAttachment[i].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+        colorBlendAttachment[i].colorBlendOp = VK_BLEND_OP_ADD; // Optional
+        colorBlendAttachment[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+        colorBlendAttachment[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+        colorBlendAttachment[i].alphaBlendOp = VK_BLEND_OP_ADD; // Optional        
+    }
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlending.logicOpEnable = VK_FALSE;
     colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &colorBlendAttachment;
+    colorBlending.attachmentCount = rendLayout->numColorBuffer;
+    colorBlending.pAttachments = colorBlendAttachment;
     colorBlending.blendConstants[0] = 0.0f; // Optional
     colorBlending.blendConstants[1] = 0.0f; // Optional
     colorBlending.blendConstants[2] = 0.0f; // Optional
@@ -333,7 +344,7 @@ bool GPU::PipelineBuilder::priv_buildVulkan ()
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.layout = vkPipelineLayoutHandle;
-    pipelineInfo.renderPass = vkRenderPassHandle;
+    pipelineInfo.renderPass = rendLayout->vkRenderPassHandle;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
     pipelineInfo.basePipelineIndex = -1; // Optional

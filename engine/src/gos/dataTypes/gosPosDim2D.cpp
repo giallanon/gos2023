@@ -4,7 +4,7 @@
 using namespace gos;
 
 //***********************************************
-i16	gos_priv_numFromStr (const char *s, u8 *out_haveMinusAtEnd)
+static i16	PosDim2D_priv_numFromStr (const char *s, char *out_lastChar)
 {
 	assert(s && s[0]!=0);
 
@@ -20,10 +20,8 @@ i16	gos_priv_numFromStr (const char *s, u8 *out_haveMinusAtEnd)
 	}
 	tmp[n] = 0;
 
-	if (s[n] == '-')
-		*out_haveMinusAtEnd = 1;
-	else
-		*out_haveMinusAtEnd = 0;
+	*out_lastChar = s[n];
+	assert (s[n] == 0x00 || s[n] == '-' || s[n] == '%');
 	return (i16)atoi(tmp);
 }
 
@@ -34,23 +32,42 @@ void Pos2D::setFromString (const char *s)
 	
 	if (s[0] == '!')
 	{
-		u8 haveMinus;
-		value = gos_priv_numFromStr (&s[1], &haveMinus);
-		if (haveMinus)
-			mode = eMode::someBeforeAfterCenter;
-		else
-			mode = eMode::somePixelAfterCenter;
+		char lastChar;
+		value = PosDim2D_priv_numFromStr (&s[1], &lastChar);
+		switch (lastChar)
+		{
+		default:
+			DBGBREAK; //simbolo non consentito
+			eMode::somePixelAfterCenter;
+			break;
+		case '-':	mode = eMode::somePixelBeforeCenter; break;
+		case 0x00:	mode = eMode::somePixelAfterCenter; break;
+		}
 	}
 	else
 	{
-		u8 haveMinus;
-		value = gos_priv_numFromStr (s, &haveMinus);
-		if (haveMinus)
-			mode = eMode::somePixelFromRight;
-		else
+		char lastChar;
+		value = PosDim2D_priv_numFromStr (s, &lastChar);
+		switch (lastChar)
 		{
-			assert (s[0] >='0' && s[0]<='9');
+		default:
+			DBGBREAK; //simbolo non consentito
+			eMode::absolute;
+			break;
+
+		case '-':
+			mode = mode = eMode::somePixelFromRight;;
+			break;
+
+		case 0x00:
+			assert (s[0] >= '0' && s[0] <= '9');
 			mode = eMode::absolute;
+			break;
+
+		case '%':
+			assert (value > 0);
+			mode = eMode::absolute;
+			break;
 		}
 	}
 }
@@ -64,7 +81,8 @@ i16	Pos2D::resolve (i16 w) const
 	case eMode::absolute:				return value;
 	case eMode::somePixelFromRight:		return w - value;
 	case eMode::somePixelAfterCenter:	return (w/2) + value;
-	case eMode::someBeforeAfterCenter:	return (w/2) - value;
+	case eMode::somePixelBeforeCenter:	return (w/2) - value;
+	case eMode::perc:					return (w*value) / 100;
 	}
 }
 
@@ -79,23 +97,42 @@ void Dim2D::setFromString (const char *s)
 		
 	if (s[0] == '!')
 	{
-		u8 haveMinus;
-		value = gos_priv_numFromStr (&s[1], &haveMinus);
-		if (haveMinus)
-			mode = eMode::upToSomeBeforeAfterCenter;
-		else
-			mode = eMode::upToSomePixelAfterCenter;
+		char lastChar;
+		value = PosDim2D_priv_numFromStr (&s[1], &lastChar);
+		switch (lastChar)
+		{
+		default:
+			DBGBREAK; //simbolo non consentito
+			eMode::upToSomePixelAfterCenter;
+			break;
+		case '-':	mode = eMode::somePixelBeforeCenter; break;
+		case 0x00:	mode = eMode::upToSomePixelAfterCenter; break;
+		}
 	}
 	else
 	{
-		u8 haveMinus;
-		value = gos_priv_numFromStr (s, &haveMinus);
-		if (haveMinus)
-			mode = eMode::upToSomePixelFromRight;
-		else
+		char lastChar;
+		value = PosDim2D_priv_numFromStr (s, &lastChar);
+		switch (lastChar)
 		{
-			assert (s[0] >='0' && s[0]<='9');
+		default:
+			DBGBREAK; //simbolo non consentito
+			eMode::absolute;
+			break;
+
+		case '-':
+			mode = mode = eMode::upToSomePixelFromRight;;
+			break;
+
+		case 0x00:
+			assert (s[0] >= '0' && s[0] <= '9');
 			mode = eMode::absolute;
+			break;
+
+		case '%':
+			assert (value > 0);
+			mode = eMode::absolute;
+			break;
 		}
 	}
 }
@@ -110,6 +147,7 @@ i16	Dim2D::resolve (i16 x1, i16 w) const
 	case eMode::absolute:						return value;
 	case eMode::upToSomePixelFromRight:			x2 = w - value;			if (x2 > x1) return (x2-x1); return 0;
 	case eMode::upToSomePixelAfterCenter:		x2 = (w/2) + value;		if (x2 > x1) return (x2-x1); return 0;
-	case eMode::upToSomeBeforeAfterCenter:		x2 = (w/2) - value;		if (x2 > x1) return (x2-x1); return 0;
+	case eMode::somePixelBeforeCenter:			x2 = (w/2) - value;		if (x2 > x1) return (x2-x1); return 0;
+	case eMode::perc:							return (w*value) / 100;
 	}
 }

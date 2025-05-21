@@ -1,0 +1,88 @@
+pipeline
+{
+	name: clear_pass
+	
+	rt: sameAsSwapchain, color_attachment_optimal, clear, store, rgb(0,0,0)
+	
+	depthStencil: best, depth_attachment_optimal, clear, store
+		zClearValue: 1
+		zEnabled: 1
+		zWrite: 1
+		zFN: eZFunc::LESS
+
+		stencilEnabled: 0
+		stencilClearValue: 0
+
+	
+	vtxFormat: vtxFormat_0
+	cullMode: eCullMode::CCW
+	drawPrimitive: eDrawPrimitive::trisList
+
+	vtxShader: PIPE_stage_clear.vert
+	pxlShader: none
+}
+
+pipeline
+{
+	name: present_pass
+	
+	rt: sameAsSwapchain, presentation, load, dont_care
+	depthStencil: best, depth_attachment_optimal, load, dont_care
+
+	vtxFormat: vtxFormat_0
+	cullMode: eCullMode::CCW
+	drawPrimitive: eDrawPrimitive::trisList
+
+	vtxShader: PIPE_stage_clear.vert
+	pxlShader: none
+}
+
+
+pipeline
+{
+	name: line3D
+	
+	rt: sameAsSwapchain, color_attachment_optimal, load, store
+	
+	depthStencil: best, depth_attachment_optimal, load, store
+		zClearValue: 1
+		zEnabled: 1
+		zWrite: 0
+		zFN: eZFunc::LESSEQUAL
+
+		stencilEnabled: 0
+		stencilClearValue: 0
+
+	
+	vtxFormat: vtxFormat_0
+	cullMode: eCullMode::CCW
+	drawPrimitive: eDrawPrimitive::trisList
+
+	vtxShader: lineRenderer.vert.shader
+	pxlShader: lineRenderer.frag.shader
+	
+	push_constant: vtx, float, width
+}
+
+chain
+{
+	resources
+	{
+		rt: colorRT, sameAsSwapchain, 100%, 100%
+		depthStencil: mainZB, best, 100%, 100%, 0
+	}
+	
+	step
+	{
+		pipeline: clear_pass
+		rt: colorRT
+		depthStencil: mainZB
+	}
+	
+	step
+	{
+		pipeline: present_pass
+		rt: colorRT
+		depthStencil: mainZB
+	}	
+}

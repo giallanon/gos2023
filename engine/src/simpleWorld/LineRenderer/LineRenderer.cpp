@@ -58,7 +58,8 @@ bool LineRenderer::priv_setupVulkan()
     
 
     //Creo il descriptorSet layout set = 2, binding = 0
-    if (!gpu->descrSetLayout_createStatic (&descr2_layout)
+    //if (!gpu->descrSetLayout_createStatic (&descr2_layout)
+    if (!gpu->descrSetLayout_createDynamic (&descr2_layout)
         .add_storageBuffer (VK_SHADER_STAGE_VERTEX_BIT)
         .end())
     {

@@ -1,0 +1,97 @@
+renderTarget
+{
+	name: 	""
+	format:	sameAsSwapchain | eImageFormat
+	width:	vedi Dim2D
+	height:	vedi Dim2D
+	
+	NB: sameAsSwapchain è garantito essere una delle due seguenti (dipende dall'HW)
+			VK_FORMAT_R8G8B8A8_SRGB
+			VK_FORMAT_B8G8R8A8_SRGB
+}
+
+depthStencil
+{
+	name: ""
+	format:	best | eImageFormat
+	width:	vedi Dim2D
+	height:	vedi Dim2D
+	stencil: 0|1		default 0
+	
+	NB: "best" è garantito essere una delle due seguenti, in ordine di priorità (dipende dall'HW):
+			VK_FORMAT_D32_SFLOAT
+			VK_FORMAT_D16_UNORM
+			
+		oppure (se richiesto anche lo stencil):
+			VK_FORMAT_D32_SFLOAT_S8_UINT
+			VK_FORMAT_D24_UNORM_S8_UINT
+			VK_FORMAT_D16_UNORM_S8_UINT
+}
+
+vtxFormat
+{
+	name: ""
+	field
+	field
+	field...
+}
+
+descriptorSet
+{
+}
+
+pipeline
+{
+	name:
+	
+	rt: format, finalLayout, loadOp, storeOp, optional_clearColor
+	rt...
+	
+	depthStencil: format, finalLayout, loadOp, storeOp, optional_clearColor
+	{
+		format:
+		finalLayout:
+		loadOp:
+		storeOp:
+		zEnabled: 0|1
+		zWrite: 0|1
+		zFN: vedi eZFunc
+		stencilEnabled: 0|1
+	}
+	
+	vtxFormat: name di un vtxFormat
+	cullMode: vedi eCullMode
+	drawPrimitive: vedi eDrawPrimitive
+	
+	descriptorSet..
+	descriptorSet..
+	descriptorSet..	
+	
+	vtxShader: name di un vtxShader
+	pxlShader: name di un pxlShader
+}
+
+
+chain
+{
+	resources
+	{
+		rt: name, format, width, height
+		..
+		rt: name, format, width, height
+		
+		depthStencil: name, format, width, height, stencilYesNo
+		..
+		depthStencil: name, format, width, height, stencilYesNo
+	}
+	
+	step
+	{
+		pipeline: nome di una Pipeline
+		rt: nome di una [resources] di tipo rt
+		..
+		rt: nome di una [resources] di tipo rt
+		
+		depthStencil: nome di una [resources] di tipo depthStencil
+		
+	}
