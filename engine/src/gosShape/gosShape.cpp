@@ -100,7 +100,16 @@ bool shape::areEqual (const gos::VtxLayout &a, const gos::VtxLayout &b)
 	if (a.numElem != b.numElem) return false;
 	if (a.numElem == 0) return true;
 	return ( memcmp(a.elemList, b.elemList, sizeof(u32) * a.numElem) == 0 );
-}		
+}
+
+//*************************************************************
+void shape::clone (const gos::VtxLayout &src, gos::VtxLayout *out_dst)
+{
+	assert (NULL != out_dst);
+	out_dst->numElem = src.numElem;
+	if (src.numElem)
+		memcpy (out_dst->elemList, src.elemList, sizeof(u32) * src.numElem);
+}
 
 //*************************************************************
 u32 shape::calcSizeOfAVertex (const VtxLayout &a)

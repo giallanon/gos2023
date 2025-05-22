@@ -71,14 +71,15 @@ namespace gos
 	struct VtxLayout
 	{
 	public:
+		void 	reset()									{ numElem = 0; }
+
+	public:
 		static constexpr u32 NUM_MAX_ELEM = 11;
 
 	public:
 		u32		numElem;
 		u32 	elemList[NUM_MAX_ELEM]; //ognuno di questi e' creato usando shape::VtxElem::define
 
-	public:
-		void 	reset()		{ numElem = 0; }
 	};
 	
 	

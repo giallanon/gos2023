@@ -845,6 +845,7 @@ GPU::VtxDeclBuilder& GPU::vtxDecl_createNew (GPUVtxDeclHandle *out_handle)
     return vtxDeclBuilder;
 }
 
+
 //************************************
 void GPU::deleteResource (GPUVtxDeclHandle &handle)
 {

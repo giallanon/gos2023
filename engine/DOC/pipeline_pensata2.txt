@@ -1,0 +1,163 @@
+def-descriptor
+{
+	name: texture_and_sampler
+	type: dynamic
+	add_sampler: VK_SHADER_STAGE_FRAGMENT_BIT, 8
+	add_texture: (VK_SHADER_STAGE_FRAGMENT_BIT, 1024
+}
+
+def-descriptor
+{
+	name: scene
+	type: static
+	add_uniformBuffer: VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+}
+
+def-pipeline
+{
+	//name: <pipe-def-name>
+	name: clear_pass
+	
+	//output-rt: <format>, <finalLayout>, <loadO>, <storeOp>, <optional_clearColor>
+	output-rt: sameAsSwapchain, color_attachment_optimal, clear, store, rgb(0,0,0)
+	
+	//output-depthStencil: <format>, <finalLayout>, <loadO>, <storeOp>, <optional_zClearValue>, <optional_stencilClearValue>
+	output-depthStencil: best, depth_attachment_optimal, clear, store, 1, 0
+
+	//zOption: <enabled>, <write>, <cmpFN>
+	zOption: 1, 1, eZFunc::LESS
+	
+	//stencilOption: <enabled>, <cmpFN>
+	stencilOption: 0, eStencilFunc::NEVER
+	
+	vtxFormat: vtxFormat_0
+	cullMode: eCullMode::CCW
+	drawPrimitive: eDrawPrimitive::trisList
+
+	//descriptor: <name-of-a-def-descriptor>
+	descriptor: "texture_and_sampler"
+	descriptor: "scene"
+	
+	//push_constant: <name>, <vtx-or-frag>, <sizeInByte>
+	push_constant: "width", frag, 4
+	
+	//vtxShader: none | <file-name>
+	vtxShader: PIPE_stage_clear.vert
+	
+	//pxlShader: none | <file-name>
+	pxlShader: none
+}
+
+def-pipeline
+{
+	name: present_pass
+	
+	output
+	{
+		rt: sameAsSwapchain, presentation, load, dont_care
+		depthStencil: best, depth_attachment_optimal, load, dont_care
+	}
+
+	vtxFormat: vtxFormat_0
+	cullMode: eCullMode::CCW
+	drawPrimitive: eDrawPrimitive::trisList
+
+	vtxShader: PIPE_stage_clear.vert
+	pxlShader: none
+}
+
+
+def-pipeline
+{
+	name: line3D
+	
+	output
+	{
+		rt: sameAsSwapchain, color_attachment_optimal, load, store
+	
+		depthStencil: best, depth_attachment_optimal, load, store
+	}
+	
+	zOption
+	{
+		enabled: 1
+		write: 0
+		cmpFN: eZFunc::LESSEQUAL
+	}
+
+	stencilOption
+	{
+		enabled: 0
+	}
+
+	
+	vtxFormat: vtxFormat_0
+	cullMode: eCullMode::CCW
+	drawPrimitive: eDrawPrimitive::trisList
+
+	vtxShader: lineRenderer.vert.shader
+	pxlShader: lineRenderer.frag.shader
+	
+	descriptor: "@texture_and_sampler"
+	descriptor: "@scene"
+	descriptor
+	{
+		name: perInstanceData
+		type: dynamic
+		add_storageBuffer: VK_SHADER_STAGE_VERTEX_BIT		
+	}
+	
+	push_constant: name, vtx-or-frag, size
+}
+
+chain
+{
+	//risorse che vengono create da questa chain e sono 
+	//accessibili da tutti gli step di questa chain.
+	//In generale sono istanze di una qualche def-xx definita in precedenza
+	resources
+	{
+		create-rt: <res-name>, <format>, <width>, <height>
+		create-depthStencil: <res-name>, <format>, <width>, <height>, <withStencil>
+		create-descriptor: <res-name>, <name-of-def-descriptor>
+		create-pipeline: <res-name>, <name-of-def-pipeline>
+	}
+	
+	step
+	{
+		//use-pipeline: <res-name>
+		//with-output: <res-name>
+		//with-descriptor: <res-name>
+
+		enabled: 1
+		use-pipline: pipe-line2D
+		with-output: "rt-name"
+		with-output: "zb-name"
+		with-descriptor: "descr1-name"
+		with-descriptor: "descr2-name"			
+	}
+	
+	step
+	{
+		enabled: 1
+		use-pipeline: line3D
+		
+		with-output
+		{
+			rt: colorRT
+			depthStencil: mainZB
+		}
+	}	
+	
+	step
+	{
+		enabled: 1
+		use-pipeline: present_pass
+		
+		with-output
+		{
+			rt: colorRT
+			depthStencil: mainZB
+		}
+	}	
+}

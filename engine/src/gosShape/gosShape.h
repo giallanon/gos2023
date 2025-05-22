@@ -25,6 +25,7 @@ namespace gos
 		 *
 		 *==============================================================================*/
 		bool 	areEqual (const VtxLayout &a, const VtxLayout &b);
+		void	clone (const VtxLayout &src, VtxLayout *out_dst);
 		u32 	calcSizeOfAVertex (const VtxLayout &a);
 		
 				//serialize

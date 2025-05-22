@@ -3,6 +3,7 @@
 #include "../gos/gosEnumAndDefine.h"
 #include "../gos/dataTypes/gosColorHDR.h"
 #include "../gos/gosHandle.h"
+#include "../gosShape/gosShapeEnumAndDefine.h"
 #include "vulkan/gosGPUVulkanEnumAndDefine.h"
 
 #define 	GOSGPU__NUM_MAX_VTXDECL_ATTR					32

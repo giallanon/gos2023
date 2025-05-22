@@ -730,7 +730,7 @@ void MarchingSquare::priv_mesh_buildSingleQuad (f32 spessore, const sInfo *info,
         out_vtxList.append (vtx1);
     }
 
-    const vec3f quadOrigin (quad.x, 0, -quad.y);
+    const vec3f quadOrigin ((f32)quad.x, 0, (f32)-quad.y);
     const u8 tipoQuad = quad.quadType;
     switch (tipoQuad)
     {
