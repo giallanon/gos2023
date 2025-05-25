@@ -122,6 +122,8 @@ gosBufferLinear.h
 gosBufferSparse.h
 gosBufferSparse.cpp
 gosConsole.cpp
+gosDataFormat.cpp
+gosDataFormat.h
 gosDataTypes.h
 gosEnumAndDefine.h
 gosFastArray.h

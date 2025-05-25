@@ -6,45 +6,22 @@
 *.goslog
 *.exe
 *.manifest
+*.spv
+*__linux_Debug
+*__linux_Release
+*__windows_Debug.exe
+*__windows_Release.exe
 
 engine/aaCMakePresets.json
 engine/.vs/
 
-engine/bin/testKernel__linux_Debug
-engine/bin/testKernel__linux_Release
-engine/bin/testKernel__windows_Debug.exe
-
-engine/bin/testVulkan__linux_Debug
-engine/bin/testVulkan__linux_Release
-engine/bin/testVulkan__windows_Debug.exe
-engine/bin/testVulkan/testVulkan__windows_Debug.exe
 engine/bin/testVulkan/shader/example6/angolo.glb
 engine/bin/testVulkan/writable/
-
-engine/bin/ProfileServer/ProfileServer__linux_Debug
-engine/bin/ProfileServer/ProfileServer__linux_Release
-engine/bin/ProfileServer/writable/log/
-engine/bin/ProfileServer/ProfileServer__windows_Debug.exe
-
-
-
-
-
-
-engine/bin/testKernel/testKernel__linux_Debug
-
-engine/bin/testKernel/testKernel__linux_Release
-
-engine/bin/simpleWorld/simpleWorld__linux_Debug
-
-*.spv
-
 engine/bin/testVulkan/texture/faccia256x256.png
-
 engine/bin/testVulkan/texture/faccia512x512.jpg
 
-engine/bin/simpleWorld/assets/sponza/sponza.glb
+engine/bin/ProfileServer/writable/log/
 
+engine/bin/simpleWorld/assets/sponza/sponza.glb
 engine/bin/simpleWorld/assets/sponza/sponza_glTF.ini
 
-engine/bin/Renderer2D/Renderer2D__linux_Debug

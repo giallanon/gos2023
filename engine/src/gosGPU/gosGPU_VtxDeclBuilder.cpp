@@ -41,7 +41,7 @@ GPU::VtxDeclBuilder& GPU::VtxDeclBuilder::addLayout (u8 bindingLocation, u32 off
         const u8 iPrev = i -1;
         if (attributeDesc[iPrev].streamIndex == streamIndex)
         {
-            const u32 nextValidOffset = attributeDesc[iPrev].offset + gos::utils::getFormatSize(attributeDesc[iPrev].format);
+            const u32 nextValidOffset = attributeDesc[iPrev].offset + gos::dataformat::getSize(attributeDesc[iPrev].format);
             if (offsetInBuffer < nextValidOffset)
             {
                 priv_markAsInvalid();

@@ -1,6 +1,6 @@
 #ifndef _gosEnumAndDefine_h_
 #define _gosEnumAndDefine_h_
-#include "gosDataTypes.h"
+#include "gosDataFormat.h"
 
 //================================================================
 #define GOS_IS_POWER_OF_TWO(n)                          (n && !(n & (n - 1)))
@@ -97,24 +97,6 @@ enum class eDayOfWeek : u8
     thursday    = 4,
     friday      = 5,
     saturday    = 6
-};
-
-enum class eDataFormat : u8
-{
-    _1f32			= 0,
-    _2f32			= 1,
-    _3f32			= 2,
-    _4f32			= 3,
-    _1i32			= 4,
-    _2i32			= 5,
-    _3i32			= 6,
-    _4i32			= 7,
-    _1u32			= 8,
-    _2u32			= 9,
-    _3u32			= 10,
-    _4u32			= 11,
-    _4u8			= 12,
-    _4u8_norm		= 13,	//speciale per HLSL, vuol dire che prende i 4 byte e, internamente nello shader, li converte in 4 float tra 0.0 e 1.0
 };
 
 enum class eSocketError: u8

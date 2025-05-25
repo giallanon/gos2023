@@ -28,6 +28,13 @@ void string::utf8::Iter::setup (const char *utf8_src, u32 firstByteIN, u32 lengh
 }
 
 //**************************************************
+void string::utf8::Iter::setup (const Iter &src, u32 src_cursorStart, u32 src_cursorEnd)
+{
+	assert (src_cursorEnd > src_cursorStart);
+	setup (src.utf8_seq, src_cursorStart, src_cursorEnd - src_cursorStart+1);
+}
+
+//**************************************************
 void string::utf8::Iter::toStart()
 {
 	cursorPos = 0;
@@ -54,6 +61,26 @@ bool string::utf8::Iter::priv_detectCurrentChar()
 	return true;
 }
 
+//**************************************************
+bool string::utf8::Iter::advanceNumByte (u32 howMany)
+{
+	if (cursorPos + howMany >= seq_length)
+	{
+		curChar.setEOF();
+		cursorPos = seq_length;
+		bytesUsedForCurChar = 0;
+		return false;
+	}
+
+	cursorPos += howMany;
+	return priv_detectCurrentChar();
+}
+
+//**************************************************
+void string::utf8::Iter::toNextValidChar()
+{
+	string::utf8::toNextValidChar(*this);
+}
 
 //**************************************************
 bool string::utf8::Iter::advanceOneChar()
@@ -195,4 +222,38 @@ void string::utf8::Iter::toLast()
 	cursorPos = seq_length;
 	bytesUsedForCurChar = 0;
 	backOneChar();
+}
+
+//**************************************************
+void string::utf8::Iter::deductCurrentLineAndCharPosition (u32 *out_lineNum, u32 *out_charPos) const
+{
+	assert (NULL != out_lineNum);
+	assert (NULL != out_charPos);
+
+	u32 lastLineStartedAt = 0;
+	u32 line = 0;
+	u32 i=0;
+	while (i <= cursorPos)
+	{
+		if (utf8_seq[i] == '\n')
+		{
+			line++;
+			i++;
+			lastLineStartedAt = i;
+		}
+		else if (utf8_seq[i] == '\r')
+		{
+			line++;
+			i++;
+			if (utf8_seq[i]=='\n')
+				i++;
+			lastLineStartedAt =i;
+		}
+		else
+			i++;
+	}
+
+	//siamo sulla linea dove e' posizionato il cursore
+	(*out_charPos) = (cursorPos - lastLineStartedAt) +1;
+	(*out_lineNum) = line+1;
 }

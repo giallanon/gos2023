@@ -54,3 +54,25 @@ La coordinata z va da 0 a 1
    |
    V
 (0,h)                           (w,h)
+
+
+
+### VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+Uniform buffers are great for small, read only data
+With uniform buffers (UBO), only a small amount can be accessed in the shader (vendor dependant, 16 kilobytes guaranteed minimum) and the memory will be read-only
+
+
+### VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+Storage buffers are usually slightly slower than uniform buffers, but they can be much, much bigger. If you want to stuff your entire scene into one buffer, you have to use them
+Storage buffers (SSBO) are fully generic read-write buffers with very high size. Spec minimum size is 128 megabytes
+
+### DESCRIPTOR
+When creating the descriptors, its also possible to have them as DYNAMIC BUFFER. If you use that, you can control the offset the buffer is bound to when writing the commands. This lets you use 1 descriptor set for multiple objects draws, by storing the uniform data for multiple objects into a big buffer, and then binding that descriptor at different offsets within that. It works well for uniform buffers, but for storage buffers its better to go with device-address.
+
+
+VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT: 
+Once you bind a descriptor set and use it in a vkCmdDraw() function, you can no longer modify it unless you specify the
+VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT flag
+
+VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
+it is possible to use descriptor sets, and bind them in command buffers, and update it right before submitting the command buffer. This is mostly a niche use case, and not commonly used. You can only update a descriptor set before it’s bound for the first time, unless you use that flag, in which case you can only update it before you submit the command buffer into a queue. When a descriptor set is being used, it’s immutable, and trying to update it will cause errors. The validation layers catch that. To be able to update the descriptor sets again, you need to wait until the command has finished executing.

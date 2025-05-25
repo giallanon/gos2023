@@ -7,9 +7,8 @@ namespace gos
     namespace utils
     {
         const char* enumToString (eSocketError s);
+        const char*	enumToString (const eDataFormat e);
         
-
-        u8	        getFormatSize (eDataFormat f);
 
         /* ritorna il numero di bytes necessari a contenere la rappresentazione
          * in base64 di dei primi [sizeInBytesOfIn] di [in] */

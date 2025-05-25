@@ -38,7 +38,7 @@ void Pos2D::setFromString (const char *s)
 		{
 		default:
 			DBGBREAK; //simbolo non consentito
-			eMode::somePixelAfterCenter;
+			mode = eMode::somePixelAfterCenter;
 			break;
 		case '-':	mode = eMode::somePixelBeforeCenter; break;
 		case 0x00:	mode = eMode::somePixelAfterCenter; break;
@@ -52,11 +52,11 @@ void Pos2D::setFromString (const char *s)
 		{
 		default:
 			DBGBREAK; //simbolo non consentito
-			eMode::absolute;
+			mode = eMode::absolute;
 			break;
 
 		case '-':
-			mode = mode = eMode::somePixelFromRight;;
+			mode = eMode::somePixelFromRight;
 			break;
 
 		case 0x00:
@@ -103,7 +103,7 @@ void Dim2D::setFromString (const char *s)
 		{
 		default:
 			DBGBREAK; //simbolo non consentito
-			eMode::upToSomePixelAfterCenter;
+			mode = eMode::upToSomePixelAfterCenter;
 			break;
 		case '-':	mode = eMode::somePixelBeforeCenter; break;
 		case 0x00:	mode = eMode::upToSomePixelAfterCenter; break;
@@ -117,11 +117,11 @@ void Dim2D::setFromString (const char *s)
 		{
 		default:
 			DBGBREAK; //simbolo non consentito
-			eMode::absolute;
+			mode = eMode::absolute;
 			break;
 
 		case '-':
-			mode = mode = eMode::upToSomePixelFromRight;;
+			mode = eMode::upToSomePixelFromRight;
 			break;
 
 		case 0x00:

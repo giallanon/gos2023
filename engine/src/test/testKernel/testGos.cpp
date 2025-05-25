@@ -831,6 +831,86 @@ namespace test8
     }    
 }
 
+namespace test9_eDataFormat
+{
+    int run()
+    {
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_8bit, false, 0, 1) == eDataFormat::_1u8);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_8bit, false, 0, 2) == eDataFormat::_2u8);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_8bit, false, 0, 3) == eDataFormat::_3u8);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_8bit, false, 0, 4) == eDataFormat::_4u8);
+
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_8bit, true, 0, 1) == eDataFormat::_1i8);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_8bit, true, 0, 2) == eDataFormat::_2i8);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_8bit, true, 0, 3) == eDataFormat::_3i8);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_8bit, true, 0, 4) == eDataFormat::_4i8);
+
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_32bit, false, 0, 1) == eDataFormat::_1u32);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_32bit, false, 0, 2) == eDataFormat::_2u32);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_32bit, false, 0, 3) == eDataFormat::_3u32);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_32bit, false, 0, 4) == eDataFormat::_4u32);
+
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_32bit, true, 0, 1) == eDataFormat::_1i32);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_32bit, true, 0, 2) == eDataFormat::_2i32);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_32bit, true, 0, 3) == eDataFormat::_3i32);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_32bit, true, 0, 4) == eDataFormat::_4i32);
+
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_f32, true, 0, 1) == eDataFormat::_1f32);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_f32, true, 0, 2) == eDataFormat::_2f32);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_f32, true, 0, 3) == eDataFormat::_3f32);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_f32, true, 0, 4) == eDataFormat::_4f32);        
+
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_f32, true, 2, 2) == eDataFormat::_mat2x2);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_f32, true, 3, 3) == eDataFormat::_mat3x3);
+        TEST_ASSERT(gos::dataformat::build (eDataFormat_type::_f32, true, 4, 4) == eDataFormat::_mat4x4);
+
+        for (u8 isSigned=0; isSigned<2; isSigned++)
+        {
+            bool bSigned = false;
+            if (isSigned)
+                bSigned = true;
+
+            for (u8 basicFmt=0; basicFmt<4; basicFmt++)
+            {
+                eDataFormat_type dataFormatType = eDataFormat_type::_8bit;
+                switch (basicFmt)
+                {
+                default:    dataFormatType = eDataFormat_type::_8bit; break;
+                case 1:     dataFormatType = eDataFormat_type::_16bit; break;
+                case 2:     dataFormatType = eDataFormat_type::_32bit; break;
+                case 3:     dataFormatType = eDataFormat_type::_f32; break;
+                }
+
+                for (u8 row=1; row<=4; row++)
+                {
+                    eDataFormat fmt = gos::dataformat::build (dataFormatType, bSigned, 0, row);
+                    TEST_ASSERT(!gos::dataformat::isMatrix(fmt));
+                    TEST_ASSERT(gos::dataformat::isArray(fmt));
+                    TEST_ASSERT(!gos::dataformat::isArrayUNORM(fmt));
+                    TEST_ASSERT(gos::dataformat::getArrayNumElem(fmt) == row);
+                    TEST_ASSERT(gos::dataformat::getBasicType(fmt) == dataFormatType);
+                    TEST_ASSERT(gos::dataformat::isSigned(fmt) == bSigned);
+
+                    for (u8 col=1; col<=4; col++)
+                    {
+                        eDataFormat fmt = gos::dataformat::build (dataFormatType, bSigned, row, col);
+                        TEST_ASSERT(gos::dataformat::isMatrix(fmt));
+                        TEST_ASSERT(!gos::dataformat::isArray(fmt));
+                        TEST_ASSERT(!gos::dataformat::isArrayUNORM(fmt));
+                        TEST_ASSERT(gos::dataformat::getMatrixNumRow(fmt) == row);
+                        TEST_ASSERT(gos::dataformat::getMatrixNumCol(fmt) == col);
+                        TEST_ASSERT(gos::dataformat::getBasicType(fmt) == dataFormatType);
+                        TEST_ASSERT(gos::dataformat::isSigned(fmt) == bSigned);
+                    }
+                }
+            }
+        }
+
+        return 0;
+    }    
+}
+
+
 
 } //namespace test_gos
 
@@ -845,4 +925,5 @@ void testGos (Tester &tester)
     tester.run("test6 gos::testBitUtils", test_gos::test6::testBitUtils);
     tester.run("test7 gos::testNetAddr_and_MacAdd", test_gos::test7::testNetAddr_and_MacAdd);
     tester.run("test8 string hash", test_gos::test8::run);
+    tester.run("test9 eDataFormat", test_gos::test9_eDataFormat::run);
 }

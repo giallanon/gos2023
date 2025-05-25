@@ -511,7 +511,7 @@ bool string::utf8::find (Iter &src, const char *whatToFind)
 			continue;
 		}
 
-		//ho trovato un ch di [src] che � == al primo ch di [whatToFind].
+		//ho trovato un ch di [src] che e' == al primo ch di [whatToFind].
 		//Ora faccio un memcmp
 		const u32 bytesLeftSRC = src.getBytesLeft();
 		if (bytesLeftSRC >= whatToFindLEN)
@@ -1317,5 +1317,27 @@ u32 string::utf8::rtrim(char *s)
 	assert (i <= n);
 	s[i] = 0;
 	return i;
+}
+
+//***************************************************************
+bool string::utf8::extractUntil (Iter &src, char terminator, Iter *out_result, bool bAlsoIncludeTerminator)
+{
+	return string::utf8::extractUntil (src, UTF8Char(terminator), out_result,bAlsoIncludeTerminator);
+}
+bool string::utf8::extractUntil (Iter &src, const UTF8Char &terminator, Iter *out_result, bool bAlsoIncludeTerminator)
+{
+    const u32 startIndex = src.getCursorPos();
+	if (!gos::string::utf8::advanceUntil (src, &terminator, 1))
+	{
+        return false;
+	}
+	
+	if (bAlsoIncludeTerminator)
+		out_result->setup (src, startIndex, src.getCursorPos());
+	else
+	{
+		out_result->setup (src, startIndex, src.getCursorPos() - terminator.length());
+	}
+	return true;
 }
 

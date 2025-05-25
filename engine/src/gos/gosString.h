@@ -180,15 +180,24 @@ namespace gos
 									Iter (const Iter &b)										{ priv_copyFrom (b); }
 
 				void				setup (const char *utf8_src, u32 firstByte=0, u32 lenghtInBytes=u32MAX);
+				void				setup (const Iter &src, u32 src_cursorStart, u32 src_cursorEnd);
 
 				void				toStart();
 				void				toLast();
 				bool				advanceOneChar();	//ritorna false quando si va oltre la fine
 				bool				backOneChar();		//ritorna false quando si va sotto zero
+				bool				advanceNumByte (u32 howMany);//ritorna false quando si va oltre la fine
+				void 				toNextValidChar();
 			
 				const UTF8Char&		getCurChar() const												{ return curChar; }
 				const char*			getPointerToCurrentPosition() const;
 				u32					getCursorPos () const											{ return cursorPos; }
+				
+				
+				//basandosi sulla posizione attuale di [cursor], conta in \n per determinare su quale
+				//riga del file di testo siamo
+				void 				deductCurrentLineAndCharPosition (u32 *out_lineNum, u32 *out_charPos) const;
+
 
 				//copia in [out] tutta la stringa, a partire da utf8_seq[startingCursorPos] fino al carattere attuale (compreso se bIncludeCurrentChar==true).
 				//Ritorna il num di bytes copiati (strlen) e mette uno 0x00 alla fine
@@ -255,9 +264,18 @@ namespace gos
 			//Ritorna false altrimenti. In questo caso, [src] è avanzato fino a EOF
 			bool			find (Iter &src, const char *whatToFind);
 
-			//Prende tutti i caratteri compresti tra src.getCurChar() e l'EOL e li ritorna in out_result
+			//Prende tutti i caratteri compresi tra src.getCurChar() e l'EOL e li ritorna in out_result
 			//All'uscita di questa fn, src punta al primo char subito dopo EOL o a fine buffer
 			void			extractLine (Iter &src, Iter *out_result);
+
+			//controlla il char corrente e compara con [terminator]]. Se il char corrente e' [terminator], ritorna true, 
+			//altrimenti passa al carattere successivo e ripete.
+			//Se arriviamo a fine stringa, ritorna false
+			//Se ritorna true, allora in [out_result] c'e' tutta la stringa compresa tra src.getCurChar() e terminator
+			//[terminator] e' compreso solo se [bAlsoIncludeTerminator] == true
+			//[src] e' posizionato sul carattere [terminator]
+			bool			extractUntil (Iter &src, const UTF8Char &terminator, Iter *out_result, bool bAlsoIncludeTerminator = false);
+			bool			extractUntil (Iter &src, char terminator, Iter *out_result, bool bAlsoIncludeTerminator = false);
 
 			//Ritorna true se trova un valido value, nel qual caso src punta al primo char subito dopo il value trovato e
 			//out_result punta al value

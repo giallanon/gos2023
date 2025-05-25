@@ -40,7 +40,7 @@ namespace gos
                                         if (!attr_getList (streamIndex, &i, &n))
                                             return 0;
                                         const u8 pos = i+n-1;
-                                        return attr_getOffset(pos) + gos::utils::getFormatSize (attr_getDataFormat(pos));
+                                        return attr_getOffset(pos) + gos::dataformat::getSize (attr_getDataFormat(pos));
                                     }
 
             u8                      attr_getNum() const                                                     { return gos::byte32GET (streamInfo, 2); }

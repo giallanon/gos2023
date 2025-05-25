@@ -33,40 +33,44 @@ const char* utils::enumToString (eSocketError s)
     }
 }
 
-
-//******************************************
-u8	utils::getFormatSize (eDataFormat f)
+//*************************************************************************
+const char* utils::enumToString (const eDataFormat f)
 {
 	switch (f)
 	{
-    default:
-    	DBGBREAK;
-	    return 0;
+    default: return "invalid value";
+    ENUM_TO_STRING_CASE(eDataFormat, _unknown);
+    ENUM_TO_STRING_CASE(eDataFormat, _1f32);
+    ENUM_TO_STRING_CASE(eDataFormat, _2f32);
+    ENUM_TO_STRING_CASE(eDataFormat, _3f32);
+    ENUM_TO_STRING_CASE(eDataFormat, _4f32);
 
-	case eDataFormat::_1f32: 
-	case eDataFormat::_1i32: 
-	case eDataFormat::_1u32: 
-	case eDataFormat::_4u8: 
-	case eDataFormat::_4u8_norm:
-		return 4;
+    ENUM_TO_STRING_CASE(eDataFormat, _1u32);
+    ENUM_TO_STRING_CASE(eDataFormat, _2u32);
+    ENUM_TO_STRING_CASE(eDataFormat, _3u32);
+    ENUM_TO_STRING_CASE(eDataFormat, _4u32);
 
-	case eDataFormat::_2f32: 
-	case eDataFormat::_2i32: 
-	case eDataFormat::_2u32: 
-		return 8;
-	
-	case eDataFormat::_3f32: 
-	case eDataFormat::_3i32: 
-	case eDataFormat::_3u32: 
-		return 12;
-	
-	case eDataFormat::_4f32: 
-	case eDataFormat::_4i32: 
-	case eDataFormat::_4u32: 
-		return 16;
-	}
+    ENUM_TO_STRING_CASE(eDataFormat, _1i32);
+    ENUM_TO_STRING_CASE(eDataFormat, _2i32);
+    ENUM_TO_STRING_CASE(eDataFormat, _3i32);
+    ENUM_TO_STRING_CASE(eDataFormat, _4i32);
+
+    ENUM_TO_STRING_CASE(eDataFormat, _1u8); 
+    ENUM_TO_STRING_CASE(eDataFormat, _2u8); 
+    ENUM_TO_STRING_CASE(eDataFormat, _3u8); 
+    ENUM_TO_STRING_CASE(eDataFormat, _4u8);
+    ENUM_TO_STRING_CASE(eDataFormat, _4u8_norm);
+
+    ENUM_TO_STRING_CASE(eDataFormat, _1i8); 
+    ENUM_TO_STRING_CASE(eDataFormat, _2i8); 
+    ENUM_TO_STRING_CASE(eDataFormat, _3i8); 
+    ENUM_TO_STRING_CASE(eDataFormat, _4i8); 
+
+    ENUM_TO_STRING_CASE(eDataFormat, _mat2x2);
+    ENUM_TO_STRING_CASE(eDataFormat, _mat3x3);
+    ENUM_TO_STRING_CASE(eDataFormat, _mat4x4);
+    }
 }
-
 
 //******************************************************************************
 u8 gos::utils::bufferWriteF32 (u8 *buffer, f32 val)
