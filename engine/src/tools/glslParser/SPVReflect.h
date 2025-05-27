@@ -1,8 +1,8 @@
 #ifndef _SPVReflect_h_
 #define _SPVReflect_h_
-#include "gos.h"
+#include "SPVReflectEnumAndDefine.h"
 #include "gosFastArray.h"
-#include "spirv_reflect.h"
+
 
 /**
  * @brief SPVReflect
@@ -12,6 +12,9 @@
  */
 class SPVReflect
 {
+public:
+    static const char* enumToString (eDescriptrorType s);
+
 public:
             SPVReflect();
             ~SPVReflect();
@@ -154,6 +157,9 @@ private:
         gos::FastArray<PushConstantElem>    list;
     };
 
+
+
+
     struct DescrSetElem
     {
     public:
@@ -162,13 +168,16 @@ private:
 
     public:
                     DescrSetElem()      { reset(); }
-        void        reset()             { memset(name,0,sizeof(name)); flag=set=binding=0; }
+        void        reset()             { memset(name,0,sizeof(name)); flag=set=binding=0; vulkanDescrType=eDescriptrorType::UNKNOWN; count=0; }
 
     public:
-        char        name[64];    
-        u8          flag;
-        u8          set;
-        u8          binding;
+        char                name[64];    
+        u8                  flag;
+        u8                  set;
+        u8                  binding;
+        eDescriptrorType    vulkanDescrType;
+        u32                 count;
+        sResInfo            resType;
     };
 
     class DescrSetList
@@ -236,6 +245,7 @@ private:
     private:
         gos::FastArray<DescrSetElem>    list;
     };
+
     
 private:
     void        priv_reset();

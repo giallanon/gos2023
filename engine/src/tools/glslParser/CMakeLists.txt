@@ -26,6 +26,7 @@ spirv_reflect.h
 spirv.h
 SPVReflect.cpp
 SPVReflect.h
+SPVReflectEnumAndDefine.h
 )
 
 #====================================================

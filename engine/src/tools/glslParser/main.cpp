@@ -24,6 +24,9 @@ int main()
     }
     
 
+#ifdef GOS_PLATFORM__WINDOWS
+    _getch();
+#endif
     
     gos::deinit();
     return 0;

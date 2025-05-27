@@ -45,6 +45,27 @@ bool SPVReflect::priv_SpvReflectFormat_to_eDataFormat (SpvReflectFormat fmtIN, e
 }
 
 //***************************************************
+const char* SPVReflect::enumToString (eDescriptrorType s)
+{
+    switch (s)
+    {
+    default: return "invalid value";
+    case eDescriptrorType::SAMPLER: return "SAMPLER";
+    case eDescriptrorType::COMBINED_IMAGE_SAMPLER: return "COMBINED_IMAGE_SAMPLER";
+    case eDescriptrorType::TEXTURE2D: return "TEXTURE2D";
+    case eDescriptrorType::STORAGE_IMAGE: return "STORAGE_IMAGE";
+    case eDescriptrorType::UNIFORM_TEXEL_BUFFER: return "UNIFORM_TEXEL_BUFFER";
+    case eDescriptrorType::STORAGE_TEXEL_BUFFER: return "STORAGE_TEXEL_BUFFER";
+    case eDescriptrorType::UNIFORM_BUFFER: return "UNIFORM_BUFFER";
+    case eDescriptrorType::STORAGE_BUFFER: return "STORAGE_BUFFER";
+    case eDescriptrorType::DYNAMIC_UNIFORM_BUFFER: return "DYNAMIC_UNIFORM_BUFFER";
+    case eDescriptrorType::DYNAMIC_STORAGE_BUFFER: return "DYNAMIC_STORAGE_BUFFER";
+    case eDescriptrorType::INPUT_ATTACHMENT: return "INPUT_ATTACHMENT";
+    case eDescriptrorType::UNKNOWN: return "UNKNOWN";
+    }
+}
+
+//***************************************************
 void SPVReflect::reset()
 {
     vtxDeclList.reset();
@@ -319,6 +340,54 @@ bool SPVReflect::priv_parse_descriptors (SpvReflectShaderModule *module)
                     e.flag |= DescrSetElem::FLAG__USED_IN_FRAG_SHADER;
             }
 
+            //tipo (vulkan) di descriptor
+            switch (vars[i]->descriptor_type)
+            {
+            default:
+                gos::logger::err ("SPVReflect::priv_parse_descriptors() => error <descriptor_type> invalid, %d\n", (int)vars[i]->descriptor_type);
+                return false;
+
+            case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: e.vulkanDescrType = eDescriptrorType::SAMPLER; break;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: e.vulkanDescrType = eDescriptrorType::COMBINED_IMAGE_SAMPLER; break;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE: e.vulkanDescrType = eDescriptrorType::TEXTURE2D; break;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE: e.vulkanDescrType = eDescriptrorType::STORAGE_IMAGE; break;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER: e.vulkanDescrType = eDescriptrorType::UNIFORM_TEXEL_BUFFER; break;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER: e.vulkanDescrType = eDescriptrorType::STORAGE_TEXEL_BUFFER; break;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER: e.vulkanDescrType = eDescriptrorType::UNIFORM_BUFFER; break;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER: e.vulkanDescrType = eDescriptrorType::STORAGE_BUFFER; break;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC: e.vulkanDescrType = eDescriptrorType::DYNAMIC_UNIFORM_BUFFER; break;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: e.vulkanDescrType = eDescriptrorType::DYNAMIC_STORAGE_BUFFER; break;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT: e.vulkanDescrType = eDescriptrorType::INPUT_ATTACHMENT; break;
+            }
+
+            switch (vars[i]->type_description->op)
+            {
+            default:
+                gos::logger::err ("SPVReflect::priv_parse_descriptors() => error <type_description> invalid, %d\n", (int)vars[i]->descriptor_type);
+                return false;
+
+            case SpvOpTypeArray:
+                {
+                    e.resType.type = eResourceType::_array;
+                    e.resType.info.asArray.ordine = vars[i]->array.dims_count;
+                    for (u8 t = 0; t < e.resType.info.asArray.ordine; t++)
+                    {
+                        e.resType.info.asArray.numElem[t] = vars[i]->array.dims[t];
+                    }
+                }
+                break;
+
+            case SpvOpTypeRuntimeArray:
+                e.resType.type = eResourceType::_dynamicArray;
+                e.resType.info.asDynArray.ordine = vars[i]->array.dims_count;
+                break;
+
+            case SpvOpTypeStruct:
+                e.resType.type = eResourceType::_struct;
+                break;
+
+            }
+
             descrSetList.add (e);
         }
     }
@@ -347,7 +416,8 @@ void SPVReflect::printInfo() const
                         vtxDeclList(i).bindingLocation,
                         vtxDeclList(i).name,
                         utils::enumToString (vtxDeclList(i).fmt),
-                        dataformat::getSize (vtxDeclList(i).fmt));
+                        dataformat::getSize (vtxDeclList(i).fmt)
+                );
             }
         }
         logger::decIndent();
@@ -400,10 +470,11 @@ void SPVReflect::printInfo() const
                 if (descrSetList(i).flag & DescrSetElem::FLAG__USED_IN_FRAG_SHADER)
                     strcat_s (stage, sizeof(stage), "FRG ");
 
-                logger::log ("[% -12s] name:% -32s (set=%d, binding=%d)\n", 
+                logger::log ("[% -12s] name:% -32s (set=%d, binding=%d), type=%s\n", 
                         stage, 
                         descrSetList(i).name,
-                        descrSetList(i).set, descrSetList(i).binding);
+                        descrSetList(i).set, descrSetList(i).binding,
+                        enumToString (descrSetList(i).vulkanDescrType));
             }
         }
         logger::decIndent();

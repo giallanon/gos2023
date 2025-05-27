@@ -1,0 +1,102 @@
+/*
+	LEGENDA
+	def = definition
+*/
+
+
+//definisce una pipeline, non ne crea una istanza
+def-pipeline
+{
+	//name: <pipe-def-name>
+	name: clear_pass
+	
+	//output-rt: <format>, <finalLayout>, <loadOp>, <storeOp>, <optional_clearColor>
+	output-rt: sameAsSwapchain, color_attachment_optimal, clear, store, rgb(0,0,0)
+	
+	//output-depthStencil: <format>, <finalLayout>, <loadO>, <storeOp>, <optional_zClearValue>, <optional_stencilClearValue>
+	output-depthStencil: best, depth_attachment_optimal, clear, store, 1, 0
+
+	//zOption: <enabled>, <write>, <cmpFN>
+	//	default: 1, 1, LESS
+	zOption: 1, 1, LESS
+	
+	//stencilOption: <enabled>, <cmpFN>
+	//	default: 0, NEVER
+	stencilOption: 0, NEVER
+
+	//cullMode: <fn>
+	//	default: eCullMode::CCW
+	cullMode: CCW
+	
+	//drawPrimitive: <fn>
+	//	default: trisList
+	drawPrimitive: trisList
+
+	//vtxShader: none | <file-name>
+	//	default: none
+	vtxShader: PIPE_stage_clear.vert
+	
+	//pxlShader: none | <file-name>
+	//	default: none
+	pxlShader: none
+
+	/* da vtxShader/pxlShader vengono automaticamente estratti:
+		- vtxFormat
+		- push-constant
+		- descriptorSet definition
+	*/
+}
+
+
+
+chain
+{
+	//risorse che vengono create da questa chain e sono 
+	//accessibili da tutti gli step di questa chain.
+	//In generale sono istanze di una qualche def-xx definita in precedenza
+	resources
+	{
+		create-rt: <res-name>, <format>, <width>, <height>
+		create-depthStencil: <res-name>, <format>, <width>, <height>, <withStencil>
+		create-descriptor: <res-name>, <name-of-def-descriptor>
+		create-pipeline: <res-name>, <name-of-def-pipeline>
+	}
+	
+	step
+	{
+		//use-pipeline: <res-name>
+		//with-output: <res-name>
+		//with-descriptor: <res-name>
+
+		enabled: 1
+		use-pipline: pipe-line2D
+		with-output: "rt-name"
+		with-output: "zb-name"
+		with-descriptor: "descr1-name"
+		with-descriptor: "descr2-name"			
+	}
+	
+	step
+	{
+		enabled: 1
+		use-pipeline: line3D
+		
+		with-output
+		{
+			rt: colorRT
+			depthStencil: mainZB
+		}
+	}	
+	
+	step
+	{
+		enabled: 1
+		use-pipeline: present_pass
+		
+		with-output
+		{
+			rt: colorRT
+			depthStencil: mainZB
+		}
+	}	
+}
