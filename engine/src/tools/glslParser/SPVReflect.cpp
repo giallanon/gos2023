@@ -49,7 +49,7 @@ const char* SPVReflect::enumToString (eDescriptrorType s)
 {
     switch (s)
     {
-    default: return "invalid value";
+    default: return "eDescriptrorType::invalid value";
     case eDescriptrorType::SAMPLER: return "SAMPLER";
     case eDescriptrorType::COMBINED_IMAGE_SAMPLER: return "COMBINED_IMAGE_SAMPLER";
     case eDescriptrorType::TEXTURE2D: return "TEXTURE2D";
@@ -63,6 +63,60 @@ const char* SPVReflect::enumToString (eDescriptrorType s)
     case eDescriptrorType::INPUT_ATTACHMENT: return "INPUT_ATTACHMENT";
     case eDescriptrorType::UNKNOWN: return "UNKNOWN";
     }
+}
+
+//***************************************************
+const char* SPVReflect::enumToString (eResourceType s)
+{
+    switch (s)
+    {
+    default: return "eResourceType::invalid value";
+    case eResourceType::_struct: return "struct";
+    case eResourceType::_array: return "array";
+    case eResourceType::_dynamicArray: return "dynamicArray";
+    }
+}
+
+//***************************************************
+eDataFormat SPVReflect::priv_fromSPVReflectTypeDescrToDataFormat (const SpvReflectTypeDescription *strTypeDescr) const
+{
+    bool bSigned = false;
+    if (strTypeDescr->traits.numeric.scalar.signedness)
+        bSigned = true;
+
+    eDataFormat_type basicType = eDataFormat_type::_8bit;
+
+    SpvReflectTypeFlags srcFlags = strTypeDescr->type_flags;
+    if ((srcFlags & SPV_REFLECT_TYPE_FLAG_BOOL) != 0)
+        basicType = eDataFormat_type::_8bit;
+    else if ((srcFlags & SPV_REFLECT_TYPE_FLAG_INT) != 0)
+        basicType = eDataFormat_type::_32bit;
+    else if ((srcFlags & SPV_REFLECT_TYPE_FLAG_FLOAT) != 0)
+    {
+        basicType = eDataFormat_type::_f32;
+        bSigned = true;
+    }
+
+
+    u8 numRow = 0;
+    u8 numCol = 0;
+    if ((srcFlags & SPV_REFLECT_TYPE_FLAG_MATRIX) != 0)
+    {
+        numRow = strTypeDescr->traits.numeric.matrix.row_count;
+        numCol = strTypeDescr->traits.numeric.matrix.column_count;
+    }
+    else if ((srcFlags & SPV_REFLECT_TYPE_FLAG_VECTOR) != 0)
+    {
+        numCol = strTypeDescr->traits.numeric.vector.component_count;
+    }
+    else if ((srcFlags & SPV_REFLECT_TYPE_FLAG_ARRAY) != 0)
+    {
+        numCol = strTypeDescr->traits.array.dims[0];
+    }
+    else
+        numCol = 1;
+
+    return gos::dataformat::build (basicType, bSigned, numRow, numCol);
 }
 
 //***************************************************
@@ -227,44 +281,7 @@ bool SPVReflect::priv_parse_pushConstant (SpvReflectShaderModule *module)
                     e.paddedSize = info->padded_size;
 
                     //informazioni sul tipo della variabile
-                    const SpvReflectTypeDescription *typeInfo = info->type_description;
-
-                    bool bSigned = false;
-                    if (typeInfo->traits.numeric.scalar.signedness)
-                        bSigned = true;
-
-                    eDataFormat_type basicType = eDataFormat_type::_8bit;
-                    if ((typeInfo->type_flags & SPV_REFLECT_TYPE_FLAG_BOOL) != 0)
-                        basicType = eDataFormat_type::_8bit;
-                    else if ((typeInfo->type_flags & SPV_REFLECT_TYPE_FLAG_INT) != 0)
-                        basicType = eDataFormat_type::_32bit;
-                    else if ((typeInfo->type_flags & SPV_REFLECT_TYPE_FLAG_FLOAT) != 0)
-                    {
-                        basicType = eDataFormat_type::_f32;
-                        bSigned = true;
-                    }
-
-
-                    u8 numRow = 0;
-                    u8 numCol = 0;
-                    if ((typeInfo->type_flags & SPV_REFLECT_TYPE_FLAG_MATRIX) != 0)
-                    {
-                        numRow = typeInfo->traits.numeric.matrix.row_count;
-                        numCol = typeInfo->traits.numeric.matrix.column_count;
-                    }
-                    else if ((typeInfo->type_flags & SPV_REFLECT_TYPE_FLAG_VECTOR) != 0)
-                    {
-                        numCol = typeInfo->traits.numeric.vector.component_count;
-                    }
-                    else if ((typeInfo->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) != 0)
-                    {
-                        numCol = typeInfo->traits.array.dims[0];
-                    }
-                    
-                    else
-                        numCol = 1;
-
-                    e.fmt = gos::dataformat::build (basicType, bSigned, numRow, numCol);
+                    e.fmt = priv_fromSPVReflectTypeDescrToDataFormat (info->type_description);
                     pushConstantList.add (e);
                 }
             }
@@ -383,7 +400,15 @@ bool SPVReflect::priv_parse_descriptors (SpvReflectShaderModule *module)
                 break;
 
             case SpvOpTypeStruct:
-                e.resType.type = eResourceType::_struct;
+                {
+                    e.resType.type = eResourceType::_struct;
+                    e.resType.info.asStruct.numElem = vars[i]->type_description->member_count;
+                    for (u8 t = 0; t < e.resType.info.asStruct.numElem; t++)
+                    {
+                        sprintf_s (e.resType.info.asStruct.name[t], sizeof(e.resType.info.asStruct.name[t]), "%s", vars[i]->type_description->members[t].struct_member_name);
+                        e.resType.info.asStruct.fmt[t] = priv_fromSPVReflectTypeDescrToDataFormat(&vars[i]->type_description->members[t]);
+                    }
+                }
                 break;
 
             }
@@ -470,11 +495,54 @@ void SPVReflect::printInfo() const
                 if (descrSetList(i).flag & DescrSetElem::FLAG__USED_IN_FRAG_SHADER)
                     strcat_s (stage, sizeof(stage), "FRG ");
 
-                logger::log ("[% -12s] name:% -32s (set=%d, binding=%d), type=%s\n", 
+                const sResInfo *resInfo = &descrSetList(i).resType;
+                logger::log ("[% -12s] name:% -32s (set=%d, binding=%d), VKtype=%s, data-type:%s", 
                         stage, 
                         descrSetList(i).name,
                         descrSetList(i).set, descrSetList(i).binding,
-                        enumToString (descrSetList(i).vulkanDescrType));
+                        enumToString (descrSetList(i).vulkanDescrType),
+                        enumToString (resInfo->type)
+                        );
+
+                
+                switch (resInfo->type)
+                {
+                default: 
+                    logger::log (", ERR");
+                    break;
+                
+                case eResourceType::_array:
+                    {
+                        logger::log (", %s", descrSetList(i).name);
+                        for (u8 t = 0; t < resInfo->info.asArray.ordine; t++)
+                        {
+                            logger::log ("[%d]", resInfo->info.asArray.numElem[t]);
+                        }
+                    }
+                    break;
+
+                case eResourceType::_dynamicArray:
+                    {
+                        logger::log (", %s", descrSetList(i).name);
+                        for (u8 t = 0; t < resInfo->info.asArray.ordine; t++)
+                        {
+                            logger::log ("[]");
+                        }
+                    }
+                    break;
+                
+                case eResourceType::_struct:
+                    for (u8 t = 0; t < resInfo->info.asStruct.numElem; t++)
+                    {
+                        const eDataFormat fmt = resInfo->info.asStruct.fmt[t];
+                        logger::log ("\n     % -16s, fmt=% -10s, size=%d",
+                            resInfo->info.asStruct.name[t],
+                            utils::enumToString (fmt), gos::dataformat::getSize(fmt));
+                    }
+                    break;
+
+                }
+                logger::log ("\n");
             }
         }
         logger::decIndent();

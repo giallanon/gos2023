@@ -14,6 +14,7 @@ class SPVReflect
 {
 public:
     static const char* enumToString (eDescriptrorType s);
+    static const char* enumToString (eResourceType s);
 
 public:
             SPVReflect();
@@ -255,6 +256,8 @@ private:
     bool        priv_parse_pushConstant (SpvReflectShaderModule *module);
     bool        priv_parse_fragShader (SpvReflectShaderModule *module);
     bool        priv_parse_descriptors (SpvReflectShaderModule *module);
+
+   eDataFormat  priv_fromSPVReflectTypeDescrToDataFormat (const SpvReflectTypeDescription *strTypeDescr) const;
 
 
 private:

@@ -32,7 +32,9 @@ enum eResourceType
 
 struct sResAsStruct
 {
-    u8 _TODO;
+    u8 numElem;
+    char name[64][32];
+    eDataFormat fmt[32];
 };
 
 struct sResAsArray
