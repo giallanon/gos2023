@@ -34,6 +34,7 @@ TTest.h
 include_directories(${PROJECT_SOURCE_DIR}/../../gos)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosMath)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosGeom)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosImage)
 
 #====================================================
 # info a video
@@ -48,7 +49,7 @@ message("         compiler flags: ${MAIN_CFLAGS}")
 
 #====================================================
 # additional library to be linked
-set(LIBRARY_LIST "gosMath;gosGeom;gos")
+set(LIBRARY_LIST "gosImage;gosMath;gosGeom;gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
     #set(finalLibNameAndPath "${PROJECT_SOURCE_DIR}/../../../lib/lib${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.a")

@@ -3,6 +3,7 @@
 #include "string/gosStringList.h"
 #include "gosUtils.h"
 #include "gosBit.h"
+#include "gosImage.h"
 
 namespace test_gos
 {
@@ -911,6 +912,53 @@ namespace test9_eDataFormat
 }
 
 
+namespace test10_eImageFormat
+{
+    int run()
+    {
+        gos::eImageFormat fmt;
+
+#define HELPER(s)   {\
+        TEST_ASSERT(gos::stringToEnum (#s, &fmt));\
+        TEST_ASSERT(fmt == gos::eImageFormat::s);\
+    }\
+
+        HELPER(U8_RGBA_sRGB)
+        HELPER(U8_RGBA)
+		HELPER(U8_RGB)
+		HELPER(U8_R)
+
+		HELPER(U16_RGBA)
+		HELPER(U16_RGB)
+		HELPER(U16_R)
+
+		HELPER(U32_RGBA)
+		HELPER(U32_RGB)
+		HELPER(U32_R)
+
+		HELPER(F32_RGBA)
+		HELPER(F32_RGB)
+		HELPER(F32_R)
+
+		HELPER(U8_BGRA_sRGB)
+
+		//depth format	(range 0xE0 - 0xEF)
+    	HELPER(DEPTH_F32)
+		HELPER(DEPTH_U16)
+    	HELPER(DEPTH_F32_STENCIL_U8)
+    	HELPER(DEPTH_U16_STENCIL_U8)
+    	HELPER(DEPTH_U24_STENCIL_U8)
+
+		//compressed format
+		HELPER(DDS_BC3)
+		HELPER(DDS_BC4)
+		HELPER(DDS_BC5)
+
+#undef HELPER        
+        return 0;
+    }
+}
+
 
 } //namespace test_gos
 
@@ -926,4 +974,5 @@ void testGos (Tester &tester)
     tester.run("test7 gos::testNetAddr_and_MacAdd", test_gos::test7::testNetAddr_and_MacAdd);
     tester.run("test8 string hash", test_gos::test8::run);
     tester.run("test9 eDataFormat", test_gos::test9_eDataFormat::run);
+    tester.run("test9 eImageFormat", test_gos::test10_eImageFormat::run);
 }

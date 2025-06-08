@@ -49,6 +49,11 @@ namespace gos
 		void			zero() 																									{ memset(mem, 0, allocatedSize); }
 		bool			read  (void *dest, u32 offset, u32 nBytesToread) const;
 		bool			write (const void *src, u32 offset, u32 nBytesTowrite, bool bCangrow=true);
+		
+		bool 			append (const void *src, u32 *in_out_offset, u32 nBytesTowrite, bool bCangrow=true);
+		bool 			appendStr (const char *s, u32 *in_out_offset, bool bCangrow=true);
+						/* append funziona come write solo che aggiorna [in_out_offset] */
+		
 		bool			growIncremental (u32 howManyBytesToAdd);
 		bool			growUpTo (u32 finalSize);
 		u32				getTotalSizeAllocated() const																			{ return allocatedSize; }

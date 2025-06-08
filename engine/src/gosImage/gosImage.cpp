@@ -47,6 +47,66 @@ const char*	gos::enumToString (const eImageFormat fmt)
 }
 
 //********************************************************** 
+bool gos::stringToEnum (const char *str, eImageFormat *out)
+{
+	assert (NULL != out);
+	if (NULL == str)
+		return false;
+	
+	const u32 n = gos::string::utf8::lengthInByte(str);
+	if (n < 4)
+		return false;
+
+#define HELPER(fmt)			if (0 == strcasecmp(str, #fmt)) { *out=eImageFormat::fmt; return true; }
+
+	if (0 == strncasecmp(str, "U8_", 3))
+	{
+		HELPER(U8_RGBA_sRGB)
+		HELPER(U8_RGBA)
+		HELPER(U8_RGB)
+		HELPER(U8_R)
+		HELPER(U8_BGRA_sRGB)
+	}
+	else if (0 == strncasecmp(str, "U16_", 4))
+	{
+		HELPER(U16_RGBA)
+		HELPER(U16_RGB)
+		HELPER(U16_R)
+	}
+	else if (0 == strncasecmp(str, "U32_", 4))
+	{
+		HELPER(U32_RGBA)
+		HELPER(U32_RGB)
+		HELPER(U32_R)
+	}
+	else if (0 == strncasecmp(str, "F32_", 4))
+	{
+		HELPER(F32_RGBA)
+		HELPER(F32_RGB)
+		HELPER(F32_R)
+	}
+	else if (0 == strncasecmp(str, "DEPTH_", 6))
+	{
+    	HELPER(DEPTH_F32)
+		HELPER(DEPTH_U16)
+    	HELPER(DEPTH_F32_STENCIL_U8)
+    	HELPER(DEPTH_U16_STENCIL_U8)
+    	HELPER(DEPTH_U24_STENCIL_U8)
+
+	}
+	else if (0 == strncasecmp(str, "DDS_", 3))
+	{
+		HELPER(DDS_BC3)
+		HELPER(DDS_BC4)
+		HELPER(DDS_BC5)
+	}
+	
+#undef HELPER	
+	return false;
+}
+
+
+//********************************************************** 
 bool image::isFormatWithDepth (const eImageFormat fmt)
 {
 	return (static_cast<u8>(fmt) >= 0xE0 && static_cast<u8>(fmt)<=0xEF);

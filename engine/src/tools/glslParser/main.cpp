@@ -8,26 +8,24 @@ bool compile (const char *shaderSRCFile, const char *shaderStage, bool bWithSour
 {
     //glslc -fshader-stage=vert --target-env=vulkan1.3 lineRenderer.vert.shader -g -O -o lineRenderer.vert.spv
     char cmd[1024];
-    sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s/example/%s -g -O -o %s/example/compiled/%s.spv", 
+    sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s/example/%s -g -O -o %s/example/compiled/%s.spv 2>&1", 
         shaderStage,
         gos::getAppPathNoSlash(), shaderSRCFile,
         gos::getAppPathNoSlash(), shaderSRCFile
     );
 
-    FILE *fp = _popen (cmd, "r");
-    if (NULL != fp)
-    {
-        memset (cmd, 0, sizeof(cmd));
-        while (fgets(cmd, sizeof(cmd), fp) != NULL)
-            printf("%s", cmd);
-        _pclose(fp);
-    }
+    char *result;
+    u32 len;
+    if (!gos::runShellScriptAndStoreResult (cmd, gos::getScrapAllocator(), &result, &len))
+        return false;
 
-    _getch();
-
-    if (0x00 == cmd[0])
+    if (NULL == result)
         return true;
-    return false;
+
+    //c'e' stato qualche errore di compilazione
+    printf("(%d): %s", len, result);
+    GOSFREE_SCRAP(result);
+    return true;
 }
 
 //******************************** 
@@ -41,12 +39,14 @@ int main()
         return -1;
     else
     {
-        compile("lineRenderer.vert.shader", "vert", true); return 0;
-        fs::addAlias ("@ex", "example", eAliasPathMode::relativeToAppFolder);
+        compile("lineRenderer.vert.shader", "vert", true);
+        
+        /*fs::addAlias ("@ex", "example", eAliasPathMode::relativeToAppFolder);
 
         SPVReflect parser;
         if (parser.parseFromFile ("@ex/phong.vert.spv", "@ex/phong.frag.spv"))
             parser.printInfo();
+            */
     }
     
 

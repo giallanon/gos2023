@@ -30,6 +30,10 @@ namespace platform
     void            getTimeNow (u8 *out_hour, u8 *out_min, u8 *out_sec);
 
 
+    inline FILE*    gos_popen (const char *cmd, const char *mode)                   { return popen(cmd, mode); }
+    inline void     gos_pclose (FILE *fp)                                           { pclose(fp); }
+
+
     /******************************************************
      * console stuff
      * 

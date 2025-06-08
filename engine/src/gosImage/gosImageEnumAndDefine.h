@@ -14,6 +14,7 @@ namespace gos
 		U8_RGBA			= 1,
 		U8_RGB			= 2,
 		U8_R			= 3,
+
 		U16_RGBA		= 4,
 		U16_RGB			= 5,
 		U16_R			= 6,
@@ -38,7 +39,7 @@ namespace gos
 		//compressed format
 		DDS_BC3			= 0xF2,
 		DDS_BC4			= 0xF3,
-		DDS_BC5			= 0xF4
+		DDS_BC5			= 0xF4,
 	};
 
 	struct Image

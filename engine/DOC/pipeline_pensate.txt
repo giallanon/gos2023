@@ -10,10 +10,10 @@ def-pipeline
 	//name: <pipe-def-name>
 	name: clear_pass
 	
-	//output-rt: <format>, <finalLayout>, <loadOp>, <storeOp>, <optional_clearColor>
+	//output-rt: sameAsSwapchain | <eImgFormat>, <finalLayout>, <loadOp>, <storeOp>, <optional_clearColor>
 	output-rt: sameAsSwapchain, color_attachment_optimal, clear, store, rgb(0,0,0)
 	
-	//output-depthStencil: <format>, <finalLayout>, <loadO>, <storeOp>, <optional_zClearValue>, <optional_stencilClearValue>
+	//output-depthStencil: sameAsSwapchain | <eImgFormat>, <finalLayout>, <loadO>, <storeOp>, <optional_zClearValue>, <optional_stencilClearValue>
 	output-depthStencil: best, depth_attachment_optimal, clear, store, 1, 0
 
 	//zOption: <enabled>, <write>, <cmpFN>

@@ -7,6 +7,7 @@
 namespace gos
 { 
 	const char*	enumToString (const eImageFormat e);
+	bool stringToEnum (const char *str, eImageFormat *out);
 	
 	namespace image
 	{

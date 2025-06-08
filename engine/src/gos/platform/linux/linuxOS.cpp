@@ -295,4 +295,5 @@ bool platform::NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP)
     return ret;
 }
 
+
 #endif //GOS_PLATFORM__LINUX

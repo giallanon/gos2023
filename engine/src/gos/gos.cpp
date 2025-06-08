@@ -442,3 +442,49 @@ void gos::socket::UDPSendBroadcast(Socket &sok, const u8 *buffer, u32 nByteToSen
     setsockopt (sok.osSok.socketID, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&i), sizeof(i));
 }
 
+//*************************************************** 
+#include "gosBufferLinear.h"
+bool gos::runShellScriptAndStoreResult (const char *cmdLine, gos::Allocator *allocator, char **out_result, u32 *out_resultLen)
+{
+	assert (NULL != out_resultLen);
+	assert (NULL != out_result);
+	assert (NULL != *out_result);
+
+	gos::BufferLinear bf;
+	bf.setup (allocator, 1024);
+
+	u32 cursor = 0;
+	bf.appendStr (cmdLine, &cursor);
+	bf.appendStr (" 2>&1", &cursor); //appendo 2>&1 per fare redirect di stderr su stdout
+
+    FILE *fp = platform::gos_popen (reinterpret_cast<const char*>(bf._getPointer(0)), "r");
+    if (NULL == fp)
+	{
+		*out_result = NULL;
+		*out_resultLen = 0;
+		return false;
+	}
+
+	cursor = 0;
+	char s[1024];
+	memset (s, 0, sizeof(s));
+	while (fgets(s, sizeof(s), fp) != NULL)
+	{
+		bf.appendStr (s, &cursor);
+	}
+	platform::gos_pclose(fp);
+
+	if (0 == cursor)
+	{
+		*out_resultLen = 0;
+		*out_result = NULL;
+	}
+	else
+	{
+		*out_resultLen = cursor+1;
+		*out_result = GOSALLOCT (char*, allocator, cursor+1);
+		memcpy (*out_result, bf._getPointer(0), cursor +1);
+	}
+	
+	return true;
+}

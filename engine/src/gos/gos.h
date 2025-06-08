@@ -44,6 +44,10 @@ namespace gos
 	inline Allocator*	getSysHeapAllocator()					{ return mem::getSysHeapAllocator(); }
 	inline Allocator*	getScrapAllocator()						{ return mem::getScrapAllocator(); }
 
+	//esegue [cmdLine] e memorizza l'output in [out_result]
+	//Ritorna false se [cmdLine] non esiste
+	bool				runShellScriptAndStoreResult (const char *cmdLine, Allocator *allocator, char **out_result, u32 *out_resultLen);
+
 
 	/************************************************************************************************************
 	 *
