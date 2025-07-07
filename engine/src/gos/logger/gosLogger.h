@@ -23,6 +23,19 @@ namespace gos
         void                logWithPrefix (const char *prefix, const char *format, ...)                             { va_list argptr; va_start (argptr, format); vlogWithPrefix (prefix, format, argptr); va_end (argptr); }
         void                logWithPrefix (const eTextColor col, const char *prefix, const char *format, ...)       { va_list argptr; va_start (argptr, format); vlogWithPrefix (col, prefix, format, argptr); va_end (argptr); }
 
+        void                verbose (const char *format, ...)														{ va_list argptr; va_start (argptr, format); vlogWithPrefix (eTextColor::darkYellow, "VERBOSE=>", format, argptr); va_end (argptr); }
+        void                warn (const char *format, ...)														    { va_list argptr; va_start (argptr, format); vlogWithPrefix (eTextColor::magenta, "WARNING=>", format, argptr); va_end (argptr); }
+        void                err (const char *format, ...)
+                            {
+	                            va_list argptr; 
+	                            va_start (argptr, format); 
+	                            vlogWithPrefix (eTextColor::red, "ERROR=>", format, argptr); 
+	                            va_end (argptr); 
+	                            DBGBREAK;
+                            }
+
+
+
         virtual void        vlog (const char *format, va_list argptr) = 0;
         virtual void        vlog (const eTextColor col, const char *format, va_list argptr) = 0;
         virtual void        vlogWithPrefix (const char *prefix, const char *format, va_list argptr) = 0;

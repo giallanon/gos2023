@@ -41,12 +41,11 @@ int main()
     {
         compile("lineRenderer.vert.shader", "vert", true);
         
-        /*fs::addAlias ("@ex", "example", eAliasPathMode::relativeToAppFolder);
+        fs::addAlias ("@ex", "example", eAliasPathMode::relativeToAppFolder);
 
         SPVReflect parser;
-        if (parser.parseFromFile ("@ex/phong.vert.spv", "@ex/phong.frag.spv"))
+        if (parser.parseFromFile ("@ex/phondg.vert.spv", "@ex/phong.frag.spv"))
             parser.printInfo();
-            */
     }
     
 

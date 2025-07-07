@@ -21,12 +21,12 @@ public:
             ~SPVReflect();
 
     void    reset();
-    bool    parseFromFile (const char *vtxShaderFilename, const char *fragShaderFilename);
-    bool    VS_parseFromMemory (const u8 *buffer, u32 bufferSize);
-    bool    PS_parseFromMemory (const u8 *buffer, u32 bufferSize);
+    bool    parseFromFile (const char *vtxShaderFilename, const char *fragShaderFilename, gos::Logger *logger = NULL);
+    bool    VS_parseFromMemory (const u8 *buffer, u32 bufferSize, gos::Logger *logger = NULL);
+    bool    PS_parseFromMemory (const u8 *buffer, u32 bufferSize, gos::Logger *logger = NULL);
 
 
-    void    printInfo() const;
+    void    printInfo(gos::Logger *logger = NULL) const;
 
 private:
     struct VtxDeclElem
@@ -251,11 +251,11 @@ private:
 private:
     void        priv_reset();
     bool        priv_SpvReflectFormat_to_eDataFormat (SpvReflectFormat fmtIN, eDataFormat *out_fmt) const;
-    bool        priv_parse_vtxShader (SpvReflectShaderModule *module);
-    bool        priv_parse_vtxShader_vtxDecl (SpvReflectShaderModule *module);
-    bool        priv_parse_pushConstant (SpvReflectShaderModule *module);
-    bool        priv_parse_fragShader (SpvReflectShaderModule *module);
-    bool        priv_parse_descriptors (SpvReflectShaderModule *module);
+    bool        priv_parse_vtxShader (SpvReflectShaderModule *module, gos::Logger *loggerIN);
+    bool        priv_parse_vtxShader_vtxDecl (SpvReflectShaderModule *module, gos::Logger *loggerIN);
+    bool        priv_parse_pushConstant (SpvReflectShaderModule *module, gos::Logger *loggerIN);
+    bool        priv_parse_fragShader (SpvReflectShaderModule *module, gos::Logger *loggerIN);
+    bool        priv_parse_descriptors (SpvReflectShaderModule *module, gos::Logger *loggerIN);
 
    eDataFormat  priv_fromSPVReflectTypeDescrToDataFormat (const SpvReflectTypeDescription *strTypeDescr) const;
 

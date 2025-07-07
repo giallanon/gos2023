@@ -1,7 +1,5 @@
 #include "gos.h"
 #include "logger/gosLogger.h"
-#include "logger/gosLoggerNull.h"
-#include "logger/gosLoggerStdout.h"
 #include "gosUtils.h"
 #include "gosThreadMsgQ.h"
 

@@ -129,8 +129,11 @@ void SPVReflect::reset()
 
 
 //***************************************************
-bool SPVReflect::parseFromFile (const char *vtxShaderFilename, const char *fragShaderFilename)
+bool SPVReflect::parseFromFile (const char *vtxShaderFilename, const char *fragShaderFilename, gos::Logger *loggerIN)
 {
+    if (NULL == loggerIN)
+        loggerIN = gos::logger::getSystemLogger();
+
     reset();
 
     bool ret = true;
@@ -141,10 +144,10 @@ bool SPVReflect::parseFromFile (const char *vtxShaderFilename, const char *fragS
         u8 *buffer = gos::fs::fileLoadInMemory (gos::getScrapAllocator(), vtxShaderFilename, &fsize);
         if (NULL == buffer)
         {
-            logger::err ("SPVReflect::loadAndParse() => can't load %s\n", vtxShaderFilename);
+            loggerIN->err ("SPVReflect::loadAndParse() => can't load %s\n", vtxShaderFilename);
             return false;
         }
-        ret = VS_parseFromMemory (buffer, fsize);
+        ret = VS_parseFromMemory (buffer, fsize, loggerIN);
         GOSFREE_SCRAP(buffer);
     }
 
@@ -156,34 +159,37 @@ bool SPVReflect::parseFromFile (const char *vtxShaderFilename, const char *fragS
         u8 *buffer = gos::fs::fileLoadInMemory (gos::getScrapAllocator(), fragShaderFilename, &fsize);
         if (NULL == buffer)
         {
-            logger::err ("SPVReflect::loadAndParse() => can't load %s\n", fragShaderFilename);
+            loggerIN->err ("SPVReflect::loadAndParse() => can't load %s\n", fragShaderFilename);
             return false;
         }
-        ret = PS_parseFromMemory (buffer, fsize);
+        ret = PS_parseFromMemory (buffer, fsize, loggerIN);
         GOSFREE_SCRAP(buffer);
     }
     return ret;
 }
 
 //***************************************************
-bool SPVReflect::VS_parseFromMemory (const u8 *buffer, u32 bufferSize)
+bool SPVReflect::VS_parseFromMemory (const u8 *buffer, u32 bufferSize, gos::Logger *loggerIN)
 {
+    if (NULL == loggerIN)
+        loggerIN = gos::logger::getSystemLogger();
+
     SpvReflectShaderModule module;
     SpvReflectResult result = spvReflectCreateShaderModule (bufferSize, buffer, &module);
     if (result != SPV_REFLECT_RESULT_SUCCESS)
     {
-        gos::logger::err ("SPVReflect::VS_parseFromMemory() => error parsing shader, errcode=%d\n", result);
+        loggerIN->err ("SPVReflect::VS_parseFromMemory() => error parsing shader, errcode=%d\n", result);
         return false;
     }
 
     bool ret = false;
     if (SPV_REFLECT_SHADER_STAGE_VERTEX_BIT == module.shader_stage)
     {
-        ret = priv_parse_vtxShader (&module);
+        ret = priv_parse_vtxShader (&module, loggerIN);
     }
     else
     {
-        gos::logger::err ("SPVReflect::VS_parseFromMemory() => not a vertex shader!\n");
+        loggerIN->err ("SPVReflect::VS_parseFromMemory() => not a vertex shader!\n");
     }
 
     spvReflectDestroyShaderModule (&module);
@@ -191,25 +197,29 @@ bool SPVReflect::VS_parseFromMemory (const u8 *buffer, u32 bufferSize)
 }
 
 //***************************************************
-bool SPVReflect::priv_parse_vtxShader (SpvReflectShaderModule *module)
+bool SPVReflect::priv_parse_vtxShader (SpvReflectShaderModule *module, gos::Logger *loggerIN)
 {
-    if (!priv_parse_vtxShader_vtxDecl(module))
+    assert (NULL != loggerIN);
+
+    if (!priv_parse_vtxShader_vtxDecl(module, loggerIN))
         return false;
-    if (!priv_parse_pushConstant(module))
+    if (!priv_parse_pushConstant(module, loggerIN))
         return false;
-    if (!priv_parse_descriptors(module))
+    if (!priv_parse_descriptors(module, loggerIN))
         return false;
     return true;
 }
 
 //***************************************************
-bool SPVReflect::priv_parse_vtxShader_vtxDecl (SpvReflectShaderModule *module)
+bool SPVReflect::priv_parse_vtxShader_vtxDecl (SpvReflectShaderModule *module, gos::Logger *loggerIN)
 {
+    assert (NULL != loggerIN);
+
     u32 n = 0;
     SpvReflectResult result = spvReflectEnumerateInputVariables (module, &n, NULL);
     if (SPV_REFLECT_RESULT_SUCCESS != result)
     {
-        gos::logger::err ("SPVReflect::priv_parse_vtxShader_vtxDecl() => error <spvReflectEnumerateInputVariables>, %d\n", result);
+        loggerIN->err ("SPVReflect::priv_parse_vtxShader_vtxDecl() => error <spvReflectEnumerateInputVariables>, %d\n", result);
         return false;
     }
     
@@ -236,13 +246,15 @@ bool SPVReflect::priv_parse_vtxShader_vtxDecl (SpvReflectShaderModule *module)
 }
 
 //***************************************************
-bool SPVReflect::priv_parse_pushConstant (SpvReflectShaderModule *module)
+bool SPVReflect::priv_parse_pushConstant (SpvReflectShaderModule *module, gos::Logger *loggerIN)
 {
+    assert (NULL != loggerIN);
+
     u32 n = 0;
     SpvReflectResult result = spvReflectEnumeratePushConstantBlocks (module, &n, NULL);
     if (SPV_REFLECT_RESULT_SUCCESS != result)
     {
-        gos::logger::err ("SPVReflect::priv_parse_vtxShader_pushConstant() => error <spvReflectEnumeratePushConstantBlocks>, %d\n", result);
+        loggerIN->err ("SPVReflect::priv_parse_vtxShader_pushConstant() => error <spvReflectEnumeratePushConstantBlocks>, %d\n", result);
         return false;
     }
 
@@ -252,7 +264,7 @@ bool SPVReflect::priv_parse_pushConstant (SpvReflectShaderModule *module)
     {
         if (n > 1)
         {
-            gos::logger::err ("SPVReflect::priv_parse_vtxShader_pushConstant() => error n is >1\n");
+            loggerIN->err ("SPVReflect::priv_parse_vtxShader_pushConstant() => error n is >1\n");
             return false;
         }
 
@@ -294,24 +306,27 @@ bool SPVReflect::priv_parse_pushConstant (SpvReflectShaderModule *module)
 }
 
 //***************************************************
-bool SPVReflect::PS_parseFromMemory (const u8 *buffer, u32 bufferSize)
+bool SPVReflect::PS_parseFromMemory (const u8 *buffer, u32 bufferSize, gos::Logger *loggerIN)
 {
+    if (NULL == loggerIN)
+        loggerIN = gos::logger::getSystemLogger();
+
     SpvReflectShaderModule module;
     SpvReflectResult result = spvReflectCreateShaderModule (bufferSize, buffer, &module);
     if (result != SPV_REFLECT_RESULT_SUCCESS)
     {
-        gos::logger::err ("SPVReflect::PS_parseFromMemory() => error parsing shader, errcode=%d\n", result);
+        loggerIN->err ("SPVReflect::PS_parseFromMemory() => error parsing shader, errcode=%d\n", result);
         return false;
     }
 
     bool ret = false;
     if (SPV_REFLECT_SHADER_STAGE_FRAGMENT_BIT == module.shader_stage)
     {
-        ret = priv_parse_fragShader (&module);
+        ret = priv_parse_fragShader (&module, loggerIN);
     }
     else
     {
-        gos::logger::err ("SPVReflect::PS_parseFromMemory() => not a fragment shader!\n");
+        loggerIN->err ("SPVReflect::PS_parseFromMemory() => not a fragment shader!\n");
     }
 
     spvReflectDestroyShaderModule (&module);
@@ -319,23 +334,27 @@ bool SPVReflect::PS_parseFromMemory (const u8 *buffer, u32 bufferSize)
 }
 
 //***************************************************
-bool SPVReflect::priv_parse_fragShader (SpvReflectShaderModule *module)
+bool SPVReflect::priv_parse_fragShader (SpvReflectShaderModule *module, gos::Logger *loggerIN)
 {
-    if (!priv_parse_pushConstant (module))
+    assert (NULL != loggerIN);
+
+    if (!priv_parse_pushConstant (module, loggerIN))
         return false;
-    if (!priv_parse_descriptors(module))
+    if (!priv_parse_descriptors(module, loggerIN))
         return false;
     return true;
 }
 
 //***************************************************
-bool SPVReflect::priv_parse_descriptors (SpvReflectShaderModule *module)
+bool SPVReflect::priv_parse_descriptors (SpvReflectShaderModule *module, gos::Logger *loggerIN)
 {
+    assert (NULL != loggerIN);
+
     u32 n = 0;
     SpvReflectResult result = spvReflectEnumerateDescriptorBindings (module, &n, NULL);
     if (SPV_REFLECT_RESULT_SUCCESS != result)
     {
-        gos::logger::err ("SPVReflect::priv_parse_descriptors() => error <spvReflectEnumerateDescriptorBindings>, %d\n", result);
+        loggerIN->err ("SPVReflect::priv_parse_descriptors() => error <spvReflectEnumerateDescriptorBindings>, %d\n", result);
         return false;
     }
     
@@ -361,7 +380,7 @@ bool SPVReflect::priv_parse_descriptors (SpvReflectShaderModule *module)
             switch (vars[i]->descriptor_type)
             {
             default:
-                gos::logger::err ("SPVReflect::priv_parse_descriptors() => error <descriptor_type> invalid, %d\n", (int)vars[i]->descriptor_type);
+                loggerIN->err ("SPVReflect::priv_parse_descriptors() => error <descriptor_type> invalid, %d\n", (int)vars[i]->descriptor_type);
                 return false;
 
             case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: e.vulkanDescrType = eDescriptrorType::SAMPLER; break;
@@ -380,7 +399,7 @@ bool SPVReflect::priv_parse_descriptors (SpvReflectShaderModule *module)
             switch (vars[i]->type_description->op)
             {
             default:
-                gos::logger::err ("SPVReflect::priv_parse_descriptors() => error <type_description> invalid, %d\n", (int)vars[i]->descriptor_type);
+                loggerIN->err ("SPVReflect::priv_parse_descriptors() => error <type_description> invalid, %d\n", (int)vars[i]->descriptor_type);
                 return false;
 
             case SpvOpTypeArray:
@@ -423,21 +442,24 @@ bool SPVReflect::priv_parse_descriptors (SpvReflectShaderModule *module)
 }
 
 //***************************************************
-void SPVReflect::printInfo() const
+void SPVReflect::printInfo(gos::Logger *loggerIN) const
 {
-    logger::log ("SPVReflect::printInfo()\n");
-    logger::incIndent();
+    if (NULL == loggerIN)
+        loggerIN = gos::logger::getSystemLogger();
 
-    logger::log ("Vertex declaration:\n");
+    loggerIN->log ("SPVReflect::printInfo()\n");
+    loggerIN->incIndent();
+
+    loggerIN->log ("Vertex declaration:\n");
     {
-        logger::incIndent();
+        loggerIN->incIndent();
         if (0 == vtxDeclList.getNElem())
-            logger::log ("no info!\n");
+            loggerIN->log ("no info!\n");
         else
         {
             for (u32 i=0; i<vtxDeclList.getNElem(); i++)
             {
-                logger::log ("bindingLoc:% 2d, name:% -32s, fmt=% -10s, size=%d\n", 
+                loggerIN->log ("bindingLoc:% 2d, name:% -32s, fmt=% -10s, size=%d\n", 
                         vtxDeclList(i).bindingLocation,
                         vtxDeclList(i).name,
                         utils::enumToString (vtxDeclList(i).fmt),
@@ -445,14 +467,14 @@ void SPVReflect::printInfo() const
                 );
             }
         }
-        logger::decIndent();
+        loggerIN->decIndent();
     }
 
-    logger::log ("\nPush constant:\n");
+    loggerIN->log ("\nPush constant:\n");
     {
-        logger::incIndent();
+        loggerIN->incIndent();
         if (0 == pushConstantList.getNElem())
-            logger::log ("no info!\n");
+            loggerIN->log ("no info!\n");
         else
         {
             for (u32 i=0; i<pushConstantList.getNElem(); i++)
@@ -466,7 +488,7 @@ void SPVReflect::printInfo() const
                 if (pushConstantList(i).flag & PushConstantElem::FLAG__USED_IN_FRAG_SHADER)
                     strcat_s (stage, sizeof(stage), "FRG ");
 
-                logger::log ("[% -12s] name:% -32s, fmt=% -10s, size=% -3d (paddedSize=% -3d), offset=% -3d (absOffset=%d)\n", 
+                loggerIN->log ("[% -12s] name:% -32s, fmt=% -10s, size=% -3d (paddedSize=% -3d), offset=% -3d (absOffset=%d)\n", 
                         stage, 
                         pushConstantList(i).name,
                         utils::enumToString (pushConstantList(i).fmt),
@@ -474,14 +496,14 @@ void SPVReflect::printInfo() const
                         pushConstantList(i).offset, pushConstantList(i).absoluteOffset);
             }
         }
-        logger::decIndent();
+        loggerIN->decIndent();
     }
 
-    logger::log ("\nDescriptor sets:\n");
+    loggerIN->log ("\nDescriptor sets:\n");
     {
-        logger::incIndent();
+        loggerIN->incIndent();
         if (0 == descrSetList.getNElem())
-            logger::log ("no info!\n");
+            loggerIN->log ("no info!\n");
         else
         {
             for (u32 i=0; i<descrSetList.getNElem(); i++)
@@ -496,7 +518,7 @@ void SPVReflect::printInfo() const
                     strcat_s (stage, sizeof(stage), "FRG ");
 
                 const sResInfo *resInfo = &descrSetList(i).resType;
-                logger::log ("[% -12s] name:% -32s (set=%d, binding=%d), VKtype=%s, data-type:%s", 
+                loggerIN->log ("[% -12s] name:% -32s (set=%d, binding=%d), VKtype=%s, data-type:%s", 
                         stage, 
                         descrSetList(i).name,
                         descrSetList(i).set, descrSetList(i).binding,
@@ -508,25 +530,25 @@ void SPVReflect::printInfo() const
                 switch (resInfo->type)
                 {
                 default: 
-                    logger::log (", ERR");
+                    loggerIN->log (", ERR");
                     break;
                 
                 case eResourceType::_array:
                     {
-                        logger::log (", %s", descrSetList(i).name);
+                        loggerIN->log (", %s", descrSetList(i).name);
                         for (u8 t = 0; t < resInfo->info.asArray.ordine; t++)
                         {
-                            logger::log ("[%d]", resInfo->info.asArray.numElem[t]);
+                            loggerIN->log ("[%d]", resInfo->info.asArray.numElem[t]);
                         }
                     }
                     break;
 
                 case eResourceType::_dynamicArray:
                     {
-                        logger::log (", %s", descrSetList(i).name);
+                        loggerIN->log (", %s", descrSetList(i).name);
                         for (u8 t = 0; t < resInfo->info.asArray.ordine; t++)
                         {
-                            logger::log ("[]");
+                            loggerIN->log ("[]");
                         }
                     }
                     break;
@@ -535,20 +557,20 @@ void SPVReflect::printInfo() const
                     for (u8 t = 0; t < resInfo->info.asStruct.numElem; t++)
                     {
                         const eDataFormat fmt = resInfo->info.asStruct.fmt[t];
-                        logger::log ("\n     % -16s, fmt=% -10s, size=%d",
+                        loggerIN->log ("\n     % -16s, fmt=% -10s, size=%d",
                             resInfo->info.asStruct.name[t],
                             utils::enumToString (fmt), gos::dataformat::getSize(fmt));
                     }
                     break;
 
                 }
-                logger::log ("\n");
+                loggerIN->log ("\n");
             }
         }
-        logger::decIndent();
+        loggerIN->decIndent();
     }    
 
-    logger::decIndent();
+    loggerIN->decIndent();
 }
 
 
