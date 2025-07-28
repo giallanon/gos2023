@@ -9,6 +9,7 @@
 #include "dataTypes/gosDateTime.h"
 #include "gosRandom.h"
 #include "gosHandle.h"
+#include "gosErr.h"
 
 
 //A per "num max di handle", B per "num di chunk", C per "counter"
@@ -52,6 +53,24 @@ namespace gos
 
 	/************************************************************************************************************
 	 *
+	 * global error
+	 * 
+	 * Queste funzioni sono thread safe in quanto per ogni thread esiste una istanza specifica di err.
+	 * Ogni thread quindi e' libero di utilizzare le fn di questo namespace sicuro che non andra' ad interferire
+	 * con l'err di altri thread
+	 *
+	 */
+	namespace err
+	{
+		void 			clear();
+		void 			add (const char *format, ...);
+		u32				anyError();
+		const char*		getErrByIndex (u32 i);
+	};
+
+
+	/************************************************************************************************************
+	 *
 	 * systeminfo
 	 *
 	 */
@@ -75,7 +94,10 @@ namespace gos
 
         void	log (const char *format, ...);
         void	log (const eTextColor col, const char *format, ...);
+		
 		void	err (const char *format, ...);
+				// err() setta anche il global error chiamando gos::err::add()
+
 		void	verbose (const char *format, ...);
 		void	warn (const char *format, ...);
         void	logWithPrefix (const char *prefix, const char *format, ...);
@@ -221,6 +243,7 @@ namespace gos
 
         eThreadError    create (GOSThreadHandle *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb=2048);
         void            waitEnd (GOSThreadHandle &hThread);
+		inline u32		getCurrentThreadID()													{ return platform::getCurrentThreadID(); }
 
     } // namespace thread
 

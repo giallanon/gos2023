@@ -21,6 +21,9 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
 main.cpp
+PipelineDef.cpp
+PipelineParser.cpp
+PipelineParser.h
 spirv_reflect.c
 spirv_reflect.h
 spirv.h

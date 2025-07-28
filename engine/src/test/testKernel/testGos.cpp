@@ -916,11 +916,11 @@ namespace test10_eImageFormat
 {
     int run()
     {
-        gos::eImageFormat fmt;
+        eImageFormat fmt;
 
 #define HELPER(s)   {\
-        TEST_ASSERT(gos::stringToEnum (#s, &fmt));\
-        TEST_ASSERT(fmt == gos::eImageFormat::s);\
+        TEST_ASSERT(gos::utils::stringToEnum (#s, &fmt));\
+        TEST_ASSERT(fmt == eImageFormat::s);\
     }\
 
         HELPER(U8_RGBA_sRGB)

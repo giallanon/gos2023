@@ -11,7 +11,7 @@ void importTexture (u16 w, u16 h, const char *fname)
     gos::image::Builder builder;
 
     builder.begin (gos::getScrapAllocator(), &im)
-        .beginTexture2D (gos::eImageFormat::U8_RGBA_sRGB, w, h, 1)
+        .beginTexture2D (eImageFormat::U8_RGBA_sRGB, w, h, 1)
         .setMipMapDataFromFile (0, fname)
         .endTexture2D()
     .end();

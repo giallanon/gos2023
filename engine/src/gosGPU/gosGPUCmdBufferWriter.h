@@ -1,6 +1,7 @@
 #ifndef _gosGPUCmdBufferWriter_h_
 #define _gosGPUCmdBufferWriter_h_
 #include "gosGPUEnumAndDefine.h"
+#include "vulkan/gosGPUVulkanEnumAndDefine.h"
 #include "../gos/gosBit.h"
 #include "../gos/gosUtils.h"
 

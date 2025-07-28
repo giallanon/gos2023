@@ -1,4 +1,5 @@
 #include "SPVReflect.h"
+#include "PipelineParser.h"
 
 using namespace gos;
 
@@ -28,6 +29,39 @@ bool compile (const char *shaderSRCFile, const char *shaderStage, bool bWithSour
     return true;
 }
 
+
+//******************************** 
+void test_reflect_1()
+{
+    compile("lineRenderer.vert.shader", "vert", true);
+    SPVReflect parser;
+    if (parser.parseFromFile ("@ex/phong.vert.spv", "@ex/phong.frag.spv"))
+        parser.printInfo();
+    else
+    {
+        assert (gos::err::anyError());
+        printf (gos::err::getErrByIndex(0));
+        gos::err::clear();
+    }    
+}
+
+//******************************** 
+void test_pipelineParser_1 ()
+{
+    PipelineParser pp;
+
+    gos::PipelineDef out;
+    
+    if (!pp.parseFromFile ("@ex/pipeline1.txt", &out))
+    {
+        gos::err::clear();
+    }
+    
+    assert (out.outputRT_fmt == eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN);
+
+
+}
+
 //******************************** 
 int main()
 {
@@ -39,13 +73,10 @@ int main()
         return -1;
     else
     {
-        compile("lineRenderer.vert.shader", "vert", true);
-        
         fs::addAlias ("@ex", "example", eAliasPathMode::relativeToAppFolder);
 
-        SPVReflect parser;
-        if (parser.parseFromFile ("@ex/phondg.vert.spv", "@ex/phong.frag.spv"))
-            parser.printInfo();
+        //test_reflect_1();
+        test_pipelineParser_1 ();
     }
     
 

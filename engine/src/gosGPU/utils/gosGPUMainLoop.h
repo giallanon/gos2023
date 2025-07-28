@@ -1,6 +1,7 @@
 #ifndef _gosGPUMainLoop_h_
 #define _gosGPUMainLoop_h_
 #include "../gosGPUEnumAndDefine.h"
+#include "../vulkan/gosGPUVulkanEnumAndDefine.h"
 #include "../../gos/dataTypes/gosTimer.h"
 
 

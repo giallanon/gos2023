@@ -5,16 +5,16 @@
 
 
 //definisce una pipeline, non ne crea una istanza
-def-pipeline
+pipeline_def
 {
 	//name: <pipe-def-name>
 	name: clear_pass
 	
-	//output-rt: sameAsSwapchain | <eImgFormat>, <finalLayout>, <loadOp>, <storeOp>, <optional_clearColor>
-	output-rt: sameAsSwapchain, color_attachment_optimal, clear, store, rgb(0,0,0)
+	//output_rt: sameAsSwapchain | <eImgFormat>, <finalLayout>, <loadOp>, <storeOp>, <optional_clearColor (#rgb, #argb, #rrggbb, #aarrggbb)>
+	output_rt: sameAsSwapchain, color_attachment_optimal, clear, store, #000
 	
-	//output-depthStencil: sameAsSwapchain | <eImgFormat>, <finalLayout>, <loadO>, <storeOp>, <optional_zClearValue>, <optional_stencilClearValue>
-	output-depthStencil: best, depth_attachment_optimal, clear, store, 1, 0
+	//output_depthStencil: sameAsSwapchain | <eImgFormat>, <finalLayout>, <loadOp>, <storeOp>, <optional_zClearValue>, <optional_stencilClearValue>
+	output_depthStencil: best, depth_attachment_optimal, clear, store, 1, 0
 
 	//zOption: <enabled>, <write>, <cmpFN>
 	//	default: 1, 1, LESS
@@ -56,17 +56,17 @@ chain
 	//In generale sono istanze di una qualche def-xx definita in precedenza
 	resources
 	{
-		create-rt: <res-name>, <format>, <width>, <height>
-		create-depthStencil: <res-name>, <format>, <width>, <height>, <withStencil>
-		create-descriptor: <res-name>, <name-of-def-descriptor>
-		create-pipeline: <res-name>, <name-of-def-pipeline>
+		create_rt: <res-name>, <format>, <width>, <height>
+		create_depthStencil: <res-name>, <format>, <width>, <height>, <withStencil>
+		create_descriptor: <res-name>, <name-of-def-descriptor>
+		create_pipeline: <res-name>, <name-of-def-pipeline>
 	}
 	
 	step
 	{
-		//use-pipeline: <res-name>
-		//with-output: <res-name>
-		//with-descriptor: <res-name>
+		//use_pipeline: <res-name>
+		//with_output: <res-name>
+		//with_descriptor: <res-name>
 
 		enabled: 1
 		use-pipline: pipe-line2D
@@ -79,9 +79,9 @@ chain
 	step
 	{
 		enabled: 1
-		use-pipeline: line3D
+		use_pipeline: line3D
 		
-		with-output
+		with_output
 		{
 			rt: colorRT
 			depthStencil: mainZB
@@ -91,9 +91,9 @@ chain
 	step
 	{
 		enabled: 1
-		use-pipeline: present_pass
+		use_pipeline: present_pass
 		
-		with-output
+		with_output
 		{
 			rt: colorRT
 			depthStencil: mainZB

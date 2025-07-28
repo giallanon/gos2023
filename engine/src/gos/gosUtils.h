@@ -6,9 +6,32 @@ namespace gos
 {
     namespace utils
     {
+        bool stringIsTrueOrFalse (const char *val, bool *out);
+
         const char* enumToString (eSocketError s);
         const char*	enumToString (const eDataFormat e);
-        
+        const char*	enumToString (const eImageFormat e);
+        const char*	enumToString (const eImageLayout e);
+        const char*	enumToString (const eAttachmentLoadOp e);
+        const char*	enumToString (const eAttachmentStoreOp e);
+        const char* enumToString (const eDepthStencilLayout e);
+        const char*	enumToString (const eZFunc e);
+        const char*	enumToString (const eStencilOp e);
+        const char*	enumToString (const eStencilFunc e);
+        const char*	enumToString (const eCullMode e);
+        const char*	enumToString (const eDrawPrimitive e);
+
+        bool stringToEnum (const char *str, eImageFormat *out);        
+        bool stringToEnum (const char *str, eImageLayout *out);
+        bool stringToEnum (const char *str, eAttachmentLoadOp *out);
+        bool stringToEnum (const char *str, eAttachmentStoreOp *out);
+        bool stringToEnum (const char *str, eDepthStencilLayout *out);
+        bool stringToEnum (const char *str, eZFunc *out);
+        bool stringToEnum (const char *str, eStencilOp *out);
+        bool stringToEnum (const char *str, eStencilFunc *out);
+        bool stringToEnum (const char *str, eCullMode *out);
+        bool stringToEnum (const char *str, eDrawPrimitive *out);
+
 
         /* ritorna il numero di bytes necessari a contenere la rappresentazione
          * in base64 di dei primi [sizeInBytesOfIn] di [in] */

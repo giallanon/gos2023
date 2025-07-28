@@ -1,7 +1,7 @@
 #ifndef _gosGPUDescrSetInstanceWriter_h_
 #define _gosGPUDescrSetInstanceWriter_h_
 #include "gosGPUEnumAndDefine.h"
-
+#include "vulkan/gosGPUVulkanEnumAndDefine.h"
 
 namespace gos
 {

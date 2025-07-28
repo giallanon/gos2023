@@ -1,13 +1,14 @@
 #ifndef _gosGPU_h_
 #define _gosGPU_h_
 #include "gosGPUEnumAndDefine.h"
+#include "vulkan/gosGPUVulkanEnumAndDefine.h"
+#include "vulkan/gosGPUVulkan.h"
 #include "../gos/gos.h"
 #include "../gos/gosFastArray.h"
 #include "../gosMath/gosMath.h"
 #include "../gosInput/gosInput.h"
 #include "../gos/gosHashMap.h"
 #include "../gosImage/gosImage.h"
-#include "vulkan/gosGPUVulkan.h"
 #include "gosGPUDescrSetInstanceWriter.h"
 #include "gosGPUCmdBufferWriter.h"
 #include "utils/gosGPUMainLoop.h"
@@ -149,8 +150,8 @@ namespace gos
                             RenderTaskLayoutBuilder (GPU *gpuIN, GPURenderLayoutHandle *out_handle);
             virtual         ~RenderTaskLayoutBuilder();
 
-            RTLB&           requireRendertarget (const gos::eImageFormat imageFormat, const eImageLayout initialLayout, const eImageLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp);
-            RTLB&           requireZBuffer (const gos::eImageFormat imageFormat, const eDepthStencilLayout initialLayout, const eDepthStencilLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp);
+            RTLB&           requireRendertarget (const eImageFormat imageFormat, const eImageLayout initialLayout, const eImageLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp);
+            RTLB&           requireZBuffer (const eImageFormat imageFormat, const eDepthStencilLayout initialLayout, const eDepthStencilLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp);
             
             SubPassInfo&    addSubpass_GFX ();
             SubPassInfo&    addSubpass_COMPUTE ();
@@ -489,7 +490,7 @@ namespace gos
         u32                 swapChain_getWidth() const                      { return vulkan.swapChainInfo.imageExtent.width; }
         u32                 swapChain_getHeight() const                     { return vulkan.swapChainInfo.imageExtent.height; }
         f32                 swapChain_calcAspectRatio() const               { return (f32)swapChain_getWidth() / (f32)swapChain_getHeight(); }
-        gos::eImageFormat   swapChain_getImageFormat() const;
+        eImageFormat        swapChain_getImageFormat() const;
         u8                  swapChain_getImageCount() const                 { return static_cast<u8>(vulkan.swapChainInfo.imageCount); }
         VkImageView         swapChain_getImageView(u8 i) const              { assert(i < swapChain_getImageCount()); return vulkan.swapChainInfo.vkImageListView[i]; }
         VkExtent2D          swapChain_getImageExten2D() const               { return vulkan.swapChainInfo.imageExtent; }
@@ -557,8 +558,8 @@ namespace gos
 
         //================ depth buffer
         GPUDepthStencilHandle       depthStencil_getDefault() const                         { return defaultDepthStencil.handle; }
-        gos::eImageFormat           depthStencil_getDefaultFormat() const                   { return defaultDepthStencil.gosFormat; }
-        bool                        depthStencil_create (const gos::eImageFormat fmt, const gos::Dim2D &w, const gos::Dim2D &h, bool bWithStencil, GPUDepthStencilHandle *out_handle);
+        eImageFormat                depthStencil_getDefaultFormat() const                   { return defaultDepthStencil.gosFormat; }
+        bool                        depthStencil_create (const eImageFormat fmt, const gos::Dim2D &w, const gos::Dim2D &h, bool bWithStencil, GPUDepthStencilHandle *out_handle);
         void                        deleteResource (GPUDepthStencilHandle &handle);
         const gpu::DepthStencil*    getInfo (const GPUDepthStencilHandle handle) const;
 

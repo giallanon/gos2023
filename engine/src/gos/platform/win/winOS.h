@@ -64,6 +64,7 @@ namespace platform
 
 	eThreadError    createThread  (OSThread *out_handle, gos::Allocator *allocatorTS, GOS_ThreadMainFunction threadFunction, u32 stackSizeInKb, void *userParam);
 	void            waitThreadEnd (OSThread &handle);
+    u32				getCurrentThreadID();
 
 
 				

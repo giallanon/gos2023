@@ -287,7 +287,7 @@ bool IniFile::priv_Parse_Section (IniFileSection *section, string::utf8::Iter &s
 		//mi porto sul primo char buono
 		string::utf8::toNextValidChar (src);
 
-		//a questo punto o c'o' un valore (identifier : valore) oppure l'inizio di una sezione ({)
+		//a questo punto o c'e' un valore (identifier : valore) oppure l'inizio di una sezione ({)
 		if (src.getCurChar() == '{')
 		{
 			IniFileSection *subSection = section->addSubsection (identifierName);
@@ -299,7 +299,7 @@ bool IniFile::priv_Parse_Section (IniFileSection *section, string::utf8::Iter &s
 			continue;
 		}
 		
-		//dato che non o' iniziata una sezione, mi aspetto identifier : value
+		//dato che non e' iniziata una sezione, mi aspetto identifier : value
 		if (!priv_Parse_separator_Value (src, &result, ':'))
 			return false;
 		

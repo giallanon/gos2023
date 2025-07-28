@@ -1,4 +1,5 @@
 #include "gosGPU.h"
+#include "../gos/gosUtils.h"
 
 using namespace gos;
 
@@ -52,7 +53,7 @@ GPU::RenderTaskLayoutBuilder::~RenderTaskLayoutBuilder()
 
 
 //***********************************************************
-RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (const gos::eImageFormat imageFormat, const eImageLayout initialLayout, const eImageLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp)
+RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (const eImageFormat imageFormat, const eImageLayout initialLayout, const eImageLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp)
 {
     if (numRenderTargetInfo < GOSGPU__NUM_MAX_ATTACHMENT)
     {
@@ -74,12 +75,12 @@ RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (const gos::eImageF
 
 
 //***********************************************************
-RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireZBuffer (const gos::eImageFormat imageFormat, const eDepthStencilLayout initialLayout, const eDepthStencilLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp)
+RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireZBuffer (const eImageFormat imageFormat, const eDepthStencilLayout initialLayout, const eDepthStencilLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp)
 {
     if (!image::isFormatWithDepth(imageFormat))
     {
         bAnyError = true;
-        gos::logger::err ("RenderTaskLayout::requireZBuffer(%s) => invalid format, not a DEPTH format\n", gos::enumToString(imageFormat));
+        gos::logger::err ("RenderTaskLayout::requireZBuffer(%s) => invalid format, not a DEPTH format\n", utils::enumToString(imageFormat));
         return *this;
     }
     

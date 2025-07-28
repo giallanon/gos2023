@@ -6,6 +6,517 @@ using namespace gos;
 
 #define ENUM_TO_STRING_CASE(enumClass,enumValue) case enumClass::enumValue: return #enumValue
 
+//**************************************
+bool utils::stringIsTrueOrFalse (const char *val, bool *out)
+{
+    if (NULL == val)
+        return false;
+    if (0x00 == val[0])
+        return false;
+
+    if (strcasecmp(val, "1") == 0)      { *out=true; return true; }
+    if (strcasecmp(val, "0") == 0)      { *out=false; return true; }
+
+    if (strcasecmp(val, "y") == 0)      { *out=true; return true; }
+    if (strcasecmp(val, "n") == 0)      { *out=false; return true; }
+
+    if (strcasecmp(val, "yes") == 0)    { *out=true; return true; }
+    if (strcasecmp(val, "no") == 0)     { *out=false; return true; }
+
+    return false;
+}
+
+
+//***********************************************
+const char*	utils::enumToString (const eImageFormat fmt)
+{
+#define HELPER(s)	case eImageFormat::s: return #s;
+
+    switch (fmt)
+    {
+    default:
+        DBGBREAK;
+        return "??INVALID-VALUE??";
+
+		HELPER(U8_RGBA_sRGB)
+		HELPER(U8_RGBA)
+		HELPER(U8_RGB)
+		HELPER(U8_R)
+
+		HELPER(U16_RGBA)
+		HELPER(U16_RGB)
+		HELPER(U16_R)
+
+		HELPER(U32_RGBA)
+		HELPER(U32_RGB)
+		HELPER(U32_R)
+
+		HELPER(F32_RGBA)
+		HELPER(F32_RGB)
+		HELPER(F32_R)
+
+		HELPER(U8_BGRA_sRGB)
+
+		//depth buffer format
+		HELPER(DEPTH_F32)
+		HELPER(DEPTH_U16)
+		HELPER(DEPTH_F32_STENCIL_U8)
+		HELPER(DEPTH_U16_STENCIL_U8)
+		HELPER(DEPTH_U24_STENCIL_U8)
+    }
+
+#undef HELPER
+}
+
+//********************************************************** 
+bool utils::stringToEnum (const char *str, eImageFormat *out)
+{
+	assert (NULL != out);
+	if (NULL == str)
+		return false;
+        
+	const u32 n = gos::string::utf8::lengthInByte(str);
+	if (n < 4)
+		return false;
+
+#define HELPER(fmt)			if (0 == strcasecmp(str, #fmt)) { *out=eImageFormat::fmt; return true; }
+
+	if (0 == strncasecmp(str, "sameAsSwapchain", 15))
+	{
+		*out = eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN;
+		return true;
+	}
+
+
+	if (0 == strncasecmp(str, "U8_", 3))
+	{
+		HELPER(U8_RGBA_sRGB)
+		HELPER(U8_RGBA)
+		HELPER(U8_RGB)
+		HELPER(U8_R)
+		HELPER(U8_BGRA_sRGB)
+	}
+	else if (0 == strncasecmp(str, "U16_", 4))
+	{
+		HELPER(U16_RGBA)
+		HELPER(U16_RGB)
+		HELPER(U16_R)
+	}
+	else if (0 == strncasecmp(str, "U32_", 4))
+	{
+		HELPER(U32_RGBA)
+		HELPER(U32_RGB)
+		HELPER(U32_R)
+	}
+	else if (0 == strncasecmp(str, "F32_", 4))
+	{
+		HELPER(F32_RGBA)
+		HELPER(F32_RGB)
+		HELPER(F32_R)
+	}
+	else if (0 == strncasecmp(str, "DEPTH_", 6))
+	{
+    	HELPER(DEPTH_F32)
+		HELPER(DEPTH_U16)
+    	HELPER(DEPTH_F32_STENCIL_U8)
+    	HELPER(DEPTH_U16_STENCIL_U8)
+    	HELPER(DEPTH_U24_STENCIL_U8)
+
+	}
+	else if (0 == strncasecmp(str, "DDS_", 3))
+	{
+		HELPER(DDS_BC3)
+		HELPER(DDS_BC4)
+		HELPER(DDS_BC5)
+	}
+	
+#undef HELPER	
+	return false;
+}
+
+//***********************************************
+const char*	utils::enumToString (const eImageLayout e)
+{
+#define HELPER(s)	case eImageLayout::s: return #s;
+
+    switch (e)
+    {
+    default:
+        DBGBREAK;
+        return "??INVALID-VALUE??";
+
+    HELPER(undefined)
+    HELPER(general)
+    HELPER(color_attachment_optimal)
+    HELPER(shader_readonly)
+    HELPER(transfer_src)
+    HELPER(transfer_dst)
+    HELPER(presentation)
+    }
+
+#undef HELPER
+}
+
+//********************************************************** 
+bool utils::stringToEnum (const char *str, eImageLayout *out)
+{
+	assert (NULL != out);
+	if (NULL == str)
+		return false;
+    if (0 == str[0])
+        return false;
+	
+#define HELPER(fmt)			if (0 == strcasecmp(str, #fmt)) { *out=eImageLayout::fmt; return true; }
+
+    HELPER(undefined)
+    HELPER(general)
+    HELPER(color_attachment_optimal)
+    HELPER(shader_readonly)
+    HELPER(transfer_src)
+    HELPER(transfer_dst)
+    HELPER(presentation)
+	
+#undef HELPER	
+	return false;
+}
+
+//***********************************************
+const char*	utils::enumToString (const eAttachmentLoadOp e)
+{
+#define HELPER(s)	case eAttachmentLoadOp::s: return #s;
+
+    switch (e)
+    {
+    default:
+        DBGBREAK;
+        return "??INVALID-VALUE??";
+
+    HELPER(load)
+    HELPER(clear)
+    HELPER(dont_care)
+    }
+
+#undef HELPER
+}
+
+//********************************************************** 
+bool utils::stringToEnum (const char *str, eAttachmentLoadOp *out)
+{
+	assert (NULL != out);
+	if (NULL == str)
+		return false;
+    if (0 == str[0])
+        return false;
+	
+#define HELPER(fmt)			if (0 == strcasecmp(str, #fmt)) { *out=eAttachmentLoadOp::fmt; return true; }
+
+    HELPER(load)
+    HELPER(clear)
+    HELPER(dont_care)
+	
+#undef HELPER	
+	return false;
+}
+
+//***********************************************
+const char*	utils::enumToString (const eAttachmentStoreOp e)
+{
+#define HELPER(s)	case eAttachmentStoreOp::s: return #s;
+
+    switch (e)
+    {
+    default:
+        DBGBREAK;
+        return "??INVALID-VALUE??";
+
+    HELPER(store)
+    HELPER(dont_care)
+    HELPER(none)
+    }
+
+#undef HELPER
+}
+
+//********************************************************** 
+bool utils::stringToEnum (const char *str, eAttachmentStoreOp *out)
+{
+	assert (NULL != out);
+	if (NULL == str)
+		return false;
+    if (0 == str[0])
+        return false;
+	
+#define HELPER(fmt)			if (0 == strcasecmp(str, #fmt)) { *out=eAttachmentStoreOp::fmt; return true; }
+
+    HELPER(store)
+    HELPER(dont_care)
+    HELPER(none)
+	
+#undef HELPER	
+	return false;
+}
+
+//***********************************************
+const char*	utils::enumToString (const eDepthStencilLayout e)
+{
+#define HELPER(s)	case eDepthStencilLayout::s: return #s;
+
+    switch (e)
+    {
+    default:
+        DBGBREAK;
+        return "??INVALID-VALUE??";
+
+    HELPER(undefined)
+    HELPER(depth_attachment_optimal)
+    HELPER(depth_shader_readonly)
+    }
+
+#undef HELPER
+}
+
+//********************************************************** 
+bool utils::stringToEnum (const char *str, eDepthStencilLayout *out)
+{
+	assert (NULL != out);
+	if (NULL == str)
+		return false;
+    if (0 == str[0])
+        return false;
+	
+#define HELPER(fmt)			if (0 == strcasecmp(str, #fmt)) { *out=eDepthStencilLayout::fmt; return true; }
+
+    HELPER(undefined)
+    HELPER(depth_attachment_optimal)
+    HELPER(depth_shader_readonly)
+	
+#undef HELPER	
+	return false;
+}
+
+//***********************************************
+const char*	utils::enumToString (const eZFunc e)
+{
+#define HELPER(s)	case eZFunc::s: return #s;
+
+    switch (e)
+    {
+    default:
+        DBGBREAK;
+        return "??INVALID-VALUE??";
+
+    HELPER(NEVER)
+    HELPER(LESS)
+    HELPER(EQUAL)
+	HELPER(LESS_EQUAL)
+	HELPER(GREATER)
+	HELPER(NOT_EQUAL)
+	HELPER(GREATER_EQUAL)
+	HELPER(ALWAYS)
+    }
+
+#undef HELPER
+}
+
+//********************************************************** 
+bool utils::stringToEnum (const char *str, eZFunc *out)
+{
+	assert (NULL != out);
+	if (NULL == str)
+		return false;
+    if (0 == str[0])
+        return false;
+	
+#define HELPER(fmt)			if (0 == strcasecmp(str, #fmt)) { *out=eZFunc::fmt; return true; }
+
+    HELPER(NEVER)
+	HELPER(LESS)
+	HELPER(EQUAL)
+	HELPER(LESS_EQUAL)
+	HELPER(GREATER)
+	HELPER(NOT_EQUAL)
+	HELPER(GREATER_EQUAL)
+	HELPER(ALWAYS)
+#undef HELPER	
+	return false;
+}
+
+//***********************************************
+const char*	utils::enumToString (const eStencilOp e)
+{
+#define HELPER(s)	case eStencilOp::s: return #s;
+
+    switch (e)
+    {
+    default:
+        DBGBREAK;
+        return "??INVALID-VALUE??";
+
+    HELPER(KEEP)
+    HELPER(ZERO)
+    HELPER(REPLACE)
+	HELPER(INCR_AND_CLAMP)
+	HELPER(DECR_AND_CLAMP)
+	HELPER(INVERT)
+	HELPER(INCR_AND_WRAP)
+	HELPER(DECR_AND_WRAP)
+    }
+
+#undef HELPER
+}
+
+//********************************************************** 
+bool utils::stringToEnum (const char *str, eStencilOp *out)
+{
+	assert (NULL != out);
+	if (NULL == str)
+		return false;
+    if (0 == str[0])
+        return false;
+	
+#define HELPER(fmt)			if (0 == strcasecmp(str, #fmt)) { *out=eStencilOp::fmt; return true; }
+
+    HELPER(KEEP)
+	HELPER(ZERO)
+	HELPER(REPLACE)
+	HELPER(INCR_AND_CLAMP)
+	HELPER(DECR_AND_CLAMP)
+	HELPER(INVERT)
+	HELPER(INCR_AND_WRAP)
+	HELPER(DECR_AND_WRAP)
+#undef HELPER	
+	return false;
+}
+
+//***********************************************
+const char*	utils::enumToString (const eStencilFunc e)
+{
+#define HELPER(s)	case eStencilFunc::s: return #s;
+
+    switch (e)
+    {
+    default:
+        DBGBREAK;
+        return "??INVALID-VALUE??";
+
+    HELPER(NEVER)
+	HELPER(LESS)
+	HELPER(EQUAL)
+	HELPER(LESS_EQUAL)
+	HELPER(GREATER)
+	HELPER(NOT_EQUAL)
+	HELPER(GREATER_EQUAL)
+	HELPER(ALWAYS)
+    }
+
+#undef HELPER
+}
+
+//********************************************************** 
+bool utils::stringToEnum (const char *str, eStencilFunc *out)
+{
+	assert (NULL != out);
+	if (NULL == str)
+		return false;
+    if (0 == str[0])
+        return false;
+	
+#define HELPER(fmt)			if (0 == strcasecmp(str, #fmt)) { *out=eStencilFunc::fmt; return true; }
+
+    HELPER(NEVER)
+	HELPER(LESS)
+	HELPER(EQUAL)
+	HELPER(LESS_EQUAL)
+	HELPER(GREATER)
+	HELPER(NOT_EQUAL)
+	HELPER(GREATER_EQUAL)
+	HELPER(ALWAYS)
+#undef HELPER	
+	return false;
+}
+
+//***********************************************
+const char*	utils::enumToString (const eCullMode e)
+{
+#define HELPER(s)	case eCullMode::s: return #s;
+
+    switch (e)
+    {
+    default:
+        DBGBREAK;
+        return "??INVALID-VALUE??";
+
+    HELPER(NONE)
+	HELPER(CW)
+	HELPER(CCW)
+    }
+
+#undef HELPER
+}
+
+//********************************************************** 
+bool utils::stringToEnum (const char *str, eCullMode *out)
+{
+	assert (NULL != out);
+	if (NULL == str)
+		return false;
+    if (0 == str[0])
+        return false;
+	
+#define HELPER(fmt)			if (0 == strcasecmp(str, #fmt)) { *out=eCullMode::fmt; return true; }
+
+    HELPER(NONE)
+	HELPER(CW)
+	HELPER(CCW)
+#undef HELPER	
+	return false;
+}
+
+
+//***********************************************
+const char*	utils::enumToString (const eDrawPrimitive e)
+{
+#define HELPER(s)	case eDrawPrimitive::s: return #s;
+
+    switch (e)
+    {
+    default:
+        DBGBREAK;
+        return "??INVALID-VALUE??";
+
+    HELPER(pointList)
+	HELPER(lineList)
+	HELPER(lineStrip)
+	HELPER(trisList)
+	HELPER(trisStrip)
+	HELPER(trisFan)
+    }
+
+#undef HELPER
+}
+
+//********************************************************** 
+bool utils::stringToEnum (const char *str, eDrawPrimitive *out)
+{
+	assert (NULL != out);
+	if (NULL == str)
+		return false;
+    if (0 == str[0])
+        return false;
+	
+#define HELPER(fmt)			if (0 == strcasecmp(str, #fmt)) { *out=eDrawPrimitive::fmt; return true; }
+
+    HELPER(pointList)
+	HELPER(lineList)
+	HELPER(lineStrip)
+	HELPER(trisList)
+	HELPER(trisStrip)
+	HELPER(trisFan)
+#undef HELPER	
+	return false;
+}
+
+
 //*************************************************************************
 const char* utils::enumToString (eSocketError s)
 {
@@ -71,6 +582,11 @@ const char* utils::enumToString (const eDataFormat f)
     ENUM_TO_STRING_CASE(eDataFormat, _mat4x4);
     }
 }
+
+
+
+
+
 
 //******************************************************************************
 u8 gos::utils::bufferWriteF32 (u8 *buffer, f32 val)

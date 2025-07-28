@@ -163,7 +163,7 @@ VkImageLayout gpu::toVulkan (eDepthStencilLayout s, eImageFormat fmt)
 };
 
 //**********************************************************
-VkFormat gpu::toVulkan (gos::eImageFormat fmt)
+VkFormat gpu::toVulkan (eImageFormat fmt)
 {
     switch (fmt)
     {

@@ -4,15 +4,15 @@
 
 namespace gos
 {
-	/******************************************************************************
-	 * BufferSparse
-	 *
-	 * Fornisce i metodi per il read/write di un blocco di memoria che, internalmente, viene gestito come una serie
-	 * di blocchi di memoria non contigui
-	 * Nel momento in cui si volesse far crescere il buffer, BufferSparse si appoggia ad un Allocator per riservare nuova
-	 * memoria. 
-	 * La dimensione della nuova memoria allocata, � di almeno [minSizeOfBlocksWhengrowing] bytes
-	 *******************************************************************************/
+	/**
+ 	* @brief BufferSparse
+ 	* 
+	* Fornisce i metodi per il read/write di un blocco di memoria che, internalmente, viene gestito come una serie
+	* di blocchi di memoria non contigui
+	* Nel momento in cui si volesse far crescere il buffer, BufferSparse si appoggia ad un Allocator per riservare nuova
+	* memoria. 
+	* La dimensione della nuova memoria allocata, e' di almeno [minSizeOfBlocksWhengrowing] bytes
+	*/
 	class BufferSparse
 	{
 	public:

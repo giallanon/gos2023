@@ -126,6 +126,8 @@ gosDataFormat.cpp
 gosDataFormat.h
 gosDataTypes.h
 gosEnumAndDefine.h
+gosErr.cpp
+gosErr.h
 gosFastArray.h
 gosFIFO.h
 gosFIFOFixedSize.h

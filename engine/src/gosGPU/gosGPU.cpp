@@ -166,7 +166,7 @@ bool GPU::init (GOSWinHandle mainWin, bool vSyncIN)
             defaultDepthStencil.gosFormat = gpu::fromVulkan(s->depthFormat);
         }
 
-        gos::logger::log ("default zbuffer created with format: %s\n", enumToString(defaultDepthStencil.gosFormat));
+        gos::logger::log ("default zbuffer created with format: %s\n", utils::enumToString(defaultDepthStencil.gosFormat));
     }
 
     //fine
@@ -487,7 +487,7 @@ void GPU::fence_resetMany (const VkFence *fenceHandleList, u32 fenceCount)
 }
 
 //************************************
-gos::eImageFormat GPU::swapChain_getImageFormat() const
+eImageFormat GPU::swapChain_getImageFormat() const
 { 
     return gpu::fromVulkan(vulkan.swapChainInfo.imageFormat); 
 }
@@ -1122,13 +1122,13 @@ const gpu::RenderTarget* GPU::getInfo (const GPURenderTargetHandle handle) const
  * 
  * 
  *************************************************************************************************************/
-bool GPU::depthStencil_create (const gos::eImageFormat fmt, const gos::Dim2D &widthIN, const gos::Dim2D &heightIN, bool bWithStencil, GPUDepthStencilHandle *out_handle)
+bool GPU::depthStencil_create (const eImageFormat fmt, const gos::Dim2D &widthIN, const gos::Dim2D &heightIN, bool bWithStencil, GPUDepthStencilHandle *out_handle)
 {
     assert (NULL != out_handle);
 
     if (!image::isFormatWithDepth(fmt))
     {
-        gos::logger::err ("GPU::depthStencil_create() => invalid depth format (%s). Must be a valid 'DEPTH_something'\n", gos::enumToString(fmt));
+        gos::logger::err ("GPU::depthStencil_create() => invalid depth format (%s). Must be a valid 'DEPTH_something'\n", utils::enumToString(fmt));
         return false;
     }
 
@@ -1136,7 +1136,7 @@ bool GPU::depthStencil_create (const gos::eImageFormat fmt, const gos::Dim2D &wi
     {
         if (!image::isFormatWithStencil(fmt))
         {
-            gos::logger::err ("GPU::depthStencil_create() => invalid depth format (%s). Format must include a STENCIL option\n", gos::enumToString(fmt));
+            gos::logger::err ("GPU::depthStencil_create() => invalid depth format (%s). Format must include a STENCIL option\n", utils::enumToString(fmt));
             return false;
         }
     }
@@ -1144,7 +1144,7 @@ bool GPU::depthStencil_create (const gos::eImageFormat fmt, const gos::Dim2D &wi
     {
         if (image::isFormatWithStencil(fmt))
         {
-            gos::logger::err ("GPU::depthStencil_create() => invalid depth format (%s). Format must NOT include a STENCIL option\n", gos::enumToString(fmt));
+            gos::logger::err ("GPU::depthStencil_create() => invalid depth format (%s). Format must NOT include a STENCIL option\n", utils::enumToString(fmt));
             return false;
         }
     }

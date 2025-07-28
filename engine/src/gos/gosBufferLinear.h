@@ -4,14 +4,14 @@
 
 namespace gos
 {
-	/******************************************************************************
-	 * BufferLinear
-	 *
-	 * Gestisce un blocco di memoria, che viene mantenuto contiguo anche a seguito di eventuale crescita del buffer.
-	 * Nel momento in cui si volesse far crescere il buffer, BufferLinear si appoggia ad un Allocator per riservare nuova
-	 * memoria. Il buffer precedente viene memcpy nel buffer nuovo.
-	 * In questo modo il blocco di memoria e' sempre contiguo, anche a seguito di espansione
-	 */
+	/**
+ 	* @brief BufferLinear
+ 	* 
+	* Gestisce un blocco di memoria, che viene mantenuto contiguo anche a seguito di eventuale crescita del buffer.
+	* Nel momento in cui si volesse far crescere il buffer, BufferLinear si appoggia ad un Allocator per riservare nuova
+	* memoria. Il buffer precedente viene memcpy nel buffer nuovo.
+	* In questo modo il blocco di memoria e' sempre contiguo, anche a seguito di espansione
+	*/
 	class BufferLinear
 	{
 	public:

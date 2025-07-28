@@ -26,7 +26,7 @@ bool VulkanExample7::virtual_onInit ()
 {
     //creo un renderLayout
     gpu->renderLayout_createNew (&renderLayoutHandle)
-        .requireRendertarget (gos::eImageFormat::U8_RGBA, eImageLayout::undefined, eImageLayout::transfer_src, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
+        .requireRendertarget (eImageFormat::U8_RGBA, eImageLayout::undefined, eImageLayout::transfer_src, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
         .addSubpass_GFX()
             .writeToRenderTarget(0)
         .end()
@@ -40,7 +40,7 @@ bool VulkanExample7::virtual_onInit ()
 
 
     //creo un RT grosso tanto quanto la swapchain
-    if (!gpu->renderTarget_create ("0-", "0-", gos::eImageFormat::U8_RGBA, &rt1))
+    if (!gpu->renderTarget_create ("0-", "0-", eImageFormat::U8_RGBA, &rt1))
     {
         gos::logger::err ("VulkanApp::init() => can't create render target\n");
         return false;

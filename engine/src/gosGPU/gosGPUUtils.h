@@ -1,6 +1,7 @@
 #ifndef _gosGPUUtils_h_
 #define _gosGPUUtils_h_
 #include "gosGPUEnumAndDefine.h"
+#include "vulkan/gosGPUVulkanEnumAndDefine.h"
 #include "../gosImage/gosImageEnumAndDefine.h"
 
 namespace gos

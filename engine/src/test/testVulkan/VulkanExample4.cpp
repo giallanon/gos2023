@@ -126,7 +126,7 @@ bool VulkanExample4::virtual_onInit ()
 /*        gos::image::Builder builder;
 
         builder.begin (gos::getScrapAllocator(), &im)
-            .beginTexture (gos::eImageFormat::U8_RGBA_sRGB, 512, 512, 2)
+            .beginTexture (eImageFormat::U8_RGBA_sRGB, 512, 512, 2)
             .setMipMapDataFromFile (0, "texture/faccia512x512.jpg")
             .setMipMapDataFromFile (1, "texture/faccia256x256.png")
             .endTexture()

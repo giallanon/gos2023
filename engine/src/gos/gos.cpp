@@ -2,19 +2,22 @@
 #include "logger/gosLogger.h"
 #include "gosUtils.h"
 #include "gosThreadMsgQ.h"
+#include "gosBufferLinear.h"
 
 struct sGOSGlobals
 {
-	u64					timeStarted_usec;
-	gos::Logger			*logger;
-	char				*appName;
-	char				*pathToWritableFolder;
-	u32 				lengthOfAppPathConSlash;
-	u32 				lengthOfPathToWritableFolder;
+	u64						timeStarted_usec;
+	gos::Logger				*logger;
+	char					*appName;
+	char					*pathToWritableFolder;
+	u32 					lengthOfAppPathConSlash;
+	u32 					lengthOfPathToWritableFolder;
+	gos::MultiThreadErrHandler	*errHandler;
 };
 
 static sGOSGlobals		gosGlobals;
 static gos::Random		gosGlobalsRnd;
+
 
 
 //******************************************
@@ -82,6 +85,8 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 	gosGlobals.lengthOfAppPathConSlash = gos::string::utf8::lengthInByte (gos::getAppPathNoSlash());
 	gosGlobals.lengthOfPathToWritableFolder = gos::string::utf8::lengthInByte (gosGlobals.pathToWritableFolder);
 
+	//global error logger
+	gosGlobals.errHandler = new	gos::MultiThreadErrHandler();
 
 	//logger
 	switch (init._logMode)
@@ -118,7 +123,6 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 	gos::logger::log (eTextColor::white, "%s is starting...\n", appName);
 
 	gosGlobals.appName = reinterpret_cast<char*>(gos::string::utf8::allocStr (gos::getSysHeapAllocator(), appName));
-
 
 
 	//generatore random
@@ -158,6 +162,9 @@ void gos::deinit()
 		logger->log ("FIN\n\n\n\n");
 		delete logger;
 	}
+
+	delete gosGlobals.errHandler;
+	gosGlobals.errHandler = NULL;
 }
 
 //******************************************
@@ -184,8 +191,13 @@ void gos::logger::err (const char *format, ...)
 {
 	va_list argptr; 
 	va_start (argptr, format); 
-	gosGlobals.logger->vlogWithPrefix (eTextColor::red, "ERROR=>", format, argptr); 
-	va_end (argptr); 
+	gosGlobals.logger->vlogWithPrefix (eTextColor::red, "ERROR=>", format, argptr);
+	va_end (argptr);
+
+	//aggiungo l'errore sul globalErr
+	va_start (argptr, format); 
+	gosGlobals.errHandler->vadd (gos::thread::getCurrentThreadID(), format, argptr);
+	va_end (argptr);
 
 	DBGBREAK;
 }
@@ -441,7 +453,6 @@ void gos::socket::UDPSendBroadcast(Socket &sok, const u8 *buffer, u32 nByteToSen
 }
 
 //*************************************************** 
-#include "gosBufferLinear.h"
 bool gos::runShellScriptAndStoreResult (const char *cmdLine, gos::Allocator *allocator, char **out_result, u32 *out_resultLen)
 {
 	assert (NULL != out_resultLen);
@@ -486,3 +497,31 @@ bool gos::runShellScriptAndStoreResult (const char *cmdLine, gos::Allocator *all
 	
 	return true;
 }
+
+//******************************************
+void gos::err::clear()
+{
+	gosGlobals.errHandler->clear (gos::thread::getCurrentThreadID());
+}
+
+//******************************************
+void gos::err::add (const char *format, ...)
+{
+    va_list argptr; 
+    va_start (argptr, format); 
+	gosGlobals.errHandler->vadd (gos::thread::getCurrentThreadID(), format, argptr);
+    va_end (argptr);     
+}
+
+//******************************************
+u32 gos::err::anyError()
+{
+	return gosGlobals.errHandler->getErrCount(gos::thread::getCurrentThreadID());
+}
+
+//******************************************
+const char* gos::err::getErrByIndex (u32 i)
+{
+	return gosGlobals.errHandler->getErrByIndex(gos::thread::getCurrentThreadID(), i);
+}
+

@@ -3,8 +3,7 @@
 #include "GLFW/gosGLFWInclude.h"
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
-#include "../../gos/gosEnumAndDefine.h"
-//#include "../../gos/gos.h"
+#include "../gosGPUEnumAndDefine.h"
 
 
 static constexpr u8 SWAPCHAIN_NUM_MAX_IMAGES = 8;
@@ -187,6 +186,38 @@ namespace gos
         u64                 memory_curAllocated;
         
     };
+
+
+	namespace gpu
+	{
+		struct sVtxDescriptor
+		{
+			u8              streamIndex;
+			u8              bindingLocation;
+			eDataFormat     format;
+			u8              offset;
+		};
+
+		struct sPipeline
+		{
+			void    reset ()                        { vkPipelineLayoutHandle = VK_NULL_HANDLE; vkPipelineHandle = VK_NULL_HANDLE; memset (pushContantList, 0, sizeof(pushContantList)); }
+
+			VkPipelineLayout    vkPipelineLayoutHandle;
+			VkPipeline          vkPipelineHandle;
+			VkPushConstantRange pushContantList[GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE];
+		};  
+
+
+		struct sMappedBuffer
+		{
+            void            *host_pt;
+			VkDeviceMemory  _vkMemHandle;
+            u32             offset;
+            u32             size;
+		};
+	} //namespace gpu
+
+
 
 }  //namespace gos
 

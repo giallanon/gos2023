@@ -146,6 +146,137 @@ enum class eAliasPathMode : u8
     absolutePath
 };
 
+enum class eImageFormat : u8
+{
+    U8_RGBA_sRGB	= 0,
+    U8_RGBA			= 1,
+    U8_RGB			= 2,
+    U8_R			= 3,
+
+    U16_RGBA		= 4,
+    U16_RGB			= 5,
+    U16_R			= 6,
+
+    U32_RGBA		= 7,
+    U32_RGB			= 8,
+    U32_R			= 9,
+
+    F32_RGBA		= 10,
+    F32_RGB			= 11,
+    F32_R			= 12,
+
+    U8_BGRA_sRGB	= 20,
+
+    //depth format	(range 0xE0 - 0xEF)
+    DEPTH_F32				= 0xE0,			//solo depth float 32bit
+    DEPTH_U16				= 0xE1,			//solo depth 16 bit intero
+    DEPTH_F32_STENCIL_U8	= 0xEA,			//depth f32 e stencil u8
+    DEPTH_U16_STENCIL_U8	= 0xEB,			//depth u16 e stencil u8
+    DEPTH_U24_STENCIL_U8	= 0xEC,			//depth u24 e stencil u8
+
+    //compressed format
+    DDS_BC3			= 0xF2,
+    DDS_BC4			= 0xF3,
+    DDS_BC5			= 0xF4,
+
+    //uso interno
+    _SAME_AS_CURRENT_SWAPCHAIN = 0xFF
+};
+
+enum class eDrawPrimitive : u8
+{
+	pointList = 0,
+	
+	lineList = 1,
+	lineStrip = 2,
+	
+	trisList = 3,
+	trisStrip = 4,
+	trisFan = 5
+};
+
+enum class eShaderType : u8
+{
+	vertexShader = 0,
+	fragmentShader = 1,
+	unknown = 0xff
+};
+
+enum class eZFunc : u8
+{
+	NEVER           = 0,
+	LESS            = 1,
+	EQUAL           = 2,
+	LESS_EQUAL      = 3,
+	GREATER         = 4,
+	NOT_EQUAL       = 5,
+	GREATER_EQUAL   = 6,
+	ALWAYS          = 7 
+};
+
+enum class eStencilOp : u8
+{
+	KEEP       		= 0,
+	ZERO       		= 1,
+	REPLACE    		= 2,
+	INCR_AND_CLAMP  = 3,
+	DECR_AND_CLAMP  = 4,
+	INVERT     		= 5,
+	INCR_AND_WRAP   = 6,
+	DECR_AND_WRAP   = 7 
+};
+
+enum class eStencilFunc : u8
+{
+	NEVER           = 0,
+	LESS            = 1,
+	EQUAL           = 2,
+	LESS_EQUAL      = 3,
+	GREATER         = 4,
+	NOT_EQUAL       = 5,
+	GREATER_EQUAL   = 6,
+	ALWAYS          = 7 
+};
+
+enum class eCullMode : u8
+{
+	NONE	= 0,
+	CW		= 1,
+	CCW		= 2
+};
+
+enum class eImageLayout : u8
+{
+	undefined = 0,					//VK_IMAGE_LAYOUT_UNDEFINED
+	general,						//VK_IMAGE_LAYOUT_GENERAL
+    color_attachment_optimal, 		//VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    shader_readonly,				//VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	transfer_src,					//VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+    transfer_dst,					//VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+	presentation,					//VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+};
+
+enum class eAttachmentLoadOp : u8
+{
+    load = 0, 		//VK_ATTACHMENT_LOAD_OP_LOAD
+    clear,			//VK_ATTACHMENT_LOAD_OP_CLEAR
+    dont_care		//VK_ATTACHMENT_LOAD_OP_DONT_CARE
+};
+
+enum class eAttachmentStoreOp : u8
+{
+	store = 0, 		//VK_ATTACHMENT_STORE_OP_STORE
+	dont_care,		//VK_ATTACHMENT_STORE_OP_DONT_CARE
+    none			//VK_ATTACHMENT_STORE_OP_NONE
+};
+
+enum class eDepthStencilLayout : u8
+{
+	undefined = 0,						//VK_IMAGE_LAYOUT_UNDEFINED
+    depth_attachment_optimal, 			//VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+    depth_shader_readonly,				//VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
+};
+
 namespace gos
 {
     struct sGOSInit

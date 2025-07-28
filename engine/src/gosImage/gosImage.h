@@ -6,9 +6,6 @@
 
 namespace gos
 { 
-	const char*	enumToString (const eImageFormat e);
-	bool stringToEnum (const char *str, eImageFormat *out);
-	
 	namespace image
 	{
 		u16 	getFormatSize (const eImageFormat fmt);

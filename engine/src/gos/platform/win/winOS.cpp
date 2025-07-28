@@ -372,5 +372,12 @@ bool platform::NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP)
 	return (whichAdapterTypeWasFound != 0);
 }
 
+//***********************************
+u32 platform::getCurrentThreadID()
+{
+    //pid_t tid = gettid();
+    return static_cast<u32>(GetCurrentThreadId());
+}
+
 #endif //GOS_PLATFORM__WINDOWS
 

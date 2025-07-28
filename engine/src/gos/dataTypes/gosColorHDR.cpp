@@ -76,12 +76,12 @@ bool gosColorHDR_channelFromHex (f32 originalVal, const char* s, u32 len, f32 *o
 }
 
 //******************************************
-void ColorHDR::setFromString (const char* s, u32 lenOfS)
+bool ColorHDR::setFromString (const char* s, u32 lenOfS)
 {
 	if (NULL == s || s[0] != '#')
 	{
 		DBGBREAK;
-		return;
+		return false;
 	}
 
 	if (u32MAX == lenOfS)
@@ -94,7 +94,7 @@ void ColorHDR::setFromString (const char* s, u32 lenOfS)
 		if (gosColorHDR_channelFromHex (col.r, &s[1], 1, &rr) && gosColorHDR_channelFromHex (col.g, &s[2], 1, &gg) && gosColorHDR_channelFromHex (col.b, &s[3], 1, &bb))
 		{
 			col.a=1; col.r=rr; col.g=gg; col.b=bb;
-			return;
+			return true;
 		}
 		break;
 
@@ -102,7 +102,7 @@ void ColorHDR::setFromString (const char* s, u32 lenOfS)
 		if (gosColorHDR_channelFromHex (col.a, &s[1], 1, &aa) && gosColorHDR_channelFromHex (col.r, &s[2], 1, &rr) && gosColorHDR_channelFromHex (col.g, &s[3], 1, &gg) && gosColorHDR_channelFromHex (col.b, &s[4], 1, &bb))
 		{
 			col.a=aa; col.r=rr; col.g=gg; col.b=bb;
-			return;
+			return true;
 		}
 		break;
 
@@ -110,7 +110,7 @@ void ColorHDR::setFromString (const char* s, u32 lenOfS)
 		if (gosColorHDR_channelFromHex (col.r, &s[1], 2, &rr) && gosColorHDR_channelFromHex (col.g, &s[3], 2, &gg) && gosColorHDR_channelFromHex (col.b, &s[5], 2, &bb))
 		{
 			col.a=1; col.r=rr; col.g=gg; col.b=bb;
-			return;
+			return true;
 		}
 		break;
 
@@ -118,11 +118,12 @@ void ColorHDR::setFromString (const char* s, u32 lenOfS)
 		if (gosColorHDR_channelFromHex (col.a, &s[1], 2, &aa) && gosColorHDR_channelFromHex (col.r, &s[3], 2, &rr) && gosColorHDR_channelFromHex (col.g, &s[5], 2, &gg)  && gosColorHDR_channelFromHex (col.b, &s[7], 2, &bb))
 		{
 			col.a=aa; col.r=rr; col.g=gg; col.b=bb;
-			return;
+			return true;
 		}
 		break;
 	}
 
 	DBGBREAK;
+	return false;
 }
 

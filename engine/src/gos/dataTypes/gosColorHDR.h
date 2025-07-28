@@ -18,7 +18,7 @@ namespace gos
 	 *
 	 *	Accetta anche la sintassi stringa nei seguenti formati:
 	 *	#rgb, #argb, #rrggbb, #aarrggbb
-	 *	Al posto di un colore, � possibile indicare un punto "." per dire "non modificare il colore di quel canale"-
+	 *	Al posto di un colore, e' possibile indicare un punto "." per dire "non modificare il colore di quel canale"-
 	 *	Ad esempio:  #..f0 significa non toccare alfa, non toccare red, metti green=ff, metti blue=00
 	 *	Per i colori che non indicano un alfa, si assume alfa = 1
 	 *================================================================*/
@@ -39,7 +39,7 @@ namespace gos
 
 				void		set (f32 r, f32 g, f32 b)							{ col.a=1.0f;	col.r=r; col.g=g; col.b=b; }
 				void		set (f32 a, f32 r, f32 g, f32 b)					{ col.a=a;		col.r=r; col.g=g; col.b=b; }
-				void		setFromString (const char* s, u32 lenOfS=u32MAX);
+				bool		setFromString (const char* s, u32 lenOfS=u32MAX);
 				void		setU32_argb (u32 argb)								{ fromU32(argb); }
 				void		setU8_argb (u8 a, u8 r, u8 g, u8 b)					{ col.a = (f32)a / 255.0f; col.r = (f32)r / 255.0f; col.g = (f32)g / 255.0f; col.b = (f32)b / 255.0f; }
 				void		setU8_a (u8 a)										{ col.a = (f32)a / 255.0f; }
