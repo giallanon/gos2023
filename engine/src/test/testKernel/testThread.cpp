@@ -201,6 +201,73 @@ namespace test3
     }
 }
 
+//*******************************
+namespace test4_globalErr
+{
+    struct sUserParam1
+    {
+        i16 paramI16;
+    };
+
+    i16 mainFn (void *userparam)
+    {
+        sUserParam1 *param = reinterpret_cast<sUserParam1*>(userparam);
+        
+        TEST_ASSERT(gos::err::anyError() == 0);
+        printf ("th%d: error set\n", param->paramI16);
+        gos::err::add ("errore dal main thread %d\n", param->paramI16);
+        
+        TEST_ASSERT(gos::err::anyError() == 1);
+        
+        gos::sleep_msec (100);
+        return 0;
+    }
+
+    int run()
+    {
+        //Creo un th1
+        GOSThreadHandle hThread1;
+        sUserParam1 userParam1;
+        userParam1.paramI16 = 1;
+        eThreadError err = gos::thread::create (&hThread1, test_thread::test4_globalErr::mainFn, &userParam1);
+        TEST_ASSERT(err == eThreadError::none);
+
+        gos::sleep_msec (100);
+
+        //Creo un th2
+        GOSThreadHandle hThread2;
+        sUserParam1 userParam2;
+        userParam2.paramI16 = 2;
+        err = gos::thread::create (&hThread2, test_thread::test4_globalErr::mainFn, &userParam2);
+        TEST_ASSERT(err == eThreadError::none);
+
+
+        TEST_ASSERT(gos::err::anyError() == 0);
+        gos::sleep_msec (200);
+
+
+        //a questo punto sia th1 che th2 dovrebbero aver settato il loro errore, ma a me non deve risultare nessun errore
+        TEST_ASSERT(gos::err::anyError() == 0);
+
+        gos::err::add ("errore dal main thread");
+        TEST_ASSERT(gos::err::anyError() == 1);
+
+        gos::thread::waitEnd (hThread1);
+        TEST_ASSERT(gos::err::anyError() == 1);
+
+
+        gos::thread::waitEnd (hThread2);
+        TEST_ASSERT(gos::err::anyError() == 1);
+
+        gos::err::clear();
+        TEST_ASSERT(gos::err::anyError() == 0);
+
+
+
+        return 0;
+    }
+}
+
 } //namespace test_thread
 
 
@@ -210,4 +277,5 @@ void testThread (Tester &tester)
     tester.run("thread::test1", test_thread::test1::run);
     tester.run("thread::test2", test_thread::test2::run);
     tester.run("thread::test3", test_thread::test3::run);
+    tester.run("thread::test4_globalErr", test_thread::test4_globalErr::run);
 }

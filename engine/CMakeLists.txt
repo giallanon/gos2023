@@ -60,7 +60,17 @@ if(BUILD_IS_DEBUG)
     add_compile_definitions(_DEBUG)
 elseif(BUILD_IS_RELEASE)
     add_compile_definitions(_NDEBUG)
-    add_compile_options(-O3)
+
+    #flag di ottimizzazione
+    if (MSVC)
+        add_compile_options(-O2)    #max optimization
+        add_compile_options(-Ob2)   #exand inline: any suitabile
+        add_compile_options(-Ot)    #enable intrinsic fn: yes
+        add_compile_options(-GL)    #favor fast code
+    else()
+        add_compile_options(-O3)
+    endif()
+    
 
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         add_compile_options(-Wno-maybe-uninitialized)

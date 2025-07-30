@@ -3,6 +3,9 @@
 #include "gosUtils.h"
 #include "memory/gosAllocatorHeap.h"
 
+
+void gos_err_deleteThisHandlerIfExists (u32 threadID);
+
 using namespace gos;
 
 //data struct per un thread
@@ -94,6 +97,7 @@ i16 GOS_threadFunctionWrapper (void *userParam)
     //invalido il thread handle e libero le risorse
 	gosThreadGlob.threadHandleList.release (handle);
 
+    gos_err_deleteThisHandlerIfExists (gos::thread::getCurrentThreadID());
 	return retCode;
 }
 

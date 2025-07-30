@@ -17,7 +17,7 @@ void MultiThreadErrHandler::ThreadErr::vadd (const char *format, va_list argptr)
 {
     char msg[1024];
     vsnprintf (msg, sizeof(msg), format, argptr);
-    const u16 msgLen = 1 + strlen(msg);
+    const u16 msgLen = static_cast<u16>(1 + strlen(msg));
     errCount++;
     buffer.append (&msgLen, &offset, 2, true);
     buffer.append (msg, &offset, msgLen, true);
@@ -65,6 +65,24 @@ MultiThreadErrHandler::~MultiThreadErrHandler()
     }
     thread::mutexDestroy (mutex);
 }
+
+//************************************** 
+void MultiThreadErrHandler::deleteThisHandlerIfExists (u32 threadID)
+{
+    MUTEX_LOCK(mutex);
+    for (u32 i=0; i<NUM_MAX_HANDLER; i++)
+    {
+        if (handlerList[i].threadID == threadID)
+        {
+            delete handlerList[i].err;
+            handlerList[i].threadID = 0;
+            handlerList[i].err = NULL;
+            break;
+        }
+    }
+    MUTEX_UNLOCK(mutex);
+}
+
 
 //**************************************
 MultiThreadErrHandler::ThreadErr* MultiThreadErrHandler::exists (u32 threadID) const

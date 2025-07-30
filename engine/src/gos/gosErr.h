@@ -23,8 +23,10 @@ namespace gos
 		void 			clear (u32 threadID);
 		void 			add (u32 threadID, const char *format, ...)                 { va_list argptr; va_start (argptr, format); vadd (threadID, format, argptr); va_end (argptr); }
         void            vadd (u32 threadID, const char *format, va_list argptr);
-		u32				getErrCount(u32 threadID);
-		const char*		getErrByIndex (u32 threadID, u32 i);        
+		u32				getErrCount (u32 threadID);
+		const char*		getErrByIndex (u32 threadID, u32 i);
+
+        void            deleteThisHandlerIfExists (u32 threadID);
 
     private:
         static const u8 NUM_MAX_HANDLER = 32;

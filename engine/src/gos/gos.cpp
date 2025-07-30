@@ -525,3 +525,8 @@ const char* gos::err::getErrByIndex (u32 i)
 	return gosGlobals.errHandler->getErrByIndex(gos::thread::getCurrentThreadID(), i);
 }
 
+//******************************************
+void gos_err_deleteThisHandlerIfExists (u32 threadID)
+{
+	return gosGlobals.errHandler->deleteThisHandlerIfExists (threadID);
+}
