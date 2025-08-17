@@ -1,0 +1,149 @@
+{
+	"files": [
+		{
+			"path": "src/gosGPU/gosGPU.cpp",
+			"bookmarks": [
+				{
+					"line": 158,
+					"column": 1,
+					"label": ""
+				},
+				{
+					"line": 492,
+					"column": 10,
+					"label": ""
+				},
+				{
+					"line": 593,
+					"column": 29,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/gos/memory/Doug_Lea_malloc.h",
+			"bookmarks": [
+				{
+					"line": 667,
+					"column": 19,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/gos/string/gosUTF8.cpp",
+			"bookmarks": [
+				{
+					"line": 332,
+					"column": 52,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/test/testVulkan/VulkanApp.cpp",
+			"bookmarks": [
+				{
+					"line": 10,
+					"column": 7,
+					"label": ""
+				},
+				{
+					"line": 86,
+					"column": 29,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/gosInput/gosInputMapper.cpp",
+			"bookmarks": [
+				{
+					"line": 202,
+					"column": 12,
+					"label": ""
+				},
+				{
+					"line": 450,
+					"column": 37,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/test/testVulkan/VulkanExample4.cpp",
+			"bookmarks": [
+				{
+					"line": 124,
+					"column": 15,
+					"label": ""
+				},
+				{
+					"line": 391,
+					"column": 37,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/test/testVulkan/VulkanExample5.cpp",
+			"bookmarks": [
+				{
+					"line": 65,
+					"column": 20,
+					"label": ""
+				},
+				{
+					"line": 240,
+					"column": 1,
+					"label": ""
+				},
+				{
+					"line": 356,
+					"column": 23,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/gosGeom/gosGeomShapes_sphere.cpp",
+			"bookmarks": [
+				{
+					"line": 26,
+					"column": 0,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/gosInput/gosInput.cpp",
+			"bookmarks": [
+				{
+					"line": 292,
+					"column": 12,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/test/testVulkan/VulkanExample5_line.cpp",
+			"bookmarks": [
+				{
+					"line": 89,
+					"column": 24,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/gos/gosDataBlob_DefBuilder.cpp",
+			"bookmarks": [
+				{
+					"line": 99,
+					"column": 13,
+					"label": ""
+				}
+			]
+		}
+	]
+}

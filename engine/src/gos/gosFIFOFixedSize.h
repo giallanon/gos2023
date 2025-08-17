@@ -47,22 +47,23 @@ namespace gos
 								}
 							}
 
-		bool				pop (T &t)
+		bool				pop (T *out_val)
 							{
+								assert (NULL != out_val);
 								if (isEmpty())
 									return false;
-								t = blob[iPop++];
+								*out_val = blob[iPop++];
 								if (N == iPop)
 									iPop = 0;
 								bFull = 0;
 								return true;
 							}
 
-		bool				top (T &t) const
+		bool				top (T *out_val) const
 							{
 								if (isEmpty())
 									return false;
-								t = blob[iPop];
+								*out_val = blob[iPop];
 								return true;
 							}
 

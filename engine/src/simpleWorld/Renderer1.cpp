@@ -70,7 +70,7 @@ bool Renderer1::priv_setupVulkan()
 bool Renderer1::priv_createDescriptorMaterial()
 {
     //Creo il descriptorSet layout 2
-    if (!gpu->descrSetLayout_createStatic (&descriptorMaterial.descr.layout)
+    if (!gpu->descrSetLayout_create (&descriptorMaterial.descr.layout)
         .add_dynamicStorageBuffer (VK_SHADER_STAGE_FRAGMENT_BIT) //set 2, binding 0
         .end())
     {

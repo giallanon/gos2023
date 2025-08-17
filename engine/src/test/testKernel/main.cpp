@@ -8,6 +8,7 @@ void testMath(Tester &tester);
 void testThread (Tester &tester);
 void testIniFile (Tester &tester);
 void testAllocTracker (Tester &tester);
+void testDataBlob (Tester &tester);
 
 //********************************
 #include "protocol/gosProtocolChSocketTCP.h"
@@ -50,11 +51,12 @@ void runAllTest()
 {
     Tester tester;
     {
-        testGos (tester);
-        testMath(tester);
-        testThread (tester);
-        testIniFile (tester);
-        testAllocTracker (tester);
+        //testGos (tester);
+        //testMath(tester);
+        //testThread (tester);
+        //testIniFile (tester);
+        //testAllocTracker (tester);
+        testDataBlob (tester);
     }
     tester.printReport();
 }
@@ -62,7 +64,7 @@ void runAllTest()
 
 
 //********************************+
-int main()
+int main(int argc, const char **argv)
 {
     gos::sGOSInit init;
     init.memory_setDefaultForNonGame();

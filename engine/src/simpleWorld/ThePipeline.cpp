@@ -238,7 +238,7 @@ bool ThePipeline::priv_createDescriptorBase()
     gos::gpu::DescrSetInstanceWriter descrWriter;
 
     //descriptor base: texture & sampler
-    if (!gpu->descrSetLayout_createDynamic (&descriptorBase.layout)
+    if (!gpu->descrSetLayout_create_updAfterBind (&descriptorBase.layout)
         .add_sampler (VK_SHADER_STAGE_FRAGMENT_BIT, 8)                  //set 0, binding 0
         .add_texture (VK_SHADER_STAGE_FRAGMENT_BIT, NUM_MAX_TEXTURE)    //set 0, binding 1
         .end())
@@ -324,7 +324,7 @@ bool ThePipeline::decriptorBase_addTextureIfNotExitst (const GPUTextureHandle &h
 bool ThePipeline::priv_createDescriptorScene()
 {
     //Creo il descriptorSet layout 1 (scene data)
-    if (!gpu->descrSetLayout_createStatic (&descriptorScene.descr.layout)
+    if (!gpu->descrSetLayout_create (&descriptorScene.descr.layout)
         .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT) //set 1, binding 0
         .end())
     {

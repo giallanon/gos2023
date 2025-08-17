@@ -4,7 +4,7 @@ pipeline_def
 	name: clear_pass
 	
 	//output_rt: sameAsSwapchain | <eImgFormat>, <finalLayout>, <loadOp>, <storeOp>, <optional_clearColor (#rgb, #argb, #rrggbb, #aarrggbb)>
-	output_rt: U8_RGBA, transfer_src, clear, store, #000080
+	output_rt: U8_RGBA, color_attachment_undefined, clear, store, #123
 	
 	//output_depthStencil: sameAsSwapchain | <eImgFormat>, <finalLayout>, <loadOp>, <storeOp>, <optional_zClearValue>, <optional_stencilClearValue>
 	output_depthStencil: sameAsSwapchain, depth_attachment_optimal, clear, store, 1, 0

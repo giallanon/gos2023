@@ -457,7 +457,6 @@ bool gos::runShellScriptAndStoreResult (const char *cmdLine, gos::Allocator *all
 {
 	assert (NULL != out_resultLen);
 	assert (NULL != out_result);
-	assert (NULL != *out_result);
 
 	gos::BufferLinear bf;
 	bf.setup (allocator, 1024);

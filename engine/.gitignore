@@ -1,4 +1,4 @@
 
-.vscode/
 build/
 lib/
+!.vscode/launch.json

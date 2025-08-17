@@ -62,7 +62,7 @@ bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHa
     }
 
     //Creo il descriptorSet layout  con un solo UNIFORM BUFFER per il VTX SHADER
-    gpu->descrSetLayout_createStatic (&hDescrSetLayout)
+    gpu->descrSetLayout_create (&hDescrSetLayout)
         .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT)
         .end();
     if (hDescrSetLayout.isInvalid())

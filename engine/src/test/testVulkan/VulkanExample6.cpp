@@ -164,7 +164,7 @@ bool VulkanExample6::virtual_onInit ()
     }
 
     //Creo il descriptorSet layout  con un solo UNIFORM BUFFER per il VTX SHADER
-    gpu->descrSetLayout_createStatic(&descrSetLayoutHandle)
+    gpu->descrSetLayout_create(&descrSetLayoutHandle)
         .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT)
         .end();
     if (descrSetLayoutHandle.isInvalid())

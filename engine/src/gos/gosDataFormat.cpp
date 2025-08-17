@@ -1,5 +1,5 @@
 #include "gosDataFormat.h"
-
+#include "gosEnumAndDefine.h"
 
 //*****************************************
 u8 gos::dataformat::getSize (eDataFormat f)

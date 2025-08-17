@@ -484,8 +484,15 @@ void SPVReflect::printInfo() const
             gos::logger::log ("no info!\n");
         else
         {
+            u8 last_descriptor_set = 0;
             for (u32 i=0; i<descrSetList.getNElem(); i++)
             {
+                if (descrSetList(i).set != last_descriptor_set)
+                {
+                    last_descriptor_set = descrSetList(i).set;
+                    gos::logger::log ("\n");
+                }
+
                 char stage[32];
 
                 memset (stage, 0, sizeof(stage));

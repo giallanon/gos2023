@@ -59,7 +59,7 @@ bool PipelineParser::parseFromMemory (const u8 *buffer, u32 sizeof_buffer, Pipel
         gos::logger::err ("PipelineParser::parseFromMemory() => can't find section <def-pipeline>\n");
         return false;
     }
-    return parse_PipelineDef (*sec, out);
+    return parseFromIniFileSection (*sec, out);
 
     return false;
 }
@@ -98,7 +98,7 @@ bool PipelineParser_priv_splitParams (gos::IniFileSection &sec, const char *para
 }
 
 //**************************************
-bool PipelineParser::parse_PipelineDef (gos::IniFileSection &sec, PipelineDef *out)
+bool PipelineParser::parseFromIniFileSection (gos::IniFileSection &sec, PipelineDef *out)
 {
     assert (NULL != out);
     out->setDefault();
@@ -324,7 +324,7 @@ bool PipelineParser::parse_PipelineDef (gos::IniFileSection &sec, PipelineDef *o
     }
     
     //Opzionale:
-    //rawPrimitive: <fn>
+    //drawPrimitive: <fn>
     if (sec.exists("drawPrimitive"))
     {    
         PipelineParser_priv_splitParams (sec, "drawPrimitive", 1, [out](const char *paramName, u32 paramIndex, const char *paramValue){

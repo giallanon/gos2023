@@ -22,6 +22,7 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 add_executable(${BINARY_OUTPUT_FILENAME}
 main.cpp
 testAllocTracker.cpp
+testDataBlob.cpp
 testGos.cpp
 testIniFile.cpp
 testMath.cpp

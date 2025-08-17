@@ -62,10 +62,10 @@ namespace gos
 
         bool    parseFromFile (const char *fname, PipelineDef *out);
         bool    parseFromMemory (const u8 *buffer, u32 sizeof_buffer, PipelineDef *out);
-        //se ritornano false, il mesg di errore e' recuperabile tramite gos::err:
+        //se ritornano false, il msg di errore e' recuperabile tramite gos::err
     
 
-        bool    parse_PipelineDef (gos::IniFileSection &sec, PipelineDef *out);
+        bool    parseFromIniFileSection (gos::IniFileSection &sec, PipelineDef *out);
 
 
     private:

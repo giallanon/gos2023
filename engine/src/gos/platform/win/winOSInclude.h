@@ -55,13 +55,13 @@ typedef uintptr_t   uiPtr;      //un "intero" la cui dimensione in byte dipende 
 
 /***********************************************
  * debug helpers
- */
+ *
 #ifdef _DEBUG
 	#define	DBGBREAK	__debugbreak();
 #else
 	#define	DBGBREAK
 #endif
-
+*/
 
 /***********************************************
  * c/c++ portability stuff

@@ -29,19 +29,19 @@ namespace gos
 								return true;
 							}
 
-		bool				pop (T &t)
+		bool				pop (T *out_val)
 							{
 								if (nElem == 0)
 									return false;
-								t = blob[--nElem];
+								*out_val = blob[--nElem];
 								return true;
 							}
 
-		bool				top (T &t) const
+		bool				top (T *out_val) const
 							{
 								if (nElem == 0)
 									return false;
-								t = blob[nElem-1];
+								*out_val = blob[nElem-1];
 								return true;
 							}
 	private:

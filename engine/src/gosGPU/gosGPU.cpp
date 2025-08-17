@@ -2178,7 +2178,7 @@ bool GPU::toVulkan (const GPUStorageBufferHandle handle, VkBuffer *out, u32 *out
  * 
  * 
  *************************************************************************************************************/
-GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_createStatic (GPUDescrSetLayoutHandle *out_handle)
+GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_create (GPUDescrSetLayoutHandle *out_handle)
 {
     assert (NULL != out_handle);
     out_handle->setInvalid();
@@ -2187,7 +2187,7 @@ GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_createStatic (GPUDescrSetLa
     return *builder;
 }
 
-GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_createPushable (GPUDescrSetLayoutHandle *out_handle)
+GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_create_pushable (GPUDescrSetLayoutHandle *out_handle)
 {
     assert (NULL != out_handle);
     out_handle->setInvalid();
@@ -2196,7 +2196,7 @@ GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_createPushable (GPUDescrSet
     return *builder;
 }
 
-GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_createDynamic (GPUDescrSetLayoutHandle *out_handle)
+GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_create_updAfterBind (GPUDescrSetLayoutHandle *out_handle)
 {
     assert (NULL != out_handle);
     out_handle->setInvalid();

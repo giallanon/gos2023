@@ -1,6 +1,7 @@
 #ifndef _gosEnumAndDefine_h_
 #define _gosEnumAndDefine_h_
 #include "gosDataFormat.h"
+#include "gosMagicUID.h"
 
 //================================================================
 #define GOS_IS_POWER_OF_TWO(n)                          (n && !(n & (n - 1)))
@@ -23,8 +24,16 @@ typedef void (*GOS_ConsoleTrap_CTRL_C)(void *userParam);
 //thread thread main-fn prototype
 typedef i16 (*GOS_ThreadMainFunction)(void *userParam);
 
+#include "helpers/debugbreak.h"
+
 
 //================================================================
+enum class eEndianess : u8
+{
+    little = 0,
+    big = 1
+};
+
 enum class eSeek: u8
 {
 	start = 0,
@@ -275,6 +284,13 @@ enum class eDepthStencilLayout : u8
 	undefined = 0,						//VK_IMAGE_LAYOUT_UNDEFINED
     depth_attachment_optimal, 			//VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
     depth_shader_readonly,				//VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
+};
+
+enum class eDataBlobElemType : u8
+{
+    simpleType = 0,
+    structType = 1,
+    arrayType = 2
 };
 
 namespace gos

@@ -387,7 +387,7 @@ void TheApp::run()
             if (thePipeline.beginFrame (ctx))
             {
                 //mapRenderer.recordCommandBuffer(cw, &cam);
-                renderer.recordCommandBuffer(cw, &cam);
+                //renderer.recordCommandBuffer(cw, &cam);
                 lineRenderer.recordCommandBuffer(cw, &cam);
 
                 thePipeline.endFrame(ctx);

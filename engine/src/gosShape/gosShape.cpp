@@ -181,7 +181,7 @@ bool shape::shapeAlloc (gos::Allocator *allocator, const VtxLayout &vtxLayout, u
 		return false;
 	}
 
-	if (out_shape->magic != Shape::MAGIC ||
+	if (out_shape->magic != GOS_MAGIC__SHAPE ||
 		NULL != out_shape->idxBuffer ||
 		NULL != out_shape->vtxBuffer||
 		0 != out_shape->numVtx ||
@@ -207,9 +207,14 @@ void shape::shapeFree (gos::Allocator *allocator, Shape *shapeIN)
 	assert (NULL != allocator);
 	assert (NULL != shapeIN);
 
-	if (shapeIN->magic != Shape::MAGIC)
+	if (!gos::magic::signatureMatch (shapeIN->magic, GOS_MAGIC__SHAPE))
 	{
-		logger::err ("shape::shapeFree() => invalid shape struct\n");
+		logger::err ("shape::shapeFree() => invalid shape struct, MAGIC does not match\n");
+		return;
+	}
+	if (!gos::magic::versionMatch (shapeIN->magic, GOS_MAGIC__SHAPE))
+	{
+		logger::err ("shape::shapeFree() => invalid shape struct, MAGIC signature is correct but version does not match\n");
 		return;
 	}
 
@@ -251,11 +256,17 @@ u32 shape::shapeLoadFromMemory (const u8 *mem, u32 sizeof_mem, gos::Allocator *a
 	out_shape->reset();
 
 	out_shape->magic = gos::utils::bufferReadU32 (&mem[ct]);		ct+=4;
-	if (out_shape->magic != Shape::MAGIC)
+	if (!gos::magic::signatureMatch (out_shape->magic, GOS_MAGIC__SHAPE))
 	{
-		gos::logger::err ("shape::shapeLoadFromMemory() => inavlid MAGIC\n");
+		gos::logger::err ("shape::shapeLoadFromMemory() => invalid MAGIC\n");
 		return 0;
 	}
+
+	if (!gos::magic::versionMatch (out_shape->magic, GOS_MAGIC__SHAPE))
+	{
+		gos::logger::err ("shape::shapeLoadFromMemory() => MAGIC signature is ok, but version is invalid\n");
+		return 0;
+	}	
 
 	const u32 numVtx = gos::utils::bufferReadU32 (&mem[ct]);			ct+=4;
 	const u32 numIdx = gos::utils::bufferReadU32 (&mem[ct]);			ct+=4;

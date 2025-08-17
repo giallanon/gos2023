@@ -22,8 +22,13 @@ public:
 
     void    reset();
     bool    parseFromFile (const char *vtxShaderFilename, const char *fragShaderFilename);
+            //in caso di errore, gos::err contiene un messaggio specifico
+
     bool    VS_parseFromMemory (const u8 *buffer, u32 bufferSize);
+            //in caso di errore, gos::err contiene un messaggio specifico
+
     bool    PS_parseFromMemory (const u8 *buffer, u32 bufferSize);
+            //in caso di errore, gos::err contiene un messaggio specifico
 
 
     void    printInfo() const;

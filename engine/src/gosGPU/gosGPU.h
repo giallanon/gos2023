@@ -644,9 +644,9 @@ namespace gos
 
 
         //================ descriptorSet layout
-        DescriptorSetLayoutBuilder&    descrSetLayout_createStatic (GPUDescrSetLayoutHandle *out_handle);
-        DescriptorSetLayoutBuilder&    descrSetLayout_createDynamic (GPUDescrSetLayoutHandle *out_handle);
-        DescriptorSetLayoutBuilder&    descrSetLayout_createPushable (GPUDescrSetLayoutHandle *out_handle);
+        DescriptorSetLayoutBuilder&    descrSetLayout_create (GPUDescrSetLayoutHandle *out_handle);
+        DescriptorSetLayoutBuilder&    descrSetLayout_create_updAfterBind (GPUDescrSetLayoutHandle *out_handle);
+        DescriptorSetLayoutBuilder&    descrSetLayout_create_pushable (GPUDescrSetLayoutHandle *out_handle);
         void                deleteResource (GPUDescrSetLayoutHandle &handle);
         bool                toVulkan (const GPUDescrSetLayoutHandle handle, VkDescriptorSetLayout *out) const;
 

@@ -30,10 +30,10 @@ void test1 (GOSWinHandle &mainWin)
         //runExample<VulkanExample1>(&gpu, "VulkanExample1");
         //runExample<VulkanExample2>(&gpu, "VulkanExample2");
         //runExample<VulkanExample3>(&gpu, "VulkanExample3");
-        //runExample<VulkanExample4>(&gpu, "VulkanExample4");
+        runExample<VulkanExample4>(&gpu, "VulkanExample4");
         //runExample<VulkanExample5>(&gpu, "VulkanExample5");
         //runExample<VulkanExample6>(&gpu, "VulkanExample6");
-        runExample<VulkanExample7>(&gpu, "VulkanExample7");
+        //runExample<VulkanExample7>(&gpu, "VulkanExample7");
         gpu.deinit();
     }
 }

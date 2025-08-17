@@ -231,7 +231,7 @@ bool VulkanExample4::virtual_onInit ()
 
     //Creo il descriptorSet layout  con un UNIFORM BUFFER per il VTX SHADER
     //e un texture sampler per FRAG SHADER
-    gpu->descrSetLayout_createStatic (&descrSetLayoutHandle)
+    gpu->descrSetLayout_create (&descrSetLayoutHandle)
         .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT)
         .add_combinedTextureAndSampler (VK_SHADER_STAGE_FRAGMENT_BIT)
         .end();

@@ -27,6 +27,8 @@ PipelineParser.h
 spirv_reflect.c
 spirv_reflect.h
 spirv.h
+SPVDataType.cpp
+SPVDataType.h
 SPVReflect.cpp
 SPVReflect.h
 SPVReflectEnumAndDefine.h

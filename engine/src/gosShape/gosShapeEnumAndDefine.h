@@ -89,9 +89,6 @@ namespace gos
 	struct Shape
 	{
 	public:
-		static constexpr u32 MAGIC = 0xA7320001;
-
-	public:
 		u32			magic;
 		u32 		numVtx;
 		u32 		numIdx;
@@ -100,7 +97,7 @@ namespace gos
 		u16 		*idxBuffer;
 
 	public:
-		void 		reset()		{ magic=Shape::MAGIC; numVtx = numIdx = 0; vtxBuffer=NULL; idxBuffer=NULL; vtxLayout.reset(); }
+		void 		reset()		{ magic=GOS_MAGIC__SHAPE; numVtx = numIdx = 0; vtxBuffer=NULL; idxBuffer=NULL; vtxLayout.reset(); }
 	};
 
 

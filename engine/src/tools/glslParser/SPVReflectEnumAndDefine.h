@@ -23,11 +23,12 @@ enum class eDescriptrorType : u8
 };
 
 
-enum eResourceType
+enum class eResourceType: u8
 {
-    _struct = 0,
-    _array = 1,
-    _dynamicArray = 2,
+    _simple = 0,
+    _struct = 1,
+    _array = 2,
+    _dynamicArray = 3
 };
 
 struct sResAsStruct

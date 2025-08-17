@@ -210,7 +210,7 @@ void MapRenderer::priv_createAShape (MarchingSquare::VertexList3 &tempVtxList, g
 bool MapRenderer::priv_createDescriptorPerInstance()
 {
     //Creo il descriptorSet layout 2
-    if (!gpu->descrSetLayout_createStatic (&descriptorPerInstance.descr.layout)
+    if (!gpu->descrSetLayout_create (&descriptorPerInstance.descr.layout)
         .add_storageBuffer (VK_SHADER_STAGE_VERTEX_BIT) //set 2, binding 0
         .end())
     {

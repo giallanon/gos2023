@@ -37,6 +37,7 @@ dataTypes/gosTimer.cpp
 dataTypes/gosTimer.h
 
 helpers/base64.cpp
+helpers/debugbreak.h
 helpers/mtrand.cpp
 helpers/mtrand.h
 helpers/sha1.cpp
@@ -119,9 +120,17 @@ gosBit.cpp
 gosBit.h
 gosBufferLinear.cpp 
 gosBufferLinear.h
+gosBufferReader.cpp
+gosBufferReader.h
 gosBufferSparse.h
 gosBufferSparse.cpp
+gosBufferWriter.cpp
+gosBufferWriter.h
 gosConsole.cpp
+gosDataBlob_DefBuilder.cpp
+gosDataBlob_DefReader.cpp
+gosDataBlob.cpp
+gosDataBlob.h
 gosDataFormat.cpp
 gosDataFormat.h
 gosDataTypes.h
@@ -140,6 +149,7 @@ gosIniFile_section.cpp
 gosIniFile.cpp
 gosIniFile.h
 gosLIFOFixedSize.h
+gosMagicUID.h
 gosRandom.h
 gosServerTCP.cpp
 gosServerTCP.h
