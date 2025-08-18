@@ -18,10 +18,11 @@ struct sEsempio1
 //obj data
 layout(push_constant) uniform PushConstantData
 {
+    float    width;
     sEsempio1     es1;
     sEsempio1     arrayDiStruct[4];
     mat4    matW;
     vec2    unVecDi2Elem;
-    float    width;
     int     unArrayDiIntDi8Elem[8];
+    float   height;
 } objInstance;

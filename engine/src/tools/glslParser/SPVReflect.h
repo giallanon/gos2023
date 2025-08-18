@@ -2,6 +2,7 @@
 #define _SPVReflect_h_
 #include "SPVReflectEnumAndDefine.h"
 #include "gosFastArray.h"
+#include "gosDataBlob.h"
 
 
 /**
@@ -20,15 +21,18 @@ public:
             SPVReflect();
             ~SPVReflect();
 
-    void    reset();
     bool    parseFromFile (const char *vtxShaderFilename, const char *fragShaderFilename);
             //in caso di errore, gos::err contiene un messaggio specifico
 
+
+    void    beginParseFromMemory();
     bool    VS_parseFromMemory (const u8 *buffer, u32 bufferSize);
             //in caso di errore, gos::err contiene un messaggio specifico
 
     bool    PS_parseFromMemory (const u8 *buffer, u32 bufferSize);
             //in caso di errore, gos::err contiene un messaggio specifico
+
+    bool    endParseFromMemory();
 
 
     void    printInfo() const;
@@ -92,12 +96,32 @@ private:
     struct PushConstantElem
     {
     public:
-        static constexpr u8     FLAG__USED_IN_VTX_SHADER     = 0x01;
-        static constexpr u8     FLAG__USED_IN_FRAG_SHADER    = 0x02;
+        static constexpr u8     FLAG__USED_IN_VTX_SHADER    = 0x01;
+        static constexpr u8     FLAG__USED_IN_FRAG_SHADER   = 0x02;
+        static constexpr u8     FLAG__IS_STRUCT             = 0x04;
+        static constexpr u8     FLAG__IS_ARRAY              = 0x08;
 
     public:
                     PushConstantElem()  { reset(); }
-        void        reset()             { memset(name,0,sizeof(name)); flag=0; offset=size=paddedSize=0; fmt=eDataFormat::_unknown; }
+        void        reset()             { memset(name,0,sizeof(name)); flag=0; offset=size=paddedSize=0; fmt=eDataFormat::_unknown; memset(&other, 0, sizeof(other)); }
+
+    public:
+        struct sAsStruct
+        {
+            u8  numMembers;
+        };
+        struct sAsArray
+        {
+            u8  numDimension;
+            u16 sizeOfOneElem;
+            u16 numElem[8];
+        };
+
+        union eOther
+        {
+            sAsStruct   asStruct;
+            sAsArray    asArray;
+        };
 
     public:
         char        name[64];    
@@ -107,6 +131,7 @@ private:
         u32         absoluteOffset;
         u32         paddedSize;
         eDataFormat fmt;
+        eOther      other;
     };
 
     class PushConstantList
@@ -162,9 +187,6 @@ private:
     private:
         gos::FastArray<PushConstantElem>    list;
     };
-
-
-
 
     struct DescrSetElem
     {
@@ -252,24 +274,113 @@ private:
         gos::FastArray<DescrSetElem>    list;
     };
 
-    
+    class PushConstantNode
+    {
+    public:
+        static gos::Allocator *localAllocator;
+
+    public:
+        static PushConstantNode* createNew ()
+        {
+            PushConstantNode *p = GOSNEW(localAllocator, PushConstantNode)();
+            return p;
+        }
+
+        static void deleteTree (PushConstantNode *root)
+        {
+            PushConstantNode *p = root;
+            while (p)
+            {
+                PushConstantNode *thisNode = p;
+
+                if (NULL != p->figlio)
+                    deleteTree (p->figlio);
+                p = p->fratello;
+
+                GOSDELETE(localAllocator, thisNode);
+            }
+    }
+
+    public:
+        static constexpr u8     FLAG__USED_IN_VTX_SHADER    = 0x01;
+        static constexpr u8     FLAG__USED_IN_FRAG_SHADER   = 0x02;
+        static constexpr u8     FLAG__IS_STRUCT             = 0x04;
+        static constexpr u8     FLAG__IS_ARRAY              = 0x08;
+
+    public:
+                    PushConstantNode()  { reset(); }
+        void        reset()             { memset(name,0,sizeof(name)); flag=0; offset=size=paddedSize=0; fmt=eDataFormat::_unknown; memset(&other, 0, sizeof(other)); figlio = fratello = NULL;}
+
+        void        appendChild (PushConstantNode *child)
+        {
+            PushConstantNode *p = this->figlio;
+            if (NULL == p)
+                this->figlio = child;
+            else
+            {
+                while (p->fratello)
+                {
+                    p = p->fratello;
+                }
+                p->fratello = child;
+            }
+
+        }
+
+    public:
+        struct sAsStruct
+        {
+            u8  numMembers;
+        };
+        struct sAsArray
+        {
+            u8  numDimension;
+            u16 sizeOfOneElem;
+            u16 numElem[8];
+        };
+
+        union eOther
+        {
+            sAsStruct   asStruct;
+            sAsArray    asArray;
+        };
+
+    public:
+        char        name[64];    
+        u8          flag;
+        u32         offset;
+        u32         size;
+        u32         absoluteOffset;
+        u32         paddedSize;
+        eDataFormat fmt;
+        eOther      other;
+        PushConstantNode    *figlio;
+        PushConstantNode    *fratello;
+
+    friend SPVReflect;
+    };
+
 private:
-    void        priv_reset();
+
     bool        priv_SpvReflectFormat_to_eDataFormat (SpvReflectFormat fmtIN, eDataFormat *out_fmt) const;
     bool        priv_parse_vtxShader (SpvReflectShaderModule *module);
     bool        priv_parse_vtxShader_vtxDecl (SpvReflectShaderModule *module);
     bool        priv_parse_pushConstant (SpvReflectShaderModule *module);
     bool        priv_parse_fragShader (SpvReflectShaderModule *module);
     bool        priv_parse_descriptors (SpvReflectShaderModule *module);
+    eDataFormat  priv_fromSPVReflectTypeDescrToDataFormat (const SpvReflectTypeDescription *strTypeDescr) const;
 
-   eDataFormat  priv_fromSPVReflectTypeDescrToDataFormat (const SpvReflectTypeDescription *strTypeDescr) const;
-
+    PushConstantNode* priv_parseVar (const SpvReflectShaderModule *module, const SpvReflectBlockVariable *var);
+    void        print (const PushConstantNode *node) const;
 
 private:
+    gos::Allocator      *localAllocator;
     VtxDeclList         vtxDeclList;
     PushConstantList    pushConstantList;
     DescrSetList        descrSetList;
-        
+
+    PushConstantNode    *pushConstant_root;
+     
 };
 
 #endif //_SPVReflect_h_

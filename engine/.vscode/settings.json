@@ -28,6 +28,9 @@
         "string": "cpp",
         "string_view": "cpp",
         "ranges": "cpp",
-        "span": "cpp"
-    }
+        "span": "cpp",
+        "text_encoding": "cpp",
+        "typeinfo": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }

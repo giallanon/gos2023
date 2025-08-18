@@ -139,8 +139,63 @@
 			"path": "src/gos/gosDataBlob_DefBuilder.cpp",
 			"bookmarks": [
 				{
-					"line": 99,
+					"line": 43,
+					"column": 14,
+					"label": ""
+				},
+				{
+					"line": 71,
+					"column": 11,
+					"label": ""
+				},
+				{
+					"line": 131,
 					"column": 13,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/gos/gosDataBlob.h",
+			"bookmarks": [
+				{
+					"line": 167,
+					"column": 47,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/tools/glslParser/SPVReflect.cpp",
+			"bookmarks": [
+				{
+					"line": 258,
+					"column": 0,
+					"label": ""
+				},
+				{
+					"line": 341,
+					"column": 9,
+					"label": ""
+				},
+				{
+					"line": 367,
+					"column": 0,
+					"label": ""
+				},
+				{
+					"line": 586,
+					"column": 81,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/tools/glslParser/SPVReflect.h",
+			"bookmarks": [
+				{
+					"line": 276,
+					"column": 26,
 					"label": ""
 				}
 			]

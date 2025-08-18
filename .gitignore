@@ -24,3 +24,5 @@ engine/bin/ProfileServer/writable/log/
 engine/bin/simpleWorld/assets/sponza/sponza.glb
 engine/bin/simpleWorld/assets/sponza/sponza_glTF.ini
 
+
+engine/.vscode/bookmarks.json

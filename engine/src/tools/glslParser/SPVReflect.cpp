@@ -3,15 +3,22 @@
 
 using namespace gos;
 
+gos::Allocator *SPVReflect::PushConstantNode::localAllocator = NULL;
+
+
 //***************************************************
 SPVReflect::SPVReflect()
 {
-    reset();
+    localAllocator = gos::getSysHeapAllocator();
+    SPVReflect::PushConstantNode::localAllocator = localAllocator;
+
+    pushConstant_root = NULL;
 }
 
 //***************************************************
 SPVReflect::~SPVReflect()
 {
+    PushConstantNode::deleteTree (pushConstant_root);
 }
 
 //***************************************************
@@ -119,19 +126,13 @@ eDataFormat SPVReflect::priv_fromSPVReflectTypeDescrToDataFormat (const SpvRefle
     return gos::dataformat::build (basicType, bSigned, numRow, numCol);
 }
 
-//***************************************************
-void SPVReflect::reset()
-{
-    vtxDeclList.reset();
-    pushConstantList.reset();
-    descrSetList.reset();
-}
+
 
 
 //***************************************************
 bool SPVReflect::parseFromFile (const char *vtxShaderFilename, const char *fragShaderFilename)
 {
-    reset();
+    beginParseFromMemory();
 
     bool ret = true;
     u32 fsize;
@@ -151,7 +152,7 @@ bool SPVReflect::parseFromFile (const char *vtxShaderFilename, const char *fragS
     if (!ret)
         return false;
 
-    if (NULL != fragShaderFilename)
+    /*if (NULL != fragShaderFilename)
     {
         u8 *buffer = gos::fs::fileLoadInMemory (gos::getScrapAllocator(), fragShaderFilename, &fsize);
         if (NULL == buffer)
@@ -162,8 +163,26 @@ bool SPVReflect::parseFromFile (const char *vtxShaderFilename, const char *fragS
         ret = PS_parseFromMemory (buffer, fsize);
         GOSFREE_SCRAP(buffer);
     }
-    return ret;
+    if (!ret)
+        return false;
+    */
+    return endParseFromMemory();
 }
+
+ //***************************************************
+void SPVReflect::beginParseFromMemory()
+{
+    vtxDeclList.reset();
+    pushConstantList.reset();
+    descrSetList.reset();
+}
+
+ //***************************************************
+bool SPVReflect::endParseFromMemory()
+{
+    return true;
+}
+
 
 //***************************************************
 bool SPVReflect::VS_parseFromMemory (const u8 *buffer, u32 bufferSize)
@@ -235,9 +254,70 @@ bool SPVReflect::priv_parse_vtxShader_vtxDecl (SpvReflectShaderModule *module)
     return true;
 }
 
+
+//***************************************************
+SPVReflect::PushConstantNode* SPVReflect::priv_parseVar (const SpvReflectShaderModule *module, const SpvReflectBlockVariable *var)
+{
+    PushConstantNode *node = PushConstantNode::createNew();
+    sprintf_s (node->name, sizeof(node->name), "%s", var->name);
+
+    if ( (var->flags & SPV_REFLECT_VARIABLE_FLAGS_UNUSED) == 0)
+    {
+        if (SPV_REFLECT_SHADER_STAGE_VERTEX_BIT == module->shader_stage)
+            node->flag |= PushConstantElem::FLAG__USED_IN_VTX_SHADER;
+        if (SPV_REFLECT_SHADER_STAGE_FRAGMENT_BIT == module->shader_stage)
+            node->flag |= PushConstantElem::FLAG__USED_IN_FRAG_SHADER;
+    }
+
+    node->offset = var->offset;
+    node->absoluteOffset = var->absolute_offset;
+    //node->size = var->
+    node->paddedSize = var->padded_size;
+    
+    switch (var->type_description->op)
+    {
+    case SpvOpTypeStruct:
+        node->flag |= PushConstantElem::FLAG__IS_STRUCT;
+        node->other.asStruct.numMembers = var->member_count;
+        break;
+
+    case SpvOpTypeArray:
+        node->flag |= PushConstantElem::FLAG__IS_ARRAY;
+        node->other.asArray.numDimension = static_cast<u8>(var->array.dims_count);
+        node->other.asArray.sizeOfOneElem = static_cast<u16>(var->array.stride);
+        {
+            for (u8 i3=0; i3<node->other.asArray.numDimension; i3++)
+            {
+                node->other.asArray.numElem[i3] = var->array.dims[i3];
+            }
+        }
+        break;
+
+    default:
+        //informazioni sul tipo della variabile
+        node->fmt = priv_fromSPVReflectTypeDescrToDataFormat (var->type_description);
+        break;
+    }
+
+
+    
+    for (u32 i=0; i<var->member_count; i++)
+    {
+        const SpvReflectBlockVariable *info = &var->members[i];
+        PushConstantNode *figlio = priv_parseVar(module, info);
+        node->appendChild (figlio);
+    }
+    
+    return node;
+}
+
 //***************************************************
 bool SPVReflect::priv_parse_pushConstant (SpvReflectShaderModule *module)
 {
+    PushConstantNode::deleteTree (pushConstant_root);
+    pushConstant_root = PushConstantNode::createNew ();
+    sprintf_s (pushConstant_root->name, sizeof(pushConstant_root->name), "PushContant-ROOT");
+
     u32 n = 0;
     SpvReflectResult result = spvReflectEnumeratePushConstantBlocks (module, &n, NULL);
     if (SPV_REFLECT_RESULT_SUCCESS != result)
@@ -262,6 +342,10 @@ bool SPVReflect::priv_parse_pushConstant (SpvReflectShaderModule *module)
         {
             for (u32 i=0; i<n; i++)
             {
+                PushConstantNode *node = priv_parseVar (module, vars[i]);
+                pushConstant_root->appendChild (node);
+
+                /*
                 for (u32 i2=0; i2<vars[i]->member_count; i2++)
                 {
                     const SpvReflectBlockVariable *info = &vars[i]->members[i2];
@@ -274,20 +358,47 @@ bool SPVReflect::priv_parse_pushConstant (SpvReflectShaderModule *module)
                         if (SPV_REFLECT_SHADER_STAGE_FRAGMENT_BIT == module->shader_stage)
                             e.flag |= PushConstantElem::FLAG__USED_IN_FRAG_SHADER;
                     }
-                                        sprintf_s (e.name, sizeof(e.name), "%s.%s", vars[i]->name, info->name);
+                
+                    sprintf_s (e.name, sizeof(e.name), "%s.%s", vars[i]->name, info->name);
                     e.offset = info->offset;
                     e.absoluteOffset = info->absolute_offset;
                     e.size = vars[i]->members[i2].size;
                     e.paddedSize = info->padded_size;
+                    
+                    switch (info->type_description->op)
+                    {
+                    case SpvOpTypeStruct:
+                        e.flag |= PushConstantElem::FLAG__IS_STRUCT;
+                        e.other.asStruct.numMembers = info->member_count;
+                        break;
 
-                    //informazioni sul tipo della variabile
-                    e.fmt = priv_fromSPVReflectTypeDescrToDataFormat (info->type_description);
+                    case SpvOpTypeArray:
+                        e.flag |= PushConstantElem::FLAG__IS_ARRAY;
+                        e.other.asArray.numDimension = static_cast<u8>(info->array.dims_count);
+                        e.other.asArray.sizeOfOneElem = static_cast<u16>(info->array.stride);
+                        {
+                            for (u8 i3=0; i3<e.other.asArray.numDimension; i3++)
+                            {
+                                e.other.asArray.numElem[i3] = info->array.dims[i3];
+                            }
+                        }
+                        break;
+
+                    default:
+                        //informazioni sul tipo della variabile
+                        e.fmt = priv_fromSPVReflectTypeDescrToDataFormat (info->type_description);
+                        pushConstant_builder.add_simpleType (e.name, e.fmt, e.paddedSize);
+                        break;
+                    }
+
                     pushConstantList.add (e);
                 }
+                */
             }
         }
         free (vars);
     }
+    print (pushConstant_root);
 
     pushConstantList.sort();
     return true;
@@ -472,6 +583,24 @@ void SPVReflect::printInfo() const
                         utils::enumToString (pushConstantList(i).fmt),
                         pushConstantList(i).size, pushConstantList(i).paddedSize,
                         pushConstantList(i).offset, pushConstantList(i).absoluteOffset);
+
+                if ((pushConstantList(i).flag & PushConstantElem::FLAG__IS_STRUCT) != 0)
+                {
+                    logger::incIndent();
+                    logger::log ("struct, num-members=%d\n", pushConstantList(i).other.asStruct.numMembers);
+                    logger::decIndent();
+                }
+                else if ((pushConstantList(i).flag & PushConstantElem::FLAG__IS_ARRAY) != 0)
+                {
+                    logger::incIndent();
+                    logger::log ("array");
+                    for (u8 i2=0; i2<pushConstantList(i).other.asArray.numDimension; i2++)
+                        logger::log ("[%d]", pushConstantList(i).other.asArray.numElem[i2]);
+
+                    logger::log (", sizeof_oneElem=%d\n", pushConstantList(i).other.asArray.sizeOfOneElem);
+                    logger::decIndent();
+
+                }
             }
         }
         gos::logger::decIndent();
@@ -558,5 +687,22 @@ void SPVReflect::printInfo() const
     gos::logger::decIndent();
 }
 
+//***************************************************
+void SPVReflect:: print (const PushConstantNode *node) const
+{
+    if (NULL == node)
+        return;
+    
+    logger::log ("%s\t\tabs-offset=%d, rel-offset=%d, padded-size=%d", node->name, node->absoluteOffset, node->offset, node->paddedSize);
 
+    if ((node->flag && PushConstantNode::FLAG__IS_ARRAY) != 0)
+        logger::log (", stride=%d", node->other.asArray.sizeOfOneElem);
 
+    logger::log("\n");
+
+    logger::incIndent();
+        print (node->figlio);
+    logger::decIndent();
+
+    print (node->fratello);
+}
