@@ -6,6 +6,21 @@
 
 namespace gos
 {
+	class STRFMT
+	{
+	public:
+		STRFMT (const char *format, ...)
+		{
+			va_list argptr;
+			va_start (argptr, format); 
+			vsnprintf (temp, sizeof(temp), format, argptr);
+			va_end (argptr);
+		}
+
+	public:
+		char temp[128];		
+	};
+
 	/*==============================================
 	 * UTF8String
 	 *
@@ -44,6 +59,7 @@ namespace gos
 #else
 		void				append (u64 i)																{ char buf[64]; sprintf_s (buf, sizeof(buf),"%" PRIu64,i); append (buf, (u32)strlen(buf)); }
 		void				append (i64 i)																{ char buf[64]; sprintf_s (buf, sizeof(buf),"%" PRIi64,i); append (buf, (u32)strlen(buf)); }
+		void 				append (const STRFMT &num)													{ append (num.temp); }
 #endif
 
 		friend	UTF8String&		operator<<  (UTF8String &me, const UTF8String &b)								{ me.append (b); return me; }
@@ -59,6 +75,7 @@ namespace gos
 #endif
 		friend	UTF8String&		operator<<  (UTF8String &me, u64 b)												{ me.append (b); return me; }
 		friend	UTF8String&		operator<<  (UTF8String &me, i64 b)												{ me.append (b); return me; }
+		friend	UTF8String&		operator<<  (UTF8String &me, const STRFMT &b)									{ me.append (b.temp); return me; }
 
 							//================================================ concat
 		static	UTF8String		concat (const UTF8String &a, const UTF8String &b)								{ UTF8String ret; ret.prealloc (a.lengthInByte() + b.lengthInByte()+1); ret = a; ret.append(b); return ret; }
@@ -96,6 +113,9 @@ namespace gos
 		void				unescape();
 		void				escapeTo (UTF8String *out) const;
 		void				unescapeTo (UTF8String *out) const;
+		
+							//aggiunge N <filler> fino a che la riga corrente non raggiunge la dimensione <column>
+		void 				fillRowUntilColumn (u32 column, char filler=' ');
 
 	private:
 		void				priv_constructor();

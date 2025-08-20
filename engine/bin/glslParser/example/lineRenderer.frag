@@ -9,7 +9,15 @@
 //output
 layout(location = 0) out vec4 out_colorRGBA;
 
+
+//obj data
+layout(push_constant) uniform PushConstantData
+{
+    layout(offset = 4) float    col;
+} altroinPS;
+
+
 void main() 
 {
-    out_colorRGBA = vec4(1,0,0,0);
+    out_colorRGBA = vec4(1,0,0,altroinPS.col);
 }

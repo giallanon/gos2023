@@ -45,7 +45,7 @@ void DateTime::debug_test_me()
 
 
 //*****************************************************
-void DateTime::formatAs_YYYYMMDDHHMMSS(char *out, u32 sizeOfOut, char char_between_date_and_time, char date_sep, char time_sep) const
+void DateTime::formatAs_YYYYMMDDHHMMSS(char *out, u32 sizeof_out, char char_between_date_and_time, char date_sep, char time_sep) const
 {
 	/*
 	0123456789 12345678
@@ -53,15 +53,15 @@ void DateTime::formatAs_YYYYMMDDHHMMSS(char *out, u32 sizeOfOut, char char_betwe
 	*/
 
 	out[0] = 0x00;
-	date.formatAs_YYYYMMDD(out, sizeOfOut, date_sep);
+	date.formatAs_YYYYMMDD(out, sizeof_out, date_sep);
 	
 	u32 n = (u32)strlen(out);
 	if (n == 0)
 		return;
 
-	if (sizeOfOut > n)
+	if (sizeof_out > n)
 	{
-		u32 nLeft = sizeOfOut - n;
+		u32 nLeft = sizeof_out - n;
 		if (char_between_date_and_time != 0x00)
 		{
 			out[n++] = char_between_date_and_time;

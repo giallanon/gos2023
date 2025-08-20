@@ -45,21 +45,21 @@ u32 Time24::formatAs_HHMMSS() const
 }
 
 //****************************
-void Time24::formatAs_HHMMSS(char *out, u32 sizeofout, char time_sep) const
+void Time24::formatAs_HHMMSS(char *out, u32 sizeof_out, char time_sep) const
 {
 	if (time_sep == 0x00)
 	{
-		assert(sizeofout >= 7);
-		if (sizeofout >= 7)
-			sprintf_s(out, sizeofout, "%02d%02d%02d", getHour(), getMin(), getSec());
+		assert(sizeof_out >= 7);
+		if (sizeof_out >= 7)
+			sprintf_s(out, sizeof_out, "%02d%02d%02d", getHour(), getMin(), getSec());
 		else
 			out[0] = 0x00;
 	}
 	else
 	{
-		assert(sizeofout >= 9);
-		if (sizeofout >= 9)
-			sprintf_s(out, sizeofout, "%02d%c%02d%c%02d", getHour(), time_sep, getMin(), time_sep, getSec());
+		assert(sizeof_out >= 9);
+		if (sizeof_out >= 9)
+			sprintf_s(out, sizeof_out, "%02d%c%02d%c%02d", getHour(), time_sep, getMin(), time_sep, getSec());
 		else
 			out[0] = 0x00;
 	}

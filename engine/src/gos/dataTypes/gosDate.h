@@ -39,7 +39,7 @@ namespace gos
         u32				getYMD() const														{ return ts; }
         eDayOfWeek      getDayOfWeek () const;
 
-        void			formatAs_YYYYMMDD (char *out, u32 sizeofout, char date_sep = 0x00) const;
+        void			formatAs_YYYYMMDD (char *out, u32 sizeof_out, char date_sep = 0x00) const;
 		u32				formatAs_YYYYMMDD () const; 
 							//questa ritorna un U32 del tipo 20190412
 

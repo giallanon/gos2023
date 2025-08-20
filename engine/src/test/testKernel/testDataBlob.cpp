@@ -10,6 +10,10 @@ namespace test1
 {
     int run()
     {
+        gos::UTF8String out;
+        out.prealloc (1024);
+
+
         //def builder
         u8  def1[128];
         u8  def2[128];
@@ -74,10 +78,8 @@ namespace test1
                 .add_simpleType ("s3", eDataFormat::_1f32)
 
                 .array_begin1D ("array1", 16)
-                    .struct_begin ("struct3")
-                        .add_simpleType ("m3_1", eDataFormat::_1f32)
-                        .add_simpleType ("m3_2", eDataFormat::_1u8)
-                    .struct_end()
+                    .add_simpleType ("m3_1", eDataFormat::_1f32)
+                    .add_simpleType ("m3_2", eDataFormat::_1u8)
                 .array_end()
                 .add_simpleType ("s4", eDataFormat::_1f32)
 
@@ -91,10 +93,8 @@ namespace test1
                 .struct_begin ("struct1")
                     .add_simpleType ("m1", eDataFormat::_2u8)
                     .array_begin2D ("arr1", 3, 4)
-                        .struct_begin ("struct2")
-                            .add_simpleType ("m2_1", eDataFormat::_1u8)
-                            .add_simpleType ("m2_2", eDataFormat::_1i8)
-                        .struct_end()
+                        .add_simpleType ("m2_1", eDataFormat::_1u8)
+                        .add_simpleType ("m2_2", eDataFormat::_1i8)
                     .array_end()
                     .add_simpleType ("m3", eDataFormat::_3f32)
                 .struct_end()
@@ -107,9 +107,10 @@ namespace test1
         {
             u32 nElem;
             gos::datablob::DefReader r;
-            gos::datablob::DefReader::Elem elem;
+            gos::datablob::DefElem elem;
 
-            gos::datablob::print_info ("def1", def1);
+            out << "def1\n";
+            gos::datablob::blobDef_prinfInfo (out, def1);
             TEST_ASSERT (r.begin (def1, &elem));
             nElem = 0;
             do
@@ -118,20 +119,21 @@ namespace test1
                 TEST_ASSERT (0 == elem.getOffset());
                 TEST_ASSERT (4 == elem.getPaddedSize());
                 TEST_ASSERT (0 == strcmp ("s1", elem.getName()));
-                TEST_ASSERT (eDataFormat::_1f32 == elem.simpleType_getDataFmt());
+                TEST_ASSERT (eDataFormat::_1f32 == elem.getDataFmt());
                 nElem++;
             } while (elem.next());
             TEST_ASSERT(1 == nElem);
 
 
-            gos::datablob::print_info ("def2", def2);
+            out << "def2\n";
+            gos::datablob::blobDef_prinfInfo (out, def2);
             TEST_ASSERT (r.begin (def2, &elem));
             nElem = 0;
                 TEST_ASSERT (eDataBlobElemType::simpleType == elem.getType());
                 TEST_ASSERT (0 == elem.getOffset());
                 TEST_ASSERT (4 == elem.getPaddedSize());
                 TEST_ASSERT (0 == strcmp ("s2", elem.getName()));
-                TEST_ASSERT (eDataFormat::_1u32 == elem.simpleType_getDataFmt());
+                TEST_ASSERT (eDataFormat::_1u32 == elem.getDataFmt());
                 TEST_ASSERT (elem.next());
                 nElem++;
             
@@ -139,7 +141,7 @@ namespace test1
                 TEST_ASSERT (4 == elem.getOffset());
                 TEST_ASSERT (8 == elem.getPaddedSize());
                 TEST_ASSERT (0 == strcmp ("s3", elem.getName()));
-                TEST_ASSERT (eDataFormat::_2u32 == elem.simpleType_getDataFmt());
+                TEST_ASSERT (eDataFormat::_2u32 == elem.getDataFmt());
                 TEST_ASSERT (elem.next());
                 nElem++;
 
@@ -147,7 +149,7 @@ namespace test1
                 TEST_ASSERT (12 == elem.getOffset());
                 TEST_ASSERT (12 == elem.getPaddedSize());
                 TEST_ASSERT (0 == strcmp ("s4", elem.getName()));
-                TEST_ASSERT (eDataFormat::_3u32 == elem.simpleType_getDataFmt());
+                TEST_ASSERT (eDataFormat::_3u32 == elem.getDataFmt());
                 TEST_ASSERT (elem.next());
                 nElem++;
 
@@ -155,20 +157,23 @@ namespace test1
                 TEST_ASSERT (24 == elem.getOffset());
                 TEST_ASSERT (16 == elem.getPaddedSize());
                 TEST_ASSERT (0 == strcmp ("s5", elem.getName()));
-                TEST_ASSERT (eDataFormat::_4u32 == elem.simpleType_getDataFmt());
+                TEST_ASSERT (eDataFormat::_4u32 == elem.getDataFmt());
                 TEST_ASSERT (false == elem.next());
                 nElem++;                                            
             TEST_ASSERT(4 == nElem);
 
 
-            gos::datablob::print_info ("def3", def3);
+            out << "def3\n";
+            gos::datablob::blobDef_prinfInfo (out, def3);
             TEST_ASSERT (r.begin (def3, &elem));
                 TEST_ASSERT (15 == r.dataBlob_getSize());
                 TEST_ASSERT (eDataBlobElemType::structType == elem.getType());
                 TEST_ASSERT (3 == elem.structType_getNumMembers());
                 TEST_ASSERT (false == elem.next());
                             
-            gos::datablob::print_info ("def4", def4);
+
+            out << "de45\n";
+            gos::datablob::blobDef_prinfInfo (out, def4);
             TEST_ASSERT (r.begin (def4, &elem));
                 TEST_ASSERT (157 == r.dataBlob_getSize());
                 TEST_ASSERT (eDataBlobElemType::simpleType == elem.getType());
@@ -185,7 +190,12 @@ namespace test1
                 TEST_ASSERT (3 == elem.structType_getNumMembers());
                 TEST_ASSERT (elem.next());
 
-            gos::datablob::print_info ("def5", def5);
+            out << "def5\n";
+            gos::datablob::blobDef_prinfInfo (out, def5, [](gos::UTF8String &out, const gos::datablob::DefElem &elem) {
+            
+                out << gos::STRFMT("0x%08X", elem.getUserData());
+            });
+            printf ("%s\n", out.getBuffer());
         }
 
         return 0;

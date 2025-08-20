@@ -482,16 +482,16 @@ bool IniFileSection::exists  (const char *identifier) const
 }
 
 //********************************************
-bool IniFileSection::get (const char *identifier, char *out, u32 sizeofout) const
+bool IniFileSection::get (const char *identifier, char *out, u32 sizeof_out) const
 {
 	const char *pstr = priv_get (identifier);
 	if (NULL == pstr)
 		return false;
 
 	u32 n = (u32)string::utf8::lengthInByte(pstr);
-	if (n>=sizeofout)
+	if (n>=sizeof_out)
 	{
-		n = sizeofout-1;
+		n = sizeof_out-1;
 		DBGBREAK;
 	}
 	memcpy (out, pstr, n);
@@ -509,16 +509,16 @@ void IniFileSection::getOrDefault (const char *identifier, const char *defaultVa
 }
 
 //*******************************************
-void IniFileSection::getOrDefault (const char *identifier, const char *defaultValue, char *out, u32 sizeofout) const
+void IniFileSection::getOrDefault (const char *identifier, const char *defaultValue, char *out, u32 sizeof_out) const
 {
-	if (get (identifier, out, sizeofout))
+	if (get (identifier, out, sizeof_out))
 		return;
 	
 	assert (NULL != defaultValue);
 	u32 n = (u32)string::utf8::lengthInByte(defaultValue);
-	if (n>=sizeofout)
+	if (n>=sizeof_out)
 	{
-		n = sizeofout-1;
+		n = sizeof_out-1;
 		DBGBREAK;
 	}
 	memcpy (out, defaultValue, n);

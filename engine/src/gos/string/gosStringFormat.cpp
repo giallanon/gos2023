@@ -183,9 +183,9 @@ void string::format::F32 (f32 val, u32 numDecimal, char thousandSep, char decima
 
 
 //*******************************************************************
-void string::format::Hex32 (u32 hex, char *out, u32 sizeofout)
+void string::format::Hex32 (u32 hex, char *out, u32 sizeof_out)
 {
-	if (sizeofout <= 8)
+	if (sizeof_out <= 8)
 	{
 		DBGBREAK;
 		out[0] = 0;
@@ -208,9 +208,9 @@ void string::format::Hex32 (u32 hex, char *out, u32 sizeofout)
 }
 
 //*******************************************************************
-void string::format::Hex16(u16 hex, char *out, UNUSED_PARAM(u32 sizeofout))
+void string::format::Hex16(u16 hex, char *out, UNUSED_PARAM(u32 sizeof_out))
 {
-	assert(sizeofout > 4);
+	assert(sizeof_out > 4);
 	u16 mask = 0x000F;
 	u16 shift = 0;
 	u8 i = 4;
@@ -229,9 +229,9 @@ void string::format::Hex16(u16 hex, char *out, UNUSED_PARAM(u32 sizeofout))
 }
 
 //*******************************************************************
-void string::format::Hex8(u8 hex, char *out, UNUSED_PARAM(u32 sizeofout))
+void string::format::Hex8(u8 hex, char *out, UNUSED_PARAM(u32 sizeof_out))
 {
-	assert(sizeofout > 2);
+	assert(sizeof_out > 2);
 	u8 mask = 0x0F;
 	u8 shift = 0;
 	u8 i = 2;
@@ -279,7 +279,7 @@ void string::format::memoryToKB_MB_GB (u64 qtyInByte, char *out, u32 sizeof_out)
  * formatta [price] riempendo [out] con una stringa che rappresenta il numero [price] le cui ultime [numDecimal]
  * cifre sono da intendersi come decimali, seprarati dal resto della cifra dal carattere [decimalPointCharacter]
  */
-void string::format::currency (u16 price, u8 numDecimal, char decimalPointCharacter, char *out_s, u16 sizeOfOut)
+void string::format::currency (u16 price, u8 numDecimal, char decimalPointCharacter, char *out_s, u16 sizeof_out)
 {
     char s[16];
     if (numDecimal == 0)
@@ -325,5 +325,5 @@ void string::format::currency (u16 price, u8 numDecimal, char decimalPointCharac
         
     }
 
-    sprintf_s (out_s, sizeOfOut, "%s", s);
+    sprintf_s (out_s, sizeof_out, "%s", s);
 }

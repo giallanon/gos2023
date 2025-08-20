@@ -7,8 +7,8 @@ namespace gos
 {
 	namespace string
 	{
-		bool		strANSItoUTF8  (const char *in, char *out, u32 sizeOfOut);
-		bool		strANSItoUTF8  (const char *in, u32 lenOfIN, char *out,  u32 sizeOfOut);
+		bool		strANSItoUTF8  (const char *in, char *out, u32 sizeof_out);
+		bool		strANSItoUTF8  (const char *in, u32 lenOfIN, char *out,  u32 sizeof_out);
 		bool		strANSItoUTF16 (const char *in, u16 *out, u32 sizeOfOutInBytes);
 		bool		strUTF8toUTF16 (const char *in, u16 *out, u32 sizeOfOutInBytes);
 		bool		strUTF16toUTF8 (const u16 *in, char *out, u32 sizeOfOutInBytes);
@@ -21,9 +21,9 @@ namespace gos
 			void	F32 (f32 val, u32 numDecimal, char thousandSep, char decimalSep, char *out, u32 sizeof_out);
 			void	U32 (u32 val, char thousandSep, char *out, u32 sizeof_out);
 			void	U64 (u64 val, char thousandSep, char *out, u32 sizeof_out);
-			void	Hex32 (u32 hex, char *out, u32 sizeofout);	//filla out con la rappresentazione esadecimale di hex (senza lo 0x davanti)
-			void	Hex16 (u16 hex, char *out, u32 sizeofout);	//filla out con la rappresentazione esadecimale di hex (senza lo 0x davanti)
-			void	Hex8 (u8 hex, char *out, u32 sizeofout);	//filla out con la rappresentazione esadecimale di hex (senza lo 0x davanti)
+			void	Hex32 (u32 hex, char *out, u32 sizeof_out);	//filla out con la rappresentazione esadecimale di hex (senza lo 0x davanti)
+			void	Hex16 (u16 hex, char *out, u32 sizeof_out);	//filla out con la rappresentazione esadecimale di hex (senza lo 0x davanti)
+			void	Hex8 (u8 hex, char *out, u32 sizeof_out);	//filla out con la rappresentazione esadecimale di hex (senza lo 0x davanti)
 			void	timeMicroSecToHHMMSSMsUs (u64 microSec, char *out, u32 sizeof_out);
 
 			//ritorna in [out] una stringa con qtyInByte formattata con 2 decimali e con la sua unita' di misura espressa in KB o MB o GB
@@ -31,7 +31,7 @@ namespace gos
 			void 	memoryToKB_MB_GB (u64 qtyInByte, char *out, u32 sizeof_out);
 
 
-			void    currency (u16 price, u8 numDecimal, char decimalPointCharacter, char *out_s, u16 sizeOfOut);
+			void    currency (u16 price, u8 numDecimal, char decimalPointCharacter, char *out_s, u16 sizeof_out);
 
 			//ritorna una stringa nel formato  "4d 8h 32m 5s".  Se numero giorni == 0, allora ritorna "12h 32m 15s".
 			//Se [bIncludeSeconds]==false, allora omette i secondi nella stringa di ritorno

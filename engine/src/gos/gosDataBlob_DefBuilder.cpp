@@ -8,13 +8,16 @@ using namespace gos::datablob;
 DefBuilder::DefBuilder()
 {
     buffer.setup (gos::getSysHeapAllocator(), 256, eEndianess::big);
-    bIsValid = false;
+    flag.zero();
+    flag.set (FLAG__ERROR);
 }
 
 //******************************** 
 DefBuilder& DefBuilder::begin()
 {
-    bIsValid = false;
+    flag.zero();
+    flag.set (FLAG__BEGIN);
+
     sizeof_dataBlob = 0;
     buffer.reset();
     stack.reset();
@@ -29,6 +32,11 @@ DefBuilder& DefBuilder::begin()
 //******************************** 
 bool DefBuilder::end()
 {
+    if (flag.isBitSet(FLAG__ERROR))
+        return false;
+    if (!flag.isBitSet(FLAG__BEGIN))
+        return false;
+
     //scrive la dimensione totale di questo DataBlobDef
     const u16 total_size_of_dataBlobDef = static_cast<u16>(buffer.tell());
     buffer.writeU16At (4, total_size_of_dataBlobDef);
@@ -36,7 +44,17 @@ bool DefBuilder::end()
     //scrive la dimensione totale del DataBlob descritto da questo DataBlobDef
     buffer.writeU16At (6, sizeof_dataBlob);
 
-    bIsValid = true;
+    flag.zero();
+    return true;
+}
+
+//******************************** 
+bool DefBuilder::isValid() const
+{
+    if (flag.isBitSet(FLAG__BEGIN))
+        return false;
+    if (flag.isBitSet(FLAG__ERROR))
+        return false;
     return true;
 }
 
@@ -80,7 +98,7 @@ void DefBuilder::priv_add_pad()
 }
 
 //******************************** 
-u16 DefBuilder::priv_elem_begin (eDataBlobElemType elemtype, const char *name)
+u16 DefBuilder::priv_elem_begin (eDataBlobElemType elemtype, const char *name, u32 userDefinedData)
 {
     //voglio che parta ad un indirizzo che e' un multiplo di 8, in modo che
     //il "name" sia allineato correttamente
@@ -89,8 +107,10 @@ u16 DefBuilder::priv_elem_begin (eDataBlobElemType elemtype, const char *name)
     const u16 pos = static_cast<u16>(buffer.tell());
     stack.push (pos);
 
+    //0     elem type
     buffer.writeU8 (static_cast<u8>(elemtype));
 
+    //1     nameLen
     u8 nameLen = 0;
     if (NULL != name)
     {
@@ -99,10 +119,19 @@ u16 DefBuilder::priv_elem_begin (eDataBlobElemType elemtype, const char *name)
     }
     buffer.writeU8 (nameLen);
 
-    buffer.writeU16 (0xFFFF);           //next
-    buffer.writeU16 (sizeof_dataBlob);  //absOffset
-    buffer.writeU16 (0x0000);           //size
+    //2     next
+    buffer.writeU16 (0xFFFF);
+    
+    //4     absOffset
+    buffer.writeU16 (sizeof_dataBlob);
 
+    //6     size
+    buffer.writeU16 (0x0000);
+
+    //8     userDefine
+    buffer.writeU32 (userDefinedData);
+
+    //12    name
     if (nameLen)
         buffer.write (name, nameLen);   //name
 
@@ -125,11 +154,21 @@ u16 DefBuilder::priv_elem_end ()
     return pos_elemStarted;
 }
 
-
 //******************************** 
-DefBuilder& DefBuilder::add_simpleType (const char *var_name, eDataFormat fmt, u32 paddedSize)
+DefBuilder& DefBuilder::add_simpleTypeAtOffset (u16 offset, const char *var_name, eDataFormat fmt, u32 userDefinedData, u32 paddedSize)
 {
-    priv_elem_begin (eDataBlobElemType::simpleType, var_name);
+    if (!flag.isBitSet(FLAG__BEGIN))
+        flag.set (FLAG__ERROR);
+    if (offset < sizeof_dataBlob)
+        flag.set(FLAG__ERROR);
+    if (flag.isBitSet(FLAG__ERROR))
+    {
+        DBGBREAK;
+        return *this;
+    }
+    sizeof_dataBlob = offset;
+
+    priv_elem_begin (eDataBlobElemType::simpleType, var_name, userDefinedData);
 
     //scrivo il blocco data specifico di questo elemento
     buffer.writeU8 (static_cast<u8>(fmt));
@@ -147,9 +186,21 @@ DefBuilder& DefBuilder::add_simpleType (const char *var_name, eDataFormat fmt, u
 }
 
 //******************************** 
-DefBuilder& DefBuilder::struct_begin (const char *var_name)
+DefBuilder& DefBuilder::struct_beginAtOffset (u16 offset, const char *var_name, u32 userDefinedData)
 {
-    priv_elem_begin (eDataBlobElemType::structType, var_name);
+    if (!flag.isBitSet(FLAG__BEGIN))
+        flag.set (FLAG__ERROR);
+    if (offset < sizeof_dataBlob)
+        flag.set(FLAG__ERROR);
+    if (flag.isBitSet(FLAG__ERROR))
+    {
+        DBGBREAK;
+        return *this;
+    }
+
+    sizeof_dataBlob = offset;
+
+    priv_elem_begin (eDataBlobElemType::structType, var_name, userDefinedData);
     stack.push (sizeof_dataBlob);
 
     //pos of 1st child
@@ -173,6 +224,15 @@ DefBuilder& DefBuilder::struct_begin (const char *var_name)
 //******************************** 
 DefBuilder& DefBuilder::struct_end()
 {
+    if (!flag.isBitSet(FLAG__BEGIN))
+        flag.set (FLAG__ERROR);
+    if (flag.isBitSet(FLAG__ERROR))
+    {
+        DBGBREAK;
+        return *this;
+    }
+
+
     u16 sizeof_dataBlob_beforeThisStruct;
     stack.pop (&sizeof_dataBlob_beforeThisStruct);
     const u32 pos_elemStarted = priv_elem_end();
@@ -204,39 +264,60 @@ DefBuilder& DefBuilder::struct_end()
 }
 
 //******************************** 
-DefBuilder& DefBuilder::array_begin1D (const char *var_name, u16 numElem1)
+DefBuilder& DefBuilder::array_begin1DAtOffset (u16 offset, const char *var_name, u16 numElem1, u32 userDefinedData)
 {
-    const u16 pos_posOfFirstChild = priv_array_begin_start (var_name, 1);
-    buffer.writeU16 (numElem1);
-    priv_array_begin_end (pos_posOfFirstChild);
+    const u16 pos_posOfFirstChild = priv_array_begin_start (offset, var_name, 1, userDefinedData);
+    if (u16MAX != pos_posOfFirstChild)
+    {
+        buffer.writeU16 (numElem1);
+        priv_array_begin_end (pos_posOfFirstChild);
+    }
     return *this;
 }
 
 //******************************** 
-DefBuilder& DefBuilder::array_begin2D (const char *var_name, u16 numElem1, u16 numElem2)
+DefBuilder& DefBuilder::array_begin2DAtOffset (u16 offset, const char *var_name, u16 numElem1, u16 numElem2, u32 userDefinedData)
 {
-    const u16 pos_posOfFirstChild = priv_array_begin_start (var_name, 2);
-    buffer.writeU16 (numElem1);
-    buffer.writeU16 (numElem2);
-    priv_array_begin_end (pos_posOfFirstChild);
+    const u16 pos_posOfFirstChild = priv_array_begin_start (offset, var_name, 2, userDefinedData);
+    if (u16MAX != pos_posOfFirstChild)
+    {
+        buffer.writeU16 (numElem1);
+        buffer.writeU16 (numElem2);
+        priv_array_begin_end (pos_posOfFirstChild);
+    }
     return *this;
 }
 
 //******************************** 
-DefBuilder& DefBuilder::array_begin3D (const char *var_name, u16 numElem1, u16 numElem2, u16 numElem3)
+DefBuilder& DefBuilder::array_begin3DAtOffset (u16 offset, const char *var_name, u16 numElem1, u16 numElem2, u16 numElem3, u32 userDefinedData)
 {
-    const u16 pos_posOfFirstChild = priv_array_begin_start (var_name, 3);
-    buffer.writeU16 (numElem1);
-    buffer.writeU16 (numElem2);
-    buffer.writeU16 (numElem3);
-    priv_array_begin_end (pos_posOfFirstChild);
+    const u16 pos_posOfFirstChild = priv_array_begin_start (offset, var_name, 3, userDefinedData);
+    if (u16MAX != pos_posOfFirstChild)
+    {
+        buffer.writeU16 (numElem1);
+        buffer.writeU16 (numElem2);
+        buffer.writeU16 (numElem3);
+        priv_array_begin_end (pos_posOfFirstChild);
+    }
     return *this;
 }
 
 //******************************** 
-u16 DefBuilder::priv_array_begin_start (const char *var_name, u8 numDimension)
+u16 DefBuilder::priv_array_begin_start (u16 offset, const char *var_name, u8 numDimension, u32 userDefinedData)
 {
-    priv_elem_begin (eDataBlobElemType::arrayType, var_name);
+    if (!flag.isBitSet(FLAG__BEGIN))
+        flag.set (FLAG__ERROR);
+    if (offset < sizeof_dataBlob)
+        flag.set(FLAG__ERROR);
+    if (flag.isBitSet(FLAG__ERROR))
+    {
+        DBGBREAK;
+        return u16MAX;
+    }
+
+    sizeof_dataBlob = offset;
+
+    priv_elem_begin (eDataBlobElemType::arrayType, var_name, userDefinedData);
     stack.push (sizeof_dataBlob);
 
     //pos of 1st child
@@ -257,6 +338,15 @@ u16 DefBuilder::priv_array_begin_start (const char *var_name, u8 numDimension)
 
 void DefBuilder::priv_array_begin_end (u16 pos_posOfFirstChild)
 {
+    if (!flag.isBitSet(FLAG__BEGIN))
+        flag.set (FLAG__ERROR);
+    if (flag.isBitSet(FLAG__ERROR))
+    {
+        DBGBREAK;
+        return;
+    }
+
+
     //voglio che il prossimo elemento parta ad un indirizzo che sia un multiplo di 8
     //per questioni di allineamento del campo "name"
     priv_add_pad();
@@ -267,6 +357,15 @@ void DefBuilder::priv_array_begin_end (u16 pos_posOfFirstChild)
 //******************************** 
 DefBuilder& DefBuilder::array_end ()
 {
+    if (!flag.isBitSet(FLAG__BEGIN))
+        flag.set (FLAG__ERROR);
+    if (flag.isBitSet(FLAG__ERROR))
+    {
+        DBGBREAK;
+        return *this;
+    }
+
+
     u16 sizeof_dataBlob_beforeThisStruct;
     stack.pop (&sizeof_dataBlob_beforeThisStruct);
     const u32 pos_elemStarted = priv_elem_end();
@@ -279,6 +378,7 @@ DefBuilder& DefBuilder::array_end ()
     header.decodeFromBuffer (buffer.getPointer(pos_elemStarted));
     const u32 pos_dataBlock = pos_elemStarted + header.sizeof_thisHeader;
 
+    //scrivo lo stride
     buffer.writeU8At (pos_dataBlock+5, sizeof_oneElem);
 
     //calcolo la dimensione totale dell'array
@@ -295,9 +395,26 @@ DefBuilder& DefBuilder::array_end ()
     sizeof_dataBlob -= sizeof_oneElem;
     sizeof_dataBlob += total_sizeof_array;
 
-    //const u16 pos_firstChild = buffer.readU16At (pos_dataBlock);
-    
     //scrivo la end pos dell'ultimo figlio
     buffer.writeU16At (pos_dataBlock + 2, static_cast<u16>(buffer.tell()));
+
+    //conto il numero di figli. Se ha solo un figlio, allora deve essere di tipo
+    //eDataBlobElemType::simpleType e significa che l'array e' un array semplice.
+    //Se ha piu' di un figlio, allora e' un array di struct
+    u16 pos = buffer.readU16At (pos_dataBlock);
+    u8 numMembers = 0;
+    while (pos < buffer.tell())
+    {
+        header.decodeFromBuffer (buffer.getPointer(pos));
+        pos = header.next;
+        numMembers++;
+    }    
+    if (1 == numMembers)
+    {
+        u8 numDim = buffer.readU8At (pos_dataBlock + 4);
+        numDim |= 0x80;
+        buffer.writeU8At (pos_dataBlock + 4, numDim);
+    }
+    
     return *this;
 }

@@ -17,8 +17,14 @@ void main()
 {
     const float c = PIPE_calcLight_01 (in_normal) * objInstance.width;
 
+
     //const uint ii = nonuniformEXT(material.textureIndex);
     const vec3 texCol = PIPE_sample2D_bilinear (material.textureIndex, in_texCoord).rgb;
     out_colorRGBA = vec4(material.color.rgb * texCol * c, 1);
+
+    out_colorRGBA.xyz += objInstance.arrayDiStruct[2].v3;
+    out_colorRGBA.x += objInstance.unVec2.y + objInstance.unArrayDiVec2Di6Elem[2].x;
+
+
 //	out_color2RGBA = vec4(1,0,0,0);
 }

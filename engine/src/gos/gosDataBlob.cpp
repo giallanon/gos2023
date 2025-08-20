@@ -15,6 +15,7 @@ void sElemHeader::decodeFromBuffer (const u8 *buffer)
     this->next = reader.readU16 ();
     this->absOffset = reader.readU16 ();
     this->paddedSize = reader.readU16 ();
+    this->userDefined = reader.readU32 ();
 
     this->elemName = NULL;
     if (this->nameLen)
@@ -55,95 +56,119 @@ u16 gos::datablob::blobDef_getSizeOfDataBlob (const void *dataBlodDef)
 }
 
 //******************************** 
-static void gos_datablob_print_info_header (const gos::datablob::DefReader::Elem &elem, const char *namePrefix, u16 indent)
+void gos_datablob_blobDef_prinfInfo_ric (gos::UTF8String &out, gos::datablob::DefElem &elem, u32 indent, trapFn_printOtherInfoOnThisRow trapFn)
 {
-    char var_name[256];
+    static constexpr u8 PRINT_COL1 = 45;
+    static constexpr u8 PRINT_COL2 = 72;
+    //static constexpr u8 PRINT_COL3 = 100;
 
-    memset (var_name, 0, sizeof(var_name));
+    char sIndent[128];
+    memset (sIndent, 0, sizeof(sIndent));
     if (indent)
-        memset (var_name, ' ', indent);
+        memset(sIndent, ' ', indent*4);
 
-    if (NULL == namePrefix)
-        sprintf_s (&var_name[indent], sizeof(var_name) - indent, "%s", elem.getName());
-    else
-        sprintf_s (&var_name[indent], sizeof(var_name) - indent, "%s.%s", namePrefix, elem.getName());
-
-    switch (elem.getType())
+    if (eDataBlobElemType::structType == elem.getType())
     {
-    default:
-        gos::logger::log ("ERROR!!\n");
-        DBGBREAK;
-        break;
+        out << "\n" << sIndent << "struct\n"
+            << sIndent << "{\n";
 
-    case eDataBlobElemType::simpleType:
-        gos::logger::log ("%-6d %-4d %-8s %s\n", 
-                            elem.getOffset(), elem.getPaddedSize(),
-                            gos::utils::enumToString(elem.simpleType_getDataFmt()), var_name);
-        break;
+        DefElem figlio;
+        if (elem.getFirstChild(&figlio))
+            gos_datablob_blobDef_prinfInfo_ric (out, figlio, indent+1, trapFn);
 
-    case eDataBlobElemType::structType:
-        gos::logger::log ("%-6d %-4d %-8s %s (num-members=%d)\n", 
-                            elem.getOffset(), elem.getPaddedSize(),
-                            "struct", var_name,
-                            elem.structType_getNumMembers());
+        out << sIndent << "} " << elem.getName() << ";";
+        
+        if (trapFn)
         {
-            gos::datablob::DefReader::Elem childElem;
-            elem.structType_getFirstMember (&childElem);
-            do
-            {
-                gos_datablob_print_info_header (childElem, var_name, indent+2);
-            } while (childElem.next());
+            out.fillRowUntilColumn (PRINT_COL2);
+            trapFn (out, elem);
         }
-        break;
-
-    case eDataBlobElemType::arrayType:
-        {
-            const u8 dimension = elem.arrayType_getNumDimension();
-            for (u8 i=0; i<dimension; i++)
-            {
-                char s[32];
-                sprintf_s (s, sizeof(s), "[%d]", elem.arrayType_getNumElem(i));
-                strcat_s (var_name, sizeof(var_name), s);
-            }
-
-            gos::logger::log ("%-6d %-4d %-8s %s (size-of-oneElem=%d)\n", 
-                                elem.getOffset(), elem.getPaddedSize(),
-                                "array", var_name,
-                                elem.arrayType_getSizeOfOneElem());
-            {
-                gos::datablob::DefReader::Elem childElem;
-                elem.arrayType_getFirstMember (&childElem);
-                do
-                {
-                    gos_datablob_print_info_header (childElem, var_name, indent+2);
-                } while (childElem.next());
-            }
-        }
-        break;
+        out << "\n\n";
     }
+    else if (eDataBlobElemType::arrayType == elem.getType())
+    {
+        char arrName[64];
+        sprintf_s (arrName, sizeof(arrName), "%s", elem.getName());
+        for (u8 i=0; i<elem.arrayType_getNumDimension(); i++)
+        {
+            char s[32];
+            sprintf_s (s, sizeof(s), "[%d]", elem.arrayType_getNumElem(i));
+            strcat_s (arrName, sizeof(arrName), s);
+        }
+
+        DefElem figlio;
+        if (elem.getFirstChild(&figlio))
+        {
+            DefElem figlio;
+            elem.getFirstChild(&figlio);
+
+            if (elem.arrayType_isSimple())
+            {
+                out << sIndent << STRFMT("%-10s", gos::utils::enumToString(figlio.getDataFmt())) << arrName << ";";
+            }
+            else
+            {
+                //array di struct
+                out << "\n" << sIndent << "struct\n"
+                    << sIndent << "{\n";
+
+                gos_datablob_blobDef_prinfInfo_ric (out, figlio, indent+1, trapFn);
+
+                out << sIndent << "} " << arrName << ";";
+            }
+
+            out.fillRowUntilColumn (PRINT_COL1-1);
+            out << "|" << STRFMT("% 6d", elem.getOffset()) << "|"
+                << STRFMT("% 8d", elem.getPaddedSize()) << "|"
+                << "stride=" << elem.arrayType_getStride();
+
+            if (trapFn)
+            {
+                out.fillRowUntilColumn (PRINT_COL2);
+                trapFn (out, elem);
+            }
+            out << "\n\n";
+        }
+    }
+    else 
+    {
+        //variabile semplice
+        out << sIndent << STRFMT("%-10s", gos::utils::enumToString(elem.getDataFmt())) << elem.getName() << ";";
+        out.fillRowUntilColumn (PRINT_COL1-1);
+        out << "|" << STRFMT("% 6d", elem.getOffset()) << "|"
+            << STRFMT("% 8d", elem.getPaddedSize()) << "|";
+
+        if (trapFn)
+        {
+            out.fillRowUntilColumn (PRINT_COL2);
+            trapFn (out, elem);
+        }
+        out << "\n";
+    }
+
+    if (elem.next())
+        gos_datablob_blobDef_prinfInfo_ric (out, elem, indent, trapFn);
 }
 
-//******************************** 
-void gos::datablob::print_info (const char *name, const void *dataBlobDef)
+void gos::datablob::blobDef_prinfInfo (gos::UTF8String &out, const void *dataBlobDef, trapFn_printOtherInfoOnThisRow trapFn)
 {
     gos::datablob::DefReader r;
-    gos::datablob::DefReader::Elem elem;
+    gos::datablob::DefElem elem;
 
     if (!r.begin (dataBlobDef, &elem))
     {
         DBGBREAK;
         return;
     }
-    gos::logger::log ("================================\n");
-    gos::logger::log ("%s, dataBlofDef_size=%d, dataBlob_size=%d\n", name, gos::datablob::blobDef_getTotalSize(dataBlobDef), r.dataBlob_getSize());
-    gos::logger::incIndent();
-    gos::logger::log ("OFFSET SIZE TYPE     VAR-NAME\n");
+
+    out << "sizeof_dataBlobDef=" << datablob::blobDef_getTotalSize(dataBlobDef) << ", sizeof_dataBlob=" << r.dataBlob_getSize()
+        << "\n"
+        << "NAME                                        |OFFSET|PAD-SIZE|OTHER\n"
+        << "------------------------------------------------------------------\n";
+
     do
     {
-        gos_datablob_print_info_header (elem, NULL, 0);
-    } while (elem.next());        
-
-    gos::logger::log("\n");
-    gos::logger::decIndent();
+        gos_datablob_blobDef_prinfInfo_ric (out, elem, 0, trapFn);
+    } while (elem.next());
+    out << "\n";
 }
-

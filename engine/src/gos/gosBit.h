@@ -85,6 +85,10 @@ namespace gos
 			void 	set (u32 pos)							{ assert (pos < 64); flag |= ((u64)1 << pos); }
 			void 	clear (u32 pos)                       	{ assert (pos < 64); flag &= ~(((u64)1 << pos)); }
 			bool 	isBitSet (u32 pos) const				{ assert (pos < 64); return ((flag & ((u64)1 << pos)) != 0); }
+			bool 	isZero() const							{ return (flag==0); }
+
+        	bool	operator== (const Flag64& b) const		{ return flag == b.flag; }
+        	bool	operator!= (const Flag64& b) const		{ return flag != b.flag; }
 
 			u64		getBitmask() const						{ return flag; }
 
@@ -103,6 +107,10 @@ namespace gos
 			void 	set (u32 pos)							{ assert (pos < 32); flag |= (0x00000001 << pos); }
 			void 	clear (u32 pos)                       	{ assert (pos < 32); flag &= ~((0x00000001 << pos)); }
 			bool 	isBitSet (u32 pos) const				{ assert (pos < 32); return ((flag & (0x00000001 << pos)) != 0); }
+			bool 	isZero() const							{ return (flag==0); }
+
+        	bool	operator== (const Flag32& b) const		{ return flag == b.flag; }
+        	bool	operator!= (const Flag32& b) const		{ return flag != b.flag; }
 
 			u32		getBitmask() const 						{ return flag; }
 
@@ -123,6 +131,10 @@ namespace gos
 			void 	set (u32 pos)							{ assert (pos < 16); flag |= (0x00001 << pos); }
 			void 	clear (u32 pos)                       	{ assert (pos < 16); flag &= ~((0x00001 << pos)); }
 			bool 	isBitSet (u32 pos) const				{ assert (pos < 16); return ((flag & (0x00001 << pos)) != 0); }
+			bool 	isZero() const							{ return (flag==0); }
+
+        	bool	operator== (const Flag16& b) const		{ return flag == b.flag; }
+        	bool	operator!= (const Flag16& b) const		{ return flag != b.flag; }
 
 			u16		getBitmask() const						{ return flag; }
 
@@ -143,7 +155,11 @@ namespace gos
 			void 	set (u32 pos)							{ assert (pos < 8); flag |= (0x01 << pos); }
 			void 	clear (u32 pos)                       	{ assert (pos < 8); flag &= ~((0x01 << pos)); }
 			bool 	isBitSet (u32 pos) const				{ assert (pos < 8); return ((flag & (0x01 << pos)) != 0); }
+			bool 	isZero() const							{ return (flag==0); }
 
+        	bool	operator== (const Flag8& b) const		{ return flag == b.flag; }
+        	bool	operator!= (const Flag8& b) const		{ return flag != b.flag; }
+			
 			u8 		getBitmask() const 						{ return flag; }
 
 		private:

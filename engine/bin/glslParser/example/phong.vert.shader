@@ -20,6 +20,8 @@ void main()
 
     //normale in world coordinate
     out_normal = in_normal * mat3(objInstance.matW);
+
+    out_normal.x += objInstance.arrayDiStruct[1].fl + objInstance.es1.fl;
     
-    out_texCoord = in_texCoord + objInstance.unVecDi2Elem;
+    out_texCoord = in_texCoord + objInstance.unVec2;
 }

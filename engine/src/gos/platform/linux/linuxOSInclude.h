@@ -16,7 +16,7 @@
 #include <string.h>
 #include <sys/eventfd.h>
 #include <sys/epoll.h>
-#include <termio.h>
+//#include <termio.h>
 #include <termios.h>
 #include <unistd.h>
 

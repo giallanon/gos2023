@@ -43,7 +43,7 @@ namespace gos
         u64					getInternalRappresentation() const														{ u64 d = date.getInternalRappresentation(); u64 t=time.getInternalRappresentation(); return ((d<<32) | t); }
         void				setFromInternalRappresentation(u64 u)													{ date.setFromInternalRappresentation ((u32)((u >> 32) & 0x00000000FFFFFFFF)); time.setFromInternalRappresentation ((u32)(u&0x00000000FFFFFFFF)); }
 
-		void				formatAs_YYYYMMDDHHMMSS (char *out, u32 sizeOfOut, char char_between_date_and_time=' ', char date_sep='-', char time_sep=':') const;
+		void				formatAs_YYYYMMDDHHMMSS (char *out, u32 sizeof_out, char char_between_date_and_time=' ', char date_sep='-', char time_sep=':') const;
 							/* ritorna in out una stringa cosi' composta YYYYaMMaDDbHHcMMcSS dove:
 								YYYY = anno 4 cifre
 								a = carattere di separazione (date_Sep, default ='-')

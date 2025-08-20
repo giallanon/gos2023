@@ -3,7 +3,8 @@
 #include "gosEnumAndDefine.h"
 #include "gosBufferWriter.h"
 #include "gosLIFOFixedSize.h"
-
+#include "gosBit.h"
+#include "string/gosUTF8String.h"
 
 namespace gos
 {
@@ -30,7 +31,8 @@ namespace gos
      *          2   u16     next                Indirizzo assoluto del prossimo elemento, oppure 0xFFFF
      *          4   u16     absOffset           Offset assoluto di questo elemento all'iterno di un ipotetico DataBlob
      *          6   u16     size                Dimensione in byte di questo elemento all'interno di un ipotetico DataBlob
-     *          8   char    *name               Un numero variabile di char ad indicare il nome dell'elemento. La stringa contiene lo 0x00 e la sua 
+     *          8   u32     userDefined         Un 32bit per uso generico
+     *          12  char    *name               Un numero variabile di char ad indicare il nome dell'elemento. La stringa contiene lo 0x00 e la sua 
      *                                          lunghezza totale e' indicata da <nameLen>
      *          
      *          A seguire, ci possono essere ulteriori dati che dipendono dal tipo di dato che stiamo descrivendo:
@@ -48,7 +50,8 @@ namespace gos
      *                  0   u16     pos of 1st child
      *                  2   u16     end pos of last child
      *                  4   u8      dimension   (1=array 1D, 2=array 2D, 3=array 3D...)
-     *                  5   u8      size of one elem
+     *                              Il bit + significativo vale 1 se l'array e' un array semplice
+     *                  5   u8      stride (AKA size of one elem)
      *                  6   u16     numElem per la dimensione 1
      *                  ...
      *                  ..  u16     numElem per la dimensione N
@@ -56,6 +59,8 @@ namespace gos
      */    
     namespace datablob
     {
+        class DefReader; //fwd decl
+
         struct sElemHeader
         {
         public:
@@ -70,15 +75,63 @@ namespace gos
             u16     next;
             u16     absOffset;
             u16     paddedSize;
+            u32     userDefined;
             u32     sizeof_thisHeader;
             const char    *elemName;
         };
+
+        /**
+        * @brief DefElem
+        * Ottenuto da DefReader durante la scansione della struttura dati
+        */
+        class DefElem
+        {
+        public:
+                                DefElem()                                      { }
+                                ~DefElem()                                     { }
+
+            eDataBlobElemType   getType() const                             { return header.elemType; }
+            u16                 getOffset() const                           { return header.absOffset; }
+            u16                 getPaddedSize() const                       { return header.paddedSize; }
+            const char*         getName() const                             { return header.elemName; }
+            eDataFormat         getDataFmt() const;
+            u32                 getUserData() const                         { return header.userDefined; }
+
+            bool                getFirstChild (DefElem *out) const;
+            bool                getNextSibling (DefElem *out) const;
+
+                                //this diventa il fratello di se stesso
+            bool                next(); 
+
+
+            u8                  structType_getNumMembers() const;
+
+            u8                  arrayType_getNumDimension() const;
+            u16                 arrayType_getNumElem (u8 index) const;
+            bool                arrayType_isSimple() const;
+            u8                  arrayType_getStride() const;
+
+
+        private:
+            void                priv_setup (const BufferR *reader, u16 startingPos, u16 endingPos);
+
+        private:
+            const BufferR   *reader;
+            sElemHeader     header;
+            u16             pos_curElem;
+            u16             endingPos;
+
+        friend DefReader;
+        };
+
+        typedef void (*trapFn_printOtherInfoOnThisRow)(UTF8String &out, const DefElem &elem);
 
 
         bool    blobDef_isValidMagic (const void *dataBlodDef);
         u16     blobDef_getTotalSize (const void *dataBlodDef);
         u16     blobDef_getSizeOfDataBlob (const void *dataBlodDef);
-        void    print_info (const char *name, const void *dataBlobDef);
+        void    blobDef_prinfInfo (gos::UTF8String &out, const void *dataBlobDef, trapFn_printOtherInfoOnThisRow trapFn = NULL);
+
 
         /**
         * @brief DefBuilder
@@ -93,29 +146,34 @@ namespace gos
                     //aggiunge un tipo di dato semplice (non un array, non una struct). La dimensione
                     //del tipo di dati e' definita da <paddedSize>.
                     //Se <paddedSize> == u32MAX, allora la dimensione del tipo di dati e' calcolata automaticamente
-            DefBuilder&     add_simpleType (const char *var_name, eDataFormat fmt, u32 paddedSize = u32MAX);
+                    //
+                    //La variante ..atOffset consente di specificare un preciso offset al quale fare partire l'elemento
+                    //E' mandatorio che l'offset in questione sia sempre crescente, non e' possibile aggiungere elementi
+                    //con offset minore dell'ultimo elemento aggiunto
+            DefBuilder&     add_simpleType (const char *var_name, eDataFormat fmt, u32 userDefinedData=0, u32 paddedSize=u32MAX)                        { return add_simpleTypeAtOffset (sizeof_dataBlob, var_name, fmt, userDefinedData, paddedSize); }
+            DefBuilder&     add_simpleTypeAtOffset (u16 offset, const char *var_name, eDataFormat fmt, u32 userDefinedData=0, u32 paddedSize=u32MAX);
 
-            DefBuilder&     struct_begin (const char *var_name);
+            DefBuilder&     struct_begin (const char *var_name, u32 userDefinedData=0)                          { return struct_beginAtOffset (sizeof_dataBlob, var_name, userDefinedData); }
+            DefBuilder&     struct_beginAtOffset (u16 offset, const char *var_name, u32 userDefinedData=0);
                             //add_simpleType..
                             //...
                             //add_simpleType..
             DefBuilder&     struct_end();
 
-            DefBuilder&     array_begin1D (const char *var_name, u16 numElem1);
-            DefBuilder&     array_begin2D (const char *var_name, u16 numElem1, u16 numElem2);
-            DefBuilder&     array_begin3D (const char *var_name, u16 numElem1, u16 numElem2, u16 numElem3);
-                            //add_simpleType..
-                            // oppure
-                            //struct_begin
+            DefBuilder&     array_begin1D (const char *var_name, u16 numElem1, u32 userDefinedData=0)                               { return array_begin1DAtOffset (sizeof_dataBlob, var_name, numElem1, userDefinedData); }
+            DefBuilder&     array_begin1DAtOffset (u16 offset, const char *var_name, u16 numElem1, u32 userDefinedData=0);
+            DefBuilder&     array_begin2D (const char *var_name, u16 numElem1, u16 numElem2, u32 userDefinedData=0)                 { return array_begin2DAtOffset (sizeof_dataBlob, var_name, numElem1, numElem2, userDefinedData); }
+            DefBuilder&     array_begin2DAtOffset (u16 offset, const char *var_name, u16 numElem1, u16 numElem2, u32 userDefinedData=0);
+            DefBuilder&     array_begin3D (const char *var_name, u16 numElem1, u16 numElem2, u16 numElem3, u32 userDefinedData=0)   { return array_begin3DAtOffset (sizeof_dataBlob, var_name, numElem1, numElem2, numElem3, userDefinedData); }
+            DefBuilder&     array_begin3DAtOffset (u16 offset, const char *var_name, u16 numElem1, u16 numElem2, u16 numElem3, u32 userDefinedData=0);
                             //add_simpleType..
                             //...
                             //add_simpleType..
-                            //struct_end();
             DefBuilder&     array_end ();
 
             bool            end();
 
-            bool            isValid() const                             { return bIsValid; }
+            bool            isValid() const;
 
                             //ritorna la dimensione inbyte dell'interno DataBlobDef
             u16             getDataBlobDefSize() const                  { return buffer.readU16At (4); }
@@ -127,17 +185,21 @@ namespace gos
                             //alloca un buffer della necessaria dimensione e ci memcpia la DataBlobDef
 
         private:
-            u16             priv_elem_begin (eDataBlobElemType elemtype, const char *name);
+            static constexpr u8     FLAG__BEGIN = 0;
+            static constexpr u8     FLAG__ERROR = 1;
+
+        private:
+            u16             priv_elem_begin (eDataBlobElemType elemtype, const char *name, u32 userDefinedData);
             u16             priv_elem_end ();
             void            priv_add_pad();
-            u16             priv_array_begin_start (const char *var_name, u8 numDimension);
+            u16             priv_array_begin_start (u16 offset, const char *var_name, u8 numDimension, u32 userDefinedData);
             void            priv_array_begin_end(u16 pos_posOfFirstChild);
 
         private:
             gos::LIFOFixedSize<u16, 32> stack;
             gos::BufferW_linear         buffer;
-            bool                        bIsValid;
             u16                         sizeof_dataBlob;
+            gos::Flag8                  flag;
         }; //class DefBuilder
 
         
@@ -148,47 +210,10 @@ namespace gos
         class DefReader
         {
         public:
-            class Elem
-            {
-            public:
-                                    Elem()                                      { }
-                                    ~Elem()                                     { }
-
-                eDataBlobElemType   getType() const                             { return header.elemType; }
-                u16                 getOffset() const                           { return header.absOffset; }
-                u16                 getPaddedSize() const                       { return header.paddedSize; }
-                const char*         getName() const                             { return header.elemName; }
-
-                eDataFormat         simpleType_getDataFmt() const;
-                
-                u8                  structType_getNumMembers() const;
-                const char*         structType_getMemberName(u8 index) const;
-                bool                structType_getFirstMember (Elem *out) const;
-
-                u8                  arrayType_getNumDimension() const;
-                u16                 arrayType_getNumElem (u8 index) const;
-                u8                  arrayType_getSizeOfOneElem() const;
-                bool                arrayType_getFirstMember (Elem *out) const;
-
-                bool                next();
-
-            private:
-                void                priv_setup (const BufferR *reader, u16 startingPos, u16 endingPos);
-
-            private:
-                const BufferR   *reader;
-                sElemHeader     header;
-                u16             pos_curElem;
-                u16             endingPos;
-
-            friend DefReader;
-            };
-
-        public:
                                 DefReader()                                     { }
                                 ~DefReader()                                    { }
 
-            bool                begin (const void *dataBlobDef, Elem *out);
+            bool                begin (const void *dataBlobDef, DefElem *out);
             u16                 dataBlob_getSize() const                        { return reader.readU16At (6); }
 
         private:

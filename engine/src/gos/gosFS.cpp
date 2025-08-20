@@ -178,9 +178,9 @@ void fs::pathSanitizeInPlace (char *utf8_path, u32 nBytesToCheck)
 }
 
 //******************************************** 
-void fs::pathGoBack (const char *pathSenzaSlashIN, char *out, u32 sizeofout)
+void fs::pathGoBack (const char *pathSenzaSlashIN, char *out, u32 sizeof_out)
 {
-	assert (NULL != out && sizeofout > 1);
+	assert (NULL != out && sizeof_out > 1);
 	out[0] ='/'; 
 	out[1] = 0;
 	if (NULL == pathSenzaSlashIN || (NULL != pathSenzaSlashIN && pathSenzaSlashIN[0] == 0))
@@ -210,16 +210,16 @@ void fs::pathGoBack (const char *pathSenzaSlashIN, char *out, u32 sizeofout)
 	if (parser.getCurChar() == '/')
 	{
 		if (parser.backOneChar())
-			parser.copyStrFromXToCurrentPosition (0, out, sizeofout, true);
+			parser.copyStrFromXToCurrentPosition (0, out, sizeof_out, true);
 	}
 
 }
 
 
 //**************************************************************************
-void fs::extractFileExt (const char *utf8_filename, char *out, u32 sizeofout)
+void fs::extractFileExt (const char *utf8_filename, char *out, u32 sizeof_out)
 {
-	assert (out && sizeofout >=3);
+	assert (out && sizeof_out >=3);
 	out[0] = 0;
 
 	u32 len = (u32)strlen((const char*)utf8_filename);
@@ -233,10 +233,10 @@ void fs::extractFileExt (const char *utf8_filename, char *out, u32 sizeofout)
 				if (i < len - 1)
 				{
 					u32 numBytesToCopy = len - i - 1;
-					if (numBytesToCopy >= sizeofout-1)
+					if (numBytesToCopy >= sizeof_out-1)
 					{
 						DBGBREAK;
-						numBytesToCopy = sizeofout -2;
+						numBytesToCopy = sizeof_out -2;
 					}
 					memcpy (out, &utf8_filename[i+1], numBytesToCopy);
 					out[numBytesToCopy] = 0;
@@ -248,9 +248,9 @@ void fs::extractFileExt (const char *utf8_filename, char *out, u32 sizeofout)
 }
 
 //**************************************************************************
-void fs::extractFileNameWithExt (const char *utf8_filename, char *out, u32 sizeofout)
+void fs::extractFileNameWithExt (const char *utf8_filename, char *out, u32 sizeof_out)
 {
-	assert (out && sizeofout >=3);
+	assert (out && sizeof_out >=3);
 	out[0] = 0;
 
 	u32 len = (u32)strlen((const char*)utf8_filename);
@@ -262,10 +262,10 @@ void fs::extractFileNameWithExt (const char *utf8_filename, char *out, u32 sizeo
 			if (utf8_filename[i]=='/' || utf8_filename[i]=='\\')
 			{
 				u32 numBytesToCopy = len - i - 1;
-				if (numBytesToCopy >= sizeofout-1)
+				if (numBytesToCopy >= sizeof_out-1)
 				{
 					DBGBREAK;
-					numBytesToCopy = sizeofout -2;
+					numBytesToCopy = sizeof_out -2;
 				}
 				memcpy (out, &utf8_filename[i+1], numBytesToCopy);
 				out[numBytesToCopy] = 0;
@@ -274,10 +274,10 @@ void fs::extractFileNameWithExt (const char *utf8_filename, char *out, u32 sizeo
 		}
 		
 		u32 numBytesToCopy = len;
-		if (numBytesToCopy >= sizeofout-1)
+		if (numBytesToCopy >= sizeof_out-1)
 		{
 			DBGBREAK;
-			numBytesToCopy = sizeofout -2;
+			numBytesToCopy = sizeof_out -2;
 		}
 		memcpy (out, utf8_filename, numBytesToCopy);
 		out[numBytesToCopy] = 0;
@@ -286,9 +286,9 @@ void fs::extractFileNameWithExt (const char *utf8_filename, char *out, u32 sizeo
 }
 
 //**************************************************************************
-void fs::extractFileNameWithoutExt (const char *utf8_filename, char *out, u32 sizeofout)
+void fs::extractFileNameWithoutExt (const char *utf8_filename, char *out, u32 sizeof_out)
 {
-	fs::extractFileNameWithExt (utf8_filename, out, sizeofout);
+	fs::extractFileNameWithExt (utf8_filename, out, sizeof_out);
 
 	u32 len = (u32)strlen((const char*)out);
 	while (len--)
@@ -302,9 +302,9 @@ void fs::extractFileNameWithoutExt (const char *utf8_filename, char *out, u32 si
 }
 
 //**************************************************************************
-void fs::extractFilePathWithSlash (const char *utf8_filename, char *out, u32 sizeofout)
+void fs::extractFilePathWithSlash (const char *utf8_filename, char *out, u32 sizeof_out)
 {
-	assert (out && sizeofout >=3);
+	assert (out && sizeof_out >=3);
 	out[0] = 0;
 
 	u32 len = (u32)strlen((const char*)utf8_filename);
@@ -313,10 +313,10 @@ void fs::extractFilePathWithSlash (const char *utf8_filename, char *out, u32 siz
 		if (utf8_filename[len]=='/' || utf8_filename[len]=='\\')
 		{
 			u32 numBytesToCopy = len+1;
-			if (numBytesToCopy >= sizeofout)
+			if (numBytesToCopy >= sizeof_out)
 			{
 				DBGBREAK;
-				numBytesToCopy = sizeofout -1;
+				numBytesToCopy = sizeof_out -1;
 			}
 			memcpy (out, utf8_filename, numBytesToCopy);
 			out[numBytesToCopy] = 0;
@@ -326,9 +326,9 @@ void fs::extractFilePathWithSlash (const char *utf8_filename, char *out, u32 siz
 }
 
 //**************************************************************************
-void fs::extractFilePathWithOutSlash (const char *utf8_filename, char *out, u32 sizeofout)
+void fs::extractFilePathWithOutSlash (const char *utf8_filename, char *out, u32 sizeof_out)
 {
-	assert (out && sizeofout >=3);
+	assert (out && sizeof_out >=3);
 	out[0] = 0;
 
 	u32 len = (u32)strlen((const char*)utf8_filename);
@@ -337,10 +337,10 @@ void fs::extractFilePathWithOutSlash (const char *utf8_filename, char *out, u32 
 		if (utf8_filename[len]=='/' || utf8_filename[len]=='\\')
 		{
 			u32 numBytesToCopy = len;
-			if (numBytesToCopy >= sizeofout)
+			if (numBytesToCopy >= sizeof_out)
 			{
 				DBGBREAK;
-				numBytesToCopy = sizeofout -1;
+				numBytesToCopy = sizeof_out -1;
 			}
 			memcpy (out, utf8_filename, numBytesToCopy);
 			out[numBytesToCopy] = 0;

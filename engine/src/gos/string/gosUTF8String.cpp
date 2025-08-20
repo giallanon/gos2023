@@ -298,3 +298,28 @@ void UTF8String::unescapeTo (UTF8String *out) const
 	out->curSize = gos::string::utf8::unescape (out->buffer, newSize, buffer, curSize);
 }
 
+//*******************************
+void UTF8String::fillRowUntilColumn (u32 column, char filler)
+{
+	//a partire da buffer[curSize], vado indietro fino a trovare l'inizio di questa riga
+	u32 ctFirstCharOfRow = curSize;
+	while (ctFirstCharOfRow)
+	{
+		if (buffer[ctFirstCharOfRow] == '\n')
+		{	
+			ctFirstCharOfRow++;
+			break;
+		}
+
+		ctFirstCharOfRow--;
+	}
+
+	//il primo carattere della riga inizia in buffer[ct]
+	const u32 ctlastCharOfRow = curSize;
+	u32 rowSize = ctlastCharOfRow - ctFirstCharOfRow;
+	while (rowSize++ < column)
+	{
+		append(filler);
+	}
+	
+}

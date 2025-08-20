@@ -334,11 +334,11 @@ bool IniFile::get (const char *identifier, UTF8String &out) const
 }
 
 //********************************************
-bool IniFile::get (const char *identifier, char *out, u32 sizeofout) const
+bool IniFile::get (const char *identifier, char *out, u32 sizeof_out) const
 {
 	if (NULL == root)
 		return false;
-	return root->get (identifier, out, sizeofout);
+	return root->get (identifier, out, sizeof_out);
 }
 
 //********************************************
@@ -351,22 +351,22 @@ void IniFile::getOrDefault (const char *identifier, const char *defaultValue, UT
 }
 
 //*******************************************
-void IniFile::getOrDefault (const char *identifier, const char *defaultValue, char *out, u32 sizeofout) const
+void IniFile::getOrDefault (const char *identifier, const char *defaultValue, char *out, u32 sizeof_out) const
 {
 	if (NULL == root)
 	{
 		assert (NULL != defaultValue);
 		u32 n = string::utf8::lengthInByte(defaultValue);
-		if (n>=sizeofout)
+		if (n>=sizeof_out)
 		{
-			n = sizeofout-1;
+			n = sizeof_out-1;
 			DBGBREAK;
 		}
 		memcpy (out, defaultValue, n);
 		out[n] = 0;
 	}
 	else
-		root->getOrDefault (identifier, defaultValue, out, sizeofout);
+		root->getOrDefault (identifier, defaultValue, out, sizeof_out);
 }
 
 //********************************************

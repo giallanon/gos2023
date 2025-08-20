@@ -5,15 +5,15 @@
 using namespace gos;
 
 //**************************************************
-bool string::strANSItoUTF8 (const char *in, char *out, u32 sizeOfOut)
+bool string::strANSItoUTF8 (const char *in, char *out, u32 sizeof_out)
 {
-	return strANSItoUTF8 (in, (u32)strlen(in), out, sizeOfOut);
+	return strANSItoUTF8 (in, (u32)strlen(in), out, sizeof_out);
 }
 
 //**************************************************
-bool string::strANSItoUTF8  (const char *in, u32 lenOfIN, char *out,  u32 sizeOfOut)
+bool string::strANSItoUTF8  (const char *in, u32 lenOfIN, char *out,  u32 sizeof_out)
 {
-	assert (out && sizeOfOut);
+	assert (out && sizeof_out);
 
 	if (NULL == in)
 	{
@@ -41,7 +41,7 @@ bool string::strANSItoUTF8  (const char *in, u32 lenOfIN, char *out,  u32 sizeOf
 		else if (u.data[2]) nBytes = 3;
 		else if (u.data[1]) nBytes = 2;
 
-		if (n + nBytes >= sizeOfOut)
+		if (n + nBytes >= sizeof_out)
 		{
 			DBGBREAK; //non c'� abbastanza spazio in *out
 			out[n] = 0;

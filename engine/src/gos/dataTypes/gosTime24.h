@@ -45,7 +45,7 @@ namespace gos
         u8				getSec() const															{ return (u8)((ts & 0x0000FC00) >> 10); }
         u32				getMSec() const															{ return ((ts & 0x000003FF)); }
         
-		void			formatAs_HHMMSS(char *out, u32 sizeofout, char time_sep = 0x00) const;
+		void			formatAs_HHMMSS(char *out, u32 sizeof_out, char time_sep = 0x00) const;
 		u32				formatAs_HHMMSS() const;
 						//ritorna un u32 del tipo 159025 (15::09:25)
 

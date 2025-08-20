@@ -141,14 +141,14 @@ namespace gos
 		bool			isPathAbsolute (const char *path);
 		void 			pathSanitize (const char *utf8_path, char *out_utf8sanitizedPath, u32 sizeOfOutSanitzed);
 		void			pathSanitizeInPlace (char *utf8_path, u32 nBytesToCheck = u32MAX);
-		void			pathGoBack (const char *pathSenzaSlashIN, char *out, u32 sizeofout);
+		void			pathGoBack (const char *pathSenzaSlashIN, char *out, u32 sizeof_out);
 		bool			doesFileNameMatchJolly (const char *utf8_filename, const char *utf8_strJolly);
 
-		void			extractFileExt (const char *utf8_filename, char *out, u32 sizeofout);
-		void			extractFileNameWithExt (const char *utf8_filename, char *out, u32 sizeofout);
-		void			extractFileNameWithoutExt (const char *utf8_filename, char *out, u32 sizeofout);
-		void			extractFilePathWithSlash (const char *utf8_filename, char *out, u32 sizeofout);
-		void			extractFilePathWithOutSlash (const char *utf8_filename, char *out, u32 sizeofout);
+		void			extractFileExt (const char *utf8_filename, char *out, u32 sizeof_out);
+		void			extractFileNameWithExt (const char *utf8_filename, char *out, u32 sizeof_out);
+		void			extractFileNameWithoutExt (const char *utf8_filename, char *out, u32 sizeof_out);
+		void			extractFilePathWithSlash (const char *utf8_filename, char *out, u32 sizeof_out);
+		void			extractFilePathWithOutSlash (const char *utf8_filename, char *out, u32 sizeof_out);
 
 		bool			folderExists (const char *utf8_pathSenzaSlashRESOLVABLE);
 		bool			folderDelete (const char *utf8_pathSenzaSlashRESOLVABLE);

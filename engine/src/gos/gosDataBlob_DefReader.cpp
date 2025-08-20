@@ -5,7 +5,7 @@ using namespace gos;
 using namespace gos::datablob;
 
 //*****************************
-void DefReader::Elem::priv_setup (const BufferR *readerIN, u16 startingPos, u16 endingPosIN)
+void DefElem::priv_setup (const BufferR *readerIN, u16 startingPos, u16 endingPosIN)
 {
     reader = readerIN;
     header.decodeFromBuffer (reader->getPointer(startingPos));
@@ -14,7 +14,7 @@ void DefReader::Elem::priv_setup (const BufferR *readerIN, u16 startingPos, u16 
 }
 
 //*****************************
-bool DefReader::Elem::next()
+bool DefElem::next()
 {
     const u16 pos_nextElem = header.next;
     if (pos_nextElem >= endingPos)
@@ -26,47 +26,12 @@ bool DefReader::Elem::next()
 }
 
 //*****************************
-eDataFormat DefReader::Elem::simpleType_getDataFmt() const
-{
-    assert (getType() == eDataBlobElemType::simpleType);
-    const u32 pos_startOfDataBlock = pos_curElem + header.sizeof_thisHeader;
-
-    return static_cast<eDataFormat> (reader->readU8At (pos_startOfDataBlock));
-}
-
-//*****************************
-u8 DefReader::Elem::structType_getNumMembers() const
-{
-    assert (getType() == eDataBlobElemType::structType);
-    const u32 pos_startOfDataBlock = pos_curElem + header.sizeof_thisHeader;
-
-    return reader->readU8At (pos_startOfDataBlock + 4);
-}
-
-//*****************************
-const char* DefReader::Elem::structType_getMemberName(u8 index) const
-{
-    assert (getType() == eDataBlobElemType::structType);
-    assert (index < structType_getNumMembers());
-
-    u16 pos = reader->readU16At (pos_curElem + header.sizeof_thisHeader + 2);
-    sElemHeader tempHeader;
-    tempHeader.decodeFromBuffer (reader->getPointer(pos));
-    
-    for (u8 i=0;i<index;i++)
-    {
-        pos = tempHeader.next;
-        tempHeader.decodeFromBuffer (reader->getPointer(pos));
-    }
-
-    return tempHeader.elemName;
-}
-
-//*****************************
-bool DefReader::Elem::structType_getFirstMember (Elem *out) const
+bool DefElem::getFirstChild (DefElem *out) const
 {
     assert (NULL != out);
-    assert (getType() == eDataBlobElemType::structType);
+    if (eDataBlobElemType::simpleType == getType())
+        return false;
+
     const u16 posFistChild = reader->readU16At (pos_curElem + header.sizeof_thisHeader);
     const u16 endPosOfLastChild = reader->readU16At (pos_curElem + header.sizeof_thisHeader + 2);
     out->priv_setup (reader, posFistChild, endPosOfLastChild);
@@ -74,16 +39,57 @@ bool DefReader::Elem::structType_getFirstMember (Elem *out) const
 }
 
 //*****************************
-u8 DefReader::Elem::arrayType_getNumDimension() const
+bool DefElem::getNextSibling (DefElem *out) const
 {
-    assert (getType() == eDataBlobElemType::arrayType);
+    assert (NULL != out);
+    const u16 pos_nextElem = header.next;
+    if (pos_nextElem >= endingPos)
+        return false;
+
+    out->priv_setup (reader, pos_nextElem, endingPos);
+    return true;
+}
+
+//*****************************
+eDataFormat DefElem::getDataFmt() const
+{
+    if (eDataBlobElemType::simpleType == getType())
+    {
+        const u32 pos_startOfDataBlock = pos_curElem + header.sizeof_thisHeader;
+        return static_cast<eDataFormat> (reader->readU8At (pos_startOfDataBlock));
+    }
+    return eDataFormat::_unknown;
+}
+
+//*****************************
+u8 DefElem::structType_getNumMembers() const
+{
+    assert (getType() == eDataBlobElemType::structType);
     const u32 pos_startOfDataBlock = pos_curElem + header.sizeof_thisHeader;
 
     return reader->readU8At (pos_startOfDataBlock + 4);
 }
 
 //*****************************
-u16 DefReader::Elem::arrayType_getNumElem (u8 index) const
+u8 DefElem::arrayType_getNumDimension() const
+{
+    assert (getType() == eDataBlobElemType::arrayType);
+    const u32 pos_startOfDataBlock = pos_curElem + header.sizeof_thisHeader;
+
+    return (reader->readU8At (pos_startOfDataBlock + 4) & 0x7F);
+}
+
+//*****************************
+bool DefElem::arrayType_isSimple() const
+{
+    assert (getType() == eDataBlobElemType::arrayType);
+    const u32 pos_startOfDataBlock = pos_curElem + header.sizeof_thisHeader;
+
+    return ((reader->readU8At (pos_startOfDataBlock + 4) & 0x80) != 0);
+}
+
+//*****************************
+u16 DefElem::arrayType_getNumElem (u8 index) const
 {
     assert (getType() == eDataBlobElemType::arrayType);
     assert (index < arrayType_getNumDimension());
@@ -93,7 +99,7 @@ u16 DefReader::Elem::arrayType_getNumElem (u8 index) const
 }
 
 //*****************************
-u8 DefReader::Elem::arrayType_getSizeOfOneElem() const
+u8 DefElem::arrayType_getStride() const
 {
     assert (getType() == eDataBlobElemType::arrayType);
     const u32 pos_startOfDataBlock = pos_curElem + header.sizeof_thisHeader;
@@ -102,19 +108,7 @@ u8 DefReader::Elem::arrayType_getSizeOfOneElem() const
 }
 
 //*****************************
-bool DefReader::Elem::arrayType_getFirstMember (Elem *out) const
-{
-    assert (NULL != out);
-    assert (getType() == eDataBlobElemType::arrayType);
-    const u16 posFistChild = reader->readU16At (pos_curElem + header.sizeof_thisHeader);
-    const u16 endPosOfLastChild = reader->readU16At (pos_curElem + header.sizeof_thisHeader + 2);
-    out->priv_setup (reader, posFistChild, endPosOfLastChild);
-    return true;
-}
-
-
-//*****************************
-bool DefReader::begin (const void *dataBlobDef, Elem *out)
+bool DefReader::begin (const void *dataBlobDef, DefElem *out)
 {
     assert (NULL != out);
 

@@ -20,9 +20,11 @@ layout(push_constant) uniform PushConstantData
 {
     float    width;
     sEsempio1     es1;
-    sEsempio1     arrayDiStruct[4];
+    sEsempio1     arrayDiStruct[5];
     mat4    matW;
-    vec2    unVecDi2Elem;
-    int     unArrayDiIntDi8Elem[8];
+    vec2    unVec2;
+    int     unArray3x5diInt[3][5];
+    vec2    unArrayDiVec2Di6Elem[6];
+    mat4    unArrayDiMat42Di5Elem[5];
     float   height;
 } objInstance;

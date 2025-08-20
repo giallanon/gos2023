@@ -26,15 +26,15 @@ bool compile (const char *shaderSRCFile, const char *shaderStage, bool bWithSour
     //c'e' stato qualche errore di compilazione
     printf("(%d): %s", len, result);
     GOSFREE_SCRAP(result);
-    return true;
+    return false;
 }
 
 
 //******************************** 
 void test_reflect_1()
 {
-    compile("phong.vert.shader", "vert", true);
-    compile("phong.frag.shader", "frag", true);
+    if (!compile("phong.vert.shader", "vert", true)) return;
+    if (!compile("phong.frag.shader", "frag", true)) return;
     SPVReflect parser;
     if (parser.parseFromFile ("@ex/compiled/phong.vert.shader.spv", "@ex/compiled/phong.frag.shader.spv"))
         parser.printInfo();
@@ -49,8 +49,8 @@ void test_reflect_1()
 //******************************** 
 void test_reflect_2()
 {
-    compile("shader_noVtxDecl.vert", "vert", true);
-    compile("shader_noVtxDecl.frag", "frag", true);
+    if (!compile("shader_noVtxDecl.vert", "vert", true)) return;
+    if (!compile("shader_noVtxDecl.frag", "frag", true)) return;
     SPVReflect parser;
     if (parser.parseFromFile ("@ex/compiled/shader_noVtxDecl.vert.spv", "@ex/compiled/shader_noVtxDecl.frag.spv"))
         parser.printInfo();
@@ -65,8 +65,8 @@ void test_reflect_2()
 //******************************** 
 void test_reflect_3()
 {
-    compile("lineRenderer.vert", "vert", true);
-    compile("lineRenderer.frag", "frag", true);
+    if (!compile("lineRenderer.vert", "vert", true)) return;
+    if (!compile("lineRenderer.frag", "frag", true)) return;
     SPVReflect parser;
     if (parser.parseFromFile ("@ex/compiled/lineRenderer.vert.spv", "@ex/compiled/lineRenderer.frag.spv"))
         parser.printInfo();
@@ -106,9 +106,9 @@ int main()
     {
         fs::addAlias ("@ex", "example", eAliasPathMode::relativeToAppFolder);
 
-        test_reflect_1();
-        //test_reflect_2();
-        //test_reflect_3();
+        test_reflect_1();   //phong
+        //test_reflect_2(); //shader_noVtxDecl
+        //test_reflect_3(); //lineRenderer
         //test_pipelineParser_1 ();
     }
     

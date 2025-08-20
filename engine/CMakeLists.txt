@@ -53,6 +53,7 @@ if (MSVC)
     add_compile_definitions(GOS_COMPILER__MSVC)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options(-Wall)
+    add_compile_options(-Wno-format-truncation)
     add_compile_definitions(GOS_COMPILER__GCC)
 endif()
 
