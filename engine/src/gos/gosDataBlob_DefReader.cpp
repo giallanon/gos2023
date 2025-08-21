@@ -26,6 +26,18 @@ bool DefElem::next()
 }
 
 //*****************************
+bool DefElem::firstChild()
+{
+    if (eDataBlobElemType::simpleType == getType())
+        return false;
+
+    const u16 posFistChild = reader->readU16At (pos_curElem + header.sizeof_thisHeader);
+    const u16 endPosOfLastChild = reader->readU16At (pos_curElem + header.sizeof_thisHeader + 2);
+    priv_setup (reader, posFistChild, endPosOfLastChild);
+    return true;
+}
+
+//*****************************
 bool DefElem::getFirstChild (DefElem *out) const
 {
     assert (NULL != out);
@@ -108,20 +120,65 @@ u8 DefElem::arrayType_getStride() const
 }
 
 //*****************************
-bool DefReader::begin (const void *dataBlobDef, DefElem *out)
+bool DefReader::setup (const void *dataBlobDef)
 {
-    assert (NULL != out);
-
     //verifico che il blob sia in effetti una DataBlobDef
     if (!datablob::blobDef_isValidMagic(dataBlobDef))
         return false;
 
     //preparo il reader
-    const u16 sizeof_blobDef = datablob::blobDef_getTotalSize(dataBlobDef);
+    const u16 sizeof_blobDef = datablob::blobDef_getSize(dataBlobDef);
     reader.setup (dataBlobDef, sizeof_blobDef, eEndianess::big);
-    
-    //e mi porto sul primo elemento
-    out->priv_setup (&reader, 8, sizeof_blobDef);
     return true;
 }
 
+//*****************************
+void DefReader::beginEnumerate (DefElem *out) const
+{
+    assert (NULL != out);
+    const u16 sizeof_blobDef = reader.readU16At (4);
+    out->priv_setup (&reader, 8, sizeof_blobDef);
+}
+
+//*****************************
+bool DefReader::getOffset (const char *var_name, u16 *out) const
+{
+    assert (NULL != out);
+    if (NULL == var_name)
+        return false;
+
+    string::utf8::StringListParser parser;
+    parser.toStart (var_name, '.');
+
+    DefElem elem;
+    beginEnumerate (&elem);
+
+    char s[128];
+    if (!parser.next(s, sizeof(s)))
+        return false;
+
+    bool bEsci = false;
+    while (false == bEsci)
+    {
+        //cerco <s> tra i fratelli di <elem>
+        bEsci = true;
+        do
+        {
+            if (0 == strcmp(s, elem.getName()))
+            {
+                //se siamo a fine <var_name>...
+                if (!parser.next(s, sizeof(s)))
+                {
+                    *out = elem.getOffset();
+                    return true;
+                }
+
+                //c'e' un altro pezzo di var name da analizzare
+                elem.firstChild();
+                bEsci = false;
+                break;
+            }
+        } while (elem.next());
+    }
+    return false;
+}

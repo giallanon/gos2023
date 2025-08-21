@@ -101,7 +101,8 @@ namespace gos
             bool                getNextSibling (DefElem *out) const;
 
                                 //this diventa il fratello di se stesso
-            bool                next(); 
+            bool                next();
+            bool                firstChild();
 
 
             u8                  structType_getNumMembers() const;
@@ -128,9 +129,17 @@ namespace gos
 
 
         bool    blobDef_isValidMagic (const void *dataBlodDef);
-        u16     blobDef_getTotalSize (const void *dataBlodDef);
+        u16     blobDef_getSize (const void *dataBlodDef);
         u16     blobDef_getSizeOfDataBlob (const void *dataBlodDef);
         void    blobDef_prinfInfo (gos::UTF8String &out, const void *dataBlobDef, trapFn_printOtherInfoOnThisRow trapFn = NULL);
+
+        /**
+         * @brief   alloca un nuovo <dataBlob> le cui dimensioni in memoria dipendono
+         *          da <dataBlobDef>
+         */
+        u8*     createNew (gos::Allocator *allocator, const void *dataBlobDef);
+
+        void    destroy (gos::Allocator *allocator, void *dataBlob);
 
 
         /**
@@ -205,22 +214,30 @@ namespace gos
         
         /**
         * @brief DefReader
-        * Classe di comodo utilizzata per leggere una DataBlobDef
+        * Classe di comodo utilizzata per accedere alla struttura implicata da una <dataBlobDef>
         */
         class DefReader
         {
         public:
-                                DefReader()                                     { }
-                                ~DefReader()                                    { }
+                        DefReader()                                     { }
+                        ~DefReader()                                    { }
 
-            bool                begin (const void *dataBlobDef, DefElem *out);
-            u16                 dataBlob_getSize() const                        { return reader.readU16At (6); }
+            bool        setup (const void *dataBlobDef);
+            u16         dataBlob_getSize() const                        { return reader.readU16At (6); }
+
+            void        beginEnumerate (DefElem *out) const;
+
+                        /**
+                         * @param   var_name accetta la notazione 'dotted' come ad esempio "pippo.pluto"
+                         */
+            bool        getOffset (const char *var_name, u16 *out) const;
 
         private:
             BufferR     reader;
         }; //class DefReader
 
 
+      
     } //namespace datablob
 } //namespace gos
 

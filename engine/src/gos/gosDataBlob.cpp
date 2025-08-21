@@ -40,7 +40,7 @@ bool gos::datablob::blobDef_isValidMagic (const void *dataBlodDef)
 }
 
 //******************************** 
-u16 gos::datablob::blobDef_getTotalSize (const void *dataBlodDef)
+u16 gos::datablob::blobDef_getSize (const void *dataBlodDef)
 {
     assert (blobDef_isValidMagic(dataBlodDef));
     const u8 *p = reinterpret_cast<const u8*>(dataBlodDef);
@@ -54,6 +54,23 @@ u16 gos::datablob::blobDef_getSizeOfDataBlob (const void *dataBlodDef)
     const u8 *p = reinterpret_cast<const u8*>(dataBlodDef);
     return gos::utils::bufferReadU16 (&p[6]);
 }
+
+//******************************** 
+u8* gos::datablob::createNew (gos::Allocator *allocator, const void *dataBlobDef)
+{
+    const u16 size = blobDef_getSizeOfDataBlob(dataBlobDef);
+    u8 *ret = GOSALLOCT(u8*, allocator, size);
+    memset (ret, 0, size);
+    return ret;
+}
+
+//******************************** 
+void gos::datablob::destroy (gos::Allocator *allocator, void *dataBlob)
+{
+    if (NULL != dataBlob)
+        GOSFREE(allocator, dataBlob);
+}
+
 
 //******************************** 
 void gos_datablob_blobDef_prinfInfo_ric (gos::UTF8String &out, gos::datablob::DefElem &elem, u32 indent, trapFn_printOtherInfoOnThisRow trapFn)
@@ -153,15 +170,15 @@ void gos_datablob_blobDef_prinfInfo_ric (gos::UTF8String &out, gos::datablob::De
 void gos::datablob::blobDef_prinfInfo (gos::UTF8String &out, const void *dataBlobDef, trapFn_printOtherInfoOnThisRow trapFn)
 {
     gos::datablob::DefReader r;
-    gos::datablob::DefElem elem;
-
-    if (!r.begin (dataBlobDef, &elem))
+    if (!r.setup (dataBlobDef))
     {
         DBGBREAK;
         return;
     }
 
-    out << "sizeof_dataBlobDef=" << datablob::blobDef_getTotalSize(dataBlobDef) << ", sizeof_dataBlob=" << r.dataBlob_getSize()
+    gos::datablob::DefElem elem;    
+    r.beginEnumerate (&elem);
+    out << "sizeof_dataBlobDef=" << datablob::blobDef_getSize(dataBlobDef) << ", sizeof_dataBlob=" << r.dataBlob_getSize()
         << "\n"
         << "NAME                                        |OFFSET|PAD-SIZE|OTHER\n"
         << "------------------------------------------------------------------\n";

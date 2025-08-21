@@ -108,10 +108,12 @@ namespace test1
             u32 nElem;
             gos::datablob::DefReader r;
             gos::datablob::DefElem elem;
+            u16     offset;
 
             out << "def1\n";
             gos::datablob::blobDef_prinfInfo (out, def1);
-            TEST_ASSERT (r.begin (def1, &elem));
+            TEST_ASSERT (r.setup (def1));
+            r.beginEnumerate (&elem);
             nElem = 0;
             do
             {
@@ -123,11 +125,18 @@ namespace test1
                 nElem++;
             } while (elem.next());
             TEST_ASSERT(1 == nElem);
+            TEST_ASSERT (false == r.getOffset ("", &offset));
+            TEST_ASSERT (false == r.getOffset ("pippo", &offset));
+            TEST_ASSERT (false == r.getOffset ("pippo.pluto", &offset));
+            TEST_ASSERT (false == r.getOffset ("s1.pluto", &offset));
+            TEST_ASSERT (r.getOffset ("s1", &offset));
+            TEST_ASSERT (offset == 0);
 
 
             out << "def2\n";
             gos::datablob::blobDef_prinfInfo (out, def2);
-            TEST_ASSERT (r.begin (def2, &elem));
+            TEST_ASSERT (r.setup (def2));
+            r.beginEnumerate (&elem);
             nElem = 0;
                 TEST_ASSERT (eDataBlobElemType::simpleType == elem.getType());
                 TEST_ASSERT (0 == elem.getOffset());
@@ -161,20 +170,43 @@ namespace test1
                 TEST_ASSERT (false == elem.next());
                 nElem++;                                            
             TEST_ASSERT(4 == nElem);
-
+            TEST_ASSERT (false == r.getOffset ("pippo", &offset));
+            TEST_ASSERT (false == r.getOffset ("pippo.pluto", &offset));
+            TEST_ASSERT (false == r.getOffset ("s1.pluto", &offset));
+            TEST_ASSERT (r.getOffset ("s2", &offset));
+            TEST_ASSERT (offset == 0);
+            TEST_ASSERT (r.getOffset ("s3", &offset));
+            TEST_ASSERT (offset == 4);
+            TEST_ASSERT (r.getOffset ("s4", &offset));
+            TEST_ASSERT (offset == 12);
+            TEST_ASSERT (r.getOffset ("s5", &offset));
+            TEST_ASSERT (offset == 24);
 
             out << "def3\n";
             gos::datablob::blobDef_prinfInfo (out, def3);
-            TEST_ASSERT (r.begin (def3, &elem));
+            TEST_ASSERT (r.setup (def3));
+            r.beginEnumerate (&elem);
                 TEST_ASSERT (15 == r.dataBlob_getSize());
                 TEST_ASSERT (eDataBlobElemType::structType == elem.getType());
                 TEST_ASSERT (3 == elem.structType_getNumMembers());
                 TEST_ASSERT (false == elem.next());
-                            
+            TEST_ASSERT (false == r.getOffset ("m1", &offset));
+            TEST_ASSERT (false == r.getOffset ("m2", &offset));
+            TEST_ASSERT (false == r.getOffset ("m3", &offset));
+            TEST_ASSERT (false == r.getOffset ("m4", &offset));
+            TEST_ASSERT (false == r.getOffset ("struct1.m4", &offset));
+            TEST_ASSERT (r.getOffset ("struct1.m1", &offset));
+            TEST_ASSERT (offset == 0);
+            TEST_ASSERT (r.getOffset ("struct1.m2", &offset));
+            TEST_ASSERT (offset == 2);
+            TEST_ASSERT (r.getOffset ("struct1.m3", &offset));
+            TEST_ASSERT (offset == 3);
+            TEST_ASSERT (false == r.getOffset ("struct1.m2.pippo", &offset));
 
-            out << "de45\n";
+            out << "def4\n";
             gos::datablob::blobDef_prinfInfo (out, def4);
-            TEST_ASSERT (r.begin (def4, &elem));
+            TEST_ASSERT (r.setup (def4));
+            r.beginEnumerate (&elem);
                 TEST_ASSERT (157 == r.dataBlob_getSize());
                 TEST_ASSERT (eDataBlobElemType::simpleType == elem.getType());
                 TEST_ASSERT (elem.next());
@@ -189,6 +221,28 @@ namespace test1
                 TEST_ASSERT (eDataBlobElemType::structType == elem.getType());
                 TEST_ASSERT (3 == elem.structType_getNumMembers());
                 TEST_ASSERT (elem.next());
+            TEST_ASSERT (false == r.getOffset ("m1", &offset));
+            TEST_ASSERT (false == r.getOffset ("m2", &offset));
+            TEST_ASSERT (false == r.getOffset ("m3", &offset));
+            TEST_ASSERT (false == r.getOffset ("m4", &offset));
+            
+            TEST_ASSERT (r.getOffset ("struct1.m1", &offset));      TEST_ASSERT (offset == 8);
+            TEST_ASSERT (r.getOffset ("struct1.m2", &offset));      TEST_ASSERT (offset == 10);
+            TEST_ASSERT (r.getOffset ("struct1.m3", &offset));      TEST_ASSERT (offset == 11);
+            TEST_ASSERT (r.getOffset ("struct1.m4", &offset));      TEST_ASSERT (offset == 23);
+            TEST_ASSERT (false == r.getOffset ("struct1.m5", &offset));
+            TEST_ASSERT (false == r.getOffset ("struct1.m2.pippo", &offset));
+
+            TEST_ASSERT (r.getOffset ("s1", &offset));      TEST_ASSERT (offset == 0);
+            TEST_ASSERT (r.getOffset ("s2", &offset));      TEST_ASSERT (offset == 24);
+            TEST_ASSERT (r.getOffset ("s3", &offset));      TEST_ASSERT (offset == 69);
+            TEST_ASSERT (r.getOffset ("s4", &offset));      TEST_ASSERT (offset == 153);
+
+            TEST_ASSERT (r.getOffset ("struct2.m2_1", &offset));      TEST_ASSERT (offset == 28);
+            TEST_ASSERT (r.getOffset ("struct2.m2_2", &offset));      TEST_ASSERT (offset == 29);
+            TEST_ASSERT (r.getOffset ("struct2.m2_3", &offset));      TEST_ASSERT (offset == 33);
+
+
 
             out << "def5\n";
             gos::datablob::blobDef_prinfInfo (out, def5, [](gos::UTF8String &out, const gos::datablob::DefElem &elem) {
