@@ -3,14 +3,14 @@
 
 using namespace gos;
 
-gos::Allocator *SPVReflect::PushConstantNode::localAllocator = NULL;
+gos::Allocator *SPVReflect::Node::localAllocator = NULL;
 
 
 //***************************************************
 SPVReflect::SPVReflect()
 {
     localAllocator = gos::getSysHeapAllocator();
-    SPVReflect::PushConstantNode::localAllocator = localAllocator;
+    SPVReflect::Node::localAllocator = localAllocator;
 
     pushConstant_VS = pushConstant_PS = pushConstant_merged = NULL;
     pushConstant_dataBlobDef = NULL;
@@ -25,8 +25,11 @@ SPVReflect::~SPVReflect()
 //***************************************************
 void SPVReflect::priv_free()
 {
-    PushConstantNode::deleteTree (pushConstant_VS);
-    PushConstantNode::deleteTree (pushConstant_PS);
+    vtxDeclList.reset();
+    descrSetList.reset();
+
+    Node::deleteTree (pushConstant_VS);
+    Node::deleteTree (pushConstant_PS);
     pushConstant_VS = pushConstant_PS = pushConstant_merged = NULL;
 
     if (NULL != pushConstant_dataBlobDef)
@@ -67,36 +70,14 @@ bool SPVReflect::priv_SpvReflectFormat_to_eDataFormat (SpvReflectFormat fmtIN, e
 }
 
 //***************************************************
-const char* SPVReflect::enumToString (eDescriptrorType s)
+const char* SPVReflect::enumToString_Usage (const gos::Flag8 usage)
 {
-    switch (s)
-    {
-    default: return "eDescriptrorType::invalid value";
-    case eDescriptrorType::SAMPLER: return "SAMPLER";
-    case eDescriptrorType::COMBINED_IMAGE_SAMPLER: return "COMBINED_IMAGE_SAMPLER";
-    case eDescriptrorType::TEXTURE2D: return "TEXTURE2D";
-    case eDescriptrorType::STORAGE_IMAGE: return "STORAGE_IMAGE";
-    case eDescriptrorType::UNIFORM_TEXEL_BUFFER: return "UNIFORM_TEXEL_BUFFER";
-    case eDescriptrorType::STORAGE_TEXEL_BUFFER: return "STORAGE_TEXEL_BUFFER";
-    case eDescriptrorType::UNIFORM_BUFFER: return "UNIFORM_BUFFER";
-    case eDescriptrorType::STORAGE_BUFFER: return "STORAGE_BUFFER";
-    case eDescriptrorType::DYNAMIC_UNIFORM_BUFFER: return "DYNAMIC_UNIFORM_BUFFER";
-    case eDescriptrorType::DYNAMIC_STORAGE_BUFFER: return "DYNAMIC_STORAGE_BUFFER";
-    case eDescriptrorType::INPUT_ATTACHMENT: return "INPUT_ATTACHMENT";
-    case eDescriptrorType::UNKNOWN: return "UNKNOWN";
-    }
-}
+    if (usage.isBitSet(TYPEDESCR__IS_STRUCT))          return "struct";
+    if (usage.isBitSet(TYPEDESCR__IS_ARRAY))           return "array";
+    if (usage.isBitSet(TYPEDESCR__IS_DYNAMIC_ARRAY))   return "dynamicArray";
 
-//***************************************************
-const char* SPVReflect::enumToString (eResourceType s)
-{
-    switch (s)
-    {
-    default: return "eResourceType::invalid value";
-    case eResourceType::_struct: return "struct";
-    case eResourceType::_array: return "array";
-    case eResourceType::_dynamicArray: return "dynamicArray";
-    }
+    DBGBREAK;
+    return "!!UNKNOWN TYPE!!";
 }
 
 //***************************************************
@@ -133,8 +114,13 @@ eDataFormat SPVReflect::priv_fromSPVReflectTypeDescrToDataFormat (const SpvRefle
     }
     else if ((srcFlags & SPV_REFLECT_TYPE_FLAG_ARRAY) != 0)
     {
-        //numCol = strTypeDescr->traits.array.dims[0];
-        numCol = 1;
+        if (NULL == strTypeDescr->struct_type_description)
+            numCol = 1;
+        else
+        {
+            numCol = 1;
+            DBGBREAK;
+        }
     }
     else
         numCol = 1;
@@ -152,14 +138,17 @@ bool SPVReflect::parseFromFile (const char *vtxShaderFilename, const char *fragS
     
     if (NULL != vtxShaderFilename)
     {
-        u8 *buffer = gos::fs::fileLoadInMemory (gos::getScrapAllocator(), vtxShaderFilename, &fsize);
-        if (NULL == buffer)
+        if (0x00 != vtxShaderFilename[0])
         {
-            gos::logger::err ("SPVReflect::loadAndParse() => can't load %s\n", vtxShaderFilename);
-            return false;
+            u8 *buffer = gos::fs::fileLoadInMemory (gos::getScrapAllocator(), vtxShaderFilename, &fsize);
+            if (NULL == buffer)
+            {
+                gos::logger::err ("SPVReflect::loadAndParse() => can't load %s\n", vtxShaderFilename);
+                return false;
+            }
+            ret = VS_parseFromMemory (buffer, fsize);
+            GOSFREE_SCRAP(buffer);
         }
-        ret = VS_parseFromMemory (buffer, fsize);
-        GOSFREE_SCRAP(buffer);
     }
 
     if (!ret)
@@ -167,14 +156,17 @@ bool SPVReflect::parseFromFile (const char *vtxShaderFilename, const char *fragS
 
     if (NULL != fragShaderFilename)
     {
-        u8 *buffer = gos::fs::fileLoadInMemory (gos::getScrapAllocator(), fragShaderFilename, &fsize);
-        if (NULL == buffer)
+        if (0x00 != fragShaderFilename[0])
         {
-            gos::logger::err ("SPVReflect::loadAndParse() => can't load %s\n", fragShaderFilename);
-            return false;
+            u8 *buffer = gos::fs::fileLoadInMemory (gos::getScrapAllocator(), fragShaderFilename, &fsize);
+            if (NULL == buffer)
+            {
+                gos::logger::err ("SPVReflect::loadAndParse() => can't load %s\n", fragShaderFilename);
+                return false;
+            }
+            ret = PS_parseFromMemory (buffer, fsize);
+            GOSFREE_SCRAP(buffer);
         }
-        ret = PS_parseFromMemory (buffer, fsize);
-        GOSFREE_SCRAP(buffer);
     }
     if (!ret)
         return false;
@@ -185,8 +177,6 @@ bool SPVReflect::parseFromFile (const char *vtxShaderFilename, const char *fragS
  //***************************************************
 void SPVReflect::beginParseFromMemory()
 {
-    vtxDeclList.reset();
-    descrSetList.reset();
     priv_free();
 }
 
@@ -205,16 +195,35 @@ bool SPVReflect::endParseFromMemory()
     {
         pushConstant_merged = pushConstant_VS;
         if (NULL != pushConstant_PS)
-            priv_pushConst_merge(pushConstant_merged, pushConstant_PS);
+            priv_nodeTree_merge(pushConstant_merged, pushConstant_PS);
     }
-    priv_pushConst_adjustArrayOffset (pushConstant_merged);
-    priv_pushConst_adjustPaddedSize (pushConstant_merged);
+    priv_nodeTree_adjustArrayOffset (pushConstant_merged);
+    priv_nodeTree_adjustPaddedSize (pushConstant_merged);
 
     //out << "\nMERGED\n"; priv_pushConst_printNode (out, pushConstant_merged, 0);
     //printf ("%s", out.getBuffer());
 
     //Creo la blobDef per le push constant
-    pushConstant_dataBlobDef = priv_pushConst_createGosDataBlobDef(localAllocator, pushConstant_merged);
+    pushConstant_dataBlobDef = priv_nodeTree_createGosDataBlobDef(localAllocator, pushConstant_merged);
+
+
+    //creo blobDef per i descriptor
+    for (u32 i=0; i<descrSetList.getNElem(); i++)
+    {
+        switch (descrSetList(i).vulkanDescrType)
+        {
+        default:
+            break;
+
+        case eGPUDescriptrorType::UNIFORM_BUFFER:
+        case eGPUDescriptrorType::STORAGE_BUFFER:
+        case eGPUDescriptrorType::DYNAMIC_UNIFORM_BUFFER:
+        case eGPUDescriptrorType::DYNAMIC_STORAGE_BUFFER:
+            descrSetList[i].blobDef = priv_nodeTree_createGosDataBlobDef(Node::localAllocator, descrSetList(i).root);
+            break;
+        }
+    }
+
 
     return true;
 }
@@ -330,17 +339,17 @@ bool SPVReflect::priv_parse_fragShader (SpvReflectShaderModule *module)
 }
 
 //***************************************************
-SPVReflect::PushConstantNode* SPVReflect::priv_pushConst_parseVar (const SpvReflectShaderModule *module, const SpvReflectBlockVariable *var, const char *parentName)
+SPVReflect::Node* SPVReflect::priv_parse_BlockVariable (const SpvReflectShaderModule *module, const SpvReflectBlockVariable *var)
 {
-    PushConstantNode *node = PushConstantNode::createNew();
+    Node *node = Node::createNew();
     sprintf_s (node->name, sizeof(node->name), "%s", var->name);
 
     if ( (var->flags & SPV_REFLECT_VARIABLE_FLAGS_UNUSED) == 0)
     {
         if (SPV_REFLECT_SHADER_STAGE_VERTEX_BIT == module->shader_stage)
-            node->flag |= PushConstantNode::FLAG__USED_IN_VTX_SHADER;
+            node->usage.set (USAGE__USED_IN_VTX_SHADER);
         if (SPV_REFLECT_SHADER_STAGE_FRAGMENT_BIT == module->shader_stage)
-            node->flag |= PushConstantNode::FLAG__USED_IN_FRAG_SHADER;
+            node->usage.set (USAGE__USED_IN_FRAG_SHADER);
     }
 
     node->offset = var->offset;
@@ -351,12 +360,17 @@ SPVReflect::PushConstantNode* SPVReflect::priv_pushConst_parseVar (const SpvRefl
     switch (var->type_description->op)
     {
     case SpvOpTypeStruct:
-        node->flag |= PushConstantNode::FLAG__IS_STRUCT;
+        node->typeDescr.set (TYPEDESCR__IS_STRUCT);
         node->other.asStruct.numMembers = var->member_count;
         break;
 
     case SpvOpTypeArray:
-        node->flag |= PushConstantNode::FLAG__IS_ARRAY;
+    case SpvOpTypeRuntimeArray:
+        if (SpvOpTypeArray == var->type_description->op)
+            node->typeDescr.set (TYPEDESCR__IS_ARRAY);
+        else
+            node->typeDescr.set (TYPEDESCR__IS_DYNAMIC_ARRAY);
+
         node->other.asArray.numDimension = static_cast<u8>(var->array.dims_count);
         node->other.asArray.sizeOfOneElem = static_cast<u16>(var->array.stride);
         {
@@ -376,32 +390,25 @@ SPVReflect::PushConstantNode* SPVReflect::priv_pushConst_parseVar (const SpvRefl
         break;
     }
 
-    //compongo il mio full name
-    if (NULL != parentName)
-        sprintf_s (node->fullName, sizeof(node->fullName), "%s.%s", parentName, node->name);
-    else
-        sprintf_s (node->fullName, sizeof(node->fullName), "%s", node->name);
-
-    
     for (u32 i=0; i<var->member_count; i++)
     {
         const SpvReflectBlockVariable *info = &var->members[i];
-        PushConstantNode *figlio = priv_pushConst_parseVar(module, info, node->fullName);
+        Node *figlio = priv_parse_BlockVariable(module, info);
         node->appendChild (figlio);
 
-        if ((figlio->flag & PushConstantNode::FLAG__USED_IN_VTX_SHADER) != 0)
-            node->flag |= PushConstantNode::FLAG__USED_IN_VTX_SHADER;
-        if ((figlio->flag & PushConstantNode::FLAG__USED_IN_FRAG_SHADER) != 0)
-            node->flag |= PushConstantNode::FLAG__USED_IN_FRAG_SHADER;
+        if (figlio->isUsedByVtxShader())
+            node->usage.set (USAGE__USED_IN_VTX_SHADER);
+        if (figlio->isUsedByFragShader())
+            node->usage.set (USAGE__USED_IN_FRAG_SHADER);
     }
     
     return node;
 }
 
 //***************************************************
-SPVReflect::PushConstantNode* SPVReflect::priv_pushConst_parseModule (SpvReflectShaderModule *module)
+SPVReflect::Node* SPVReflect::priv_pushConst_parseModule (SpvReflectShaderModule *module)
 {
-    PushConstantNode *root = NULL;
+    Node *root = NULL;
 
     u32 n = 0;
     SpvReflectResult result = spvReflectEnumeratePushConstantBlocks (module, &n, NULL);
@@ -429,7 +436,7 @@ SPVReflect::PushConstantNode* SPVReflect::priv_pushConst_parseModule (SpvReflect
             {
                 for (u32 i=0; i<n; i++)
                 {
-                    PushConstantNode *node = priv_pushConst_parseVar (module, vars[i], NULL);
+                    Node *node = priv_parse_BlockVariable (module, vars[i]);
                     if (NULL == root)
                         root = node;
                     else 
@@ -443,24 +450,24 @@ SPVReflect::PushConstantNode* SPVReflect::priv_pushConst_parseModule (SpvReflect
 }
 
 //***************************************************
-void SPVReflect::priv_pushConst_merge (PushConstantNode *&dstIN, PushConstantNode *&srcIN)
+void SPVReflect::priv_nodeTree_merge (Node *&dstIN, Node *&srcIN)
 {
     if (NULL == srcIN)
         return;
 
-    PushConstantNode *src_prev = NULL;
-    PushConstantNode *src = srcIN;
+    Node *src_prev = NULL;
+    Node *src = srcIN;
     while (src)
     {
-        PushConstantNode *found = src;
-        PushConstantNode *dst = dstIN;
+        Node *found = src;
+        Node *dst = dstIN;
         while (dst)
         {
             if (src->offset == dst->offset)
             {
                 //l'elemento di src esiste gia' in dst
-                dst->mergeFlagWith (src);
-                priv_pushConst_merge (dst->figlio, src->figlio);
+                dst->mergeUsageWith (src);
+                priv_nodeTree_merge (dst->figlio, src->figlio);
                 found = NULL;
                 break;
             }
@@ -482,7 +489,7 @@ void SPVReflect::priv_pushConst_merge (PushConstantNode *&dstIN, PushConstantNod
             found->fratello = NULL;
 
             //inserisco <found> in <dst>
-            PushConstantNode *prev = NULL;
+            Node *prev = NULL;
             dst = dstIN;
             while (dst)            
             {
@@ -516,7 +523,7 @@ void SPVReflect::priv_pushConst_merge (PushConstantNode *&dstIN, PushConstantNod
             }
 
             //riparto da capo e termino
-            priv_pushConst_merge (dstIN, srcIN);
+            priv_nodeTree_merge (dstIN, srcIN);
             return;
         }
 
@@ -526,20 +533,25 @@ void SPVReflect::priv_pushConst_merge (PushConstantNode *&dstIN, PushConstantNod
 }
 
 //***************************************************
-void SPVReflect::priv_pushConst_adjustPaddedSize  (PushConstantNode *node, u16 arrayStride)
+void SPVReflect::priv_nodeTree_adjustPaddedSize  (Node *node, u16 arrayStride)
 {
-    PushConstantNode *first = node;
-    PushConstantNode *last = NULL;
+    Node *first = node;
+    Node *last = NULL;
     while (node)
     {
         if (node->isArray())
         {
             if (0 != node->numChildren)
-                priv_pushConst_adjustPaddedSize (node->figlio, node->other.asArray.sizeOfOneElem);
+                priv_nodeTree_adjustPaddedSize (node->figlio, node->other.asArray.sizeOfOneElem);
         }
         else if (node->isStruct())
         {
-            priv_pushConst_adjustPaddedSize (node->figlio);
+            if (NULL != node->figlio)
+            {
+                if (node->absoluteOffset < node->figlio->absoluteOffset)
+                    node->absoluteOffset = node->figlio->absoluteOffset;
+                priv_nodeTree_adjustPaddedSize (node->figlio);
+            }
         }
         else
         {
@@ -562,7 +574,7 @@ void SPVReflect::priv_pushConst_adjustPaddedSize  (PushConstantNode *node, u16 a
 }
 
 //***************************************************
-void SPVReflect::priv_pushConst_adjustArrayOffset (PushConstantNode *node ,u16 arrayStartAbsOffset)
+void SPVReflect::priv_nodeTree_adjustArrayOffset (Node *node ,u16 arrayStartAbsOffset)
 {
     while (node)
     {
@@ -572,14 +584,14 @@ void SPVReflect::priv_pushConst_adjustArrayOffset (PushConstantNode *node ,u16 a
                 node->absoluteOffset = arrayStartAbsOffset + node->offset;
         }
 
-        if (node->isArray())
+        if (node->isArray() || node->isDynamicArray())
         {
             if (0 != node->numChildren)
-                priv_pushConst_adjustArrayOffset (node->figlio, node->absoluteOffset);
+                priv_nodeTree_adjustArrayOffset (node->figlio, node->absoluteOffset);
         }
         else if (node->isStruct())
         {
-            priv_pushConst_adjustArrayOffset (node->figlio);
+            priv_nodeTree_adjustArrayOffset (node->figlio);
         }
 
         node = node->fratello;
@@ -587,7 +599,7 @@ void SPVReflect::priv_pushConst_adjustArrayOffset (PushConstantNode *node ,u16 a
 }
 
 //***************************************************
-void SPVReflect::priv_pushConst_createGosDataBlobDef_ric (gos::datablob::DefBuilder &builder, PushConstantNode *node)
+void SPVReflect::priv_nodeTree_createGosDataBlobDef_ric (gos::datablob::DefBuilder &builder, Node *node)
  {
     while (node)
     {
@@ -598,10 +610,10 @@ void SPVReflect::priv_pushConst_createGosDataBlobDef_ric (gos::datablob::DefBuil
         if (node->isStruct())
         {
             builder.struct_beginAtOffset (node->absoluteOffset, node->name, vtx_frag);
-            priv_pushConst_createGosDataBlobDef_ric (builder, node->figlio);
+            priv_nodeTree_createGosDataBlobDef_ric (builder, node->figlio);
             builder.struct_end();
         }
-        else if (node->isArray())
+        else if (node->isArray() || node->isDynamicArray())
         {
             switch (node->other.asArray.numDimension)
             {
@@ -623,7 +635,7 @@ void SPVReflect::priv_pushConst_createGosDataBlobDef_ric (gos::datablob::DefBuil
             if (0 == node->numChildren)
                 builder.add_simpleType (node->name, node->fmt, vtx_frag);
             else
-                priv_pushConst_createGosDataBlobDef_ric (builder, node->figlio);
+                priv_nodeTree_createGosDataBlobDef_ric (builder, node->figlio);
             builder.array_end();
         }
         else
@@ -636,14 +648,14 @@ void SPVReflect::priv_pushConst_createGosDataBlobDef_ric (gos::datablob::DefBuil
  }
 
 //***************************************************
-u8* SPVReflect::priv_pushConst_createGosDataBlobDef (gos::Allocator *allocator, PushConstantNode *node)
+u8* SPVReflect::priv_nodeTree_createGosDataBlobDef (gos::Allocator *allocator, Node *node)
 {
     if (NULL == node)
         return NULL;
     datablob::DefBuilder builder;
 
     builder.begin();
-    priv_pushConst_createGosDataBlobDef_ric (builder, node);
+    priv_nodeTree_createGosDataBlobDef_ric (builder, node);
     builder.end();
     if (builder.isValid())
         return builder.allocDataBlobDef (allocator);
@@ -651,23 +663,20 @@ u8* SPVReflect::priv_pushConst_createGosDataBlobDef (gos::Allocator *allocator, 
 }
 
 //***************************************************
-void SPVReflect::priv_pushConst_printNode_appendUsageInfo(gos::UTF8String &out, const PushConstantNode *node) const
+void SPVReflect::priv_printNode_appendUsageInfo (gos::UTF8String &out, const Node *node) const
 {
     out.fillRowUntilColumn (PRINT_COL1);
     out << "[";
-    if ((node->flag & PushConstantNode::FLAG__USED_IN_VTX_SHADER) != 0)
+    if (node->isUsedByVtxShader())
         out << "VTX ";
-    if ((node->flag & PushConstantNode::FLAG__USED_IN_FRAG_SHADER) != 0)
+    if (node->isUsedByFragShader())
         out << "FRAG";
     out.fillRowUntilColumn (PRINT_COL1+9);
     out << "]";
-
-    out.fillRowUntilColumn (PRINT_COL2);
-    out << node->fullName;    
 }
 
 //***************************************************
-void SPVReflect::priv_pushConst_printNode (gos::UTF8String &out, const PushConstantNode *node, u32 indent) const
+void SPVReflect::priv_printNode (gos::UTF8String &out, const Node *node, u32 indent) const
 {
     if (NULL == node)
         return;
@@ -677,34 +686,38 @@ void SPVReflect::priv_pushConst_printNode (gos::UTF8String &out, const PushConst
     if (indent)
         memset(sIndent, ' ', indent*4);
 
-    if ((node->flag & PushConstantNode::FLAG__IS_STRUCT) != 0)
+    if (node->isStruct())
     {
         out << "\n" << sIndent << "struct";
         out.fillRowUntilColumn (PRINT_COL3);
         out << "abs-offset=" << STRFMT("% 5d", node->absoluteOffset) << "\n";
         
         out << sIndent << "{\n";
-        priv_pushConst_printNode (out, node->figlio, indent+1);
+        priv_printNode (out, node->figlio, indent+1);
         out << sIndent << "} " << node->name << ";";
         
-        priv_pushConst_printNode_appendUsageInfo (out, node);
+        priv_printNode_appendUsageInfo (out, node);
 
         out.fillRowUntilColumn (PRINT_COL3);
         out << "abs-offset=" << STRFMT("% 5d", node->absoluteOffset)
             << ", pad-size=" << STRFMT("% 5d", node->offset)
             << "\n";
     }
-    else if ((node->flag & PushConstantNode::FLAG__IS_ARRAY) != 0)
+    else if (node->isArray() || node->isDynamicArray())
     {
         char arrName[64];
         sprintf_s (arrName, sizeof(arrName), "%s", node->name);
-        for (u8 i=0; i<node->other.asArray.numDimension; i++)
+        if (node->isDynamicArray())
+            strcat_s (arrName, sizeof(arrName), "[]");
+        else
         {
-            char s[32];
-            sprintf_s (s, sizeof(s), "[%d]", node->other.asArray.numElem[i]);
-            strcat_s (arrName, sizeof(arrName), s);
-        }
-        
+            for (u8 i=0; i<node->other.asArray.numDimension; i++)
+            {
+                char s[32];
+                sprintf_s (s, sizeof(s), "[%d]", node->other.asArray.numElem[i]);
+                strcat_s (arrName, sizeof(arrName), s);
+            }
+        }        
 
         if (0 == node->numChildren)
         {
@@ -712,7 +725,7 @@ void SPVReflect::priv_pushConst_printNode (gos::UTF8String &out, const PushConst
             //char fmt[32];   sprintf_s (fmt, sizeof(fmt), "%-8s", gos::utils::enumToString(node->fmt));
             out << sIndent << STRFMT("%-8s", gos::utils::enumToString(node->fmt))  << arrName << ";";
 
-            priv_pushConst_printNode_appendUsageInfo (out, node);
+            priv_printNode_appendUsageInfo (out, node);
 
             out.fillRowUntilColumn (PRINT_COL3);
             out << "abs-offset=" << STRFMT("% 5d", node->absoluteOffset)
@@ -724,10 +737,10 @@ void SPVReflect::priv_pushConst_printNode (gos::UTF8String &out, const PushConst
             //array di struct
             out << "\n" << sIndent << "struct\n";
             out << sIndent << "{\n";
-            priv_pushConst_printNode (out, node->figlio, indent+1);
+            priv_printNode (out, node->figlio, indent+1);
             out << sIndent << "} " << arrName << ";";
 
-            priv_pushConst_printNode_appendUsageInfo (out, node);
+            priv_printNode_appendUsageInfo (out, node);
 
             out.fillRowUntilColumn (PRINT_COL3);
             out << "abs-offset=" << STRFMT("% 5d", node->absoluteOffset)
@@ -741,7 +754,7 @@ void SPVReflect::priv_pushConst_printNode (gos::UTF8String &out, const PushConst
         {
             //non non categorizzato
             out << sIndent << node->name << "\n";
-            priv_pushConst_printNode (out, node->figlio, indent+1);
+            priv_printNode (out, node->figlio, indent+1);
         }
         else
         {
@@ -749,7 +762,7 @@ void SPVReflect::priv_pushConst_printNode (gos::UTF8String &out, const PushConst
             //char fmt[32];   sprintf_s (fmt, sizeof(fmt), "%-8s", gos::utils::enumToString(node->fmt));
             out << sIndent << STRFMT("%-8s", gos::utils::enumToString(node->fmt)) << node->name << ";";
             
-            priv_pushConst_printNode_appendUsageInfo (out, node);
+            priv_printNode_appendUsageInfo (out, node);
 
             out.fillRowUntilColumn (PRINT_COL3);
             out << "abs-offset=" << STRFMT("% 5d", node->absoluteOffset)
@@ -758,7 +771,107 @@ void SPVReflect::priv_pushConst_printNode (gos::UTF8String &out, const PushConst
         }
     }
 
-    priv_pushConst_printNode (out, node->fratello, indent);
+    priv_printNode (out, node->fratello, indent);
+}
+
+//***************************************************
+void SPVReflect::priv_descriptor_parseVar (const SpvReflectShaderModule *module, const SpvReflectDescriptorBinding *var)
+{
+    DescrSetElem e;
+    e.set = var->set;
+    e.binding = var->binding;
+    if (0 != var->accessed)
+    {
+        if (SPV_REFLECT_SHADER_STAGE_VERTEX_BIT == module->shader_stage)
+            e.usage.set (USAGE__USED_IN_VTX_SHADER);
+        if (SPV_REFLECT_SHADER_STAGE_FRAGMENT_BIT == module->shader_stage)
+            e.usage.set (USAGE__USED_IN_FRAG_SHADER);
+    }
+
+    //tipo (vulkan) di descriptor
+    switch (var->descriptor_type)
+    {
+    default:
+        gos::logger::err ("SPVReflect::priv_descriptor_parseVar() => error <descriptor_type> invalid, %d\n", (int)var->descriptor_type);
+        return;
+
+    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: e.vulkanDescrType = eGPUDescriptrorType::SAMPLER; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: e.vulkanDescrType = eGPUDescriptrorType::COMBINED_IMAGE_SAMPLER; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE: e.vulkanDescrType = eGPUDescriptrorType::TEXTURE2D; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE: e.vulkanDescrType = eGPUDescriptrorType::STORAGE_IMAGE; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER: e.vulkanDescrType = eGPUDescriptrorType::UNIFORM_TEXEL_BUFFER; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER: e.vulkanDescrType = eGPUDescriptrorType::STORAGE_TEXEL_BUFFER; break;
+    
+    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER: e.vulkanDescrType = eGPUDescriptrorType::UNIFORM_BUFFER; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER: e.vulkanDescrType = eGPUDescriptrorType::STORAGE_BUFFER; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC: e.vulkanDescrType = eGPUDescriptrorType::DYNAMIC_UNIFORM_BUFFER; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: e.vulkanDescrType = eGPUDescriptrorType::DYNAMIC_STORAGE_BUFFER; break;
+    
+    case SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT: e.vulkanDescrType = eGPUDescriptrorType::INPUT_ATTACHMENT; break;
+    }
+
+    switch (var->type_description->op)
+    {
+    default:
+        gos::logger::err ("SPVReflect::priv_descriptor_parseVar() => error <type_description> invalid, %d\n", (int)var->descriptor_type);
+        return;
+
+    case SpvOpTypeSampler:
+    case SpvOpTypeImage:
+        e.root = Node::createNew();
+        sprintf_s (e.root->name, sizeof(e.root->name), "%s", var->name);
+        e.root->usage = e.usage;
+        break;
+
+    case SpvOpTypeArray:
+    case SpvOpTypeRuntimeArray:
+        {
+            e.root = Node::createNew();
+            sprintf_s (e.root->name, sizeof(e.root->name), "%s", var->name);
+            e.root->usage = e.usage;
+            
+            if (SpvOpTypeArray == var->type_description->op)
+                e.root->typeDescr.set(TYPEDESCR__IS_ARRAY);
+            else
+                e.root->typeDescr.set(TYPEDESCR__IS_DYNAMIC_ARRAY);
+
+            e.root->other.asArray.numDimension = var->array.dims_count;
+            for (u8 t = 0; t < e.root->other.asArray.numDimension; t++)
+            {
+                e.root->other.asArray.numElem[t] = var->array.dims[t];
+            }
+        }
+        break;
+
+    case SpvOpTypeStruct:
+        {
+            e.root = Node::createNew();
+            e.root->usage = e.usage;
+
+            sprintf_s (e.root->name, sizeof(e.root->name), "%s", var->name);
+            e.root->typeDescr.set (TYPEDESCR__IS_STRUCT);
+
+            for (u8 t = 0; t < var->block.member_count; t++)
+            {
+                Node *node = priv_parse_BlockVariable (module, &var->block.members[t]);
+                e.root->appendChild (node);
+            }
+        }
+        break;
+
+    }
+
+
+    u32 index = descrSetList.addIfNotExists(e);
+    if (u32MAX != index)
+    {
+        if (NULL != e.root)
+        {
+            priv_nodeTree_merge (descrSetList[index].root, e.root);
+            Node::deleteTree (e.root);
+            e.root = NULL;
+        }
+    }
 }
 
 //***************************************************
@@ -778,81 +891,203 @@ bool SPVReflect::priv_parse_descriptors (SpvReflectShaderModule *module)
     {
         for (u32 i=0; i<n; i++)
         {
-            DescrSetElem e;
-            sprintf_s (e.name, sizeof(e.name), "%s", vars[i]->name);
-            e.set = vars[i]->set;
-            e.binding = vars[i]->binding;
-            if (0 != vars[i]->accessed)
-            {
-                if (SPV_REFLECT_SHADER_STAGE_VERTEX_BIT == module->shader_stage)
-                    e.flag |= DescrSetElem::FLAG__USED_IN_VTX_SHADER;
-                if (SPV_REFLECT_SHADER_STAGE_FRAGMENT_BIT == module->shader_stage)
-                    e.flag |= DescrSetElem::FLAG__USED_IN_FRAG_SHADER;
-            }
-
-            //tipo (vulkan) di descriptor
-            switch (vars[i]->descriptor_type)
-            {
-            default:
-                gos::logger::err ("SPVReflect::priv_parse_descriptors() => error <descriptor_type> invalid, %d\n", (int)vars[i]->descriptor_type);
-                return false;
-
-            case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: e.vulkanDescrType = eDescriptrorType::SAMPLER; break;
-            case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: e.vulkanDescrType = eDescriptrorType::COMBINED_IMAGE_SAMPLER; break;
-            case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE: e.vulkanDescrType = eDescriptrorType::TEXTURE2D; break;
-            case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE: e.vulkanDescrType = eDescriptrorType::STORAGE_IMAGE; break;
-            case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER: e.vulkanDescrType = eDescriptrorType::UNIFORM_TEXEL_BUFFER; break;
-            case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER: e.vulkanDescrType = eDescriptrorType::STORAGE_TEXEL_BUFFER; break;
-            case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER: e.vulkanDescrType = eDescriptrorType::UNIFORM_BUFFER; break;
-            case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER: e.vulkanDescrType = eDescriptrorType::STORAGE_BUFFER; break;
-            case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC: e.vulkanDescrType = eDescriptrorType::DYNAMIC_UNIFORM_BUFFER; break;
-            case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: e.vulkanDescrType = eDescriptrorType::DYNAMIC_STORAGE_BUFFER; break;
-            case SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT: e.vulkanDescrType = eDescriptrorType::INPUT_ATTACHMENT; break;
-            }
-
-            switch (vars[i]->type_description->op)
-            {
-            default:
-                gos::logger::err ("SPVReflect::priv_parse_descriptors() => error <type_description> invalid, %d\n", (int)vars[i]->descriptor_type);
-                return false;
-
-            case SpvOpTypeArray:
-                {
-                    e.resType.type = eResourceType::_array;
-                    e.resType.info.asArray.ordine = vars[i]->array.dims_count;
-                    for (u8 t = 0; t < e.resType.info.asArray.ordine; t++)
-                    {
-                        e.resType.info.asArray.numElem[t] = vars[i]->array.dims[t];
-                    }
-                }
-                break;
-
-            case SpvOpTypeRuntimeArray:
-                e.resType.type = eResourceType::_dynamicArray;
-                e.resType.info.asDynArray.ordine = vars[i]->array.dims_count;
-                break;
-
-            case SpvOpTypeStruct:
-                {
-                    e.resType.type = eResourceType::_struct;
-                    e.resType.info.asStruct.numElem = vars[i]->type_description->member_count;
-                    for (u8 t = 0; t < e.resType.info.asStruct.numElem; t++)
-                    {
-                        sprintf_s (e.resType.info.asStruct.name[t], sizeof(e.resType.info.asStruct.name[t]), "%s", vars[i]->type_description->members[t].struct_member_name);
-                        e.resType.info.asStruct.fmt[t] = priv_fromSPVReflectTypeDescrToDataFormat(&vars[i]->type_description->members[t]);
-                    }
-                }
-                break;
-
-            }
-
-            descrSetList.add (e);
+            priv_descriptor_parseVar (module, vars[i]);
         }
+        free (vars);
     }
-    free (vars);
+    
 
     descrSetList.sort();
+
+    for (u32 i=0; i<descrSetList.getNElem(); i++)
+    {
+        priv_nodeTree_adjustArrayOffset (descrSetList[i].root);
+        priv_nodeTree_adjustPaddedSize (descrSetList[i].root);
+    }
     return true;
+}
+
+//***************************************************
+bool SPVReflect::save (const char *fname) const
+{
+    gos::File f;
+    if (!fs::fileOpenForW (&f, fname, false))
+    {
+        gos::logger::err ("SPVReflect::save() => can't create file %s\n", fname);
+        return false;
+    }
+    bool ret = save (f);
+    fs::fileClose (f);
+    
+    return ret;
+}
+
+//***************************************************
+bool SPVReflect::save (gos::File &f) const
+{
+    u32 size = 0;
+    u8 *buffer = serialize (localAllocator, &size);
+    if (NULL != buffer)
+    {
+        fs::fileWrite (f, buffer, size);
+        GOSFREE(localAllocator, buffer);
+        return true;
+    }
+
+    return false;
+}
+
+//***************************************************
+u8* SPVReflect::serialize (gos::Allocator *allocator, u32 *out_sizeAllocated) const
+{
+    u8 stackBuffer[2048];
+
+    gos::BufferW_linear buffer;
+    buffer.setupWithBase (stackBuffer, sizeof(stackBuffer), gos::getScrapAllocator(), eEndianess::big);
+
+    //magic
+    buffer.writeU32 (0);
+
+    //total size of this block
+    buffer.writeU32 (0);
+
+    //TOC
+    const u32 address_TOC = buffer.tell();
+    buffer.writeU32 (0);    //rel pos of VtxDcl block u32MAX se non esiste
+    buffer.writeU32 (0);    //rel pos of PushContant block oppure u32MAX se non esiste
+    buffer.writeU32 (0);    //rel pos of Descriptor oppure u32MAX se non esiste
+
+    //VtxDcl block
+    if (0 == vtxDeclList.getNElem())
+    {
+        buffer.writeU32At (address_TOC, u32MAX);
+    }
+    else
+    {
+        buffer.writeU32At (address_TOC, buffer.tell());
+
+        //num elementi
+        buffer.writeU16 (static_cast<u16>(vtxDeclList.getNElem()));
+
+        //offset, bindingLoc, dataFmt per ogni elemento
+        for (u32 i=0; i<vtxDeclList.getNElem(); i++)
+        {
+            buffer.writeU8 (static_cast<u16>(vtxDeclList(i).offsetInBuffer));
+            buffer.writeU8 (static_cast<u8>(vtxDeclList(i).bindingLocation));
+            buffer.writeU8 (static_cast<u8>(vtxDeclList(i).fmt));
+        }
+
+        //a seguire ci metto i nomi nel formato <len> <nome comprensivo di 0x00>
+        for (u32 i=0; i<vtxDeclList.getNElem(); i++)
+        {
+            const u8 nameLen = static_cast<u8>(1 + strlen(vtxDeclList(i).name));
+            buffer.writeU8(nameLen);
+            buffer.write (vtxDeclList(i).name, nameLen);
+        }
+    }
+    //pad fino ad un multiplo di 4
+    buffer.writePadUntilMultiplo4();
+
+
+    //Push constant block
+    if (NULL == pushConstant_dataBlobDef)
+    {
+        buffer.writeU32At (address_TOC + 4, u32MAX);
+    }
+    else
+    {
+        buffer.writeU32At (address_TOC + 4, buffer.tell());
+
+        const u32 size = datablob::blobDef_getSize(pushConstant_dataBlobDef);
+        buffer.writeU32 (size);
+        buffer.write (pushConstant_dataBlobDef, size);
+    }
+    //pad fino ad un multiplo di 4
+    buffer.writePadUntilMultiplo4();
+
+
+    //Descriptor block
+    if (0 == descrSetList.getNElem())
+    {
+        buffer.writeU32At (address_TOC + 8, u32MAX);
+    }
+    else
+    {
+        buffer.writeU32At (address_TOC + 8, buffer.tell());
+
+        //Num elem
+        buffer.writeU16 (static_cast<u16>(descrSetList.getNElem()));
+        for (u32 i=0; i<descrSetList.getNElem(); i++)
+        {
+            const u32 offset_now = buffer.tell();
+            
+            //dimensione di questo elemento
+            buffer.writeU32 (0);    
+
+            //usa, set, binding, vktype
+            buffer.writeU8 (descrSetList(i).usage.getBitmask());
+            buffer.writeU8 (descrSetList(i).set);
+            buffer.writeU8 (descrSetList(i).binding);
+            buffer.writeU8 (static_cast<u8>(descrSetList(i).vulkanDescrType));
+
+            u8 descriptorType = DESCRIPTOR_TYPE__OTHER;
+            if (NULL != descrSetList(i).blobDef)
+                descriptorType = DESCRIPTOR_TYPE__BLOBDEF;
+            else
+            {
+                if (descrSetList(i).root->isArray())
+                    descriptorType = DESCRIPTOR_TYPE__ARRAY;
+                else if (descrSetList(i).root->isDynamicArray())
+                    descriptorType = DESCRIPTOR_TYPE__DYNARRAY;
+            }
+            buffer.writeU8 (descriptorType);
+
+            switch (descriptorType)
+            {
+            default:
+                DBGBREAK;
+                break;
+
+            case DESCRIPTOR_TYPE__BLOBDEF:
+                {
+                    const u32 size = datablob::blobDef_getSize(descrSetList(i).blobDef);
+                    buffer.writeU32 (size);
+                    buffer.write (descrSetList(i).blobDef, size);
+                }
+                break;
+
+            case DESCRIPTOR_TYPE__ARRAY:
+                buffer.writeU8 (descrSetList(i).root->other.asArray.numDimension);
+                for (u8 i2=0; i2<descrSetList(i).root->other.asArray.numDimension; i2++)
+                    buffer.writeU16 (descrSetList(i).root->other.asArray.numElem[i2]);
+                break;
+
+            case DESCRIPTOR_TYPE__DYNARRAY:
+                break;
+
+            case DESCRIPTOR_TYPE__OTHER:
+                break;
+            }
+
+            //padding per questo elemento
+            buffer.writePadUntilMultiplo4();
+            
+            //scrivo la dimensione di questo elemento
+            buffer.writeU32At (offset_now, buffer.tell() - offset_now);
+        }
+    }
+    //pad fino ad un multiplo di 4
+    buffer.writePadUntilMultiplo4();
+
+
+    //total size di questo blocco
+    buffer.writeU32At (4, buffer.tell());
+
+
+    *out_sizeAllocated = buffer.tell();
+    u8 *ret = GOSALLOCT(u8*, allocator, buffer.tell());
+    memcpy (ret, buffer.getPointer(0), buffer.tell());
+    return ret;
 }
 
 //***************************************************
@@ -922,87 +1157,55 @@ void SPVReflect::printInfo() const
         << "= DESCRIPTOR SETs                              =\n"
         << "================================================\n";
 
-printf ("%s", out.getBuffer());
+    if (0 == descrSetList.getNElem())
+        out << "no info!\n";
+    else
 
-
-    //Descriptor sets
     {
-        gos::logger::incIndent();
-        if (0 == descrSetList.getNElem())
-            gos::logger::log ("no info!\n");
-        else
+        for (u32 i=0; i<descrSetList.getNElem(); i++)
         {
-            u8 last_descriptor_set = 0;
-            for (u32 i=0; i<descrSetList.getNElem(); i++)
+            out << "\n----------------------------------------------------------------\n";
+            out << "set=" << descrSetList(i).set << ", binding=" << descrSetList(i).binding << ", vktype=" << utils::enumToString(descrSetList(i).vulkanDescrType) << "\n";
+                
+            
+            //priv_printNode (out, descrSetList(i).root, 0);
+
+            if (NULL == descrSetList(i).blobDef)
             {
-                if (descrSetList(i).set != last_descriptor_set)
+                out << descrSetList(i).root->name;
+                
+                if (descrSetList(i).root->isArray())
                 {
-                    last_descriptor_set = descrSetList(i).set;
-                    gos::logger::log ("\n");
+                    for (u8 i2=0; i2<descrSetList(i).root->other.asArray.numDimension; i2++)
+                        out << "[" << descrSetList(i).root->other.asArray.numElem[i2] << "]";
+                    out << ";\n";
                 }
-
-                char stage[32];
-
-                memset (stage, 0, sizeof(stage));
-
-                if (descrSetList(i).flag & DescrSetElem::FLAG__USED_IN_VTX_SHADER)
-                    strcat_s (stage, sizeof(stage), "VTX ");
-                if (descrSetList(i).flag & DescrSetElem::FLAG__USED_IN_FRAG_SHADER)
-                    strcat_s (stage, sizeof(stage), "FRG ");
-
-                const sResInfo *resInfo = &descrSetList(i).resType;
-                gos::logger::log ("[% -12s] name:% -32s (set=%d, binding=%d), VKtype=%s, data-type:%s", 
-                        stage, 
-                        descrSetList(i).name,
-                        descrSetList(i).set, descrSetList(i).binding,
-                        enumToString (descrSetList(i).vulkanDescrType),
-                        enumToString (resInfo->type)
-                        );
-
-                
-                switch (resInfo->type)
-                {
-                default: 
-                    gos::logger::log (", ERR");
-                    break;
-                
-                case eResourceType::_array:
+                if (descrSetList(i).root->isDynamicArray())
+                    out << "[];\n";
+            }
+            else
+            {
+                out << "\n";
+                datablob::blobDef_prinfInfo(out, descrSetList(i).blobDef, [](UTF8String &out, const datablob::DefElem &elem) {
+                    if ((elem.getUserData() & 0x01) != 0)
                     {
-                        gos::logger::log (", %s", descrSetList(i).name);
-                        for (u8 t = 0; t < resInfo->info.asArray.ordine; t++)
-                        {
-                            gos::logger::log ("[%d]", resInfo->info.asArray.numElem[t]);
-                        }
+                        if ((elem.getUserData() & 0x02) != 0)
+                            out << "[VTX FRAG]";
+                        else
+                            out << "[VTX     ]";
                     }
-                    break;
-
-                case eResourceType::_dynamicArray:
+                    else if ((elem.getUserData() & 0x02) != 0)
                     {
-                        gos::logger::log (", %s", descrSetList(i).name);
-                        for (u8 t = 0; t < resInfo->info.asArray.ordine; t++)
-                        {
-                            gos::logger::log ("[]");
-                        }
+                        out <<     "[FRAG    ]";
                     }
-                    break;
-                
-                case eResourceType::_struct:
-                    for (u8 t = 0; t < resInfo->info.asStruct.numElem; t++)
-                    {
-                        const eDataFormat fmt = resInfo->info.asStruct.fmt[t];
-                        gos::logger::log ("\n     % -16s, fmt=% -10s, size=%d",
-                            resInfo->info.asStruct.name[t],
-                            utils::enumToString (fmt), gos::dataformat::getSize(fmt));
-                    }
-                    break;
-
-                }
-                gos::logger::log ("\n");
+                    else
+                        out <<     "[        ]";
+                });            
             }
         }
-        gos::logger::decIndent();
-    }    
+    }
 
-    gos::logger::decIndent();
+printf ("%s", out.getBuffer());
+
 }
 

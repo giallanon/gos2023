@@ -472,7 +472,6 @@ bool utils::stringToEnum (const char *str, eCullMode *out)
 	return false;
 }
 
-
 //***********************************************
 const char*	utils::enumToString (const eDrawPrimitive e)
 {
@@ -515,7 +514,6 @@ bool utils::stringToEnum (const char *str, eDrawPrimitive *out)
 #undef HELPER	
 	return false;
 }
-
 
 //*************************************************************************
 const char* utils::enumToString (eSocketError s)
@@ -583,7 +581,58 @@ const char* utils::enumToString (const eDataFormat f)
     }
 }
 
+//***************************************************
+const char* utils::enumToString (const eGPUDescriptrorType s)
+{
+    switch (s)
+    {
+    default: return "eGPUDescriptrorType::invalid value";
+    case eGPUDescriptrorType::SAMPLER: return "SAMPLER";
+    case eGPUDescriptrorType::COMBINED_IMAGE_SAMPLER: return "COMBINED_IMAGE_SAMPLER";
+    case eGPUDescriptrorType::TEXTURE2D: return "TEXTURE2D";
+    case eGPUDescriptrorType::STORAGE_IMAGE: return "STORAGE_IMAGE";
+    case eGPUDescriptrorType::UNIFORM_TEXEL_BUFFER: return "UNIFORM_TEXEL_BUFFER";
+    case eGPUDescriptrorType::STORAGE_TEXEL_BUFFER: return "STORAGE_TEXEL_BUFFER";
+    case eGPUDescriptrorType::UNIFORM_BUFFER: return "UNIFORM_BUFFER";
+    case eGPUDescriptrorType::STORAGE_BUFFER: return "STORAGE_BUFFER";
+    case eGPUDescriptrorType::DYNAMIC_UNIFORM_BUFFER: return "DYNAMIC_UNIFORM_BUFFER";
+    case eGPUDescriptrorType::DYNAMIC_STORAGE_BUFFER: return "DYNAMIC_STORAGE_BUFFER";
+    case eGPUDescriptrorType::INPUT_ATTACHMENT: return "INPUT_ATTACHMENT";
+    case eGPUDescriptrorType::UNKNOWN: return "UNKNOWN";
+    }
+}
 
+//***************************************************
+const char* utils::enumToString (const eResType s)
+{
+    switch (s)
+    {
+    default: return "eResType::invalid value";
+    case eResType::unknown:         return "unknown";
+    case eResType::vtx_shader:      return "vtx_shader";
+    case eResType::pxl_shader:      return "pxl_shader";
+    case eResType::texture2D:       return "texture2D";
+    }
+}
+
+//********************************************************** 
+bool utils::stringToEnum (const char *str, eResType *out)
+{
+	assert (NULL != out);
+	if (NULL == str)
+		return false;
+    if (0 == str[0])
+        return false;
+	
+#define HELPER(value)			if (0 == strcasecmp(str, #value)) { *out=eResType::value ; return true; }
+
+    HELPER(unknown)
+	HELPER(vtx_shader)
+	HELPER(pxl_shader)
+	HELPER(texture2D)
+#undef HELPER	
+	return false;
+}
 
 
 
@@ -713,19 +762,19 @@ u16 utils::simpleChecksum16_calc (const void *bufferIN, u32 lenInBytes)
     return ret;
 }
 
-//********************************************************
-inline u32 gos_utils_CRC32 (const u8 *buffer, int len)
-{
-    if (len < 0)
-        return 0xFFFFFFFF;
-    return (gos_utils_CRC32(buffer, len-1) >> 8) ^ crc_table[(gos_utils_CRC32(buffer, len-1) ^ buffer[len]) & 0x000000FF];
-}
 
 //********************************************************
-u32 utils::crc32 (const void *buffer, u32 sizeOfBuffer)
+u32 utils::crc32 (const void *bufferIN, u32 sizeof_buffer)
 {
-	assert (NULL != buffer);
-    return (gos_utils_CRC32 (reinterpret_cast<const u8*>(buffer), (int)sizeOfBuffer) ^ 0xFFFFFFFF);
+    u32 crc = 0;
+    const u8 *buffer = reinterpret_cast<const u8*>(bufferIN);
+    for (u32 i=0; i<sizeof_buffer; i++)
+    {
+        //crc = crc_table[( crc ^ buffer[i]) & 0xFF] ^ (crc >> 8);
+        crc = crc_table[ ((crc & 0xFF000000) >> 24) ^ buffer[i]]  ^  ( (crc & 0x00FFFFFF) <<8 );
+
+    }
+    return (crc ^ 0xFFFFFFFF);
 }
 
 //********************************************************
@@ -734,3 +783,4 @@ u32 utils::crc32 (const char *str)
 	assert (NULL != str);
 	return crc32(str, gos::string::utf8::lengthInByte(str));
 }
+

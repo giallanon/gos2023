@@ -137,6 +137,9 @@ namespace gos
 		//	[realPathNoSlash] e' il path reale, non deve terminare con /
 		bool 			addAlias (const char *alias, const char *realPathNoSlash, eAliasPathMode mode);
 
+						//path che comprendono degli alias, o che hanno dei percorsi relativi
+						//vengono completamente espansi
+		void 			resolvePath (const char *pathIN, char *out, u32 sizeof_out);
 
 		bool			isPathAbsolute (const char *path);
 		void 			pathSanitize (const char *utf8_path, char *out_utf8sanitizedPath, u32 sizeOfOutSanitzed);

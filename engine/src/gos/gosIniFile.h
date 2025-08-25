@@ -37,10 +37,10 @@ namespace gos
 
 								//============================ merge
 		void					mergeWith (const IniFile &otherIniFile, bool onConflictUseValueFromOtherIniFile);
-									//Scorre tutte le sezioni di [otherIniFile] e le aggiunge a this se gi� non esistevano.
+									//Scorre tutte le sezioni di [otherIniFile] e le aggiunge a this se gia' non esistevano.
 									//Per ogni voce di ogni sezione:
-									//		- la aggiunge a this se gi� non esisteva.
-									//		- se la voce esisteva gi�, la sovrascrive con il valore di [otherIniFile] se [onConflictUseValueFromOtherIniFile]==true, altrimenti
+									//		- la aggiunge a this se gia' non esisteva.
+									//		- se la voce esisteva gia', la sovrascrive con il valore di [otherIniFile] se [onConflictUseValueFromOtherIniFile]==true, altrimenti
 									//		  mantiene il valore precedente
 									
 

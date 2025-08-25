@@ -38,6 +38,14 @@ bool DefElem::firstChild()
 }
 
 //*****************************
+bool DefElem::hasChild() const
+{
+    if (eDataBlobElemType::simpleType == getType())
+        return false;
+    return true;
+}
+
+//*****************************
 bool DefElem::getFirstChild (DefElem *out) const
 {
     assert (NULL != out);
@@ -158,18 +166,96 @@ bool DefReader::getOffset (const char *var_name, u16 *out) const
         return false;
 
     bool bEsci = false;
+    u16 array_offset = 0;
     while (false == bEsci)
     {
+        //cerco di capire se <s> e' un nome di array e, se si, valorizzo
+        //array_index[] con il numero/i numeri riportato/i tra parentesi quadre
+        u8  array_ordine = 0;
+        u16 array_index[8];
+        u32 len = strlen(s);
+        if (0 == len)
+            return false;
+        if (s[len-1] == ']')
+        {
+            //ho trovato una [,il che vuol dire che <s> sta indicando un array.
+            //Essendo che l'array puo' essere multidimensionale, devo recuperare
+            //l'indice per ogni dimensione
+            u32 i = 0;
+            while (i<len)
+            {
+                if (s[i] != '[')
+                {
+                    i++;
+                    continue;
+                }
+
+                //ho trovato la prima [
+                //Da qui in poi deve essere una sequenza di [num][num]..[num]
+                while (i<len)
+                {
+                    if (s[i] != '[')
+                        return false;
+
+                    s[i++] = 0x00;
+                    const u8 pos = i;
+                    while (i<len)
+                    {
+                        if (s[i] == ']')
+                        {
+                            s[i++] = 0x00;
+                            const u32 index = gos::string::ansi::toI32(&s[pos]);
+                            if (index < 0)
+                                return false;
+                            if (index >= 65535)
+                                return false;
+
+                            array_index[array_ordine++] = static_cast<u16>(index);
+                            break;
+                        }
+                        i++;
+                    }
+                }
+            }
+
+            if (array_ordine == 0)
+                return false;
+        }
+
         //cerco <s> tra i fratelli di <elem>
         bEsci = true;
         do
         {
             if (0 == strcmp(s, elem.getName()))
             {
+                //ho trovato un nome che matcha.
+                //Se stavo indicizzando un array, verifico gli indici
+                if (0 != array_ordine)
+                {
+                    if (eDataBlobElemType::arrayType != elem.getType())
+                        return false;
+                    if (elem.arrayType_getNumDimension() != array_ordine)
+                        return false;
+                    
+                    const u16 n = array_ordine-1;
+                    u16 offset = 0;
+                    for (u8 i=0; i<n; i++)
+                    {
+                        if (array_index[i] >= elem.arrayType_getNumElem(i))
+                            return false;
+                        offset += array_index[i] * elem.arrayType_getNumElem(i+1);
+                    }
+                    if (array_index[n] >= elem.arrayType_getNumElem(n))
+                        return false;
+                    offset += array_index[n];
+
+                    array_offset += offset * elem.arrayType_getStride();
+                }
+
                 //se siamo a fine <var_name>...
                 if (!parser.next(s, sizeof(s)))
                 {
-                    *out = elem.getOffset();
+                    *out = elem.getOffset() + array_offset;
                     return true;
                 }
 

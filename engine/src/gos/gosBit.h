@@ -157,7 +157,10 @@ namespace gos
 			bool 	isBitSet (u32 pos) const				{ assert (pos < 8); return ((flag & (0x01 << pos)) != 0); }
 			bool 	isZero() const							{ return (flag==0); }
 
-        	bool	operator== (const Flag8& b) const		{ return flag == b.flag; }
+			void	operator|= (const Flag8& b)				{ flag |= b.flag; }
+			void 	operator&= (const Flag8& b)				{ flag &= b.flag; }
+
+			bool	operator== (const Flag8& b) const		{ return flag == b.flag; }
         	bool	operator!= (const Flag8& b) const		{ return flag != b.flag; }
 			
 			u8 		getBitmask() const 						{ return flag; }

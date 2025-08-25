@@ -2,6 +2,7 @@
 #include "../../gos/gosIniFile.h"
 #include "../../gos/gosUtils.h"
 #include "../../gos/string/gosUTF8String.h"
+#include "SPVReflect.h"
 
 using namespace gos;
 
@@ -17,38 +18,14 @@ PipelineParser::~PipelineParser()
 }
 
 //************************************** 
-bool PipelineParser::parseFromFile (const char *fname, PipelineDef *out)
+bool PipelineParser::createFromIniFile (const char *fname, PipelineDef *out)
 {
     assert (NULL != out);
-
-    u32 fsize = 0;
-    u8 *buffer = fs::fileLoadInMemory (gos::getScrapAllocator(), fname, &fsize);
-    if (NULL == buffer)
-    {
-        gos::logger::err ("PipelineParser::parseFromFile() => file not found %s\n", fname);
-        return false;
-    }
-
-    const bool ret = parseFromMemory (buffer, fsize, out);
-    GOSFREE(gos::getScrapAllocator(), buffer);
-    return ret;
-}
-
-//************************************** 
-bool PipelineParser::parseFromMemory (const u8 *buffer, u32 sizeof_buffer, PipelineDef *out)
-{
-    assert (NULL != out);
-
-    if (NULL == buffer || 0 == sizeof_buffer)
-    {
-        gos::logger::err ("PipelineParser::parseFromMemory() => invalid file size %d\n", sizeof_buffer);
-        return false;
-    }
 
     gos::IniFile ini;
-    if (!ini.parseFromMemory (buffer, sizeof_buffer))
+    if (!ini.loadAndParse (fname))
     {
-        gos::logger::err ("PipelineParser::parseFromMemory() => error parsing file\n");
+        gos::logger::err ("PipelineParser::createFromIniFile() => error parsing file %s\n", fname);
         return false;
     }
     
@@ -56,11 +33,56 @@ bool PipelineParser::parseFromMemory (const u8 *buffer, u32 sizeof_buffer, Pipel
     IniFileSection *sec = ini.getSubsection ("pipeline_def");
     if (NULL == sec)
     {
-        gos::logger::err ("PipelineParser::parseFromMemory() => can't find section <def-pipeline>\n");
+        gos::logger::err ("PipelineParser::createFromIniFile() => can't find section <def-pipeline>\n");
         return false;
     }
-    return parseFromIniFileSection (*sec, out);
 
+    char srcFolder[512];
+    gos::fs::extractFilePathWithOutSlash (fname, srcFolder, sizeof(srcFolder));
+    return priv_parseIniFileSection (srcFolder, *sec, out);
+    return false;
+}
+
+//******************************** 
+bool PipelineParser::priv_shader_compile (const char *shaderSRCFile, const char *shaderStage, const char *firstDefine, ...) const
+{
+    //se esistono delle define da passare al compilatore...
+    char defineList[1024];
+    memset (defineList, 0, sizeof(defineList));
+    if (NULL != firstDefine)
+    {
+        va_list argptr;
+        va_start (argptr, firstDefine);
+
+        const char *def = firstDefine;
+        while (1)
+        {
+            strcat_s (defineList, sizeof(defineList), "-D");
+            strcat_s (defineList, sizeof(defineList), def);
+            strcat_s (defineList, sizeof(defineList), " ");
+
+            def = va_arg(argptr, const char *);
+            if (NULL == def)
+                break;
+        }
+        va_end(argptr);
+    }
+
+    //glslc -fshader-stage=vert --target-env=vulkan1.3 lineRenderer.vert.shader -g -O -o lineRenderer.vert.spv
+    char cmd[1024];
+    sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s %s -g -O -o %s.spv 2>&1",  shaderStage, defineList, shaderSRCFile, shaderSRCFile);
+
+    char *result;
+    u32 len;
+    if (!gos::runShellScriptAndStoreResult (cmd, gos::getScrapAllocator(), &result, &len))
+        return false;
+
+    if (NULL == result)
+        return true;
+
+    //c'e' stato qualche errore di compilazione
+    gos::logger::err("PipelineParser::priv_shader_compile, error compiling shader %s\n%s", shaderSRCFile, result);
+    GOSFREE_SCRAP(result);
     return false;
 }
 
@@ -98,14 +120,14 @@ bool PipelineParser_priv_splitParams (gos::IniFileSection &sec, const char *para
 }
 
 //**************************************
-bool PipelineParser::parseFromIniFileSection (gos::IniFileSection &sec, PipelineDef *out)
+bool PipelineParser::priv_parseIniFileSection (const char *srcFolder, gos::IniFileSection &sec, PipelineDef *out)
 {
     assert (NULL != out);
     out->setDefault();
 
     if (!sec.get("name", out->name, sizeof(out->name)))
     {
-        gos::logger::err ("PipelineParser::parse_PipelineDef() => <name> not found\n");
+        gos::logger::err ("PipelineParser::priv_parseIniFileSection() => param <name> not found\n");
         return false;
     }
 
@@ -344,7 +366,60 @@ bool PipelineParser::parseFromIniFileSection (gos::IniFileSection &sec, Pipeline
             }
             return true;
         });
-    }     
+    }
+
+
+    //vtx shader (e' opzionale)
+    char s[1024];
+    char filename_vtxShader[1024];
+
+    filename_vtxShader[0] = 0x00;
+    if (sec.get("vtxShader", filename_vtxShader, sizeof(filename_vtxShader)))
+    {
+        if (strcmp(filename_vtxShader, "none") == 0)
+            filename_vtxShader[0] = 0x00;
+        else
+        {
+            sprintf_s (s, sizeof(s), "%s/%s", srcFolder, filename_vtxShader);
+            fs::resolvePath (s, filename_vtxShader, sizeof(filename_vtxShader));
+            if (!priv_shader_compile (filename_vtxShader, "vert"))
+            {
+                gos::logger::err ("PipelineParser => error compiling vtxshader %s\n", s);
+                return false;
+            }
+
+            strcat_s (filename_vtxShader, sizeof(filename_vtxShader), ".spv");
+        }
+    }
+
+    //frag shader (e' opzionale)
+    char filename_pxlShader[1024];
+
+    filename_pxlShader[0] = 0x00;
+    if (sec.get("pxlShader", filename_pxlShader, sizeof(filename_pxlShader)))
+    {
+        if (strcmp(filename_pxlShader, "none") == 0)
+            filename_pxlShader[0] = 0x00;
+        else
+        {
+            sprintf_s (s, sizeof(s), "%s/%s", srcFolder, filename_pxlShader);
+            fs::resolvePath (s, filename_pxlShader, sizeof(filename_pxlShader));
+            if (!priv_shader_compile (filename_pxlShader, "frag"))
+            {
+                gos::logger::err ("PipelineParser => error compiling pxlshader %s\n", s);
+                return false;
+            }
+
+            strcat_s (filename_pxlShader, sizeof(filename_pxlShader), ".spv");
+        }
+    }    
+ 
+    SPVReflect reflect;
+    if (!reflect.parseFromFile (filename_vtxShader, filename_pxlShader))
+    {
+        gos::logger::err ("PipelineParser => error 'reflecting' shaders %s\n", s);
+        return false;
+    }
 
     return true;
 }

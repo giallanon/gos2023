@@ -27,7 +27,7 @@ pipeline_def
 
 	//vtxShader: none | <file-name>
 	//	default: none
-	vtxShader: PIPE_stage_clear.vert
+	vtxShader: phong.vert.shader
 	
 	//pxlShader: none | <file-name>
 	//	default: none

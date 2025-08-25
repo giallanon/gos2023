@@ -1,6 +1,6 @@
 #ifndef _SPVReflect_h_
 #define _SPVReflect_h_
-#include "SPVReflectEnumAndDefine.h"
+#include "spirv_reflect.h"
 #include "gosFastArray.h"
 #include "gosDataBlob.h"
 #include "gosBit.h"
@@ -14,10 +14,6 @@
  */
 class SPVReflect
 {
-public:
-    static const char* enumToString (eDescriptrorType s);
-    static const char* enumToString (eResourceType s);
-
 public:
             SPVReflect();
             ~SPVReflect();
@@ -35,8 +31,32 @@ public:
 
     bool    endParseFromMemory();
 
+    bool    save (const char *fname) const;
+    bool    save (gos::File &f) const;
+
+    u8*     serialize (gos::Allocator *allocator, u32 *out_sizeAllocated) const;
 
     void    printInfo() const;
+
+protected:
+    static constexpr u8     USAGE__USED_IN_VTX_SHADER       = 0;
+    static constexpr u8     USAGE__USED_IN_FRAG_SHADER      = 1;
+
+    static constexpr u8     TYPEDESCR__IS_STRUCT             = 0;
+    static constexpr u8     TYPEDESCR__IS_ARRAY              = 1;
+    static constexpr u8     TYPEDESCR__IS_DYNAMIC_ARRAY      = 2;
+
+    static constexpr u8     DESCRIPTOR_TYPE__BLOBDEF            = 0;
+    static constexpr u8     DESCRIPTOR_TYPE__ARRAY              = 1;
+    static constexpr u8     DESCRIPTOR_TYPE__DYNARRAY           = 2;
+    static constexpr u8     DESCRIPTOR_TYPE__OTHER              = 3;
+    static constexpr u8     DESCRIPTOR_TYPE__UNKNOWN            = 0xff;
+
+
+protected:
+    static const char* enumToString_Usage (const gos::Flag8 usage);
+
+
 
 private:
     struct VtxDeclElem
@@ -94,48 +114,157 @@ private:
         gos::FastArray<VtxDeclElem>    list;
     };
 
+    class Node
+    {
+    public:
+        static gos::Allocator *localAllocator;
+
+    public:
+        static Node* createNew ()
+        {
+            Node *p = GOSNEW(localAllocator, Node)();
+            return p;
+        }
+
+        static void deleteTree (Node *root)
+        {
+            Node *p = root;
+            while (p)
+            {
+                Node *thisNode = p;
+                p = p->fratello;
+
+                if (NULL != thisNode->figlio)
+                    deleteTree (thisNode->figlio);
+                GOSDELETE(localAllocator, thisNode);
+            }
+    }
+
+    public:
+                    Node()                                          { reset(); }
+        void        reset()                                         { memset(name,0,sizeof(name)); usage.zero(); typeDescr.zero(); absoluteOffset=offset=size=paddedSize=0; fmt=eDataFormat::_unknown; memset(&other, 0, sizeof(other)); figlio = fratello = NULL; numChildren=0;}
+        void        mergeUsageWith (const Node *node)               { if (node->isUsedByVtxShader())  usage.set(USAGE__USED_IN_VTX_SHADER); if (node->isUsedByFragShader())  usage.set(USAGE__USED_IN_FRAG_SHADER); }
+
+        void        appendChild (Node *child)
+        {
+            numChildren++;
+
+            Node *p = this->figlio;
+            if (NULL == p)
+            {
+                this->figlio = child;
+            }
+            else
+            {
+                while (p->fratello)
+                {
+                    p = p->fratello;
+                }
+                p->fratello = child;
+            }
+
+        }
+
+        bool        isUsedByVtxShader() const                       { return usage.isBitSet(USAGE__USED_IN_VTX_SHADER); }
+        bool        isUsedByFragShader() const                      { return usage.isBitSet(USAGE__USED_IN_FRAG_SHADER); }
+
+        bool        isArray() const                                 { return typeDescr.isBitSet(TYPEDESCR__IS_ARRAY); }
+        bool        isDynamicArray() const                          { return typeDescr.isBitSet(TYPEDESCR__IS_DYNAMIC_ARRAY); }
+        bool        isStruct() const                                { return typeDescr.isBitSet(TYPEDESCR__IS_STRUCT); }
+
+    public:
+        struct sAsStruct
+        {
+            u8  numMembers;
+        };
+        struct sAsArray
+        {
+            u8  numDimension;
+            u16 sizeOfOneElem;
+            u16 numElem[8];
+        };
+                    
+        union eOther
+        {
+            sAsStruct   asStruct;
+            sAsArray    asArray;
+        };
+
+    public:
+        char        name[64];
+        gos::Flag8  usage;
+        gos::Flag8  typeDescr;
+        u32         offset;
+        u32         size;
+        u32         absoluteOffset;
+        u32         paddedSize;
+        eDataFormat fmt;
+        eOther      other;
+        u8          numChildren;
+        
+        Node        *figlio;
+        Node        *fratello;
+
+    friend SPVReflect;
+    };
+
     struct DescrSetElem
     {
     public:
-        static constexpr u8     FLAG__USED_IN_VTX_SHADER     = 0x01;
-        static constexpr u8     FLAG__USED_IN_FRAG_SHADER    = 0x02;
+                    DescrSetElem()                      { reset(); }
+        void        reset()                             { root = NULL; blobDef=NULL; usage.zero(); set=binding=0; vulkanDescrType=eGPUDescriptrorType::UNKNOWN; }
+
+        bool        isUsedByVtxShader() const           { return usage.isBitSet(USAGE__USED_IN_VTX_SHADER); }
+        bool        isUsedByFragShader() const          { return usage.isBitSet(USAGE__USED_IN_FRAG_SHADER); }
 
     public:
-                    DescrSetElem()      { reset(); }
-        void        reset()             { memset(name,0,sizeof(name)); flag=set=binding=0; vulkanDescrType=eDescriptrorType::UNKNOWN; count=0; }
-
-    public:
-        char                name[64];    
-        u8                  flag;
-        u8                  set;
-        u8                  binding;
-        eDescriptrorType    vulkanDescrType;
-        u32                 count;
-        sResInfo            resType;
+        gos::Flag8              usage;
+        u8                      set;
+        u8                      binding;
+        eGPUDescriptrorType     vulkanDescrType;
+        Node                    *root;
+        u8                      *blobDef;
     };
 
     class DescrSetList
     {
     public:
-                DescrSetList()                              { list.setup(gos::getSysHeapAllocator(), 16); }
-                ~DescrSetList()                             { list.unsetup(); }
+                DescrSetList()                                  { list.setup(gos::getSysHeapAllocator(), 16); }
+                ~DescrSetList()                                 { reset(); list.unsetup(); }
 
-        void    reset()                                         { list.reset(); }
-        void    add (const DescrSetElem &elem)
+        void    reset()                                         
+        { 
+            for (u32 i=0; i<list.getNElem(); i++)
+            {
+                if (NULL != list(i).root)
+                {
+                    if (NULL != list[i].root)
+                        Node::deleteTree (list[i].root);
+                }
+                if (NULL != list(i).blobDef)
+                {
+                    GOSFREE(Node::localAllocator, list[i].blobDef);
+                    list[i].blobDef= NULL;
+                }
+            }
+            list.reset(); 
+        }
+        
+        u32    addIfNotExists (DescrSetElem &elem)
         {
             for (u32 i=0; i<list.getNElem(); i++)
             {
                 if (list(i).set == elem.set && list(i).binding == elem.binding)
                 {
                     //ho trovato un elemeno che gia' esisteva in lista
-                    list[i].flag |= elem.flag;
-                    return;
+                    list[i].usage |= elem.usage;
+                    return i;;
                 }
             }
 
             list.append(elem);
+            return u32MAX;
         }
-
         
         void    sort()
         {
@@ -172,153 +301,12 @@ private:
             }
         }
         
-        u32		getNElem()	const	                            { return list.getNElem(); }
+        u32		                getNElem()	const               { return list.getNElem(); }
         const DescrSetElem&		operator() (u32 i)	const       { return list(i); }
-
+        DescrSetElem&		    operator[] (u32 i)              { return list[i]; }
         
     private:
         gos::FastArray<DescrSetElem>    list;
-    };
-
-    class PushConstantNode
-    {
-    public:
-        static gos::Allocator *localAllocator;
-
-    public:
-        static PushConstantNode* createNew ()
-        {
-            PushConstantNode *p = GOSNEW(localAllocator, PushConstantNode)();
-            return p;
-        }
-
-        static void deleteTree (PushConstantNode *root)
-        {
-            PushConstantNode *p = root;
-            while (p)
-            {
-                PushConstantNode *thisNode = p;
-
-                if (NULL != p->figlio)
-                    deleteTree (p->figlio);
-                p = p->fratello;
-
-                GOSDELETE(localAllocator, thisNode);
-            }
-    }
-
-    public:
-        static constexpr u8     FLAG__USED_IN_VTX_SHADER    = 0x01;
-        static constexpr u8     FLAG__USED_IN_FRAG_SHADER   = 0x02;
-        static constexpr u8     FLAG__IS_STRUCT             = 0x04;
-        static constexpr u8     FLAG__IS_ARRAY              = 0x08;
-
-    public:
-                    PushConstantNode()  { reset(); }
-        void        reset()             { memset(name,0,sizeof(name)); memset(fullName,0,sizeof(fullName)); flag=0; absoluteOffset=offset=size=paddedSize=0; fmt=eDataFormat::_unknown; memset(&other, 0, sizeof(other)); figlio = fratello = NULL; numChildren=0;}
-        void        mergeFlagWith (const PushConstantNode *node)
-        {
-            if ((node->flag & PushConstantNode::FLAG__USED_IN_VTX_SHADER) != 0) flag |= PushConstantNode::FLAG__USED_IN_VTX_SHADER;
-            if ((node->flag & PushConstantNode::FLAG__USED_IN_FRAG_SHADER) != 0) flag |= PushConstantNode::FLAG__USED_IN_FRAG_SHADER;
-        }
-
-        void        appendChild (PushConstantNode *child)
-        {
-            numChildren++;
-
-            PushConstantNode *p = this->figlio;
-            if (NULL == p)
-            {
-                this->figlio = child;
-            }
-            else
-            {
-                while (p->fratello)
-                {
-                    p = p->fratello;
-                }
-                p->fratello = child;
-            }
-
-        }
-
-        bool        isArray() const                 { return (flag & FLAG__IS_ARRAY) != 0; }
-        bool        isStruct() const                { return (flag & FLAG__IS_STRUCT) != 0; }
-        bool        isUsedByVtxShader() const       { return (flag & FLAG__USED_IN_VTX_SHADER) != 0; }
-        bool        isUsedByFragShader() const      { return (flag & FLAG__USED_IN_FRAG_SHADER) != 0; }
-
-    public:
-        struct sAsStruct
-        {
-            u8  numMembers;
-        };
-        struct sAsArray
-        {
-            u8  numDimension;
-            u16 sizeOfOneElem;
-            u16 numElem[8];
-        };
-
-        union eOther
-        {
-            sAsStruct   asStruct;
-            sAsArray    asArray;
-        };
-
-    public:
-        char        name[64];
-        char        fullName[128];    
-        u8          flag;
-        u32         offset;
-        u32         size;
-        u32         absoluteOffset;
-        u32         paddedSize;
-        eDataFormat fmt;
-        eOther      other;
-        u8          numChildren;
-        PushConstantNode    *figlio;
-        PushConstantNode    *fratello;
-
-    friend SPVReflect;
-    };
-
-    class ArrayEnumerator
-    {
-    public:
-                        ArrayEnumerator()   { }
-        void            begin (u8 numDimensionIN, const u16 *numElemIN)     { numDimension = numDimensionIN; memcpy (numElem, numElemIN, sizeof(u16) * numDimension); memset(curElem,0,sizeof(curElem));  }
-        const char*     get()
-        {
-            memset (s, 0, sizeof(s));
-            for (u8 i=0; i<numDimension; i++)
-            {
-                char temp[8];
-                sprintf_s (temp, sizeof(temp), "[%d]", curElem[i]);
-                strcat_s (s, sizeof(s), temp);
-            }
-            return s;
-        }
-        bool            next()
-        {
-            u8 i = numDimension;
-            while (i)
-            {
-                i--;
-                if (curElem[i] < numElem[i] - 1)
-                {
-                    curElem[i]++;
-                    return true;
-                }
-                curElem[i] = 0;
-            }
-            return false;
-        }
-
-    private:
-        u8      numDimension;
-        u16     numElem[16];
-        u16     curElem[16];
-        char    s[32];
     };
 
 private:
@@ -336,25 +324,32 @@ private:
     bool                priv_parse_fragShader (SpvReflectShaderModule *module);
     bool                priv_parse_descriptors (SpvReflectShaderModule *module);
 
-    PushConstantNode*   priv_pushConst_parseModule (SpvReflectShaderModule *module);
-    PushConstantNode*   priv_pushConst_parseVar (const SpvReflectShaderModule *module, const SpvReflectBlockVariable *var, const char *parentName);
-    void                priv_pushConst_merge (PushConstantNode *&dst, PushConstantNode *&src);
-    void                priv_pushConst_adjustArrayOffset (PushConstantNode *node, u16 arrayStartAbsOffset = u16MAX);
-    void                priv_pushConst_adjustPaddedSize  (PushConstantNode *node, u16 arrayStride = 0);
-    void                priv_pushConst_printNode (gos::UTF8String &out, const PushConstantNode *node, u32 indent) const;
-    void                priv_pushConst_printNode_appendUsageInfo(gos::UTF8String &out, const PushConstantNode *node) const;
-    u8*                 priv_pushConst_createGosDataBlobDef (gos::Allocator *allocator, PushConstantNode *node);
-    void                priv_pushConst_createGosDataBlobDef_ric (gos::datablob::DefBuilder &builder, PushConstantNode *node);
+    Node*               priv_parse_BlockVariable (const SpvReflectShaderModule *module, const SpvReflectBlockVariable *var);
+    Node*               priv_parse_TypeDescription (const SpvReflectShaderModule *module, const SpvReflectTypeDescription *var);
 
+    void                priv_descriptor_parseVar (const SpvReflectShaderModule *module, const SpvReflectDescriptorBinding *var);
+
+    Node*               priv_pushConst_parseModule (SpvReflectShaderModule *module);
+
+    u8*                 priv_nodeTree_createGosDataBlobDef (gos::Allocator *allocator, Node *node);
+    void                priv_nodeTree_createGosDataBlobDef_ric (gos::datablob::DefBuilder &builder, Node *node);
+    void                priv_nodeTree_merge (Node *&dst, Node *&src);
+    void                priv_nodeTree_adjustArrayOffset (Node *node, u16 arrayStartAbsOffset = u16MAX);
+    void                priv_nodeTree_adjustPaddedSize  (Node *node, u16 arrayStride = 0);
+
+    void                priv_printNode (gos::UTF8String &out, const Node *node, u32 indent) const;
+    void                priv_printNode_appendUsageInfo(gos::UTF8String &out, const Node *node) const;
+
+    
 private:
     gos::Allocator      *localAllocator;
     VtxDeclList         vtxDeclList;
     DescrSetList        descrSetList;
 
-    PushConstantNode    *pushConstant_VS;
-    PushConstantNode    *pushConstant_PS;
-    PushConstantNode    *pushConstant_merged;
-    u8                  *pushConstant_dataBlobDef;
+    Node    *pushConstant_VS;
+    Node    *pushConstant_PS;
+    Node    *pushConstant_merged;
+    u8      *pushConstant_dataBlobDef;
 };
 
 #endif //_SPVReflect_h_

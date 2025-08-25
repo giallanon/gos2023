@@ -180,10 +180,21 @@ void platform::getDateNow(u16 *out_year, u16 *out_month, u16 *out_day)
 }
 
 //*******************************************************************
-void platform::getTimeNow (u8 *out_hour, u8 *out_min, u8 *out_sec)
+void platform::getTimeNow_local (u8 *out_hour, u8 *out_min, u8 *out_sec)
 {
 	SYSTEMTIME s;
 	GetLocalTime(&s);
+
+	(*out_hour) = (u8)s.wHour;
+	(*out_min) = (u8)s.wMinute;
+	(*out_sec) = (u8)s.wSecond;
+}
+
+//*******************************************************************
+void platform::getTimeNow_UTC (u8 *out_hour, u8 *out_min, u8 *out_sec)
+{
+	SYSTEMTIME s;
+	GetSystemTime(&s);
 
 	(*out_hour) = (u8)s.wHour;
 	(*out_min) = (u8)s.wMinute;

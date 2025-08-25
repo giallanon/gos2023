@@ -1,0 +1,40 @@
+//il nome della sezione indica il tipo di risorsa da buildare
+//E' 1 a 1 con il tipo gos::eResType
+[vtx_shader]
+{
+    runtimeName:    "ex4.vs"          //indica il nome associato alla risorsa buildata. A runtime, utilizzare questo nome per caricare questa esatta risorsa
+                                    //NB: <runtimeName> diversi possono puntare alla stessa risorsa, vedi il successivo vtx_shader
+
+    src:            "ex4.vert"        //nome del file di testo con il src dello shader. Questo file si deve trovare in <BASE_FOLDER>/raw/shaders
+
+    //define:                       //OPZIONALE: elenco di define da passare allo shader, separate dal carattere spazio ' '
+}
+
+
+//chiedo di buildare un nuovo vtx-shader che pero' ha gli stessi input param del precedente vs
+//Il risultato e' che il builder non buildera' 2 differenti VS, ma 1 solo e sia "ex4.vs" che "ex4-alias.vs"
+//punteranno allo stesso file buildato
+[vtx_shader]
+{
+    runtimeName:    ex4-alias.vs
+    src:            ex4.vert
+}
+
+
+//pxl shader usa la stessa sintassi di vxtShader
+[pxl_shader]
+{
+    runtimeName:    ex4.ps
+    src:            ex4.frag
+}
+
+
+
+[vtx_shader]
+{
+    runtimeName:    ex4-v2.vs
+    src:            ex4.vert
+    define: pippo pluto
+}
+
+

@@ -579,6 +579,11 @@ void fs::folderDeleteAllFileWithJolly  (const char *utf8_pathSenzaSlashRESOLVABL
 }
 
 
+//**************************************************************************
+void fs::resolvePath (const char *pathIN, char *out, u32 sizeof_out)
+{
+	pathResolver.resolve (pathIN, out, sizeof_out);
+}	
 
 /**************************************************************************
  * Questa suppone che [utf8_filePathAndName] sia gia' stato risolto da qualcuno altro tramite 

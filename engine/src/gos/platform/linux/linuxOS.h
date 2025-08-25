@@ -27,7 +27,8 @@ namespace platform
 
     u64             getTimeNow_usec();
     void            getDateNow (u16 *out_year, u16 *out_month, u16 *out_day);
-    void            getTimeNow (u8 *out_hour, u8 *out_min, u8 *out_sec);
+    void            getTimeNow_local (u8 *out_hour, u8 *out_min, u8 *out_sec);
+    void            getTimeNow_UTC (u8 *out_hour, u8 *out_min, u8 *out_sec);
 
 
     inline FILE*    gos_popen (const char *cmd, const char *mode)                   { return popen(cmd, mode); }

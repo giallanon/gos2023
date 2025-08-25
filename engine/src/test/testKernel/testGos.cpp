@@ -20,7 +20,7 @@ namespace test1
 
         gos::DateTime dt;
         char s[256];
-        dt.setNow();
+        dt.setNow_local();
         dt.formatAs_YYYYMMDDHHMMSS (s, sizeof(s));
         gos::logger::log ("current date and time: %s\n", s);
 
@@ -784,17 +784,31 @@ namespace test7
 
 namespace test8
 {
+    int run1()
+    {
+        TEST_ASSERT (0x579B24DF == gos::utils::crc32("a"));
+        TEST_ASSERT (0xE92499B0 == gos::utils::crc32("ab"));
+        TEST_ASSERT (0xD3E8C673 == gos::utils::crc32("abc"));
+        TEST_ASSERT (0xFA48EE30 == gos::utils::crc32("abcd"));
+        TEST_ASSERT (0x498CC5F3 == gos::utils::crc32("stack-overflow"));
+        TEST_ASSERT (0x5AD53D29 == gos::utils::crc32("pippo fa la pizza"));
+        TEST_ASSERT (0x785392AA == gos::utils::crc32("bella CIao"));
+        return 0;
+    }
+
+
+
 
     enum TestEnum
     {
         CrcVal01 = COMPILE_TIME_STR_CRC32("stack-overflow"),
     };
 
-    int run()
+    int run2()
     {
-        u32 test1 = COMPILE_TIME_STR_CRC32("stack-overflow"); printf ("0x%08X\n", test1);
-        TEST_ASSERT(0x44381BC3==test1);
-        TEST_ASSERT(0x44381BC3==CrcVal01);
+        u32 test1 = COMPILE_TIME_STR_CRC32("stack-overflow");
+        TEST_ASSERT(0x498CC5F3==test1);
+        TEST_ASSERT(0x498CC5F3==CrcVal01);
         TEST_ASSERT(COMPILE_TIME_STR_CRC32("stack-overflow")==CrcVal01);
 
         if constexpr (COMPILE_TIME_STR_CRC32("pippo fa la pizza") == COMPILE_TIME_STR_CRC32("pippo fa la pizza"))
@@ -806,9 +820,9 @@ namespace test8
             TEST_ASSERT(0);
         }
         
-        TEST_ASSERT(0xC2EC16E5==COMPILE_TIME_STR_CRC32("pippo fa la pizza"));
+        TEST_ASSERT(0x5AD53D29==COMPILE_TIME_STR_CRC32("pippo fa la pizza"));
 
-        TEST_ASSERT(gos::utils::crc32("stack-overflow") == 0x44381BC3);
+        TEST_ASSERT(gos::utils::crc32("stack-overflow") == 0x498CC5F3);
         TEST_ASSERT(gos::utils::crc32("stack-overflow") == CrcVal01);
         TEST_ASSERT(gos::utils::crc32("stack-overflow") == COMPILE_TIME_STR_CRC32("stack-overflow"));
         TEST_ASSERT(gos::utils::crc32("pippo fa la pizza") == COMPILE_TIME_STR_CRC32("pippo fa la pizza"));
@@ -972,7 +986,8 @@ void testGos (Tester &tester)
     tester.run("test5 gos::testStringList", test_gos::test5::testStringList);
     tester.run("test6 gos::testBitUtils", test_gos::test6::testBitUtils);
     tester.run("test7 gos::testNetAddr_and_MacAdd", test_gos::test7::testNetAddr_and_MacAdd);
-    tester.run("test8 string hash", test_gos::test8::run);
+    tester.run("test8 string hash(1)", test_gos::test8::run1);
+    tester.run("test8 string hash(2)", test_gos::test8::run2);
     tester.run("test9 eDataFormat", test_gos::test9_eDataFormat::run);
     tester.run("test9 eImageFormat", test_gos::test10_eImageFormat::run);
 }

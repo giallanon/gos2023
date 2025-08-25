@@ -20,8 +20,10 @@ namespace gos
         const char*	enumToString (const eStencilFunc e);
         const char*	enumToString (const eCullMode e);
         const char*	enumToString (const eDrawPrimitive e);
+        const char*	enumToString (const eGPUDescriptrorType s);
+        const char* enumToString (const eResType t);
 
-        bool stringToEnum (const char *str, eImageFormat *out);        
+        bool stringToEnum (const char *str, eImageFormat *out);
         bool stringToEnum (const char *str, eImageLayout *out);
         bool stringToEnum (const char *str, eAttachmentLoadOp *out);
         bool stringToEnum (const char *str, eAttachmentStoreOp *out);
@@ -31,6 +33,7 @@ namespace gos
         bool stringToEnum (const char *str, eStencilFunc *out);
         bool stringToEnum (const char *str, eCullMode *out);
         bool stringToEnum (const char *str, eDrawPrimitive *out);
+        bool stringToEnum (const char *str, eResType *out);
 
 
         /* ritorna il numero di bytes necessari a contenere la rappresentazione

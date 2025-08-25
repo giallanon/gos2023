@@ -50,19 +50,6 @@ typedef uintptr_t   uiPtr;      //un "intero" la cui dimensione in byte dipende 
 #define i64MAX      9223372036854775807
 
 
-//#pragma warning(disable:26495)	//Variable 'sOSFileFind::findData' is uninitialized.Always initialize a member variable(type.6)
-//#pragma warning(disable:4458)	//declaration of 'allocator' hides class member	
-
-/***********************************************
- * debug helpers
- *
-#ifdef _DEBUG
-	#define	DBGBREAK	__debugbreak();
-#else
-	#define	DBGBREAK
-#endif
-*/
-
 /***********************************************
  * c/c++ portability stuff
  */

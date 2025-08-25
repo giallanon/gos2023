@@ -16,9 +16,11 @@ namespace gos
 #endif
 
 	public:
-		static DateTime		Now()																					{ DateTime t; t.setNow(); return t; }
+		static DateTime		Now_local()																				{ DateTime t; t.setNow_local(); return t; }
+		static DateTime		Now_UTC()																				{ DateTime t; t.setNow_UTC(); return t; }
 		static void			getDateNow(u16 *out_year, u16 *out_month, u16 *out_day)									{ gos::Date::getDateNow(out_year, out_month, out_day); }
-		static void			getTimeNow(u8 *out_hour, u8 *out_min, u8 *out_sec)										{ gos::Time24::getTimeNow(out_hour, out_min, out_sec); }
+		static void			getTimeNow_local(u8 *out_hour, u8 *out_min, u8 *out_sec)								{ gos::Time24::getTimeNow_local(out_hour, out_min, out_sec); }
+		static void			getTimeNow_UTC(u8 *out_hour, u8 *out_min, u8 *out_sec)									{ gos::Time24::getTimeNow_UTC(out_hour, out_min, out_sec); }
 		static void			calcEuropeanSummerTimeStartAndEndDateTime (u32 year, DateTime *out_startDate, DateTime *out_endDate);
 		static i64			diff_seconds (const DateTime &a, const DateTime &b);
 								//ritorna (a - b) in secondi
@@ -37,7 +39,8 @@ namespace gos
         bool        		operator<= (const DateTime& b) const;
         bool        		operator>= (const DateTime& b) const;
 
-        void				setNow()																				{ date.setNow(); time.setNow(); }
+        void				setNow_local()																			{ date.setNow(); time.setNow_local(); }
+		void				setNow_UTC()																			{ date.setNow(); time.setNow_UTC(); }
 		void				set (u32 year, u32 month, u32 day, u32 h, u32 m, u32 s, u32 ms = 0)						{ date.setYMD (year, month, day); time.setHMS (h, m, s, ms); }
 
         u64					getInternalRappresentation() const														{ u64 d = date.getInternalRappresentation(); u64 t=time.getInternalRappresentation(); return ((d<<32) | t); }
@@ -59,6 +62,9 @@ namespace gos
 
 								a, b, c possono eventualmente essere 0x00 se non si desidera includerli nella stringa finale
 							*/
+
+		u64					formatAsU64_yymmddhhmmss () const;
+							/* ritorna un u64 composto da yy mm dd hh mm ss */
 
 
 

@@ -130,7 +130,7 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 		u16 y, m, d;
 		u8 hh, mm, ss;
 		gos::Date::getDateNow(&y, &m, &d);
-		gos::Time24::getTimeNow(&hh, &mm, &ss);
+		gos::Time24::getTimeNow_local(&hh, &mm, &ss);
         const u32 seed = (y * 365 + m * 31 + d) * 24 * 3600 + hh * 3600 + mm * 60 + ss +static_cast<u32>(gosGlobals.timeStarted_usec);
 		gosGlobalsRnd.seed(seed);
 	}
@@ -148,6 +148,9 @@ void gos::deinit()
 	if (NULL != logger)
 		gos::logger::log (eTextColor::white, "\n\ngos is shutting down...\n");
 
+	delete gosGlobals.errHandler;
+	gosGlobals.errHandler = NULL;
+
 	thread::internal_deinit();
 	GOSFREE(gos::getSysHeapAllocator(), gosGlobals.appName);
 	GOSFREE(gos::getSysHeapAllocator(), gosGlobals.pathToWritableFolder);
@@ -162,9 +165,6 @@ void gos::deinit()
 		logger->log ("FIN\n\n\n\n");
 		delete logger;
 	}
-
-	delete gosGlobals.errHandler;
-	gosGlobals.errHandler = NULL;
 }
 
 //******************************************

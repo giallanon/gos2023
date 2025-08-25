@@ -65,14 +65,6 @@ u8* gos::datablob::createNew (gos::Allocator *allocator, const void *dataBlobDef
 }
 
 //******************************** 
-void gos::datablob::destroy (gos::Allocator *allocator, void *dataBlob)
-{
-    if (NULL != dataBlob)
-        GOSFREE(allocator, dataBlob);
-}
-
-
-//******************************** 
 void gos_datablob_blobDef_prinfInfo_ric (gos::UTF8String &out, gos::datablob::DefElem &elem, u32 indent, trapFn_printOtherInfoOnThisRow trapFn)
 {
     static constexpr u8 PRINT_COL1 = 45;
@@ -169,6 +161,8 @@ void gos_datablob_blobDef_prinfInfo_ric (gos::UTF8String &out, gos::datablob::De
 
 void gos::datablob::blobDef_prinfInfo (gos::UTF8String &out, const void *dataBlobDef, trapFn_printOtherInfoOnThisRow trapFn)
 {
+    if (NULL == dataBlobDef)
+        return;
     gos::datablob::DefReader r;
     if (!r.setup (dataBlobDef))
     {

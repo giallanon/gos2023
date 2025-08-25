@@ -7,17 +7,32 @@ using namespace gos;
 
 
 //******************************
-void Time24::setNow ()
+void Time24::setNow_local ()
 {
     u8 h,m,s;
-	platform::getTimeNow(&h, &m, &s);
+	platform::getTimeNow_local(&h, &m, &s);
     setHMS (h, m, s, 0);
 }
 
-//****************************
-void Time24::getTimeNow(u8 *out_hour, u8 *out_min, u8 *out_sec)
+//******************************
+void Time24::setNow_UTC ()
 {
-	platform::getTimeNow(out_hour, out_min, out_sec);
+    u8 h,m,s;
+	platform::getTimeNow_UTC(&h, &m, &s);
+    setHMS (h, m, s, 0);
+}
+
+
+//****************************
+void Time24::getTimeNow_local(u8 *out_hour, u8 *out_min, u8 *out_sec)
+{
+	platform::getTimeNow_local(out_hour, out_min, out_sec);
+}
+
+//****************************
+void Time24::getTimeNow_UTC(u8 *out_hour, u8 *out_min, u8 *out_sec)
+{
+	platform::getTimeNow_UTC(out_hour, out_min, out_sec);
 }
 
 //****************************

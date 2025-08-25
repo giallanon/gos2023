@@ -2,7 +2,7 @@
 #
 #  PROJECT: gosGPU
 =====================================================]]
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 4.00)
 
 #project name and version
 project(gosGPU VERSION 1.0.0 LANGUAGES C CXX)
@@ -68,7 +68,7 @@ gosGPUResVtxDecl.h
 
 gosGPUUtils.cpp
 gosGPUUtils.h
- )
+)
 
 #====================================================
 # info a video
@@ -80,6 +80,7 @@ message("         current config = ${GOS_PLATFORM__NAME} / ${CMAKE_BUILD_TYPE}")
 message("         ouput file = ${BINARY_OUTPUT_FILENAME}")
 get_target_property(MAIN_CFLAGS ${BINARY_OUTPUT_FILENAME} COMPILE_OPTIONS)
 message("         compiler flags: ${MAIN_CFLAGS}")
+
 
 #====================================================
 # additional include path

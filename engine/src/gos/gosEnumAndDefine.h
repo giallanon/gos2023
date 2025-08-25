@@ -286,12 +286,39 @@ enum class eDepthStencilLayout : u8
     depth_shader_readonly,				//VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
 };
 
+enum class eGPUDescriptrorType : u8    //sono pari pari ai corrispondenti enum di vulkan
+{
+    SAMPLER = 0,                //aka VK_DESCRIPTOR_TYPE_SAMPLER
+    COMBINED_IMAGE_SAMPLER = 1, //aka VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
+    TEXTURE2D = 2,
+    STORAGE_IMAGE = 3,
+    UNIFORM_TEXEL_BUFFER = 4,
+    STORAGE_TEXEL_BUFFER = 5,
+    UNIFORM_BUFFER = 6,
+    STORAGE_BUFFER = 7,
+    DYNAMIC_UNIFORM_BUFFER = 8,
+    DYNAMIC_STORAGE_BUFFER = 9,
+    INPUT_ATTACHMENT = 10,
+
+    UNKNOWN = 0xff
+};
+
 enum class eDataBlobElemType : u8
 {
     simpleType = 0,
     structType = 1,
     arrayType = 2
 };
+
+enum class eResType : u8
+{
+    vtx_shader  = 0,
+    pxl_shader  = 1,
+    texture2D   = 2,
+    
+    unknown     = 0xFF
+};
+
 
 namespace gos
 {

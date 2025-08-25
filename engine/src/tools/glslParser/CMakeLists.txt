@@ -3,7 +3,7 @@
 #  PROJECT: glslParser
 #
 =====================================================]]
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 4.00)
 
 #project name and version
 project(glslParser VERSION 1.0.0 LANGUAGES C CXX)
@@ -29,12 +29,24 @@ spirv_reflect.h
 spirv.h
 SPVReflect.cpp
 SPVReflect.h
-SPVReflectEnumAndDefine.h
 )
 
 #====================================================
 # additional include path
 include_directories(${PROJECT_SOURCE_DIR}/../../gos)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosDB)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosRes)
+
+
+
+#====================================================
+# additional library to be linked
+set(LIBRARY_LIST "gosRes;gosDB;gos")
+foreach(libName IN LISTS LIBRARY_LIST)
+    makeLibraryName(finalLibNameAndPath ${libName})
+    message("         linkling libray [${libName}] => ${finalLibNameAndPath}")
+    target_link_libraries(${BINARY_OUTPUT_FILENAME} ${finalLibNameAndPath})
+endforeach()
 
 
 #====================================================
@@ -48,12 +60,5 @@ message("         ouput file = ${BINARY_OUTPUT_FILENAME}")
 get_target_property(MAIN_CFLAGS ${BINARY_OUTPUT_FILENAME} COMPILE_OPTIONS)
 message("         compiler flags: ${MAIN_CFLAGS}")
 
-#====================================================
-# additional library to be linked
-set(LIBRARY_LIST "gos")
-foreach(libName IN LISTS LIBRARY_LIST)
-    makeLibraryName(finalLibNameAndPath ${libName})
-    message("         linkling libray [${libName}] => ${finalLibNameAndPath}")
-    target_link_libraries(${BINARY_OUTPUT_FILENAME} ${finalLibNameAndPath})
-endforeach()
+
 

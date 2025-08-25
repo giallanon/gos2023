@@ -3,7 +3,7 @@
 #  PROJECT: simpleWorld
 #
 =====================================================]]
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 4.00)
 
 #project name and version
 project(simpleWorld VERSION 1.0.0 LANGUAGES C CXX)
@@ -47,15 +47,6 @@ VBIBSTBuffer.h
 )
 
 #====================================================
-# additional include path
-include_directories(${PROJECT_SOURCE_DIR}/../gos)
-include_directories(${PROJECT_SOURCE_DIR}/../gosMath)
-include_directories(${PROJECT_SOURCE_DIR}/../gosGeom)
-include_directories(${PROJECT_SOURCE_DIR}/../gosShape)
-include_directories(${PROJECT_SOURCE_DIR}/../gosInput)
-include_directories(${PROJECT_SOURCE_DIR}/../gosGPU)
-
-#====================================================
 # info a video
 message(" ")
 message(" ")
@@ -67,8 +58,18 @@ get_target_property(MAIN_CFLAGS ${BINARY_OUTPUT_FILENAME} COMPILE_OPTIONS)
 message("         compiler flags: ${MAIN_CFLAGS}")
 
 #====================================================
+# additional include path
+include_directories(${PROJECT_SOURCE_DIR}/../gos)
+include_directories(${PROJECT_SOURCE_DIR}/../gosMath)
+include_directories(${PROJECT_SOURCE_DIR}/../gosGeom)
+include_directories(${PROJECT_SOURCE_DIR}/../gosShape)
+include_directories(${PROJECT_SOURCE_DIR}/../gosInput)
+include_directories(${PROJECT_SOURCE_DIR}/../gosImage)
+include_directories(${PROJECT_SOURCE_DIR}/../gosGPU)
+
+#====================================================
 # additional library to be linked
-set(LIBRARY_LIST "gosGPU;gosImage;gosShape;gosInput;gosMath;gosGeom;gos")
+set(LIBRARY_LIST "gosGPU;gosImage;gosInput;gosShape;gosGeom;gosMath;gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
     message("         linkling libray [${libName}] => ${finalLibNameAndPath}")

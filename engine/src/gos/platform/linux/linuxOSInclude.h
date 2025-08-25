@@ -54,17 +54,6 @@ typedef uintptr_t   uiPtr;      //un "intero" la cui dimensione in byte dipende 
 
 
 /***********************************************
- * debug helpers
- 
-#ifdef _DEBUG
-    //#define	DBGBREAK	raise(SIGABRT);
-    #define	DBGBREAK	raise(SIGINT);
-#else
-    #define	DBGBREAK
-#endif */
-
-
-/***********************************************
  * c/c++ portability stuff
  */
 #define UNUSED_PARAM(x)	x __attribute__((unused))

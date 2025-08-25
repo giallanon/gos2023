@@ -5,12 +5,13 @@
 struct sPerInstanceData
 {
     vec4    worldPos;
+    float   altro;
 };
 
 layout(std140, set = 2, binding = 0) readonly buffer SSBO_2_0
 {
     vec2 pippo[3];
-    sPerInstanceData data[];
+    sPerInstanceData data[2];
 
 } perInstanceData;
 

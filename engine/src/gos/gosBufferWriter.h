@@ -36,6 +36,10 @@ namespace gos
         bool    writeU16At (u32 offset, u16 data)                       { return priv_writeU16At (offset, data, false); }
         bool    writeU32At (u32 offset, u32 data)                       { return priv_writeU32At (offset, data, false); }
 
+                //inseriscono degli 0 fino a che <cursor> non diventa un multiplo di 4 o 8
+        bool    writePadUntilMultiplo4();
+        bool    writePadUntilMultiplo8();
+
                 //read: avanzano il cursore
                 //vedi BufferReader
 

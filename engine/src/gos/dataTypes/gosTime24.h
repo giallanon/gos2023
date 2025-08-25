@@ -17,7 +17,8 @@ namespace gos
     class Time24
     {
 	public:
-		static void		getTimeNow(u8 *out_hour, u8 *out_min, u8 *out_sec);
+		static void		getTimeNow_local (u8 *out_hour, u8 *out_min, u8 *out_sec);
+        static void		getTimeNow_UTC (u8 *out_hour, u8 *out_min, u8 *out_sec);
 
     public:
                         Time24()                                                                { ts = 0; }
@@ -32,7 +33,8 @@ namespace gos
         bool        	operator<= (const Time24& b) const                                      { return (calcTimeInMSec() <= b.calcTimeInMSec()); }
         bool        	operator>= (const Time24& b) const                                      { return (calcTimeInMSec() >= b.calcTimeInMSec()); }
 
-        void			setNow ();
+        void			setNow_local ();
+        void			setNow_UTC ();
         void			setHMS (u32 h, u32 m,u32 s, u32 ms=0)									{ setHour(h); setMin(m); setSec(s); setMSec(ms); }
         void			setHour(u32 t) 															{ assert(t<24);   ts &= (~0x07C00000); ts |= (t<<22); }
         void			setMin(u32 t) 															{ assert(t<60);   ts &= (~0x003F0000); ts |= (t<<16); }

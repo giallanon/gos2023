@@ -97,6 +97,7 @@ namespace gos
             eDataFormat         getDataFmt() const;
             u32                 getUserData() const                         { return header.userDefined; }
 
+            bool                hasChild() const;
             bool                getFirstChild (DefElem *out) const;
             bool                getNextSibling (DefElem *out) const;
 
@@ -138,8 +139,6 @@ namespace gos
          *          da <dataBlobDef>
          */
         u8*     createNew (gos::Allocator *allocator, const void *dataBlobDef);
-
-        void    destroy (gos::Allocator *allocator, void *dataBlob);
 
 
         /**
@@ -229,6 +228,7 @@ namespace gos
 
                         /**
                          * @param   var_name accetta la notazione 'dotted' come ad esempio "pippo.pluto"
+                         *          Accetta anche la notazione [] per gli array (es: pippo,pluto[2] e pippo,pluto[2].m1)
                          */
             bool        getOffset (const char *var_name, u16 *out) const;
 
@@ -237,6 +237,64 @@ namespace gos
         }; //class DefReader
 
 
+        /**
+        * @brief Var
+        * E' una coppia <dataBlobDef, dataBlob> e fornisce i metodi per lettura
+        * e scrittura del <dataBlob>
+        * 
+        * Internamente mantiene un puntatore a un DefReader e a un dataBlob.
+        * Non e' responsabilita' di questta classe fare alloc/free di <dataBlob> e <DefReader>.
+        * Il DefReader deve essere stato inizializzato con il <dataBlobDef> adeguato per il <dataBlob>
+        */
+        class Var
+        {
+        public:
+                    Var()                                                           { reader = NULL; dataBlob = NULL; }
+                    ~Var()                                                          { }
+                        
+            void    setup (const DefReader *readerIN, u8 *dataBlobIN)               { reader = readerIN; dataBlob = dataBlobIN; }
+            bool    getOffset (const char *var_name, u16 *out) const                { return reader->getOffset(var_name, out); }
+
+            void    zero()                                                          { memset (dataBlob, 0, reader->dataBlob_getSize()); }
+            void    rawset (u16 offset, const void *data, u32 sizeof_data)          { memcpy (&dataBlob[offset], data, sizeof_data); }
+            void    rawget (u16 offset, void *dst, u32 howManyByteToRead) const     { memcpy (dst, &dataBlob[offset], howManyByteToRead); }
+
+                    template<class T>
+            void    set (u16 offset, const T &val)                                  { rawset (offset, &val, sizeof(T)); }
+
+                    template<class T>
+            void    set (const char *var_name, const T &val)
+                    { 
+                        u16 offset;
+                        if (getOffset(var_name, &offset))
+                            set<T>(offset, val);
+#ifdef _DEBUG
+                        else
+                            DBGBREAK;
+#endif
+                    }
+
+                    template<class T>
+            T&      get (u16 offset) const								            { return * reinterpret_cast<T*>(&dataBlob[offset]); }
+
+                    template<class T>
+            T&      get (const char *var_name) const
+                    {
+                        u16 offset;
+                        if (getOffset(var_name, &offset))
+                            return get<T>(offset);
+
+                        DBGBREAK;
+                        return get<T>((u16)0);
+                    }
+            
+            const DefReader*    getDef() const                                      { return reader; }
+            u8*                 getDataBlob() const                                 { return dataBlob;} 
+
+        private:
+            const DefReader *reader;
+            u8              *dataBlob;
+        }; //class Var
       
     } //namespace datablob
 } //namespace gos

@@ -2,3 +2,6 @@
 build/
 lib/
 !.vscode/launch.json
+.cache/
+,vscode/c_cpp_properties.json
+.vscode/bookmarks.json

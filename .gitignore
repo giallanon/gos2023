@@ -26,3 +26,9 @@ engine/bin/simpleWorld/assets/sponza/sponza_glTF.ini
 
 
 engine/.vscode/bookmarks.json
+
+engine/.vscode/c_cpp_properties.json
+
+engine/bin/glslParser/example/compiled/
+
+engine/bin/glslParser/testResBuild1/compiled/

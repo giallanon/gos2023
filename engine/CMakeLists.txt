@@ -3,7 +3,7 @@
 #  PROJECT: engine
 #
 =====================================================]]
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 4.00)
 
 #project name and version
 project(gosEngine VERSION 1.0.0 LANGUAGES C CXX)
@@ -103,11 +103,14 @@ endfunction()
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/external/glfw-3.3.8)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gos)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosMath)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosDB)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGeom)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosShape)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosInput)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosImage)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosRes)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGPU)
+
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/simpleWorld)

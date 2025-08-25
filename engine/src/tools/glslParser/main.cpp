@@ -1,19 +1,46 @@
 #include "SPVReflect.h"
 #include "PipelineParser.h"
+#include "gosRes.h"
 
 using namespace gos;
 
 
 //******************************** 
-bool compile (const char *shaderSRCFile, const char *shaderStage, bool bWithSourceLevelDebugInfo)
+bool compile (const char *shaderSRCFile, const char *shaderStage, const char *firstDefine=NULL, ...)
 {
+    //se esistono delle define da passare al compilatore...
+    char defineList[1024];
+    memset (defineList, 0, sizeof(defineList));
+    if (NULL != firstDefine)
+    {
+        va_list argptr;
+        va_start (argptr, firstDefine);
+
+        const char *def = firstDefine;
+        while (1)
+        {
+            strcat_s (defineList, sizeof(defineList), "-D");
+            strcat_s (defineList, sizeof(defineList), def);
+            strcat_s (defineList, sizeof(defineList), " ");
+
+            def = va_arg(argptr, const char *);
+            if (NULL == def)
+                break;
+        }
+        va_end(argptr);
+    }
+
+
     //glslc -fshader-stage=vert --target-env=vulkan1.3 lineRenderer.vert.shader -g -O -o lineRenderer.vert.spv
-    char cmd[1024];
-    sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s/example/%s -g -O -o %s/example/compiled/%s.spv 2>&1", 
+    char cmd[2048];
+    sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s %s/example/%s -g -O -o %s/example/compiled/%s.spv 2>&1", 
         shaderStage,
+        defineList,
         gos::getAppPathNoSlash(), shaderSRCFile,
         gos::getAppPathNoSlash(), shaderSRCFile
     );
+
+    printf ("%s\n", cmd);
 
     char *result;
     u32 len;
@@ -33,11 +60,14 @@ bool compile (const char *shaderSRCFile, const char *shaderStage, bool bWithSour
 //******************************** 
 void test_reflect_1()
 {
-    if (!compile("phong.vert.shader", "vert", true)) return;
-    if (!compile("phong.frag.shader", "frag", true)) return;
+    if (!compile("phong.vert.shader", "vert", "SBBO2_1", "SBBO2_1_NUM_ELEM=4", NULL)) return;
+    if (!compile("phong.frag.shader", "frag", "SBBO2_1", "SBBO2_1_NUM_ELEM=4", NULL)) return;
     SPVReflect parser;
     if (parser.parseFromFile ("@ex/compiled/phong.vert.shader.spv", "@ex/compiled/phong.frag.shader.spv"))
+    {
+        parser.save ("@ex/compiled/phong.dat");
         parser.printInfo();
+    }
     else
     {
         assert (gos::err::anyError());
@@ -49,8 +79,8 @@ void test_reflect_1()
 //******************************** 
 void test_reflect_2()
 {
-    if (!compile("shader_noVtxDecl.vert", "vert", true)) return;
-    if (!compile("shader_noVtxDecl.frag", "frag", true)) return;
+    if (!compile("shader_noVtxDecl.vert", "vert")) return;
+    if (!compile("shader_noVtxDecl.frag", "frag")) return;
     SPVReflect parser;
     if (parser.parseFromFile ("@ex/compiled/shader_noVtxDecl.vert.spv", "@ex/compiled/shader_noVtxDecl.frag.spv"))
         parser.printInfo();
@@ -65,8 +95,8 @@ void test_reflect_2()
 //******************************** 
 void test_reflect_3()
 {
-    if (!compile("lineRenderer.vert", "vert", true)) return;
-    if (!compile("lineRenderer.frag", "frag", true)) return;
+    if (!compile("lineRenderer.vert", "vert")) return;
+    if (!compile("lineRenderer.frag", "frag")) return;
     SPVReflect parser;
     if (parser.parseFromFile ("@ex/compiled/lineRenderer.vert.spv", "@ex/compiled/lineRenderer.frag.spv"))
         parser.printInfo();
@@ -85,12 +115,21 @@ void test_pipelineParser_1 ()
 
     gos::PipelineDef out;
     
-    if (!pp.parseFromFile ("@ex/pipeline1.txt", &out))
+    if (!pp.createFromIniFile ("@ex/pipeline1.txt", &out))
     {
         gos::err::clear();
     }
-    
-    assert (out.outputRT_fmt == eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN);
+}
+
+//******************************** 
+#include "gosResShaderBuilder.h"
+void test_resBuilder1()
+{
+    res::Builder builder;
+    if (!builder.open ("testResBuild1"))
+        return;
+    builder.buildAll ();
+
 }
 
 //******************************** 
@@ -106,10 +145,13 @@ int main()
     {
         fs::addAlias ("@ex", "example", eAliasPathMode::relativeToAppFolder);
 
-        test_reflect_1();   //phong
+        //test_reflect_1();   //phong
         //test_reflect_2(); //shader_noVtxDecl
         //test_reflect_3(); //lineRenderer
+ 
         //test_pipelineParser_1 ();
+
+        test_resBuilder1();
     }
     
 

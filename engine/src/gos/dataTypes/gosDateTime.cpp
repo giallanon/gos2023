@@ -1,6 +1,6 @@
 #include <time.h>
 #include "gosDateTime.h"
-#include <string.h>
+#include "../gosString.h"
 
 using namespace gos;
 
@@ -71,6 +71,14 @@ void DateTime::formatAs_YYYYMMDDHHMMSS(char *out, u32 sizeof_out, char char_betw
 
 		time.formatAs_HHMMSS(&out[n], nLeft, time_sep);
 	}
+}
+
+//*****************************************************
+u64 DateTime::formatAsU64_yymmddhhmmss () const
+{
+    char yyyymmddhhmmss[16];
+    formatAs_YYYYMMDDHHMMSS (yyyymmddhhmmss, sizeof(yyyymmddhhmmss), 0x00, 0x00, 0x00);
+	return gos::string::utf8::toU64 (&yyyymmddhhmmss[2]);
 }
 
 //****************************

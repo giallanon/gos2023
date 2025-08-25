@@ -9,6 +9,9 @@
 layout(set = 0, binding = 0) uniform sampler samplerList[];
 layout(set = 0, binding = 1) uniform texture2D textureList[];
 
+layout(set = 0, binding = 2) uniform sampler   unSoloSampler;
+layout(set = 0, binding = 3) uniform texture2D unaSolaTexture;
+
 //scene
 layout(set = 1, binding = 0) uniform LAYOUT_SCENE_DATA
 {

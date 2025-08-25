@@ -158,12 +158,25 @@ namespace gos
 	typedef math::Vec3<f32>	vec3f;
 	typedef math::Vec4<f32>	vec4f;
 
+	typedef math::Vec2<u32>	vec2u;
+	typedef math::Vec3<u32>	vec3u;
+	typedef math::Vec4<u32>	vec4u;
+
 	typedef math::Vec2<i32>	vec2i;
 	typedef math::Vec3<i32>	vec3i;
 	typedef math::Vec4<i32>	vec4i;
 
+	typedef	math::Vec2<u8>	vec2u8;
+	typedef	math::Vec3<u8>	vec3u8;
+	
+	typedef	math::Vec2<i8>	vec2i8;
+	typedef	math::Vec3<i8>	vec3i8;
+
 	typedef	math::Vec2<u16>	vec2u16;
+	typedef	math::Vec3<u16>	vec3u16;
+	
 	typedef	math::Vec2<i16>	vec2i16;
+	typedef	math::Vec3<i16>	vec3i16;
 } //namespace gos
 
 #ifdef GOS_COMPILER__GCC

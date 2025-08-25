@@ -115,10 +115,21 @@ void platform::getDateNow (u16 *out_year, u16 *out_month, u16 *out_day)
 }
 
 //*******************************************************************
-void platform::getTimeNow (u8 *out_hour, u8 *out_min, u8 *out_sec)
+void platform::getTimeNow_local (u8 *out_hour, u8 *out_min, u8 *out_sec)
 {
     time_t T = time(NULL);
     struct  tm tm = *localtime(&T);
+
+    *out_hour = tm.tm_hour;
+    *out_min = tm.tm_min;
+    *out_sec = tm.tm_sec;
+}
+
+//*******************************************************************
+void platform::getTimeNow_UTC (u8 *out_hour, u8 *out_min, u8 *out_sec)
+{
+    time_t T = time(NULL);
+    struct  tm tm = *gmtime(&T);
 
     *out_hour = tm.tm_hour;
     *out_min = tm.tm_min;

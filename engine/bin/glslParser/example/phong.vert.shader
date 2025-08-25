@@ -12,7 +12,6 @@ layout(location = 1) out vec2 out_texCoord;
 
 
 
-
 void main() 
 {
     //[gl_Position] esiste automaticamente nei VertexShader e rappresenta le coordinate in clip space da passare al FragmentShader
@@ -24,4 +23,12 @@ void main()
     out_normal.x += objInstance.arrayDiStruct[1].fl + objInstance.es1.fl;
     
     out_texCoord = in_texCoord + objInstance.unVec2;
+
+
+#ifdef  SBBO2_1
+    out_texCoord.x += sbbo2_1.m1.x;
+    out_texCoord.y += sbbo2_1.m1.y;
+#endif
+
+    out_texCoord.y += sbbo2_2.m3[1].z;
 }

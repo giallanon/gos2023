@@ -3,7 +3,7 @@
 #  PROJECT: gosInput
 #
 =====================================================]]
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 4.00)
 
 #project name and version
 project(gosInput VERSION 1.0.0 LANGUAGES C CXX)
@@ -47,12 +47,16 @@ message("         ouput file = ${BINARY_OUTPUT_FILENAME}")
 get_target_property(MAIN_CFLAGS ${BINARY_OUTPUT_FILENAME} COMPILE_OPTIONS)
 message("         compiler flags: ${MAIN_CFLAGS}")
 
+#====================================================
+# additional include path
+include_directories(${PROJECT_SOURCE_DIR}/../gos)
 
 #====================================================
 # additional include path
 # GLFW-3.38 library
 set(PATH_TO_GLFW "${PROJECT_SOURCE_DIR}/../external/glfw-3.3.8")
 include_directories(${PATH_TO_GLFW}/include)
+
 
 #===================================
 # vulkan library (richiesto da glFW)

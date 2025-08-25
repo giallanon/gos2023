@@ -1,5 +1,6 @@
 #include "TTest.h"
 #include "gosDataBlob.h"
+#include "gosMath.h"
 
 namespace test_datablob
 {
@@ -55,6 +56,7 @@ namespace test1
             TEST_ASSERT (true == def.isValid());
             TEST_ASSERT (def.memcpyDataBlobDef (def3, sizeof(def3)));
 
+            //def4
             def.begin();
             TEST_ASSERT (false == def.isValid());
             def
@@ -77,7 +79,7 @@ namespace test1
                 .array_end()
                 .add_simpleType ("s3", eDataFormat::_1f32)
 
-                .array_begin1D ("array1", 16)
+                .array_begin1D ("array2", 16)
                     .add_simpleType ("m3_1", eDataFormat::_1f32)
                     .add_simpleType ("m3_2", eDataFormat::_1u8)
                 .array_end()
@@ -87,16 +89,27 @@ namespace test1
             TEST_ASSERT (true == def.isValid());
             TEST_ASSERT (def.memcpyDataBlobDef (def4, sizeof(def4)));
 
+
+            //def5
             def.begin();
             TEST_ASSERT (false == def.isValid());
             def
                 .struct_begin ("struct1")
                     .add_simpleType ("m1", eDataFormat::_2u8)
-                    .array_begin2D ("arr1", 3, 4)
-                        .add_simpleType ("m2_1", eDataFormat::_1u8)
-                        .add_simpleType ("m2_2", eDataFormat::_1i8)
+
+                    .array_begin2D ("arr1", 2, 8)
+                        .add_simpleType ("", eDataFormat::_1f32)
                     .array_end()
-                    .add_simpleType ("m3", eDataFormat::_3f32)
+
+                    .array_begin2D ("arr2", 3, 4)
+                        .add_simpleType ("m3_1", eDataFormat::_1u8)
+                        .add_simpleType ("m3_2", eDataFormat::_1i8)
+                        .array_begin1D ("m3_3_arr1", 4)
+                            .add_simpleType ("", eDataFormat::_1f32)
+                        .array_end()
+                    .array_end()
+                    
+                    .add_simpleType ("m4", eDataFormat::_3f32)
                 .struct_end()
             .end();
             TEST_ASSERT (true == def.isValid());
@@ -242,19 +255,173 @@ namespace test1
             TEST_ASSERT (r.getOffset ("struct2.m2_2", &offset));      TEST_ASSERT (offset == 29);
             TEST_ASSERT (r.getOffset ("struct2.m2_3", &offset));      TEST_ASSERT (offset == 33);
 
+            TEST_ASSERT (r.getOffset ("array1", &offset));      TEST_ASSERT (offset == 37);
+            TEST_ASSERT (r.getOffset ("array1[0]", &offset));      TEST_ASSERT (offset == 37);
+            TEST_ASSERT (r.getOffset ("array1[1]", &offset));      TEST_ASSERT (offset == 38);
+            TEST_ASSERT (r.getOffset ("array1[31]", &offset));      TEST_ASSERT (offset == 68);
+            TEST_ASSERT (false == r.getOffset ("array1[32]", &offset));
+            TEST_ASSERT (false == r.getOffset ("array1[0][1]", &offset));
+
+            TEST_ASSERT (r.getOffset ("array2.m3_1", &offset));                  TEST_ASSERT (offset == 73);
+            TEST_ASSERT (r.getOffset ("array2[0].m3_1", &offset));               TEST_ASSERT (offset == 73);
+            TEST_ASSERT (r.getOffset ("array2[0].m3_2", &offset));               TEST_ASSERT (offset == 77);
+            TEST_ASSERT (r.getOffset ("array2[1].m3_1", &offset));               TEST_ASSERT (offset == 78);
+            TEST_ASSERT (r.getOffset ("array2[1].m3_2", &offset));               TEST_ASSERT (offset == 82);
+            TEST_ASSERT (r.getOffset ("array2[2].m3_1", &offset));               TEST_ASSERT (offset == 83);
+            TEST_ASSERT (r.getOffset ("array2[2].m3_2", &offset));               TEST_ASSERT (offset == 87);
+            TEST_ASSERT (r.getOffset ("array2[15].m3_1", &offset));              TEST_ASSERT (offset == 148);
+            TEST_ASSERT (r.getOffset ("array2[15].m3_2", &offset));              TEST_ASSERT (offset == 152);
+            TEST_ASSERT (false == r.getOffset ("array2[16]", &offset));
+            TEST_ASSERT (false == r.getOffset ("array2[16].m3_1", &offset));
+            TEST_ASSERT (false == r.getOffset ("array2[16].m3_2", &offset));
+            TEST_ASSERT (false == r.getOffset ("array2.pippo", &offset));
+            TEST_ASSERT (false == r.getOffset ("array2[0].pippo", &offset));
+            TEST_ASSERT (false == r.getOffset ("array2[4].m3_1.pippo", &offset));
+
 
 
             out << "def5\n";
+            TEST_ASSERT (r.setup (def5));
             gos::datablob::blobDef_prinfInfo (out, def5, [](gos::UTF8String &out, const gos::datablob::DefElem &elem) {
             
                 out << gos::STRFMT("0x%08X", elem.getUserData());
             });
             printf ("%s\n", out.getBuffer());
+            for (u8 i1=0; i1<2; i1++)
+            {
+                for (u8 i2=0; i2<8; i2++)
+                {
+                    char s[64];
+                    sprintf_s (s, sizeof(s), "struct1.arr1[%d][%d]", i1, i2);
+                    TEST_ASSERT(r.getOffset(s, &offset));
+                    TEST_ASSERT(offset == 2 + 4*(i1*8 +i2));
+                }
+            }
+            TEST_ASSERT(r.getOffset("struct1.arr1", &offset));  TEST_ASSERT(offset == 2);
+            TEST_ASSERT(false == r.getOffset("struct1.arr1[0]", &offset));
+            TEST_ASSERT(false == r.getOffset("struct1.arr1[0][9]", &offset));
+            TEST_ASSERT(false == r.getOffset("struct1.arr1[2][0]", &offset));
+
+
+            TEST_ASSERT(r.getOffset("struct1.arr2", &offset));  TEST_ASSERT(offset == 66);
+            TEST_ASSERT(r.getOffset("struct1.arr2[0][0].m3_1", &offset));  TEST_ASSERT(offset == 66);
+            TEST_ASSERT(r.getOffset("struct1.arr2[0][0].m3_2", &offset));  TEST_ASSERT(offset == 67);
+            TEST_ASSERT(false == r.getOffset("struct1.arr2[0][0].pippo", &offset));
+            for (u8 i1=0; i1<3; i1++)
+            {
+                for (u8 i2=0; i2<4; i2++)
+                {
+                    char s[64];
+                    sprintf_s (s, sizeof(s), "struct1.arr2[%d][%d]", i1, i2);
+                    TEST_ASSERT(r.getOffset(s, &offset));
+                    TEST_ASSERT(offset == 66 + 18*(i1*4 +i2));
+                }
+            }
+            
+            TEST_ASSERT(r.getOffset("struct1.arr2[0][0].m3_1", &offset));           TEST_ASSERT(offset == 66);
+            TEST_ASSERT(r.getOffset("struct1.arr2[0][0].m3_3_arr1", &offset));      TEST_ASSERT(offset == 68);
+            TEST_ASSERT(r.getOffset("struct1.arr2[0][0].m3_3_arr1[0]", &offset));   TEST_ASSERT(offset == 68);
+            TEST_ASSERT(r.getOffset("struct1.arr2[0][0].m3_3_arr1[1]", &offset));   TEST_ASSERT(offset == 72);
+            TEST_ASSERT(r.getOffset("struct1.arr2[0][0].m3_3_arr1[2]", &offset));   TEST_ASSERT(offset == 76);
+            TEST_ASSERT(r.getOffset("struct1.arr2[0][0].m3_3_arr1[3]", &offset));   TEST_ASSERT(offset == 80);
+            TEST_ASSERT(false == r.getOffset("struct1.arr2[0][0].m3_3_arr1[4]", &offset));
+
+            TEST_ASSERT(r.getOffset("struct1.arr2[0][1].m3_1", &offset));           TEST_ASSERT(offset == 66 + 18);
+            TEST_ASSERT(r.getOffset("struct1.arr2[0][1].m3_3_arr1[0]", &offset));   TEST_ASSERT(offset == 66 + 18 +2);
+            TEST_ASSERT(r.getOffset("struct1.arr2[0][1].m3_3_arr1[1]", &offset));   TEST_ASSERT(offset == 66 + 18 +2 +4);
+            TEST_ASSERT(r.getOffset("struct1.arr2[0][1].m3_3_arr1[2]", &offset));   TEST_ASSERT(offset == 66 + 18 +2 +8);
+            TEST_ASSERT(r.getOffset("struct1.arr2[0][1].m3_3_arr1[3]", &offset));   TEST_ASSERT(offset == 66 + 18 +2 +12);
+            
+            TEST_ASSERT(r.getOffset("struct1.arr2[1][0].m3_1", &offset));           TEST_ASSERT(offset == 66 + 18*4);
+            TEST_ASSERT(r.getOffset("struct1.arr2[1][0].m3_3_arr1[0]", &offset));   TEST_ASSERT(offset == 66 + 18*4 +2);
+            TEST_ASSERT(r.getOffset("struct1.arr2[1][0].m3_3_arr1[1]", &offset));   TEST_ASSERT(offset == 66 + 18*4 +2 +4);
+            TEST_ASSERT(r.getOffset("struct1.arr2[1][0].m3_3_arr1[2]", &offset));   TEST_ASSERT(offset == 66 + 18*4 +2 +8);
+            TEST_ASSERT(r.getOffset("struct1.arr2[1][0].m3_3_arr1[3]", &offset));   TEST_ASSERT(offset == 66 + 18*4 +2 +12);
+
+            TEST_ASSERT(r.getOffset("struct1.arr2[1][2].m3_1", &offset));           TEST_ASSERT(offset == 66 + 18*6);
+            TEST_ASSERT(r.getOffset("struct1.arr2[1][2].m3_3_arr1[0]", &offset));   TEST_ASSERT(offset == 66 + 18*6 +2);
+            TEST_ASSERT(r.getOffset("struct1.arr2[1][2].m3_3_arr1[1]", &offset));   TEST_ASSERT(offset == 66 + 18*6 +2 +4);
+            TEST_ASSERT(r.getOffset("struct1.arr2[1][2].m3_3_arr1[2]", &offset));   TEST_ASSERT(offset == 66 + 18*6 +2 +8);
+            TEST_ASSERT(r.getOffset("struct1.arr2[1][2].m3_3_arr1[3]", &offset));   TEST_ASSERT(offset == 66 + 18*6 +2 +12);
         }
 
         return 0;
-    }    
+    }
 } //namespace test1
+
+
+
+
+namespace test2
+{
+    int test1(gos::datablob::Var &v)
+    {
+        v.zero();
+
+        v.set ("f1", 1.2f);
+        v.set ("f2", gos::vec2f(3.4f, 4.5f));
+        v.set ("f3", gos::vec3f(5.6f, 6.7f, 7.8f));
+        
+        v.set<u8> ("u1", 32);
+        v.set ("u2", gos::vec2u8(33, 34));
+        
+        v.set<i32> ("i1", -1000);
+        v.set ("i2", gos::vec2i(-2000, -3000));
+        v.set ("i3", gos::vec3i(-2000, -3000, -4000));
+
+        TEST_ASSERT (v.get<f32>("f1") == 1.2f);
+        TEST_ASSERT (v.get<gos::vec2f>("f2") == gos::vec2f(3.4f, 4.5f));
+        TEST_ASSERT (v.get<gos::vec3f>("f3") == gos::vec3f(5.6f, 6.7f, 7.8f));
+        
+        TEST_ASSERT (v.get<u8>("u1") == 32);
+        TEST_ASSERT (v.get<gos::vec2u8>("u2") == gos::vec2u8(33, 34));
+        
+        TEST_ASSERT (v.get<i32>("i1") == -1000);
+        TEST_ASSERT (v.get<gos::vec2i>("i2") == gos::vec2i(-2000, -3000));
+        TEST_ASSERT (v.get<gos::vec3i>("i3") == gos::vec3i(-2000, -3000, -4000));
+        
+        return 0;
+    }
+
+    int run()
+    {
+        gos::Allocator *localAllocator = gos::getSysHeapAllocator();
+        u8  *dataBlobDef = NULL;
+        u8  *dataBlob = NULL;
+        
+        {
+            gos::datablob::DefBuilder def;
+            def.begin()
+                .add_simpleType ("f1", eDataFormat::_1f32)
+                .add_simpleType ("f2", eDataFormat::_2f32)
+                .add_simpleType ("f3", eDataFormat::_3f32)
+                
+                .add_simpleType ("u1", eDataFormat::_1u8)
+                .add_simpleType ("u2", eDataFormat::_2u8)
+                
+                .add_simpleType ("i1", eDataFormat::_1i32)
+                .add_simpleType ("i2", eDataFormat::_2i32)
+                .add_simpleType ("i3", eDataFormat::_3i32)
+            .end();
+            dataBlobDef = def.allocDataBlobDef (localAllocator);
+        }
+
+        gos::datablob::DefReader reader;
+        reader.setup (dataBlobDef);
+
+        dataBlob = gos::datablob::createNew (localAllocator, dataBlobDef);
+        
+        gos::datablob::Var v1;
+        v1.setup (&reader, dataBlob);
+        
+        int ret = test1(v1);
+        GOSFREE(localAllocator, dataBlobDef);
+        GOSFREE(localAllocator, dataBlob);
+        
+        return ret;
+    }
+} //namespace test2
+
 
 } //namespace test_datablob
 
@@ -262,4 +429,5 @@ namespace test1
 void testDataBlob (Tester &tester)
 {
     tester.run("test_datablob::test1", test_datablob::test1::run);
+    tester.run("test_datablob::test2", test_datablob::test2::run);
 }

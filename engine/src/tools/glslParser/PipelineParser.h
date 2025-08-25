@@ -60,16 +60,19 @@ namespace gos
                 ~PipelineParser();
 
 
-        bool    parseFromFile (const char *fname, PipelineDef *out);
-        bool    parseFromMemory (const u8 *buffer, u32 sizeof_buffer, PipelineDef *out);
-        //se ritornano false, il msg di errore e' recuperabile tramite gos::err
-    
-
-        bool    parseFromIniFileSection (gos::IniFileSection &sec, PipelineDef *out);
-
+        bool    createFromIniFile (const char *fname, PipelineDef *out);
 
     private:
+        bool    priv_parseIniFileSection  (const char *srcFolder, gos::IniFileSection &sec, PipelineDef *out);
         bool    priv_trueOrFalse (const char *val, bool *out) const;
+
+        /**
+         * @param   firstDefine se diverso da NULL, indica una define da passare allo shader
+         *          A seguire, deve esserci un elenco di ulteriori define terminato da NULL
+         *          es: "pippo", NULL
+         *              "pippo", "pluto=3", NULL
+         */
+        bool    priv_shader_compile (const char *shaderSRCFile, const char *shaderStage, const char *firstDefine=NULL, ...) const;
     };
 
 } //namespace gos

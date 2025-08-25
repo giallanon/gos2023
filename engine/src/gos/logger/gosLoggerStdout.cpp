@@ -57,7 +57,7 @@ void LoggerStdout::priv_out (const char *what)
     {
         char hhmmss[16];
         gos::Time24 dt;
-        dt.setNow();
+        dt.setNow_local();
         dt.formatAs_HHMMSS (hhmmss, sizeof(hhmmss), ':');
 
         if (bShoudLogToStdout)
@@ -284,7 +284,7 @@ void LoggerStdout::LogToFile::priv_logIntestazione()
 
     char ymdhms[64];
     gos::DateTime dt;
-    dt.setNow();
+    dt.setNow_local();
     dt.formatAs_YYYYMMDDHHMMSS (ymdhms, sizeof(ymdhms));
 
     gos::fs::fpf (f, "\n\n\n\n============================================================================\n");
@@ -354,7 +354,7 @@ void LoggerStdout::LogToFile::priv_createNewLogFileAndOpenForAppend()
 
     char yyyymmddhhmmss[64];
     gos::DateTime dt;
-    dt.setNow();
+    dt.setNow_local();
     dt.formatAs_YYYYMMDDHHMMSS (yyyymmddhhmmss, sizeof(yyyymmddhhmmss), 0x00, 0x00, 0x00);
 
     char s[1204];

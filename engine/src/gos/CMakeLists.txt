@@ -3,7 +3,7 @@
 #  PROJECT: gos
 #
 =====================================================]]
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 4.00)
 
 #project name and version
 project(gos VERSION 1.0.0 LANGUAGES C CXX)

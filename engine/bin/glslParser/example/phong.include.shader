@@ -9,6 +9,21 @@ layout(std140, set = 2, binding = 0) readonly buffer SSBO_2_0
 } material;
 
 
+//material parameteres
+layout(std140, set = 2, binding = 1) readonly buffer SSBO_2_1
+{
+    vec4    m1;
+    uint    m2;
+} sbbo2_1;
+
+//material parameteres
+layout(std140, set = 2, binding = 2) readonly buffer SSBO_2_2
+{
+    vec4    m3[SBBO2_1_NUM_ELEM];
+} sbbo2_2;
+
+
+
 struct sEsempio1
 {
     float   fl;

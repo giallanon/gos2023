@@ -51,11 +51,11 @@ void runAllTest()
 {
     Tester tester;
     {
-        //testGos (tester);
-        //testMath(tester);
-        //testThread (tester);
-        //testIniFile (tester);
-        //testAllocTracker (tester);
+        testGos (tester);
+        testMath(tester);
+        testThread (tester);
+        testIniFile (tester);
+        testAllocTracker (tester);
         testDataBlob (tester);
     }
     tester.printReport();

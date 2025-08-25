@@ -29,6 +29,37 @@ bool BufferW_interface::prot_moveCursorTo (u32 absOffset)
 }
 
 //*********************************** 
+bool BufferW_interface::writePadUntilMultiplo4()
+{
+    u32 i = cursor & 4;
+    if (0 == i)
+        return true;
+    i = 4-i;
+    while (i--)
+    {
+        if (!writeU8 (0))
+            return false;
+    }
+    return true;
+}
+
+//*********************************** 
+bool BufferW_interface::writePadUntilMultiplo8()
+{
+    u32 i = cursor & 8;
+    if (0 == i)
+        return true;
+    i = 8-i;
+    while (i--)
+    {
+        if (!writeU8 (0))
+            return false;
+    }
+    return true;
+}
+
+
+//*********************************** 
 bool BufferW_interface::priv_writeAt (u32 offset, const void *src, u32 howManyByte, bool bMoveCursor)
 {
     const u32 finalOffset = offset + howManyByte;

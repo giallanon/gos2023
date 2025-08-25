@@ -1,42 +1,39 @@
-### AssetID
-Ogni asset ha un UID che non cambia mai nel tempo
-    u32     crc32_relativePath_fileName
-    u8      asset type: texture, shape...
-    u8      not used
-    u8      not used
-    u8      not used
+### Hystory
+2025-08-24  creazione documento
 
 
-### AssetManager
-baseFolder:
-  * tutti i path sono relativi al baseFolder
 
-stringTable:
-  * utility, contiene tutte le stringhe che servono a AssetManager
-  * u32 addString (const char *s)
 
-assetID-to-filename:
-  * hashTable<AssetID, offsetInStringTable>
-  * const char* getFilename (const AssetID &id)
+### intro
+Nella gestione delle risorse, bisogna distinguere 2 attivita' che sono separate e distinte:
 
-asset_import:
-  * prende un asset di un certo tipo e lo importa all'interno di baseFolder assegnandogli un AssetID definitivo e creando i
-    file necessari affinche l'asset sia caricabile da disco alla bisogna.
-    Nel caso in cui una copia dell'asset in questione esisteva gia', allora AssetID viene mantenuto identico ma i file precedentemente
-    creati sono eliminati e dei nuovi file sono creati basandosi sulla nuova versione dell'asset.
-    E' imperativo che l'AssetID rimanga invariato rispetto al passato.
+- build di una risorsa e creazione dei relativi file .gosres
+- load a runtime di una .gosres
 
-  * "Assets di base", sono asset non scomponibili, rappresentano l'unità minima e sono sempre caricabili da un singolo
-    file, senza dipendenze da altri asset:
-    - texture
-    - shape
 
-  * "Assets compositi", ovvero che sono composti almeno parzialmente da altri asset (quindi dipendono da altri asset):
-    - material (linka a texture)
-    - model (link a shape e material)
+### build step (aka import asset into engine)
+Un tool apposito si occupa di prendere dei file in input e produrre i necessari file .gosres
+Lo stesso tool eventualmente puo' monitorare le directory per detectare delle modifiche nei file src e rebuildare le risorse associate.
 
-  * "Asset runtime", ovvero asset che sono creati alla bisogna a partire da un "Asset di base"
-    - gpuTexture     ->  una texture caricata in memoria GPU
-    - gpuShape       ->  una shape caricata in memoria GPU (VB/IB)
-    - gpuMaterial?   ->  possibilmente in un UBO dinamico?
+Il motore di build cerca in resource/src tutti i file di tipo 
+
+
+
+## struttura delle directory
+- <BASE_FOLDER>
+  - compiled      -> tutte le risorse buildate finiscono qui, che e' dove il runtime si aspetta di trovarle
+  
+  - raw           -> tutte le risorse di base, non buildate
+    - shaders     -> i src degli shader in formato testo
+    - images      -> png, jpg e quant'altro
+    - models      -> glTF
+
+  - src           -> contiene un elenco di gosresd (resource descriptor) che indicano cosa buildare
+                     a partire da quanto esiste in /<BASE_FOLDER>/raw
+                     Ad esempio, qui troviamo file per la descrizione delle pipeline, dellete texture e dei modelli 3d
+
+
+### basic resource
+u32 UID       crc di filename
+u8  type
 
