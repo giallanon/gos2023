@@ -13,6 +13,7 @@ IniFileSection::IniFileSection (Allocator *alloc)
 {
 	assert (alloc);
 	allocator = alloc;
+	startAtLine = 0;
 	name.setAllocator (allocator);
 	subSection.setup (alloc, 4);
 	identifier.setup (alloc, 32);
@@ -316,23 +317,70 @@ void IniFileSection::save (gos::File &f, u32 tabCount, u32 level) const
 		BW_WRITE_TABS
 
 		const char *p = name.getBuffer();
+		//if (p[nameLen-1] == '@' && p[0] != '@')
 		if (p[nameLen-1] == '@')
 		{
-			//e' un elemento di un array
-			sprintf_s (s, sizeof(s), "[%s", p);
-			
-			while (nameLen--)
+			if (p[0] == '@')
 			{
-				if (s[nameLen] == '@')
+				//e' una direttiva
+				sprintf_s (s, sizeof(s), "%s", p);
+				nameLen--;
+				
+				while (nameLen--)
 				{
-					s[nameLen++] = ']';
-					s[nameLen] = 0x00;
-					p = s;
-					break;
+					if (s[nameLen] == '@')
+					{
+						s[nameLen] = 0x00;
+						p = s;
+						break;
+					}
+				}
+
+				//le direttive potrebbero avere un campo __value nel qual caso la sintasi su file e':
+				// @<nomedirettiva>:<__value>
+				const u32 n = elements.getNElem();
+				for (u32 i=0; i<n; i++)
+				{
+					if (eElem::identifierValue == elements(i).what)
+					{
+						const u32 index = elements(i).index;
+						if (7 == identifier(index).lengthInByte())
+						{
+							if (memcmp(identifier(index).getBuffer(), "__value", 7) == 0)
+							{
+								gos::fs::fileWrite (f, p, nameLen);
+								gos::fs::fileWrite (f, ": ", 2);
+								gos::fs::fileWrite (f, value(index).getBuffer(), value(index).lengthInByte());
+								p = NULL;
+								break;
+							}
+						}
+
+					}
+				}
+
+
+			}
+			else
+			{
+				//e' un elemento di un array
+				sprintf_s (s, sizeof(s), "[%s", p);
+				
+				while (nameLen--)
+				{
+					if (s[nameLen] == '@')
+					{
+						s[nameLen++] = ']';
+						s[nameLen] = 0x00;
+						p = s;
+						break;
+					}
 				}
 			}
 		}
-		gos::fs::fileWrite (f, p, nameLen);
+
+		if (NULL != p)
+			gos::fs::fileWrite (f, p, nameLen);
 		BW_WRITE_EOL
 		BW_WRITE_TABS
 		BW_WRITE_GRAFFA_OPEN
@@ -366,11 +414,20 @@ void IniFileSection::save (gos::File &f, u32 tabCount, u32 level) const
 		case eElem::identifierValue:
 			{
 				u32 i = elements(i2).index;
+				const char *p = identifier(i).getBuffer();
+				u32 nameLen = identifier(i).lengthInByte();
+
+				if (nameLen == 7)
+				{
+					if (memcmp(p, "__value", 7) == 0)
+					{
+						//il campo __value e' tipico delle direttive, non lo devo scrivere esplicitamente su file
+						break;
+					}
+				}
 
 				BW_WRITE_TABS
 				{
-					const char *p = identifier(i).getBuffer();
-					u32 nameLen = identifier(i).lengthInByte();
 					if (p[nameLen-1] == '@')
 					{
 						//e' un elemento di un array
@@ -1097,4 +1154,31 @@ bool IniFileSection::fromJSon (gos::string::utf8::Iter &iter)
 		}
 	}
 
+}
+
+//********************************************
+void IniFileSection::debug_print (gos::UTF8String &out, u32 indentIN) const
+{
+	const u32 indent = indentIN * 4;
+	for (u32 i=0; i<getNIdentifier(); i++)
+	{
+		out.insertNSpaces (indent);
+		out << getIdentifierByIndex(i) << ": " << getValueByIndex(i) << "\n";
+	}
+
+	for (u32 i=0; i<getNSubsection(); i++)
+	{
+		const IniFileSection *sec = getSubsectionByIndex(i);
+
+		out.insertNSpaces (indent);
+		out << sec->name << "\n";
+		
+		out.insertNSpaces (indent);
+		out << "{\n";
+
+		sec->debug_print (out, indentIN + 1);
+
+		out.insertNSpaces (indent);
+		out << "}\n\n";
+	}
 }

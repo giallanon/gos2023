@@ -80,6 +80,12 @@ const char* RST::getColValue (u32 index) const
 }
 
 //***************************************************
+u8 RST::getColValueAsU8 (u32 index) const               { if (NULL == stmt || index >= getNumCols()) return 0; return static_cast<u8> (sqlite3_column_int (stmt, index)); }
+i8 RST::getColValueAsI8 (u32 index) const               { if (NULL == stmt || index >= getNumCols()) return 0; return static_cast<i8> (sqlite3_column_int (stmt, index)); }
+u16 RST::getColValueAsU16 (u32 index) const             { if (NULL == stmt || index >= getNumCols()) return 0; return static_cast<u16> (sqlite3_column_int (stmt, index)); }
+i16 RST::getColValueAsI16 (u32 index) const             { if (NULL == stmt || index >= getNumCols()) return 0; return static_cast<i16> (sqlite3_column_int (stmt, index)); }
+
+//***************************************************
 u32 RST::getColValueAsU32 (u32 index) const
 {
     if (NULL == stmt || index >= getNumCols())

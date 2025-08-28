@@ -310,16 +310,6 @@ enum class eDataBlobElemType : u8
     arrayType = 2
 };
 
-enum class eResType : u8
-{
-    vtx_shader  = 0,
-    pxl_shader  = 1,
-    texture2D   = 2,
-    
-    unknown     = 0xFF
-};
-
-
 namespace gos
 {
     struct sGOSInit

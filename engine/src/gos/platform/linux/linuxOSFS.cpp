@@ -1,6 +1,7 @@
 #ifdef GOS_PLATFORM__LINUX
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/sendfile.h>
 #include "linuxOS.h"
 #include "../../gos.h"
 
@@ -330,6 +331,31 @@ void platform::FS_findGetFileName (const OSFileFind &ff, char *out, u32 sizeofOu
     sprintf_s((char*)out, sizeofOut, "%s", ff.dp->d_name);
 }
 
+//*****************************************************
+bool platform::FS_fileCopy (const char *src, const char *dst)
+{
+    int source = open (src, O_RDONLY, 0);
+    int dest   = open (dst, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+
+    struct stat stat_source;
+    fstat (source, &stat_source);
+
+    ssize_t result = 0;
+    off_t byteTransferred = 0;
+    while (byteTransferred < stat_source.st_size)
+    {
+        result = sendfile (dest, source, &byteTransferred, stat_source.st_size);
+        if (-1 == result)
+            break;
+
+        byteTransferred += result;
+    }
+
+    close(source);
+    close(dest);
+
+    return (result != -1);    
+}
 
 
 #endif //GOS_PLATFORM__LINUX

@@ -4,6 +4,15 @@
 
 using namespace gos;
 
+
+#define	CR		'\r'
+#define	LF 		'\n'
+
+//line break types.
+//	CR LF (Windows)
+//	LF (Unix)
+//	CR (Macintosh) 
+
 namespace gos
 {
 	namespace string
@@ -430,63 +439,98 @@ bool string::utf8::isOneOfThis (const UTF8Char &c, const UTF8Char *validChars, u
 }
 
 //**************************************************
-void string::utf8::skip (Iter &src, const UTF8Char *toBeskippedChars, u32 numOfToBeskippedChars)
+u32 string::utf8::skip (Iter &src, const UTF8Char *toBeskippedChars, u32 numOfToBeskippedChars)
 {
+	u32 numLineeSkippate = 0;
+
 	while (!src.getCurChar().isEOF())
 	{
-		if (utf8::isOneOfThis (src.getCurChar(), toBeskippedChars, numOfToBeskippedChars))
-			src.advanceOneChar();
+		const gos::UTF8Char c = src.getCurChar();
+		if (!utf8::isOneOfThis (c, toBeskippedChars, numOfToBeskippedChars))
+			break;
+		
+		if (c == CR || c == LF)
+			numLineeSkippate += skipEOL (src);
 		else
-			return;
+			src.advanceOneChar();
 	}
+
+	return numLineeSkippate;
 }
 
 //**************************************************
-void string::utf8::skipEOL (Iter &src)
+u32 string::utf8::skipEOL (Iter &src)
 {
-	while (!src.getCurChar().isEOF())
+	u32 numLineSkipped = 0;
+
+	gos::UTF8Char c;
+	while (!(c = src.getCurChar()).isEOF())
 	{
-		if (src.getCurChar() == '\n' || src.getCurChar() == '\r')
+		if (c == CR)
+		{
+			numLineSkipped++;
 			src.advanceOneChar();
+
+			c = src.getCurChar();
+			if (c == LF)
+				src.advanceOneChar();
+		}
+		else if (c == LF)
+		{
+			numLineSkipped++;
+			src.advanceOneChar();
+		}
 		else
-			return;
+			return numLineSkipped;
 	}
+	return numLineSkipped;
 }
 
 //**************************************************
-bool string::utf8::advanceUntil (Iter &src, const UTF8Char *validTerminators, u32 numOfValidTerminators)
+bool string::utf8::advanceUntil (Iter &src, const UTF8Char *validTerminators, u32 numOfValidTerminators, u32 *out_canbeNULL_numLineSkipped)
 {
+	if (NULL != out_canbeNULL_numLineSkipped)
+		*out_canbeNULL_numLineSkipped = 0;
+
+	u32 numLineeSkippate = 0;
 	while (!src.getCurChar().isEOF())
 	{
-		if (utf8::isOneOfThis (src.getCurChar(), validTerminators, numOfValidTerminators))
+		const gos::UTF8Char c = src.getCurChar();
+		if (utf8::isOneOfThis (c, validTerminators, numOfValidTerminators))
+		{
+			if (NULL != out_canbeNULL_numLineSkipped)
+				*out_canbeNULL_numLineSkipped = numLineeSkippate;
 			return true;
-		src.advanceOneChar ();
+		}
+
+		if (c == CR || c == LF)
+			numLineeSkippate += skipEOL (src);
+		else
+			src.advanceOneChar ();
 	}
+
+	if (NULL != out_canbeNULL_numLineSkipped)
+		*out_canbeNULL_numLineSkipped = numLineeSkippate;
 	return false;
 }
 
 //*****************************************
-void string::utf8::advanceToEOL (Iter &src, bool bskipEOL)
+u32 string::utf8::advanceToEOL (Iter &src, bool bskipEOL)
 {
+	u32 numLineSkipped = 0;
+
 	gos::UTF8Char c;
 	while (!(c = src.getCurChar()).isEOF())
 	{
-		if (c == '\n' || c == '\r')
+		if (c == CR || c == LF)
 			break;
 		src.advanceOneChar();
 	}
 
 	if (bskipEOL)
-	{
-		while (!(c = src.getCurChar()).isEOF())
-		{
-			if (c == '\n' || c == '\r')
-				src.advanceOneChar();
-			else
+		return skipEOL (src);
 
-				break;
-		}
-	}
+	return numLineSkipped;
 }
 
 //**************************************************
@@ -527,15 +571,18 @@ bool string::utf8::find (Iter &src, const char *whatToFind)
 }
 
 //**************************************************
-void string::utf8::extractLine (Iter &srcIN, Iter *out_result)
+u32 string::utf8::extractLine (Iter &srcIN, Iter *out_result)
 {
 	assert (out_result);
+
+	u32 numLineeSkippate = 0;
+
 	Iter src = srcIN;
 	
 	gos::UTF8Char c;
 	while ( !(c=src.getCurChar()).isEOF() )
 	{
-		if (c == '\n' || c == '\r')
+		if (c == CR || c == LF)
 			break;
 		src.advanceOneChar();
 	}
@@ -544,16 +591,12 @@ void string::utf8::extractLine (Iter &srcIN, Iter *out_result)
 	out_result->setup (srcIN.getPointerToCurrentPosition(), 0, src.getCursorPos() - srcIN.getCursorPos());
 	
 	//avanzo per skippare i \n e\o \r
-	while ( !(c=src.getCurChar()).isEOF() )
-	{
-		if (c == '\n' || c == '\r')
-			src.advanceOneChar();
-		else
-			break;
-	}
+	numLineeSkippate += skipEOL(src);
 
 	//aggiorno srcIN
 	srcIN = src;
+
+	return numLineeSkippate;
 }
 
 //**************************************************
@@ -972,33 +1015,37 @@ bool string::utf8::extractU32Array (Iter &srcIN, u32 *out, u32 *maxIntIN_Out, co
 }
 
 //*****************************************
-bool string::utf8::extractCPPComment (Iter &srcIN, Iter *result)
+bool string::utf8::extractCPPComment (Iter &srcIN, Iter *result, u32 *out_canbeNULL_numLineSkipped)
 {
+	if (NULL != out_canbeNULL_numLineSkipped)
+		*out_canbeNULL_numLineSkipped = 0;
+
 	Iter src = srcIN;
 	if (src.getCurChar() != '/')
 		return false;
 	src.advanceOneChar();
 
-	//se il secondo char � un'altro /, leggo fino a fine riga
+	//se il secondo char e' un'altro /, leggo fino a fine riga
 	if (src.getCurChar() == '/')
 	{
-		string::utf8::extractLine (srcIN, result);
+		const u32 numLineSkipped = string::utf8::extractLine (srcIN, result);
+		if (NULL != out_canbeNULL_numLineSkipped)
+			*out_canbeNULL_numLineSkipped = numLineSkipped;
 		return true;
 	}
 	
-	//se il secondo char � * leggo fino a che non trovo * /
+	//se il secondo char e' * leggo fino a che non trovo * /
 	if (src.getCurChar() == '*')
 	{
 		const UTF8Char star('*');
 		while (1)
 		{
-			if (!advanceUntil (src, &star, 1))
+			if (!advanceUntil (src, &star, 1, out_canbeNULL_numLineSkipped))
 				return false;
 			src.advanceOneChar();
 			if (src.getCurChar() == '/')
 			{
 				src.advanceOneChar();
-				//result->setup (&(srcIN.s[srcIN.iNow]), 0, src.iNow - srcIN.iNow );
                 result->setup (srcIN.getPointerToCurrentPosition(), 0, static_cast<u32>(src.getPointerToCurrentPosition() - srcIN.getPointerToCurrentPosition()) );
 				srcIN = src;
 				return true;

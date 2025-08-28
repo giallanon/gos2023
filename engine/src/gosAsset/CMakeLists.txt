@@ -1,12 +1,12 @@
 #[[====================================================
 #
-#  PROJECT: gosRes
+#  PROJECT: gosAsset
 #
 =====================================================]]
 cmake_minimum_required(VERSION 4.00)
 
 #project name and version
-project(gosRes VERSION 1.0.0 LANGUAGES C CXX)
+project(gosAsset VERSION 1.0.0 LANGUAGES C CXX)
 
 #====================================================
 # path di output di questo progetto
@@ -22,14 +22,17 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC
-gosRes.cpp
-gosRes.h
-gosResBuilder.cpp
-gosResBuilder.h
-gosResEnumAndDefine.h
-gosResResBuilder.cpp
-gosResShaderBuilder.h
-gosResShaderBuilder.cpp
+builders/gosAssetBuilder_pipedef.cpp
+builders/gosAssetBuilder_pipedef.h
+builders/gosAssetBuilder_shader.cpp
+builders/gosAssetBuilder_shader.h
+
+gosAsset.cpp
+gosAsset.h
+gosAssetBuilder.cpp
+gosAssetBuilder.h
+gosAssetBuilderInterface.h
+gosAssetEnumAndDefine.h
 )
 
 

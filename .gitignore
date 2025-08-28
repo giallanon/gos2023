@@ -32,3 +32,7 @@ engine/.vscode/c_cpp_properties.json
 engine/bin/glslParser/example/compiled/
 
 engine/bin/glslParser/testResBuild1/compiled/
+
+engine/bin/testKernel/writable/testIniFile/test1_PARSED.txt
+
+engine/bin/testKernel/writable/testIniFile/test_direttive_PARSED.txt

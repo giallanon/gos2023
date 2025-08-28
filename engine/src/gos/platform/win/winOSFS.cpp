@@ -423,6 +423,10 @@ void platform::FS_findClose(OSFileFind &ff)
 	ff.h = INVALID_HANDLE_VALUE;
 }
 
-
+//*****************************************************
+bool platform::FS_fileCopy (const char *src, const char *dst)
+{
+	return (0 !=::CopyFile (src, dst, FALSE));
+}
 
 #endif //GOS_PLATFORM__WINDOWS

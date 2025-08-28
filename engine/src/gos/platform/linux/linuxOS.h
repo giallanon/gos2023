@@ -96,6 +96,7 @@ namespace platform
     u64				FS_fileLength (const char *utf8_filePathAndName);
     void			FS_fileSeek (OSFile &h, u64 position, eSeek seekMode);
     u64				FS_fileTell (OSFile &h);
+    bool			FS_fileCopy (const char *src, const char *dst);
 
     bool            FS_findFirst (OSFileFind *ff, const char *utf8_path, const char *utf8_jolly);
     bool            FS_findNext (OSFileFind &ff);

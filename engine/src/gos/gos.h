@@ -164,7 +164,7 @@ namespace gos
 
 		bool			fileExists (const char *utf8_filePathAndNameRESOLVABLE);
 		bool   			fileDelete (const char *utf8_filePathAndNameRESOLVABLE);
-		inline bool		fileRename (const char *utf8_pathNoSlashRESOLVABLE, const char *utf8_oldFilename, const char *utf8_newFilename);
+		bool			fileRename (const char *utf8_pathNoSlashRESOLVABLE, const char *utf8_oldFilename, const char *utf8_newFilename);
 
 		void     		fileGetCreationTime_UTC (const char *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
 		void     		fileGetLastTimeModified_UTC (const char *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
@@ -206,13 +206,14 @@ namespace gos
     	inline u64		fileTell(gos::File &h) 																				{ return platform::FS_fileTell(h.osFile); }
 
 		u8*				fileLoadInMemory (Allocator *allocator, const char* utf8_filePathAndNameRESOLVABLE, u32 *out_fileSize=NULL);
+		inline bool		fileCopy (const char *src, const char *dst)															{ return platform::FS_fileCopy (src, dst); }
 
 		bool			findFirst (gos::FileFind *ff, const char *utf8_pathRESOLVABLE, const char *utf8_jolly);
-		inline bool     findNext (gos::FileFind &ff)																	{ return platform::FS_findNext(ff.osFF); }
-		inline void     findClose(gos::FileFind &ff)																	{ platform::FS_findClose(ff.osFF); }
-		inline bool     findIsDirectory(const gos::FileFind &ff)														{ return platform::FS_findIsDirectory(ff.osFF); }
-		inline const char* findGetFileName(const gos::FileFind &ff)														{ return platform::FS_findGetFileName(ff.osFF); }
-		inline void     findGetFileName (const gos::FileFind &ff, char *out, u32 sizeofOut)								{ platform::FS_findGetFileName(ff.osFF, out, sizeofOut); }
+		inline bool     findNext (gos::FileFind &ff)																		{ return platform::FS_findNext(ff.osFF); }
+		inline void     findClose(gos::FileFind &ff)																		{ platform::FS_findClose(ff.osFF); }
+		inline bool     findIsDirectory(const gos::FileFind &ff)															{ return platform::FS_findIsDirectory(ff.osFF); }
+		inline const char* findGetFileName(const gos::FileFind &ff)															{ return platform::FS_findGetFileName(ff.osFF); }
+		inline void     findGetFileName (const gos::FileFind &ff, char *out, u32 sizeofOut)									{ platform::FS_findGetFileName(ff.osFF, out, sizeofOut); }
 		void 			findComposeFullFilePathAndName (const gos::FileFind &ff, const char *pathNoSlash, char *out, u32 sizeofOut);
 	} //namespace fs
 

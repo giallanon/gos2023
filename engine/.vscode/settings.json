@@ -37,7 +37,8 @@
         "thread": "cpp",
         "vector": "cpp",
         "*.ipp": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "cstdlib": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.compilerPath": "/usr/bin/g++-13"

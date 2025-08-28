@@ -55,11 +55,11 @@ void IniFile::reset()
 }
 
 //********************************************
-void IniFile::priv_errorMessageNear (const UTF8String &msg, const string::utf8::Iter &src) const
+void IniFile::priv_errorMessageNear (u32 linuNumber, const UTF8String &msg, const string::utf8::Iter &src) const
 {
 	char temp[256];
 	src.copyStrFromCurrentPositionToEnd (temp, sizeof(temp));
-	gos::logger::err ("%s was expected near %s", msg.getBuffer(), temp);
+	gos::logger::err ("%s was expected at line %d, near\n%s\n", msg.getBuffer(), linuNumber, temp);
 }
 
 //********************************************
@@ -90,7 +90,7 @@ void IniFile::saveAs (const char* filenameIN) const
 
 
 //********************************************
-bool IniFile::priv_Parse_separator_Value (string::utf8::Iter &src, string::utf8::Iter *result, char separator) const
+bool IniFile::priv_Parse_separator_Value (u32 linuNumber, string::utf8::Iter &src, string::utf8::Iter *result, char separator) const
 {
 	string::utf8::toNextValidChar(src);
 
@@ -101,7 +101,7 @@ bool IniFile::priv_Parse_separator_Value (string::utf8::Iter &src, string::utf8:
 		temp = "IniFile::priv_Parse_Identifier_separator_Value () -> '";
 		temp.append (&separator, 1);
 		temp.append ("'", 1);
-		priv_errorMessageNear (temp, src);
+		priv_errorMessageNear (linuNumber, temp, src);
 		return false;
 	}
 	src.advanceOneChar();
@@ -112,7 +112,7 @@ bool IniFile::priv_Parse_separator_Value (string::utf8::Iter &src, string::utf8:
 	UTF8Char closer[2] = { UTF8Char('\r'), UTF8Char('\n') };
 	if (!string::utf8::extractValue (src, result, closer, 2))
 	{
-		priv_errorMessageNear ("IniFile::Parse () -> A valid string", src);
+		priv_errorMessageNear (linuNumber, "IniFile::Parse () -> A valid string", src);
 		return false;
 	}
 	return true;
@@ -167,7 +167,9 @@ bool IniFile::parseFromMemory (const void *buffer, u32 sizeOfBuffer)
 
 	string::utf8::Iter src;
 	src.setup (reinterpret_cast<const char *>(buffer), 0, sizeOfBuffer);
-	if (!priv_Parse_Section (root, src))
+	
+	u32 lineNum = 1;
+	if (!priv_Parse_Section (root, src, lineNum))
 	{
 		//gos::logErr ("IniFile::parseFromMemory() -> filename: [%s]\n", filename);
 		return false;
@@ -177,11 +179,11 @@ bool IniFile::parseFromMemory (const void *buffer, u32 sizeOfBuffer)
 
 
 //********************************************
-void IniFile::priv_toNextValidChar (IniFileSection *section, string::utf8::Iter &src) const
+u32 IniFile::priv_toNextValidChar (IniFileSection *section, string::utf8::Iter &src) const
 {
 	const UTF8Char	cTabAndBlank[2] = { UTF8Char(' '), UTF8Char('\t') };
 
-	u32 nLine = 0;
+	u32 nLineSkipped = 0;
 	while (!src.getCurChar().isEOF())
 	{
 		//mi porto sul primo char buono
@@ -189,25 +191,27 @@ void IniFile::priv_toNextValidChar (IniFileSection *section, string::utf8::Iter 
 
 		if (src.getCurChar() == '\n' || src.getCurChar() == '\r')
 		{
-			string::utf8::skipEOL (src);
-			++nLine;
+			nLineSkipped += string::utf8::skipEOL (src);
 		}
 		else
 			break;
 	}
 
-	if (nLine)
+	if (nLineSkipped)
 	{
+		u32 nLine = nLineSkipped;
 		if (nLine > 32)
 			nLine = 32;
 		char eol[32];
 		memset (eol, '\n', 32);
 		section->addBlob (eol, nLine);
 	}
+
+	return nLineSkipped;
 }
 
 //********************************************
-bool IniFile::priv_Parse_Section (IniFileSection *section, string::utf8::Iter &src)
+bool IniFile::priv_Parse_Section (IniFileSection *section, string::utf8::Iter &src, u32 &in_out_curLineNumber)
 {
 	IniFileArrayHelper	arrayHelper;
 
@@ -215,92 +219,182 @@ bool IniFile::priv_Parse_Section (IniFileSection *section, string::utf8::Iter &s
 	while (!src.getCurChar().isEOF())
 	{
 		//mi porto sul primo char buono
-		priv_toNextValidChar (section, src);
+		in_out_curLineNumber += priv_toNextValidChar (section, src);
 		if (src.getCurChar().isEOF())
 			break;
 
 		//qui puo' esserci un commento
-		if (string::utf8::extractCPPComment (src, &result))
+		u32 nLineSkipped;
+		if (string::utf8::extractCPPComment (src, &result, &nLineSkipped))
 		{
+			in_out_curLineNumber += nLineSkipped;
 			section->addComment (result.getPointerToCurrentPosition(), result.getBytesLeft());
-			string::utf8::skipEOL(src);
+			in_out_curLineNumber += string::utf8::skipEOL(src);
 			continue;
 		}
 
 		//oppure la fine della sezione
 		if (src.getCurChar() == '}')
 		{
-			string::utf8::advanceToEOL (src, true);
+			in_out_curLineNumber += string::utf8::advanceToEOL (src, true);
 			break;
 		}
 
 
 		//mi aspetto un identifier
-		char identifierName[128];
+		const u32 lineIdentifierStarted = in_out_curLineNumber;
+		bool bIsADirective = false;
+		char identifierName[256];
+		char directive_value[512];
+		directive_value[0] = 0x00;
+		
 		if (string::utf8::extractIdentifier (src, &result))
 			result.copyAllStr (identifierName, sizeof(identifierName));
 		else
 		{
-			//ok, in generale questo o' un errore ma c'o' un caso particolare. Consento alle sezioni di chiamarsi [nomeSezione] ovvero
-			//con le parentesi quadre attorno al nome. Questa sintassi vuol dire che posso avere nel file n sezioni con lo stesso nome
-			//e che d'ufficio io appendo un numero univoco al nome della sezione durante il parsing
+			/*	ok, in generale questo o' un errore ma ci sono un paio di casi particolari. 
+				1-	Consento alle sezioni di chiamarsi [nomeSezione] ovvero con le parentesi quadre attorno al nome.
+					Questa sintassi vuol dire che posso avere nel file n sezioni con lo stesso nome e che d'ufficio io
+					appendo un numero univoco al nome della sezione durante il parsing.
+					Serve per avere una sorta di 'array di sezioni con lo stesso nome'
+
+				2-	Consento alle sezioni di iniziare con il carattere @ nel qual caso questa sezione la definisco una "direttiva".
+					Le direttive iniziano sempre con il carattere @ e, a seguire, ci deve essere un valido identificatore (che ne indica il nome).
+
+						@<nome_direttiva>
+						@<nome_direttiva> : <valore_direttiva>
+
+					<valore_direttiva> comprendo tutto quanto va dal primo carattere buono dopo il ':' fino a fine linea.
+
+					Ogni direttiva diventa automaticamente una sezione di nome @<nome_direttiva>.
+					Se <valore_direttiva> e' non nullo, allora sezione contiene il campo "__value" che riporta il <valore_direttiva>.
+
+					Opzionalmente, dopo una direttiva puo' esserci una sezione i cui campi sono riportati pari pari nella sezione
+					di nome @<nome_direttiva>.
+						@<nome_direttiva>
+						{
+							values..
+						}
+
+						@<nome_direttiva> : <valore_direttiva>
+						{
+							values..
+						}
+
+					Le direttive sono sempre considerate degli array (come nel caso 1) per cui in fondo al nome viene
+					sempre appeso @<INDEX>@
+			*/
 			
-			const UTF8Char parentesiQuadraAperta('[');
-			const UTF8Char parentesiQuadraChiusa(']');
-			bool isErr = true;
-			while (1)
+			const UTF8Char chiocciola('@');
+			if (src.getCurChar() == chiocciola)
 			{
-				if (src.getCurChar() != parentesiQuadraAperta)
-					break;
+				in_out_curLineNumber +=	string::utf8::extractLine (src, &result);
+				
 
-				src.advanceOneChar();
-				if (!string::utf8::extractIdentifier (src, &result, &parentesiQuadraChiusa, 1))
-					break;
+				//mi aspetto un input del tipo  @nome_direttiva  oppure   @nome_direttiva: valore_direttiva
+				bIsADirective = true;
+				string::utf8::Iter direttiva_name;
+				if (extractUntil (result, ':', &direttiva_name))
+				{
+					//sono nel caso @nome_direttiva: valore_direttiva
+					direttiva_name.copyAllStr (identifierName, sizeof(identifierName));
 
-				//mi assicuro che la ] sia l'ultimo char
-				result.copyAllStr (identifierName, sizeof(identifierName));
-				u32 n = string::utf8::lengthInByte(identifierName);
-				if (identifierName[n - 1] != ']')
-					break;
-				identifierName[n - 1] = 0;
+					result.advanceOneChar();
+					in_out_curLineNumber += result.toNextValidChar();
+					result.copyStrFromCurrentPositionToEnd (directive_value, sizeof(directive_value));
+					string::utf8::rtrim (directive_value);
+				}
+				else
+				{
+					//sono nel caso @nome_direttiva
+					result.copyAllStr (identifierName, sizeof(identifierName));
+				}
 
-				//trasformo il nome eliminando [] e aggiungendo @arrayIndex
+				//le direttive sono sempre considerate un array, per cui aggiungo l'indice 
+				string::utf8::rtrim (identifierName);
 				{
 					const u32 arrayIndex = arrayHelper.acquireNetxArrayIndex(identifierName);
 					char num[32];
 					sprintf_s (num, sizeof(num), "@%d@", arrayIndex);
 					string::utf8::concatStr (identifierName, sizeof(identifierName), num);
-				}
-
-				isErr = false;
-				break;
+				}				
 			}
-			
-			if (isErr)
-			{
-				priv_errorMessageNear ("IniFile::Parse () -> A valid identifier", src);
-				return false;
+			else
+			{	
+				const UTF8Char parentesiQuadraAperta('[');
+				const UTF8Char parentesiQuadraChiusa(']');
+				bool isErr = true;
+				while (1)
+				{
+					if (src.getCurChar() != parentesiQuadraAperta)
+						break;
+
+					src.advanceOneChar();
+					if (!string::utf8::extractIdentifier (src, &result, &parentesiQuadraChiusa, 1))
+						break;
+
+					//mi assicuro che la ] sia l'ultimo char
+					result.copyAllStr (identifierName, sizeof(identifierName));
+					u32 n = string::utf8::lengthInByte(identifierName);
+					if (identifierName[n - 1] != ']')
+						break;
+					identifierName[n - 1] = 0;
+
+					//trasformo il nome eliminando [] e aggiungendo @arrayIndex
+					{
+						const u32 arrayIndex = arrayHelper.acquireNetxArrayIndex(identifierName);
+						char num[32];
+						sprintf_s (num, sizeof(num), "@%d@", arrayIndex);
+						string::utf8::concatStr (identifierName, sizeof(identifierName), num);
+					}
+
+					isErr = false;
+					break;
+				}
+				
+				if (isErr)
+				{
+					priv_errorMessageNear (in_out_curLineNumber, "IniFile::Parse () -> A valid identifier", src);
+					return false;
+				}
 			}
 		}
 		
 
 		//mi porto sul primo char buono
-		string::utf8::toNextValidChar (src);
+		in_out_curLineNumber += string::utf8::toNextValidChar (src);
 
 		//a questo punto o c'e' un valore (identifier : valore) oppure l'inizio di una sezione ({)
 		if (src.getCurChar() == '{')
 		{
 			IniFileSection *subSection = section->addSubsection (identifierName);
+			subSection->startAtLine = lineIdentifierStarted;
+
+			if (bIsADirective && 0x00 != directive_value[0])
+				subSection->set ("__value", directive_value);
+
 			src.advanceOneChar();
-			string::utf8::toNextValidChar(src);
-			string::utf8::skipEOL(src);
-			if (!priv_Parse_Section (subSection, src))
+			in_out_curLineNumber += string::utf8::toNextValidChar(src);
+			in_out_curLineNumber += string::utf8::skipEOL(src);
+			if (!priv_Parse_Section (subSection, src, in_out_curLineNumber))
 				return false;
 			continue;
 		}
+
+		
 		
 		//dato che non e' iniziata una sezione, mi aspetto identifier : value
-		if (!priv_Parse_separator_Value (src, &result, ':'))
+		//a meno che identifierName non sia una direttiva, nel qual caso creo una sezione vuota e vado avanti
+		if (bIsADirective)
+		{
+			IniFileSection *subSection = section->addSubsection (identifierName);
+			subSection->startAtLine = lineIdentifierStarted;
+			if (0x00 != directive_value[0])
+				subSection->set ("__value", directive_value);
+			continue;
+		}
+
+		if (!priv_Parse_separator_Value (in_out_curLineNumber, src, &result, ':'))
 			return false;
 		
 		//section->priv_set (identifierName, result.getPointerToCurrentPosition(), result.getBytesLeft());
@@ -311,7 +405,7 @@ bool IniFile::priv_Parse_Section (IniFileSection *section, string::utf8::Iter &s
 		const u32 len = string::utf8::unescapeInPlace (temp, u32MAX);
 		section->priv_set (identifierName, temp, len);
 
-		string::utf8::advanceToEOL(src, true);
+		in_out_curLineNumber += string::utf8::advanceToEOL(src, true);
 	}
 	return true;
 }
@@ -606,4 +700,11 @@ bool IniFile::_resolveInplace_identifierThatMayHaveArrayIndexing (char *in_out_n
 	//il noma aveva una quadra chiusa alla fine ma non ho trovato la quadra aperta
 	DBGBREAK;
 	return false;
+}
+
+//*************************************************************
+void IniFile::debug_print (gos::UTF8String &out) const
+{ 
+	if (NULL != root)
+		root->debug_print(out, 0); 
 }

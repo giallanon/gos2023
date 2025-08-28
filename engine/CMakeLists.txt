@@ -108,7 +108,7 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGeom)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosShape)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosInput)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosImage)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosRes)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosAsset)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGPU)
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)

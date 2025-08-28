@@ -63,8 +63,9 @@ namespace gos
 								a, b, c possono eventualmente essere 0x00 se non si desidera includerli nella stringa finale
 							*/
 
-		u64					formatAsU64_yymmddhhmmss () const;
-							/* ritorna un u64 composto da yy mm dd hh mm ss */
+		u64 				getAsNiceU64() const;
+							/* ritorna un u64 composto da yyyy mm dd hh mm ss */
+		void 				setFromNiceU64 (u64 yyyymmddhhmmss);
 
 
 

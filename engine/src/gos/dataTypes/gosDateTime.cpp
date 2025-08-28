@@ -74,11 +74,22 @@ void DateTime::formatAs_YYYYMMDDHHMMSS(char *out, u32 sizeof_out, char char_betw
 }
 
 //*****************************************************
-u64 DateTime::formatAsU64_yymmddhhmmss () const
+u64 DateTime::getAsNiceU64 () const
 {
     char yyyymmddhhmmss[16];
     formatAs_YYYYMMDDHHMMSS (yyyymmddhhmmss, sizeof(yyyymmddhhmmss), 0x00, 0x00, 0x00);
-	return gos::string::utf8::toU64 (&yyyymmddhhmmss[2]);
+	return gos::string::utf8::toU64 (yyyymmddhhmmss);
+}
+
+//*****************************************************
+void DateTime::setFromNiceU64 (u64 yyyymmddhhmmss)
+{
+	char s[32];
+	sprintf_s (s, sizeof(s), "%" PRIu64 "", yyyymmddhhmmss);
+
+	time.setFromHHMMSS (&s[8]);
+	s[8] = 0x00;
+	date.setFromYYYYMMDD (s);
 }
 
 //****************************

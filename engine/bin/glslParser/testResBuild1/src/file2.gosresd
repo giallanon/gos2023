@@ -1,5 +1,0 @@
-[pxl_shader]
-{
-    runtimeName:    ex4-v2.ps
-    src:            ex4.frag
-}

@@ -66,6 +66,18 @@ nome_sezione1
 		}
 	}	
 
+	@direttiva: di prova
+
+	@direttiva2
+	{
+		d2_1: aaa
+	}
+
+	@direttiva3: valore di direttiva 3
+	{
+		d3_1: bbb
+	}
+
 	[autore]
 	{
 		nome: giovanna
@@ -75,11 +87,25 @@ nome_sezione1
 	[biografia]
 	{
 		rif: 73983
+		/* commento esteso dentro
+			una sottosezione
+		*/
 	}
 
+	/* 	commento
+		esteso*/
 	[biografia]
 	{
 		rif: 30923
 	}	
+}
+
+//commento breve
+
+
+nome_sezione2
+{
+	m2_1: ciao
+	m2_2: 10
 }
 

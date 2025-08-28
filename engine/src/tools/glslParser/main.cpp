@@ -1,6 +1,5 @@
 #include "SPVReflect.h"
 #include "PipelineParser.h"
-#include "gosRes.h"
 
 using namespace gos;
 
@@ -122,14 +121,11 @@ void test_pipelineParser_1 ()
 }
 
 //******************************** 
-#include "gosResShaderBuilder.h"
-void test_resBuilder1()
+#include "gosAssetBuilder.h"
+void test_assetBuilder2()
 {
-    res::Builder builder;
-    if (!builder.open ("testResBuild1"))
-        return;
-    builder.buildAll ();
-
+    asset::Builder builder;
+    builder.rebuildAll("test_assets_2");
 }
 
 //******************************** 
@@ -151,7 +147,8 @@ int main()
  
         //test_pipelineParser_1 ();
 
-        test_resBuilder1();
+        //test_assetBuilder1();
+        test_assetBuilder2();
     }
     
 

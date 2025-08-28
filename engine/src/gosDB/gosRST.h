@@ -22,6 +22,10 @@ namespace gos
             u32         getNumCols() const          { return numCols; }
 
             const char* getColValue (u32 index)  const;
+            u8          getColValueAsU8 (u32 index)  const;
+            i8          getColValueAsI8 (u32 index)  const;
+            u16         getColValueAsU16 (u32 index)  const;
+            i16         getColValueAsI16 (u32 index)  const;
             u32         getColValueAsU32 (u32 index)  const;
             i32         getColValueAsI32 (u32 index)  const;
             u64         getColValueAsU64 (u32 index)  const;

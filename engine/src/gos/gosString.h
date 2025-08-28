@@ -187,7 +187,7 @@ namespace gos
 				bool				advanceOneChar();	//ritorna false quando si va oltre la fine
 				bool				backOneChar();		//ritorna false quando si va sotto zero
 				bool				advanceNumByte (u32 howMany);//ritorna false quando si va oltre la fine
-				void 				toNextValidChar();
+				u32 				toNextValidChar();
 			
 				const UTF8Char&		getCurChar() const												{ return curChar; }
 				const char*			getPointerToCurrentPosition() const;
@@ -242,23 +242,27 @@ namespace gos
 							
 			//avanza e si ferma quando trova char != da quelli da skipppare o a fine buffer
 			//Se trova un char != dai toBeskippedChars, src punta al primo char trovato
-			void			skip (Iter &src, const UTF8Char *toBeskippedChars, u32 numOfToBeskippedChars);
+			//Ritorna il numero di linee skippate (nel caso in cui \n e/o \r siano tra i <toBeskippedChars>
+			u32				skip (Iter &src, const UTF8Char *toBeskippedChars, u32 numOfToBeskippedChars);
 
 			//posto che il carattere attuale sia su un \n o \r, skippa il car attuale
 			//e tutti i successivi \n \r
-			void			skipEOL (Iter &src);
+			//Ritorna il numero di linee skippate
+			u32				skipEOL (Iter &src);
 			
 			// usa la skip() per skippare tutti o "\r\n\t\b" e ritorna l'indice del primo char buono 
-			inline	void	toNextValidChar (Iter &src)											{ utf8::skip (src, utf8::CHAR_ARRAY_b_r_n_t, 4); }
+			//Ritorna il numero di linee skippate
+			inline	u32		toNextValidChar (Iter &src)													{ return utf8::skip (src, utf8::CHAR_ARRAY_b_r_n_t, 4); }
 								
 			//controlla il char corrente e compara con validTerminators. Se il char corrente è uno di quelli, ritorna true, 
 			//altrimenti passa al carattere successivo e ripete.
 			//Se arriviamo a fine stringa, ritorna false
-			bool			advanceUntil (Iter &src, const UTF8Char *validTerminators, u32 numOfValidTerminators);
+			bool			advanceUntil (Iter &src, const UTF8Char *validTerminators, u32 numOfValidTerminators, u32 *out_canbeNULL_numLineSkipped = NULL);
 
-			//controllo il char corrente e se è un EOL termina (o lo skippa), altrimenti avanza e ripete il controllo
+			//controllo il char corrente e se e' un EOL termina (o lo skippa), altrimenti avanza e ripete il controllo
 			//All'uscita, src punta a EOL oppure al primo char subito dopo EOL (se bskipEOL=true), oppure a fine buffer
-			void			advanceToEOL (Iter &src, bool bskipEOL=true);
+			//Ritorna il numero di linee skippate
+			u32				advanceToEOL (Iter &src, bool bskipEOL=true);
 
 			//ritorna true se trova esattamente la stringa [whatToFind]. In questo caso, [src] punta al primo carattere dell'istanza di [whatToFind]
 			//Ritorna false altrimenti. In questo caso, [src] è avanzato fino a EOF
@@ -266,7 +270,8 @@ namespace gos
 
 			//Prende tutti i caratteri compresi tra src.getCurChar() e l'EOL e li ritorna in out_result
 			//All'uscita di questa fn, src punta al primo char subito dopo EOL o a fine buffer
-			void			extractLine (Iter &src, Iter *out_result);
+			//Ritorna il numero di linee skippate
+			u32				extractLine (Iter &src, Iter *out_result);
 
 			//controlla il char corrente e compara con [terminator]]. Se il char corrente e' [terminator], ritorna true, 
 			//altrimenti passa al carattere successivo e ripete.
@@ -328,7 +333,7 @@ namespace gos
 			//	1- inizia con "//", allora è lungo fino alla fine della riga (\n\r o fine buffer)
 			//	oppure
 			//	2- inizia con / *, allora e finisce quando trova * /
-			bool			extractCPPComment (Iter &src, Iter *out_result);
+			bool			extractCPPComment (Iter &src, Iter *out_result, u32 *out_canbeNULL_numLineSkipped);
 
 
 			/*=======================================================

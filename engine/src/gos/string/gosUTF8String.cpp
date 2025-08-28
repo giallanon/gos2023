@@ -87,6 +87,18 @@ void UTF8String::append (const char *b, u32 lenInBytes)
 }
 
 //*******************************************
+void UTF8String::insertNSpaces (u32 numSpaceToInsert)
+{
+	if (0 == numSpaceToInsert)
+		return;
+
+	prealloc (curSize + numSpaceToInsert + 1);
+	memset (&(buffer[curSize]), ' ', numSpaceToInsert);
+	curSize += numSpaceToInsert;
+	buffer[curSize] = 0;
+}
+
+//*******************************************
 i32 UTF8String::findFirst (const gos::UTF8Char &ch, u32 startIndex) const
 {
 	if (startIndex >= curSize)

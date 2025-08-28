@@ -1,0 +1,44 @@
+@direttivaA :
+
+	 @direttiva1 : include anche un : carattere speciale
+
+@direttiva2:ciao'amico'[mio]
+{
+}
+
+@direttiva3: 	 prova
+[nome_sezione_normale]
+{
+	campo1: ciao
+	campo2: "hello"
+}
+
+[nome_sezione_normale]
+{
+	campo3: 33234
+	campo4: yeah
+}
+
+
+@direttiva4:questa ha anche dei valori in sezione
+{
+	m4_1: 10
+	m4_2: "ciao amico"
+}
+
+@direttiva5: che include anche un : carattere speciale;
+@direttiva6:   che include anche un : carattere speciale
+{
+}
+
+@direttiva1: secondo valore
+@direttiva1: 3
+
+
+//una direttiva senza <value>
+@direttiva7
+
+@direttiva8
+{
+	m7_1:	71
+}

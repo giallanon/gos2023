@@ -93,14 +93,17 @@ namespace gos
 		bool					fromJSon (const u8 *jsonSRC, u32 sizeOfJSonSRC)									{ return fromJSon (reinterpret_cast<const char*>(jsonSRC), sizeOfJSonSRC); }
 		bool					fromJSon (const char *jsonSRC, u32 sizeOfJSonSRC);
 
+								//============================ utils
+		void 					debug_print (gos::UTF8String &out) const;
+
 	public:
 		static bool 			_resolveInplace_identifierThatMayHaveArrayIndexing (char *in_out_name, u32 lenof_name);
 
 	private:
-		void					priv_errorMessageNear (const UTF8String &msg, const string::utf8::Iter &src) const;
-		bool					priv_Parse_separator_Value (string::utf8::Iter &src, string::utf8::Iter *result, char separator) const;
-		bool					priv_Parse_Section (IniFileSection *section, string::utf8::Iter &src);
-		void					priv_toNextValidChar (IniFileSection *section, string::utf8::Iter &src) const;
+		void					priv_errorMessageNear (u32 linuNumber, const UTF8String &msg, const string::utf8::Iter &src) const;
+		bool					priv_Parse_separator_Value (u32 linuNumber, string::utf8::Iter &src, string::utf8::Iter *result, char separator) const;
+		bool					priv_Parse_Section (IniFileSection *section, string::utf8::Iter &src, u32 &in_out_curLineNumber);
+		u32						priv_toNextValidChar (IniFileSection *section, string::utf8::Iter &src) const;
 		
 
 	private:
@@ -133,6 +136,7 @@ namespace gos
 		void					set (const char *identifierIN, f32 value, bool bCreateIfNotFound)					{ char s[32]; sprintf_s (s, sizeof(s), "%f", value); set (identifierIN, s, bCreateIfNotFound); }
 		void					set (const char *identifierIN, bool value, bool bCreateIfNotFound)					{ if (true == value) set (identifierIN, "1", bCreateIfNotFound); else set (identifierIN, "0", bCreateIfNotFound); }
 
+		u32 					getLineStarted() const 																{ return startAtLine; }
 
 		bool 					exists  (const char *identifier) const;
 		bool					get (const char *identifier, char *out, u32 sizeof_out) const;
@@ -178,13 +182,14 @@ namespace gos
 
 								//============================= Save
 		void					save (gos::File &f, u32 tabCount, u32 level) const;
+		void 					debug_print (gos::UTF8String &out, u32 indent=0) const;
 		
 								//============================= json
 		void					toJSon (BufferLinear &buffer, u32 &ct) const;
 		bool					fromJSon (gos::string::utf8::Iter &iter);
 
 								//============================ var
-		UTF8String			name;
+		UTF8String				name;
 
 	private:
 		enum class eElem : u8
@@ -216,7 +221,8 @@ namespace gos
 		u32									priv_simpleIdentifierExists (const char *name) const;
 
 	private:
-		Allocator						*allocator;
+		Allocator							*allocator;
+		u32									startAtLine;
 		Array<sElem>						elements;
 		Array<UTF8String>					blob;
 		Array<UTF8String>					comments;

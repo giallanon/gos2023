@@ -77,9 +77,9 @@ bool string::utf8::Iter::advanceNumByte (u32 howMany)
 }
 
 //**************************************************
-void string::utf8::Iter::toNextValidChar()
+u32 string::utf8::Iter::toNextValidChar()
 {
-	string::utf8::toNextValidChar(*this);
+	return string::utf8::toNextValidChar(*this);
 }
 
 //**************************************************

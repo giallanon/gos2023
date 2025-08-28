@@ -21,6 +21,7 @@ namespace gos
 		char temp[128];		
 	};
 
+
 	/*==============================================
 	 * UTF8String
 	 *
@@ -113,6 +114,7 @@ namespace gos
 		void				unescape();
 		void				escapeTo (UTF8String *out) const;
 		void				unescapeTo (UTF8String *out) const;
+		void 				insertNSpaces (u32 numSpaceToInsert);
 		
 							//aggiunge N <filler> fino a che la riga corrente non raggiunge la dimensione <column>
 		void 				fillRowUntilColumn (u32 column, char filler=' ');

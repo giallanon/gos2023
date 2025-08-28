@@ -93,6 +93,15 @@ namespace testJSON
 
 namespace test1
 {
+    void printSectionStartingLine (const gos::IniFileSection *sec)
+    {
+        printf ("line %03d\t\t%s\n", sec->getLineStarted(), sec->name.getBuffer());
+
+        for (u32 i=0; i<sec->getNSubsection(); i++)
+            printSectionStartingLine (sec->getSubsectionByIndex(i));
+    }
+
+
     int checkIT (gos::IniFile &ini)
     {
         TEST_ASSERT(ini.checkString("nome_sezione1.campo1", "ciao"));
@@ -157,6 +166,21 @@ namespace test1
             TEST_ASSERT(ini.loadAndParse("@w/testIniFile/test1.txt"));
             ini.saveAs("@w/testIniFile/test1_PARSED.txt");
             TEST_FAIL_IF(0 != checkIT(ini));
+
+            printSectionStartingLine(ini.getRoot());
+            TEST_ASSERT(ini.getSubsection("nome_sezione1")->getLineStarted() == 1);
+            TEST_ASSERT(ini.getSubsection("nome_sezione1.nome_sezione2")->getLineStarted() == 25);
+            TEST_ASSERT(ini.getSubsection("nome_sezione1.autore@0@")->getLineStarted() == 44);
+            TEST_ASSERT(ini.getSubsection("nome_sezione1.autore@1@")->getLineStarted() == 50);
+            TEST_ASSERT(ini.getSubsection("nome_sezione1.autore@1@.other@0@")->getLineStarted() == 55);
+            TEST_ASSERT(ini.getSubsection("nome_sezione1.autore@1@.other@1@")->getLineStarted() == 60);
+            TEST_ASSERT(ini.getSubsection("nome_sezione1.@direttiva@0@")->getLineStarted() == 69);
+            TEST_ASSERT(ini.getSubsection("nome_sezione1.@direttiva2@0@")->getLineStarted() == 71);
+            TEST_ASSERT(ini.getSubsection("nome_sezione1.@direttiva3@0@")->getLineStarted() == 76);
+            TEST_ASSERT(ini.getSubsection("nome_sezione1.autore@2@")->getLineStarted() == 81);
+            TEST_ASSERT(ini.getSubsection("nome_sezione1.biografia@0@")->getLineStarted() == 87);
+            TEST_ASSERT(ini.getSubsection("nome_sezione1.biografia@1@")->getLineStarted() == 97);
+            TEST_ASSERT(ini.getSubsection("nome_sezione2")->getLineStarted() == 106);
         }
         
         {
@@ -165,11 +189,85 @@ namespace test1
             TEST_FAIL_IF(0 != checkIT(ini));
         }
 
-      
+
 
         return 0;
     }
 } //namespace test1
+
+
+namespace test_direttive
+{
+    int checkDirettiva (gos::IniFile &ini, const char *nomeDirettiva, const char *valore)
+    {
+        const gos::IniFileSection *sec = ini.getSubsection(nomeDirettiva);
+        TEST_ASSERT(NULL != sec);
+
+        char s[1024];
+        if (0x00 == valore[0])
+        {
+            TEST_ASSERT(false == sec->get("__value", s, sizeof(s)));
+        }
+        else
+        {
+            TEST_ASSERT(sec->get("__value", s, sizeof(s)));
+            TEST_ASSERT(0 == strcmp(valore, s));
+        }    
+
+        return 0;
+    }
+
+    int checkIT (const char *fname)
+    {
+        char s[512];
+        gos::IniFile ini;
+        TEST_ASSERT(ini.loadAndParse(fname));
+        
+        //gos::UTF8String out;    ini.debug_print(out);   printf ("%s\n\n", out.getBuffer());
+
+        TEST_ASSERT(13 == ini.getNSubsection());
+
+        for (u32 i=0; i<ini.getNSubsection(); i++)
+        {
+            const gos::IniFileSection *sec = ini.getSubsectionByIndex(i);
+            TEST_ASSERT(NULL != sec);
+
+            const gos::IniFileSection *sec2 = ini.getSubsection (sec->name.getBuffer());
+            TEST_ASSERT(NULL != sec2);
+        }
+
+        checkDirettiva(ini, "@direttivaA@0@", "");
+        checkDirettiva(ini, "@direttiva1@0@", "include anche un : carattere speciale");
+        checkDirettiva(ini, "@direttiva1@1@", "secondo valore");
+        checkDirettiva(ini, "@direttiva1@2@", "terzo valore");
+        TEST_ASSERT (3 == ini.getOrDefaultAsU32("@direttiva1@2@.__value", 0));
+
+        checkDirettiva(ini, "@direttiva2@0@", "ciao'amico'[mio]");
+        checkDirettiva(ini, "@direttiva3@0@", "prova");
+
+        TEST_ASSERT(true == ini.get("@direttiva4@0@.__value", s, sizeof(s)));
+        TEST_ASSERT(0 == strcmp(s, "questa ha anche dei valori in sezione"));
+        TEST_ASSERT (10 == ini.getOrDefaultAsU32("@direttiva4@0@.m4_1", 0));
+        TEST_ASSERT(true == ini.get("@direttiva4@0@.m4_2", s, sizeof(s)));
+        TEST_ASSERT(0 == strcmp(s, "ciao amico"));
+
+        return 0;
+    }
+
+    int run()
+    {
+        gos::IniFile ini;
+        TEST_ASSERT(ini.loadAndParse("@w/testIniFile/test_direttive.txt"));
+        ini.saveAs("@w/testIniFile/test_direttive_PARSED.txt");
+
+
+        TEST_FAIL_IF(0 != checkIT("@w/testIniFile/test_direttive.txt"));        
+        //TEST_FAIL_IF(0 != checkIT("@w/testIniFile/test_direttive_PARSED.txt"));
+
+        return 0;
+    }
+} //namespace test_direttive
+
 
 } //namespace test_thread
 
@@ -179,4 +277,5 @@ void testIniFile (Tester &tester)
 {
     tester.run("iniFile::test1", test_iniFile::test1::run);
     tester.run("iniFile::testJSON", test_iniFile::testJSON::run);
+    tester.run("iniFile::test_direttive", test_iniFile::test_direttive::run);
 }

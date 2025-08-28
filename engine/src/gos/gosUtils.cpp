@@ -602,39 +602,6 @@ const char* utils::enumToString (const eGPUDescriptrorType s)
     }
 }
 
-//***************************************************
-const char* utils::enumToString (const eResType s)
-{
-    switch (s)
-    {
-    default: return "eResType::invalid value";
-    case eResType::unknown:         return "unknown";
-    case eResType::vtx_shader:      return "vtx_shader";
-    case eResType::pxl_shader:      return "pxl_shader";
-    case eResType::texture2D:       return "texture2D";
-    }
-}
-
-//********************************************************** 
-bool utils::stringToEnum (const char *str, eResType *out)
-{
-	assert (NULL != out);
-	if (NULL == str)
-		return false;
-    if (0 == str[0])
-        return false;
-	
-#define HELPER(value)			if (0 == strcasecmp(str, #value)) { *out=eResType::value ; return true; }
-
-    HELPER(unknown)
-	HELPER(vtx_shader)
-	HELPER(pxl_shader)
-	HELPER(texture2D)
-#undef HELPER	
-	return false;
-}
-
-
 
 
 //******************************************************************************
