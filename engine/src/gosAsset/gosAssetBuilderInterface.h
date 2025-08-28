@@ -23,8 +23,12 @@ namespace gos
             eAssetType      getAssType() const                                              { return assType; }
 
 
-            virtual bool    build (Context &ctx, u64 buildTimeUTC, const gos::IniFileSection *sec, sBuildResult *out) = 0;
+            virtual bool    build (Context &ctx, u64 buildTimeUTC, const asset::UID &uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out) = 0;
             
+        protected:
+            bool            prot_needResolvedSubsection (Context &ctx, const gos::IniFileSection *sec, eAssetType assType, asset::UID *out_uid) const;
+            bool            prot_needResource (Context &ctx, eResType resType, const char *resName, asset::UID *out_uid) const;
+
         private:
             eAssetType assType;
         }; //class BuilderInterface

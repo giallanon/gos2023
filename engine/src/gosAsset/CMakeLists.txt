@@ -29,8 +29,10 @@ builders/gosAssetBuilder_shader.h
 
 gosAsset.cpp
 gosAsset.h
+gosAssetBuilder_dep.cpp
 gosAssetBuilder.cpp
 gosAssetBuilder.h
+gosAssetBuilderInterface.cpp
 gosAssetBuilderInterface.h
 gosAssetEnumAndDefine.h
 )

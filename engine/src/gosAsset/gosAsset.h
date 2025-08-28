@@ -10,6 +10,7 @@ namespace gos
         #define GOS_ASSET__TABLE_ASSET_LIST     "assetList"
         #define GOS_ASSET__TABLE_RES_LIST       "resList"
         #define GOS_ASSET__TABLE_RUNTIME_NAME   "rtnameList"
+        #define GOS_ASSET__TABLE_DEPENDS        "depends"
 
 
         const char* enumToString (const eResType s);
@@ -31,8 +32,11 @@ namespace gos
         bool        res_get_folder_name (const Context &ctx, eResType resType, char *out, u32 sizeof_out);
         bool        res_createUID (eResType resType, const char *filename, asset::UID *out);
         bool        res_insert (Context &ctx, const asset::UID uid, u64 lastTimeMod, eResType resType, const char *resName);
+        bool        res_update (Context &ctx, const asset::UID uid, u64 lastTimeMod);
+        bool        res_exists (Context &ctx, eResType resType, const char *resName, asset::UID *out_uid);
+        bool        res_get_info (Context &ctx, const asset::UID &uid, char *out_CAN_BE_NULL_name, u32 sizeof_outName, eResType *out_CAN_BE_NULL_resType, u64 *out_CAN_BE_NULL_lastTimeMod);
+        bool        res_get_requireBy_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out);
 
-        
         //================ iniFile        
         bool        inifile_insert (Context &ctx, const asset::UID uid, u64 lastTimeMod, eAssetType assType, const char *srcfileName);
 
@@ -46,16 +50,16 @@ namespace gos
                     //ritorna 0 se <uid> non esiste
         u64         asset_query_lastTimeBuilt (Context &ctx, const asset::UID &uid);
 
+        bool        asset_get_dependecies_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out);
+        bool        asset_get_requireBy_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out);
+
 
         //================ runtime Name
-                    //se rtname esistva gia' in tabella, ritorna in <out_oldUID> l'uid al quale era precedentemente associato
-        bool        rtname_insert_or_update (Context &ctx, const char *runtimeName, const asset::UID &uid, asset::UID *out_oldUID);
+        bool        rtname_exists (Context &ctx, const char *runtimeName, asset::UID *out_uid);
+        bool        rtname_insert (Context &ctx, const char *runtimeName, const asset::UID &uid);
 
-
-
-        bool        insert_or_update_assets (Context &ctx, const asset::UID &uid, eAssetType assType, u64 lastTimeBuilt);
-        bool        add_dependency (Context &ctx, const asset::UID &uidPadre, const asset::UID &uidFiglio);
-        bool        add_dependency (Context &ctx, const asset::UID &uidPadre, eResType resType, const char *resname);
+        //================ dependencies
+        bool        depend_add (Context &ctx, const asset::UID &padre, const asset::UID &figlio);
 
         
     } //namespace res

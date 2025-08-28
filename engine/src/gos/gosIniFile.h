@@ -135,6 +135,7 @@ namespace gos
 		void					set (const char *identifierIN, i32 value, bool bCreateIfNotFound)					{ char s[32]; sprintf_s (s, sizeof(s), "%d", value); set (identifierIN, s, bCreateIfNotFound); }
 		void					set (const char *identifierIN, f32 value, bool bCreateIfNotFound)					{ char s[32]; sprintf_s (s, sizeof(s), "%f", value); set (identifierIN, s, bCreateIfNotFound); }
 		void					set (const char *identifierIN, bool value, bool bCreateIfNotFound)					{ if (true == value) set (identifierIN, "1", bCreateIfNotFound); else set (identifierIN, "0", bCreateIfNotFound); }
+		void					setU64 (const char *identifierIN, u64 value, bool bCreateIfNotFound)				{ char s[32]; sprintf_s (s, sizeof(s), "%" PRIu64 "", value); set (identifierIN, s, bCreateIfNotFound); }
 
 		u32 					getLineStarted() const 																{ return startAtLine; }
 

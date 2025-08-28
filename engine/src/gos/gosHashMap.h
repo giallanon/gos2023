@@ -4,8 +4,8 @@
 
 namespace gos
 {
-    template<class T>
-    inline int HashMap_compareFn (const T &t1, const T &t2)        { return t1.compare(t2); }
+    template<class TKEY>
+    inline int HashMap_compareFn (const TKEY &t1, const TKEY &t2)   { return t1.compare(t2); }
 
     template<>
     inline int HashMap_compareFn (const u64 &t1, const u64 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }

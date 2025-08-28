@@ -15,7 +15,7 @@ const char* asset::enumToString (const asset::eResType s)
     switch (s)
     {
     default:                                return "!eResType::invalid value";
-    case asset::eResType::iniFile:          return "iniFile";
+    case asset::eResType::gosasset_d:       return "gosasset_d";
     case asset::eResType::shader_txt:       return "shader_txt";
     case asset::eResType::image:            return "image";
     }
@@ -32,7 +32,7 @@ bool asset::stringToEnum (const char *str, asset::eResType *out)
 	
 #define HELPER(value)			if (0 == strcasecmp(str, #value)) { *out=asset::eResType::value ; return true; }
 
-    HELPER(iniFile)
+    HELPER(gosasset_d)
     HELPER(shader_txt)
 	HELPER(image)
 #undef HELPER	
@@ -175,21 +175,11 @@ type UNSIGNED INT1 NOT NULL)\
                 break;
 
 
-            //table: depends
-            sprintf_s (s, sizeof(s), "CREATE TABLE depends (\
+            //table: GOS_ASSET__TABLE_DEPENDS
+            sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET__TABLE_DEPENDS " (\
 ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,\
-assetUID UNSIGNED INT8 NOT NULL,\
-depUID UNSIGNED INT8 NOT NULL\
-)");
-            if (!db::exec (db, s))
-                break;
-
-            //table: depends_res
-            sprintf_s (s, sizeof(s), "CREATE TABLE depends_res (\
-ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,\
-assetUID UNSIGNED INT8 NOT NULL,\
-restype UNSIGNED INT1 NOT NULL,\
-resname VARCHAR(64) NOT NULL\
+UID UNSIGNED INT8 NOT NULL,\
+childUID UNSIGNED INT8 NOT NULL\
 )");
             if (!db::exec (db, s))
                 break;
@@ -314,7 +304,82 @@ bool asset::res_insert (Context &ctx, const asset::UID uid, u64 lastTimeMod, eRe
     return true;
 }
 
+//********************************************************** 
+bool asset::res_update (Context &ctx, const asset::UID uid, u64 lastTimeMod)
+{
+    if (!ctx.isValid())
+    {
+        logger::err ("asset::res_update(%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        return false;
+    }
 
+    char s[512];
+    sprintf_s (s, sizeof(s), "UPDATE " GOS_ASSET__TABLE_RES_LIST " SET lastTimeMod=%" PRIu64 " WHERE UID=%" PRIu64 ";", lastTimeMod, uid._uid);
+    if (!db::exec (ctx.db, s))
+    {
+        logger::err ("asset::res_update(%" PRIu64 ") => error updating table\n",  uid._uid);
+        return false;
+    }
+
+    return true;
+}
+
+//********************************************************** 
+bool asset::res_exists (Context &ctx, eResType resType, const char *resName, asset::UID *out_uid)
+{
+    assert (NULL != out_uid);
+    out_uid->setInvalid();
+
+    if (!ctx.isValid())
+    {
+        logger::err ("res_exists(\"%s\") => invalid ctx\n", resName);
+        return false;
+    }
+
+    db::RST rst;
+    char s[256];
+    
+    sprintf_s (s, sizeof(s), "SELECT UID FROM " GOS_ASSET__TABLE_RES_LIST " WHERE type=%d AND name='%s'", static_cast<u8>(resType), resName);
+    if (!db::query (ctx.db, s, &rst)) return false;
+    if (rst.fetchRow())
+    {
+        out_uid->_uid = rst.getColValueAsU64(0);
+        return true;
+    }
+
+    return false;
+}
+
+//********************************************************** 
+bool asset::res_get_info (Context &ctx, const asset::UID &uid, char *out_CAN_BE_NULL_name, u32 sizeof_outName, eResType *out_CAN_BE_NULL_resType, u64 *out_CAN_BE_NULL_lastTimeMod)
+{
+    if (!ctx.isValid())
+    {
+        logger::err ("asset::res_get_name(%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        return false;
+    }
+
+    db::RST rst;
+    char s[128];
+    
+    sprintf_s (s, sizeof(s), "SELECT lastTimeMod,type,name FROM " GOS_ASSET__TABLE_RES_LIST " WHERE UID=%" PRIu64 "", uid._uid);
+    if (!db::query (ctx.db, s, &rst)) return false;
+    if (rst.fetchRow())
+    {
+        if (NULL != out_CAN_BE_NULL_lastTimeMod)    *out_CAN_BE_NULL_lastTimeMod = rst.getColValueAsU64(0);
+        if (NULL != out_CAN_BE_NULL_resType)        *out_CAN_BE_NULL_resType = static_cast<eResType>(rst.getColValueAsU8(1));
+        if (NULL != out_CAN_BE_NULL_name)           sprintf_s (out_CAN_BE_NULL_name, sizeof_outName, "%s", rst.getColValue(2));
+        return true;
+    }
+
+    return false;
+}
+
+//********************************************************** 
+bool asset::res_get_requireBy_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out)
+{
+    return asset_get_requireBy_list (ctx, uid, bClearListOnStart, out);
+}
 
 
 
@@ -411,7 +476,85 @@ u64 asset::asset_query_lastTimeBuilt (Context &ctx, const asset::UID &uid)
     return 0;
 }
 
+//*******************************************************
+bool asset::asset_get_dependecies_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out)
+{
+    assert (NULL != out);
+    if (bClearListOnStart)
+        out->reset();
 
+    if (!ctx.isValid())
+    {
+        logger::err ("asset_get_dependecies_list (%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        return false;
+    }
+
+    db::RST rst;
+    char s[256];
+    sprintf_s (s, sizeof(s), "SELECT childUID FROM " GOS_ASSET__TABLE_DEPENDS " WHERE UID=%" PRIu64 "", uid._uid);
+    if (!db::query (ctx.db, s, &rst))
+    {
+        logger::err ("asset_get_dependecies_list (%" PRIu64 ") => error querying\n",  uid._uid);
+        return false;
+    }
+
+    while (rst.fetchRow())
+    {
+        asset::UID childUID;
+        childUID._uid = rst.getColValueAsU64(0);
+        out->insertIfNotExists (childUID, 0);
+    }
+
+    rst.rewind();
+    while (rst.fetchRow())
+    {
+        asset::UID childUID;
+        childUID._uid = rst.getColValueAsU64(0);
+        if (!asset_get_dependecies_list (ctx, childUID, false, out))
+            return false;
+    }
+    return true;
+}
+
+//*******************************************************
+bool asset::asset_get_requireBy_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out)
+{
+    assert (NULL != out);
+    if (bClearListOnStart)
+        out->reset();
+
+    if (!ctx.isValid())
+    {
+        logger::err ("asset_get_requireBy_list (%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        return false;
+    }
+
+    db::RST rst;
+    char s[256];
+    sprintf_s (s, sizeof(s), "SELECT UID FROM " GOS_ASSET__TABLE_DEPENDS " WHERE childUID=%" PRIu64 "", uid._uid);
+    if (!db::query (ctx.db, s, &rst))
+    {
+        logger::err ("asset_get_requireBy_list (%" PRIu64 ") => error querying\n",  uid._uid);
+        return false;
+    }
+
+    while (rst.fetchRow())
+    {
+        asset::UID childUID;
+        childUID._uid = rst.getColValueAsU64(0);
+        out->insertIfNotExists (childUID, 0);
+    }
+
+    rst.rewind();
+    while (rst.fetchRow())
+    {
+        asset::UID childUID;
+        childUID._uid = rst.getColValueAsU64(0);
+        if (!asset_get_requireBy_list (ctx, childUID, false, out))
+            return false;
+    }
+    return true;
+}
 
 
 //*******************************************************
@@ -480,60 +623,17 @@ bool asset::context_cloneDB  (Context &ctx, const char *file_extension_to_append
     return ret;
 }
 
-//*******************************************************
-bool asset::insert_or_update_assets (Context &ctx, const asset::UID &uid, eAssetType assType, u64 lastTimeBuilt)
-{
-    if (!ctx.isValid())
-    {
-        logger::err ("asset::insert_or_update_assets(%" PRIu64 ", %d, %" PRIu64 ") => invalid ctx\n",  uid._uid, assType, lastTimeBuilt);
-        return false;
-    }
 
-    db::RST rst;
-    char s[256];
-    
-    sprintf_s (s, sizeof(s), "SELECT type FROM assets WHERE UID=%" PRIu64 "", uid._uid);
-    if (!db::query (ctx.db, s, &rst)) return false;
-    if (rst.fetchRow())
-    {
-        const eAssetType readAssetType = static_cast<eAssetType>(rst.getColValueAsU8(0));
-        if (readAssetType != assType)
-        {
-            logger::err ("asset::insert_or_update_assets(%" PRIu64 ", %d, %" PRIu64 ") => the asset is already in DB but the assetType does not match. Old assetType=%d, new-assetType=%d\n",
-                uid._uid, assType, lastTimeBuilt, assType, readAssetType);
-            return false;
-        }
-
-        sprintf_s (s, sizeof(s), "UPDATE assets SET lastTimeBuilt=%" PRIu64 " WHERE UID=%" PRIu64 "", lastTimeBuilt, uid._uid);
-        if (!db::exec (ctx.db, s))
-        {
-            logger::err ("asset::insert_or_update_assets(%" PRIu64 ", %d, %" PRIu64 ") => error updating table\n", uid._uid, assType, lastTimeBuilt);
-            return false;
-        }
-    }
-    else
-    {
-        //non esisteva, lo aggiungo
-        sprintf_s (s, sizeof(s), "INSERT INTO assets (UID,lastTimeBuilt,type) VALUES(%" PRIu64 ",%" PRIu64 ",%d)", uid._uid, lastTimeBuilt, static_cast<u8>(assType));
-        if (!db::exec (ctx.db, s))
-        {
-            logger::err ("asset_insert(%" PRIu64 ", %d, %" PRIu64 ") => error inserting into tale\n", uid._uid, assType, lastTimeBuilt);
-            return false;
-        }
-    }
-
-    return true;
-}
 
 //*******************************************************
-bool asset::rtname_insert_or_update (Context &ctx, const char *runtimeName, const asset::UID &uid, asset::UID *out_oldUID)
+bool asset::rtname_exists (Context &ctx, const char *runtimeName, asset::UID *out_uid)
 {
-    assert (NULL != out_oldUID);
-    out_oldUID->setInvalid();
+    assert (NULL != out_uid);
+    out_uid->setInvalid();
 
     if (!ctx.isValid())
     {
-        logger::err ("rtname_insert_or_update(\"%s\", %" PRIu64 ") => invalid ctx\n", runtimeName, uid._uid);
+        logger::err ("rtname_exists(\"%s\") => invalid ctx\n", runtimeName);
         return false;
     }
 
@@ -544,86 +644,48 @@ bool asset::rtname_insert_or_update (Context &ctx, const char *runtimeName, cons
     if (!db::query (ctx.db, s, &rst)) return false;
     if (rst.fetchRow())
     {
-        out_oldUID->_uid = rst.getColValueAsU64(0);
-
-        sprintf_s (s, sizeof(s), "UPDATE " GOS_ASSET__TABLE_RUNTIME_NAME " SET assetUID=%" PRIu64 " WHERE name='%s'", uid._uid, runtimeName);
-        if (!db::exec (ctx.db, s))
-        {
-            logger::err ("rtname_insert_or_update(\"%s\", %" PRIu64 ") => error updating table\n", runtimeName, uid._uid);
-            return false;
-        }
-    }
-    else
-    {
-        //non esisteva, lo aggiungo
-        sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET__TABLE_RUNTIME_NAME " (name,assetUID) VALUES('%s', %" PRIu64 ")", runtimeName, uid._uid);
-        if (!db::exec (ctx.db, s))
-        {
-            logger::err ("rtname_insert_or_update(\"%s\", %" PRIu64 ") => error inserting into table\n", runtimeName, uid._uid);
-            return false;
-        }
+        out_uid->_uid = rst.getColValueAsU64(0);
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 //*******************************************************
-bool asset::add_dependency (Context &ctx, const asset::UID &uidPadre, const asset::UID &uidFiglio)
+bool asset::rtname_insert (Context &ctx, const char *runtimeName, const asset::UID &uid)
 {
     if (!ctx.isValid())
     {
-        logger::err ("asset::add_dependency(%" PRIu64 ",%" PRIu64 ") => invalid ctx\n", uidPadre._uid, uidFiglio._uid);
+        logger::err ("rtname_insert(\"%s\", %" PRIu64 ") => invalid ctx\n", runtimeName, uid._uid);
         return false;
     }
 
-    db::RST rst;
     char s[256];
-    
-    sprintf_s (s, sizeof(s), "SELECT ID FROM depends WHERE assetUID=%" PRIu64 " AND depUID=%" PRIu64 "", uidPadre._uid, uidFiglio._uid);
-    if (!db::query (ctx.db, s, &rst)) return false;
-    if (rst.fetchRow())
+    //non esisteva, lo aggiungo
+    sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET__TABLE_RUNTIME_NAME " (name,assetUID) VALUES('%s', %" PRIu64 ")", runtimeName, uid._uid);
+    if (db::exec (ctx.db, s))
         return true;
 
-    //non esisteva, lo aggiungo
-    sprintf_s (s, sizeof(s), "INSERT INTO depends (assetUID,depUID) VALUES(%" PRIu64 ",%" PRIu64 ")", uidPadre._uid, uidFiglio._uid);
-    if (!db::exec (ctx.db, s))
-    {
-        logger::err ("asset::add_dependency(%" PRIu64 ",%" PRIu64 ") => error inserting into table\n", uidPadre._uid, uidFiglio._uid);
-        return false;
-    }
-
-    return true;
+    logger::err ("rtname_insert(\"%s\", %" PRIu64 ") => error inserting into table\n", runtimeName, uid._uid);
+    return false;
 }
 
-//*******************************************************
-bool asset::add_dependency (Context &ctx, const asset::UID &uidPadre, eResType resType, const char *resname)
-{
-    assert (NULL != resname);
-    if (NULL == resname)        return false;
-    if (0x00 == resname[0])     return false;
 
+//*******************************************************
+bool asset::depend_add (Context &ctx, const asset::UID &uid_padre, const asset::UID &uid_figlio)
+{
     if (!ctx.isValid())
     {
-        logger::err ("asset::add_dependency(%" PRIu64 ", %d, '%s') => invalid ctx\n", uidPadre._uid, static_cast<u8>(resType), resname);
+        logger::err ("depend_add(%" PRIX64 ",%" PRIX64 ") => invalid ctx\n", uid_padre._uid, uid_figlio._uid);
         return false;
     }
 
-    db::RST rst;
-    char s[512];
-    
-    sprintf_s (s, sizeof(s), "SELECT ID FROM depends_res WHERE assetUID=%" PRIu64 " AND resType=%d AND resname='%s'", uidPadre._uid, static_cast<u8>(resType), resname);
-    if (!db::query (ctx.db, s, &rst)) return false;
-    if (rst.fetchRow())
+    char s[128];
+    sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET__TABLE_DEPENDS " (UID,childUID) VALUES(%" PRIu64 ",%" PRIu64 ")", uid_padre._uid, uid_figlio._uid);
+    if (db::exec (ctx.db, s))
         return true;
 
-    //non esisteva, lo aggiungo
-    sprintf_s (s, sizeof(s), "INSERT INTO depends_res (assetUID,resType,resname) VALUES(%" PRIu64 ",%d,'%s')", uidPadre._uid, static_cast<u8>(resType), resname);
-    if (!db::exec (ctx.db, s))
-    {
-        logger::err ("asset::add_dependency(%" PRIu64 ", %d, '%s') => error inserting into table\n", uidPadre._uid, static_cast<u8>(resType), resname);
-        return false;
-    }
-
-    return true;
+    logger::err ("depend_add(%" PRIX64 ",%" PRIX64 ") => error inserting into table\n", uid_padre._uid, uid_figlio._uid);
+    return false;
 }
 

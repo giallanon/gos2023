@@ -71,6 +71,13 @@ bool RST::fetchRow()
 }
 
 //***************************************************
+void RST::rewind()
+{
+    if (NULL != stmt)
+        sqlite3_reset(stmt);
+}
+    
+//***************************************************
 const char* RST::getColValue (u32 index) const
 {
     if (NULL == stmt || index >= getNumCols())

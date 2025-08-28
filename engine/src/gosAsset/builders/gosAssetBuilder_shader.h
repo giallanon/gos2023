@@ -15,8 +15,9 @@ namespace gos
         public:
             struct Params
             {
-                char src[128];
-                char define[1024];
+                char        src[128];
+                char        define[1024];
+                asset::UID  uid__resource_shader_txt;
             };
 
         public:
@@ -24,10 +25,17 @@ namespace gos
             static bool extractParams (const IniFileSection *sec, Params *out_params);
 
         public:
-                    Builder_shader (eAssetType assTypeIN) : BuilderInterface (assTypeIN)            { }
-                    ~Builder_shader()                                                               { }
+            /**
+             * @brief   calc_depth e' mandatorio, va implementato in tutti i Builder.
+                        Per una descrizione piu' accurata del significato, vedi gosAssetBuilder_pipedef
+            */
+            static u32  calc_depth()                                                                     { return 0; }
 
-            bool    build (Context &ctx, u64 buildTimeUTC, const IniFileSection *sec, sBuildResult *out);
+        public:
+                        Builder_shader (eAssetType assTypeIN) : BuilderInterface (assTypeIN)            { }
+                        ~Builder_shader()                                                               { }
+
+            bool        build (Context &ctx, u64 buildTimeUTC, const asset::UID &uid_of_iniFile, const IniFileSection *sec, sBuildResult *out);
             
         }; //class Builder_shader
 
@@ -40,8 +48,11 @@ namespace gos
         class Builder_vtxShader : public Builder_shader
         {
         public:
-                    Builder_vtxShader () : Builder_shader (eAssetType::vtx_shader)  { }
-                    ~Builder_vtxShader()                                            { }
+            static u32  calc_depth()                                                    { return Builder_shader::calc_depth(); }
+
+        public:
+                        Builder_vtxShader () : Builder_shader (eAssetType::vtx_shader)  { }
+                        ~Builder_vtxShader()                                            { }
         }; //class Builder_vtxShader
 
 
@@ -52,8 +63,11 @@ namespace gos
         class Builder_pxlShader : public Builder_shader
         {
         public:
-                    Builder_pxlShader () : Builder_shader (eAssetType::pxl_shader)  { }
-                    ~Builder_pxlShader()                                            { }
+            static u32  calc_depth()                                                    { return Builder_shader::calc_depth(); }
+
+        public:
+                    Builder_pxlShader () : Builder_shader (eAssetType::pxl_shader)      { }
+                    ~Builder_pxlShader()                                                { }
         }; //class Builder_pxlShader
 
     } //namespace res

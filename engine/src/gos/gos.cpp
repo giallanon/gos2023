@@ -191,7 +191,7 @@ void gos::logger::err (const char *format, ...)
 {
 	va_list argptr; 
 	va_start (argptr, format); 
-	gosGlobals.logger->vlogWithPrefix (eTextColor::red, "ERROR=>", format, argptr);
+	gosGlobals.logger->vlogWithPrefix (eTextColor::red, "ERROR=> ", format, argptr);
 	va_end (argptr);
 
 	//aggiungo l'errore sul globalErr

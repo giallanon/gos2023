@@ -18,6 +18,7 @@ namespace gos
                         ~RST()                      { priv_free(); }
 
             bool        fetchRow();
+            void        rewind();
 
             u32         getNumCols() const          { return numCols; }
 

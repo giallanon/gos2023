@@ -124,8 +124,13 @@ void test_pipelineParser_1 ()
 #include "gosAssetBuilder.h"
 void test_assetBuilder2()
 {
+    const char BASE_FOLDER[] = { "test_assets_2" };
+
     asset::Builder builder;
-    builder.rebuildAll("test_assets_2");
+    builder.buildAll(BASE_FOLDER);
+
+
+    //builder.print_dependencies(BASE_FOLDER);
 }
 
 //******************************** 

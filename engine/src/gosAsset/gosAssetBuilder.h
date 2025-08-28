@@ -20,11 +20,15 @@ namespace gos
                 NEW         = 1,
                 MODIFIED    = 2,
                 DELETED     = 3,
-                UNCHANGED   = 4
+                UNCHANGED   = 4,
+                REQUIRED    = 5
             };
 
         private:            
             static const char* enumToString (const eBuildStatus s);
+
+        public:
+            static void     print_dependencies (const char *baseFolder);
 
         public:
                     Builder();
@@ -34,7 +38,8 @@ namespace gos
             bool    addBuilder ()
                     {
                         TBUILDER *builder = GOSNEW(localAllocator, TBUILDER)();
-                        if (priv_addBuilder(builder))
+                        const u32 depth = TBUILDER::calc_depth();
+                        if (priv_addBuilder(builder, depth))
                             return true;
                         GOSDELETE(localAllocator, builder);
                         return false;
@@ -42,6 +47,9 @@ namespace gos
 
             bool    rebuildAll (const char *baseFolder);
             bool    buildAll (const char *baseFolder);
+
+        private:
+            static constexpr u8 NUM_MAX_ASSET_BUILDER = 32;
 
         private:
             struct sResListElem
@@ -59,23 +67,27 @@ namespace gos
             typedef gos::FastArray<sResListElem>    ResList;
 
         private:
-            bool    priv_addBuilder (BuilderInterface *builder);
+            bool    priv_addBuilder (BuilderInterface *builder, u32 asset_depth);
             BuilderInterface*   priv_getBuilder (eAssetType assType);
+
+            u32     priv_getDepthByAssetType (eAssetType assType) const                                         { assert (static_cast<u8>(assType) < NUM_MAX_ASSET_BUILDER); return depthByAssetType[static_cast<u8>(assType)]; }
 
             void    priv_printResList (const ResList &list) const;
             bool    priv_fromSectionNameToAssetType (const char *name, eAssetType *out) const;
-            u32     priv_fromSectionNameToAssetDeepAndType (const char *namee, eAssetType *out) const;
+            u32     priv_fromSectionNameToAssetDepthAndType (const char *name, eAssetType *out) const;
 
             u32     priv_collectResInfo (ResList &out_list);
             void    priv_collectResourcesFromDisk (ResList &out_list);
-            void    priv_collectIniFileFromFDisk (ResList &out_list);
+            void    priv_collectIniFileFromDisk (ResList &out_list);
+
+            bool    priv_explode_NEW_or_MODIFIED_res (ResList *in_out_list);
 
             u32     priv_explodeIniFile (ResList &list, gos::IniFile *out);
             void    priv_explodeIniFile_adjustSubsectionName (const char *in, char *out, u32 sizeof_out);
-            bool    priv_explodeIniFile_ric (gos::IniFileSection *dst, IniFileSection *sec, const char *nameOfSRC);
+            bool    priv_explodeIniFile_ric (gos::IniFileSection *dst, IniFileSection *sec, const char *nameOfSRC, const asset::UID &uid_of_iniFile);
 
             u32     priv_build_explodedIniFileInFolder (gos::IniFile &ini);
-            u32     priv_build_iniSection (const IniFileSection *sec, BuilderInterface *builder, const char *runtimeName);
+            u32     priv_build_iniSection (const IniFileSection *sec, const asset::UID &uid_of_iniFile, BuilderInterface *builder, const char *runtimeName);
 
 
         private:
@@ -84,7 +96,8 @@ namespace gos
             u64                 buildTimeUTC;
             u32                 nextTempNameIndex;
             u32                 nextTempSubsectionIndex;
-            FastArray<BuilderInterface*>   builderList;
+            u32                 *depthByAssetType;
+            BuilderInterface    **builderList;
 
         }; //class Builder
 

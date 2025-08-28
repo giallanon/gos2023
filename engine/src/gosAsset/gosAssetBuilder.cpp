@@ -18,6 +18,7 @@ const char* Builder::enumToString (const eBuildStatus s)
     case eBuildStatus::MODIFIED:    return "modified";
     case eBuildStatus::DELETED:     return "DELETED";
     case eBuildStatus::UNCHANGED:   return "unchanged";
+    case eBuildStatus::REQUIRED:    return "required";
     }
 }
 
@@ -25,7 +26,18 @@ const char* Builder::enumToString (const eBuildStatus s)
 Builder::Builder()
 {
     localAllocator = gos::getSysHeapAllocator();
-    builderList.setup (localAllocator, 32);
+    
+    
+    //suppongo un massimo di NUM_MAX_ASSET_BUILDER tipo di asset diversi
+    u32 size;
+    size = sizeof(BuilderInterface*) * NUM_MAX_ASSET_BUILDER;
+    builderList = GOSALLOCT(BuilderInterface**, localAllocator, size);
+    memset (builderList, 0, size);
+
+    size = sizeof(u32) * NUM_MAX_ASSET_BUILDER;
+    depthByAssetType = GOSALLOCT(u32*, localAllocator, size);
+    memset (depthByAssetType, 0xFF, sizeof(u32) * NUM_MAX_ASSET_BUILDER);
+
 
     addBuilder<Builder_vtxShader>();
     addBuilder<Builder_pxlShader>();
@@ -35,46 +47,47 @@ Builder::Builder()
 //***********************************
 Builder::~Builder()
 {
-    for (u32 i=0; i<builderList.getNElem(); i++)
+    for (u32 i=0; i<NUM_MAX_ASSET_BUILDER; i++)
     {
-        BuilderInterface *builder = builderList[i];
-        GOSDELETE(localAllocator, builder);
+        if (NULL == builderList[i])
+            continue;
+        GOSDELETE(localAllocator, builderList[i]);
     }
 
-    builderList.unsetup();
+    GOSFREE(localAllocator, builderList);
+    builderList = NULL;
+    
+    GOSFREE(localAllocator, depthByAssetType);
+    depthByAssetType = NULL;
     
     asset::context_close (ctx);
 }
 
 //***********************************
-bool Builder::priv_addBuilder (BuilderInterface *builder)
+bool Builder::priv_addBuilder (BuilderInterface *builder, u32 asset_depth)
 {
     assert (NULL != builder);
-    for (u32 i=0; i<builderList.getNElem(); i++)
-    {
-        if (builderList(i)->getAssType() == builder->getAssType())
-        {
-            logger::err ("asset::Builder::priv_addBuilder() => a builder for res %s already exists\n", asset::enumToString(builder->getAssType()));
-            return false;
-        }
-    }
+    
+    const u32 index = static_cast<u8>(builder->getAssType());
+    assert (index < NUM_MAX_ASSET_BUILDER);
 
-    builderList.append (builder);
-    return true;
+    if (NULL == builderList[index])
+    {
+        builderList[index] = builder;
+        depthByAssetType[index] = asset_depth;
+        return true;
+    }
+    
+    logger::err ("asset::Builder::priv_addBuilder() => a builder for res %s already exists\n", asset::enumToString(builder->getAssType()));
+    return false;
 }
 
 //***********************************
 BuilderInterface* Builder::priv_getBuilder (eAssetType assType)
 {
-    for (u32 i=0; i<builderList.getNElem(); i++)
-    {
-        if (builderList(i)->getAssType() == assType)
-        {
-            return builderList[i];
-        }
-    }
-    
-    return NULL;    
+    const u32 index = static_cast<u8>(assType);
+    assert (index < NUM_MAX_ASSET_BUILDER);
+    return builderList[index];
 }
 
 //***********************************
@@ -82,14 +95,34 @@ void Builder::priv_printResList (const ResList &list) const
 {
     for (u32 i=0; i<list.getNElem(); i++)
     {
+        eTextColor color = eTextColor::grey;
+        switch (list(i).status)
+        {
+        default:
+            color = eTextColor::magenta;
+            break;
+
+        case eBuildStatus::NEW:
+        case eBuildStatus::MODIFIED:
+            color = eTextColor::green;
+            break;
+
+        case eBuildStatus::REQUIRED:
+            color = eTextColor::grey;
+            break;
+
+        case eBuildStatus::DELETED:
+            color = eTextColor::red;
+            break;
+        }
+
         gos::DateTime dt;
         dt.setFromNiceU64 (list(i).lastTimeModified);
 
         char lastTimeMod[64];
-        dt.formatAs_YYYYMMDDHHMMSS (lastTimeMod, sizeof(lastTimeMod));
+        dt.formatAs_YYYYMMDDHHMMSS (lastTimeMod, sizeof(lastTimeMod));            
 
-
-        logger::log ("%-10s %016" PRIX64 " %-64s [%-12s] % 20s\n", 
+        logger::log (color, "%-10s %016" PRIX64 " %-64s [%-12s] % 20s\n", 
             enumToString(list(i).status),
             list(i).uid._uid, 
             list(i).name, 
@@ -124,65 +157,11 @@ bool Builder::priv_fromSectionNameToAssetType (const char *secName, eAssetType *
 }
 
 //***********************************
-u32 Builder::priv_fromSectionNameToAssetDeepAndType (const char *name, eAssetType *out_assType) const
+u32 Builder::priv_fromSectionNameToAssetDepthAndType (const char *name, eAssetType *out_assType) const
 {
-    /*  deep rappresenta il numero massimo di subsection annidate all'interno di una secion di tipo asset.
-        Maggiore e' deep, piu' tardi viene builadata la risorsa.
-        L'idea e' di buildare prima gli asset piu' semplice, per es gli shader che di fatto non dipendono
-        da nessun altro asset.
-        A seguire si buildano quelli che dipendono da un solo asset e via dicendo.
-        Deep pero' non rappresenta il num di asset da cui dipende una risorsa, ma rappresenta la profondita'
-        dell'alvero che descrive la rirosa.
-        Es:
-            @section  (deep=0)
-            {
-                param
-                ..
-                param
-            }
-
-            @section  (deep=1)
-            {
-                param
-                ..
-                param
-
-                @sebsection
-                {
-                    param...
-                }
-            }            
-
-            @section  (deep=2)
-            {
-                param
-                ..
-                param
-
-                @sebsection
-                {
-                    param...
-
-                    @sebsection
-                    {
-                    }
-                }
-            }            
-    */
-
     if (!priv_fromSectionNameToAssetType(name, out_assType))
         return u32MAX;
-
-    switch (*out_assType)
-    {
-    default:    
-        DBGBREAK;
-        return u32MAX;
-    
-    case eAssetType::vtx_shader:    return 0;
-    case eAssetType::pxl_shader:    return 0;
-    case eAssetType::pipeline_def:  return 1;
-    }
+    return priv_getDepthByAssetType (*out_assType);
 }
 
 //***********************************
@@ -224,6 +203,7 @@ bool Builder::buildAll (const char *baseFolder)
     }
 
     //data e ora di build
+    char s[1024];
     gos::DateTime dt;
     dt.setNow_UTC();
     this->buildTimeUTC = dt.getAsNiceU64();
@@ -239,31 +219,85 @@ bool Builder::buildAll (const char *baseFolder)
         
         //elenco delle risorse e dei gosres_d che sono stati modificati, cancellati o creati nuovi
         ResList updatedResList(localAllocator, 256);
-
-        logger::log (eTextColor::blue, "scanning resource folders...\n");
-        logger::incIndent();
         {
-            ResList tempList(localAllocator, 256);
-            num_errors += priv_collectResInfo(tempList);
+            logger::log (eTextColor::blue, "scanning resource folders...\n");
             logger::incIndent();
-                priv_printResList (tempList);
+            {
+                ResList tempList(localAllocator, 256);
+                num_errors += priv_collectResInfo (tempList);
+
+                //Elimino le risorse UNCHANGED dalla lista.
+                //Aggiorno il DB lastTimeMod delle risorse MODIFIED
+                //Inserisco le NEW nel DB
+                for (u32 i=0; i<tempList.getNElem(); i++)
+                {   
+                    if (eBuildStatus::UNCHANGED != tempList(i).status)
+                        updatedResList.append (tempList(i));
+
+                    switch (tempList(i).status)
+                    {
+                    default:
+                    case eBuildStatus::DONT_KNOW:
+                        //questo non deve mai succede
+                        DBGBREAK;
+                        break;
+
+                    case eBuildStatus::UNCHANGED:
+                        break;
+
+                    case eBuildStatus::NEW:
+                        if (!asset::res_insert (ctx, tempList(i).uid, tempList(i).lastTimeModified, tempList(i).resType, tempList(i).name))
+                            num_errors++;
+                        break;
+
+                    case eBuildStatus::MODIFIED:
+                        if (!asset::res_update (ctx, tempList(i).uid, buildTimeUTC))
+                            num_errors++;
+                        break;
+
+                    case eBuildStatus::DELETED:
+                        //TODO
+                        num_errors++;
+                        DBGBREAK;
+                        break;
+                    }
+                }
+
+                logger::incIndent();
+                    priv_printResList (updatedResList);
+                logger::decIndent();
+
+            }
+            logger::decIndent();
+        }
+
+    //Ho collezionato le risorse che sono state modificate, cancellate o create nuove.
+    //Controllo le risorse "modificate" e per ciascuna di queste verifico quali asset la richiedono.
+    //Gli asset che richiedono una risorsa MODIFIED, devono a loro volta essere rebuildate
+    if (0 == num_errors)
+    {
+        if (!priv_explode_NEW_or_MODIFIED_res (&updatedResList))
+            num_errors++;
+        else
+        {
+            logger::log (eTextColor::blue, "including dependencies...\n");
+            logger::incIndent();
+                priv_printResList (updatedResList);
             logger::decIndent();
 
-            //elimino le risorse UNCHANGED
-            for (u32 i=0; i<tempList.getNElem(); i++)
-            {   
-                if (eBuildStatus::UNCHANGED != tempList(i).status)
-                    updatedResList.append (tempList(i));
-            }
-        }
-        logger::decIndent();
+        }        
+    }
 
 
-
-        /*esplosione dei fine gosres_d
+    if (0 == num_errors)
+    {
+       /*esplosione dei fine gosres_d
             Prendo tutti i file gosres_d in lista e li esplodo il che vuol dire che creo un nuovo IniFile che contiene tutti gli asset da creare.
             Per ogni asset che ha un sotto-asset, esplodo il file ini tirando fuori la sottosezione
             Alla fine della procudera, ho un IniFile in cui anche gli asset con sottorisorsa sono sempre espressi come asset che si riferiscono ad un runtimeName
+
+            Il file finale lo trovi in /asset/src/__build.gosasset_d
+
             Ad esempio:
                 @pipeline_def : pipe1
                 {
@@ -301,25 +335,32 @@ bool Builder::buildAll (const char *baseFolder)
         */
         gos::IniFile iniExploded;
         iniExploded.setup (localAllocator);
-        priv_explodeIniFile (updatedResList, &iniExploded);
+        num_errors += priv_explodeIniFile (updatedResList, &iniExploded);
+            
+        if (0 == num_errors)
+        {
+            //in ordine ora si devono processare prima le risorse deleted, poi le update e per ultimo le new
+            //...
+            //...
 
+            //infine processo tutti gli IniFile che sono in stato di NEW
+            logger::log (eTextColor::blue, "building NEW assets...\n");
+            logger::incIndent();
+                num_errors += priv_build_explodedIniFileInFolder (iniExploded);
+                if (0 == num_errors)
+                {
+                    //clean up del DB
+                    //Elimino tutti i runtimeName che iniziano con __ dato che li ho creati io artificialmente durante il build
+                    db::exec (ctx.db, "DELETE FROM " GOS_ASSET__TABLE_RUNTIME_NAME " WHERE name LIKE '!_!_%' escape '!'");
+                }
+            logger::decIndent();
+        }
+    }
 
-
-        //in ordine ora si devono processare prima le risorse deleted, poi le update e per ultimo le new
-        //...
-        //...
-
-        //infine processo tutti gli IniFile che sono in stato di NEW
-        logger::log (eTextColor::blue, "building NEW assets...\n");
-        logger::incIndent();
-            num_errors += priv_build_explodedIniFileInFolder (iniExploded);
-        logger::decIndent();
-
-
+    //finito
     logger::decIndent();
 
     //se tutto ok, ho finito
-    char s[1024];
     if (0 == num_errors)
     {
         asset::context_close (ctx);
@@ -350,7 +391,7 @@ u32 Builder::priv_collectResInfo (ResList &out_list)
 
     //elenco delle risorse su hard-disk
     priv_collectResourcesFromDisk(out_list);
-    priv_collectIniFileFromFDisk(out_list);
+    priv_collectIniFileFromDisk(out_list);
 
     //elenco delle risorse storate nel DB
     ResList listDB(localAllocator, 256);
@@ -427,15 +468,6 @@ u32 Builder::priv_collectResInfo (ResList &out_list)
         }
     }
 
-
-    //just for fun, inserisco tutte le NEW
-    for (u32 i=0; i<out_list.getNElem(); i++)
-    {
-        if (eBuildStatus::NEW == out_list(i).status)
-            asset::res_insert (ctx, out_list(i).uid, out_list(i).lastTimeModified, out_list(i).resType, out_list(i).name);
-    }
-    
-
     return 0;
 }
 
@@ -487,7 +519,7 @@ void Builder::priv_collectResourcesFromDisk (ResList &out_list)
 }
 
 //***********************************
-void Builder::priv_collectIniFileFromFDisk (ResList &out_list)
+void Builder::priv_collectIniFileFromDisk (ResList &out_list)
 {
     gos::FileFind ff;
     if (fs::findFirst (&ff, ctx.folder_assets_src, "*.gosasset_d"))
@@ -497,18 +529,27 @@ void Builder::priv_collectIniFileFromFDisk (ResList &out_list)
             if (fs::findIsDirectory(ff))
                 continue;
 
-            char s[1024];
+            const char *filename = fs::findGetFileName(ff);
+            
+            //skippo i file che iniziano con __ (dato che li creo/uso come file di appoggio durante il build)
+            if (filename[0] == '_')
+            {
+                if (filename[1] == '_')
+                    continue;
+            }
+
 
             //data ultima modifica
+            char s[1024];
             gos::DateTime dt;
-            sprintf_s (s, sizeof(s), "%s/%s", ctx.folder_assets_src, fs::findGetFileName(ff));
+            sprintf_s (s, sizeof(s), "%s/%s", ctx.folder_assets_src, filename);
             fs::fileGetLastTimeModified_UTC(s, &dt);
 
             //aggiungo alla lista di risorse
             sResListElem elem;
             elem.reset();
-            sprintf_s (elem.name, sizeof(elem.name), "%s", fs::findGetFileName(ff));
-            elem.resType = eResType::iniFile;
+            sprintf_s (elem.name, sizeof(elem.name), "%s", filename);
+            elem.resType = eResType::gosasset_d;
             asset::res_createUID (elem.resType, elem.name, &elem.uid);
             elem.lastTimeModified = dt.getAsNiceU64();            
 
@@ -523,21 +564,126 @@ void Builder::priv_collectIniFileFromFDisk (ResList &out_list)
 
 
 //***********************************
+bool Builder::priv_explode_NEW_or_MODIFIED_res (ResList *in_out_list)
+{
+    asset::HashedUIDList hashList;
+    hashList.setup (localAllocator, 1024);
+
+    asset::HashedUIDList requiredByList;
+    requiredByList.setup (localAllocator, 1024);
+
+    asset::HashedUIDList dependOnList;
+    dependOnList.setup (localAllocator, 1024);
+
+    ResList list;
+    list.setup (localAllocator, 1024);
+
+    const u32 n = in_out_list->getNElem();
+    for (u32 i=0; i<n; i++)
+    {
+        if (eBuildStatus::NEW == in_out_list->queryElem(i).status)
+        {
+            //le risorse NEW finisco certamente nella lista
+            list.append ( in_out_list->queryElem(i) );
+            continue;
+        }
+
+        if (eBuildStatus::MODIFIED == in_out_list->queryElem(i).status)
+        {
+            asset::UID uid;
+            uid = in_out_list->queryElem(i).uid;
+
+            if (!hashList.insertIfNotExists(uid, 0))
+                continue;
+
+            //ho trovato una risorsa MODIFIED che non ho ancora preso in considerazione
+            //Devo recuperre tutti quelli che dipendono da questa risorsa e aggiungerli alla lista.
+            //Attenzione che la lista e' solo una lista di risorse, non deve includere anche gli asset
+            list.append ( in_out_list->queryElem(i) );
+
+            if (!asset::res_get_requireBy_list (ctx, uid, true, &requiredByList))
+                return false;
+            else
+            {
+                //ho una lista di risorse e asset che dipendono da me.
+                //Aggiungo tutte le risorse che dipendono da me.
+                //Aggiungo anche tutte le risorse che sono richieste dagli asset che dipendono da me
+                auto reqList = requiredByList._queryList();
+                const u32 n2 = reqList->getNElem();
+                for (u32 i2=0; i2<n2; i2++)
+                {
+                    asset::UID uid2;
+                    uid2 = reqList->queryElem(i2).key;
+
+                    //se sta cosa l'ho gia' processata, skippo
+                    if (!hashList.insertIfNotExists(uid2, 1))
+                        continue;
+
+                    sResListElem elem;
+                    if (uid2.isAResource())
+                    {
+                        elem.reset();
+                        elem.uid = uid2;
+                        elem.status = eBuildStatus::REQUIRED;
+                        asset::res_get_info (ctx, elem.uid, elem.name, sizeof(elem.name), &elem.resType, &elem.lastTimeModified);
+
+                        list.append (elem);
+                    }
+                    else
+                    {
+                        //sono un asset... devo recuperare la lista delle risorse che mi sono necessarie
+                        if (!asset::asset_get_dependecies_list (ctx, uid2, true, &dependOnList))
+                            return false;
+                     
+                        auto depList = dependOnList._queryList();
+                        const u32 n3 = depList->getNElem();
+                        for (u32 i3=0; i3<n3; i3++)
+                        {
+                            asset::UID uid3;
+                            uid3 = depList->queryElem(i3).key;
+
+                            if (uid3.isAResource())
+                            {
+                                if (!hashList.insertIfNotExists(uid3, 0))
+                                    continue;
+                                
+                                elem.reset();
+                                elem.uid = uid3;
+                                elem.status = eBuildStatus::REQUIRED;
+                                asset::res_get_info (ctx, elem.uid, elem.name, sizeof(elem.name), &elem.resType, &elem.lastTimeModified);
+                                list.append (elem);
+                            }                            
+                        }                            
+                    }
+                }
+            }
+        }
+    }
+
+    //Se tutto ok, aggiorno la lista <in_out_list> con tutte le nuove risorse da considerare
+    in_out_list->reset();
+    in_out_list->copyFrom (list);
+    return true;
+}
+
+
+
+//***********************************
 u32 Builder::priv_explodeIniFile (ResList &list, gos::IniFile *out)
 {
     u32 num_errors = 0;
 
     char s[1024];
-    sprintf_s (s, sizeof(s), "%s/all_assets.txt", ctx.folder_assets_src);
+    sprintf_s (s, sizeof(s), "%s/__build.gosasset_d", ctx.folder_assets_src);
     out->createEmpty (s);
 
 
     for (u32 i=0; i<list.getNElem(); i++)
     {
-        if (eResType::iniFile != list(i).resType)
+        if (eResType::gosasset_d != list(i).resType)
             continue;
 
-        if (eBuildStatus::NEW == list(i).status || eBuildStatus::MODIFIED == list(i).status)
+        if (eBuildStatus::NEW == list(i).status || eBuildStatus::MODIFIED == list(i).status || eBuildStatus::REQUIRED == list(i).status)
         {
             //Ho un IniFile che e' in stato NEW o MODIFIED, lo devo esplodere
             
@@ -550,7 +696,7 @@ u32 Builder::priv_explodeIniFile (ResList &list, gos::IniFile *out)
             }
 
             //scanno tutte le sezioni
-            if (!priv_explodeIniFile_ric (out->getRoot(), ini.getRoot(), list(i).name))
+            if (!priv_explodeIniFile_ric (out->getRoot(), ini.getRoot(), list(i).name, list(i).uid))
             {
                 num_errors++;
                 return num_errors;
@@ -582,7 +728,7 @@ void Builder::priv_explodeIniFile_adjustSubsectionName (const char *subsec_name,
 }
 
 //***********************************
-bool Builder::priv_explodeIniFile_ric (gos::IniFileSection *dst, gos::IniFileSection *src, const char *nameOfSRC)
+bool Builder::priv_explodeIniFile_ric (gos::IniFileSection *dst, gos::IniFileSection *src, const char *nameOfSRC, const asset::UID &uid_of_iniFile)
 {
     if (NULL == src)
         return true;
@@ -608,7 +754,7 @@ bool Builder::priv_explodeIniFile_ric (gos::IniFileSection *dst, gos::IniFileSec
         }
 
         if (subsecSRC->getNIdentifier() > 1)
-            priv_explodeIniFile_ric (dst, subsecSRC, nameOfSRC);
+            priv_explodeIniFile_ric (dst, subsecSRC, nameOfSRC, uid_of_iniFile);
     }
 
     //copio me stesso in dst
@@ -620,12 +766,15 @@ bool Builder::priv_explodeIniFile_ric (gos::IniFileSection *dst, gos::IniFileSec
         
         gos::IniFileSection *subsecDST = dst->addSubsection (s);
         {
-            subsecDST->set ("__decl", nameOfSRC);
+            //da quale file gosres_d dove viene questo asset?
+            sprintf_s (s, sizeof(s), "%s@%d", nameOfSRC, src->getLineStarted());
+            subsecDST->set ("__decl", s);
+            subsecDST->setU64 ("__decl_uid", uid_of_iniFile._uid, true);
 
             eAssetType assType;
-            u32 deep = priv_fromSectionNameToAssetDeepAndType (subsec_name, &assType);
-            if (u32MAX == deep) { logger::err ("error calculating deep...\n"); return false; }
-            subsecDST->set ("__deep", deep, true);
+            u32 depth = priv_fromSectionNameToAssetDepthAndType (subsec_name, &assType);
+            if (u32MAX == depth) { logger::err ("error calculating depth...\n"); return false; }
+            subsecDST->set ("__depth", depth, true);
             subsecDST->set ("__assType", static_cast<u8>(assType), true);
 
             //copio tutti i parametri della sezione src in subsecDST
@@ -637,16 +786,18 @@ bool Builder::priv_explodeIniFile_ric (gos::IniFileSection *dst, gos::IniFileSec
             //copio tutte le mie subsection di primo livello
             for (u32 i=0; i<src->getNSubsection(); i++)
             {
+                char subsecName[128];
                 const gos::IniFileSection *subsecSRC = src->getSubsectionByIndex(i);
-                priv_explodeIniFile_adjustSubsectionName (subsecSRC->name.getBuffer(), s, sizeof(s));
-
-                gos::IniFileSection *sub = subsecDST->addSubsection (s);
+                priv_explodeIniFile_adjustSubsectionName (subsecSRC->name.getBuffer(), subsecName, sizeof(subsecName));    
+                
+                gos::IniFileSection *sub = subsecDST->addSubsection (subsecName);
                 {
-                    sub->set ("__decl", nameOfSRC);
+                    sprintf_s (s, sizeof(s), "%s@%d", nameOfSRC, subsecSRC->getLineStarted());
+                    sub->set ("__decl", s);
 
-                    deep = priv_fromSectionNameToAssetDeepAndType (s, &assType);
-                    if (u32MAX == deep){ logger::err ("error calculating deep...\n"); return false; }        
-                    sub->set ("__deep", deep, true);
+                    depth = priv_fromSectionNameToAssetDepthAndType (subsecName, &assType);
+                    if (u32MAX == depth){ logger::err ("error calculating depth...\n"); return false; }        
+                    sub->set ("__depth", depth, true);
                     sub->set ("__assType", static_cast<u8>(assType), true);
 
                     subsecSRC->get("__value", s, sizeof(s));
@@ -673,9 +824,9 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini)
         return 0;
     }
 
-    //buildo gli asset in ordine di "__deep"
+    //buildo gli asset in ordine di "__depth", dal piu' semplice al piu' complesso
     u32 num_errors = 0;
-    u32 deep = 0;
+    u32 depth = 0;
     bool bEsci = false;
     while (bEsci == false)
     {
@@ -683,13 +834,12 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini)
         for (u32 secnum=0; secnum<numSection; secnum++)
         {
             IniFileSection *sec = ini.getSubsectionByIndex(secnum);
-
-            if (deep != sec->getOrDefaultAsU32("__deep", u32MAX))
+            if (depth != sec->getOrDefaultAsU32("__depth", u32MAX))
                 continue;
 
-            //segno che questa sezione l'ho processata
+            //segno che questa sezione l'ho processata cosi' al prossimo giro la skippo
             bEsci = false;
-            sec->set ("__deep", u32MAX, false);
+            sec->set ("__depth", u32MAX, false);
 
             //recupero asset-type
             eAssetType assType = static_cast<eAssetType> (sec->getOrDefaultAsU8 ("__assType", 0));
@@ -705,7 +855,7 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini)
             sec->get ("__decl", fromSRC, sizeof(fromSRC));
 
 
-
+            //info a video
             logger::log (eTextColor::grey, "parsing section '%s: %s from %s'\n", sec->name.getBuffer(), runtimeName, fromSRC);
 
             //cerco un builder appropriato
@@ -714,60 +864,75 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini)
             {
                 num_errors++;
                 logger::err ("can't find a Builder to build this asset.\n");
-                continue;
+            }
+            else
+            {
+                //buildo
+                logger::incIndent();
+
+                asset::UID uid_of_iniFile;
+                uid_of_iniFile._uid = sec->getOrDefaultAsU64("__decl_uid", 0);
+                num_errors += priv_build_iniSection (sec, uid_of_iniFile, builder, runtimeName);
+                logger::decIndent();
             }
 
-            logger::incIndent();
-            num_errors += priv_build_iniSection (sec, builder, runtimeName);
-            logger::decIndent();
+            //troppi errori..termino prematuramente
+            if (num_errors > 5)
+            {
+                bEsci = true;
+                break;
+            }
         }
 
-
-        deep++;
+        depth++;
     }
 
     return num_errors;
 }
 
 //***********************************
-u32 Builder::priv_build_iniSection (const IniFileSection *sec, BuilderInterface *builder, const char *runtimeName)
+u32 Builder::priv_build_iniSection (const IniFileSection *sec, const asset::UID &uid_of_iniFile, BuilderInterface *builder, const char *runtimeName)
 {
-    u32 num_errors = 0;
-
     asset::sBuildResult result;
-    if (!builder->build (ctx, buildTimeUTC, sec, &result))
-    {
-        num_errors++;
-        return num_errors;
-    }
+    if (!builder->build (ctx, buildTimeUTC, uid_of_iniFile, sec, &result))
+        return 1;
 
-    //ok, l'asset e' stato buildato con successo ed e' stato inserito nel DB
-    //Se e' associato ad un runtimeName..
-    /*
-    TODO:   bisogna prima accertarsi che i runtimeName della roba da buildare non siano
-            duplicati. Ci pensiamo dopo aver risolto la questione delle dipendenze tra risorse!
-    if (NULL != runtimeName)
-    {
-        asset::UID oldUID;
-        if (!asset::rtname_insert_or_update (ctx, runtimeName, result.uid, &oldUID))
-        {
-            num_errors++;
-            return num_errors;
-        }
-        
-        if (oldUID.isValid())
-        {
-            //il <runtimeName> era associato ad un assetUID il che vuol dire che tutti gli asset che
-            //facevano riferimento a quello assetUID adesso vanno rebuildati
-        }
-    }
-    */
-    
-    //report finale a video
+    //report a video del risultato della build
     eTextColor color = eTextColor::green;
     if (eBuildResult::was_already_built == result.result)
         color = eTextColor::darkBlue;
-    logger::log (color, "[%-17s] %016" PRIX64 "\n", asset::enumToString(result.result), result.uid._uid);
-    
-    return num_errors;
+    logger::log (color, "%016" PRIX64 " [%-17s] \n", result.uid._uid, asset::enumToString(result.result));
+
+
+    /*  ok, l'asset e' stato buildato con successo ed e' stato inserito nel DB
+        Se e' associato ad un runtimeName, devo registrare il link
+    */
+    if (NULL == runtimeName)
+        return 0;
+
+
+    asset::UID uid;
+    color = eTextColor::darkBlue;            
+    if (!asset::rtname_exists (ctx, runtimeName, &uid))
+    {
+        if (!asset::rtname_insert (ctx, runtimeName, result.uid))
+            return 1;
+
+        if (runtimeName[0] != '_' && runtimeName[1] != '_')
+            color = eTextColor::green;
+        logger::log (color, "%016" PRIX64 " is now known as '%s'\n", result.uid._uid, runtimeName);
+        return 0;
+    }
+
+    //il runtimeName esiste gia' nel DB.
+    //Se punta allo stesso UID, tutto bene, altrimenti c'e' un problema
+    if (uid == result.uid)
+    {
+        logger::log (color, "%016" PRIX64 " is now known as '%s'\n", result.uid._uid, runtimeName);
+        return 0;
+    }
+
+
+    logger::err ("runtimeName '%s' is already linked to UID=%016" PRIX64 " (use another name)\n", runtimeName, uid._uid);
+    return 1;
 }

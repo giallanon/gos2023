@@ -7,6 +7,21 @@
 using namespace gos;
 using namespace gos::asset;
 
+//************************************
+u32 Builder_pipeDef::calc_depth()
+{
+    static constexpr u32 BASE_DEPTH = 1; //1 perche' io dipendo da almeno un altro asset
+    u32 depth = 0;
+    u32 d;
+
+    //dipendo da vtx shader
+    d = BASE_DEPTH + asset::Builder_vtxShader::calc_depth();    if (d > depth) depth = d;
+
+    //dipendo da pxl shader
+    d = BASE_DEPTH + asset::Builder_pxlShader::calc_depth();    if (d > depth) depth = d;
+
+    return depth;
+}
 
 //************************************
 bool Builder_pipeDef::extractParams (const IniFileSection *sec, Params *out_params)
@@ -34,7 +49,7 @@ bool Builder_pipeDef::extractParams (const IniFileSection *sec, Params *out_para
 }
 
 //************************************
-bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const IniFileSection *sec, sBuildResult *out)
+bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const asset::UID &uid_of_iniFile, const IniFileSection *sec, sBuildResult *out)
 {
     assert (ctx.isValid());
     assert (NULL != sec);
@@ -48,7 +63,21 @@ bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const IniFileSectio
     {
         gos::logger::err ("error parsing IniFileSection\n");
         return false;
-    }    
+    }
+
+    //devo avere una subsection di tipo @vtx_shader, gia' risolta
+    if (!prot_needResolvedSubsection (ctx, sec, eAssetType::vtx_shader, &params.uid_vtxshader))
+    {
+        gos::logger::err ("section [vtx_shader] is missing\n");
+        return false;
+    }
+
+    //devo avere una subsection di tipo @pxl_shader, gia' risolta
+    if (!prot_needResolvedSubsection (ctx, sec, eAssetType::pxl_shader, &params.uid_pxlshader))
+    {
+        gos::logger::err ("section [pxl_shader] is missing\n");
+        return false;
+    }
 
 
     //calcolo assetUID
@@ -58,25 +87,37 @@ bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const IniFileSectio
         return false;
     }
 
-    //idealmente asset::UID non dovrebbe esistere in tabella visto che lo sto buildando
-    //C'e' pero' la possibilita' che durante il buildAll, lo stesso asset venga buildata + di una
-    //volta.
-    //Voglio evitare questo fatto
+
+    /*  Idealmente asset::UID non dovrebbe esistere in tabella visto che lo sto buildando.
+        Potenzialmente pero', lo stesso UID puo' essere generato da diversi asset perche' lo specificano
+        inline o perche' vi fanno riferimento direttamente usando un runtimeName.
+        In linea di massimo quindi, se l'asset esiste gia', non sto a ricompilarlo dato che il 
+        risultato sarebbe il medesimo
+    */
     const u64 lastTimeBuilt = asset::asset_query_lastTimeBuilt (ctx, out->uid);
-    if (lastTimeBuilt >= buildTimeUTC)
+    if (0 == lastTimeBuilt)
     {
+        //asset::UID non esisteva nel DB, ottimo, lo aggiungo e termino con successo
+        if (!asset::asset_insert (ctx, out->uid, getAssType(), buildTimeUTC))
+        {
+            gos::logger::err ("error inserting asset\n");
+            return false;
+        }
+
+        out->result = eBuildResult::just_built;
+
+        //aggiungo le sue dipendenze
+        if (!asset::depend_add (ctx, out->uid, uid_of_iniFile)) return false;
+        if (!asset::depend_add (ctx, out->uid, params.uid_vtxshader)) return false;
+        if (!asset::depend_add (ctx, out->uid, params.uid_pxlshader)) return false;
+    }
+    else
+    {
+        //asset::UID esiste gia' nel DB ma e' stato buildato a questo giro di build, quindi va bene,
+        //semplicemente non sto a buildarlo una seconda volta
         out->result = eBuildResult::was_already_built;
-        return true;
     }
-
-
-    //lo registro in tabella
-    if (!asset::asset_insert (ctx, out->uid, getAssType(), buildTimeUTC))
-    {
-        gos::logger::err ("error inserting asset\n");
-        return false;
-    }
-
-    out->result = eBuildResult::just_built;
+    
+    
     return true;
 }
