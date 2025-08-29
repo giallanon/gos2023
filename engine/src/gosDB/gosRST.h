@@ -21,16 +21,17 @@ namespace gos
             void        rewind();
 
             u32         getNumCols() const          { return numCols; }
+            const char* getColName (u32 colIndex);
 
-            const char* getColValue (u32 index)  const;
-            u8          getColValueAsU8 (u32 index)  const;
-            i8          getColValueAsI8 (u32 index)  const;
-            u16         getColValueAsU16 (u32 index)  const;
-            i16         getColValueAsI16 (u32 index)  const;
-            u32         getColValueAsU32 (u32 index)  const;
-            i32         getColValueAsI32 (u32 index)  const;
-            u64         getColValueAsU64 (u32 index)  const;
-            i64         getColValueAsI64 (u32 index)  const;
+            const char* getVal (u32 index)  const;
+            u8          getValAsU8 (u32 index)  const;
+            i8          getValAsI8 (u32 index)  const;
+            u16         getValAsU16 (u32 index)  const;
+            i16         getValAsI16 (u32 index)  const;
+            u32         getValAsU32 (u32 index)  const;
+            i32         getValAsI32 (u32 index)  const;
+            u64         getValAsU64 (u32 index)  const;
+            i64         getValAsI64 (u32 index)  const;
 
         private:
             static char strNULL[8];

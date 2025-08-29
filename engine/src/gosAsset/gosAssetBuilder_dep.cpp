@@ -30,7 +30,7 @@ static u32 Builder__print_dependencies (gos::UTF8String &out, Context &ctx, cons
         ++num_dep;
 
         asset::UID childUID;
-        childUID._uid = rst.getColValueAsU64(0);
+        childUID._uid = rst.getValAsU64(0);
 
         //uid, tipo di asset
         char childType[16];
@@ -51,8 +51,8 @@ static u32 Builder__print_dependencies (gos::UTF8String &out, Context &ctx, cons
             db::query (ctx.db, s, &rst2);
             if (rst2.fetchRow())
             {
-                eResType resType = static_cast<eResType> (rst2.getColValueAsU8(0));
-                const char *resName = rst2.getColValue(1);
+                eResType resType = static_cast<eResType> (rst2.getValAsU8(0));
+                const char *resName = rst2.getVal(1);
 
                 out << STRFMT("%-12s", asset::enumToString (resType)) << " | "
                     << "\"" << resName << "\"";
@@ -73,11 +73,11 @@ static u32 Builder__print_dependencies (gos::UTF8String &out, Context &ctx, cons
                 if (n == 0)
                 {
                     ++n;
-                    eAssetType childAssType = static_cast<eAssetType> (rst2.getColValueAsU8(0));
+                    eAssetType childAssType = static_cast<eAssetType> (rst2.getValAsU8(0));
                     out << STRFMT("%-12s", asset::enumToString (childAssType)) << " | ";
                 }
 
-                const char *childAssName = rst2.getColValue(1);
+                const char *childAssName = rst2.getVal(1);
                 out << "\"" << childAssName << "\" ";
             }
         }
@@ -113,7 +113,7 @@ static u32 Builder__print_requiredBy  (gos::UTF8String &out, Context &ctx, const
         ++num_required;
 
         asset::UID childUID;
-        childUID._uid = rst.getColValueAsU64(0);
+        childUID._uid = rst.getValAsU64(0);
         
         //uid, tipo di asset
         char childType[16];
@@ -134,8 +134,8 @@ static u32 Builder__print_requiredBy  (gos::UTF8String &out, Context &ctx, const
             db::query (ctx.db, s, &rst2);
             if (rst2.fetchRow())
             {
-                eResType resType = static_cast<eResType> (rst2.getColValueAsU8(0));
-                const char *resName = rst2.getColValue(1);
+                eResType resType = static_cast<eResType> (rst2.getValAsU8(0));
+                const char *resName = rst2.getVal(1);
 
                 out << STRFMT("%-12s", asset::enumToString (resType)) << " | "
                     << "\"" << resName << "\"";
@@ -156,11 +156,11 @@ static u32 Builder__print_requiredBy  (gos::UTF8String &out, Context &ctx, const
                 if (n == 0)
                 {
                     ++n;
-                    eAssetType childAssType = static_cast<eAssetType> (rst2.getColValueAsU8(0));
+                    eAssetType childAssType = static_cast<eAssetType> (rst2.getValAsU8(0));
                     out << STRFMT("%-12s", asset::enumToString (childAssType)) << " | ";
                 }
 
-                const char *childAssName = rst2.getColValue(1);
+                const char *childAssName = rst2.getVal(1);
                 out << "\"" << childAssName << "\" ";
             }
         }
@@ -173,66 +173,45 @@ static u32 Builder__print_requiredBy  (gos::UTF8String &out, Context &ctx, const
     return num_required;
 }
 
-//***********************************
-void Builder::print_dependencies (const char *baseFolder)
+static void Builder__do_print (asset::Context &ctx, gos::UTF8String &out, db::RST &rstAssetList)
 {
-    Context ctx;
-    if (!asset::context_open (baseFolder, &ctx))
-    {
-        logger::err ("Can't open context in %s\n", baseFolder);
-        return;
-    }
-
     asset::HashedUIDList listUID;
     listUID.setup (gos::getScrapAllocator(), 64);    
 
-    gos::UTF8String out;
     gos::UTF8String out2;
-    out.prealloc (4096);
     out2.prealloc (1024);
 
-
-    out << "\n\n"
-        << "========================== ASSETS LIST ==========================\n\n"
-        << "Asset UID        | Asset type   | runtimeNameList\n";
-
-    db::RST rst;
-    db::RST rstAssetList;
-    char s[1024];
-    db::query (ctx.db, "\
- SELECT UID,type FROM " GOS_ASSET__TABLE_ASSET_LIST "\
- UNION\
- SELECT UID,type FROM " GOS_ASSET__TABLE_RES_LIST "\
- ORDER BY UID", &rstAssetList);
     while (rstAssetList.fetchRow())
     {
         asset::UID uid;
-        uid._uid = rstAssetList.getColValueAsU64(0);
+        uid._uid = rstAssetList.getValAsU64(0);
         
-        //asset ID
+        //asset/resource ID
         out << "-----------------+--------------+--------------------------------\n"
             << STRFMT("%016" PRIX64 "", uid._uid) << " | ";
 
-        //asset type
+        //asset/resource type
         if (uid.isAnAsset())
         {
-            eAssetType assType = static_cast<eAssetType> (rstAssetList.getColValueAsU8(1));
+            eAssetType assType = static_cast<eAssetType> (rstAssetList.getValAsU8(1));
             out << STRFMT("%-12s", asset::enumToString (assType)) << " | ";
         }
         else
         {
-            eResType resType = static_cast<eResType> (rstAssetList.getColValueAsU8(1));
+            eResType resType = static_cast<eResType> (rstAssetList.getValAsU8(1));
             out << STRFMT("%-12s", asset::enumToString (resType)) << " | ";
         }
 
         //lista dei nomi runtime di questo asset
+        db::RST rst;
+        char s[128];
         if (uid.isAnAsset())
         {
             sprintf_s (s, sizeof(s), "SELECT name FROM " GOS_ASSET__TABLE_RUNTIME_NAME " WHERE assetUID=%" PRIu64 " ORDER BY name", uid._uid);
             db::query (ctx.db, s, &rst);
             while (rst.fetchRow())
             {
-                out << "\"" << rst.getColValue(0) << "\" ";
+                out << "\"" << rst.getVal(0) << "\" ";
             }
         }
         else
@@ -241,7 +220,7 @@ void Builder::print_dependencies (const char *baseFolder)
             sprintf_s (s, sizeof(s), "SELECT name FROM " GOS_ASSET__TABLE_RES_LIST " WHERE UID=%" PRIu64 " ORDER BY name", uid._uid);
             db::query (ctx.db, s, &rst);
             if (rst.fetchRow())
-                out << "\"" << rst.getColValue(0) << "\" ";
+                out << "\"" << rst.getVal(0) << "\" ";
         }
         out << "\n";
         
@@ -271,9 +250,9 @@ void Builder::print_dependencies (const char *baseFolder)
         Builder__print_requiredBy (out2, ctx, uid, 1);
         {
             if (uid.isAnAsset())
-                asset::asset_get_requireBy_list (ctx, uid, true, &listUID);
+                asset::asset_get_requireBy_list (ctx, uid, true, &listUID, eFilter::both);
             else
-                asset::res_get_requireBy_list (ctx, uid, true, &listUID);
+                asset::res_get_requireBy_list (ctx, uid, true, &listUID, eFilter::both);
 
                 
             auto theList = listUID._queryList();
@@ -290,6 +269,45 @@ void Builder::print_dependencies (const char *baseFolder)
 
         out << "\n";
     }
+
+
+}
+
+//***********************************
+void Builder::print_dependencies (const char *baseFolder, asset::eFilter filter)
+{
+    Context ctx;
+    if (!asset::context_open (baseFolder, &ctx))
+    {
+        logger::err ("Can't open context in %s\n", baseFolder);
+        return;
+    }
+
+    gos::UTF8String out;
+    out.prealloc (4096);
+
+    db::RST rstAssetList;
+    if (eFilter::only_resources == filter || eFilter::both == filter)
+    {
+        out << "\n\n"
+            << "========================== RESOURCES LIST ==========================\n\n"
+            << "Resource UID     | Type         | Filename\n";
+
+        db::query (ctx.db, "SELECT UID,type FROM " GOS_ASSET__TABLE_RES_LIST " ORDER BY UID", &rstAssetList);
+        Builder__do_print (ctx, out, rstAssetList);
+    }
+
+
+    if (eFilter::only_assets == filter || eFilter::both == filter)
+    {
+        out << "\n\n"
+            << "========================== ASSETS LIST ==========================\n\n"
+            << "Asset UID        | Type         | runtimeName-list\n";
+
+        db::query (ctx.db, "SELECT UID,type FROM " GOS_ASSET__TABLE_ASSET_LIST " ORDER BY UID", &rstAssetList);
+        Builder__do_print (ctx, out, rstAssetList);
+    }
+
 
     printf ("%s\n\n", out.getBuffer());
 

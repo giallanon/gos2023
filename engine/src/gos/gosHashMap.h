@@ -44,8 +44,9 @@ namespace gos
         };
 
     public:
-                HashMap ()                                                      { }
-                ~HashMap ()                                                     { list.unsetup (); }
+                HashMap ()                                                              { }
+                HashMap (Allocator *backingallocator, u32 preallocNumElem=0)            { setup (backingallocator, preallocNumElem); }
+                ~HashMap ()                                                             { list.unsetup (); }
 
                 //======================================= memory
         void	setup (Allocator *backingallocator, u32 preallocNumElem=0)              { list.setup (backingallocator, preallocNumElem); }
@@ -53,7 +54,7 @@ namespace gos
         void	prealloc (u32 n)														{ list.prealloc (n); }
 
         void    reset()                                                                 { list.reset(); }
-
+        void    copyFrom (const HashMap<TKEY, TVALUE> &src)                             { list.copyFrom (src.list); }
 
         /**
          * @brief   inserisce la coppia (key, value) solo se (key) non e' gia' presente

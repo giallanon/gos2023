@@ -35,7 +35,7 @@ namespace gos
                         Builder_shader (eAssetType assTypeIN) : BuilderInterface (assTypeIN)            { }
                         ~Builder_shader()                                                               { }
 
-            bool        build (Context &ctx, u64 buildTimeUTC, const asset::UID &uid_of_iniFile, const IniFileSection *sec, sBuildResult *out);
+            bool        build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, sBuildResult *out);
             
         }; //class Builder_shader
 

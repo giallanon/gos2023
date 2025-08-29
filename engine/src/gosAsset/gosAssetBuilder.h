@@ -1,5 +1,6 @@
 #ifndef _gosAssetBuilder_h_
 #define _gosAssetBuilder_h_
+#include "logger/gosLoggerNull.h"
 #include "gosAsset.h"
 #include "gosAssetBuilderInterface.h"
 
@@ -25,10 +26,10 @@ namespace gos
             };
 
         private:            
-            static const char* enumToString (const eBuildStatus s);
+            static const char*  enumToString (const eBuildStatus s);
 
         public:
-            static void     print_dependencies (const char *baseFolder);
+            static void         print_dependencies (const char *baseFolder, asset::eFilter filter = eFilter::both);
 
         public:
                     Builder();
@@ -45,11 +46,15 @@ namespace gos
                         return false;
                     }
 
-            bool    rebuildAll (const char *baseFolder);
-            bool    buildAll (const char *baseFolder);
+            bool    rebuildAll (const char *baseFolder, bool bVerbose);
+            bool    buildAll (const char *baseFolder, bool bVerbose);
+
+
+            void    debug_sanityCheck (const char *baseFolder);
 
         private:
             static constexpr u8 NUM_MAX_ASSET_BUILDER = 32;
+            static constexpr char DB_NAME[] = { "assets.sqlite3" };
 
         private:
             struct sResListElem
@@ -71,6 +76,10 @@ namespace gos
             BuilderInterface*   priv_getBuilder (eAssetType assType);
 
             u32     priv_getDepthByAssetType (eAssetType assType) const                                         { assert (static_cast<u8>(assType) < NUM_MAX_ASSET_BUILDER); return depthByAssetType[static_cast<u8>(assType)]; }
+            void    priv_closeAllContext();
+
+
+            u32     priv_do_build (Context &ctx);
 
             void    priv_printResList (const ResList &list) const;
             bool    priv_fromSectionNameToAssetType (const char *name, eAssetType *out) const;
@@ -80,19 +89,27 @@ namespace gos
             void    priv_collectResourcesFromDisk (ResList &out_list);
             void    priv_collectIniFileFromDisk (ResList &out_list);
 
-            bool    priv_explode_NEW_or_MODIFIED_res (ResList *in_out_list);
-
-            u32     priv_explodeIniFile (ResList &list, gos::IniFile *out);
+            //bool    priv_explode_NEW_or_MODIFIED_res (ResList *in_out_list);
             void    priv_explodeIniFile_adjustSubsectionName (const char *in, char *out, u32 sizeof_out);
-            bool    priv_explodeIniFile_ric (gos::IniFileSection *dst, IniFileSection *sec, const char *nameOfSRC, const asset::UID &uid_of_iniFile);
+            bool    priv_explodeScript_ric (gos::IniFileSection *dst, IniFileSection *sec, const char *nameOfSRC, const asset::UID &uid_of_iniFile);
 
             u32     priv_build_explodedIniFileInFolder (gos::IniFile &ini);
-            u32     priv_build_iniSection (const IniFileSection *sec, const asset::UID &uid_of_iniFile, BuilderInterface *builder, const char *runtimeName);
+            u32     priv_build_iniSection (const IniFileSection *sec, const asset::UID &uid_of_iniFile, const char *sourceFileInfo, BuilderInterface *builder, const char *runtimeName);
 
+
+            bool    debug_sanityCheck_run (const char *baseFolder);
+            u32     debug_sanityCheck__count (db::RST &rst) const;
+            bool    debug_sanityCheck__compare (db::RST &rst1, db::RST &rst2, u32 rowIndex) const;
+            bool    debug_sanityCheck__cmp_table (const char *sql, const char *tableName);
 
         private:
             gos::Allocator      *localAllocator;
+            gos::Logger         *logger;
+            gos::LoggerNull     loggerNull;
+            
             asset::Context      ctx;
+            asset::Context      ctx_backup;
+            asset::Context      ctx_sanity;
             u64                 buildTimeUTC;
             u32                 nextTempNameIndex;
             u32                 nextTempSubsectionIndex;

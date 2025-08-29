@@ -169,7 +169,8 @@ assetUID UNSIGNED INT8 NOT NULL\
             sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET__TABLE_ASSET_LIST " (\
 UID UNSIGNED INT8 NOT NULL PRIMARY KEY,\
 lastTimeBuilt UNSIGNED INT8 NOT NULL,\
-type UNSIGNED INT1 NOT NULL)\
+type UNSIGNED INT1 NOT NULL,\
+src VARCHAR(128) NOT NULL)\
 ");
             if (!db::exec (db, s))
                 break;
@@ -196,23 +197,107 @@ childUID UNSIGNED INT8 NOT NULL\
 }
 
 //************************************
-static bool asset_openDB (const char *baseFolder, DBHandle &db)
+static bool asset_openDB (DBHandle &db, const char *baseFolder, const char *dbName)
 {
+    assert (NULL != baseFolder);
+    assert (NULL != dbName);
+
     //apre il DB delle risorse (o lo crea se non esiste gia')
-    char s[1024];
-    sprintf_s (s, sizeof(s), "%s/" GOS_ASSET__DB_NAME "", baseFolder);
-    if (!fs::fileExists(s))
+    char fullDBFilePathAndName[1024];
+    sprintf_s (fullDBFilePathAndName, sizeof(fullDBFilePathAndName), "%s/%s", baseFolder, dbName);
+
+    if (!fs::fileExists(fullDBFilePathAndName))
     {
-        if (!asset_create_emptyDB(s, db))
+        if (!asset_create_emptyDB(fullDBFilePathAndName, db))
             return false;
     }
     else
     {
-        if (!db::open (s, &db))
+        if (!db::open (fullDBFilePathAndName, &db))
             return false;
     }
 
     return true;
+}
+
+
+
+
+//*******************************************************
+bool asset::context_open_ex (const char *baseFolderIN, const char *dbName, Context *out)
+{
+    assert (NULL != baseFolderIN);
+    assert (NULL != dbName);
+    assert (NULL != out);
+
+    if (out->isValid())
+        return false;
+
+    char s[1024];
+    fs::resolvePath (baseFolderIN, s, sizeof(s));
+    
+    //crea la struttura di cartelle se non esiste gia'
+    asset_create_folder_structure (s);
+
+    //apre il db o lo crea se non esiste gia'
+    if (!asset_openDB(out->db, s, dbName))
+        return false;
+
+    out->dbName = string::utf8::allocStr (gos::getSysHeapAllocator(), dbName);
+
+    out->baseFolder = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
+
+    sprintf_s (s, sizeof(s), "%s/assets/src", out->baseFolder);
+    out->folder_assets_src = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
+
+    sprintf_s (s, sizeof(s), "%s/assets/bin", out->baseFolder);
+    out->folder_assets_bin = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
+
+    sprintf_s (s, sizeof(s), "%s/res", out->baseFolder);
+    out->folder_res = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
+    
+    
+    return true; 
+}
+
+//*******************************************************
+bool asset::context_open (const char *baseFolderIN, Context *out)
+{
+    return context_open_ex (baseFolderIN, "db.sqlite3", out);
+}
+
+//*******************************************************
+void asset::context_close (Context &ctx)
+{
+    if (!ctx.isValid())
+        return;
+
+    GOSFREE (gos::getSysHeapAllocator(), ctx.baseFolder);               ctx.baseFolder = NULL;
+    GOSFREE (gos::getSysHeapAllocator(), ctx.dbName);                   ctx.dbName = NULL;
+    GOSFREE (gos::getSysHeapAllocator(), ctx.folder_assets_src);        ctx.folder_assets_src = NULL;
+    GOSFREE (gos::getSysHeapAllocator(), ctx.folder_assets_bin);        ctx.folder_assets_bin = NULL;
+    GOSFREE (gos::getSysHeapAllocator(), ctx.folder_res);               ctx.folder_res = NULL;
+
+    db::close (ctx.db);
+}
+
+//*******************************************************
+bool asset::context_cloneDB  (Context &ctx, const char *file_extension_to_append)
+{
+    if (!ctx.isValid())
+        return false;
+
+    char src[1024];
+    sprintf_s (src, sizeof(src), "%s/%s", ctx.baseFolder, ctx.dbName);
+
+    char dst[1024];
+    sprintf_s (dst, sizeof(dst), "%s/%s%s", ctx.baseFolder, ctx.dbName, file_extension_to_append);
+
+    db::close (ctx.db);
+    const bool ret = fs::fileCopy (src, dst);
+
+    db::open (src, &ctx.db);
+    return ret;
 }
 
 
@@ -283,6 +368,8 @@ bool asset::res_createUID (eResType resTypeIN, const char *filename, asset::UID 
 //********************************************************** 
 bool asset::res_insert (Context &ctx, const asset::UID uid, u64 lastTimeMod, eResType resType, const char *resName)
 {
+    assert (uid.isAResource());
+
     if (!ctx.isValid())
     {
         logger::err ("asset::res_insert(%" PRIu64 ", %02d, '%s') => invalid ctx\n",  uid._uid, resType, resName);
@@ -307,6 +394,8 @@ bool asset::res_insert (Context &ctx, const asset::UID uid, u64 lastTimeMod, eRe
 //********************************************************** 
 bool asset::res_update (Context &ctx, const asset::UID uid, u64 lastTimeMod)
 {
+    assert (uid.isAResource());
+
     if (!ctx.isValid())
     {
         logger::err ("asset::res_update(%" PRIu64 ") => invalid ctx\n",  uid._uid);
@@ -328,6 +417,7 @@ bool asset::res_update (Context &ctx, const asset::UID uid, u64 lastTimeMod)
 bool asset::res_exists (Context &ctx, eResType resType, const char *resName, asset::UID *out_uid)
 {
     assert (NULL != out_uid);
+
     out_uid->setInvalid();
 
     if (!ctx.isValid())
@@ -343,7 +433,7 @@ bool asset::res_exists (Context &ctx, eResType resType, const char *resName, ass
     if (!db::query (ctx.db, s, &rst)) return false;
     if (rst.fetchRow())
     {
-        out_uid->_uid = rst.getColValueAsU64(0);
+        out_uid->_uid = rst.getValAsU64(0);
         return true;
     }
 
@@ -353,6 +443,8 @@ bool asset::res_exists (Context &ctx, eResType resType, const char *resName, ass
 //********************************************************** 
 bool asset::res_get_info (Context &ctx, const asset::UID &uid, char *out_CAN_BE_NULL_name, u32 sizeof_outName, eResType *out_CAN_BE_NULL_resType, u64 *out_CAN_BE_NULL_lastTimeMod)
 {
+    assert (uid.isAResource());
+
     if (!ctx.isValid())
     {
         logger::err ("asset::res_get_name(%" PRIu64 ") => invalid ctx\n",  uid._uid);
@@ -366,9 +458,9 @@ bool asset::res_get_info (Context &ctx, const asset::UID &uid, char *out_CAN_BE_
     if (!db::query (ctx.db, s, &rst)) return false;
     if (rst.fetchRow())
     {
-        if (NULL != out_CAN_BE_NULL_lastTimeMod)    *out_CAN_BE_NULL_lastTimeMod = rst.getColValueAsU64(0);
-        if (NULL != out_CAN_BE_NULL_resType)        *out_CAN_BE_NULL_resType = static_cast<eResType>(rst.getColValueAsU8(1));
-        if (NULL != out_CAN_BE_NULL_name)           sprintf_s (out_CAN_BE_NULL_name, sizeof_outName, "%s", rst.getColValue(2));
+        if (NULL != out_CAN_BE_NULL_lastTimeMod)    *out_CAN_BE_NULL_lastTimeMod = rst.getValAsU64(0);
+        if (NULL != out_CAN_BE_NULL_resType)        *out_CAN_BE_NULL_resType = static_cast<eResType>(rst.getValAsU8(1));
+        if (NULL != out_CAN_BE_NULL_name)           sprintf_s (out_CAN_BE_NULL_name, sizeof_outName, "%s", rst.getVal(2));
         return true;
     }
 
@@ -376,9 +468,145 @@ bool asset::res_get_info (Context &ctx, const asset::UID &uid, char *out_CAN_BE_
 }
 
 //********************************************************** 
-bool asset::res_get_requireBy_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out)
+bool asset::res_get_requireBy_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out, asset::eFilter filter)
 {
-    return asset_get_requireBy_list (ctx, uid, bClearListOnStart, out);
+    assert (uid.isAResource());
+    assert (NULL != out);
+
+    if (bClearListOnStart)
+        out->reset();
+
+    if (!ctx.isValid())
+    {
+        logger::err ("res_get_requireBy_list (%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        return false;
+    }
+
+    db::RST rst;
+    char s[256];
+    sprintf_s (s, sizeof(s), "SELECT UID FROM " GOS_ASSET__TABLE_DEPENDS " WHERE childUID=%" PRIu64 "", uid._uid);
+    if (!db::query (ctx.db, s, &rst))
+    {
+        logger::err ("res_get_requireBy_list (%" PRIu64 ") => error querying\n",  uid._uid);
+        return false;
+    }
+
+    while (rst.fetchRow())
+    {
+        asset::UID childUID;
+        childUID._uid = rst.getValAsU64(0);
+        
+        switch (filter)
+        {
+        default:
+            DBGBREAK;
+            break;
+
+        case asset::eFilter::both:
+            out->insertIfNotExists (childUID, 0);
+            break;
+
+        case asset::eFilter::only_assets:
+            if (childUID.isAnAsset())
+                out->insertIfNotExists (childUID, 0);
+            break;
+
+        case asset::eFilter::only_resources:
+            if (childUID.isAResource())
+                out->insertIfNotExists (childUID, 0);
+            break;
+        }
+
+    }
+
+    rst.rewind();
+    while (rst.fetchRow())
+    {
+        asset::UID childUID;
+        childUID._uid = rst.getValAsU64(0);
+
+        if (childUID.isAnAsset())
+        {
+            if (!asset_get_requireBy_list (ctx, childUID, false, out, filter))
+                return false;
+        }
+    }
+    return true;
+}
+
+//*******************************************************
+bool asset::res_delete (Context &ctx, const asset::UID &uid, asset::HashedUIDList *out_CAN_BE_NULL_list_of_deleted_asset, bool bClearListOnStart)
+{
+    assert (uid.isAResource());
+
+    if (!ctx.isValid())
+    {
+        logger::err ("res_delete (%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        return false;
+    }
+    
+    if (!uid.isAResource())
+    {
+        logger::err ("res_delete (%" PRIu64 ") => UID is not an RESOURCE uid\n",  uid._uid);
+        return false;
+    }
+
+    //prima di eliminare la risorsa, recupero una lista di asset che dipendono da me, perche' vanno eliminati anche quelli
+    asset::HashedUIDList dependList(gos::getSysHeapAllocator(), 128);
+    if (!asset::res_get_requireBy_list (ctx, uid, true, &dependList, asset::eFilter::only_assets))
+    {
+        logger::err ("res_delete (%" PRIu64 ") => error querying requiderByList\n",  uid._uid);
+        return false;
+    }
+
+    if (!db::transaction_begin(ctx.db))
+    {
+        logger::err ("res_delete (%" PRIu64 ") => transaction_begin failed, DB has not been touched\n",  uid._uid);
+        return false;
+    }
+
+    bool ret = true;
+    //elimino tutti gli asset da cui dipendo
+    auto depList = dependList._queryList();
+    const u32 n = depList->getNElem();
+    for (u32 i=0; i<n; i++)
+    {
+        if (!asset::asset_delete (ctx, uid, out_CAN_BE_NULL_list_of_deleted_asset, bClearListOnStart))
+        {
+            ret = false;
+            break;
+        }
+    } 
+
+    if (ret)
+    {
+        //elimino me stesso
+        char s[128];
+        sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET__TABLE_RES_LIST " WHERE UID=%" PRIu64 "", uid._uid);
+        ret = db::exec (ctx.db, s);
+
+        if (ret)
+        {
+            sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET__TABLE_DEPENDS " WHERE UID=%" PRIu64 "", uid._uid);
+            ret = db::exec (ctx.db, s);
+        }
+    }
+
+
+    if (!ret)
+    {
+        db::transaction_rollback(ctx.db);
+        logger::err ("res_delete (%" PRIu64 ") => error deleting. DB has been rolled-back\n",  uid._uid);
+        return false;
+    }
+
+    if (!db::transaction_commit (ctx.db))
+    {
+        logger::err ("res_delete (%" PRIu64 ") => transaction_commit failed... not sure what to do\n",  uid._uid);
+        return false;
+    }
+        
+    return true;
 }
 
 
@@ -426,8 +654,11 @@ bool asset::asset_createUID (eAssetType assTypeIN, const void *buffer, u32 sizeo
 }
 
 //*******************************************************
-bool asset::asset_insert (Context &ctx, const asset::UID &uid, eAssetType assType, u64 lastTimeBuilt)
+bool asset::asset_insert (Context &ctx, const asset::UID &uid, eAssetType assType, u64 lastTimeBuilt, const char *sourceFileInfo)
 {
+    assert (uid.isAnAsset());
+    assert (NULL != sourceFileInfo);
+
     if (u64MAX == lastTimeBuilt)
     {
         gos::DateTime dt;
@@ -437,16 +668,16 @@ bool asset::asset_insert (Context &ctx, const asset::UID &uid, eAssetType assTyp
 
     if (!ctx.isValid())
     {
-        logger::err ("asset_insert (%" PRIu64 ", %d, %" PRIu64 ") => invalid ctx\n",  uid._uid, assType, lastTimeBuilt);
+        logger::err ("asset_insert (%" PRIu64 ", %d, %" PRIu64 ", '%s') => invalid ctx\n",  uid._uid, assType, lastTimeBuilt, sourceFileInfo);
         return false;
     }
 
     db::RST rst;
     char s[256];
-    sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET__TABLE_ASSET_LIST " (UID,lastTimeBuilt,type) VALUES(%" PRIu64 ",%" PRIu64 ",%d)", uid._uid, lastTimeBuilt, static_cast<u8>(assType));
+    sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET__TABLE_ASSET_LIST " (UID,lastTimeBuilt,type,src) VALUES(%" PRIu64 ",%" PRIu64 ",%d,'%s')", uid._uid, lastTimeBuilt, static_cast<u8>(assType), sourceFileInfo);
     if (!db::exec (ctx.db, s))
     {
-        logger::err ("asset_insert(%" PRIu64 ", %d, %" PRIu64 ") => error inserting into table\n", uid._uid, assType, lastTimeBuilt);
+        logger::err ("asset_insert(%" PRIu64 ", %d, %" PRIu64 ", '%s') => error inserting into table\n", uid._uid, assType, lastTimeBuilt, sourceFileInfo);
         return false;
     }
 
@@ -454,8 +685,100 @@ bool asset::asset_insert (Context &ctx, const asset::UID &uid, eAssetType assTyp
 }
 
 //*******************************************************
+bool asset__do_asset_delete_ric (asset::Context &ctx, const asset::UID &uid, asset::HashedUIDList &outList)
+{
+    assert (uid.isAnAsset());
+
+    if (!outList.insertIfNotExists (uid, 0))
+        return true;    //vuol dire che sono stato gia' processato ed eliminato
+
+    //prima di eliminare l'asset, recupero una lista di asset che dipendono da me, perche' vanno eliminati anche quelli
+    asset::HashedUIDList dependList(gos::getSysHeapAllocator(), 32);
+    if (!asset::asset_get_requireBy_list (ctx, uid, true, &dependList, asset::eFilter::only_assets))
+        return false;
+
+    //elimino me stesso
+    char s[256];
+    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", uid._uid);
+    if (!db::exec (ctx.db, s))
+        return false;
+
+    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET__TABLE_DEPENDS " WHERE UID=%" PRIu64 "", uid._uid);
+    if (!db::exec (ctx.db, s))
+        return false;
+
+    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET__TABLE_RUNTIME_NAME " WHERE assetUID=%" PRIu64 "", uid._uid);
+    if (!db::exec (ctx.db, s))
+        return false;
+
+    //elimino tutti gli asset da cui dipendo
+    auto depList = dependList._queryList();
+    const u32 n = depList->getNElem();
+    for (u32 i=0; i<n; i++)
+    {
+        if (!asset__do_asset_delete_ric (ctx, depList->queryElem(i).key, outList))
+            return false;
+    } 
+
+    return true;
+}
+
+bool asset::asset_delete (Context &ctx, const asset::UID &uid, asset::HashedUIDList *out_CAN_BE_NULL_list_of_deleted_asset, bool bClearListOnStart)
+{
+    assert (uid.isAnAsset());
+
+    if (!ctx.isValid())
+    {
+        logger::err ("asset_delete (%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        return false;
+    }
+    
+    if (!uid.isAnAsset())
+    {
+        logger::err ("asset_delete (%" PRIu64 ") => UID is not an ASSET uid\n",  uid._uid);
+        return false;
+    }
+
+    if (!db::transaction_begin(ctx.db))
+    {
+        logger::err ("asset_delete (%" PRIu64 ") => transaction_begin failed, DB has not been touched\n",  uid._uid);
+        return false;
+    }
+
+    bool ret;
+    if (NULL == out_CAN_BE_NULL_list_of_deleted_asset)
+    {
+        asset::HashedUIDList outList (gos::getSysHeapAllocator(), 64);
+        ret = asset__do_asset_delete_ric (ctx, uid, outList);
+    }
+    else
+    {
+        if (bClearListOnStart)
+            out_CAN_BE_NULL_list_of_deleted_asset->reset();
+        ret = asset__do_asset_delete_ric (ctx, uid, *out_CAN_BE_NULL_list_of_deleted_asset);
+    }
+
+    if (!ret)
+    {
+        db::transaction_rollback(ctx.db);
+        logger::err ("asset_delete (%" PRIu64 ") => error deleting asset. DB has been rolled-back\n",  uid._uid);
+        return false;
+    }        
+
+    if (!db::transaction_commit (ctx.db))
+    {
+        logger::err ("asset_delete (%" PRIu64 ") => transaction_commit failed... not sure what to do\n",  uid._uid);
+        return false;
+    }
+        
+    return true;
+}
+
+//*******************************************************
 u64 asset::asset_query_lastTimeBuilt (Context &ctx, const asset::UID &uid)
 {
+    assert (uid.isAnAsset());
+
     if (!ctx.isValid())
     {
         logger::err ("asset_query_lastTimeBuilt (%" PRIu64 ") => invalid ctx\n",  uid._uid);
@@ -472,14 +795,51 @@ u64 asset::asset_query_lastTimeBuilt (Context &ctx, const asset::UID &uid)
     }
 
     if (rst.fetchRow())
-        return rst.getColValueAsU64(0);
+        return rst.getValAsU64(0);
     return 0;
+}
+
+//*******************************************************
+bool asset::asset_get_info (Context &ctx, const asset::UID &uid, char *out_CAN_BE_NULL_srcFileInfo, u32 sizeof_srcFileInfo, eAssetType *out_CAN_BE_NULL_assType, u64 *out_CAN_BE_NULL_lastTimeBuilt)
+{
+    assert (uid.isAnAsset());
+
+    if (!ctx.isValid())
+    {
+        logger::err ("asset_get_info (%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        return 0;
+    }
+
+    db::RST rst;
+    char s[256];
+    sprintf_s (s, sizeof(s), "SELECT lastTimeBuilt,type,src FROM " GOS_ASSET__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", uid._uid);
+    if (!db::query (ctx.db, s, &rst))
+    {
+        logger::err ("asset_get_info (%" PRIu64 ") => error querying\n",  uid._uid);
+        return 0;
+    }
+
+    if (!rst.fetchRow())
+        return false;
+
+    if (NULL != out_CAN_BE_NULL_lastTimeBuilt)
+        *out_CAN_BE_NULL_lastTimeBuilt = rst.getValAsU64(0);
+
+    if (NULL != out_CAN_BE_NULL_assType)
+        *out_CAN_BE_NULL_assType = static_cast<eAssetType>(rst.getValAsU8(1));
+
+    if (NULL != out_CAN_BE_NULL_srcFileInfo)
+        sprintf_s (out_CAN_BE_NULL_srcFileInfo, sizeof_srcFileInfo, "%s", rst.getVal(2));
+
+    return true;
 }
 
 //*******************************************************
 bool asset::asset_get_dependecies_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out)
 {
     assert (NULL != out);
+    assert (uid.isAnAsset());
+
     if (bClearListOnStart)
         out->reset();
 
@@ -501,7 +861,7 @@ bool asset::asset_get_dependecies_list (Context &ctx, const asset::UID &uid, boo
     while (rst.fetchRow())
     {
         asset::UID childUID;
-        childUID._uid = rst.getColValueAsU64(0);
+        childUID._uid = rst.getValAsU64(0);
         out->insertIfNotExists (childUID, 0);
     }
 
@@ -509,17 +869,71 @@ bool asset::asset_get_dependecies_list (Context &ctx, const asset::UID &uid, boo
     while (rst.fetchRow())
     {
         asset::UID childUID;
-        childUID._uid = rst.getColValueAsU64(0);
-        if (!asset_get_dependecies_list (ctx, childUID, false, out))
-            return false;
+        childUID._uid = rst.getValAsU64(0);
+        
+        if (childUID.isAnAsset())
+        {
+            if (!asset_get_dependecies_list (ctx, childUID, false, out))
+                return false;
+        }
     }
     return true;
 }
 
 //*******************************************************
-bool asset::asset_get_requireBy_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out)
+bool asset::asset_get_script_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out)
 {
     assert (NULL != out);
+    assert (uid.isAnAsset());
+
+    if (bClearListOnStart)
+        out->reset();
+
+    if (!ctx.isValid())
+    {
+        logger::err ("asset_get_script_list (%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        return false;
+    }
+
+    db::RST rst;
+    char s[256];
+    sprintf_s (s, sizeof(s), "SELECT childUID FROM " GOS_ASSET__TABLE_DEPENDS " WHERE UID=%" PRIu64 "", uid._uid);    
+    if (!db::query (ctx.db, s, &rst))
+    {
+        logger::err ("asset_get_script_list (%" PRIu64 ") => error querying\n",  uid._uid);
+        return false;
+    }
+
+    while (rst.fetchRow())
+    {
+        asset::UID childUID;
+        childUID._uid = rst.getValAsU64(0);
+
+        if (childUID.isAResourceOfType (eResType::gosasset_d))
+            out->insertIfNotExists (childUID, 0);
+    }
+
+    rst.rewind();
+    while (rst.fetchRow())
+    {
+        asset::UID childUID;
+        childUID._uid = rst.getValAsU64(0);
+
+        if (childUID.isAnAsset())
+        {
+            if (!asset_get_script_list (ctx, childUID, false, out))
+                return false;
+        }
+    }
+    return true;
+}
+
+//*******************************************************
+bool asset::asset_get_requireBy_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out, asset::eFilter filter)
+{
+    assert (uid.isAnAsset());
+    assert (NULL != out);
+
     if (bClearListOnStart)
         out->reset();
 
@@ -541,87 +955,46 @@ bool asset::asset_get_requireBy_list (Context &ctx, const asset::UID &uid, bool 
     while (rst.fetchRow())
     {
         asset::UID childUID;
-        childUID._uid = rst.getColValueAsU64(0);
-        out->insertIfNotExists (childUID, 0);
+        childUID._uid = rst.getValAsU64(0);
+        
+        switch (filter)
+        {
+        default:
+            DBGBREAK;
+            break;
+
+        case asset::eFilter::both:
+            out->insertIfNotExists (childUID, 0);
+            break;
+
+        case asset::eFilter::only_assets:
+            if (childUID.isAnAsset())
+                out->insertIfNotExists (childUID, 0);
+            break;
+
+        case asset::eFilter::only_resources:
+            if (childUID.isAResource())
+                out->insertIfNotExists (childUID, 0);
+            break;
+        }
+
     }
 
     rst.rewind();
     while (rst.fetchRow())
     {
         asset::UID childUID;
-        childUID._uid = rst.getColValueAsU64(0);
-        if (!asset_get_requireBy_list (ctx, childUID, false, out))
-            return false;
+        childUID._uid = rst.getValAsU64(0);
+
+        if (childUID.isAnAsset())
+        {
+            if (!asset_get_requireBy_list (ctx, childUID, false, out, filter))
+                return false;
+        }
     }
     return true;
 }
 
-
-//*******************************************************
-bool asset::context_open (const char *baseFolderIN, Context *out)
-{
-    assert (NULL != out);
-
-    if (out->isValid())
-        return false;
-
-    char s[1024];
-    fs::resolvePath (baseFolderIN, s, sizeof(s));
-    
-    //crea la struttura di cartelle se non esiste gia'
-    asset_create_folder_structure (s);
-
-    //apre il db o lo crea se non esiste gia'
-    if (!asset_openDB(s, out->db))
-        return false;
-
-    out->baseFolder = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
-
-    sprintf_s (s, sizeof(s), "%s/assets/src", out->baseFolder);
-    out->folder_assets_src = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
-
-    sprintf_s (s, sizeof(s), "%s/assets/bin", out->baseFolder);
-    out->folder_assets_bin = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
-
-    sprintf_s (s, sizeof(s), "%s/res", out->baseFolder);
-    out->folder_res = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
-    
-    
-    return true;    
-}
-
-//*******************************************************
-void asset::context_close (Context &ctx)
-{
-    if (!ctx.isValid())
-        return;
-
-    GOSFREE (gos::getSysHeapAllocator(), ctx.baseFolder);               ctx.baseFolder = NULL;
-    GOSFREE (gos::getSysHeapAllocator(), ctx.folder_assets_src);        ctx.folder_assets_src = NULL;
-    GOSFREE (gos::getSysHeapAllocator(), ctx.folder_assets_bin);        ctx.folder_assets_bin = NULL;
-    GOSFREE (gos::getSysHeapAllocator(), ctx.folder_res);               ctx.folder_res = NULL;
-
-    db::close (ctx.db);
-}
-
-//*******************************************************
-bool asset::context_cloneDB  (Context &ctx, const char *file_extension_to_append)
-{
-    if (!ctx.isValid())
-        return false;
-
-    char src[1024];
-    sprintf_s (src, sizeof(src), "%s/" GOS_ASSET__DB_NAME "", ctx.baseFolder);
-
-    char dst[1024];
-    sprintf_s (dst, sizeof(dst), "%s/" GOS_ASSET__DB_NAME "%s", ctx.baseFolder, file_extension_to_append);
-
-
-    db::close (ctx.db);
-    const bool ret = fs::fileCopy (src, dst);
-    db::open (src, &ctx.db);
-    return ret;
-}
 
 
 
@@ -644,7 +1017,7 @@ bool asset::rtname_exists (Context &ctx, const char *runtimeName, asset::UID *ou
     if (!db::query (ctx.db, s, &rst)) return false;
     if (rst.fetchRow())
     {
-        out_uid->_uid = rst.getColValueAsU64(0);
+        out_uid->_uid = rst.getValAsU64(0);
         return true;
     }
 
@@ -654,6 +1027,8 @@ bool asset::rtname_exists (Context &ctx, const char *runtimeName, asset::UID *ou
 //*******************************************************
 bool asset::rtname_insert (Context &ctx, const char *runtimeName, const asset::UID &uid)
 {
+    assert (uid.isAnAsset());
+
     if (!ctx.isValid())
     {
         logger::err ("rtname_insert(\"%s\", %" PRIu64 ") => invalid ctx\n", runtimeName, uid._uid);

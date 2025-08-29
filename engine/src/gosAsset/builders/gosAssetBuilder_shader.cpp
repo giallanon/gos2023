@@ -76,7 +76,7 @@ bool Builder_shader::extractParams (const IniFileSection *sec, Params *out_param
 }
 
 //************************************
-bool Builder_shader::build (Context &ctx, u64 buildTimeUTC, const asset::UID &uid_of_iniFile, const IniFileSection *sec, sBuildResult *out)
+bool Builder_shader::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, sBuildResult *out)
 {
     assert (ctx.isValid());
     assert (NULL != sec);
@@ -117,7 +117,7 @@ bool Builder_shader::build (Context &ctx, u64 buildTimeUTC, const asset::UID &ui
     if (0 == lastTimeBuilt)
     {
         //asset::UID non esisteva nel DB, ottimo, lo aggiungo e termino con successo
-        if (!asset::asset_insert (ctx, out->uid, getAssType(), buildTimeUTC))
+        if (!asset::asset_insert (ctx, out->uid, getAssType(), buildTimeUTC, sourceFileInfo))
         {
             gos::logger::err ("error inserting asset\n");
             return false;

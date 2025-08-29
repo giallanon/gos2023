@@ -49,7 +49,7 @@ bool Builder_pipeDef::extractParams (const IniFileSection *sec, Params *out_para
 }
 
 //************************************
-bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const asset::UID &uid_of_iniFile, const IniFileSection *sec, sBuildResult *out)
+bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, sBuildResult *out)
 {
     assert (ctx.isValid());
     assert (NULL != sec);
@@ -68,14 +68,14 @@ bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const asset::UID &u
     //devo avere una subsection di tipo @vtx_shader, gia' risolta
     if (!prot_needResolvedSubsection (ctx, sec, eAssetType::vtx_shader, &params.uid_vtxshader))
     {
-        gos::logger::err ("section [vtx_shader] is missing\n");
+        gos::logger::err ("section [vtx_shader] is error or missing\n");
         return false;
     }
 
     //devo avere una subsection di tipo @pxl_shader, gia' risolta
     if (!prot_needResolvedSubsection (ctx, sec, eAssetType::pxl_shader, &params.uid_pxlshader))
     {
-        gos::logger::err ("section [pxl_shader] is missing\n");
+        gos::logger::err ("section [pxl_shader] is error or missing\n");
         return false;
     }
 
@@ -98,7 +98,7 @@ bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const asset::UID &u
     if (0 == lastTimeBuilt)
     {
         //asset::UID non esisteva nel DB, ottimo, lo aggiungo e termino con successo
-        if (!asset::asset_insert (ctx, out->uid, getAssType(), buildTimeUTC))
+        if (!asset::asset_insert (ctx, out->uid, getAssType(), buildTimeUTC, sourceFileInfo))
         {
             gos::logger::err ("error inserting asset\n");
             return false;

@@ -76,9 +76,18 @@ void RST::rewind()
     if (NULL != stmt)
         sqlite3_reset(stmt);
 }
-    
+ 
 //***************************************************
-const char* RST::getColValue (u32 index) const
+const char* RST::getColName (u32 index)
+{
+    if (NULL == stmt || index >= getNumCols())
+        return strNULL;
+
+    return sqlite3_column_name (stmt, index);
+}
+
+//***************************************************
+const char* RST::getVal (u32 index) const
 {
     if (NULL == stmt || index >= getNumCols())
         return strNULL;
@@ -87,13 +96,13 @@ const char* RST::getColValue (u32 index) const
 }
 
 //***************************************************
-u8 RST::getColValueAsU8 (u32 index) const               { if (NULL == stmt || index >= getNumCols()) return 0; return static_cast<u8> (sqlite3_column_int (stmt, index)); }
-i8 RST::getColValueAsI8 (u32 index) const               { if (NULL == stmt || index >= getNumCols()) return 0; return static_cast<i8> (sqlite3_column_int (stmt, index)); }
-u16 RST::getColValueAsU16 (u32 index) const             { if (NULL == stmt || index >= getNumCols()) return 0; return static_cast<u16> (sqlite3_column_int (stmt, index)); }
-i16 RST::getColValueAsI16 (u32 index) const             { if (NULL == stmt || index >= getNumCols()) return 0; return static_cast<i16> (sqlite3_column_int (stmt, index)); }
+u8 RST::getValAsU8 (u32 index) const               { if (NULL == stmt || index >= getNumCols()) return 0; return static_cast<u8> (sqlite3_column_int (stmt, index)); }
+i8 RST::getValAsI8 (u32 index) const               { if (NULL == stmt || index >= getNumCols()) return 0; return static_cast<i8> (sqlite3_column_int (stmt, index)); }
+u16 RST::getValAsU16 (u32 index) const             { if (NULL == stmt || index >= getNumCols()) return 0; return static_cast<u16> (sqlite3_column_int (stmt, index)); }
+i16 RST::getValAsI16 (u32 index) const             { if (NULL == stmt || index >= getNumCols()) return 0; return static_cast<i16> (sqlite3_column_int (stmt, index)); }
 
 //***************************************************
-u32 RST::getColValueAsU32 (u32 index) const
+u32 RST::getValAsU32 (u32 index) const
 {
     if (NULL == stmt || index >= getNumCols())
         return 0;
@@ -102,7 +111,7 @@ u32 RST::getColValueAsU32 (u32 index) const
 }
 
 //***************************************************
-i32 RST::getColValueAsI32 (u32 index) const
+i32 RST::getValAsI32 (u32 index) const
 {
     if (NULL == stmt || index >= getNumCols())
         return 0;
@@ -111,7 +120,7 @@ i32 RST::getColValueAsI32 (u32 index) const
 }
 
 //***************************************************
-u64 RST::getColValueAsU64 (u32 index) const
+u64 RST::getValAsU64 (u32 index) const
 {
     if (NULL == stmt || index >= getNumCols())
         return 0;
@@ -120,7 +129,7 @@ u64 RST::getColValueAsU64 (u32 index) const
 }
 
 //***************************************************
-i64 RST::getColValueAsI64 (u32 index) const
+i64 RST::getValAsI64 (u32 index) const
 {
     if (NULL == stmt || index >= getNumCols())
         return 0;

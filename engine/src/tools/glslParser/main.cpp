@@ -127,10 +127,13 @@ void test_assetBuilder2()
     const char BASE_FOLDER[] = { "test_assets_2" };
 
     asset::Builder builder;
-    builder.buildAll(BASE_FOLDER);
-
-
+    if (!builder.buildAll(BASE_FOLDER, true))
+        return;
+    
     //builder.print_dependencies(BASE_FOLDER);
+    
+    builder.debug_sanityCheck (BASE_FOLDER);
+    
 }
 
 //******************************** 

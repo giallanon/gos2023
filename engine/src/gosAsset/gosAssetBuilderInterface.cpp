@@ -27,7 +27,10 @@ bool BuilderInterface::prot_needResolvedSubsection (Context &ctx, const gos::Ini
                 return false;
 
             if (!asset::rtname_exists (ctx, s, out_uid))
+            {
+                logger::err ("invalid rtname: %s\n", s);
                 return false;
+            }
 
             return true;
         }

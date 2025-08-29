@@ -36,7 +36,7 @@ namespace gos
                     Builder_pipeDef () : BuilderInterface (eAssetType::pipeline_def)                { }
                     ~Builder_pipeDef()                                                              { }
 
-            bool    build (Context &ctx, u64 buildTimeUTC, const asset::UID &uid_of_iniFile, const IniFileSection *sec, sBuildResult *out);
+            bool    build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, sBuildResult *out);
             
         }; //class Builder_pipeDef
 

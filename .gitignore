@@ -38,3 +38,5 @@ engine/bin/testKernel/writable/testIniFile/test1_PARSED.txt
 engine/bin/testKernel/writable/testIniFile/test_direttive_PARSED.txt
 
 engine/bin/glslParser/test_assets_2/assets/src/__build.gosasset_d
+
+engine/bin/glslParser/test_assets_2/assets.sqlite3

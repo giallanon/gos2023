@@ -18,6 +18,13 @@ namespace gos
 
     namespace asset
     {
+        enum class eFilter : u8
+        {
+            only_assets     = 0,
+            only_resources  = 1,
+            both            = 2
+        };
+
         enum class eResType : u8
         {
             __DO__NOT__USE  = 0,
@@ -45,8 +52,12 @@ namespace gos
             void    setInvalid()                                            { _uid=0; }
             bool    isValid() const                                         { return (_uid != 0); }
 
-            bool    isAResource() const                                     { return (((_uid >> 40) & 0xFF) != 0); }
-            bool    isAnAsset() const                                       { return (((_uid >> 48) & 0xFF) != 0); }
+            bool    isAResource() const                                     { return ( priv_extractResourceType() != 0); }
+            bool    isAResourceOfType(eResType s) const                     { return (static_cast<eResType>(priv_extractResourceType()) == s); }
+
+            bool    isAnAsset() const                                       { return ( priv_extractAssetType() != 0); }
+            bool    isAnAssetOfType(eAssetType s) const                     { return (static_cast<eAssetType>(priv_extractAssetType()) == s); }
+
 
             int     compare (const UID &b) const                            { if (_uid == b._uid) return 0; if (_uid > b._uid) return 1; return -1; }
             bool    operator== (const asset::UID &b) const                  { return _uid == b._uid; }
@@ -60,6 +71,8 @@ namespace gos
 
 
         private:
+            u8      priv_extractResourceType() const                        { return static_cast<u8>((_uid >> 40) & 0xFF); }
+            u8      priv_extractAssetType() const                           { return static_cast<u8>((_uid >> 48) & 0xFF); }
             void    priv_setFromU64 (u64 i)
                     {
                         _uid = static_cast<u64>(i);
@@ -78,11 +91,12 @@ namespace gos
         struct Context
         {
         public:
-                        Context()           { baseFolder=folder_assets_src=folder_assets_bin=folder_res=NULL; }
+                        Context()           { baseFolder=dbName=folder_assets_src=folder_assets_bin=folder_res=NULL; }
             bool        isValid() const     { return (baseFolder != NULL); }
 
         public:
             char        *baseFolder;
+            char        *dbName;
             char        *folder_assets_src;
             char        *folder_assets_bin;
             char        *folder_res;
