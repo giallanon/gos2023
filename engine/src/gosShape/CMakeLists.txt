@@ -16,7 +16,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../lib)
 
 #====================================================
 # nome del file di output
-set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}")
+set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM__FILE_POSTFIX}")
 
 
 #====================================================
@@ -44,8 +44,8 @@ gosShapeVtxElem.h
 gosShapeVtxLayout.h
 gosShapeVtxLayout.cpp
 
-../external/tinyxml/tinyxml2.cpp
-../external/tinyxml/tinyxml2.h
+#../external/tinyxml/tinyxml2.cpp
+#../external/tinyxml/tinyxml2.h
 )
 
 

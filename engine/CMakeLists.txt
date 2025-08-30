@@ -15,10 +15,9 @@ project(gosEngine VERSION 1.0.0 LANGUAGES C CXX)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
-#c++14
+#c++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-
 
 #====================================================
 # piattaforma di compilazione
@@ -39,8 +38,13 @@ set(BUILD_IS_DEBUG 0)
 set(BUILD_IS_RELEASE 0)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(BUILD_IS_DEBUG 1)
+    set(GOS_PLATFORM__FILE_POSTFIX "_d")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(BUILD_IS_RELEASE 1)
+    set(GOS_PLATFORM__FILE_POSTFIX "")
+    
+    #la seguente dovrebbe abilitare le ottimizzazioni link time (LTO) su tutte le piattaforme
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 
@@ -59,6 +63,10 @@ endif()
 
 if(BUILD_IS_DEBUG)
     add_compile_definitions(_DEBUG)
+    if (MSVC)
+    else()
+        add_compile_options(-Og)    #-Og should be the optimization level of choice for the standard edit-compile-debug cycle
+    endif()
 elseif(BUILD_IS_RELEASE)
     add_compile_definitions(_NDEBUG)
 
@@ -69,7 +77,10 @@ elseif(BUILD_IS_RELEASE)
         add_compile_options(-Ot)    #enable intrinsic fn: yes
         add_compile_options(-GL)    #favor fast code
     else()
-        add_compile_options(-O3)
+        #add_compile_options(-O3)           #max optimization
+        add_compile_options(-Ofast)         #-Ofast enables all -O3 optimizations. It also enables optimizations that are not valid for all standard-compliant programs. It turns on -ffast-math..
+        add_compile_options(-flto)          #This option runs the standard link-time optimizer
+        add_compile_options(-march=native)
     endif()
     
 
@@ -85,10 +96,9 @@ endif()
 set(ABS_PATH_TO_LIB_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/lib")
 function(makeLibraryName varName libName)
     if(GOS_PLATFORM__NAME STREQUAL "linux")
-        #set(${varName} "${ABS_PATH_TO_LIB_FOLDER}/lib${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.a" PARENT_SCOPE)
-        set(temp "${ABS_PATH_TO_LIB_FOLDER}/lib${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.a")
+        set(temp "${ABS_PATH_TO_LIB_FOLDER}/lib${libName}__${GOS_PLATFORM__NAME}${GOS_PLATFORM__FILE_POSTFIX}.a")
     elseif(GOS_PLATFORM__NAME STREQUAL "windows")
-        set(temp "${ABS_PATH_TO_LIB_FOLDER}/${libName}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}.lib")
+        set(temp "${ABS_PATH_TO_LIB_FOLDER}/${libName}__${GOS_PLATFORM__NAME}${GOS_PLATFORM__FILE_POSTFIX}.lib")
     endif()
 
     set(${varName} "${temp}" PARENT_SCOPE)

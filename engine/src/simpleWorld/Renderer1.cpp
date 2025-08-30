@@ -146,7 +146,7 @@ bool Renderer1::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Camera
     {
         const u32 INDEX_OF_MATERIAL_TO_CHANGE = 0;
         debug_nextTimeChangeColor_msec = gos::getTimeSinceStart_msec() + 10;
-        Material *m;
+        Material *m = NULL;
         materialList.get (INDEX_OF_MATERIAL_TO_CHANGE, &m);
         m->colorDiffuse.y = debug_red;
         

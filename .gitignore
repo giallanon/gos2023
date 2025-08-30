@@ -6,8 +6,12 @@
 *.exe
 *.manifest
 *.spv
+*__linux
+*__linux_d
 *__linux_Debug
 *__linux_Release
+*__windows
+*__windows_d
 *__windows_Debug.exe
 *__windows_Release.exe
 

@@ -16,7 +16,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../lib)
 
 #====================================================
 # nome del file di output
-set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}")
+set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM__FILE_POSTFIX}")
 
 #====================================================
 # file da compilare
@@ -28,6 +28,10 @@ gosDB.h
 gosRST.cpp
 gosRST.h
 )
+
+#sqlite3.c tira un sacco di warning per cui aggiungo queste opzioni di compilazione per non vederli
+set_source_files_properties (sqlite-3.50.4/sqlite3.c COMPILE_FLAGS "-Wno-stringop-overread")
+                                                                    
 
 #====================================================
 # info a video

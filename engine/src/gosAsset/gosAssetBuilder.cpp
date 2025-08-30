@@ -341,7 +341,7 @@ bool Builder::rebuildAll (const char *baseFolder, bool bVerbose, bool doCreateAs
     priv_closeAllContext();
 
     bool ret = true;
-    logger->log (eTextColor::white, "asset::Builder::rebuildAll()\n");
+    logger->log (eTextColor::white, "REBUILD ALL\n");
     logger->incIndent();
     {
         //elimina il DB

@@ -9,7 +9,7 @@ void test_assetBuilder2()
     const char BASE_FOLDER[] = { "test_assets_2" };
 
     asset::Builder builder;
-    if (!builder.rebuildAll(BASE_FOLDER, true)) return;
+    if (!builder.buildAll(BASE_FOLDER, true)) return;
     
     builder.save_dependencies_report(BASE_FOLDER);
     

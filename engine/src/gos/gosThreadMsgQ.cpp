@@ -9,7 +9,7 @@ void gos_err_deleteThisHandlerIfExists (u32 threadID);
 using namespace gos;
 
 //data struct per un thread
-struct sThreadInfo
+struct sGOSThreadInfo
 {
     platform::OSThread      	osThreadHandle;
 	GOSThreadHandle					gosHandle;
@@ -18,7 +18,7 @@ struct sThreadInfo
 };
 
 //handle list per i thread
-typedef gos::HandleList<GOSThreadHandle,sThreadInfo> GOSThreadHandleList;
+typedef gos::HandleList<GOSThreadHandle,sGOSThreadInfo> GOSThreadHandleList;
 
 //FIFO dei msg di una msgQ
 typedef gos::FIFO<thread::sMsg>  GOSThreadMsgFIFO;
@@ -83,7 +83,7 @@ i16 GOS_threadFunctionWrapper (void *userParam)
     GOSThreadHandle handle = *_pt_to_handle;
 
     //recupero le info sul thread
-    sThreadInfo *info = NULL;
+    sGOSThreadInfo *info = NULL;
     gosThreadGlob.threadHandleList.fromHandleToPointer (handle, &info);
     if (NULL == info)
     {
@@ -106,7 +106,7 @@ i16 GOS_threadFunctionWrapper (void *userParam)
 eThreadError gos::thread::create (GOSThreadHandle *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb)
 {
     //riservo un handle
-	sThreadInfo *info = gosThreadGlob.threadHandleList.reserve (out_hThread);
+	sGOSThreadInfo *info = gosThreadGlob.threadHandleList.reserve (out_hThread);
 	if (NULL == info)
 		return eThreadError::tooMany;
 	info->gosHandle = *out_hThread;
@@ -128,7 +128,7 @@ eThreadError gos::thread::create (GOSThreadHandle *out_hThread, GOS_ThreadMainFu
 //************************************************************************
 void gos::thread::waitEnd (GOSThreadHandle &hThread)
 {
-	sThreadInfo *info;
+	sGOSThreadInfo *info;
 	if (gosThreadGlob.threadHandleList.fromHandleToPointer (hThread, &info))
 	    platform::waitThreadEnd (info->osThreadHandle);
 }

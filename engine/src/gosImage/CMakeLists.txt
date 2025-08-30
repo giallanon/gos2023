@@ -16,7 +16,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../lib)
 
 #====================================================
 # nome del file di output
-set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}_${CMAKE_BUILD_TYPE}")
+set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM__FILE_POSTFIX}")
 
 
 #====================================================
@@ -32,6 +32,10 @@ gosImageBuilder.h
 gosImageEnumAndDefine.h
 )
 
+#stb_image.cpp tira un sacco di warning per cui aggiungo queste opzioni di compilazione per non vederli
+set_source_files_properties (loader/stb_image.cpp COMPILE_FLAGS "-Wno-unused-function -Wno-misleading-indentation -Wno-unused-but-set-variable")
+
+
 
 #====================================================
 # info a video
@@ -45,3 +49,4 @@ get_target_property(MAIN_CFLAGS ${BINARY_OUTPUT_FILENAME} COMPILE_OPTIONS)
 message("         compiler flags: ${MAIN_CFLAGS}")
 
 
+#message("aa= ${pippo}")

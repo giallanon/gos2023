@@ -141,7 +141,7 @@ u16 DefBuilder::priv_elem_begin (eDataBlobElemType elemtype, const char *name, u
 //******************************** 
 u16 DefBuilder::priv_elem_end ()
 {
-    u16 pos_elemStarted;
+    u16 pos_elemStarted = 0;
     stack.pop (&pos_elemStarted);
 
     //voglio che il prossimo elemento parta ad un indirizzo che sia un multiplo di 8
@@ -233,7 +233,7 @@ DefBuilder& DefBuilder::struct_end()
     }
 
 
-    u16 sizeof_dataBlob_beforeThisStruct;
+    u16 sizeof_dataBlob_beforeThisStruct = 0;
     stack.pop (&sizeof_dataBlob_beforeThisStruct);
     const u32 pos_elemStarted = priv_elem_end();
 
@@ -366,7 +366,7 @@ DefBuilder& DefBuilder::array_end ()
     }
 
 
-    u16 sizeof_dataBlob_beforeThisStruct;
+    u16 sizeof_dataBlob_beforeThisStruct = 0;
     stack.pop (&sizeof_dataBlob_beforeThisStruct);
     const u32 pos_elemStarted = priv_elem_end();
 
