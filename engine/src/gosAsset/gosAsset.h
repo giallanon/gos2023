@@ -28,8 +28,8 @@ namespace gos
         //================ resuorces
         void        res_enumerate_begin (u32 *out_iter);
         bool        res_enumerate_fetch (u32 &iter, eResType *out);
-        bool        res_get_folder_name (const char *baseFolder, eResType resType, char *out, u32 sizeof_out);
-        bool        res_get_folder_name (const Context &ctx, eResType resType, char *out, u32 sizeof_out);
+        bool        res_get_folder_nameByType (const char *baseFolder, eResType resType, char *out, u32 sizeof_out);
+        bool        res_get_folder_nameByType (const Context &ctx, eResType resType, char *out, u32 sizeof_out);
         bool        res_createUID (eResType resType, const char *filename, asset::UID *out);
         bool        res_insert (Context &ctx, const asset::UID uid, u64 lastTimeMod, eResType resType, const char *resName);
         bool        res_update (Context &ctx, const asset::UID uid, u64 lastTimeMod);
@@ -52,6 +52,11 @@ namespace gos
 
         //================ assets
         void        asset_get_binfolder_name (const char *baseFolder, char *out, u32 sizeof_out);
+        void        asset_get_srcfolder_name (const char *baseFolder, char *out, u32 sizeof_out);
+
+                    //ritorna il filename completo di path della risorsa di uid == uid
+        void        asset_manufacture_fullFilename (Context &ctx, const asset::UID &uid, char *out, u32 sizeof_out);
+
         bool        asset_createUID (eAssetType assType, const void *buffer, u32 sizeof_buffer, asset::UID *out);
         bool        asset_insert (Context &ctx, const asset::UID &uid, eAssetType assType, u64 lastTimeBuilt, const char *sourceFileInfo);
         

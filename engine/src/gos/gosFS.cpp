@@ -738,6 +738,18 @@ u8* fs::fileLoadInMemory (Allocator *allocator, const char* utf8_filePathAndName
 }
 
 //**************************************************************************
+bool fs::fileSaveBuffer (const char* utf8_filePathAndNameRESOLVABLE, const void *buffer, u32 sizeof_buffer)
+{
+	gos::File f;
+	if (!fs::fileOpenForW (&f, utf8_filePathAndNameRESOLVABLE))
+		return false;
+
+	fs::fileWrite (f, buffer, sizeof_buffer);
+	fs::fileClose (f);
+	return true;
+}
+
+//**************************************************************************
 u64 fs::fileLength (const char *utf8_filePathAndNameRESOLVABLE)
 { 
 	char utf8_filePathAndName[1024];
@@ -762,6 +774,26 @@ void fs::findComposeFullFilePathAndName (const gos::FileFind &ff, const char *pa
 	fs::findGetFileName (ff, &out[n], sizeofOut - n);
 }
 
+//**************************************************************************
+void fs::findGetLastTimeModified_UTC (const gos::FileFind &ff, const char *pathNoSlash, gos::DateTime *out)
+{
+	char s[1024];
+	fs::findComposeFullFilePathAndName (ff, pathNoSlash, s, sizeof(s));
+
+	gos::DateTime dt;
+	fs::fileGetLastTimeModified_UTC(s, &dt);
+}
+
+//**************************************************************************
+u64 fs::findGetLastTimeModified_UTC_niceu64 (const gos::FileFind &ff, const char *pathNoSlash)
+{
+	char s[1024];
+	fs::findComposeFullFilePathAndName (ff, pathNoSlash, s, sizeof(s));
+
+	gos::DateTime dt;
+	fs::fileGetLastTimeModified_UTC(s, &dt);
+	return dt.getAsNiceU64();
+}
 
 //**************************************************************************
 bool fs::fileExists(const char *utf8_filePathAndNameRESOLVABLE)

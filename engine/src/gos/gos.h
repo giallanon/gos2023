@@ -206,6 +206,7 @@ namespace gos
     	inline u64		fileTell(gos::File &h) 																				{ return platform::FS_fileTell(h.osFile); }
 
 		u8*				fileLoadInMemory (Allocator *allocator, const char* utf8_filePathAndNameRESOLVABLE, u32 *out_fileSize=NULL);
+		bool 			fileSaveBuffer (const char* utf8_filePathAndNameRESOLVABLE, const void *buffer, u32 sizeof_buffer);
 		inline bool		fileCopy (const char *src, const char *dst)															{ return platform::FS_fileCopy (src, dst); }
 
 		bool			findFirst (gos::FileFind *ff, const char *utf8_pathRESOLVABLE, const char *utf8_jolly);
@@ -215,6 +216,8 @@ namespace gos
 		inline const char* findGetFileName(const gos::FileFind &ff)															{ return platform::FS_findGetFileName(ff.osFF); }
 		inline void     findGetFileName (const gos::FileFind &ff, char *out, u32 sizeofOut)									{ platform::FS_findGetFileName(ff.osFF, out, sizeofOut); }
 		void 			findComposeFullFilePathAndName (const gos::FileFind &ff, const char *pathNoSlash, char *out, u32 sizeofOut);
+		void 			findGetLastTimeModified_UTC (const gos::FileFind &ff, const char *pathNoSlash, gos::DateTime *out);
+		u64 			findGetLastTimeModified_UTC_niceu64 (const gos::FileFind &ff, const char *pathNoSlash);
 	} //namespace fs
 
 

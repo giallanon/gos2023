@@ -49,7 +49,7 @@ bool Builder_pipeDef::extractParams (const IniFileSection *sec, Params *out_para
 }
 
 //************************************
-bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, sBuildResult *out)
+bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out)
 {
     assert (ctx.isValid());
     assert (NULL != sec);
@@ -95,29 +95,48 @@ bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const char *sourceF
         risultato sarebbe il medesimo
     */
     const u64 lastTimeBuilt = asset::asset_query_lastTimeBuilt (ctx, out->uid);
-    if (0 == lastTimeBuilt)
-    {
-        //asset::UID non esisteva nel DB, ottimo, lo aggiungo e termino con successo
-        if (!asset::asset_insert (ctx, out->uid, getAssType(), buildTimeUTC, sourceFileInfo))
-        {
-            gos::logger::err ("error inserting asset\n");
-            return false;
-        }
-
-        out->result = eBuildResult::just_built;
-
-        //aggiungo le sue dipendenze
-        if (!asset::depend_add (ctx, out->uid, uid_of_iniFile)) return false;
-        if (!asset::depend_add (ctx, out->uid, params.uid_vtxshader)) return false;
-        if (!asset::depend_add (ctx, out->uid, params.uid_pxlshader)) return false;
-    }
-    else
+    if (0 != lastTimeBuilt)
     {
         //asset::UID esiste gia' nel DB ma e' stato buildato a questo giro di build, quindi va bene,
         //semplicemente non sto a buildarlo una seconda volta
         out->result = eBuildResult::was_already_built;
+        return true;
+
     }
+
+    //asset::UID non esisteva nel DB, ottimo, lo aggiungo e termino con successo
+    if (!asset::asset_insert (ctx, out->uid, getAssType(), buildTimeUTC, sourceFileInfo))
+    {
+        gos::logger::err ("error inserting asset\n");
+        return false;
+    }
+
+    //aggiungo le sue dipendenze
+    if (!asset::depend_add (ctx, out->uid, uid_of_iniFile)) return false;
+    if (!asset::depend_add (ctx, out->uid, params.uid_vtxshader)) return false;
+    if (!asset::depend_add (ctx, out->uid, params.uid_pxlshader)) return false;
+
+    //segno che e' stato buildato di fresco
+    out->result = eBuildResult::just_built;
+
     
-    
+    //a questo punto devo davvero creare il file dell'asset
+    if (doCreateAnAssetFile)
+        return priv_do_create_assetFile (ctx, params);
+
+    return true;
+}
+
+
+//************************************
+bool Builder_pipeDef::priv_do_create_assetFile (Context &ctx, const Params &params) const
+{
+    //il vtx/pxl shader esistono gia' e sono gia' stati compilati.
+    //A me serva la versione con le debug info
+    char s[1024];
+    asset::asset_manufacture_fullFilename (ctx, params.uid_vtxshader, s, sizeof(s));
+    strcat_s (s, sizeof(s), "_d");
+
+
     return true;
 }

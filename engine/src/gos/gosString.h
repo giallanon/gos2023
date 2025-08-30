@@ -336,11 +336,10 @@ namespace gos
 			bool			extractCPPComment (Iter &src, Iter *out_result, u32 *out_canbeNULL_numLineSkipped);
 
 
-			/*=======================================================
-			 * String list parser
-			 *
-			 *  Data una stringa composta da "parole" separate da [separator], ritorna le singole parole trimmate a destra e sinistra.
-			 *  Una "parola" e' tutto quanto sta tra l'attuale posizione di scan e il [separatore]
+			/***************************************************************************
+			 * @brief 	String list parser
+			 *  		Data una stringa composta da "parole" separate da [separator], ritorna le singole parole trimmate a destra e sinistra.
+			 *  		Una "parola" e' tutto quanto sta tra l'attuale posizione di scan e il [separatore]
 			 */
 			class StringListParser
 			{
@@ -376,6 +375,7 @@ namespace gos
 				Iter		iter;
 				UTF8Char 	separatore;		
 			};
+
 
 		} //namespace utf8
 

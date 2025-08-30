@@ -202,6 +202,24 @@ namespace gos
          */
         const gos::FastArray<sElem>*    _queryList() const { return &list; }
 
+
+        /**
+         * @brief   scansiona l'array lineare nel quale sono memorizzati i dati
+         *          e chiama la LAMBDA su ogni elemento. Se la LAMBDA ritorna false, la
+         *          scansione termina
+         *
+         */        
+                template<typename LAMBDA>                        
+        void    forEach (LAMBDA&& evalParamFn) const
+                {
+                    const u32 n = list.getNElem();
+                    for (u32 index=0; index<n; index++)
+                    {
+                        if (false == evalParamFn(list(index).key, list(index).value) )
+                            break;
+                    }
+                }           
+
     private:
         struct sSearchRange
         {

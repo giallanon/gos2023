@@ -118,6 +118,20 @@ i32 UTF8String::findFirst (const gos::UTF8Char &ch, u32 startIndex) const
 }
 
 //*******************************************
+int UTF8String::compare (const UTF8String &b) const
+{
+	if (0 == lengthInByte())
+	{
+		if (0 == b.lengthInByte())
+			return 0;
+		return -1;
+	}
+	if (0 == b.lengthInByte())
+		return 1;
+	return strcmp (buffer, b.buffer);
+}
+
+//*******************************************
 bool UTF8String::isEqualTo (const UTF8String &b, bool bCaseSensitive) const
 {
 	if (curSize != b.curSize)

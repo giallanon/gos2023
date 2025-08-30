@@ -103,6 +103,7 @@ namespace gos
 		bool				isEqualTo (const char* b, bool bCaseSensitive) const;
 		bool				isEqualToWithLen (const UTF8String &b, u32 lenInBytes, bool bCaseSensitive) const;
 		bool				isEqualToWithLen (const char *b, u32 lenInBytes, bool bCaseSensitive) const;
+		int 				compare (const UTF8String &b) const;
 
 							//================================================ utils
 		u32					explode (const UTF8Char &cTofind, Array<UTF8String> &out) const;

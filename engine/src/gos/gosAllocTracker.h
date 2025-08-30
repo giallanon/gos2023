@@ -36,7 +36,11 @@ namespace gos
         u32     getMemAllocated() const                     { return memAllocated; }
         u32     getMemLeft() const                          { return memSize - memAllocated; }
 
+#ifdef _DEBUG
         void    DEBUG_sanityCheck() const;
+#else
+        void    DEBUG_sanityCheck() const                   { }
+#endif
 
     private:
         struct sInfo

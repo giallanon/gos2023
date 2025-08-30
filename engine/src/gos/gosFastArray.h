@@ -29,6 +29,27 @@ namespace gos
         void			unsetup ()																						{ memBlock.unsetup(); nElem = nallocati = 0; }
         void			prealloc (u32 n)																				{ _grow (n); }
 
+                        template<typename LAMBDA>
+        void            forEach (LAMBDA&& evalParamFn)
+                        {
+                            for (u32 index=0; index<nElem; index++)
+                            {
+                                if (false == evalParamFn (index, getElem(index)))
+                                    break;
+                            }
+                        }
+
+                        template<typename LAMBDA>                        
+        void            forEach (LAMBDA&& evalParamFn) const
+                        {
+                            for (u32 index=0; index<nElem; index++)
+                            {
+                                if (false == evalParamFn(index, queryElem(index) ) )
+                                    break;
+                            }
+                        }        
+
+
                         //======================================= serialize
         u32             serialize_calcSizeNeeded() const                                                                { return 4 + sizeof(T) * nElem; }
         

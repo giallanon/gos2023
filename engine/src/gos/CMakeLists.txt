@@ -100,6 +100,8 @@ string/gosString.cpp
 string/gosStringANSI.cpp 
 string/gosStringEnumAndDefine.h
 string/gosStringFormat.cpp
+string/gosStringIncludeDetector.cpp
+string/gosStringIncludeDetector.h
 string/gosStringIter.cpp
 string/gosStringList.cpp
 string/gosStringList.h

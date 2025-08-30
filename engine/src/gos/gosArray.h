@@ -137,6 +137,34 @@ namespace gos
 							nElem -= diQuanto;
 						}
 
+						template<typename LAMBDA>
+		void			bubbleSort (LAMBDA&& cmpFn)
+						{
+							u32 n = getNElem();
+							if (n < 2)
+								return;
+
+							bool bEsci = false;
+							while (bEsci == false)
+							{
+								--n;
+								bEsci = true;
+								u32 ct = 0;
+                                T *t1 = reinterpret_cast<T*>(memBlock._getPointer(ct));
+								for (u32 i=0; i<n; i++)
+								{
+									ct+=sizeof(T);
+                                    T *t2 = reinterpret_cast<T*>(memBlock._getPointer(ct));
+									if (cmpFn(*t1, *t2))
+									{
+										bEsci = false;
+										swap (i, i+1);
+									}
+									t1 = t2;
+								}
+							}
+						}						
+/*						
 		void			bubbleSort (BubblesortFn cmpFn)
 						{
 							u32 n = getNElem();
@@ -163,7 +191,7 @@ namespace gos
 								}
 							}
 						}
-
+*/
 						//===================== query
 		u32				getNElem()	const										{ return nElem; }
 		u32				getNAllocatedElem() const								{ assert (nallocati*sizeof(T) <= memBlock.getTotalSizeAllocated()); return nallocati; }

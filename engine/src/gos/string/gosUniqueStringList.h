@@ -10,7 +10,7 @@ namespace gos
      * @brief UniqueStringList
      * 
      * Semplice buffer contiguo autoespandibile che contiene un elenco di stringhe
-     * che viene mantenuto univo grazie ad una HashMap.
+     * che viene mantenuto univoco grazie ad una HashMap.
      * Provare ad inserire N volte la stessa stringa risulta sempre nello stesso offset ritornato
     */
     class UniqueStringList

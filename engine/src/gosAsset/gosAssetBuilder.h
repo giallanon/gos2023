@@ -14,22 +14,15 @@ namespace gos
          */
         class Builder
         {
-        private:
-            enum class eBuildStatus : u8
-            {
-                DONT_KNOW   = 0,
-                NEW         = 1,
-                MODIFIED    = 2,
-                DELETED     = 3,
-                UNCHANGED   = 4,
-                REQUIRED    = 5
-            };
-
-        private:            
-            static const char*  enumToString (const eBuildStatus s);
-
         public:
-            static void         print_dependencies (const char *baseFolder, asset::eFilter filter = eFilter::both);
+                                //appende a <in_out> un report ben formattato con la lista delle dipendenze
+            static void         get_dependencies_report (gos::UTF8String &in_out, const char *baseFolder, asset::eFilter filter = eFilter::both);
+            
+                                //chiama <get_dependencies_report> e poi printf
+            static void         print_dependencies_report (const char *baseFolder, asset::eFilter filter = eFilter::both);
+            
+                                //chiama <get_dependencies_report> e poi salva un file di testo in /assets/src/__dependencies.txt
+            static void         save_dependencies_report (const char *baseFolder, asset::eFilter filter = eFilter::both);
 
         public:
                     Builder();
@@ -46,8 +39,8 @@ namespace gos
                         return false;
                     }
 
-            bool    rebuildAll (const char *baseFolder, bool bVerbose);
-            bool    buildAll (const char *baseFolder, bool bVerbose);
+            bool    rebuildAll (const char *baseFolder, bool bVerbose, bool doCreateAssetsFile = true);
+            bool    buildAll (const char *baseFolder, bool bVerbose, bool doCreateAssetsFile = true);
 
 
             void    debug_sanityCheck (const char *baseFolder);
@@ -57,21 +50,34 @@ namespace gos
             static constexpr char DB_NAME[] = { "assets.sqlite3" };
 
         private:
+            enum class eBuildStatus : u8
+            {
+                DONT_KNOW   = 0,
+                NEW         = 1,
+                MODIFIED    = 2,
+                DELETED     = 3,
+                UNCHANGED   = 4
+            };
+
+        private:
             struct sResListElem
             {
             public:
                 void        reset() { uid._uid=0; name[0]=0x00; lastTimeModified=0; resType=eResType::__FINISHED; status=eBuildStatus::DONT_KNOW; }
+
             public:
-                asset::UID  uid;
-                char        name[128];
-                u64         lastTimeModified;
-                eResType    resType;
-                eBuildStatus  status;
+                asset::UID      uid;
+                char            name[128];
+                u64             lastTimeModified;
+                eResType        resType;
+                eBuildStatus    status;
             };
 
             typedef gos::FastArray<sResListElem>    ResList;
 
         private:
+            static const char*  enumToString (const eBuildStatus s);
+
             bool    priv_addBuilder (BuilderInterface *builder, u32 asset_depth);
             BuilderInterface*   priv_getBuilder (eAssetType assType);
 
@@ -79,7 +85,7 @@ namespace gos
             void    priv_closeAllContext();
 
 
-            u32     priv_do_build (Context &ctx);
+            u32     priv_do_build (Context &ctx, bool doCreateAssetsFile);
 
             void    priv_printResList (const ResList &list) const;
             bool    priv_fromSectionNameToAssetType (const char *name, eAssetType *out) const;
@@ -87,14 +93,18 @@ namespace gos
 
             u32     priv_collectResInfo (ResList &out_list);
             void    priv_collectResourcesFromDisk (ResList &out_list);
+            void    priv_collectResourcesFromDisk_ric (const char *baseFolderName, const char *subFolder, eResType resType, ResList &out_list);
             void    priv_collectIniFileFromDisk (ResList &out_list);
 
-            //bool    priv_explode_NEW_or_MODIFIED_res (ResList *in_out_list);
+            u32     priv_shaderRes_add_dependencies (const ResList &list, u32 me);
+            bool    priv_shaderRes_remove_dependencies (const asset::UID &resUID);
+
+            
             void    priv_explodeIniFile_adjustSubsectionName (const char *in, char *out, u32 sizeof_out);
             bool    priv_explodeScript_ric (gos::IniFileSection *dst, IniFileSection *sec, const char *nameOfSRC, const asset::UID &uid_of_iniFile);
 
-            u32     priv_build_explodedIniFileInFolder (gos::IniFile &ini);
-            u32     priv_build_iniSection (const IniFileSection *sec, const asset::UID &uid_of_iniFile, const char *sourceFileInfo, BuilderInterface *builder, const char *runtimeName);
+            u32     priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreateAssetsFile);
+            u32     priv_build_iniSection (bool doCreateAssetsFile, const IniFileSection *sec, const asset::UID &uid_of_iniFile, const char *sourceFileInfo, BuilderInterface *builder, const char *runtimeName);
 
 
             bool    debug_sanityCheck_run (const char *baseFolder);
@@ -115,7 +125,6 @@ namespace gos
             u32                 nextTempSubsectionIndex;
             u32                 *depthByAssetType;
             BuilderInterface    **builderList;
-
         }; //class Builder
 
 

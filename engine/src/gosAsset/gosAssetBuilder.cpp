@@ -1,5 +1,6 @@
 #include "gosAssetBuilder.h"
 #include "gos.h"
+#include "string/gosStringIncludeDetector.h"
 #include "builders/gosAssetBuilder_shader.h"
 #include "builders/gosAssetBuilder_pipedef.h"
 
@@ -18,7 +19,6 @@ const char* Builder::enumToString (const eBuildStatus s)
     case eBuildStatus::MODIFIED:    return "modified";
     case eBuildStatus::DELETED:     return "DELETED";
     case eBuildStatus::UNCHANGED:   return "unchanged";
-    case eBuildStatus::REQUIRED:    return "required";
     }
 }
 
@@ -121,10 +121,7 @@ void Builder::priv_printResList (const ResList &list) const
 
         case eBuildStatus::UNCHANGED:
             color = eTextColor::grey;
-            break;
-
-        case eBuildStatus::REQUIRED:
-            color = eTextColor::darkGreen;;
+            continue;
             break;
         }
 
@@ -242,8 +239,8 @@ bool Builder::debug_sanityCheck__cmp_table (const char *sql, const char *tableNa
 
 void Builder::debug_sanityCheck (const char *baseFolderIN)
 {
-    /*  in pratica, faccio una copia del DB attuale e poi faccio
-        un rebuildAll.
+    /*  in pratica, faccio una copia del DB attuale e poi faccio un rebuildAll, solo che non creo davvero
+        i file .gosasset, mi limito a ricreare il DB per poterne poi verificare i dati.
         Dopo il rebuildAll, confronto i 2 DB e vedo che siano uguali
     */
     logger = gos::logger::getSystemLogger();
@@ -281,7 +278,7 @@ bool Builder::debug_sanityCheck_run (const char *baseFolderIN)
         return false;
     }    
 
-    bool ret = rebuildAll (baseFolderIN, false);
+    bool ret = rebuildAll (baseFolderIN, false, false);
     logger = gos::logger::getSystemLogger();
 
     if (!ret)
@@ -334,7 +331,7 @@ bool Builder::debug_sanityCheck_run (const char *baseFolderIN)
 
 
 //***********************************
-bool Builder::rebuildAll (const char *baseFolder, bool bVerbose)
+bool Builder::rebuildAll (const char *baseFolder, bool bVerbose, bool doCreateAssetsFile)
 {
     if (bVerbose)
         logger = gos::logger::getSystemLogger();
@@ -353,11 +350,14 @@ bool Builder::rebuildAll (const char *baseFolder, bool bVerbose)
         fs::fileDelete(s);
 
         //elimina tutti gli asset mai creati
-        asset::asset_get_binfolder_name (baseFolder, s, sizeof(s));
-        fs::folderDeleteAllFileWithJolly (s, "*.gosasset");
+        if (doCreateAssetsFile)
+        {
+            asset::asset_get_binfolder_name (baseFolder, s, sizeof(s));
+            fs::folderDeleteAllFileWithJolly (s, "*.gosasset");
+        }
 
         //builda
-        ret = buildAll(baseFolder, bVerbose);
+        ret = buildAll(baseFolder, bVerbose, doCreateAssetsFile);
         
     }
     logger->decIndent();
@@ -366,7 +366,7 @@ bool Builder::rebuildAll (const char *baseFolder, bool bVerbose)
 }
 
 //***********************************
-bool Builder::buildAll (const char *baseFolder, bool bVerbose)
+bool Builder::buildAll (const char *baseFolder, bool bVerbose, bool doCreateAssetsFile)
 {
     if (bVerbose)
         logger = gos::logger::getSystemLogger();
@@ -407,7 +407,7 @@ bool Builder::buildAll (const char *baseFolder, bool bVerbose)
         
 
         //build
-        const u32 num_errors = priv_do_build(ctx);
+        const u32 num_errors = priv_do_build(ctx, doCreateAssetsFile);
     logger->decIndent();
 
 
@@ -447,7 +447,7 @@ bool Builder::buildAll (const char *baseFolder, bool bVerbose)
 }
 
 //***********************************
-u32 Builder::priv_do_build (Context &ctx)
+u32 Builder::priv_do_build (Context &ctx, bool doCreateAssetsFile)
 {
     u32 num_errors = 0;
 
@@ -483,6 +483,7 @@ u32 Builder::priv_do_build (Context &ctx)
         //  inserisco le NEW nel DB
         //  gestisco le MODIFIED/DELETED
         //  ignoro il resto
+        bool bAnyShaderResourceToProcess = false;
         for (u32 i=0; i<resourceList.getNElem(); i++)
         {   
             switch (resourceList(i).status)
@@ -505,6 +506,8 @@ u32 Builder::priv_do_build (Context &ctx)
                 {
                     if (eResType::gosasset_d == resourceList(i).resType)
                         toBeRebuiltScriptList.insertIfNotExists (resourceList(i).uid, 0);
+                    else if (eResType::shader_txt == resourceList(i).resType)
+                        bAnyShaderResourceToProcess = true;
                 }
                 break;
 
@@ -518,8 +521,12 @@ u32 Builder::priv_do_build (Context &ctx)
                 {
                     if (eResType::gosasset_d == resourceList(i).resType)
                         deletedScriptList.insertIfNotExists (resourceList(i).uid, 0);
-                    else
-                        deletedResList.insertIfNotExists (resourceList(i).uid, 0);
+                    
+                    deletedResList.insertIfNotExists (resourceList(i).uid, 0);
+
+                    if (eResType::shader_txt == resourceList(i).resType)
+                        bAnyShaderResourceToProcess = true;
+
                 }
                 break;
                 
@@ -536,10 +543,85 @@ u32 Builder::priv_do_build (Context &ctx)
 
                     if (eResType::gosasset_d == resourceList(i).resType)
                         toBeRebuiltScriptList.insertIfNotExists (resourceList(i).uid, 0);
+                    else if (eResType::shader_txt == resourceList(i).resType)
+                        bAnyShaderResourceToProcess = true;
                 }
                 break;
             }
         }
+
+
+        //le risorse shader possono avere delle dipendenze da altre risorse shader dato che ci sono 
+        //degli include nei file src
+        if (bAnyShaderResourceToProcess)
+        {
+            //al primo giro gestisco le DELETED, rimuovendole dal DB e 
+            //marcando come MODIFIED le risorse che dipendono da lei.
+            //In questo modo, al secondo giro, le risorse MODIFIED ricreano la lista
+            //di dipendenze e, se non trovano la DELETED, si arrabbiano 
+            HashedUIDList tempResList(localAllocator, 32);
+            for (u32 i=0; i<resourceList.getNElem(); i++)
+            {   
+                if (eResType::shader_txt != resourceList(i).resType)
+                    continue;
+
+                if (eBuildStatus::DELETED == resourceList(i).status)
+                {
+                    if (!asset::res_get_requireBy_list (ctx, resourceList(i).uid, true, &tempResList, eFilter::only_resources))
+                    {
+                        num_errors++;
+                        return num_errors;
+                    }
+
+                    tempResList.forEach ( [&resourceList] (const asset::UID &key, u64 value)
+                    {
+                        resourceList.forEach ( [key](u32 index, sResListElem &elem)
+                        {
+                            if (elem.uid == key && eBuildStatus::UNCHANGED == elem.status)
+                            {
+                                elem.status = eBuildStatus::MODIFIED;
+                                return false;
+                            }
+                            return true;
+                        });
+                        
+                        return true;
+                    });
+                }
+            }
+
+            for (u32 i=0; i<resourceList.getNElem(); i++)
+            {   
+                if (eResType::shader_txt != resourceList(i).resType)
+                    continue;
+
+                switch (resourceList(i).status)
+                {
+                default:
+                    DBGBREAK;
+                    break;
+
+                case eBuildStatus::DELETED:
+                case eBuildStatus::UNCHANGED:
+                    break;
+
+                case eBuildStatus::NEW:
+                    num_errors += priv_shaderRes_add_dependencies (resourceList, i);
+                    break;
+                    
+                case eBuildStatus::MODIFIED:
+                    {
+                        //prima elimino le attuali dipendenze da altre risorse, e poi le ricalcolo
+                        if (!priv_shaderRes_remove_dependencies (resourceList(i).uid))
+                            num_errors++;
+                        
+                        num_errors += priv_shaderRes_add_dependencies (resourceList, i);
+                    }
+                    break;
+                }
+            }
+        }
+
     }
     if (0 != num_errors)
         return num_errors;
@@ -617,7 +699,7 @@ u32 Builder::priv_do_build (Context &ctx)
             logger->log (eTextColor::red, "%016" PRIX64 " [%-12s] %s\n", uid._uid, asset::enumToString (assType), s);
 
             //elimino fisicamente l'asset dal disk
-            sprintf_s (s, sizeof(s), "%s/%016" PRIX64 ".gosasset", ctx.folder_assets_bin, uid._uid);
+            asset::asset_manufacture_fullFilename (ctx, uid, s, sizeof(s));
             fs::fileDelete(s);
 
         }
@@ -741,7 +823,7 @@ u32 Builder::priv_do_build (Context &ctx)
     //finalmente posso buildare per davvero!!
     logger->log (eTextColor::blue, "Now building...\n");
     logger->incIndent();
-    num_errors = priv_build_explodedIniFileInFolder (iniExploded);
+    num_errors = priv_build_explodedIniFileInFolder (iniExploded, doCreateAssetsFile);
     logger->decIndent();
     if (0 != num_errors)
         return num_errors;    
@@ -850,42 +932,79 @@ void Builder::priv_collectResourcesFromDisk (ResList &out_list)
     while (asset::res_enumerate_fetch(iter, &resType))
     {
         char folderName[512];
-        asset::res_get_folder_name (ctx, resType, folderName, sizeof(folderName));
+        asset::res_get_folder_nameByType (ctx, resType, folderName, sizeof(folderName));
+        priv_collectResourcesFromDisk_ric (folderName, NULL, resType, out_list);
+    }
+}
 
-        logger->log ("%s\n", folderName);
-        logger->incIndent();
+//***********************************
+void Builder::priv_collectResourcesFromDisk_ric (const char *baseFolderName, const char *subFolder, eResType resType, ResList &out_list)
+{
+    char fullFolderName[1024];
+
+    if (NULL != subFolder)
+        sprintf_s (fullFolderName, sizeof(fullFolderName), "%s/%s", baseFolderName, subFolder);
+    else
+        sprintf_s (fullFolderName, sizeof(fullFolderName), "%s", baseFolderName);
+
+    logger->log ("%s\n", fullFolderName);
+    gos::FileFind ff;
+    if (!fs::findFirst (&ff, fullFolderName, "*.*"))
+        return;
+
+    bool bAnySubfolder = false;
+    do
+    {
+        const char *fname = fs::findGetFileName(ff);
+        
+        if (fs::findIsDirectory(ff))
         {
-            gos::FileFind ff;
-            if (fs::findFirst (&ff, folderName, "*.*"))
-            {
-                do
-                {
-                    if (fs::findIsDirectory(ff))
-                        continue;
-
-                    char s[1024];
-                    gos::DateTime dt;
-                    sprintf_s (s, sizeof(s), "%s/%s", folderName, fs::findGetFileName(ff));
-                    fs::fileGetLastTimeModified_UTC(s, &dt);
-
-                    sResListElem elem;
-                    elem.reset();
-                    sprintf_s (elem.name, sizeof(elem.name), "%s", fs::findGetFileName(ff));
-                    elem.resType = resType;
-                    asset::res_createUID (elem.resType, elem.name, &elem.uid);
-                    elem.lastTimeModified = dt.getAsNiceU64();
-                    
-
-                    out_list.append(elem);
-
-                } while (fs::findNext(ff));
-                
-                fs::findClose(ff);
-            }
+            if (fname[0] != '.')
+                bAnySubfolder = true;
+            continue;
         }
-        logger->decIndent();
-    }    
 
+        sResListElem elem;
+        elem.reset();
+
+        if (NULL == subFolder)
+            sprintf_s (elem.name, sizeof(elem.name), "%s", fname);
+        else
+            sprintf_s (elem.name, sizeof(elem.name), "%s/%s", subFolder, fname);
+        elem.resType = resType;
+        asset::res_createUID (elem.resType, elem.name, &elem.uid);
+        elem.lastTimeModified = fs::findGetLastTimeModified_UTC_niceu64 (ff, fullFolderName);
+        
+        out_list.append(elem);
+
+    } while (fs::findNext(ff));
+    
+    fs::findClose(ff);
+
+
+    //processa le subdir
+    if (bAnySubfolder)
+    {
+        if (!fs::findFirst (&ff, fullFolderName, "*.*"))
+            return;
+
+        do
+        {
+            const char *fname = fs::findGetFileName(ff);
+            if (fs::findIsDirectory(ff) && fname[0] != '.')
+            {
+                char s[1024];
+
+                if (NULL != subFolder)
+                    sprintf_s (s, sizeof(s), "%s/%s", subFolder, fname);
+                else
+                    sprintf_s (s, sizeof(s), "%s", fname);                
+                priv_collectResourcesFromDisk_ric (baseFolderName, s, resType, out_list);
+            }
+        } while (fs::findNext(ff));
+        
+        fs::findClose(ff);
+    }
 }
 
 //***********************************
@@ -932,110 +1051,85 @@ void Builder::priv_collectIniFileFromDisk (ResList &out_list)
 }
 
 
-
-/***********************************
-bool Builder::priv_explode_NEW_or_MODIFIED_res (ResList *in_out_list)
+//***********************************
+bool Builder::priv_shaderRes_remove_dependencies (const asset::UID &resUID)
 {
-    asset::HashedUIDList hashList;
-    hashList.setup (localAllocator, 1024);
+    assert (resUID.isAResourceOfType (eResType::shader_txt));
 
-    asset::HashedUIDList requiredByList;
-    requiredByList.setup (localAllocator, 1024);
+    const u64 MAX_RESOURCE_ID = 0x0000FF0000000000;
+    char s[128];
+    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET__TABLE_DEPENDS " WHERE UID=%" PRIu64 " AND childUID < %" PRIu64 "", resUID._uid, MAX_RESOURCE_ID);
+    return db::exec (ctx.db, s);
+}
 
-    asset::HashedUIDList dependOnList;
-    dependOnList.setup (localAllocator, 1024);
+//***********************************
+u32 Builder::priv_shaderRes_add_dependencies (const ResList &list, u32 me)
+{
+    assert (list(me).resType == eResType::shader_txt);
 
-    ResList list;
-    list.setup (localAllocator, 1024);
+    u32 num_errors = 0;
+    
+    char s[1024];
+    asset::res_get_folder_nameByType (ctx, eResType::shader_txt, s, sizeof(s));
+    strcat_s (s, sizeof(s), "/");
+    strcat_s (s, sizeof(s), list(me).name);
 
-    const u32 n = in_out_list->getNElem();
-    for (u32 i=0; i<n; i++)
+    u32 fsize=0;
+    u8 *buffer = fs::fileLoadInMemory (gos::getScrapAllocator(), s, &fsize);
+    if (NULL != buffer)
     {
-        if (eBuildStatus::NEW == in_out_list->queryElem(i).status)
+        string::IncludeDetector det;
+        const u32 n = det.parse (buffer, fsize);
+        for (u32 i=0; i<n; i++)
         {
-            //le risorse NEW finisco certamente nella lista
-            list.append ( in_out_list->queryElem(i) );
-            continue;
-        }
+            char includeName[128];
+            det.getResultAsString (buffer, i, includeName, sizeof(includeName));
 
-        if (eBuildStatus::MODIFIED == in_out_list->queryElem(i).status)
-        {
-            asset::UID uid;
-            uid = in_out_list->queryElem(i).uid;
+            //il nome della risorsa da includere dipende dal path della risorsa base + l'include
+            fs::extractFilePathWithOutSlash (list(me).name, s, sizeof(s));
+            strcat_s (s, sizeof(s), "/");
+            strcat_s (s, sizeof(s), includeName);
+            fs::pathSanitizeInPlace (s);
 
-            if (!hashList.insertIfNotExists(uid, 0))
-                continue;
-
-            //ho trovato una risorsa MODIFIED che non ho ancora preso in considerazione
-            //Devo recuperre tutti quelli che dipendono da questa risorsa e aggiungerli alla lista.
-            //Attenzione che la lista finale in uscita deve essere solo una lista di risorse, non deve includere anche gli asset
-            list.append ( in_out_list->queryElem(i) );
-
-            if (!asset::res_get_requireBy_list (ctx, uid, true, &requiredByList, eFilter::both))
-                return false;
-            else
+            //cerco la risorsa nella lista
+            bool bFound = false;
+            for (u32 i2=0; i2<list.getNElem(); i2++)
             {
-                //ho una lista di risorse e asset che dipendono da me.
-                //Aggiungo tutte le risorse che dipendono da me.
-                //Aggiungo anche tutte le risorse che sono richieste dagli asset che dipendono da me
-                auto reqList = requiredByList._queryList();
-                const u32 n2 = reqList->getNElem();
-                for (u32 i2=0; i2<n2; i2++)
+                if (list(i2).resType != eResType::shader_txt)
+                    continue;
+                if (list(i2).status == eBuildStatus::DELETED)
+                    continue;
+
+                if (strcmp (list(i2).name, s) == 0)
                 {
-                    asset::UID uid2;
-                    uid2 = reqList->queryElem(i2).key;
-
-                    //se sta cosa l'ho gia' processata, skippo
-                    if (!hashList.insertIfNotExists(uid2, 1))
-                        continue;
-
-                    sResListElem elem;
-                    if (uid2.isAResource())
+                    bFound = true;
+                    if (!asset::depend_add (ctx, list(me).uid, list(i2).uid))
                     {
-                        elem.reset();
-                        elem.uid = uid2;
-                        elem.status = eBuildStatus::REQUIRED;
-                        asset::res_get_info (ctx, elem.uid, elem.name, sizeof(elem.name), &elem.resType, &elem.lastTimeModified);
-
-                        list.append (elem);
+                        num_errors++;
+                        logger->err ("Error adding dependencies for resource type [shader_txt], '%s', UID=%016" PRIX64 " that depends on '%s', UID%016" PRIX64 "",
+                            list(me).name, list(me).uid._uid,
+                            list(i2).name, list(i2).uid._uid);
                     }
-                    else
-                    {
-                        //sono un asset... devo recuperare la lista delle risorse che mi sono necessarie
-                        if (!asset::asset_get_dependecies_list (ctx, uid2, true, &dependOnList))
-                            return false;
-                     
-                        auto depList = dependOnList._queryList();
-                        const u32 n3 = depList->getNElem();
-                        for (u32 i3=0; i3<n3; i3++)
-                        {
-                            asset::UID uid3;
-                            uid3 = depList->queryElem(i3).key;
-
-                            if (uid3.isAResource())
-                            {
-                                if (!hashList.insertIfNotExists(uid3, 0))
-                                    continue;
-                                
-                                elem.reset();
-                                elem.uid = uid3;
-                                elem.status = eBuildStatus::REQUIRED;
-                                asset::res_get_info (ctx, elem.uid, elem.name, sizeof(elem.name), &elem.resType, &elem.lastTimeModified);
-                                list.append (elem);
-                            }                            
-                        }                            
-                    }
+                    break;
                 }
             }
-        }
-    }
 
-    //Se tutto ok, aggiorno la lista <in_out_list> con tutte le nuove risorse da considerare
-    in_out_list->reset();
-    in_out_list->copyFrom (list);
-    return true;
+            if (!bFound)
+            {
+                num_errors++;
+                logger->err ("Error adding dependencies for resource type [shader_txt], '%s', UID=%016" PRIX64 "\nCan't find a resource name %s\n", list(me).name, list(me).uid._uid, s);
+            }
+
+            //
+        }
+
+        GOSFREE_SCRAP (buffer);
+    }    
+
+    return num_errors;
+    
 }
-*/
+
 
 //***********************************
 void Builder::priv_explodeIniFile_adjustSubsectionName (const char *subsec_name, char *out, u32 sizeof_out)
@@ -1143,12 +1237,12 @@ bool Builder::priv_explodeScript_ric (gos::IniFileSection *dst, gos::IniFileSect
  * Prende il input il file Ini che contiene tutte gli asset in formato "esploso"
  * e comincia a buildarli, uno per uno
  */
-u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini)
+u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreateAssetsFile)
 {
     const u32 numSection = ini.getNSubsection();
     if (0 == numSection)
     {
-        logger->log ("nothing to be done here\n");
+        logger->log ("nothing to do\n");
         return 0;
     }
 
@@ -1200,7 +1294,7 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini)
 
                 asset::UID uid_of_iniFile;
                 uid_of_iniFile._uid = sec->getOrDefaultAsU64("__decl_uid", 0);
-                num_errors += priv_build_iniSection (sec, uid_of_iniFile, fromSRC, builder, runtimeName);
+                num_errors += priv_build_iniSection (doCreateAssetsFile, sec, uid_of_iniFile, fromSRC, builder, runtimeName);
                 logger->decIndent();
             }
 
@@ -1219,10 +1313,10 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini)
 }
 
 //***********************************
-u32 Builder::priv_build_iniSection (const IniFileSection *sec, const asset::UID &uid_of_iniFile, const char *sourceFileInfo, BuilderInterface *builder, const char *runtimeName)
+u32 Builder::priv_build_iniSection (bool doCreateAssetsFile, const IniFileSection *sec, const asset::UID &uid_of_iniFile, const char *sourceFileInfo, BuilderInterface *builder, const char *runtimeName)
 {
     asset::sBuildResult result;
-    if (!builder->build (ctx, buildTimeUTC, sourceFileInfo, uid_of_iniFile, sec, &result))
+    if (!builder->build (ctx, buildTimeUTC, sourceFileInfo, uid_of_iniFile, sec, doCreateAssetsFile, &result))
         return 1;
 
     //report a video del risultato della build

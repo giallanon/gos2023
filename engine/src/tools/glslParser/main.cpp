@@ -1,6 +1,7 @@
 #include "SPVReflect.h"
 #include "PipelineParser.h"
 
+
 using namespace gos;
 
 
@@ -121,22 +122,6 @@ void test_pipelineParser_1 ()
 }
 
 //******************************** 
-#include "gosAssetBuilder.h"
-void test_assetBuilder2()
-{
-    const char BASE_FOLDER[] = { "test_assets_2" };
-
-    asset::Builder builder;
-    if (!builder.buildAll(BASE_FOLDER, true))
-        return;
-    
-    //builder.print_dependencies(BASE_FOLDER);
-    
-    builder.debug_sanityCheck (BASE_FOLDER);
-    
-}
-
-//******************************** 
 int main()
 {
     gos::sGOSInit init;
@@ -153,10 +138,7 @@ int main()
         //test_reflect_2(); //shader_noVtxDecl
         //test_reflect_3(); //lineRenderer
  
-        //test_pipelineParser_1 ();
-
-        //test_assetBuilder1();
-        test_assetBuilder2();
+        test_pipelineParser_1 ();
     }
     
 

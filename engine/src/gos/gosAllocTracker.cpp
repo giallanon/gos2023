@@ -171,6 +171,7 @@ void AllocTracker::priv_tryMerge (u32 iEntry)
 	}
 }
 
+#ifdef _DEBUG
 //**********************************************************
 void AllocTracker::DEBUG_sanityCheck() const
 {
@@ -195,3 +196,4 @@ void AllocTracker::DEBUG_sanityCheck() const
 		assert ( freeBlockList(i).startByte >= end );
 	}
 }
+#endif

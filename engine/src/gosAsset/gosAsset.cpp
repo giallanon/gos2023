@@ -112,7 +112,7 @@ static bool asset_create_folder_structure (const char *baseFolder)
     asset::res_enumerate_begin (&iter);
     while (asset::res_enumerate_fetch(iter, &resType))
     {
-        if (asset::res_get_folder_name (baseFolder, resType, s, sizeof(s)))
+        if (asset::res_get_folder_nameByType (baseFolder, resType, s, sizeof(s)))
         {
             if (!fs::folderCreate (s))
                 return false;
@@ -151,13 +151,13 @@ ver UNSIGNED INT1 NOT NULL DEFAULT 1)\
 UID UNSIGNED INT8 NOT NULL PRIMARY KEY,\
 lastTimeMod UNSIGNED INT8 NOT NULL DEFAULT 0,\
 type UNSIGNED INT1 NOT NULL,\
-name VARCHAR(64) NOT NULL)\
+name VARCHAR(128) NOT NULL)\
 ");
             if (!db::exec (db, s))
                 break;
                 
 
-            //table: GOS_ASSET__TABLE_RUNTIME_NAEM
+            //table: GOS_ASSET__TABLE_RUNTIME_NAME
             sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET__TABLE_RUNTIME_NAME " (\
 name VARCHAR(64) NOT NULL PRIMARY KEY,\
 assetUID UNSIGNED INT8 NOT NULL\
@@ -177,12 +177,16 @@ src VARCHAR(128) NOT NULL)\
 
 
             //table: GOS_ASSET__TABLE_DEPENDS
-            sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET__TABLE_DEPENDS " (\
+      /*      sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET__TABLE_DEPENDS " (\
 ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,\
 UID UNSIGNED INT8 NOT NULL,\
 childUID UNSIGNED INT8 NOT NULL\
-)");
-            if (!db::exec (db, s))
+)");*/
+            sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET__TABLE_DEPENDS " (\
+UID UNSIGNED INT8 NOT NULL,\
+childUID UNSIGNED INT8 NOT NULL,\
+PRIMARY KEY('UID','childUID'))");
+        if (!db::exec (db, s))
                 break;
 
 
@@ -247,10 +251,10 @@ bool asset::context_open_ex (const char *baseFolderIN, const char *dbName, Conte
 
     out->baseFolder = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
 
-    sprintf_s (s, sizeof(s), "%s/assets/src", out->baseFolder);
+    asset_get_srcfolder_name (out->baseFolder, s, sizeof(s));
     out->folder_assets_src = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
 
-    sprintf_s (s, sizeof(s), "%s/assets/bin", out->baseFolder);
+    asset_get_binfolder_name (out->baseFolder, s, sizeof(s));
     out->folder_assets_bin = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
 
     sprintf_s (s, sizeof(s), "%s/res", out->baseFolder);
@@ -263,7 +267,7 @@ bool asset::context_open_ex (const char *baseFolderIN, const char *dbName, Conte
 //*******************************************************
 bool asset::context_open (const char *baseFolderIN, Context *out)
 {
-    return context_open_ex (baseFolderIN, "db.sqlite3", out);
+    return context_open_ex (baseFolderIN, "assets.sqlite3", out);
 }
 
 //*******************************************************
@@ -323,7 +327,7 @@ bool asset::res_enumerate_fetch (u32 &iter, eResType *out)
 }    
 
 //********************************************************** 
-bool asset::res_get_folder_name (const Context &ctx, eResType resType, char *out, u32 sizeof_out)
+bool asset::res_get_folder_nameByType (const Context &ctx, eResType resType, char *out, u32 sizeof_out)
 {
     if (!ctx.isValid())
     {
@@ -331,9 +335,9 @@ bool asset::res_get_folder_name (const Context &ctx, eResType resType, char *out
         out[0] = 0x00;
         return false;
     }
-    return asset::res_get_folder_name (ctx.baseFolder, resType, out, sizeof_out);
+    return asset::res_get_folder_nameByType (ctx.baseFolder, resType, out, sizeof_out);
 }
-bool asset::res_get_folder_name (const char *baseFolder, eResType resType, char *out, u32 sizeof_out)
+bool asset::res_get_folder_nameByType (const char *baseFolder, eResType resType, char *out, u32 sizeof_out)
 {
     assert (NULL != out);
 
@@ -530,6 +534,11 @@ bool asset::res_get_requireBy_list (Context &ctx, const asset::UID &uid, bool bC
             if (!asset_get_requireBy_list (ctx, childUID, false, out, filter))
                 return false;
         }
+        else
+        {
+            if (!res_get_requireBy_list (ctx, childUID, false, out, filter))
+                return false;
+        }
     }
     return true;
 }
@@ -613,9 +622,21 @@ bool asset::res_delete (Context &ctx, const asset::UID &uid, asset::HashedUIDLis
 
 
 //*******************************************************
+void asset::asset_manufacture_fullFilename (Context &ctx, const asset::UID &uid, char *out, u32 sizeof_out)
+{
+    sprintf_s (out, sizeof_out, "%s/%016" PRIX64 ".gosasset", ctx.folder_assets_bin, uid._uid);
+}
+
+//*******************************************************
 void asset::asset_get_binfolder_name (const char *baseFolder, char *out, u32 sizeof_out)
 {
     sprintf_s (out, sizeof_out, "%s/" GOS_ASSET__PATH_TO_ASSETS_BIN "", baseFolder);
+}
+
+//*******************************************************
+void asset::asset_get_srcfolder_name (const char *baseFolder, char *out, u32 sizeof_out)
+{
+    sprintf_s (out, sizeof_out, "%s/" GOS_ASSET__PATH_TO_ASSETS_SRC "", baseFolder);
 }
 
 //*******************************************************
@@ -838,7 +859,7 @@ bool asset::asset_get_info (Context &ctx, const asset::UID &uid, char *out_CAN_B
 bool asset::asset_get_dependecies_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out)
 {
     assert (NULL != out);
-    assert (uid.isAnAsset());
+    //assert (uid.isAnAsset());
 
     if (bClearListOnStart)
         out->reset();
@@ -1051,7 +1072,7 @@ bool asset::depend_add (Context &ctx, const asset::UID &uid_padre, const asset::
 {
     if (!ctx.isValid())
     {
-        logger::err ("depend_add(%" PRIX64 ",%" PRIX64 ") => invalid ctx\n", uid_padre._uid, uid_figlio._uid);
+        logger::err ("depend_add(%016" PRIX64 ",%016" PRIX64 ") => invalid ctx\n", uid_padre._uid, uid_figlio._uid);
         return false;
     }
 
@@ -1060,7 +1081,7 @@ bool asset::depend_add (Context &ctx, const asset::UID &uid_padre, const asset::
     if (db::exec (ctx.db, s))
         return true;
 
-    logger::err ("depend_add(%" PRIX64 ",%" PRIX64 ") => error inserting into table\n", uid_padre._uid, uid_figlio._uid);
+    logger::err ("depend_add(%016" PRIX64 ",%016" PRIX64 ") => error inserting into table\n", uid_padre._uid, uid_figlio._uid);
     return false;
 }
 

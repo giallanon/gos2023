@@ -1,5 +1,6 @@
 #include "gos.h"
 #include "../gosAssetBuilder.h"
+#include "string/gosStringList.h"
 #include "gosAssetBuilder_shader.h"
 
 
@@ -68,15 +69,51 @@ bool Builder_shader::extractParams (const IniFileSection *sec, Params *out_param
         return false;
     }
 
-    //param:define      e' opzionale e, se esiste, e' una sequenza di parole separate da spazio
-    //                  che vengono passate come 'define' durante la compilazione dello shader
-    sec->get ("define", out_params->define, sizeof(out_params->define));
+    /*param:def     e' opzionale e, se esiste, e' una sequenza di parole separate da spazio
+                    che vengono passate come 'define' durante la compilazione dello shader.
+                    Nel file ini le parole possono essere separate da piu' spazi o magari da tab. Quello che voglio io
+                    qui e' un elenco di parole, trimmate e ordinate alfabeticamente in modo che 2 dichiarazioni apparentemente differenti tipo:
+                        1- def: a     b c
+                        2- def: a b c
+                        3- def: b   a   c
+
+                    risultino tutte uguali (ovvero lo stesso elenco di 3 parole: "a", "b", "c")
+    */
+    char s[512];
+    if (sec->get ("def", s, sizeof(s)))
+    {
+        gos::Array<gos::UTF8String> list;
+        list.setup (gos::getScrapAllocator(), 1024);
+
+        string::utf8::StringListParser sp;
+        sp.toStart (s, ' ');
+        
+        char parola[128];
+        while (sp.next (parola, sizeof(parola)))
+            list.append (parola);
+
+        list.bubbleSort ( [](const gos::UTF8String &s1, const gos::UTF8String &s2)
+        {
+            if (s1.compare(s2) > 0)
+                return true;
+            return false;
+        });
+
+        const u32 n = list.getNElem();
+        assert (n>0);
+        sprintf_s (out_params->def, sizeof(out_params->def), "%s", list(0).getBuffer());
+        for (u32 i=1; i<n; i++)
+        {
+            strcat_s (out_params->def, sizeof(out_params->def), " ");
+            strcat_s (out_params->def, sizeof(out_params->def), list(i).getBuffer());
+        }
+    }    
 
     return true;
 }
 
 //************************************
-bool Builder_shader::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, sBuildResult *out)
+bool Builder_shader::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out)
 {
     assert (ctx.isValid());
     assert (NULL != sec);
@@ -114,28 +151,58 @@ bool Builder_shader::build (Context &ctx, u64 buildTimeUTC, const char *sourceFi
         risultato sarebbe il medesimo
     */
     const u64 lastTimeBuilt = asset::asset_query_lastTimeBuilt (ctx, out->uid);
-    if (0 == lastTimeBuilt)
-    {
-        //asset::UID non esisteva nel DB, ottimo, lo aggiungo e termino con successo
-        if (!asset::asset_insert (ctx, out->uid, getAssType(), buildTimeUTC, sourceFileInfo))
-        {
-            gos::logger::err ("error inserting asset\n");
-            return false;
-        }
-
-        out->result = eBuildResult::just_built;
-
-        //aggiungo le sue dipendenze
-        if (!asset::depend_add (ctx, out->uid, uid_of_iniFile)) return false;        
-        if (!asset::depend_add (ctx, out->uid, params.uid__resource_shader_txt)) return false;
-
-    }
-    else
+    if (0 != lastTimeBuilt)
     {
         //asset::UID esiste gia' nel DB ma e' stato buildato a questo giro di build, quindi va bene,
         //semplicemente non sto a buildarlo una seconda volta
         out->result = eBuildResult::was_already_built;
+        return true;
     }
+
+
+    //asset::UID non esisteva nel DB, ottimo, lo aggiungo e termino con successo
+    if (!asset::asset_insert (ctx, out->uid, getAssType(), buildTimeUTC, sourceFileInfo))
+    {
+        gos::logger::err ("error inserting asset\n");
+        return false;
+    }
+
+    //aggiungo le sue dipendenze
+    if (!asset::depend_add (ctx, out->uid, uid_of_iniFile)) return false;        
+    if (!asset::depend_add (ctx, out->uid, params.uid__resource_shader_txt)) return false;
+
+    //segno che e' stato buildato di fresco
+    out->result = eBuildResult::just_built;
+
+
+    //a questo punto devo compilare lo shader per davvero
+    if (doCreateAnAssetFile)
+    {
+        char shaderStage[8];
+        if (eAssetType::vtx_shader == getAssType())
+            sprintf_s (shaderStage, sizeof(shaderStage), "vert");
+        else
+            sprintf_s (shaderStage, sizeof(shaderStage), "frag");
+
+        char filenameSRC[1024];
+        asset::res_get_folder_nameByType (ctx, eResType::shader_txt, filenameSRC, sizeof(filenameSRC));
+        strcat_s (filenameSRC, sizeof(filenameSRC), "/");
+        strcat_s (filenameSRC, sizeof(filenameSRC), params.src);
+
+        char filenameDST[1024];
+        asset::asset_manufacture_fullFilename (ctx, out->uid, filenameDST, sizeof(filenameDST));
+
+        //creo la versione ottimizzata e la versione con le debug-info. Quest'ultima
+        //serve per esempio alle pipeline_def per recuprare i nomi e il formato dei descrittori
+        if (!shader_compile (filenameSRC, shaderStage, params.def, filenameDST, false))
+            return false;
+
+        strcat_s (filenameDST, sizeof(filenameDST), "_d");
+        if (!shader_compile (filenameSRC, shaderStage, params.def, filenameDST, true))
+            return false;
+
+    }
+
 
     return true;
 }
