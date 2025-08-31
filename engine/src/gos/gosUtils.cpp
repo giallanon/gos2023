@@ -564,6 +564,16 @@ const char* utils::enumToString (const eDataFormat f)
     ENUM_TO_STRING_CASE(eDataFormat, _3i32);
     ENUM_TO_STRING_CASE(eDataFormat, _4i32);
 
+    ENUM_TO_STRING_CASE(eDataFormat, _1u16);
+    ENUM_TO_STRING_CASE(eDataFormat, _2u16);
+    ENUM_TO_STRING_CASE(eDataFormat, _3u16);
+    ENUM_TO_STRING_CASE(eDataFormat, _4u16);
+
+    ENUM_TO_STRING_CASE(eDataFormat, _1i16);
+    ENUM_TO_STRING_CASE(eDataFormat, _2i16);
+    ENUM_TO_STRING_CASE(eDataFormat, _3i16);
+    ENUM_TO_STRING_CASE(eDataFormat, _4i16);
+
     ENUM_TO_STRING_CASE(eDataFormat, _1u8); 
     ENUM_TO_STRING_CASE(eDataFormat, _2u8); 
     ENUM_TO_STRING_CASE(eDataFormat, _3u8); 

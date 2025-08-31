@@ -181,7 +181,7 @@ bool Renderer1::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Camera
         const u16 materialIndex = instanceList(i).indexOf_material;
 
 
-        const tpp::sBoundShapeInfo *shapeInfo;
+        const tpp::sBoundShapeInfo *shapeInfo = NULL;
         shapeList.get (instanceList(i).indexOf_shape, &shapeInfo);
 
         

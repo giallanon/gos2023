@@ -4,6 +4,7 @@
 #include "gosShapeVtxArrayReader.h"
 #include "../gos/gos.h"
 #include "../gos/gosUtils.h"
+#include "../gos/gosMagicUID.h"
 
 using namespace gos;
 
@@ -123,7 +124,7 @@ u32 shape::calcSizeOfAVertex (const VtxLayout &a)
 //*************************************************************
 u32 shape::serialize (const VtxLayout &a, u8 *buffer, u32 sizeof_buffer)
 {
-	const u32 byteNeeded = sizeof(u32) * (1 + a.numElem);
+	const u32 byteNeeded = sizeof(u32) + sizeof(u32)  + sizeof(u32)* (a.numElem);
 	if (NULL == buffer)
 		return byteNeeded;
 
@@ -131,7 +132,14 @@ u32 shape::serialize (const VtxLayout &a, u8 *buffer, u32 sizeof_buffer)
 		return 0;
 
 	u32 ct = 0;
+
+	//magic
+	ct += gos::utils::bufferWriteU32 (&buffer[ct], GOS_MAGIC__VTX_LAYOUT);
+
+	//num elem
 	ct += gos::utils::bufferWriteU32 (&buffer[ct], a.numElem);
+
+	//elem list
 	for (u32 i=0; i<a.numElem; i++)
 		ct += gos::utils::bufferWriteU32 (&buffer[ct], a.elemList[i]);
 	
@@ -141,19 +149,39 @@ u32 shape::serialize (const VtxLayout &a, u8 *buffer, u32 sizeof_buffer)
 
 
 //*************************************************************
-u32 shape::deserialize (VtxLayout *out, const u8 *buffer, u32 sizeof_buffer)
+u32 shape::deserialize (const u8 *buffer, u32 sizeof_buffer, VtxLayout *out)
 {
 	assert (NULL != out);
-	if (sizeof_buffer < sizeof(u32))
+	if (sizeof_buffer < 2 * sizeof(u32))
 		return 0;
 
 	u32 ct = 0;
+
+	//magic
+	const u32 magic = gos::utils::bufferReadU32 (&buffer[ct]);
+	ct += 4;
+
+	if (!magic::signatureMatch (magic, GOS_MAGIC__VTX_LAYOUT))
+	{
+		DBGBREAK;
+		out->numElem = 0;
+		return 0;
+	}
+	if (!magic::versionMatch (magic, GOS_MAGIC__VTX_LAYOUT))
+	{
+		DBGBREAK;
+		out->numElem = 0;
+		return 0;
+	}
+
+	//num elem
 	out->numElem = gos::utils::bufferReadU32 (&buffer[ct]);
 	ct += 4;
 
-	const u32 byteNeeded = sizeof(u32) * (1 + out->numElem);
+	const u32 byteNeeded = sizeof(u32) + sizeof(u32) + sizeof(u32) * (out->numElem);
 	if (sizeof_buffer < byteNeeded || out->numElem >= VtxLayout::NUM_MAX_ELEM)
 	{
+		DBGBREAK;
 		out->numElem = 0;
 		return 0;
 	}
@@ -164,6 +192,7 @@ u32 shape::deserialize (VtxLayout *out, const u8 *buffer, u32 sizeof_buffer)
 		ct += 4;
 	}
 
+	assert (ct == byteNeeded);
 	return byteNeeded;
 	
 }
@@ -228,6 +257,143 @@ void shape::shapeFree (gos::Allocator *allocator, Shape *shapeIN)
 }
 
 //********************************************************
+u32 shape_serialize_calcByteNeeded (const Shape *shapeIN, u32 *out_sizeof_vtxBuffer, u32 *out_sizeof_idxBuffer)
+{
+	assert (NULL != shapeIN);
+	assert (NULL != out_sizeof_vtxBuffer);
+	assert (NULL != out_sizeof_idxBuffer);
+
+	*out_sizeof_vtxBuffer = shape::calcSizeOfAVertex(shapeIN->vtxLayout) * shapeIN->numVtx;
+	*out_sizeof_idxBuffer = sizeof(u16) * shapeIN->numIdx;
+
+	const u32 byteNeeded = 	sizeof(u32) 
+							+ sizeof(u32)
+							+ sizeof(u32)
+							+ shape::serialize (shapeIN->vtxLayout, NULL, 0)
+							+ (*out_sizeof_vtxBuffer)
+							+ (*out_sizeof_idxBuffer);
+
+	return byteNeeded;
+}
+
+//********************************************************
+u32 shape::serialize (const Shape *shapeIN, u8 *buffer, u32 sizeof_buffer)
+{
+	assert (NULL != shapeIN);
+
+	u32 sizeof_vtxBuffer = 0;
+	u32 sizeof_idxBuffer = 0;
+	const u32 byteNeeded = 	shape_serialize_calcByteNeeded (shapeIN, &sizeof_vtxBuffer, &sizeof_idxBuffer);
+	if (NULL == buffer)
+		return byteNeeded;
+
+	if (sizeof_buffer < byteNeeded)
+	{
+		DBGBREAK;
+		return 0;
+	}
+
+	u32 ct = 0;
+	ct += gos::utils::bufferWriteU32 (&buffer[ct], shapeIN->magic);
+	ct += gos::utils::bufferWriteU32 (&buffer[ct], shapeIN->numVtx);
+	ct += gos::utils::bufferWriteU32 (&buffer[ct], shapeIN->numIdx);
+
+	//vtx layout
+	const u32 n = shape::serialize (shapeIN->vtxLayout, &buffer[ct], sizeof_buffer - ct);
+	if (0 == n)
+	{
+		DBGBREAK;
+		return 0;
+	}
+	ct += n;
+
+	if (sizeof_vtxBuffer)
+	{
+		memcpy (&buffer[ct], shapeIN->vtxBuffer, sizeof_vtxBuffer);
+		ct += sizeof_vtxBuffer;
+	}
+
+	if (sizeof_idxBuffer)
+	{
+		memcpy (&buffer[ct], shapeIN->idxBuffer, sizeof_idxBuffer);
+		ct += sizeof_vtxBuffer;
+	}
+
+	assert (ct == byteNeeded);
+	return byteNeeded;
+
+}
+
+//********************************************************
+u32 shape::deserialize (const u8 *buffer, u32 sizeof_buffer, gos::Allocator *allocator, Shape *out_shape)
+{
+	if (sizeof_buffer < 12)
+	{
+		DBGBREAK;
+		return 0;
+	}
+
+	u32 ct = 0;
+	out_shape->reset();
+
+	out_shape->magic = gos::utils::bufferReadU32 (&buffer[ct]);
+	ct+=4;
+	if (!gos::magic::signatureMatch (out_shape->magic, GOS_MAGIC__SHAPE))
+	{
+		gos::logger::err ("shape::deserialize() => invalid MAGIC\n");
+		return 0;
+	}
+
+	if (!gos::magic::versionMatch (out_shape->magic, GOS_MAGIC__SHAPE))
+	{
+		gos::logger::err ("shape::deserialize() => MAGIC signature is ok, but version is invalid\n");
+		return 0;
+	}	
+
+	const u32 numVtx = gos::utils::bufferReadU32 (&buffer[ct]);			ct+=4;
+	const u32 numIdx = gos::utils::bufferReadU32 (&buffer[ct]);			ct+=4;
+	
+	gos::VtxLayout vtxLayout;
+	const u32 n = shape::deserialize (&buffer[ct], sizeof_buffer - ct, &vtxLayout);
+	if (0 == n)
+	{
+		gos::logger::err ("shape::deserialize() => failed to deserialize VtxLayout\n");
+		return 0;
+	}
+	ct += n;
+
+
+	const u32 vtxBufferSize = shape::calcSizeOfAVertex(vtxLayout) * numVtx;
+	const u32 idxBufferSize = sizeof(u16) * numIdx;
+	if (sizeof_buffer < ct +vtxBufferSize +idxBufferSize)
+	{
+		gos::logger::err ("shape::deserialize() => not enough memory (2)\n");
+		return 0;
+	}	
+
+	if (!shape::shapeAlloc (allocator, vtxLayout, numVtx, numIdx, out_shape))
+	{
+		gos::logger::err ("shape::deserialize() => failed to alloc shape (numVtx=%d, numIdx=%d)\n", numVtx, numIdx);
+		return 0;
+	}
+
+	//vtxBuffer
+	if (vtxBufferSize)
+	{
+		memcpy (out_shape->vtxBuffer, &buffer[ct], vtxBufferSize);
+		ct += vtxBufferSize;
+	}
+
+	if (idxBufferSize)
+	{
+		memcpy (out_shape->idxBuffer, &buffer[ct], idxBufferSize);
+		ct += idxBufferSize;
+	}
+
+	return ct;
+}
+
+//********************************************************
 bool shape::shapeLoad (const char *filename, gos::Allocator *allocator, Shape *out)
 {
 	u32 fsize;
@@ -238,78 +404,11 @@ bool shape::shapeLoad (const char *filename, gos::Allocator *allocator, Shape *o
 		return false;
 	}
 
-	const bool ret = shape::shapeLoadFromMemory (buffer, fsize, allocator, out);
+	const u32 ret = shape::deserialize (buffer, fsize, allocator, out);
 	GOSFREE(gos::getScrapAllocator(), buffer);
-	return ret;
+	return (ret != 0);
 }
 
-//********************************************************
-u32 shape::shapeLoadFromMemory (const u8 *mem, u32 sizeof_mem, gos::Allocator *allocator, Shape *out_shape)
-{
-	if (sizeof_mem < 12)
-	{
-		gos::logger::err ("shape::shapeLoadFromMemory() => not enough memory\n");
-		return 0;
-	}
-
-	u32 ct = 0;
-	out_shape->reset();
-
-	out_shape->magic = gos::utils::bufferReadU32 (&mem[ct]);		ct+=4;
-	if (!gos::magic::signatureMatch (out_shape->magic, GOS_MAGIC__SHAPE))
-	{
-		gos::logger::err ("shape::shapeLoadFromMemory() => invalid MAGIC\n");
-		return 0;
-	}
-
-	if (!gos::magic::versionMatch (out_shape->magic, GOS_MAGIC__SHAPE))
-	{
-		gos::logger::err ("shape::shapeLoadFromMemory() => MAGIC signature is ok, but version is invalid\n");
-		return 0;
-	}	
-
-	const u32 numVtx = gos::utils::bufferReadU32 (&mem[ct]);			ct+=4;
-	const u32 numIdx = gos::utils::bufferReadU32 (&mem[ct]);			ct+=4;
-	
-	gos::VtxLayout vtxLayout;
-	const u32 n = shape::deserialize (&vtxLayout, &mem[ct], sizeof_mem - ct);
-	if (0 == n)
-	{
-		gos::logger::err ("shape::shapeLoadFromMemory() => failed to deserialize VtxLayout\n");
-		return 0;
-	}
-	ct += n;
-
-
-	const u32 vtxBufferSize = shape::calcSizeOfAVertex(vtxLayout) * numVtx;
-	const u32 idxBufferSize = sizeof(u16) * numIdx;
-	if (sizeof_mem < ct +vtxBufferSize +idxBufferSize)
-	{
-		gos::logger::err ("shape::shapeLoadFromMemory() => not enough memory (2)\n");
-		return 0;
-	}	
-
-	if (!shape::shapeAlloc (allocator, vtxLayout, numVtx, numIdx, out_shape))
-	{
-		gos::logger::err ("shape::shapeLoadFromMemory() => failed to alloc shape (numVtx=%d, numIdx=%d)\n", numVtx, numIdx);
-		return 0;
-	}
-
-	//vtxBuffer
-	if (vtxBufferSize)
-	{
-		memcpy (out_shape->vtxBuffer, &mem[ct], vtxBufferSize);
-		ct += vtxBufferSize;
-	}
-
-	if (idxBufferSize)
-	{
-		memcpy (out_shape->idxBuffer, &mem[ct], idxBufferSize);
-		ct += idxBufferSize;
-	}
-
-	return ct;
-}
 
 //********************************************************
 bool shape::shapeSave (const char *filename, const Shape *shapeIN)
@@ -331,36 +430,23 @@ bool shape::shapeSave (gos::File &hFile, const Shape *shapeIN)
 {
 	assert (NULL != shapeIN);
 
-	u8 mem[256];
-	u32 ct = 0;
-	ct += gos::utils::bufferWriteU32 (&mem[ct], shapeIN->magic);
-	ct += gos::utils::bufferWriteU32 (&mem[ct], shapeIN->numVtx);
-	ct += gos::utils::bufferWriteU32 (&mem[ct], shapeIN->numIdx);
-
-	const u32 n = shape::serialize (shapeIN->vtxLayout, &mem[ct], sizeof(mem) - ct);
-	if (0 == n)
+	u32 byteNeeded = serialize (shapeIN, NULL, 0);
+	if (0 == byteNeeded)
 	{
-		gos::logger::err ("shape::shapeSave() => failed to serialize VtxLayout\n");
-		return 0;
-	}
-	ct += n;
-
-	fs::fileWrite (hFile, mem, ct);
-
-	if (0 != shapeIN->numVtx)
-	{
-		const u32 size = shape::calcSizeOfAVertex(shapeIN->vtxLayout) * shapeIN->numVtx;
-		fs::fileWrite (hFile, shapeIN->vtxBuffer, size);
+		DBGBREAK;
+		return false;
 	}
 
-	if (0 != shapeIN->numIdx)
+	u8* buffer = GOSALLOC_SCRAPT(u8*, byteNeeded);
+	const u32 ret = serialize (shapeIN, buffer, byteNeeded);
+	if (ret)
 	{
-		const u32 size = sizeof(u16) * shapeIN->numIdx;
-		fs::fileWrite (hFile, shapeIN->idxBuffer, size);
+		assert (ret == byteNeeded);
+		fs::fileWrite (hFile, buffer, byteNeeded);
 	}
 
-	return true;
-
+	GOSFREE_SCRAP(buffer);
+	return (ret != 0);
 }
 
 //********************************************************

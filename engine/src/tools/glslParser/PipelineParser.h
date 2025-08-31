@@ -17,7 +17,7 @@ namespace gos
         static const u8 NAME_MAX_SIZE = 32;
     
     public:
-        void    setDefault();
+        void                setDefault();
 
 
     public:
