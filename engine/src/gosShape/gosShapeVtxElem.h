@@ -8,13 +8,13 @@ namespace gos
 	{
 		namespace VtxElem
 		{
-			u32 					define (u32 offset, eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt);
+			u32 					define (u32 offset, eVtxLayoutSemantic semantic, u8 index, eDataFormat fmt);
 			u32 					getOffset (u32 elem);
 			eVtxLayoutSemantic		getSemantic(u32 elem);
 			u8						getIndex(u32 elem);
-			eVtxLayoutFormat		getFormat (u32 elem);
+			eDataFormat				getFormat (u32 elem);
 			
-			u32 					buildSearchKey (eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt);
+			u32 					buildSearchKey (eVtxLayoutSemantic semantic, u8 index, eDataFormat fmt);
 			bool 					doesKeyMatch (u32 elem, u32 key, u32 *out_offset);
 		} //namespace VtxElem
 

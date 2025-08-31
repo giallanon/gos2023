@@ -236,14 +236,14 @@ bool ArraysImporter::priv_buildFinalShape (gos::Allocator *shapeAllocator, Shape
 		{
 		default:
 			errorCode = 102;
-			gos::logger::err ("shape::ArraysImporter::priv_buildFinalShape() => unsupported vtxFormat (%s)\n", shape::enumToString(da->getFormat()));
+			gos::logger::err ("shape::ArraysImporter::priv_buildFinalShape() => unsupported vtxFormat (%s)\n", utils::enumToString(da->getFormat()));
 			break;
 
-		case eVtxLayoutFormat::_2f32:
+		case eDataFormat::_2f32:
 			priv_finalizeShapeVtxBuffer<vec2f> (writer, da);
 			break;
 
-		case eVtxLayoutFormat::_3f32:
+		case eDataFormat::_3f32:
 			priv_finalizeShapeVtxBuffer<vec3f> (writer, da);
 			break;
 		}

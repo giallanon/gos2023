@@ -16,14 +16,14 @@ using namespace gos::shape;
  * 
  * 
  *************************************************************************************************************************************/
-void glTFImporter::AvailVtxChannel::addAccessorIndex (u32 accessorIndex, eVtxLayoutSemantic semantic, u32 index, eVtxLayoutFormat fmt)
+void glTFImporter::AvailVtxChannel::addAccessorIndex (u32 accessorIndex, eVtxLayoutSemantic semantic, u32 index, eDataFormat fmt)
 {
 	if (numElem >= MAX_NUM_ELEM)
 		return;
 	elem[numElem++] = VtxElem::define (accessorIndex, semantic, index, fmt);
 }
 
-bool glTFImporter::AvailVtxChannel::getAccessorIndex (eVtxLayoutSemantic semantic, u32 index, eVtxLayoutFormat fmt, u32 *out_accessorIndex) const
+bool glTFImporter::AvailVtxChannel::getAccessorIndex (eVtxLayoutSemantic semantic, u32 index, eDataFormat fmt, u32 *out_accessorIndex) const
 {
 	const u32 key = VtxElem::buildSearchKey (semantic, index, fmt);
 	for (u32 i=0; i<numElem; i++)
@@ -73,33 +73,7 @@ glTFImporter::sAccessors::eType glTFImporter::sAccessors::parseType (const char 
 	
 }
 
-bool glTFImporter::sAccessors::isCompatibile (eVtxLayoutFormat fmtIN) const
-{
-	switch (fmtIN)
-	{
-	default:
-		DBGBREAK;
-		return false;
-
-	case eVtxLayoutFormat::_1f32:	return (eFmt::_f32 == fmt && eType::scalar == type);
-	case eVtxLayoutFormat::_2f32:	return (eFmt::_f32 == fmt && eType::vec2 == type);
-	case eVtxLayoutFormat::_3f32:	return (eFmt::_f32 == fmt && eType::vec3 == type);
-	case eVtxLayoutFormat::_4f32:	return (eFmt::_f32 == fmt && eType::vec4 == type);		
-
-	case eVtxLayoutFormat::_1i32:	return (eFmt::_i32 == fmt && eType::scalar == type);
-	case eVtxLayoutFormat::_2i32:	return (eFmt::_i32 == fmt && eType::vec2 == type);
-	case eVtxLayoutFormat::_3i32:	return (eFmt::_i32 == fmt && eType::vec3 == type);
-	case eVtxLayoutFormat::_4i32:	return (eFmt::_i32 == fmt && eType::vec4 == type);		
-
-	case eVtxLayoutFormat::_1u32:	return (eFmt::_u32 == fmt && eType::scalar == type);
-	case eVtxLayoutFormat::_2u32:	return (eFmt::_u32 == fmt && eType::vec2 == type);
-	case eVtxLayoutFormat::_3u32:	return (eFmt::_u32 == fmt && eType::vec3 == type);
-	case eVtxLayoutFormat::_4u32:	return (eFmt::_u32 == fmt && eType::vec4 == type);		
-	}
-
-}
-
-eVtxLayoutFormat glTFImporter::sAccessors::toVtxLayoutFmt() const
+eDataFormat glTFImporter::sAccessors::toVtxLayoutFmt() const
 {
 	switch (fmt)
 	{
@@ -110,10 +84,10 @@ eVtxLayoutFormat glTFImporter::sAccessors::toVtxLayoutFmt() const
 		switch (type)
 		{
 			default: break;
-			case eType::scalar:	return eVtxLayoutFormat::_1i8;
-			case eType::vec2:	return eVtxLayoutFormat::_2i8;
-			case eType::vec3:	return eVtxLayoutFormat::_3i8;
-			case eType::vec4:	return eVtxLayoutFormat::_4i8;
+			case eType::scalar:	return eDataFormat::_1i8;
+			case eType::vec2:	return eDataFormat::_2i8;
+			case eType::vec3:	return eDataFormat::_3i8;
+			case eType::vec4:	return eDataFormat::_4i8;
 		}
 		break;
 
@@ -121,10 +95,10 @@ eVtxLayoutFormat glTFImporter::sAccessors::toVtxLayoutFmt() const
 		switch (type)
 		{
 			default: break;
-			case eType::scalar:	return eVtxLayoutFormat::_1u8;
-			case eType::vec2:	return eVtxLayoutFormat::_2u8;
-			case eType::vec3:	return eVtxLayoutFormat::_3u8;
-			case eType::vec4:	return eVtxLayoutFormat::_4u8;
+			case eType::scalar:	return eDataFormat::_1u8;
+			case eType::vec2:	return eDataFormat::_2u8;
+			case eType::vec3:	return eDataFormat::_3u8;
+			case eType::vec4:	return eDataFormat::_4u8;
 		}
 		break;
 
@@ -132,10 +106,10 @@ eVtxLayoutFormat glTFImporter::sAccessors::toVtxLayoutFmt() const
 		switch (type)
 		{
 			default: break;
-			case eType::scalar:	return eVtxLayoutFormat::_1i16;
-			case eType::vec2:	return eVtxLayoutFormat::_2i16;
-			case eType::vec3:	return eVtxLayoutFormat::_3i16;
-			case eType::vec4:	return eVtxLayoutFormat::_4i16;
+			case eType::scalar:	return eDataFormat::_1i16;
+			case eType::vec2:	return eDataFormat::_2i16;
+			case eType::vec3:	return eDataFormat::_3i16;
+			case eType::vec4:	return eDataFormat::_4i16;
 		}
 		break;
 
@@ -143,10 +117,10 @@ eVtxLayoutFormat glTFImporter::sAccessors::toVtxLayoutFmt() const
 		switch (type)
 		{
 			default: break;
-			case eType::scalar:	return eVtxLayoutFormat::_1u16;
-			case eType::vec2:	return eVtxLayoutFormat::_2u16;
-			case eType::vec3:	return eVtxLayoutFormat::_3u16;
-			case eType::vec4:	return eVtxLayoutFormat::_4u16;
+			case eType::scalar:	return eDataFormat::_1u16;
+			case eType::vec2:	return eDataFormat::_2u16;
+			case eType::vec3:	return eDataFormat::_3u16;
+			case eType::vec4:	return eDataFormat::_4u16;
 		}
 		break;
 
@@ -154,10 +128,10 @@ eVtxLayoutFormat glTFImporter::sAccessors::toVtxLayoutFmt() const
 		switch (type)
 		{
 			default: break;
-			case eType::scalar:	return eVtxLayoutFormat::_1i32;
-			case eType::vec2:	return eVtxLayoutFormat::_2i32;
-			case eType::vec3:	return eVtxLayoutFormat::_3i32;
-			case eType::vec4:	return eVtxLayoutFormat::_4i32;
+			case eType::scalar:	return eDataFormat::_1i32;
+			case eType::vec2:	return eDataFormat::_2i32;
+			case eType::vec3:	return eDataFormat::_3i32;
+			case eType::vec4:	return eDataFormat::_4i32;
 		}
 		break;
 
@@ -165,10 +139,10 @@ eVtxLayoutFormat glTFImporter::sAccessors::toVtxLayoutFmt() const
 		switch (type)
 		{
 			default: break;
-			case eType::scalar:	return eVtxLayoutFormat::_1u32;
-			case eType::vec2:	return eVtxLayoutFormat::_2u32;
-			case eType::vec3:	return eVtxLayoutFormat::_3u32;
-			case eType::vec4:	return eVtxLayoutFormat::_4u32;
+			case eType::scalar:	return eDataFormat::_1u32;
+			case eType::vec2:	return eDataFormat::_2u32;
+			case eType::vec3:	return eDataFormat::_3u32;
+			case eType::vec4:	return eDataFormat::_4u32;
 		}
 		break;
 
@@ -176,16 +150,16 @@ eVtxLayoutFormat glTFImporter::sAccessors::toVtxLayoutFmt() const
 		switch (type)
 		{
 			default: break;
-			case eType::scalar:	return eVtxLayoutFormat::_1f32;
-			case eType::vec2:	return eVtxLayoutFormat::_2f32;
-			case eType::vec3:	return eVtxLayoutFormat::_3f32;
-			case eType::vec4:	return eVtxLayoutFormat::_4f32;
+			case eType::scalar:	return eDataFormat::_1f32;
+			case eType::vec2:	return eDataFormat::_2f32;
+			case eType::vec3:	return eDataFormat::_3f32;
+			case eType::vec4:	return eDataFormat::_4f32;
 		}
 		break;		
 	}
 
 	DBGBREAK;
-	return eVtxLayoutFormat::unknown;
+	return eDataFormat::_unknown;
 }
 
 /************************************************************************************************************************************
@@ -288,42 +262,42 @@ void glTFImporter::priv_parseMeshAttributes (const gos::IniFileSection *sec, Ava
 	accessorIndex = sec->getOrDefaultAsU32("POSITION", u32MAX);
 	if (u32MAX != accessorIndex)
 	{
-		const eVtxLayoutFormat accessorFmt =accessorsList(accessorIndex).toVtxLayoutFmt();
+		const eDataFormat accessorFmt =accessorsList(accessorIndex).toVtxLayoutFmt();
 		out->addAccessorIndex (accessorIndex, eVtxLayoutSemantic::position, 0, accessorFmt);
 	}
 
 	accessorIndex = sec->getOrDefaultAsU32("NORMAL", u32MAX);
 	if (u32MAX != accessorIndex)
 	{
-		const eVtxLayoutFormat accessorFmt =accessorsList(accessorIndex).toVtxLayoutFmt();
+		const eDataFormat accessorFmt =accessorsList(accessorIndex).toVtxLayoutFmt();
 		out->addAccessorIndex (accessorIndex, eVtxLayoutSemantic::normal, 0, accessorFmt);
 	}
 
 	accessorIndex = sec->getOrDefaultAsU32("TANGENT", u32MAX);
 	if (u32MAX != accessorIndex)
 	{
-		const eVtxLayoutFormat accessorFmt =accessorsList(accessorIndex).toVtxLayoutFmt();
+		const eDataFormat accessorFmt =accessorsList(accessorIndex).toVtxLayoutFmt();
 		out->addAccessorIndex (accessorIndex, eVtxLayoutSemantic::tangent, 0, accessorFmt);
 	}
 
 	accessorIndex = sec->getOrDefaultAsU32("TEXCOORD_0", u32MAX);
 	if (u32MAX != accessorIndex)
 	{
-		const eVtxLayoutFormat accessorFmt =accessorsList(accessorIndex).toVtxLayoutFmt();
+		const eDataFormat accessorFmt =accessorsList(accessorIndex).toVtxLayoutFmt();
 		out->addAccessorIndex (accessorIndex, eVtxLayoutSemantic::texCoord, 0, accessorFmt);
 	}
 
 	accessorIndex = sec->getOrDefaultAsU32("TEXCOORD_1", u32MAX);
 	if (u32MAX != accessorIndex)
 	{
-		const eVtxLayoutFormat accessorFmt =accessorsList(accessorIndex).toVtxLayoutFmt();
+		const eDataFormat accessorFmt =accessorsList(accessorIndex).toVtxLayoutFmt();
 		out->addAccessorIndex (accessorIndex, eVtxLayoutSemantic::texCoord, 1, accessorFmt);
 	}
 
 	accessorIndex = sec->getOrDefaultAsU32("TEXCOORD_2", u32MAX);
 	if (u32MAX != accessorIndex)
 	{
-		const eVtxLayoutFormat accessorFmt =accessorsList(accessorIndex).toVtxLayoutFmt();
+		const eDataFormat accessorFmt =accessorsList(accessorIndex).toVtxLayoutFmt();
 		out->addAccessorIndex (accessorIndex, eVtxLayoutSemantic::texCoord, 2, accessorFmt);
 	}
 }
@@ -424,7 +398,7 @@ bool glTFImporter::priv_parseMesh (const gos::IniFileSection *sec)
 			u32 ii;
 			if (!availVtxChannel.getAccessorIndex (vtxLayoutR.getSemantic(i), vtxLayoutR.getIndex(i), vtxLayoutR.getFormat(i), &ii))
 			{
-				gos::logger::verbose ("glTFImporter::priv_parseMesh(%d) => file does not contains info for <%s, %d, %s>\n", index, shape::enumToString(vtxLayoutR.getSemantic(i)), vtxLayoutR.getIndex(i), shape::enumToString(vtxLayoutR.getFormat(i)));
+				gos::logger::verbose ("glTFImporter::priv_parseMesh(%d) => file does not contains info for <%s, %d, %s>\n", index, shape::enumToString(vtxLayoutR.getSemantic(i)), vtxLayoutR.getIndex(i), utils::enumToString(vtxLayoutR.getFormat(i)));
 			}
 			else
 			{
@@ -434,11 +408,11 @@ bool glTFImporter::priv_parseMesh (const gos::IniFileSection *sec)
 					DBGBREAK;
 					break;
 
-				case eVtxLayoutFormat::_2f32:
+				case eDataFormat::_2f32:
 					imp.addImportArray<vec2f> (accessorsList(ii).pData, i, vtxLayoutR.getSemantic(i), vtxLayoutR.getIndex(i), vtxLayoutR.getFormat(i));
 					break;
 
-				case eVtxLayoutFormat::_3f32:
+				case eDataFormat::_3f32:
 					imp.addImportArray<vec3f> (accessorsList(ii).pData, i, vtxLayoutR.getSemantic(i), vtxLayoutR.getIndex(i), vtxLayoutR.getFormat(i));
 					break;
 				}

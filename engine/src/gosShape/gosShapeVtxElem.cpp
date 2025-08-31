@@ -5,34 +5,33 @@ using namespace gos;
 
 
 //*************************************************************
-u32 shape::VtxElem::define (u32 offset, eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt)
+u32 shape::VtxElem::define (u32 offset, eVtxLayoutSemantic semantic, u8 index, eDataFormat fmt)
 {
 	assert (offset < 0xffff);
 	assert (static_cast<int>(semantic) < 16);
 	assert (index < 16);
-	assert (static_cast<int>(fmt) < 32);
+	assert (static_cast<int>(fmt) <= 0xff);
 
 	//offset	16bit
 	//semantic	4bit
 	//index		4bit
-	//format	5bit
-	//empty		3bit
+	//format	8bit
 	u32 ret = offset << 16;
 
 	ret |= ((static_cast<u32>(semantic) & 0x0f) << 12);
 	ret |= ((static_cast<u32>(index) & 0x0f) << 8);
-	ret |= ((static_cast<u32>(fmt) & 0x1f) << 3);
+	ret |= (static_cast<u32>(fmt) & 0xff);
 	return ret;
 }
 
 //*************************************************************
-u32 shape::VtxElem::getOffset (u32 elem)								{ return (elem >> 16); }
-eVtxLayoutSemantic shape::VtxElem::getSemantic (u32 elem)				{ return static_cast<eVtxLayoutSemantic>((elem >> 12) & 0x0f); }
-u8 shape::VtxElem::getIndex(u32 elem)									{ return static_cast<u8>((elem >> 8) & 0x0f); }
-eVtxLayoutFormat shape::VtxElem::getFormat(u32 elem)					{ return static_cast<eVtxLayoutFormat>((elem >> 3) & 0x1f); }
+u32 				shape::VtxElem::getOffset (u32 elem)				{ return (elem >> 16); }
+eVtxLayoutSemantic 	shape::VtxElem::getSemantic (u32 elem)				{ return static_cast<eVtxLayoutSemantic>((elem >> 12) & 0x0f); }
+u8 					shape::VtxElem::getIndex(u32 elem)					{ return static_cast<u8>((elem >> 8) & 0x0f); }
+eDataFormat	 		shape::VtxElem::getFormat(u32 elem)					{ return static_cast<eDataFormat>(elem & 0xFF); }
 
 //*************************************************************
-u32 shape::VtxElem::buildSearchKey (eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt)
+u32 shape::VtxElem::buildSearchKey (eVtxLayoutSemantic semantic, u8 index, eDataFormat fmt)
 {
 	return define(0, semantic, index, fmt);
 }

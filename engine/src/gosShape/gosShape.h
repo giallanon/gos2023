@@ -9,16 +9,8 @@ namespace gos
 	namespace shape
 	{
 		const char*		enumToString (eVtxLayoutSemantic e);
-		const char*		enumToString (eVtxLayoutFormat e);
 
-		/*============================================================================== 
-		 *
-		 *	VtxLayoutFormat
-		 *
-		 *==============================================================================*/
-		u32 	getSizeInByte (eVtxLayoutFormat fmt);
-
-
+		
 		/*============================================================================== 
 		 *
 		 *	VtxLayout

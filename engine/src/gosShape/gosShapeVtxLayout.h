@@ -22,20 +22,20 @@ namespace gos
 
 			void 				setup (VTXLAYOUT v)																				{ vl = v; }
 
-			bool				find (eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt, u32 *out_offset) const		{ assert (NULL != out_offset); *out_offset = priv_findOffset(semantic, index, fmt); return (*out_offset != u32MAX); }
-			bool 				exists  (eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt) const						{ return (priv_findOffset(semantic, index, fmt) != u32MAX); }
+			bool				find (eVtxLayoutSemantic semantic, u8 index, eDataFormat fmt, u32 *out_offset) const			{ assert (NULL != out_offset); *out_offset = priv_findOffset(semantic, index, fmt); return (*out_offset != u32MAX); }
+			bool 				exists  (eVtxLayoutSemantic semantic, u8 index, eDataFormat fmt) const							{ return (priv_findOffset(semantic, index, fmt) != u32MAX); }
 
 			u32 				getNumElem () const 																			{ return vl->numElem; }
 			u32 				getOffset (u32 elemNum)	const																	{ assert(elemNum<getNumElem()); return VtxElem::getOffset(vl->elemList[elemNum]); }
 			eVtxLayoutSemantic	getSemantic (u32 elemNum) const																	{ assert(elemNum<getNumElem()); return VtxElem::getSemantic(vl->elemList[elemNum]); }
 			u8					getIndex (u32 elemNum) const																	{ assert(elemNum<getNumElem()); return VtxElem::getIndex(vl->elemList[elemNum]); }
-			eVtxLayoutFormat	getFormat (u32 elemNum)	const																	{ assert(elemNum<getNumElem()); return VtxElem::getFormat(vl->elemList[elemNum]); }
+			eDataFormat			getFormat (u32 elemNum)	const																	{ assert(elemNum<getNumElem()); return VtxElem::getFormat(vl->elemList[elemNum]); }
 
 		protected:
 			VTXLAYOUT			vl;
 
 		private:
-			u32					priv_findOffset (eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt) const
+			u32					priv_findOffset (eVtxLayoutSemantic semantic, u8 index, eDataFormat fmt) const
 								{
 									u32 ret;
 									const u32 key = VtxElem::buildSearchKey (semantic, index, fmt);
@@ -78,7 +78,7 @@ namespace gos
 								~VtxLayoutWriter()																		{ }
 
 			VtxLayoutWriter& 	begin ()																				{ vl->numElem = 0; return *this; }
-			VtxLayoutWriter&		add (u32 offset, eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt)
+			VtxLayoutWriter&		add (u32 offset, eVtxLayoutSemantic semantic, u8 index, eDataFormat fmt)
 									{
 										if (getNumElem() >= VtxLayout::NUM_MAX_ELEM)
 										{
@@ -89,10 +89,10 @@ namespace gos
 										return *this;
 									}
 
-			VtxLayoutWriter&		addPos3 (u32 offset, u8 index=0) 													{ return add (offset, eVtxLayoutSemantic::position, index, eVtxLayoutFormat::_3f32); }
-			VtxLayoutWriter&		addNorm3 (u32 offset, u8 index=0) 													{ return add (offset, eVtxLayoutSemantic::normal, index, eVtxLayoutFormat::_3f32); }
-			VtxLayoutWriter&		addTexCoord (u32 offset, u8 index=0) 												{ return add (offset, eVtxLayoutSemantic::texCoord, index, eVtxLayoutFormat::_2f32); }
-			VtxLayoutWriter&		addColor3 (u32 offset, u8 index=0)													{ return add (offset, eVtxLayoutSemantic::color, index, eVtxLayoutFormat::_3f32); }
+			VtxLayoutWriter&		addPos3 (u32 offset, u8 index=0) 													{ return add (offset, eVtxLayoutSemantic::position, index, eDataFormat::_3f32); }
+			VtxLayoutWriter&		addNorm3 (u32 offset, u8 index=0) 													{ return add (offset, eVtxLayoutSemantic::normal, index, eDataFormat::_3f32); }
+			VtxLayoutWriter&		addTexCoord (u32 offset, u8 index=0) 												{ return add (offset, eVtxLayoutSemantic::texCoord, index, eDataFormat::_2f32); }
+			VtxLayoutWriter&		addColor3 (u32 offset, u8 index=0)													{ return add (offset, eVtxLayoutSemantic::color, index, eDataFormat::_3f32); }
 			bool				end();
 
 		};

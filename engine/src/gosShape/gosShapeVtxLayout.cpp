@@ -24,7 +24,7 @@ bool VtxLayoutWriter::end()
 	}
 
 	//gli elementi devono essere in ordine di offset
-	u32 ct = getOffset(0) + shape::getSizeInByte(getFormat(0));
+	u32 ct = getOffset(0) + dataformat::getSize(getFormat(0));
 	for (u32 i=1; i<getNumElem(); i++)
 	{
 		if (getOffset(i) < ct)
@@ -34,7 +34,7 @@ bool VtxLayoutWriter::end()
 			return false;
 		}
 
-		ct = getOffset(i) + shape::getSizeInByte(getFormat(i));
+		ct = getOffset(i) + dataformat::getSize(getFormat(i));
 	}
 
 

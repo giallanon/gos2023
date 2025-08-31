@@ -65,7 +65,7 @@ namespace gos
 			ArraysImporter&	beginUsingRealIdxBuffer (const VtxLayout &desiredLayout, const u16 *idxBuffer, u32 totNumOfIdxInIdxBuffer);
 			
 							template<class T>
-			ArraysImporter&	addImportArray (const void *listIN, u8 offsetInTupla, eVtxLayoutSemantic semanticIN, u8 semanticIndexIN, eVtxLayoutFormat fmt)
+			ArraysImporter&	addImportArray (const void *listIN, u8 offsetInTupla, eVtxLayoutSemantic semanticIN, u8 semanticIndexIN, eDataFormat fmt)
 							{
 								//se stiamo usando un vero idxBuffer, l'offset di quelo elemeno nell'idx buffer non serve
 								if (eMode::importFromRealIdxBuffer == mode)
@@ -77,14 +77,14 @@ namespace gos
 								//verifico che (semantic, semanticIdx, fmt) sia compatibile con il vtxLayout indicato durante begin()
 								if (!vxtLayoutR.exists (semanticIN, semanticIndexIN, fmt))
 								{
-									gos::logger::verbose ("shape::ArraysImporter::addImportArray() => VtxLayout does not contains '%s(%d) %s'\n", enumToString(semanticIN), semanticIndexIN, enumToString(fmt));
+									gos::logger::verbose ("shape::ArraysImporter::addImportArray() => VtxLayout does not contains '%s(%d) %s'\n", enumToString(semanticIN), semanticIndexIN, utils::enumToString(fmt));
 									errorCode = 1;
 									return *this;
 								}
 								if (offsetInTupla >= numIdxPerOgniTupla)
 								{
 									errorCode = 1;
-									gos::logger::verbose ("shape::ArraysImporter::addImportArray() => 'offsetInTupla'' for '%s(%d) %s' is out of range\n", enumToString(semanticIN), semanticIndexIN, enumToString(fmt));
+									gos::logger::verbose ("shape::ArraysImporter::addImportArray() => 'offsetInTupla'' for '%s(%d) %s' is out of range\n", enumToString(semanticIN), semanticIndexIN, utils::enumToString(fmt));
 									return *this;
 								}
 
@@ -196,14 +196,14 @@ namespace gos
 				u8 					getOffsetInTupla() const 					{ return offsetInTupla; }
 				eVtxLayoutSemantic	getSemantic() const 						{ return semantic; }
 				u8					getSemanticIndex() const 					{ return semanticIndex; }
-				eVtxLayoutFormat	getFormat() const 							{ return fmt; }
+				eDataFormat			getFormat() const 							{ return fmt; }
 
 			protected:
 				u8					offsetInTupla;
 				u8					offsetInVtx;
 				eVtxLayoutSemantic 	semantic;
 				u8 					semanticIndex;
-				eVtxLayoutFormat	fmt;
+				eDataFormat			fmt;
 			};
 
 			template <class T>
@@ -212,7 +212,7 @@ namespace gos
 			public:
 						DataArray()	: DataArrayInterface()					 	{ }
 				
-				void 	setup (	eVtxLayoutSemantic semanticIN, u8 semanticIndexIN, eVtxLayoutFormat fmtIN,
+				void 	setup (	eVtxLayoutSemantic semanticIN, u8 semanticIndexIN, eDataFormat fmtIN,
 								const T *listIN, u8 offsetInTuplaIN, u8 offsetInVtxIN)		
 						{
 							semantic = semanticIN; 
@@ -253,7 +253,7 @@ namespace gos
 						}
 
 						template<class T>
-				void	addChannel (eVtxLayoutSemantic semanticIN, u8 semanticIndexIN, eVtxLayoutFormat fmtIN, const T *listIN, u8 offsetInTuplaIN, u8 offsetInVtxIN)
+				void	addChannel (eVtxLayoutSemantic semanticIN, u8 semanticIndexIN, eDataFormat fmtIN, const T *listIN, u8 offsetInTuplaIN, u8 offsetInVtxIN)
 						{
 							DataArray<T> *data = GOSNEW(gos::getScrapAllocator(), DataArray<T>)();
 							data->setup (semanticIN, semanticIndexIN, fmtIN, listIN, offsetInTuplaIN, offsetInVtxIN);

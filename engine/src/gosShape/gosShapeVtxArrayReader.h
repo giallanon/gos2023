@@ -80,7 +80,7 @@ namespace gos
 			void	setup (const Shape *shape);
 
 					template<class T>
-			bool	get (eVtxLayoutSemantic semantic, u8 index, eVtxLayoutFormat fmt, Elem<T> *out)
+			bool	get (eVtxLayoutSemantic semantic, u8 index, eDataFormat fmt, Elem<T> *out)
 					{
 						assert (NULL != out);
 						u32 offset;
@@ -91,11 +91,11 @@ namespace gos
 						return out->isValid();
 					}
 
-			bool 	getPos3 (Elem<vec3f> *out)							{ return get<vec3f> (eVtxLayoutSemantic::position, 0, eVtxLayoutFormat::_3f32, out); }
-			bool 	getNorm3 (Elem<vec3f> *out)							{ return get<vec3f> (eVtxLayoutSemantic::normal, 0, eVtxLayoutFormat::_3f32, out); }
-			bool 	getTexCoord (Elem<vec2f> *out, u8 index=0)			{ return get<vec2f> (eVtxLayoutSemantic::texCoord, index, eVtxLayoutFormat::_2f32, out); }
-			bool 	getTan3 (Elem<vec3f> *out)							{ return get<vec3f> (eVtxLayoutSemantic::tangent, 0, eVtxLayoutFormat::_3f32, out); }
-			bool 	getBitan3 (Elem<vec3f> *out)						{ return get<vec3f> (eVtxLayoutSemantic::bitangent, 0, eVtxLayoutFormat::_3f32, out); }
+			bool 	getPos3 (Elem<vec3f> *out)							{ return get<vec3f> (eVtxLayoutSemantic::position, 0, eDataFormat::_3f32, out); }
+			bool 	getNorm3 (Elem<vec3f> *out)							{ return get<vec3f> (eVtxLayoutSemantic::normal, 0, eDataFormat::_3f32, out); }
+			bool 	getTexCoord (Elem<vec2f> *out, u8 index=0)			{ return get<vec2f> (eVtxLayoutSemantic::texCoord, index, eDataFormat::_2f32, out); }
+			bool 	getTan3 (Elem<vec3f> *out)							{ return get<vec3f> (eVtxLayoutSemantic::tangent, 0, eDataFormat::_3f32, out); }
+			bool 	getBitan3 (Elem<vec3f> *out)						{ return get<vec3f> (eVtxLayoutSemantic::bitangent, 0, eDataFormat::_3f32, out); }
 
 			u32 	getNumMaxVertex() const 							{ return numVtx; }
 

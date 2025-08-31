@@ -20,7 +20,7 @@ namespace gos
 		//max 16 elementi
 	};
 
-	enum class eVtxLayoutFormat : u8
+	/*enum class eVtxLayoutFormat : u8
 	{
 		_1f32 = 0,
 		_2f32 = 1,
@@ -59,7 +59,7 @@ namespace gos
 
 		unknown = 31
 		//max 32 elementi
-	};
+	};*/
 
 
 	/**

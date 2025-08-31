@@ -28,74 +28,6 @@ const char*	shape::enumToString (eVtxLayoutSemantic e)
 }
 
 //*************************************************************
-const char*	shape::enumToString (eVtxLayoutFormat e)
-{
-	switch (e)
-	{
-	default:	return "??unkown??"; 
-	case eVtxLayoutFormat::_1f32: return "1f32";
-	case eVtxLayoutFormat::_2f32: return "2f32";
-	case eVtxLayoutFormat::_3f32: return "3f32";
-	case eVtxLayoutFormat::_4f32: return "4f32";
-
-	case eVtxLayoutFormat::_1i32: return "1i32";
-	case eVtxLayoutFormat::_2i32: return "2i32";
-	case eVtxLayoutFormat::_3i32: return "3i32";
-	case eVtxLayoutFormat::_4i32: return "4i32";
-	
-	case eVtxLayoutFormat::_1u32: return "1u32";
-	case eVtxLayoutFormat::_2u32: return "2u32";
-	case eVtxLayoutFormat::_3u32: return "3u32";
-	case eVtxLayoutFormat::_4u32: return "4u32";
-
-	case eVtxLayoutFormat::_1i16: return "1i16";
-	case eVtxLayoutFormat::_2i16: return "2i16";
-	case eVtxLayoutFormat::_3i16: return "3i16";
-	case eVtxLayoutFormat::_4i16: return "4i16";
-
-	case eVtxLayoutFormat::_1u16: return "1u16";
-	case eVtxLayoutFormat::_2u16: return "2u16";
-	case eVtxLayoutFormat::_3u16: return "3u16";
-	case eVtxLayoutFormat::_4u16: return "4u16";
-
-	case eVtxLayoutFormat::_1i8: return "1i8";
-	case eVtxLayoutFormat::_2i8: return "2i8";
-	case eVtxLayoutFormat::_3i8: return "3i8";
-	case eVtxLayoutFormat::_4i8: return "4i8";
-	
-	case eVtxLayoutFormat::_1u8: return "1u8";
-	case eVtxLayoutFormat::_2u8: return "2u8";
-	case eVtxLayoutFormat::_3u8: return "3u8";
-	case eVtxLayoutFormat::_4u8: return "4u8";	
-	}
-}
-
-//*************************************************************
-u32 shape::getSizeInByte (eVtxLayoutFormat fmt)
-{
-	switch (fmt)
-	{
-	default:
-		DBGBREAK;
-		return 0;
-	case eVtxLayoutFormat::_1f32: return 4;
-	case eVtxLayoutFormat::_2f32: return 8;
-	case eVtxLayoutFormat::_3f32: return 12;
-	case eVtxLayoutFormat::_4f32: return 16;
-
-	case eVtxLayoutFormat::_1i32: return 4;
-	case eVtxLayoutFormat::_2i32: return 8;
-	case eVtxLayoutFormat::_3i32: return 12;
-	case eVtxLayoutFormat::_4i32: return 16;
-
-	case eVtxLayoutFormat::_1u32: return 4;
-	case eVtxLayoutFormat::_2u32: return 8;
-	case eVtxLayoutFormat::_3u32: return 12;
-	case eVtxLayoutFormat::_4u32: return 16;
-	}
-}
-
-//*************************************************************
 bool shape::areEqual (const gos::VtxLayout &a, const gos::VtxLayout &b)
 {
 	if (a.numElem != b.numElem) return false;
@@ -117,7 +49,7 @@ u32 shape::calcSizeOfAVertex (const VtxLayout &a)
 {
 	u32 ret = 0;
 	for (u32 i=0; i<a.numElem; i++)
-		ret += shape::getSizeInByte (VtxElem::getFormat (a.elemList[i]));
+		ret += dataformat::getSize (VtxElem::getFormat (a.elemList[i]));
 	return ret;
 }
 
@@ -316,7 +248,7 @@ u32 shape::serialize (const Shape *shapeIN, u8 *buffer, u32 sizeof_buffer)
 	if (sizeof_idxBuffer)
 	{
 		memcpy (&buffer[ct], shapeIN->idxBuffer, sizeof_idxBuffer);
-		ct += sizeof_vtxBuffer;
+		ct += sizeof_idxBuffer;
 	}
 
 	assert (ct == byteNeeded);
@@ -466,7 +398,7 @@ void shape::debug_shapePrint (const Shape *s)
 		{
 			gos::logger::log ("OFFSET=%04d  FORMAT=%s  SEMANTIC=%s INDEX=%d\n",
 				vtxR.getOffset(i),
-				shape::enumToString (vtxR.getFormat(i)),
+				utils::enumToString (vtxR.getFormat(i)),
 				shape::enumToString (vtxR.getSemantic(i)),
 				vtxR.getIndex(i));
 		}
@@ -490,21 +422,21 @@ void shape::debug_shapePrint (const Shape *s)
 					gos::logger::log ("( ??? )  ");
 					break;
 
-				case eVtxLayoutFormat::_2f32:
+				case eDataFormat::_2f32:
 					{
 						const gos::vec2f *data = reinterpret_cast<const gos::vec2f*>(&s->vtxBuffer[ct+offset]);
 						gos::logger::log ("(%.3f, %.3f)  ", data->x, data->y);
 					}
 					break;
 
-				case eVtxLayoutFormat::_3f32:
+				case eDataFormat::_3f32:
 					{
 						const gos::vec3f *data = reinterpret_cast<const gos::vec3f*>(&s->vtxBuffer[ct+offset]);
 						gos::logger::log ("(%.3f, %.3f, %.3f)  ", data->x, data->y, data->z);
 					}
 					break;
 
-				case eVtxLayoutFormat::_4f32:
+				case eDataFormat::_4f32:
 					{
 						const gos::vec4f *data = reinterpret_cast<const gos::vec4f*>(&s->vtxBuffer[ct+offset]);
 						gos::logger::log ("(%.3f, %.3f, %.3f)  ", data->x, data->y, data->z, data->w);

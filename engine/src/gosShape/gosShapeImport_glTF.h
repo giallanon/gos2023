@@ -62,8 +62,7 @@ namespace gos
 				static eType	parseType (const char *name);
 
 			public:
-				bool 				isCompatibile (eVtxLayoutFormat fmt) const;
-				eVtxLayoutFormat	toVtxLayoutFmt() const;
+				eDataFormat		toVtxLayoutFmt() const;
 
 			public:
 				const u8	*pData;
@@ -78,8 +77,8 @@ namespace gos
 						AvailVtxChannel()																				{ reset(); }
 
 				void	reset()																							{ numElem = 0; }
-				void 	addAccessorIndex (u32 accessorIndex, eVtxLayoutSemantic semantic, u32 index, eVtxLayoutFormat fmt);
-				bool 	getAccessorIndex (eVtxLayoutSemantic semantic, u32 index, eVtxLayoutFormat fmt, u32 *out_accessorIndex) const;
+				void 	addAccessorIndex (u32 accessorIndex, eVtxLayoutSemantic semantic, u32 index, eDataFormat fmt);
+				bool 	getAccessorIndex (eVtxLayoutSemantic semantic, u32 index, eDataFormat fmt, u32 *out_accessorIndex) const;
 
 			private:
 				static constexpr u32 MAX_NUM_ELEM = 32;
