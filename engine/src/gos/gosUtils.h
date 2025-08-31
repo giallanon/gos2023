@@ -83,6 +83,8 @@ namespace gos
 		inline u8	bufferWriteU16_LSB_MSB(u8 *buffer, u16 val)                 { buffer[1] = (u8)((val & 0xFF00) >> 8); buffer[0] = (u8)(val & 0x00FF); return 2; }
         inline u8	bufferWriteI16(u8 *buffer, i16 val)			                { buffer[0] = (u8)((val & 0xFF00) >> 8); buffer[1] = (u8)(val & 0x00FF); return 2; }
 		inline u8	bufferWriteI16_LSB_MSB(u8 *buffer, i16 val)                 { buffer[1] = (u8)((val & 0xFF00) >> 8); buffer[0] = (u8)(val & 0x00FF); return 2; }
+
+        inline u8	bufferWriteU8(u8 *buffer, u8 val)	                        { buffer[0] = val; return 1; }
 		
         u8          bufferWriteF32(u8 *buffer, f32 val);
 

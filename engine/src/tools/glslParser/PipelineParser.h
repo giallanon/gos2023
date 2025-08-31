@@ -13,11 +13,22 @@ namespace gos
      */
     struct PipelineDef
     {
+    private:
+        static constexpr u32 TEMP_MAGIC = gos::magic::_makeID (0xFF0000, 0x01);
+
     public:
-        static const u8 NAME_MAX_SIZE = 32;
-    
+        static constexpr u8 NAME_MAX_SIZE = 32;
+
     public:
         void                setDefault();
+
+				//se [buffer] == NULL ritorna il num di byte necessari alla serializzazione
+				//se [buffer] != NULL ritorna 0 in caso di errore oppure il num di byte memcpyati in [buffer]
+		u32 	serialize (u8 *buffer, u32 sizeof_buffer) const;
+
+				//ritorna 0 in caso di errore
+				//altrimenti ritorna il num di byte consumati per la deserializzazione
+		u32 	deserialize (const u8 *buffer, u32 sizeof_buffer);
 
 
     public:
@@ -44,7 +55,9 @@ namespace gos
         eStencilFunc        stencil_cmpFn;
 
         eCullMode           cullMode;
-        eDrawPrimitive      drawPrimitive;        
+        eDrawPrimitive      drawPrimitive;
+        
+        VtxLayout           vtxLayout;
     };
 
 

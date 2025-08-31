@@ -36,12 +36,13 @@ SPVReflect.h
 include_directories(${PROJECT_SOURCE_DIR}/../../gos)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosDB)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosAsset)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosShape)
 
 
 
 #====================================================
 # additional library to be linked
-set(LIBRARY_LIST "gosAsset;gosDB;gos")
+set(LIBRARY_LIST "gosShape;gosMath;gosAsset;gosDB;gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
     message("         linkling libray [${libName}] => ${finalLibNameAndPath}")
