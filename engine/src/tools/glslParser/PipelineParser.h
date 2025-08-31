@@ -41,7 +41,7 @@ namespace gos
         u32                 outputRT_clearCol_ARGB;
 
         eImageFormat        outputDepth_fmt;
-        eDepthStencilLayout outputDepth_finalLayout;
+        eImageLayout outputDepth_finalLayout;
         eAttachmentLoadOp   outputDepth_loadOp;
         eAttachmentStoreOp  outputDepth_storeOp;        
         f32                 outputDepth_zClearValue;

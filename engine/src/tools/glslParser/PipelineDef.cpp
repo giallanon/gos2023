@@ -19,7 +19,7 @@ void PipelineDef::setDefault()
     outputRT_clearCol_ARGB = 0xFF000000;
     
     outputDepth_fmt = eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN;
-    outputDepth_finalLayout = eDepthStencilLayout::depth_attachment_optimal;
+    outputDepth_finalLayout = eImageLayout::depth_attachment_optimal;
     outputDepth_loadOp = eAttachmentLoadOp::clear;
     outputDepth_storeOp = eAttachmentStoreOp::store;
     outputDepth_zClearValue = 1;
@@ -138,7 +138,7 @@ u32 PipelineDef::deserialize (const u8 *buffer, u32 sizeof_buffer)
     outputRT_clearCol_ARGB = utils::bufferReadU32 (&buffer[ct]); ct+=4;
 
     READ_U8( eImageFormat, outputDepth_fmt)
-    READ_U8( eDepthStencilLayout, outputDepth_finalLayout)
+    READ_U8( eImageLayout, outputDepth_finalLayout)
     READ_U8( eAttachmentLoadOp, outputDepth_loadOp)
     READ_U8( eAttachmentStoreOp, outputDepth_storeOp)
     outputDepth_zClearValue = utils::bufferReadF32 (&buffer[ct]); ct+=4;

@@ -282,7 +282,7 @@ bool MapRenderer::recordCommandBuffer (gpu::CmdBufferWriter &cw, gos::geom::Came
 {
     //rendering
     cw.bindPipeline (hPipeline)
-        .renderPass_begin (thePipeline->hRenderLayout, thePipeline->hFrameBuffer)
+        .renderPass_begin (thePipeline->hRenderPass, thePipeline->hFrameBuffer)
             .bindDescriptorSet (thePipeline->descriptorBase_get()->instance, 0)
             .bindDescriptorSet (thePipeline->descriptorScene_get()->instance, 1)
             .bindDescriptorSet (descriptorPerInstance.descr.instance, 2);

@@ -5,12 +5,12 @@ using namespace gos;
 
 
 //******************************** 
-GPU::PipelineBuilder::PipelineBuilder (GPU *gpuIN, const GPURenderLayoutHandle &renderLayoutHandleIN, GPUPipelineHandle *out_handleIN) : 
+GPU::PipelineBuilder::PipelineBuilder (GPU *gpuIN, const GPURenderPassHandle &renderLayoutHandleIN, GPUPipelineHandle *out_handleIN) : 
     GPU::TempBuilder (gpuIN)
 {
     gpu = gpuIN;
     out_handle = out_handleIN;
-    renderLayoutHandle = renderLayoutHandleIN;
+    renderPassHandle = renderLayoutHandleIN;
     vkPipelineHandle = VK_NULL_HANDLE;
     vkPipelineLayoutHandle = VK_NULL_HANDLE;
 
@@ -98,17 +98,17 @@ bool GPU::PipelineBuilder::end ()
 //******************************** 
 bool GPU::PipelineBuilder::priv_buildVulkan ()
 {
-    const gpu::RenderLayout *rendLayout = gpu->getInfo (renderLayoutHandle);
+    const gpu::RenderLayout *rendLayout = gpu->getInfo (renderPassHandle);
     if (NULL == rendLayout)
     {
-        gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => invalid renderLayoutHandle\n");
+        gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => invalid renderPassHandle\n");
         return false;
     }
 
 /*    VkRenderPass vkRenderPassHandle;
-    if (!gpu->toVulkan (renderLayoutHandle, &vkRenderPassHandle))
+    if (!gpu->toVulkan (renderPassHandle, &vkRenderPassHandle))
     {
-        gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => invalid renderLayoutHandle\n");
+        gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => invalid renderPassHandle\n");
         return false;
     }*/
 

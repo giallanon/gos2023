@@ -83,7 +83,7 @@ public:
 public:
     gos::GPU                    *gpu;
     LocalAllocator              *localAllocator;
-    GPURenderLayoutHandle       hRenderLayout;
+    GPURenderPassHandle         hRenderPass;
     GPUFrameBufferHandle        hFrameBuffer;
 
 
@@ -107,7 +107,7 @@ private:
 
     public:
         GPUPipelineHandle       hPipeline;
-        GPURenderLayoutHandle   hRenderLayout;
+        GPURenderPassHandle   hRenderLayout;
         GPUShaderHandle         hVtxShader;
         GPUShaderHandle         hFragShader;
     };

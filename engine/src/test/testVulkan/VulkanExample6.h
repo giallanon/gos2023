@@ -1,6 +1,7 @@
 #ifndef _VulkanExample6_h_
 #define _VulkanExample6_h_
 #include "VulkanApp.h"
+#include "../gosGPU/gosGPURenderPassDesc.h"
 
 /************************************
  *  VulkanExample6
@@ -41,6 +42,10 @@ private:
     void        mainLoop();
     void        virtual_onInputEvent (u32 event32, i16 value, const gos::input::MouseStatus &mouseStatus, const gos::input::sButtonModifier &btnModifier);
 
+    bool        priv_setupPipeline_v1 (GPUVtxDeclHandle &vtxDeclHandle);
+    bool        priv_setupPipeline_v2 (GPUVtxDeclHandle &vtxDeclHandle);
+    bool        priv_buildPipe_v2 (const gos::gpu::RenderPassDesc &rpd);
+
 private:
     gos::FastArray<gos::Shape> shapeList;
     sUniformBufferObject    ubo;
@@ -55,7 +60,7 @@ private:
     GPUPipelineHandle       pipelineHandle;
     GPUShaderHandle         vtxShaderHandle;
     GPUShaderHandle         fragShaderHandle;
-    GPURenderLayoutHandle   renderLayoutHandle;
+    GPURenderPassHandle   renderPassHandle;
     GPUFrameBufferHandle    frameBufferHandle;
 
     GPUDescrPoolHandle      descrPoolHandle;

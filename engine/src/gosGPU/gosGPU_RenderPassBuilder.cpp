@@ -4,8 +4,8 @@
 using namespace gos;
 
 
-typedef gos::GPU::RenderTaskLayoutBuilder                   RTLB_INFO;   //di comodo
-typedef gos::GPU::RenderTaskLayoutBuilder::SubPassInfo      SUBPASS_INFO;   //di comodo
+typedef gos::GPU::RenderPassBuilder                   RTLB_INFO;   //di comodo
+typedef gos::GPU::RenderPassBuilder::SubPassInfo      SUBPASS_INFO;   //di comodo
 
 /**********************************************************************************************************************
  * Subpass info
@@ -13,7 +13,7 @@ typedef gos::GPU::RenderTaskLayoutBuilder::SubPassInfo      SUBPASS_INFO;   //di
  * 
  * 
  ***********************************************************************************************************************/
-SUBPASS_INFO& GPU::RenderTaskLayoutBuilder::SubPassInfo::writeToRenderTarget (u8 index)
+SUBPASS_INFO& GPU::RenderPassBuilder::SubPassInfo::writeToRenderTarget (u8 index)
 {
     if (index < GOSGPU__NUM_MAX_ATTACHMENT)
         renderTargetIndexList[nRenderTarget++] = index;
@@ -29,12 +29,12 @@ SUBPASS_INFO& GPU::RenderTaskLayoutBuilder::SubPassInfo::writeToRenderTarget (u8
 
 
 /**********************************************************************************************************************
- * RenderTaskLayoutBuilder
+ * RenderPassBuilder
  * 
  * 
  * 
  ***********************************************************************************************************************/
-GPU::RenderTaskLayoutBuilder::RenderTaskLayoutBuilder (GPU *gpuIN, GPURenderLayoutHandle *out_handleIN) : GPU::TempBuilder (gpuIN)
+GPU::RenderPassBuilder::RenderPassBuilder (GPU *gpuIN, GPURenderPassHandle *out_handleIN) : GPU::TempBuilder (gpuIN)
 {
     out_handle = out_handleIN;
     vkRenderPassHandle = VK_NULL_HANDLE;
@@ -46,14 +46,14 @@ GPU::RenderTaskLayoutBuilder::RenderTaskLayoutBuilder (GPU *gpuIN, GPURenderLayo
 }
 
 //***********************************************************
-GPU::RenderTaskLayoutBuilder::~RenderTaskLayoutBuilder()
+GPU::RenderPassBuilder::~RenderPassBuilder()
 { 
 }
 
 
 
 //***********************************************************
-RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (const eImageFormat imageFormat, const eImageLayout initialLayout, const eImageLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp)
+RTLB_INFO& GPU::RenderPassBuilder::requireRendertarget (const eImageFormat imageFormat, const eImageLayout initialLayout, const eImageLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp)
 {
     if (numRenderTargetInfo < GOSGPU__NUM_MAX_ATTACHMENT)
     {
@@ -75,7 +75,7 @@ RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireRendertarget (const eImageFormat
 
 
 //***********************************************************
-RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireZBuffer (const eImageFormat imageFormat, const eDepthStencilLayout initialLayout, const eDepthStencilLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp)
+RTLB_INFO& GPU::RenderPassBuilder::requireZBuffer (const eImageFormat imageFormat, const eImageLayout initialLayout, const eImageLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp)
 {
     if (!image::isFormatWithDepth(imageFormat))
     {
@@ -97,7 +97,7 @@ RTLB_INFO& GPU::RenderTaskLayoutBuilder::requireZBuffer (const eImageFormat imag
 
 
 //***********************************************************
-SUBPASS_INFO& GPU::RenderTaskLayoutBuilder::addSubpass_GFX ()
+SUBPASS_INFO& GPU::RenderPassBuilder::addSubpass_GFX ()
 {
     if (numSubpassInfo < NUM_MAX_SUBPASS)
     {
@@ -114,7 +114,7 @@ SUBPASS_INFO& GPU::RenderTaskLayoutBuilder::addSubpass_GFX ()
 }
 
 //***********************************************************
-SUBPASS_INFO& GPU::RenderTaskLayoutBuilder::addSubpass_COMPUTE ()
+SUBPASS_INFO& GPU::RenderPassBuilder::addSubpass_COMPUTE ()
 {
     if (numSubpassInfo < NUM_MAX_SUBPASS)
     {
@@ -131,7 +131,7 @@ SUBPASS_INFO& GPU::RenderTaskLayoutBuilder::addSubpass_COMPUTE ()
 }
 
 //***********************************************************
-bool GPU::RenderTaskLayoutBuilder::end()
+bool GPU::RenderPassBuilder::end()
 {
     if (!bAnyError)
     {
@@ -143,7 +143,7 @@ bool GPU::RenderTaskLayoutBuilder::end()
 }
 
 //***********************************************************
-bool GPU::RenderTaskLayoutBuilder::priv_buildVulkan()
+bool GPU::RenderPassBuilder::priv_buildVulkan()
 {
     //elenco degli attachment
     u8 numAttachment = 0;

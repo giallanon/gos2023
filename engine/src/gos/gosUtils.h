@@ -14,7 +14,6 @@ namespace gos
         const char*	enumToString (const eImageLayout e);
         const char*	enumToString (const eAttachmentLoadOp e);
         const char*	enumToString (const eAttachmentStoreOp e);
-        const char* enumToString (const eDepthStencilLayout e);
         const char*	enumToString (const eZFunc e);
         const char*	enumToString (const eStencilOp e);
         const char*	enumToString (const eStencilFunc e);
@@ -26,7 +25,6 @@ namespace gos
         bool stringToEnum (const char *str, eImageLayout *out);
         bool stringToEnum (const char *str, eAttachmentLoadOp *out);
         bool stringToEnum (const char *str, eAttachmentStoreOp *out);
-        bool stringToEnum (const char *str, eDepthStencilLayout *out);
         bool stringToEnum (const char *str, eZFunc *out);
         bool stringToEnum (const char *str, eStencilOp *out);
         bool stringToEnum (const char *str, eStencilFunc *out);

@@ -15,7 +15,7 @@ void VulkanExample7::virtual_onCleanup()
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
     gpu->deleteResource (pipelineHandle);
-    gpu->deleteResource (renderLayoutHandle);
+    gpu->deleteResource (renderPassHandle);
     gpu->deleteResource (frameBufferHandle);
     gpu->deleteResource (rt1);
 }    
@@ -25,13 +25,13 @@ void VulkanExample7::virtual_onCleanup()
 bool VulkanExample7::virtual_onInit ()
 {
     //creo un renderLayout
-    gpu->renderLayout_createNew (&renderLayoutHandle)
+    gpu->renderPass_createNew (&renderPassHandle)
         .requireRendertarget (eImageFormat::U8_RGBA, eImageLayout::undefined, eImageLayout::transfer_src, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
         .addSubpass_GFX()
             .writeToRenderTarget(0)
         .end()
     .end();
-    if (renderLayoutHandle.isInvalid())
+    if (renderPassHandle.isInvalid())
     {
         gos::logger::err ("VulkanApp::init() => can't create renderTaskLayout\n");
         return false;
@@ -47,7 +47,7 @@ bool VulkanExample7::virtual_onInit ()
     }
 
     //creo un frame buffer per il renderLayout
-    gpu->frameBuffer_createNew (renderLayoutHandle, &frameBufferHandle)
+    gpu->frameBuffer_createNew (renderPassHandle, &frameBufferHandle)
         //.bindRenderTarget (gpu->renderTarget_getDefault())
         .bindRenderTarget (rt1)
         .end();
@@ -72,7 +72,7 @@ bool VulkanExample7::virtual_onInit ()
     }
 
     //creo la pipeline
-    gpu->pipeline_createNew (renderLayoutHandle, &pipelineHandle)
+    gpu->pipeline_createNew (renderPassHandle, &pipelineHandle)
         .addShader (vtxShaderHandle)
         .addShader (fragShaderHandle)
         .setVtxDecl (GPUVtxDeclHandle::INVALID())
@@ -104,7 +104,7 @@ bool VulkanExample7::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
         .bindPipeline (pipelineHandle)
         .setClearColor (0, gos::ColorHDR(0, 0, 0))
         .setDepthBufferColor(1, 0)
-        .renderPass_begin (renderLayoutHandle, frameBufferHandle)
+        .renderPass_begin (renderPassHandle, frameBufferHandle)
             .draw(3, 1, 0, 0)
         .renderPass_end();
 

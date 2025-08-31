@@ -21,7 +21,7 @@ public:
 
 private:    
     static bool recordCommandBuffer (gos::GPU *gpu, 
-                                    const GPURenderLayoutHandle &renderLayoutHandle, 
+                                    const GPURenderPassHandle &renderPassHandle, 
                                     const GPUFrameBufferHandle &frameBufferHandle,
                                     const GPUPipelineHandle &pipelineHandle,
                                     VkCommandBuffer *out_commandBuffer);
@@ -30,7 +30,7 @@ private:
     GPUPipelineHandle       pipelineHandle;
     GPUShaderHandle         vtxShaderHandle;
     GPUShaderHandle         fragShaderHandle;
-    GPURenderLayoutHandle   renderLayoutHandle;
+    GPURenderPassHandle   renderPassHandle;
     GPUFrameBufferHandle    frameBufferHandle;
 };
 

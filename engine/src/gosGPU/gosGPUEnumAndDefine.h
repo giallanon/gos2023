@@ -9,10 +9,12 @@
 #define 	GOSGPU__NUM_MAX_VTXDECL_ATTR					32
 #define 	GOSGPU__NUM_MAX_VXTDECL_STREAM					16
 #define 	GOSGPU__NUM_MAX_ATTACHMENT						16
-#define 	GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET				32
+#define 	GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET				8
+#define 	GOSGPU__NUM_MAX_DESCRIPTOR_SETS					8
 #define 	GOSGPU__NUM_MAX_DESCRIPTOR_POOL_SIZE_PER_POOL	16
 #define 	GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE		16
 #define 	GOSGPU__NUM_MAX_WRITE_DESCRIPTORS_PER_CMDBUFFER	8
+#define 	GOSGPU__NUM_MAX_SUBPASSES						4
 
 
 //A per "num max di handle", B per "num di chunk", C per "counter"
@@ -23,7 +25,7 @@ typedef gos::HandleT< 6,5,16, 1,4>	GPUDescrPoolHandle;			//2^6=64 => num totale 
 typedef gos::HandleT< 8,5,16, 0,3>	GPUPipelineHandle;			//2^8=256 => num totale di oggetti, divisi in chunk da 2^5=32
 typedef gos::HandleT< 8,5,15, 0,4>	GPUSamplerHandle;			//2^8=256 => num totale di oggetti, divisi in chunk da 2^5=32
 typedef gos::HandleT< 8,6,16, 0,2>	GPUCmdBufferHandle;			//2^8=256 => num totale di oggetti, divisi in chunk da 2^6=64
-typedef gos::HandleT< 8,7,16, 0,1>	GPURenderLayoutHandle;		//2^8=256 => num totale di oggetti, divisi in chunk da 2^7=128
+typedef gos::HandleT< 8,7,16, 0,1>	GPURenderPassHandle;		//2^8=256 => num totale di oggetti, divisi in chunk da 2^7=128
 typedef gos::HandleT< 9,7,16, 0,0>	GPUFrameBufferHandle;		//2^9=512 => num totale di oggetti, divisi in chunk da 2^7=128
 typedef gos::HandleT<10,5,16, 0,1>	GPUVtxDeclHandle;			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^5=32
 typedef gos::HandleT<10,7,14, 0,1>	GPUVtxBufferHandle;			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128

@@ -20,7 +20,7 @@ namespace gos
         VkFormat                toVulkan (eImageFormat fmt);
         eImageFormat            fromVulkan (VkFormat fmt);
         VkImageLayout           toVulkan (eImageLayout s);
-        VkImageLayout           toVulkan (eDepthStencilLayout s, eImageFormat fmt);
+        VkImageLayout           toVulkan (eImageLayout s, eImageFormat fmt);
         VkAttachmentLoadOp      toVulkan (eAttachmentLoadOp s);
         VkAttachmentStoreOp     toVulkan (eAttachmentStoreOp s);
 

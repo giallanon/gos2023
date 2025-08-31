@@ -10,7 +10,7 @@ ThePipeline::ThePipeline()
     localAllocator = GOSNEW(gos::getSysHeapAllocator(), LocalAllocator)("ThePipeline");
     localAllocator->setup (1024 * 1024);
 
-    hRenderLayout.setInvalid();
+    hRenderPass.setInvalid();
     hFrameBuffer.setInvalid();
 }
 
@@ -45,7 +45,7 @@ void ThePipeline::unsetup()
     pipeStep_clearBuffer.free (gpu);
     pipeStep_present.free (gpu);
 
-    gpu->deleteResource (hRenderLayout);
+    gpu->deleteResource (hRenderPass);
 
     gpu->deleteResource (hFrameBuffer);
     //gpu->deleteResource (hSampler0_bilinearFiltering);
@@ -90,9 +90,9 @@ bool ThePipeline::setup (gos::GPU *gpuIN)
 
     //creo la pipe step di clear-buffer
     {
-        gpu->renderLayout_createNew (&pipeStep_clearBuffer.hRenderLayout)
+        gpu->renderPass_createNew (&pipeStep_clearBuffer.hRenderLayout)
             .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::color_attachment_optimal, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
-            .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eDepthStencilLayout::undefined, eDepthStencilLayout::depth_attachment_optimal, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
+            .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eImageLayout::undefined, eImageLayout::depth_attachment_optimal, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
             .addSubpass_GFX()
                 .writeToRenderTarget(0)
                 .writeToDepthStencil()
@@ -131,9 +131,9 @@ bool ThePipeline::setup (gos::GPU *gpuIN)
 
     //creo la pipe step di presentazione
     {
-        gpu->renderLayout_createNew (&pipeStep_present.hRenderLayout)
+        gpu->renderPass_createNew (&pipeStep_present.hRenderLayout)
             .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::color_attachment_optimal, eImageLayout::presentation, eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
-            .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eDepthStencilLayout::depth_attachment_optimal, eDepthStencilLayout::depth_attachment_optimal, eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
+            .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eImageLayout::depth_attachment_optimal, eImageLayout::depth_attachment_optimal, eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
             .addSubpass_GFX()
                 .writeToRenderTarget(0)
                 .writeToDepthStencil()
@@ -170,22 +170,22 @@ bool ThePipeline::setup (gos::GPU *gpuIN)
 
 
     //questo invece e' il render layout da utilizzarsi per gli step intermedi di rendering
-    gpu->renderLayout_createNew (&hRenderLayout)
+    gpu->renderPass_createNew (&hRenderPass)
         .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::color_attachment_optimal, eImageLayout::color_attachment_optimal, eAttachmentLoadOp::load, eAttachmentStoreOp::store)
-        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eDepthStencilLayout::depth_attachment_optimal, eDepthStencilLayout::depth_attachment_optimal, eAttachmentLoadOp::load, eAttachmentStoreOp::store)
+        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eImageLayout::depth_attachment_optimal, eImageLayout::depth_attachment_optimal, eAttachmentLoadOp::load, eAttachmentStoreOp::store)
         .addSubpass_GFX()
             .writeToRenderTarget(0)
             .writeToDepthStencil()
         .end()
     .end();
-    if (hRenderLayout.isInvalid())
+    if (hRenderPass.isInvalid())
     {
         gos::logger::err ("ThePipeline::setup() => can't create renderTaskLayout\n");
         return false;
     }
 
     //frame buffers
-    gpu->frameBuffer_createNew (hRenderLayout, &hFrameBuffer)
+    gpu->frameBuffer_createNew (hRenderPass, &hFrameBuffer)
         .bindRenderTarget (gpu->renderTarget_getDefault())
         .bindDepthStencil (gpu->depthStencil_getDefault())
         .end();
@@ -376,7 +376,7 @@ gos::GPU::PipelineBuilder& ThePipeline::createPipeline (GPUPipelineHandle *out_h
 }
 gos::GPU::PipelineBuilder& ThePipeline::createPipeline (const GPUVtxDeclHandle hVtxDeclHandle_IN, GPUPipelineHandle *out_handle)
 {
-    return gpu->pipeline_createNew (hRenderLayout, out_handle)
+    return gpu->pipeline_createNew (hRenderPass, out_handle)
         .setVtxDecl (hVtxDeclHandle_IN)
         .depthStencil()
             .zbuffer_enable(true)

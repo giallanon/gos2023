@@ -54,7 +54,7 @@ private:
     GPUUniformBufferHandle  hUBO;
     GPUDescrSetLayoutHandle hDescrSetLayout;
     GPUDescrSetInstanceHandle hDescrSetInstance;
-    GPURenderLayoutHandle   hRenderLayout;
+    GPURenderPassHandle   hRenderLayout;
     GPUFrameBufferHandle    hFrameBuffer;
 };
 

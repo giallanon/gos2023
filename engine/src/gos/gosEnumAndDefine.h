@@ -263,7 +263,12 @@ enum class eImageLayout : u8
 	transfer_src,					//VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
     transfer_dst,					//VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
 	presentation,					//VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+
+    depth_attachment_optimal, 			//VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+    depth_shader_readonly,				//VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
+
 };
+
 
 enum class eAttachmentLoadOp : u8
 {
@@ -277,13 +282,6 @@ enum class eAttachmentStoreOp : u8
 	store = 0, 		//VK_ATTACHMENT_STORE_OP_STORE
 	dont_care,		//VK_ATTACHMENT_STORE_OP_DONT_CARE
     none			//VK_ATTACHMENT_STORE_OP_NONE
-};
-
-enum class eDepthStencilLayout : u8
-{
-	undefined = 0,						//VK_IMAGE_LAYOUT_UNDEFINED
-    depth_attachment_optimal, 			//VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-    depth_shader_readonly,				//VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
 };
 
 enum class eGPUDescriptrorType : u8    //sono pari pari ai corrispondenti enum di vulkan

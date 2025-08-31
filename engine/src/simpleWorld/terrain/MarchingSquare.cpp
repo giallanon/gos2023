@@ -404,7 +404,7 @@ void MarchingSquare::priv_perimetro_makeVtxList (const sPerimetro *p, gos::FastA
 
     u32 n = 0;
     gos::vec2f v;
-    ePos lastV2;
+    ePos lastV2 = ePos::a;
 
     const u32 numQuad = p->numQuad;
     for (u32 i=0; i<numQuad; i++)

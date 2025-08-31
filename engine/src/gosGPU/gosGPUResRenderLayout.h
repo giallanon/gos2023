@@ -10,7 +10,7 @@ namespace gos
         /****************************************************
          * RenderLayout
          * 
-         * struttura interna accessibile tramite i metodi di GPU utilizzando uno GPURenderLayoutHandle
+         * struttura interna accessibile tramite i metodi di GPU utilizzando uno GPURenderPassHandle
          */
         struct RenderLayout
         {

@@ -145,7 +145,7 @@ private:
     GPUPipelineHandle       pipelineHandle;
     GPUShaderHandle         vtxShaderHandle;
     GPUShaderHandle         fragShaderHandle;
-    GPURenderLayoutHandle   renderLayoutHandle;
+    GPURenderPassHandle   renderPassHandle;
     GPUFrameBufferHandle    frameBufferHandle;
 
     GPUDescrPoolHandle      descrPoolHandle;

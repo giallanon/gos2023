@@ -25,7 +25,7 @@ namespace gos
                                 boundToSwapChain = false;
                                 boundToMainRT = false;
                                 memset (vkFrameBufferList, 0, sizeof(vkFrameBufferList));
-                                renderLayoutHandle.setInvalid();
+                                renderPassHandle.setInvalid();
                                 depthStencilHandle.setInvalid();
                                 numRenderTaget = 0;
                                 numFrameBuffer = 0;
@@ -50,7 +50,7 @@ namespace gos
             //info di creazione
             gos::Dim2D              width;
             gos::Dim2D              height;
-            GPURenderLayoutHandle   renderLayoutHandle;
+            GPURenderPassHandle   renderPassHandle;
             GPUDepthStencilHandle   depthStencilHandle;
             u32                     numRenderTaget;
             GPURenderTargetHandle   renderTargetHandleList[GOSGPU__NUM_MAX_ATTACHMENT];    //elenco dei RT da usare

@@ -140,7 +140,7 @@ VkStencilOp gpu::toVulkan (eStencilOp f)
 }
 
 //**********************************************************
-VkImageLayout gpu::toVulkan (eDepthStencilLayout s, eImageFormat fmt)
+VkImageLayout gpu::toVulkan (eImageLayout s, eImageFormat fmt)
 {
     switch (s)
     {
@@ -148,13 +148,13 @@ VkImageLayout gpu::toVulkan (eDepthStencilLayout s, eImageFormat fmt)
         DBGBREAK;
         return VK_IMAGE_LAYOUT_UNDEFINED;
 
-	case eDepthStencilLayout::undefined:                            return VK_IMAGE_LAYOUT_UNDEFINED;
-    case eDepthStencilLayout::depth_attachment_optimal:
+	case eImageLayout::undefined:                            return VK_IMAGE_LAYOUT_UNDEFINED;
+    case eImageLayout::depth_attachment_optimal:
         if (image::isFormatWithStencil(fmt))
             return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
 
-    case eDepthStencilLayout::depth_shader_readonly:
+    case eImageLayout::depth_shader_readonly:
         if (image::isFormatWithStencil(fmt))
             return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
         return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;

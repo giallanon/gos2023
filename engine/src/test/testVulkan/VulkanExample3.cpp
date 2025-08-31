@@ -30,7 +30,7 @@ void VulkanExample3::virtual_onCleanup()
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
     gpu->deleteResource (pipelineHandle);
-    gpu->deleteResource (renderLayoutHandle);
+    gpu->deleteResource (renderPassHandle);
     gpu->deleteResource (frameBufferHandle);
 }    
 
@@ -79,20 +79,20 @@ bool VulkanExample3::virtual_onInit ()
 
 
     //creo il render pass
-    gpu->renderLayout_createNew (&renderLayoutHandle)
+    gpu->renderPass_createNew (&renderPassHandle)
         .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
         .addSubpass_GFX()
             .writeToRenderTarget(0)
         .end()
     .end();
-    if (renderLayoutHandle.isInvalid())
+    if (renderPassHandle.isInvalid())
     {
         gos::logger::err ("VulkanApp::init() => can't create renderTaskLayout\n");
         return false;
     }
 
     //frame buffers
-    gpu->frameBuffer_createNew (renderLayoutHandle, &frameBufferHandle)
+    gpu->frameBuffer_createNew (renderPassHandle, &frameBufferHandle)
         .bindRenderTarget (gpu->renderTarget_getDefault())
         .end();
     if (frameBufferHandle.isInvalid())
@@ -116,7 +116,7 @@ bool VulkanExample3::virtual_onInit ()
     }
 
     //creo la pipeline
-    gpu->pipeline_createNew (renderLayoutHandle, &pipelineHandle)
+    gpu->pipeline_createNew (renderPassHandle, &pipelineHandle)
         .addShader (vtxShaderHandle)
         .addShader (fragShaderHandle)
         .setVtxDecl (vtxDeclHandle)
@@ -212,9 +212,9 @@ bool VulkanExample3::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
 
     //recupero il vulkan render pass
     VkRenderPass vkRenderPassHandle = VK_NULL_HANDLE;
-    if (!gpu->toVulkan (renderLayoutHandle, &vkRenderPassHandle))
+    if (!gpu->toVulkan (renderPassHandle, &vkRenderPassHandle))
     {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid renderLayoutHandle\n");
+        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid renderPassHandle\n");
         return false;
     }
 

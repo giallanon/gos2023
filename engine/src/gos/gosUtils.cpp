@@ -152,6 +152,8 @@ const char*	utils::enumToString (const eImageLayout e)
     HELPER(transfer_src)
     HELPER(transfer_dst)
     HELPER(presentation)
+    HELPER(depth_attachment_optimal)
+    HELPER(depth_shader_readonly)    
     }
 
 #undef HELPER
@@ -175,6 +177,8 @@ bool utils::stringToEnum (const char *str, eImageLayout *out)
     HELPER(transfer_src)
     HELPER(transfer_dst)
     HELPER(presentation)
+    HELPER(depth_attachment_optimal)
+    HELPER(depth_shader_readonly)    
 	
 #undef HELPER	
 	return false;
@@ -251,44 +255,6 @@ bool utils::stringToEnum (const char *str, eAttachmentStoreOp *out)
     HELPER(store)
     HELPER(dont_care)
     HELPER(none)
-	
-#undef HELPER	
-	return false;
-}
-
-//***********************************************
-const char*	utils::enumToString (const eDepthStencilLayout e)
-{
-#define HELPER(s)	case eDepthStencilLayout::s: return #s;
-
-    switch (e)
-    {
-    default:
-        DBGBREAK;
-        return "??INVALID-VALUE??";
-
-    HELPER(undefined)
-    HELPER(depth_attachment_optimal)
-    HELPER(depth_shader_readonly)
-    }
-
-#undef HELPER
-}
-
-//********************************************************** 
-bool utils::stringToEnum (const char *str, eDepthStencilLayout *out)
-{
-	assert (NULL != out);
-	if (NULL == str)
-		return false;
-    if (0 == str[0])
-        return false;
-	
-#define HELPER(fmt)			if (0 == strcasecmp(str, #fmt)) { *out=eDepthStencilLayout::fmt; return true; }
-
-    HELPER(undefined)
-    HELPER(depth_attachment_optimal)
-    HELPER(depth_shader_readonly)
 	
 #undef HELPER	
 	return false;

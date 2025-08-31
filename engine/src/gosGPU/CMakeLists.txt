@@ -19,7 +19,7 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 
 #====================================================
 # file da compilare
-add_library(${BINARY_OUTPUT_FILENAME} STATIC
+add_library(${BINARY_OUTPUT_FILENAME} STATIC 
 vulkan/gosGPUVukanHelpers.cpp
 vulkan/gosGPUVukanHelpers.h
 vulkan/gosGPUVulkan.cpp
@@ -42,7 +42,7 @@ gosGPU_DescriptorSetLayoutBuilder.cpp
 gosGPU_FrameBuffersBuilder.cpp
 gosGPU_ImmediateTransferCmd.cpp
 gosGPU_PipelineBuilder.cpp
-gosGPU_RenderLayoutBuilder.cpp
+gosGPU_RenderPassBuilder.cpp
 gosGPU_VtxDeclBuilder.cpp
 gosGPU.cpp
 gosGPU.h
@@ -51,6 +51,10 @@ gosGPUCmdBufferWriter.h
 gosGPUDescrSetInstanceWriter.cpp
 gosGPUDescrSetInstanceWriter.h
 gosGPUEnumAndDefine.h
+gosGPUFramebuffer_def.cpp
+gosGPUFramebuffer_def.h
+gosGPURenderPassDesc.h
+gosGPURenderPassDesc.cpp
 gosGPUResBuffer.h
 gosGPUResCommandBuffer.h
 gosGPUResDepthStencil.h

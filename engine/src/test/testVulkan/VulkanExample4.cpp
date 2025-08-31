@@ -29,7 +29,7 @@ void VulkanExample4::virtual_onCleanup()
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
     gpu->deleteResource (pipelineHandle);
-    gpu->deleteResource (renderLayoutHandle);
+    gpu->deleteResource (renderPassHandle);
     gpu->deleteResource (frameBufferHandle);
     gpu->deleteResource (uboHandle);
     gpu->deleteResource (descrSetInstancerHandle);
@@ -190,22 +190,22 @@ bool VulkanExample4::virtual_onInit ()
 
 
     //creo il render pass
-    gpu->renderLayout_createNew (&renderLayoutHandle)
+    gpu->renderPass_createNew (&renderPassHandle)
         .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
-        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eDepthStencilLayout::undefined, eDepthStencilLayout::depth_shader_readonly, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)
+        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eImageLayout::undefined, eImageLayout::depth_shader_readonly, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)
         .addSubpass_GFX()
             .writeToRenderTarget(0)
             .writeToDepthStencil()
         .end()
     .end();
-    if (renderLayoutHandle.isInvalid())
+    if (renderPassHandle.isInvalid())
     {
         gos::logger::err ("VulkanApp::init() => can't create renderTaskLayout\n");
         return false;
     }
 
     //frame buffers
-    gpu->frameBuffer_createNew (renderLayoutHandle, &frameBufferHandle)
+    gpu->frameBuffer_createNew (renderPassHandle, &frameBufferHandle)
         .bindRenderTarget (gpu->renderTarget_getDefault())
         .bindDepthStencil (gpu->depthStencil_getDefault())
         .end();
@@ -242,7 +242,7 @@ bool VulkanExample4::virtual_onInit ()
     }
 
     //creo la pipeline
-    gpu->pipeline_createNew (renderLayoutHandle, &pipelineHandle)
+    gpu->pipeline_createNew (renderPassHandle, &pipelineHandle)
         .addShader (vtxShaderHandle)
         .addShader (fragShaderHandle)
         .setVtxDecl (vtxDeclHandle)
@@ -351,7 +351,7 @@ bool VulkanExample4::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
         .bindDescriptorSet (descrSetInstancerHandle, 0)
         .setClearColor (0, gos::ColorHDR(0, 0.1f, 0.3f))
         .setDepthBufferColor(1, 0)
-        .renderPass_begin (renderLayoutHandle, frameBufferHandle)
+        .renderPass_begin (renderPassHandle, frameBufferHandle)
             .bindVtxBuffer(vtxBufferHandle)
             .bindIdxBufferU16(idxBufferHandle)
             .drawIndexed (myShape.numIdx, 1, 0, 0, 0)

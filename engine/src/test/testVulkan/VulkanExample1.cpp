@@ -15,7 +15,7 @@ void VulkanExample1::virtual_onCleanup()
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
     gpu->deleteResource (pipelineHandle);
-    gpu->deleteResource (renderLayoutHandle);
+    gpu->deleteResource (renderPassHandle);
     gpu->deleteResource (frameBufferHandle);
 }    
 
@@ -24,21 +24,21 @@ void VulkanExample1::virtual_onCleanup()
 bool VulkanExample1::virtual_onInit ()
 {
     //creo il render pass
-    gpu->renderLayout_createNew (&renderLayoutHandle)
+    gpu->renderPass_createNew (&renderPassHandle)
         //.requireRendertarget (gpu->swapChain_getImageFormat(), eRenderTargetUsage::dont_care, eRenderTargetUsage::presentation, true)
         .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
         .addSubpass_GFX()
             .writeToRenderTarget(0)
         .end()
     .end();
-    if (renderLayoutHandle.isInvalid())
+    if (renderPassHandle.isInvalid())
     {
         gos::logger::err ("VulkanApp::init() => can't create renderTaskLayout\n");
         return false;
     }
 
     //frame buffers
-    gpu->frameBuffer_createNew (renderLayoutHandle, &frameBufferHandle)
+    gpu->frameBuffer_createNew (renderPassHandle, &frameBufferHandle)
         .bindRenderTarget (gpu->renderTarget_getDefault())
         .end();
     if (frameBufferHandle.isInvalid())
@@ -61,7 +61,7 @@ bool VulkanExample1::virtual_onInit ()
     }
 
     //creo la pipeline
-    gpu->pipeline_createNew (renderLayoutHandle, &pipelineHandle)
+    gpu->pipeline_createNew (renderPassHandle, &pipelineHandle)
         .addShader (vtxShaderHandle)
         .addShader (fragShaderHandle)
         .setVtxDecl (GPUVtxDeclHandle::INVALID())
@@ -85,7 +85,7 @@ bool VulkanExample1::virtual_onInit ()
 
 //************************************
 bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN, 
-                                            const GPURenderLayoutHandle &renderLayoutHandle, 
+                                            const GPURenderPassHandle &renderPassHandle, 
                                             const GPUFrameBufferHandle &frameBufferHandle,
                                             const GPUPipelineHandle &pipelineHandle,
                                             VkCommandBuffer *out_commandBuffer)
@@ -94,9 +94,9 @@ bool VulkanExample1::recordCommandBuffer (gos::GPU *gpuIN,
 
     //recupero il vulkan render pass
     VkRenderPass vkRenderPassHandle = VK_NULL_HANDLE;
-    if (!gpuIN->toVulkan (renderLayoutHandle, &vkRenderPassHandle))
+    if (!gpuIN->toVulkan (renderPassHandle, &vkRenderPassHandle))
     {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid renderLayoutHandle\n");
+        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid renderPassHandle\n");
         return false;
     }
 
@@ -219,8 +219,8 @@ void VulkanExample1::virtual_onRun()
             //command buffer che opera su [imageIndex]
             VkCommandBuffer vkCommandBuffer;
             gpu->toVulkan (cmdBufferHandle, &vkCommandBuffer);
-            //recordCommandBuffer(gpu, renderLayoutHandle, frameBufferHandleList[imageIndex], pipelineHandle, &vkCommandBuffer);
-            recordCommandBuffer(gpu, renderLayoutHandle, frameBufferHandle, pipelineHandle, &vkCommandBuffer);
+            //recordCommandBuffer(gpu, renderPassHandle, frameBufferHandleList[imageIndex], pipelineHandle, &vkCommandBuffer);
+            recordCommandBuffer(gpu, renderPassHandle, frameBufferHandle, pipelineHandle, &vkCommandBuffer);
 
             //submit
             VkSubmitInfo submitInfo{};

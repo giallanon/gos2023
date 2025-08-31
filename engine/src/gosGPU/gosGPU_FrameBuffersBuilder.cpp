@@ -6,10 +6,10 @@ using namespace gos;
 typedef GPU::FrameBuffersBuilder  GPUFBB;   //di comodo
 
 //*********************************************** 
-GPU::FrameBuffersBuilder::FrameBuffersBuilder (GPU *gpuIN, const GPURenderLayoutHandle &renderLayoutHandleIN, GPUFrameBufferHandle *out_handleIN) :
+GPU::FrameBuffersBuilder::FrameBuffersBuilder (GPU *gpuIN, const GPURenderPassHandle &renderLayoutHandleIN, GPUFrameBufferHandle *out_handleIN) :
     GPU::TempBuilder(gpuIN)
 {
-    renderLayoutHandle = renderLayoutHandleIN;
+    renderPassHandle = renderLayoutHandleIN;
     out_handle = out_handleIN;
 
     bAnyError = false;

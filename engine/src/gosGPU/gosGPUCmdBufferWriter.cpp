@@ -414,7 +414,7 @@ GPUCMDWR& gpu::CmdBufferWriter::setDepthBufferColor (f32 depth, u32 stencil)
 
 
 //***********************************************
-GPUCMDWR& gpu::CmdBufferWriter::renderPass_begin (const GPURenderLayoutHandle renderLayoutHandle, const GPUFrameBufferHandle frameBufferHandle)
+GPUCMDWR& gpu::CmdBufferWriter::renderPass_begin (const GPURenderPassHandle renderPassHandle, const GPUFrameBufferHandle frameBufferHandle)
 {
     while (1)
     {
@@ -430,10 +430,10 @@ GPUCMDWR& gpu::CmdBufferWriter::renderPass_begin (const GPURenderLayoutHandle re
         flag.set (FLAG__RENDER_PASS_BEGIN);
 
         //recupero il vulkan render pass
-        const gpu::RenderLayout *renderLayout = gpu->getInfo (renderLayoutHandle);
+        const gpu::RenderLayout *renderLayout = gpu->getInfo (renderPassHandle);
         if (NULL == renderLayout)
         {
-            gos::logger::err ("gpu::CmdBufferWriter::renderPass_begin() => invalid renderLayoutHandle\n");
+            gos::logger::err ("gpu::CmdBufferWriter::renderPass_begin() => invalid renderPassHandle\n");
             priv_setError();
             break;
         }

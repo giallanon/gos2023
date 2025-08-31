@@ -1300,12 +1300,12 @@ const gpu::DepthStencil* GPU::getInfo (const GPUDepthStencilHandle handle) const
  * 
  * 
  *************************************************************************************************************/
-GPU::FrameBuffersBuilder& GPU::frameBuffer_createNew (const GPURenderLayoutHandle &renderLayoutHandle, GPUFrameBufferHandle *out_handle)
+GPU::FrameBuffersBuilder& GPU::frameBuffer_createNew (const GPURenderPassHandle &renderPassHandle, GPUFrameBufferHandle *out_handle)
 {
     assert (NULL != out_handle);
     out_handle->setInvalid();
 
-    FrameBuffersBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::FrameBuffersBuilder) (this, renderLayoutHandle, out_handle);
+    FrameBuffersBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::FrameBuffersBuilder) (this, renderPassHandle, out_handle);
     return *builder;
 }
 
@@ -1336,13 +1336,13 @@ bool GPU::priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder)
     
     //render layout. Mi accerto che sia valido
     gpu::RenderLayout *sRL;
-    if (!priv_fromHandleToPointer (renderLayoutList, builder->renderLayoutHandle, &sRL))
+    if (!priv_fromHandleToPointer (renderLayoutList, builder->renderPassHandle, &sRL))
     {
-        gos::logger::err ("GPU::priv_frameBuffer_onBuilderEnds() => invalid renderLayoutHandle\n");
+        gos::logger::err ("GPU::priv_frameBuffer_onBuilderEnds() => invalid renderPassHandle\n");
         frameBufferList.release (handle);
         return false;
     }
-    s->renderLayoutHandle = builder->renderLayoutHandle;
+    s->renderPassHandle = builder->renderPassHandle;
     
 
     //depthstencil. Se le sue dimensioni non sono assolute, allora vuol dire che dipendono dalla
@@ -1450,7 +1450,7 @@ bool GPU::priv_frameBuffer_do_recreate (gpu::FrameBuffer *s)
 {
     //render layout
     gpu::RenderLayout *sRL;
-    if (!priv_fromHandleToPointer (renderLayoutList, s->renderLayoutHandle, &sRL))
+    if (!priv_fromHandleToPointer (renderLayoutList, s->renderPassHandle, &sRL))
     {
         gos::logger::err ("invalid handler\n");
         return false;
@@ -1548,17 +1548,17 @@ bool GPU::toVulkan (const GPUFrameBufferHandle handle, VkFramebuffer *out, u32 *
  * 
  * 
  *************************************************************************************************************/
-GPU::RenderTaskLayoutBuilder& GPU::renderLayout_createNew (GPURenderLayoutHandle *out_handle)
+GPU::RenderPassBuilder& GPU::renderPass_createNew (GPURenderPassHandle *out_handle)
 {
     assert (NULL != out_handle);
     out_handle->setInvalid();
 
-    RenderTaskLayoutBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::RenderTaskLayoutBuilder) (this, out_handle);
+    RenderPassBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::RenderPassBuilder) (this, out_handle);
     return *builder;
 }
 
 //************************************
-bool GPU::priv_renderLayout_onBuilderEnds (RenderTaskLayoutBuilder *builder)
+bool GPU::priv_renderLayout_onBuilderEnds (RenderPassBuilder *builder)
 {
     //aggiungo il builder alla lista dei builder da deletare
     toBeDeletedBuilder.add(builder);
@@ -1589,7 +1589,7 @@ bool GPU::priv_renderLayout_onBuilderEnds (RenderTaskLayoutBuilder *builder)
 }
 
 //************************************
-void GPU::deleteResource (GPURenderLayoutHandle &handle)
+void GPU::deleteResource (GPURenderPassHandle &handle)
 {
     gpu::RenderLayout *s;
     if (renderLayoutList.fromHandleToPointer (handle, &s))
@@ -1603,7 +1603,7 @@ void GPU::deleteResource (GPURenderLayoutHandle &handle)
 }
 
 //************************************
-const gpu::RenderLayout* GPU::getInfo (const GPURenderLayoutHandle handle) const
+const gpu::RenderLayout* GPU::getInfo (const GPURenderPassHandle handle) const
 {
     gpu::RenderLayout *s;
     if (priv_fromHandleToPointer (renderLayoutList, handle, &s))
@@ -1612,7 +1612,7 @@ const gpu::RenderLayout* GPU::getInfo (const GPURenderLayoutHandle handle) const
 }
 
 //************************************
-bool GPU::toVulkan (const GPURenderLayoutHandle handle, VkRenderPass *out) const
+bool GPU::toVulkan (const GPURenderPassHandle handle, VkRenderPass *out) const
 {
     gpu::RenderLayout *s;
     if (priv_fromHandleToPointer(renderLayoutList, handle, &s))
@@ -1633,12 +1633,12 @@ bool GPU::toVulkan (const GPURenderLayoutHandle handle, VkRenderPass *out) const
  * 
  * 
  *************************************************************************************************************/
-GPU::PipelineBuilder& GPU::pipeline_createNew (const GPURenderLayoutHandle &renderLayoutHandle, GPUPipelineHandle *out_handle)
+GPU::PipelineBuilder& GPU::pipeline_createNew (const GPURenderPassHandle &renderPassHandle, GPUPipelineHandle *out_handle)
 {
     assert (NULL != out_handle);
     out_handle->setInvalid();
 
-    PipelineBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::PipelineBuilder) (this, renderLayoutHandle, out_handle);
+    PipelineBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::PipelineBuilder) (this, renderPassHandle, out_handle);
     return *builder;
 }
 

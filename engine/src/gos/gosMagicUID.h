@@ -27,7 +27,8 @@ static constexpr u32 GOS_MAGIC__DATA_BLOB_DEF       = gos::magic::_makeID (0xA10
 static constexpr u32 GOS_MAGIC__SHAPE               = gos::magic::_makeID (0xA70000, 0x01);
 static constexpr u32 GOS_MAGIC__VTX_LAYOUT          = gos::magic::_makeID (0xA70001, 0x01);
 
-
+//i magic definiti nel modulo gos::GPU con 0xA80000
+static constexpr u32 GOS_MAGIC__GPU_FRAME_BUFFER_DEF    = gos::magic::_makeID (0xA80000, 0x01);
 
 
 #endif //_gosMagicUID_h_

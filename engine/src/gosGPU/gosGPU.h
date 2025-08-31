@@ -97,19 +97,55 @@ namespace gos
         }; //class VtxDeclBuilder     
 
 
+       /**************************************
+         * FrameBuffersBuilder
+         * 
+         */
+        class FrameBuffersBuilder : public TempBuilder
+        {
+        public:
+                                    FrameBuffersBuilder (GPU *gpu, const GPURenderPassHandle &renderPassHandle, GPUFrameBufferHandle *out_handle);
+            virtual                 ~FrameBuffersBuilder();
+
+            FrameBuffersBuilder&    setRenderAreaSize (const gos::Dim2D &w, const gos::Dim2D &h);
+            FrameBuffersBuilder&    bindRenderTarget (const GPURenderTargetHandle &handle);
+            FrameBuffersBuilder&    bindDepthStencil (const GPUDepthStencilHandle &handle);
+
+            bool                    end();
+
+
+            bool                    anyError() const        { return bAnyError; }
+
+        private:
+            bool                    bAnyError;
+            gos::Dim2D              width;
+            gos::Dim2D              height;
+            u32                     numRenderTarget;
+            GPURenderTargetHandle   renderTargetHandleList[GOSGPU__NUM_MAX_ATTACHMENT];
+            GPUDepthStencilHandle   depthStencilHandle;
+
+
+            GPURenderPassHandle   renderPassHandle;
+            GPUFrameBufferHandle    *out_handle;
+
+        friend class GPU;
+        }; //class FrameBuffersBuilder
+
+
+
+
 
         /**********************************************
-         * RenderTaskLayoutBuilder
+         * RenderPassBuilder
          * 
-         * Classe di comodo usata da GPU per la creazione dei RenderTaskLayout
-         * E' l'equivalente di un RenderPass di Vulkan
+         * Classe di comodo usata da GPU per la creazione dei RenderPass
          */
-        class RenderTaskLayoutBuilder : public TempBuilder
+        class RenderPassBuilder : public TempBuilder
         {
         private:
-            static const u8         NUM_MAX_SUBPASS = 8;
+            static const u8 NUM_MAX_SUBPASS = 8;
 
-            typedef RenderTaskLayoutBuilder RTLB;   //di comodo
+            typedef RenderPassBuilder RTLB;   //di comodo
 
         public:
             /**********************************************
@@ -142,16 +178,16 @@ namespace gos
                 u8      nRenderTarget;
                 u8      renderTargetIndexList[GOSGPU__NUM_MAX_ATTACHMENT];
 
-            friend class RenderTaskLayoutBuilder;
+            friend class RenderPassBuilder;
             }; //class SubPassInfo
 
 
         public:
-                            RenderTaskLayoutBuilder (GPU *gpuIN, GPURenderLayoutHandle *out_handle);
-            virtual         ~RenderTaskLayoutBuilder();
+                            RenderPassBuilder (GPU *gpuIN, GPURenderPassHandle *out_handle);
+            virtual         ~RenderPassBuilder();
 
             RTLB&           requireRendertarget (const eImageFormat imageFormat, const eImageLayout initialLayout, const eImageLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp);
-            RTLB&           requireZBuffer (const eImageFormat imageFormat, const eDepthStencilLayout initialLayout, const eDepthStencilLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp);
+            RTLB&           requireZBuffer (const eImageFormat imageFormat, const eImageLayout initialLayout, const eImageLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp);
             
             SubPassInfo&    addSubpass_GFX ();
             SubPassInfo&    addSubpass_COMPUTE ();
@@ -176,8 +212,8 @@ namespace gos
                 bool    isRequired;
                 u8      indexOfDepthStencilAttachment;
                 eImageFormat            imageFormat;
-                eDepthStencilLayout     initialLayout;
-                eDepthStencilLayout     finalLayout;
+                eImageLayout     initialLayout;
+                eImageLayout     finalLayout;
                 eAttachmentLoadOp       loadOp;
                 eAttachmentStoreOp      storeOp;
             };
@@ -186,7 +222,7 @@ namespace gos
             bool                    priv_buildVulkan();
 
         private:
-            GPURenderLayoutHandle   *out_handle;
+            GPURenderPassHandle     *out_handle;
 
             bool                    bAnyError;
             u8                      numRenderTargetInfo;
@@ -198,7 +234,7 @@ namespace gos
             VkRenderPass            vkRenderPassHandle;
 
         friend class GPU;
-        }; // class RenderTaskLayoutBuilder
+        }; // class RenderPassBuilder
     
     
         /*****************************************************
@@ -300,7 +336,7 @@ namespace gos
             }; //class DepthStencilParam        
         
         public:
-                                PipelineBuilder (GPU *gpu, const GPURenderLayoutHandle &renderLayoutHandle, GPUPipelineHandle *out_handle);
+                                PipelineBuilder (GPU *gpu, const GPURenderPassHandle &renderPassHandle, GPUPipelineHandle *out_handle);
             virtual             ~PipelineBuilder();
 
             void                cleanUp();
@@ -342,7 +378,7 @@ namespace gos
             bool                                bWireframe;
 
             GPUPipelineHandle       *out_handle;
-            GPURenderLayoutHandle   renderLayoutHandle;
+            GPURenderPassHandle   renderPassHandle;
             VkPipelineLayout        vkPipelineLayoutHandle;
             VkPipeline              vkPipelineHandle;
 
@@ -350,43 +386,7 @@ namespace gos
         }; //PipelineBuilder
 
 
-        /**************************************
-         * FrameBuffersBuilder
-         * 
-         */
-        class FrameBuffersBuilder : public TempBuilder
-        {
-        public:
-                                    FrameBuffersBuilder (GPU *gpu, const GPURenderLayoutHandle &renderLayoutHandle, GPUFrameBufferHandle *out_handle);
-            virtual                 ~FrameBuffersBuilder();
-
-            FrameBuffersBuilder&    setRenderAreaSize (const gos::Dim2D &w, const gos::Dim2D &h);
-            FrameBuffersBuilder&    bindRenderTarget (const GPURenderTargetHandle &handle);
-            FrameBuffersBuilder&    bindDepthStencil (const GPUDepthStencilHandle &handle);
-
-            bool                    end();
-
-
-            bool                    anyError() const        { return bAnyError; }
-
-        private:
-            bool                    bAnyError;
-            gos::Dim2D              width;
-            gos::Dim2D              height;
-            u32                     numRenderTarget;
-            GPURenderTargetHandle   renderTargetHandleList[GOSGPU__NUM_MAX_ATTACHMENT];
-            GPUDepthStencilHandle   depthStencilHandle;
-
-
-            GPURenderLayoutHandle   renderLayoutHandle;
-            GPUFrameBufferHandle    *out_handle;
-
-        friend class GPU;
-        }; //class FrameBuffersBuilder
-
-
-
-
+ 
         /**************************************
          * DescriptorSetLayoutBuilder
          * 
@@ -537,21 +537,21 @@ namespace gos
 
 
         //================ render layout
-        RenderTaskLayoutBuilder&    renderLayout_createNew (GPURenderLayoutHandle *out_handle);
-        void                        deleteResource (GPURenderLayoutHandle &handle);
-        bool                        toVulkan (const GPURenderLayoutHandle handle, VkRenderPass *out) const;
-        const gpu::RenderLayout*    getInfo (const GPURenderLayoutHandle handle) const;
+        RenderPassBuilder&    renderPass_createNew (GPURenderPassHandle *out_handle);
+        void                        deleteResource (GPURenderPassHandle &handle);
+        bool                        toVulkan (const GPURenderPassHandle handle, VkRenderPass *out) const;
+        const gpu::RenderLayout*    getInfo (const GPURenderPassHandle handle) const;
 
 
         //================ Frame buffer
-        FrameBuffersBuilder&    frameBuffer_createNew (const GPURenderLayoutHandle &renderLayoutHandle, GPUFrameBufferHandle *out_handle);
+        FrameBuffersBuilder&    frameBuffer_createNew (const GPURenderPassHandle &renderPassHandle, GPUFrameBufferHandle *out_handle);
         void                    deleteResource (GPUFrameBufferHandle &handle);
         bool                    toVulkan (const GPUFrameBufferHandle handle, VkFramebuffer *out, u32 *out_renderAreaW, u32 *out_renderAreaH) const;
 
 
 
         //================ Pipeline
-        PipelineBuilder&            pipeline_createNew (const GPURenderLayoutHandle &enderLayoutHandle, GPUPipelineHandle *out_handle);
+        PipelineBuilder&            pipeline_createNew (const GPURenderPassHandle &enderLayoutHandle, GPUPipelineHandle *out_handle);
         void                        deleteResource (GPUPipelineHandle &handle);
         bool                        toVulkan (const GPUPipelineHandle handle, const gpu::sPipeline **out) const;
 
@@ -788,7 +788,7 @@ namespace gos
 
         void                priv_vxtDecl_onBuilderEnds (VtxDeclBuilder *builder);
 
-        bool                priv_renderLayout_onBuilderEnds (RenderTaskLayoutBuilder *builder);
+        bool                priv_renderLayout_onBuilderEnds (RenderPassBuilder *builder);
 
         bool                priv_pipeline_onBuilderEnds (PipelineBuilder *builder);
 
@@ -947,7 +947,7 @@ namespace gos
         HandleList<GPURenderTargetHandle, gpu::RenderTarget>        renderTargetList;
         gos::FastArray<GPURenderTargetHandle>                       renderTargetHandleList;
 
-        HandleList<GPURenderLayoutHandle,gpu::RenderLayout>         renderLayoutList;
+        HandleList<GPURenderPassHandle,gpu::RenderLayout>         renderLayoutList;
         HandleList<GPUPipelineHandle,gpu::sPipeline>                pipelineList;
         HandleList<GPUFrameBufferHandle, gpu::FrameBuffer>          frameBufferList;
         gos::FastArray<GPUFrameBufferHandle>                        frameBufferDependentOnSwapChainList;

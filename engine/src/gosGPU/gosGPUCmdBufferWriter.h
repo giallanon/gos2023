@@ -30,7 +30,7 @@ namespace gos
 
             CmdBufferWriter&    setClearColor (u8 colorAttachmentIndex, const gos::ColorHDR &color);
             CmdBufferWriter&    setDepthBufferColor (f32 depth, u32 stencil);
-            CmdBufferWriter&    renderPass_begin (const GPURenderLayoutHandle renderLayoutHandle, const GPUFrameBufferHandle frameBufferHandle);
+            CmdBufferWriter&    renderPass_begin (const GPURenderPassHandle renderPassHandle, const GPUFrameBufferHandle frameBufferHandle);
             CmdBufferWriter&    bindVtxBuffer (const GPUVtxBufferHandle handle);
             CmdBufferWriter&    bindVtxBuffers (const GPUVtxBufferHandle handleStream0, const GPUVtxBufferHandle handleStream1);
             CmdBufferWriter&    bindIdxBufferU16 (const GPUIdxBufferHandle handle);
