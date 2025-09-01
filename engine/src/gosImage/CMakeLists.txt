@@ -33,7 +33,9 @@ gosImageEnumAndDefine.h
 )
 
 #stb_image.cpp tira un sacco di warning per cui aggiungo queste opzioni di compilazione per non vederli
-set_source_files_properties (loader/stb_image.cpp COMPILE_FLAGS "-Wno-unused-function -Wno-misleading-indentation -Wno-unused-but-set-variable")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	set_source_files_properties (loader/stb_image.cpp COMPILE_FLAGS "-Wno-unused-function -Wno-misleading-indentation -Wno-unused-but-set-variable")
+endif()
 
 
 

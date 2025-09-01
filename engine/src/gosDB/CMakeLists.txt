@@ -30,7 +30,9 @@ gosRST.h
 )
 
 #sqlite3.c tira un sacco di warning per cui aggiungo queste opzioni di compilazione per non vederli
-set_source_files_properties (sqlite-3.50.4/sqlite3.c COMPILE_FLAGS "-Wno-stringop-overread")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set_source_files_properties (sqlite-3.50.4/sqlite3.c COMPILE_FLAGS "-Wno-stringop-overread")
+endif()
                                                                     
 
 #====================================================

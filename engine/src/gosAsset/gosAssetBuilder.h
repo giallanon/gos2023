@@ -47,7 +47,7 @@ namespace gos
 
         private:
             static constexpr u8 NUM_MAX_ASSET_BUILDER = 32;
-            static constexpr char DB_NAME[] = { "assets.sqlite3" };
+            static char DB_NAME[32];
 
         private:
             enum class eBuildStatus : u8

@@ -972,7 +972,7 @@ u8* SPVReflect::serialize (gos::Allocator *allocator, u32 *out_sizeAllocated) co
         //offset, bindingLoc, dataFmt per ogni elemento
         for (u32 i=0; i<vtxDeclList.getNElem(); i++)
         {
-            buffer.writeU8 (static_cast<u16>(vtxDeclList(i).offsetInBuffer));
+            buffer.writeU16 (static_cast<u16>(vtxDeclList(i).offsetInBuffer));
             buffer.writeU8 (static_cast<u8>(vtxDeclList(i).bindingLocation));
             buffer.writeU8 (static_cast<u8>(vtxDeclList(i).fmt));
         }

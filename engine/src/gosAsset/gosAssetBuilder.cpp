@@ -7,6 +7,7 @@
 using namespace gos;
 using namespace gos::asset;
 
+char Builder::DB_NAME[32] = { "assets.sqlite3" };
 
 //***********************************
 const char* Builder::enumToString (const eBuildStatus s)
@@ -1137,7 +1138,7 @@ void Builder::priv_explodeIniFile_adjustSubsectionName (const char *subsec_name,
     assert (subsec_name[0] == '@');
 
     sprintf_s (out, sizeof_out, "%s", subsec_name);
-    u32 len = strlen(out);
+    u32 len = static_cast<u32>(strlen(out));
 
     len-=3;
     while (out[len] != '@')

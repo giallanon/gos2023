@@ -173,7 +173,7 @@ bool DefReader::getOffset (const char *var_name, u16 *out) const
         //array_index[] con il numero/i numeri riportato/i tra parentesi quadre
         u8  array_ordine = 0;
         u16 array_index[8];
-        u32 len = strlen(s);
+        u32 len = static_cast<u32>(strlen(s));
         if (0 == len)
             return false;
         if (s[len-1] == ']')
@@ -237,7 +237,7 @@ bool DefReader::getOffset (const char *var_name, u16 *out) const
                     if (elem.arrayType_getNumDimension() != array_ordine)
                         return false;
                     
-                    const u16 n = array_ordine-1;
+                    const u8 n = array_ordine-1;
                     u16 offset = 0;
                     for (u8 i=0; i<n; i++)
                     {

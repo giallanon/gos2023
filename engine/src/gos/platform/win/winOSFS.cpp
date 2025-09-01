@@ -426,7 +426,16 @@ void platform::FS_findClose(OSFileFind &ff)
 //*****************************************************
 bool platform::FS_fileCopy (const char *src, const char *dst)
 {
-	return (0 !=::CopyFile (src, dst, FALSE));
+	wchar_t wSRC[512];
+	if (!win32::utf8_towchar(src, u32MAX, wSRC, sizeof(wSRC)))
+		return false;
+
+	wchar_t wDST[512];
+	if (!win32::utf8_towchar(dst, u32MAX, wDST, sizeof(wDST)))
+		return false;
+
+
+	return (0 !=::CopyFile (wSRC, wDST, FALSE));
 }
 
 #endif //GOS_PLATFORM__WINDOWS
