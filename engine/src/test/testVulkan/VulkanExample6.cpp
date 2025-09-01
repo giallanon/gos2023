@@ -270,7 +270,7 @@ bool VulkanExample6::priv_setupPipeline_v2(GPUVtxDeclHandle &vtxDeclHandleIN)
         u32 n = 0;
         rpd.subpassList[n].type = gpu::RenderPassDesc::eSubpassType::gfx;
         rpd.subpassList[n].rtList[0] = 0;
-        rpd.subpassList[n].zbList[0] = 1;
+        rpd.subpassList[n].zbIndex = 1;
 
         rpd.subpassList[n].numDescrSet = 1;
         {
@@ -328,12 +328,8 @@ bool VulkanExample6::priv_buildPipe_v2 (const gpu::RenderPassDesc &rpd)
                     sp.writeToRenderTarget(i2);
                 }
 
-                for (u32 i2=0; i2<GOSGPU__NUM_MAX_ATTACHMENT; i2++)
-                {
-                    if (0xFF == subpass->zbList[i2])
-                        break;
+                if (0xFF != subpass->zbIndex)
                     sp.writeToDepthStencil();
-                }                
             }
         }
         builder.end();

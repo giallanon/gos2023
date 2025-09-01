@@ -51,7 +51,7 @@ namespace gos
                         {
                             type = eSubpassType::unknown;
                             memset(rtList, 0xFF, sizeof(rtList));
-                            memset(zbList, 0xFF, sizeof(zbList));
+                            zbIndex = 0xff;
                             memset(inputList, 0xFF, sizeof(inputList));
                             memset(preserveList, 0xFF, sizeof(preserveList));
 
@@ -73,16 +73,16 @@ namespace gos
 
             public:
                 eSubpassType        type;
-                u8                  rtList[GOSGPU__NUM_MAX_ATTACHMENT];         //terminano con 0xff
-                u8                  zbList[GOSGPU__NUM_MAX_ATTACHMENT];         //terminano con 0xff
-                u8                  inputList[GOSGPU__NUM_MAX_ATTACHMENT];      //terminano con 0xff
-                u8                  preserveList[GOSGPU__NUM_MAX_ATTACHMENT];   //terminano con 0xff
+                u8                  rtList[GOSGPU__NUM_MAX_ATTACHMENT];         //terminano con 0xff e sono degli indici per Framebuffer_def->attachment
+                u8                  zbIndex;                                    //0xff oppure in indice per Framebuffer_def->attachment
+                u8                  inputList[GOSGPU__NUM_MAX_ATTACHMENT];      //terminano con 0xff e sono degli indici per Framebuffer_def->attachment
+                u8                  preserveList[GOSGPU__NUM_MAX_ATTACHMENT];   //terminano con 0xff e sono degli indici per Framebuffer_def->attachment
 
-                bool                zbuffer_enabled;
+                bool                zbuffer_enabled; //se true, allora zbIndex deve essere != 0xff
                 bool                zbuffer_write;
                 eZFunc              zbuffer_cmpFn;
 
-                bool                stencil_enabled;
+                bool                stencil_enabled; //se true, allora zbIndex deve essere != 0xff e il formato di zb deve includere lo stencil
                 eStencilFunc        stencil_cmpFn;
 
                 eCullMode           cullMode;
