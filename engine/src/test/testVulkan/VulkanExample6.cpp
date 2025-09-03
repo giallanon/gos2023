@@ -66,8 +66,8 @@ bool VulkanExample6::virtual_onInit ()
         //if (!gos::shape::importFrom_glTF ("shader/example6/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("shader/example6/esempio2.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         
-        //if (!gos::shape::importFrom_glTF ("shader/example6/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-        if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Sponza/glTF/Sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        if (!gos::shape::importFrom_glTF ("shader/example6/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Sponza/glTF/Sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/DamagedHelmet/glTF/DamagedHelmet.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Duck/glTF-Binary/Duck.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/BrainStem/glTF-Binary/BrainStem.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
@@ -240,25 +240,9 @@ bool VulkanExample6::priv_setupPipeline_v2(GPUVtxDeclHandle &vtxDeclHandleIN)
 
     gpu::Framebuffer_def fbd;
     {
-        u32 n = 0;
         fbd.reset();
-        
-        fbd.numAttachment++;
-        fbd.attachment[n].fmt = gpu->swapChain_getImageFormat();
-        fbd.attachment[n].initialLayout = eImageLayout::undefined;
-        fbd.attachment[n].finalLayout = eImageLayout::presentation;
-        fbd.attachment[n].loadOp = eAttachmentLoadOp::clear;
-        fbd.attachment[n].storeOp = eAttachmentStoreOp::store;
-        n++;
-
-        fbd.attachment[n].fmt = gpu->depthStencil_getDefaultFormat();
-        fbd.attachment[n].initialLayout = eImageLayout::undefined;
-        fbd.attachment[n].finalLayout = eImageLayout::depth_shader_readonly;
-        fbd.attachment[n].loadOp = eAttachmentLoadOp::clear;
-        fbd.attachment[n].storeOp = eAttachmentStoreOp::dont_care;
-        n++;
-
-        fbd.numAttachment = n;
+        fbd.add (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store);
+        fbd.add (gpu->depthStencil_getDefaultFormat(), eImageLayout::undefined, eImageLayout::depth_shader_readonly, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care);
     }
 
     gpu::RenderPassDesc rpd;
@@ -267,26 +251,18 @@ bool VulkanExample6::priv_setupPipeline_v2(GPUVtxDeclHandle &vtxDeclHandleIN)
 
         rpd.framebuffer_def = &fbd;
 
-        u32 n = 0;
-        rpd.subpassList[n].type = gpu::RenderPassDesc::eSubpassType::gfx;
-        rpd.subpassList[n].rtList[0] = 0;
-        rpd.subpassList[n].zbIndex = 1;
+        gpu::RenderPassDesc::sSubpass *sub = &rpd.subpassList[0];
 
-        rpd.subpassList[n].numDescrSet = 1;
-        {
-            //rpd.subpassList[n].descriptorSetList[0].flag = 0; 
-            rpd.subpassList[n].descriptorSetList[0].numDescriptor = 1;
-            {
-                rpd.subpassList[n].descriptorSetList[0].descriptorList[0].binding = 0;
-                rpd.subpassList[n].descriptorSetList[0].descriptorList[0].count = 1;
-                rpd.subpassList[n].descriptorSetList[0].descriptorList[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-                rpd.subpassList[n].descriptorSetList[0].descriptorList[0].descrType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            }
-        }
+        sub->setType_gfx();
+        sub->add_rt (0);
+        sub->set_zbuffer (1, true, eZFunc::LESS, false, eStencilFunc::NEVER);
 
-        rpd.subpassList[n].vtxDeclHandle = vtxDeclHandleIN;
-        rpd.subpassList[n].vtxShaderHandle = vtxShaderHandle;
-        rpd.subpassList[n].pxlShaderHandle = fragShaderHandle;
+        sub->add_descriptorSet (0, 0);
+        sub->add_descriptor (0, 0, VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 1);
+
+        sub->vtxDeclHandle = vtxDeclHandleIN;
+        sub->vtxShaderHandle = vtxShaderHandle;
+        sub->pxlShaderHandle = fragShaderHandle;
     }
 
     return priv_buildPipe_v2(rpd);
@@ -321,12 +297,8 @@ bool VulkanExample6::priv_buildPipe_v2 (const gpu::RenderPassDesc &rpd)
 
             GPU::RenderPassBuilder::SubPassInfo &sp = builder.addSubpass_GFX();
             {
-                for (u32 i2=0; i2<GOSGPU__NUM_MAX_ATTACHMENT; i2++)
-                {
-                    if (0xFF == subpass->rtList[i2])
-                        break;
-                    sp.writeToRenderTarget(i2);
-                }
+                for (u32 i2=0; i2<subpass->num_rt; i2++)
+                    sp.writeToRenderTarget(subpass->rtList[i2]);
 
                 if (0xFF != subpass->zbIndex)
                     sp.writeToDepthStencil();
@@ -363,7 +335,7 @@ bool VulkanExample6::priv_buildPipe_v2 (const gpu::RenderPassDesc &rpd)
         .setVtxDecl (subpass->vtxDeclHandle)
         //.setWireframe(true)
         .depthStencil()
-            .zbuffer_enable(subpass->zbuffer_enabled)
+            .zbuffer_enable((subpass->zbIndex != 0xff))
             .zbuffer_enableWrite(subpass->zbuffer_write)
             .zbuffer_setFn (subpass->zbuffer_cmpFn)
         .end() //depth stencil

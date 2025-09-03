@@ -24,12 +24,25 @@ namespace gos
             };
 
         public:
-            void    reset()         { memset (this, 0, sizeof(Framebuffer_def)); }
+            void    reset()                                     { memset (this, 0, sizeof(Framebuffer_def)); }
+
+            void    add (eImageFormat fmtIN, eImageLayout initialLayoutIN, eImageLayout finalLayoutIN, eAttachmentLoadOp loadOpIN, eAttachmentStoreOp storeOpIN)
+            {
+                assert (numAttachment < GOSGPU__NUM_MAX_ATTACHMENT-1);
+                attachment[numAttachment].fmt = fmtIN;
+                attachment[numAttachment].initialLayout = initialLayoutIN;
+                attachment[numAttachment].finalLayout = finalLayoutIN;
+                attachment[numAttachment].loadOp = loadOpIN;
+                attachment[numAttachment].storeOp = storeOpIN;
+                numAttachment++;
+            }
 
         public:
             u32         numAttachment;
             sAttachment attachment[GOSGPU__NUM_MAX_ATTACHMENT];
         };
+
+
 
 				//se [buffer] == NULL ritorna il num di byte necessari alla serializzazione
 				//se [buffer] != NULL ritorna 0 in caso di errore oppure il num di byte memcpyati in [buffer]

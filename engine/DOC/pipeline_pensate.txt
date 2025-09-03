@@ -1,12 +1,9 @@
 @framebuffer_def
 {
 	//color e zbuffer (massimo 16)
-	colbuf: <ImgFormat = sameAsSwapchain | U8_RGBA_sRGB | ... >, <initialLayout>, <finalLayout>, <loadOp = load | clear | dont_care>, <storeOp = store | dont_care | none>
+	buf: <type = col | zb>, <ImgFormat = sameAsSwapchain | U8_RGBA_sRGB | ... >, <initialLayout>, <finalLayout>, <loadOp = load | clear | dont_care>, <storeOp = store | dont_care | none>
 	...
-	colbuf:
-
-	//max 1 zb
-	(optional)	zb: <ImgFormat = sameAsSwapchain | DEPTH_F32 | ... > <initialLayout>, <finalLayout>, <loadOp = load | clear | dont_care>, <storeOp = store | dont_care | none>
+	buf:
 }
 
 
@@ -15,23 +12,28 @@
 {
 	(mandatory)	@framebuffer_def:
 
-	(optional)	clearcol: <attachment-index-0toN>, <#aarrggbb = #f000>
+	(optional)	clearcol: <attachment-index-0toN>, ( <#aarrggbb = #f000> ) | ( <depth = 1> , <stencil = 0> )
 	...
-
-	(optional)	clearzb: <depth = 1> , <stencil = 0>
 
 
 	//mandatorio almeno 1 sub-pass, massimo 8 subpass
 	subpass
 	{
 		(mandatory)	type: gfx | compute
-		(optional)	rt: index of 1 or more <colbuf> definiti in @framebuffer_def
-		(optional)	zb: => non serve dato che nel framebuffer_def, ci può essere al max 1 ZB e se nelle zOption qui sotto dico che è enabled, lo so già da me quale è l'indice del target da usare
-		(optional)	input: index of 1 or more buf_ definiti in @framebuffer_def. Al posto di index, si può usare "zb" per indicare lo zbuffer
-		(optional)	preserve: index of 1 or more buf_ definiti in @framebuffer_def
+		(optional)	rt: index of 1 or more <buf> definiti in @framebuffer_def
+						alternativamente
+					rt: none 	=> per indicare che non viene usato alcun rt
+					DEFAULT	=> rt:none
+		
+		(optional)	zb: <index of a buf>, <zwrite = 0|1>, <zcmpFn = LESS|...>, <stencil_enabled = 0 | 1>, <stencil_cmpFn = LESS|...>,
+						alternativamente
+					zb: none 	=> per indicare che lo zb è disabilitato
+					DEFAULT	=> zb:none
+					
+						
+		(optional)	input: vedi <rt>				=> default: none
+		(optional)	preserve: vedi <rt>				=> default: none
 
-		(optional)	zOption: 1, 1, LESS				=> <enabled>, <write>, <cmpFN>		=> default: 1, 1, LESS
-		(optional)	stencilOption: 0, NEVER			=> <enabled>, <cmpFN>				=> default: 0, NEVER
 		(optional)	cullMode: CCW					=> <mode>							=> default: eCullMode::CCW
 		(optional)	drawPrimitive: trisList			=> <primitive>						=> default: trisList
 

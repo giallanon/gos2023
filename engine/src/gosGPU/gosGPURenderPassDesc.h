@@ -32,7 +32,7 @@ namespace gos
             struct sDescriptorSet
             {
                 u32 numDescriptor;
-                VkDescriptorSetLayoutCreateInfo flag;
+                VkDescriptorSetLayoutCreateFlags flag;
                 sDescriptor descriptorList[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
             };
 
@@ -43,6 +43,20 @@ namespace gos
                 u16                 sizeInByte;
             };
 
+            struct sClearColor
+            {
+                u32 argb;
+            };
+            struct sZBClearValue
+            {
+                f32 depth;
+                f32 stencil;
+            };
+            union uClearCol
+            {
+                sClearColor     asColoBuffer;
+                sZBClearValue   asZBuffer;
+            };
 
             struct sSubpass
             {
@@ -50,12 +64,12 @@ namespace gos
                 void    reset()     
                         {
                             type = eSubpassType::unknown;
-                            memset(rtList, 0xFF, sizeof(rtList));
-                            zbIndex = 0xff;
+                            num_rt = num_inputAttachment = num_preserveAttachment = 0;
+                            memset(rtList, 0, sizeof(rtList));
                             memset(inputList, 0xFF, sizeof(inputList));
                             memset(preserveList, 0xFF, sizeof(preserveList));
 
-                            zbuffer_enabled = true; zbuffer_write=true; zbuffer_cmpFn = eZFunc::LESS;
+                            zbIndex = 0xff; zbuffer_write=true; zbuffer_cmpFn = eZFunc::LESS;
                             stencil_enabled = false; stencil_cmpFn = eStencilFunc::NEVER;
                             cullMode = eCullMode::CCW;
                             drawPrimitive = eDrawPrimitive::trisList;
@@ -71,19 +85,52 @@ namespace gos
                             pxlShaderHandle.setInvalid();
                         }
 
+                void    setType_gfx()                                   { type = eSubpassType::gfx; }
+                void    setType_compute()                               { type = eSubpassType::compute; }
+                
+                void    add_rt (u8 attachmentIndex)                     { assert(attachmentIndex < GOSGPU__NUM_MAX_ATTACHMENT); assert (num_rt < GOSGPU__NUM_MAX_ATTACHMENT); rtList[num_rt++] = attachmentIndex; }
+                void    add_inputAttachment (u8 attachmentIndex)        { assert(attachmentIndex < GOSGPU__NUM_MAX_ATTACHMENT); assert (num_inputAttachment < GOSGPU__NUM_MAX_ATTACHMENT); inputList[num_inputAttachment++] = attachmentIndex; }
+                void    add_preserveAttachment (u8 attachmentIndex)     { assert(attachmentIndex < GOSGPU__NUM_MAX_ATTACHMENT); assert (num_preserveAttachment < GOSGPU__NUM_MAX_ATTACHMENT); preserveList[num_preserveAttachment++] = attachmentIndex; }
+
+                void    set_zbuffer (u8 attachmentIndex, bool zwriteIN, eZFunc zfuncIN, bool stencilEnabledIN, eStencilFunc stencilFnIN)        { zbIndex = attachmentIndex; zbuffer_write=zwriteIN; zbuffer_cmpFn=zfuncIN; stencil_enabled=stencilEnabledIN; stencil_cmpFn=stencilFnIN; }
+
+                void    set_cullMode (eCullMode m)                      { cullMode = m; }
+                void    set_drawPrimitive (eDrawPrimitive p)            { drawPrimitive = p; }
+
+                void    add_descriptorSet (u8 set, VkDescriptorSetLayoutCreateFlags flag)
+                {
+                    assert (set < GOSGPU__NUM_MAX_DESCRIPTOR_SETS);
+                    assert (descriptorSetList[set].numDescriptor == 0);
+                    descriptorSetList[set].flag = flag;
+                }
+
+                void    add_descriptor (u8 set, u8 binding, VkDescriptorType descrType, VkShaderStageFlags stageFlags, u32 count)
+                {
+                    assert (set < GOSGPU__NUM_MAX_DESCRIPTOR_SETS);
+                    assert (descriptorSetList[set].numDescriptor < GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET-1);
+                    
+                    u32 n = descriptorSetList[set].numDescriptor++;
+                    descriptorSetList[set].descriptorList[n].binding = binding;
+                    descriptorSetList[set].descriptorList[n].descrType = descrType;
+                    descriptorSetList[set].descriptorList[n].stageFlags = stageFlags;
+                    descriptorSetList[set].descriptorList[n].count = count;
+                }
+
             public:
                 eSubpassType        type;
+
+                u8                  num_rt;
+                u8                  num_inputAttachment;
+                u8                  num_preserveAttachment;
                 u8                  rtList[GOSGPU__NUM_MAX_ATTACHMENT];         //terminano con 0xff e sono degli indici per Framebuffer_def->attachment
-                u8                  zbIndex;                                    //0xff oppure in indice per Framebuffer_def->attachment
                 u8                  inputList[GOSGPU__NUM_MAX_ATTACHMENT];      //terminano con 0xff e sono degli indici per Framebuffer_def->attachment
                 u8                  preserveList[GOSGPU__NUM_MAX_ATTACHMENT];   //terminano con 0xff e sono degli indici per Framebuffer_def->attachment
 
-                bool                zbuffer_enabled; //se true, allora zbIndex deve essere != 0xff
-                bool                zbuffer_write;
-                eZFunc              zbuffer_cmpFn;
-
-                bool                stencil_enabled; //se true, allora zbIndex deve essere != 0xff e il formato di zb deve includere lo stencil
-                eStencilFunc        stencil_cmpFn;
+                u8                  zbIndex;                                    //0xff oppure in indice per Framebuffer_def->attachment
+                bool                zbuffer_write;                              //valido solo se zbIndex != 0xff
+                eZFunc              zbuffer_cmpFn;                              //valido solo se zbIndex != 0xff
+                bool                stencil_enabled;                            //valido solo se zbIndex != 0xff. Se true, allora zbIndex deve essere != 0xff e il formato di zb deve includere lo stencil
+                eStencilFunc        stencil_cmpFn;                              //valido solo se zbIndex != 0xff
 
                 eCullMode           cullMode;
                 eDrawPrimitive      drawPrimitive;                
@@ -100,10 +147,21 @@ namespace gos
             };
 
         public:
-            void    reset()         { framebuffer_def = NULL; for (u32 i=0; i<GOSGPU__NUM_MAX_SUBPASSES; i++) { subpassList[i].reset(); } }
+            void    reset()
+            {
+                framebuffer_def = NULL; 
+                for (u32 i=0; i<GOSGPU__NUM_MAX_SUBPASSES; i++)
+                    subpassList[i].reset();
+
+                memset (clearColList, 0, sizeof (clearColList));
+            }
+
+
+
 
         public:
             const Framebuffer_def   *framebuffer_def;
+            uClearCol               clearColList[GOSGPU__NUM_MAX_ATTACHMENT];
             sSubpass                subpassList[GOSGPU__NUM_MAX_SUBPASSES];
 
         };

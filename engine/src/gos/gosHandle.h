@@ -200,7 +200,7 @@ namespace gos
 			
 						allocator = allocatorIN;
 			
-						const u32 nChunk = HANDLE::getNumMaxChunk();
+						constexpr u32 nChunk = HANDLE::getNumMaxChunk();
 						chunkList = (sRecord**)GOSALIGNEDALLOC(allocator, nChunk * sizeof(sRecord*), alignof(sRecord*));
 						firstFree = (u32*)GOSALLOC (allocator,sizeof(u32) * nChunk);
 						for (u32 i = 0; i < nChunk; i++)
@@ -216,7 +216,7 @@ namespace gos
 		{
 			if (NULL == chunkList)
 				return;
-			const u32 nChunk = HANDLE::getNumMaxChunk();
+			constexpr u32 nChunk = HANDLE::getNumMaxChunk();
 
 #ifdef _DEBUG
 			//verifico che tutti gli handle siano stati rilasciati
@@ -244,7 +244,7 @@ namespace gos
 
 		DATASTRUCT*	reserve (HANDLE *out_handle)
 		{
-			const u32 nChunk = HANDLE::getNumMaxChunk();
+			constexpr u32 nChunk = HANDLE::getNumMaxChunk();
 			for (u32 i = 0; i < nChunk; i++)
 			{
 				if (firstFree[i] != 0xFFFF)
@@ -313,10 +313,10 @@ namespace gos
 		void		priv_allocChunk(u8 which)
 					{
 						#ifdef _DEBUG
-							const u32 nChunk = HANDLE::getNumMaxChunk();
+							constexpr u32 nChunk = HANDLE::getNumMaxChunk();
 							assert(which < nChunk);
 						#endif
-						const u32 nMaxHandlePerChunk = HANDLE::getNumMaxHandlePerChunk();
+						constexpr u32 nMaxHandlePerChunk = HANDLE::getNumMaxHandlePerChunk();
 						assert(NULL==chunkList[which]);
 
 						firstFree[which] = 0;
