@@ -397,6 +397,9 @@ namespace gos
                                             DescriptorSetLayoutBuilder (GPU *gpu, VkDescriptorSetLayoutCreateFlags createFlag, GPUDescrSetLayoutHandle *out_handle);
             virtual                         ~DescriptorSetLayoutBuilder();
 
+                                            //per <usageFlags> vedi eGPUDescriptrorUsageFlag
+            DescriptorSetLayoutBuilder&     add (eGPUDescriptrorType descrType, u32 usageFlags, u32 count=1);
+
             //aggiunge un descriptor al set.
             //  [stageFlags], vedi anche gos::ShaderStageFlag che contiene i flag utilizzabili
             DescriptorSetLayoutBuilder&     add_uniformBuffer (VkShaderStageFlags stageFlags, u32 count=1)                  { return priv_add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, stageFlags, count); }

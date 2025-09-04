@@ -237,7 +237,6 @@ bool VulkanExample6::priv_setupPipeline_v1(GPUVtxDeclHandle &vtxDeclHandle)
 //************************************
 bool VulkanExample6::priv_setupPipeline_v2(GPUVtxDeclHandle &vtxDeclHandleIN)
 {
-
     gpu::Framebuffer_def fbd;
     {
         fbd.reset();
@@ -245,31 +244,38 @@ bool VulkanExample6::priv_setupPipeline_v2(GPUVtxDeclHandle &vtxDeclHandleIN)
         fbd.add (gpu->depthStencil_getDefaultFormat(), eImageLayout::undefined, eImageLayout::depth_shader_readonly, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care);
     }
 
-    gpu::RenderPassDesc rpd;
+    gpu::RenderPass_def rpd;
     {
         rpd.reset();
 
         rpd.framebuffer_def = &fbd;
 
-        gpu::RenderPassDesc::sSubpass *sub = &rpd.subpassList[0];
+        gpu::RenderPass_def::sSubpass *sub = &rpd.subpassList[0];
+            sub->setType_gfx();
+            sub->add_rt (0);
+            sub->set_zbuffer (1, true, eZFunc::LESS, false, eStencilFunc::NEVER);
 
-        sub->setType_gfx();
-        sub->add_rt (0);
-        sub->set_zbuffer (1, true, eZFunc::LESS, false, eStencilFunc::NEVER);
+            //descriptors
+            sub->descriptor_addSet (0);
+                sub->descriptor_add (0, eGPUDescriptrorType::UNIFORM_BUFFER, eGPUDescriptrorUsageFlag::vtx_shader);
 
-        sub->add_descriptorSet (0, 0);
-        sub->add_descriptor (0, 0, VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 1);
+            //vtx format
+            sub->vtxDeclHandle = vtxDeclHandleIN;
+            sub->vtxdecl_addStream();
+                sub->vtxdecl_addLayout (0, offsetof(Vertex, pos), eDataFormat::_3f32);
+                sub->vtxdecl_addLayout (1, offsetof(Vertex, tutv0), eDataFormat::_2f32);
+                sub->vtxdecl_addLayout (2, offsetof(Vertex, normal), eDataFormat::_3f32);
 
-        sub->vtxDeclHandle = vtxDeclHandleIN;
-        sub->vtxShaderHandle = vtxShaderHandle;
-        sub->pxlShaderHandle = fragShaderHandle;
+            //shader
+            sub->vtxShaderHandle = vtxShaderHandle;
+            sub->pxlShaderHandle = fragShaderHandle;
     }
 
     return priv_buildPipe_v2(rpd);
 }
 
 //************************************
-bool VulkanExample6::priv_buildPipe_v2 (const gpu::RenderPassDesc &rpd)
+bool VulkanExample6::priv_buildPipe_v2 (const gpu::RenderPass_def &rpd)
 {
     //creo il render pass
     {
@@ -289,9 +295,9 @@ bool VulkanExample6::priv_buildPipe_v2 (const gpu::RenderPassDesc &rpd)
 
         for (u32 i=0; i<GOSGPU__NUM_MAX_SUBPASSES; i++)
         {
-            const gpu::RenderPassDesc::sSubpass *subpass = &rpd.subpassList[i];
+            const gpu::RenderPass_def::sSubpass *subpass = &rpd.subpassList[i];
 
-            if (gpu::RenderPassDesc::eSubpassType::unknown == subpass->type)
+            if (gpu::RenderPass_def::eSubpassType::unknown == subpass->type)
                 break;
 
 
@@ -314,7 +320,7 @@ bool VulkanExample6::priv_buildPipe_v2 (const gpu::RenderPassDesc &rpd)
     }
 
 
-    const gpu::RenderPassDesc::sSubpass *subpass = &rpd.subpassList[0];
+    const gpu::RenderPass_def::sSubpass *subpass = &rpd.subpassList[0];
 
     //Creo il descriptorSet layout  con un solo UNIFORM BUFFER per il VTX SHADER
     {

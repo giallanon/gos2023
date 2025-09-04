@@ -301,6 +301,14 @@ enum class eGPUDescriptrorType : u8    //sono pari pari ai corrispondenti enum d
     UNKNOWN = 0xff
 };
 
+enum eGPUDescriptrorUsageFlag
+{
+    vtx_shader  = 0x00000001,       //aka VK_SHADER_STAGE_VERTEX_BIT = 0x00000001,
+    geom_shader = 0x00000008,       //aka VK_SHADER_STAGE_GEOMETRY_BIT = 0x00000008,
+    pxl_shader  = 0x00000010,       //aka VK_SHADER_STAGE_FRAGMENT_BIT = 0x00000010,
+    compute_shader = 0x00000020     //aka VK_SHADER_STAGE_COMPUTE_BIT = 0x00000020,
+};
+
 enum class eDataBlobElemType : u8
 {
     simpleType = 0,

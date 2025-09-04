@@ -1,7 +1,7 @@
 #ifndef _VulkanExample6_h_
 #define _VulkanExample6_h_
 #include "VulkanApp.h"
-#include "../gosGPU/gosGPURenderPassDesc.h"
+#include "../gosGPU/gosGPURenderPass_def.h"
 
 /************************************
  *  VulkanExample6
@@ -44,7 +44,7 @@ private:
 
     bool        priv_setupPipeline_v1 (GPUVtxDeclHandle &vtxDeclHandle);
     bool        priv_setupPipeline_v2 (GPUVtxDeclHandle &vtxDeclHandle);
-    bool        priv_buildPipe_v2 (const gos::gpu::RenderPassDesc &rpd);
+    bool        priv_buildPipe_v2 (const gos::gpu::RenderPass_def &rpd);
 
 private:
     gos::FastArray<gos::Shape> shapeList;

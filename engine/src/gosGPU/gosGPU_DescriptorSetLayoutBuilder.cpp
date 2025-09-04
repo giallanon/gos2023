@@ -21,6 +21,24 @@ GPU::DescriptorSetLayoutBuilder::~DescriptorSetLayoutBuilder()
 {
 }
 
+//*********************************************** 
+GPUDSLB& GPU::DescriptorSetLayoutBuilder::add (eGPUDescriptrorType descrType, u32 usageFlags, u32 count)
+{
+    switch (descrType)
+    {
+    default:                                                break;
+    case eGPUDescriptrorType::UNIFORM_BUFFER:               return priv_add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, usageFlags, count);
+    case eGPUDescriptrorType::DYNAMIC_UNIFORM_BUFFER:       return priv_add (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, usageFlags, count);
+    case eGPUDescriptrorType::STORAGE_BUFFER:               return priv_add (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, usageFlags, count);
+    case eGPUDescriptrorType::DYNAMIC_STORAGE_BUFFER:       return priv_add (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, usageFlags, count);
+    case eGPUDescriptrorType::COMBINED_IMAGE_SAMPLER:       return priv_add (VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, usageFlags, count);
+    case eGPUDescriptrorType::SAMPLER:                      return priv_add (VK_DESCRIPTOR_TYPE_SAMPLER, usageFlags, count);
+    case eGPUDescriptrorType::TEXTURE2D:                    return priv_add (VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, usageFlags, count);
+    }
+
+    DBGBREAK;
+    return *this;
+}
 
 //*********************************************** 
 GPUDSLB& GPU::DescriptorSetLayoutBuilder::priv_add (VkDescriptorType descrType, VkShaderStageFlags stageFlags, u32 count)

@@ -53,8 +53,8 @@ gosGPUDescrSetInstanceWriter.h
 gosGPUEnumAndDefine.h
 gosGPUFramebuffer_def.cpp
 gosGPUFramebuffer_def.h
-gosGPURenderPassDesc.h
-gosGPURenderPassDesc.cpp
+gosGPURenderPass_def.h
+gosGPURenderPass_def.cpp
 gosGPUResBuffer.h
 gosGPUResCommandBuffer.h
 gosGPUResDepthStencil.h

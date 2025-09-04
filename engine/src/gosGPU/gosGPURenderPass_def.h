@@ -1,5 +1,5 @@
-#ifndef _gosGPURenderPassDesc_h_
-#define _gosGPURenderPassDesc_h_
+#ifndef _gosGPURenderPass_def_h_
+#define _gosGPURenderPass_def_h_
 #include "gosGPUFramebuffer_def.h"
 
 
@@ -8,10 +8,10 @@ namespace gos
     namespace gpu
     {
         /**
-         * @brief   RenderPassDesc
+         * @brief   RenderPass_def
          * 
          */
-        struct RenderPassDesc
+        struct RenderPass_def
         {
         public:
             enum eSubpassType
@@ -24,8 +24,8 @@ namespace gos
             struct sDescriptor
             {
                 u32                 binding;
-                VkDescriptorType    descrType;
-                VkShaderStageFlags  stageFlags;
+                eGPUDescriptrorType descrType;
+                u32                 usageFlags;
                 u32                 count;
             };
 
@@ -58,6 +58,23 @@ namespace gos
                 sZBClearValue   asZBuffer;
             };
 
+
+            struct sVtxLayout
+            {
+			    u8              bindingLocation;
+			    eDataFormat     format;
+			    u8              offset;
+            };
+
+            struct sVtxStream
+            {
+                u8                  streamIndex;
+                eVtxStreamInputRate inputRate;
+                u8                  numLayout;
+                sVtxLayout          layoutList[GOSGPU__NUM_MAX_VTXDECL_ATTR];
+            };
+
+
             struct sSubpass
             {
             public:
@@ -81,6 +98,9 @@ namespace gos
                             memset (pushConstList, 0, sizeof(pushConstList));
 
                             vtxDeclHandle.setInvalid();
+                            numVtxStream = 0;
+                            memset (vtxStreamList, 0, sizeof(vtxStreamList));
+
                             vtxShaderHandle.setInvalid();
                             pxlShaderHandle.setInvalid();
                         }
@@ -97,23 +117,48 @@ namespace gos
                 void    set_cullMode (eCullMode m)                      { cullMode = m; }
                 void    set_drawPrimitive (eDrawPrimitive p)            { drawPrimitive = p; }
 
-                void    add_descriptorSet (u8 set, VkDescriptorSetLayoutCreateFlags flag)
-                {
-                    assert (set < GOSGPU__NUM_MAX_DESCRIPTOR_SETS);
-                    assert (descriptorSetList[set].numDescriptor == 0);
-                    descriptorSetList[set].flag = flag;
-                }
 
-                void    add_descriptor (u8 set, u8 binding, VkDescriptorType descrType, VkShaderStageFlags stageFlags, u32 count)
+                void    descriptor_addSet (VkDescriptorSetLayoutCreateFlags flag)
                 {
-                    assert (set < GOSGPU__NUM_MAX_DESCRIPTOR_SETS);
-                    assert (descriptorSetList[set].numDescriptor < GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET-1);
+                    assert (numDescrSet < GOSGPU__NUM_MAX_DESCRIPTOR_SETS-1);
+                    const u32 n = numDescrSet++;
+                    memset (&descriptorSetList[n], 0, sizeof(sDescriptorSet));
+                    descriptorSetList[n].flag = flag;
+                }
+                        //per <usageFlags> vedi eGPUDescriptrorUsageFlag
+                void    descriptor_add (u8 binding, eGPUDescriptrorType descrType, u32 usageFlags, u32 count = 1)
+                {
+                    assert (numDescrSet > 0);
+                    const u32 set = numDescrSet-1;
+
+                    const u32 n = descriptorSetList[set].numDescriptor++;
+                    assert (n < GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET);
                     
-                    u32 n = descriptorSetList[set].numDescriptor++;
                     descriptorSetList[set].descriptorList[n].binding = binding;
                     descriptorSetList[set].descriptorList[n].descrType = descrType;
-                    descriptorSetList[set].descriptorList[n].stageFlags = stageFlags;
                     descriptorSetList[set].descriptorList[n].count = count;
+                    descriptorSetList[set].descriptorList[n].usageFlags = usageFlags;
+                }
+
+
+                void    vtxdecl_addStream (eVtxStreamInputRate inputRate = eVtxStreamInputRate::perVertex)
+                        {
+                            assert (numVtxStream < GOSGPU__NUM_MAX_VXTDECL_STREAM-1);
+                            vtxStreamList[numVtxStream].streamIndex = static_cast<u8>(numVtxStream);
+                            vtxStreamList[numVtxStream].inputRate = inputRate;
+                            vtxStreamList[numVtxStream].numLayout = 0;
+                            memset (vtxStreamList[numVtxStream].layoutList, 0, sizeof(vtxStreamList[numVtxStream].layoutList));
+                            numVtxStream++;
+                        }
+                void    vtxdecl_addLayout (u8 bindingLocation, u32 offsetInBuffer, eDataFormat dataFormat)
+                {
+                    assert (numVtxStream > 0);
+                    const u32 n = numVtxStream-1;
+                    const u32 i = vtxStreamList[n].numLayout++;
+                    assert (i < GOSGPU__NUM_MAX_VTXDECL_ATTR);
+                    vtxStreamList[n].layoutList[i].bindingLocation = bindingLocation;
+                    vtxStreamList[n].layoutList[i].offset = offsetInBuffer;
+                    vtxStreamList[n].layoutList[i].format = dataFormat;
                 }
 
             public:
@@ -142,6 +187,9 @@ namespace gos
                 sPushConst          pushConstList[GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE];
 
                 GPUVtxDeclHandle    vtxDeclHandle;
+                u32                 numVtxStream;
+                sVtxStream          vtxStreamList[GOSGPU__NUM_MAX_VXTDECL_STREAM];
+                
                 GPUShaderHandle     vtxShaderHandle;
                 GPUShaderHandle     pxlShaderHandle;                
             };
@@ -170,4 +218,4 @@ namespace gos
     } //namespace gpu
 } //namespace gos
 
-#endif //_gosGPURenderPassDesc_h_
+#endif //_gosGPURenderPass_def_h_
