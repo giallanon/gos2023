@@ -22,6 +22,7 @@ bool VkPhyDeviceFeatures::checkPhysicalDeviceFeatures (VkPhysicalDevice &vkDev, 
     if (vulkanVersion >= eVulkanVersion::v1_3)
     {
         CHECK(features13.synchronization2);
+        CHECK(features13.dynamicRendering);
     }
 
     CHECK(features12.separateDepthStencilLayouts);
@@ -61,17 +62,21 @@ void VkPhyDeviceFeatures::priv_getAllPhysicalDeviceFeatures (VkPhysicalDevice &v
 //*******************************************
 void VkPhyDeviceFeatures::priv_reset (eVulkanVersion vulkanVersion)
 {
-    memset (&features13, 0, sizeof(features13));
-    memset (&features12, 0, sizeof(features12));
-    memset (&features11, 0, sizeof(features11));
+
+#define ADD(obj,struct_type)\
+    {\
+        memset (&obj, 0, sizeof(obj));\
+        obj.sType = struct_type;\
+        *next=&obj;\
+        next=&obj.pNext;\
+    }\
+
+
     memset (&features, 0, sizeof(features));
-    
-    features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-    features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-    features11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
     features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-        
-    if (vulkanVersion >= eVulkanVersion::v1_3)  features12.pNext = &features13;
-    if (vulkanVersion >= eVulkanVersion::v1_2)  features11.pNext = &features12;
-    if (vulkanVersion >= eVulkanVersion::v1_1)  features.pNext = &features11;
+
+    void **next = &features.pNext;
+    if (vulkanVersion >= eVulkanVersion::v1_1)  ADD(features11,VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES);
+    if (vulkanVersion >= eVulkanVersion::v1_2)  ADD(features12,VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES);
+    if (vulkanVersion >= eVulkanVersion::v1_3)  ADD(features13,VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES);
 }

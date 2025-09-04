@@ -159,15 +159,17 @@ namespace gos
         bool    checkPhysicalDeviceFeatures (VkPhysicalDevice &vkDev, eVulkanVersion vulkanVersion);
 
     public:
-        VkPhysicalDeviceVulkan13Features    features13;
-        VkPhysicalDeviceVulkan12Features    features12;
-        VkPhysicalDeviceVulkan11Features    features11;
         VkPhysicalDeviceFeatures2           features;
 
 
     private:
         void    priv_reset (eVulkanVersion vulkanVersion);
         void    priv_getAllPhysicalDeviceFeatures (VkPhysicalDevice &vkDev, eVulkanVersion vulkanVersion);
+
+    private:
+        VkPhysicalDeviceVulkan13Features        features13;
+        VkPhysicalDeviceVulkan12Features        features12;
+        VkPhysicalDeviceVulkan11Features        features11;
     };
 
 } //namespace gos

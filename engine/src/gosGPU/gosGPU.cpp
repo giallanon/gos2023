@@ -233,6 +233,7 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
         gos::StringList vkDevice_requiredExtensionList(scrapAllocator);
         vkDevice_requiredExtensionList.add (VK_KHR_SWAPCHAIN_EXTENSION_NAME);
         vkDevice_requiredExtensionList.add (VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+        vkDevice_requiredExtensionList.add (VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
         //vkDevice_requiredExtensionList.add (VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
         //vkDevice_requiredExtensionList.add (VK_KHR_MAINTENANCE1_EXTENSION_NAME);
         //vkDevice_requiredExtensionList.add (VK_KHR_MAINTENANCE3_EXTENSION_NAME);
