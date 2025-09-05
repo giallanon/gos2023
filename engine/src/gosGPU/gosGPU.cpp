@@ -2800,6 +2800,39 @@ bool GPU::toVulkan (const GPUSamplerHandle handle, VkSampler *out) const
 }
 
 
+//************************************
+bool GPU::pipeline_v2_createNew (const gpu::RenderPass_def &rpd, GPUPipelineHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    VkResult result;
 
+    
+    //Pipeline layout
+    //Serve ad indicare il numero/tipo di "const push" disponibili alla pipe
+    //e il numero/tipo di descriptorSets
+    VkPipelineLayout            vkPipelineLayoutHandle = VK_NULL_HANDLE;
+    VkPipelineLayoutCreateInfo  pipelineLayoutInfo{};
+    VkPushConstantRange         pushConstantRange[GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE];
+/*    typedef struct VkPushConstantRange {
+    VkShaderStageFlags    stageFlags;
+    uint32_t              offset;
+    uint32_t              size;
+} VkPushConstantRange;*/
+    {
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        if (rpd.numPushConst)
+        {
+            pipelineLayoutInfo.setLayoutCount = rpd.numPushConst
+            pipelineLayoutInfo.pSetLayouts = vkElencoDescrLayout;
+            pipelineLayoutInfo.pushConstantRangeCount = pushConstantList.getNElem();
+            pipelineLayoutInfo.pPushConstantRanges = pushConstantList._queryTypedPointer();
 
-
+            result = vkCreatePipelineLayout (gpu->REMOVE_getVkDevice(), &pipelineLayoutInfo, nullptr, &vkPipelineLayoutHandle);
+            if (VK_SUCCESS != result)
+            {
+                gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => vkCreatePipelineLayout() => %s\n", string_VkResult(result));
+                return false;
+            }
+        }
+    }
+}

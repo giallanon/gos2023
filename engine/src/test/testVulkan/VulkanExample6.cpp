@@ -237,6 +237,8 @@ bool VulkanExample6::priv_setupPipeline_v1(GPUVtxDeclHandle &vtxDeclHandle)
 //************************************
 bool VulkanExample6::priv_setupPipeline_v2(GPUVtxDeclHandle &vtxDeclHandleIN)
 {
+    return false;
+    /*
     gpu::Framebuffer_def fbd;
     {
         fbd.reset();
@@ -272,11 +274,15 @@ bool VulkanExample6::priv_setupPipeline_v2(GPUVtxDeclHandle &vtxDeclHandleIN)
     }
 
     return priv_buildPipe_v2(rpd);
+    */
 }
 
 //************************************
 bool VulkanExample6::priv_buildPipe_v2 (const gpu::RenderPass_def &rpd)
 {
+    return false;
+
+    /*
     //creo il render pass
     {
         GPU::RenderPassBuilder& builder = gpu->renderPass_createNew (&renderPassHandle);
@@ -356,6 +362,7 @@ bool VulkanExample6::priv_buildPipe_v2 (const gpu::RenderPass_def &rpd)
         return false;
     }
     return true;
+    */
 }    
 
 

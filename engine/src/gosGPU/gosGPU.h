@@ -26,6 +26,7 @@
 #include "gosGPUResVtxDecl.h"
 #include "gosGPUResTexture.h"
 #include "gosGPUResSampler.h"
+#include "gosGPURenderPass_def.h"
 
 namespace gos
 {
@@ -558,6 +559,7 @@ namespace gos
         void                        deleteResource (GPUPipelineHandle &handle);
         bool                        toVulkan (const GPUPipelineHandle handle, const gpu::sPipeline **out) const;
 
+        bool                        pipeline_v2_createNew (const gpu::RenderPass_def &rpd, GPUPipelineHandle *out_handle);
 
         //================ depth buffer
         GPUDepthStencilHandle       depthStencil_getDefault() const                         { return defaultDepthStencil.handle; }
