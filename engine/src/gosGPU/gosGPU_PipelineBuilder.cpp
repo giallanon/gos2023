@@ -212,7 +212,7 @@ bool GPU::PipelineBuilder::priv_buildVulkan ()
         depthStencil.minDepthBounds = 0.0f; // Optional
         depthStencil.maxDepthBounds = 1.0f; // Optional    
         
-        depthStencil.stencilTestEnable = depthStencilParam.getStencilParams().enabled ? VK_TRUE : VK_FALSE;
+        depthStencil.stencilTestEnable = VK_FALSE;
         depthStencil.front.failOp = gpu::toVulkan(depthStencilParam.getStencilParams().frontFace.ifStencilFail);
         depthStencil.front.depthFailOp = gpu::toVulkan(depthStencilParam.getStencilParams().frontFace.ifStencilSuccessAndDepthFail);
         depthStencil.front.passOp = gpu::toVulkan(depthStencilParam.getStencilParams().frontFace.ifStencilSuccessAndDepthSuccess);

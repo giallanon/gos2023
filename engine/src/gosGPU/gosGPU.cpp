@@ -31,6 +31,51 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL GOS_vulkanDebugCallback (VkDebugUtilsMessa
 
 
 //********************************************************** 
+bool GPU::shader_compile (const char *shaderSRCFile, const char *shaderStage, const char *spaceSeparateDefineList, const char *shaderDSTFile, bool bIncludeDebugInfo)
+{
+    //se esistono delle define da passare al compilatore...
+    char defineList[2048];
+    memset (defineList, 0, sizeof(defineList));
+    if (NULL != spaceSeparateDefineList)
+    {
+        string::utf8::StringListParser parser;
+        parser.toStart (spaceSeparateDefineList, ' ');
+        
+        char def[256];
+        while (parser.next (def, sizeof(def)))
+        {
+            strcat_s (defineList, sizeof(defineList), "-D");
+            strcat_s (defineList, sizeof(defineList), def);
+            strcat_s (defineList, sizeof(defineList), " ");
+        }
+    }
+
+    char opt_includeDebugInfo[4];
+    if (bIncludeDebugInfo)
+        sprintf_s (opt_includeDebugInfo, sizeof(opt_includeDebugInfo), "-g");
+    else
+        opt_includeDebugInfo[0] = 0x00;
+
+    //glslc -fshader-stage=vert --target-env=vulkan1.3 lineRenderer.vert.shader -g -O -o lineRenderer.vert.spv
+    char cmd[1024];
+    sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s %s %s -O -o %s 2>&1",  shaderStage, defineList, shaderSRCFile, opt_includeDebugInfo, shaderDSTFile);
+    gos::logger::log ("%s\n", cmd);
+
+    char *result;
+    u32 len;
+    if (!gos::runShellScriptAndStoreResult (cmd, gos::getScrapAllocator(), &result, &len))
+        return false;
+
+    if (NULL == result)
+        return true;
+
+    //c'e' stato qualche errore di compilazione
+    gos::logger::err ("ERR => %s\n", result);
+    GOSFREE_SCRAP(result);
+    return false;
+}
+
+//********************************************************** 
 GPU::GPU()
 {
     this->allocator = NULL;
@@ -73,7 +118,8 @@ void GPU::deinit()
                 priv_samplerDelete (h);
             }
         }
-        
+
+       
         toBeDeletedBuilder.deleteAll();
         toBeDeletedBuilder.unsetup();
 
@@ -1127,7 +1173,7 @@ bool GPU::depthStencil_create (const eImageFormat fmt, const gos::Dim2D &widthIN
 {
     assert (NULL != out_handle);
 
-    if (!image::isFormatWithDepth(fmt))
+    if (!utils::isFormatWithDepth(fmt))
     {
         gos::logger::err ("GPU::depthStencil_create() => invalid depth format (%s). Must be a valid 'DEPTH_something'\n", utils::enumToString(fmt));
         return false;
@@ -1135,7 +1181,7 @@ bool GPU::depthStencil_create (const eImageFormat fmt, const gos::Dim2D &widthIN
 
     if (bWithStencil)
     {
-        if (!image::isFormatWithStencil(fmt))
+        if (!utils::isFormatWithStencil(fmt))
         {
             gos::logger::err ("GPU::depthStencil_create() => invalid depth format (%s). Format must include a STENCIL option\n", utils::enumToString(fmt));
             return false;
@@ -1143,7 +1189,7 @@ bool GPU::depthStencil_create (const eImageFormat fmt, const gos::Dim2D &widthIN
     }
     else
     {
-        if (image::isFormatWithStencil(fmt))
+        if (utils::isFormatWithStencil(fmt))
         {
             gos::logger::err ("GPU::depthStencil_create() => invalid depth format (%s). Format must NOT include a STENCIL option\n", utils::enumToString(fmt));
             return false;
@@ -2518,7 +2564,7 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, co
         u32 h = dimy;
         for (u8 i=0; i<nMipMap; i++)
         {
-            totalImgSize += image::getFormatSize(fmt) * w * h;
+            totalImgSize += utils::getFormatSize(fmt) * w * h;
             w/=2;
             h/=2;
         }
@@ -2555,7 +2601,7 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, co
             regionList[i].imageOffset = {0, 0, 0};
             regionList[i].imageExtent = { w, h, 1};
 
-            offset += w * h * image::getFormatSize(fmt);
+            offset += w * h * utils::getFormatSize(fmt);
             w/=2;
             h/=2;
         }
@@ -2800,39 +2846,429 @@ bool GPU::toVulkan (const GPUSamplerHandle handle, VkSampler *out) const
 }
 
 
-//************************************
-bool GPU::pipeline_v2_createNew (const gpu::RenderPass_def &rpd, GPUPipelineHandle *out_handle)
+/************************************************************************************************************
+ * pipeline_v2_
+ * 
+ * 
+ *************************************************************************************************************/
+bool GPU::priv_descrSetLayout_build_v2 (const gpu::pipe2::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle, VkDescriptorSetLayout *out_vkHandle)
 {
-    assert (NULL != out_handle);
-    VkResult result;
+    //TODO: cachare i descriptor-set ed eventualmente riutilizzarli visto che sono dei descrittori, non e' necessario
+    //      crearne N diversi che descrivono la stessa cosa
 
+    //elenco dei descrittori all'interno del set
+    VkDescriptorSetLayoutBinding    bindingList[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
+
+    memset (bindingList, 0, sizeof(bindingList));
+    for (u32 i=0; i<ds.numDescriptor; i++)
+    {
+        bindingList[i].binding = ds.list[i].binding;
+        bindingList[i].stageFlags = ds.list[i].usageFlags;
+        bindingList[i].descriptorCount = ds.list[i].count;
+
+        switch (ds.list[i].descrType)
+        {
+        default:                                                return false;;
+        case eGPUDescriptrorType::UNIFORM_BUFFER:               bindingList[i].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; break;
+        case eGPUDescriptrorType::DYNAMIC_UNIFORM_BUFFER:       bindingList[i].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC; break;
+        case eGPUDescriptrorType::STORAGE_BUFFER:               bindingList[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; break;
+        case eGPUDescriptrorType::DYNAMIC_STORAGE_BUFFER:       bindingList[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC; break;
+        case eGPUDescriptrorType::COMBINED_IMAGE_SAMPLER:       bindingList[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; break;
+        case eGPUDescriptrorType::SAMPLER:                      bindingList[i].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER; break;
+        case eGPUDescriptrorType::TEXTURE2D:                    bindingList[i].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE; break;
+        }
+    }
+
+
+    //creazione del descriptor-set
+    VkDescriptorSetLayoutCreateInfo creatInfo{};
+
+    memset (&creatInfo, 0, sizeof(creatInfo));
+    creatInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    creatInfo.flags = ds.flag;
+    creatInfo.bindingCount = ds.numDescriptor;
+    creatInfo.pBindings = bindingList;
+
+
+    //opzioni addizionali
+    VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsCreateInfo {};
+    VkDescriptorBindingFlags bindingFlags[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
+    if ((creatInfo.flags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT) != 0)
+    {
+        memset (bindingFlags, 0, sizeof(bindingFlags));
+        bindingFlagsCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+        bindingFlagsCreateInfo.bindingCount = creatInfo.bindingCount;
+        bindingFlagsCreateInfo.pBindingFlags = bindingFlags;
+
+        creatInfo.pNext = &bindingFlagsCreateInfo;
+
+        for (u32 i=0; i<creatInfo.bindingCount; i++)
+            bindingFlags[i] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
+    }
+
+    //chiamo vulkan
+    VkResult result = vkCreateDescriptorSetLayout (vulkan.dev, &creatInfo, nullptr, out_vkHandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::priv_descrSetLayout_build_v2 () => vkCreateDescriptorSetLayout failed => %s\n", string_VkResult(result));
+        return false;
+    }
+
+    //alloco il mio handle interno
+    gpu::DescrSetLayout *s = descrSetLayoutList.reserve (out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::priv_descrSetLayout_build_v2() => can't reserve a handle!\n");
+        return false;
+    }
+    s->reset();
+    s->vkHandle = *out_vkHandle;
+    return true;
+}
+
+//************************************
+bool GPU::pipeline_v2_createNew (const gpu::pipe2::Pipeline_def &rpd, gpu::pipe2::Pipeline *out)
+{
+    assert (NULL != out);
+    out->reset();
+
+    VkResult result;
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo;
+    memset (&pipelineCreateInfo, 0, sizeof(pipelineCreateInfo));
+    pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
+    pipelineCreateInfo.basePipelineIndex = -1; // Optional
     
     //Pipeline layout
-    //Serve ad indicare il numero/tipo di "const push" disponibili alla pipe
-    //e il numero/tipo di descriptorSets
-    VkPipelineLayout            vkPipelineLayoutHandle = VK_NULL_HANDLE;
-    VkPipelineLayoutCreateInfo  pipelineLayoutInfo{};
-    VkPushConstantRange         pushConstantRange[GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE];
-/*    typedef struct VkPushConstantRange {
-    VkShaderStageFlags    stageFlags;
-    uint32_t              offset;
-    uint32_t              size;
-} VkPushConstantRange;*/
+    //Serve ad indicare il numero/tipo di "const push" disponibili alla pipe e il numero/tipo di descriptorSets della pipe
+    VkPushConstantRange         pushConstantRangeList[GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE];
+    pipelineCreateInfo.layout = VK_NULL_HANDLE;
     {
+        VkPipelineLayoutCreateInfo  pipelineLayoutInfo{};
+        VkDescriptorSetLayout       descrSetLayoutHandleList[GOSGPU__NUM_MAX_DESCRIPTOR_SETS*GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
+        
+        memset (&pipelineLayoutInfo, 0, sizeof(pipelineLayoutInfo));
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        if (rpd.numPushConst)
-        {
-            pipelineLayoutInfo.setLayoutCount = rpd.numPushConst
-            pipelineLayoutInfo.pSetLayouts = vkElencoDescrLayout;
-            pipelineLayoutInfo.pushConstantRangeCount = pushConstantList.getNElem();
-            pipelineLayoutInfo.pPushConstantRanges = pushConstantList._queryTypedPointer();
+        pipelineLayoutInfo.pushConstantRangeCount = rpd.numPushConst;
+        pipelineLayoutInfo.pPushConstantRanges = pushConstantRangeList;
+        pipelineLayoutInfo.setLayoutCount = rpd.numDescrSet;
+        pipelineLayoutInfo.pSetLayouts = descrSetLayoutHandleList;
 
-            result = vkCreatePipelineLayout (gpu->REMOVE_getVkDevice(), &pipelineLayoutInfo, nullptr, &vkPipelineLayoutHandle);
-            if (VK_SUCCESS != result)
+        for (u32 i=0; i< rpd.numPushConst; i++)
+        {
+            pushConstantRangeList[i].offset = rpd.pushConstList[i].offset;
+            pushConstantRangeList[i].size = rpd.pushConstList[i].sizeInByte;
+            pushConstantRangeList[i].stageFlags = rpd.pushConstList[i].stageFlags;
+        }
+
+        for (u32 i=0; i<rpd.numDescrSet; i++)
+        {
+            out->descrset_num++;
+            if (!priv_descrSetLayout_build_v2 (rpd.descriptorSetList[i], &out->descrset_handle_defList[i], &descrSetLayoutHandleList[i]))
             {
-                gos::logger::err ("GPU::PipelineBuilder::priv_buildVulkan() => vkCreatePipelineLayout() => %s\n", string_VkResult(result));
+                gos::logger::err ("GPU::pipeline_v2_createNew() => error creating descriptset\n");
                 return false;
             }
         }
+
+        result = vkCreatePipelineLayout (vulkan.dev, &pipelineLayoutInfo, nullptr, &pipelineCreateInfo.layout);
+        if (VK_SUCCESS != result)
+        {
+            gos::logger::err ("GPU::pipeline_v2_createNew() => vkCreatePipelineLayout() => %s\n", string_VkResult(result));
+            return false;
+        }
     }
+
+
+    //shader
+    VkPipelineShaderStageCreateInfo shadersCreateInfoArray[GOSGPU__NUM_MAX_SHADER_PER_PIPELINE] = {};
+    pipelineCreateInfo.stageCount = rpd.numShader;
+    pipelineCreateInfo.pStages = shadersCreateInfoArray;
+    {
+        memset (shadersCreateInfoArray, 0, sizeof(shadersCreateInfoArray));
+        for (u32 i=0; i<rpd.numShader; i++)
+        {
+            const GPUShaderHandle handle = rpd.shaderHandleList[i];            
+            shadersCreateInfoArray[i].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+
+            switch (shader_getType(handle))
+            {
+            default:
+                gos::logger::err ("GPU::pipeline_v2_createNew => unsupported shader type\n");
+                DBGBREAK;
+                return false;
+                break;
+
+            case eShaderType::vertexShader:
+                shadersCreateInfoArray[i].stage = VK_SHADER_STAGE_VERTEX_BIT;
+                break;
+
+            case eShaderType::fragmentShader:
+                shadersCreateInfoArray[i].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+                break;
+            
+            case eShaderType::compute:
+                shadersCreateInfoArray[i].stage = VK_SHADER_STAGE_COMPUTE_BIT;
+                break;        
+            }
+            
+            shadersCreateInfoArray[i].module = shader_getVkHandle(handle);
+            shadersCreateInfoArray[i].pName = shader_getMainFnName(handle);
+        }
+    }
+
+
+    //VtxDeclaration
+    VkPipelineVertexInputStateCreateInfo vkVertexInputStateCreateInfo;
+    VkVertexInputBindingDescription vxtBindingDescrList[GOSGPU__NUM_MAX_VXTDECL_STREAM];
+    VkVertexInputAttributeDescription vtxAttributeDescrList[GOSGPU__NUM_MAX_VXTDECL_STREAM * GOSGPU__NUM_MAX_VTXDECL_ATTR];
+    pipelineCreateInfo.pVertexInputState = VK_NULL_HANDLE;
+    if (0 != rpd.numVtxStream)
+    {
+        u32 totNumAttributeDescr = 0;
+        for (u32 i=0; i<rpd.numVtxStream; i++)
+        {
+            vxtBindingDescrList[i].binding = i;
+
+            if (eVtxStreamInputRate::perInstance == rpd.vtxStreamList[i].inputRate)
+                vxtBindingDescrList[i].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+            else
+                vxtBindingDescrList[i].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+            vxtBindingDescrList[i].stride = rpd.vtxStreamList[i].calcStride();
+
+            for (u32 i2=0; i2<rpd.vtxStreamList[i].numLayout; i2++)
+            {
+                vtxAttributeDescrList[totNumAttributeDescr].binding  = rpd.vtxStreamList[i].streamIndex;
+                vtxAttributeDescrList[totNumAttributeDescr].location = rpd.vtxStreamList[i].list[i2].bindingLocation;
+                vtxAttributeDescrList[totNumAttributeDescr].offset = rpd.vtxStreamList[i].list[i2].offset;
+                vtxAttributeDescrList[totNumAttributeDescr].format = gos::gpu::toVulkan (rpd.vtxStreamList[i].list[i2].format);
+                
+                totNumAttributeDescr++;
+            }            
+        }
+
+        pipelineCreateInfo.pVertexInputState = &vkVertexInputStateCreateInfo;
+            memset (&vkVertexInputStateCreateInfo, 0, sizeof(vkVertexInputStateCreateInfo));
+            vkVertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+            vkVertexInputStateCreateInfo.vertexBindingDescriptionCount = rpd.numVtxStream;
+            vkVertexInputStateCreateInfo.pVertexBindingDescriptions = vxtBindingDescrList;
+            vkVertexInputStateCreateInfo.vertexAttributeDescriptionCount = totNumAttributeDescr;
+            vkVertexInputStateCreateInfo.pVertexAttributeDescriptions = vtxAttributeDescrList;        
+    }
+
+
+    //input assemply (aka draw primitive)
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly;
+    pipelineCreateInfo.pInputAssemblyState = &inputAssembly;
+    {
+        memset (&inputAssembly, 0, sizeof(inputAssembly));
+        inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        inputAssembly.topology = gos::gpu::toVulkan(rpd.drawPrimitive);
+        inputAssembly.primitiveRestartEnable = VK_FALSE;
+    }
+    
+    //fill mode, cull mode...
+    VkPipelineRasterizationStateCreateInfo rasterizer;
+    pipelineCreateInfo.pRasterizationState = &rasterizer;
+    {
+        memset (&rasterizer, 0, sizeof(rasterizer));
+        rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        rasterizer.depthClampEnable = VK_FALSE;
+        rasterizer.rasterizerDiscardEnable = VK_FALSE;
+        rasterizer.polygonMode = rpd.bWireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;      //fill o wirefram
+        rasterizer.lineWidth = 1.0f;
+        
+        switch (rpd.cullMode)
+        {
+        case eCullMode::NONE:
+            rasterizer.cullMode = VK_CULL_MODE_NONE;
+            break;
+        
+        case eCullMode::CCW:
+            rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;     //i tris "front face" sono quelli con i vtx in ordine orario
+            rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;        //scarto tutti i triangoli backfacing
+            break;
+
+        case eCullMode::CW:
+            rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; //i tris "front face" sono quelli con i vtx in ordine anti orario
+            rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;            //scarto tutti i triangoli backfacing
+            break;
+        }
+        rasterizer.depthBiasEnable = VK_FALSE;
+        rasterizer.depthBiasConstantFactor = 0.0f; // Optional
+        rasterizer.depthBiasClamp = 0.0f; // Optional
+        rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
+    }
+
+
+    //depth & stencil
+    VkPipelineDepthStencilStateCreateInfo depthStencil;
+    pipelineCreateInfo.pDepthStencilState = &depthStencil;
+    {
+        memset (&depthStencil, 0, sizeof(depthStencil));
+        depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depthStencil.depthTestEnable = (rpd.zbuffer_enabled != 0xff) ? VK_TRUE : VK_FALSE;
+        depthStencil.depthWriteEnable = rpd.zbuffer_write ? VK_TRUE : VK_FALSE;
+        depthStencil.depthCompareOp = gpu::toVulkan (rpd.zbuffer_cmpFn);
+        depthStencil.depthBoundsTestEnable = VK_FALSE;
+        depthStencil.minDepthBounds = 0.0f; // Optional
+        depthStencil.maxDepthBounds = 1.0f; // Optional    
+        
+        depthStencil.stencilTestEnable = VK_FALSE;
+        depthStencil.front.failOp = VK_STENCIL_OP_KEEP;
+        depthStencil.front.depthFailOp = VK_STENCIL_OP_KEEP;
+        depthStencil.front.passOp = VK_STENCIL_OP_KEEP;
+        depthStencil.front.compareOp = VK_COMPARE_OP_ALWAYS;
+        depthStencil.front.compareMask = 0;
+        depthStencil.front.writeMask = 0;
+        depthStencil.front.reference = 0;
+
+        depthStencil.back.failOp = VK_STENCIL_OP_KEEP;
+        depthStencil.back.depthFailOp = VK_STENCIL_OP_KEEP;
+        depthStencil.back.passOp = VK_STENCIL_OP_KEEP;
+        depthStencil.back.compareOp = VK_COMPARE_OP_ALWAYS;
+        depthStencil.back.compareMask = 0;
+        depthStencil.back.writeMask = 0;
+        depthStencil.back.reference = 0;
+    }
+
+
+    //pipeline dynamic state
+    //Si indicano qui quali stati delle pipeline sono dinamici e che quindi possono essere settati dinamicamente di volta in volta.
+    //Gli stati non dinamici (cioe' quasi tutti), sono definiti nella pipeline e non potranno mai cambiare (alpha blending, culling, etc)
+    const VkDynamicState dynamicStateList[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo;
+    pipelineCreateInfo.pDynamicState = &dynamicStateCreateInfo;
+    {
+        memset (&dynamicStateCreateInfo, 0, sizeof(dynamicStateCreateInfo));
+        dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicStateCreateInfo.dynamicStateCount = sizeof(dynamicStateList) / sizeof(VkDynamicState);
+        dynamicStateCreateInfo.pDynamicStates = dynamicStateList;
+    }
+
+    //Viewport (dinamica, va settata ogni colta con i comandi del renderBuffer
+    VkPipelineViewportStateCreateInfo viewportStateCreateInfo;
+    pipelineCreateInfo.pViewportState = &viewportStateCreateInfo;
+    {
+        memset (&viewportStateCreateInfo, 0, sizeof(viewportStateCreateInfo));
+        viewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        viewportStateCreateInfo.viewportCount = 1;
+        viewportStateCreateInfo.scissorCount = 1;
+        //viewportState.pViewports = &viewport; //non serve visto che ho definto la pipeline con viewport dinamica  
+    }
+
+
+    //multisample disabled
+    VkPipelineMultisampleStateCreateInfo multisamplingCreateInfo;
+    pipelineCreateInfo.pMultisampleState = &multisamplingCreateInfo;
+    {
+        memset (&multisamplingCreateInfo, 0, sizeof(multisamplingCreateInfo));
+        multisamplingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        multisamplingCreateInfo.sampleShadingEnable = VK_FALSE;
+        multisamplingCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        multisamplingCreateInfo.minSampleShading = 1.0f; // Optional
+        multisamplingCreateInfo.pSampleMask = nullptr; // Optional
+        multisamplingCreateInfo.alphaToCoverageEnable = VK_FALSE; // Optional
+        multisamplingCreateInfo.alphaToOneEnable = VK_FALSE; // Optional
+    }
+
+
+    //color blend mode
+    /*  Questa di seguito è l'esatto algo applicato dai driver per determinare il colore finale in base ai parametri
+        if (blendEnable) {
+            finalColor.rgb = (srcColorBlendFactor * newColor.rgb) <colorBlendOp> (dstColorBlendFactor * oldColor.rgb);
+            finalColor.a = (srcAlphaBlendFactor * newColor.a) <alphaBlendOp> (dstAlphaBlendFactor * oldColor.a);
+        } else {
+            finalColor = newColor;
+        }
+
+        finalColor = finalColor & colorWriteMask;
+    */
+    VkPipelineColorBlendStateCreateInfo colorBlendingCreateInfo;
+    VkPipelineColorBlendAttachmentState colorBlendAttachment[GOSGPU__NUM_MAX_ATTACHMENT];
+    pipelineCreateInfo.pColorBlendState = &colorBlendingCreateInfo;
+    {
+        memset (&colorBlendingCreateInfo, 0, sizeof(colorBlendingCreateInfo));
+        colorBlendingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        colorBlendingCreateInfo.logicOpEnable = VK_FALSE;
+        colorBlendingCreateInfo.logicOp = VK_LOGIC_OP_COPY; // Optional
+        colorBlendingCreateInfo.attachmentCount = rpd.numRT;
+        colorBlendingCreateInfo.pAttachments = colorBlendAttachment;
+        colorBlendingCreateInfo.blendConstants[0] = 0.0f; // Optional
+        colorBlendingCreateInfo.blendConstants[1] = 0.0f; // Optional
+        colorBlendingCreateInfo.blendConstants[2] = 0.0f; // Optional
+        colorBlendingCreateInfo.blendConstants[3] = 0.0f; // Optional 
+
+        memset (colorBlendAttachment, 0, sizeof(colorBlendAttachment));
+        for (u32 i = 0; i < rpd.numRT; i++)
+        {
+            colorBlendAttachment[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            colorBlendAttachment[i].blendEnable = VK_FALSE;
+            colorBlendAttachment[i].srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+            colorBlendAttachment[i].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+            colorBlendAttachment[i].colorBlendOp = VK_BLEND_OP_ADD; // Optional
+            colorBlendAttachment[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+            colorBlendAttachment[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+            colorBlendAttachment[i].alphaBlendOp = VK_BLEND_OP_ADD; // Optional        
+        }
+    }
+
+
+    //info addizionali per il dynamic rendering
+    VkPipelineRenderingCreateInfo pipeline_rendering_create_info;
+    VkFormat colorAttachmentsFormat[GOSGPU__NUM_MAX_ATTACHMENT];
+    pipelineCreateInfo.pNext = &pipeline_rendering_create_info;
+    {
+        memset (&pipeline_rendering_create_info, 0, sizeof(pipeline_rendering_create_info));
+        pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+
+        if (rpd.zbuffer_enabled)
+        {
+            eImageFormat fmt = rpd.zbuffer_format;
+            if (eImageFormat::_DEPTH_BEST == fmt)
+                fmt = this->depthStencil_getDefaultFormat();
+
+            pipeline_rendering_create_info.depthAttachmentFormat = gpu::toVulkan(fmt);
+            //pipeline_rendering_create_info.stencilAttachmentFormat = gpu::toVulkan(fmt);
+        }
+
+
+        pipeline_rendering_create_info.colorAttachmentCount = rpd.numRT;
+        pipeline_rendering_create_info.pColorAttachmentFormats = colorAttachmentsFormat;
+        for (u32 i=0; i<rpd.numRT; i++)
+        {
+            colorAttachmentsFormat[i] = gpu::toVulkan(rpd.renderTargetFormat[i]);
+        }
+
+    }
+
+
+
+
+    VkPipeline vkPipelineHandle;
+    result = vkCreateGraphicsPipelines (vulkan.dev, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &vkPipelineHandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::pipeline_v2_createNew => vkCreateGraphicsPipelines() error: %s\n", string_VkResult(result)); 
+        return false;
+    }
+
+
+    //riservo un handle
+    gpu::sPipeline *s = pipelineList.reserve (&out->pipeline_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::pipeline_v2_createNew() => can't reserve a handle!\n");
+        return false;
+    }
+
+    s->reset();
+    s->vkPipelineLayoutHandle = pipelineCreateInfo.layout;
+    s->vkPipelineHandle = vkPipelineHandle;
+    if (rpd.numPushConst)
+        memcpy (s->pushContantList, pushConstantRangeList, sizeof(VkPushConstantRange) * rpd.numPushConst);
+    return true;    
+    
+
 }

@@ -1,7 +1,7 @@
 #ifndef _VulkanExample6_h_
 #define _VulkanExample6_h_
 #include "VulkanApp.h"
-#include "../gosGPU/gosGPURenderPass_def.h"
+
 
 /************************************
  *  VulkanExample6
@@ -43,8 +43,9 @@ private:
     void        virtual_onInputEvent (u32 event32, i16 value, const gos::input::MouseStatus &mouseStatus, const gos::input::sButtonModifier &btnModifier);
 
     bool        priv_setupPipeline_v1 (GPUVtxDeclHandle &vtxDeclHandle);
-    bool        priv_setupPipeline_v2 (GPUVtxDeclHandle &vtxDeclHandle);
-    bool        priv_buildPipe_v2 (const gos::gpu::RenderPass_def &rpd);
+    bool        priv_setupPipeline_v2 (GPUShaderHandle vtxShaderHandle, GPUShaderHandle fragShaderHandle);
+    bool        priv_recordCommandBuffer_v1 (gos::gpu::CmdBufferWriter &cw);
+    bool        priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw);
 
 private:
     gos::FastArray<gos::Shape> shapeList;
@@ -60,13 +61,20 @@ private:
     GPUPipelineHandle       pipelineHandle;
     GPUShaderHandle         vtxShaderHandle;
     GPUShaderHandle         fragShaderHandle;
-    GPURenderPassHandle   renderPassHandle;
+    GPURenderPassHandle     renderPassHandle;
     GPUFrameBufferHandle    frameBufferHandle;
 
     GPUDescrPoolHandle      descrPoolHandle;
     GPUDescrSetLayoutHandle descrSetLayoutHandle;
     GPUDescrSetInstanceHandle descrSetInstancerHandle;
     GPUUniformBufferHandle  uboHandle;
+    
+    bool                    bUse_pipe_v2;
+    u32                     nextTimeSwapRT_msec;
+    const gos::gpu::RenderTarget      *rtToShow;
+    GPURenderTargetHandle   rt1;
+    GPURenderTargetHandle   rt2;
+    GPURenderTargetHandle   rt3;
 };
 
 

@@ -15,6 +15,7 @@
 #define 	GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE		16
 #define 	GOSGPU__NUM_MAX_WRITE_DESCRIPTORS_PER_CMDBUFFER	8
 #define 	GOSGPU__NUM_MAX_SUBPASSES						4
+#define 	GOSGPU__NUM_MAX_SHADER_PER_PIPELINE				8
 
 
 //A per "num max di handle", B per "num di chunk", C per "counter"

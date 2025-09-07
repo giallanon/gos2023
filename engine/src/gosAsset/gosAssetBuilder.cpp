@@ -1,8 +1,7 @@
 #include "gosAssetBuilder.h"
 #include "gos.h"
 #include "string/gosStringIncludeDetector.h"
-#include "builders/gosAssetBuilder_shader.h"
-#include "builders/gosAssetBuilder_pipedef.h"
+
 
 using namespace gos;
 using namespace gos::asset;
@@ -38,11 +37,6 @@ Builder::Builder()
     size = sizeof(u32) * NUM_MAX_ASSET_BUILDER;
     depthByAssetType = GOSALLOCT(u32*, localAllocator, size);
     memset (depthByAssetType, 0xFF, sizeof(u32) * NUM_MAX_ASSET_BUILDER);
-
-
-    addBuilder<Builder_vtxShader>();
-    addBuilder<Builder_pxlShader>();
-    addBuilder<Builder_pipeDef>();
 }
 
 //***********************************
@@ -1196,7 +1190,12 @@ bool Builder::priv_explodeScript_ric (gos::IniFileSection *dst, gos::IniFileSect
 
             eAssetType assType;
             u32 depth = priv_fromSectionNameToAssetDepthAndType (subsec_name, &assType);
-            if (u32MAX == depth) { logger->err ("error calculating depth...\n"); return false; }
+            if (u32MAX == depth)
+            { 
+                
+                logger->err ("builder for asset of type %s does not exits\n", asset::enumToString(assType));
+                return false; 
+            }
             subsecDST->set ("__depth", depth, true);
             subsecDST->set ("__assType", static_cast<u8>(assType), true);
 

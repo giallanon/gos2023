@@ -22,11 +22,6 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC
-builders/gosAssetBuilder_pipedef.cpp
-builders/gosAssetBuilder_pipedef.h
-builders/gosAssetBuilder_shader.cpp
-builders/gosAssetBuilder_shader.h
-
 gosAsset.cpp
 gosAsset.h
 gosAssetBuilder_dep.cpp

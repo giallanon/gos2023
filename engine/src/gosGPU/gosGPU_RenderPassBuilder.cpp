@@ -77,7 +77,7 @@ RTLB_INFO& GPU::RenderPassBuilder::requireRendertarget (const eImageFormat image
 //***********************************************************
 RTLB_INFO& GPU::RenderPassBuilder::requireZBuffer (const eImageFormat imageFormat, const eImageLayout initialLayout, const eImageLayout finalLayout, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp)
 {
-    if (!image::isFormatWithDepth(imageFormat))
+    if (!utils::isFormatWithDepth(imageFormat))
     {
         bAnyError = true;
         gos::logger::err ("RenderTaskLayout::requireZBuffer(%s) => invalid format, not a DEPTH format\n", utils::enumToString(imageFormat));
@@ -185,7 +185,7 @@ bool GPU::RenderPassBuilder::priv_buildVulkan()
         attachmentList[numAttachment].loadOp = gpu::toVulkan(depthBuffer.loadOp);
         attachmentList[numAttachment].storeOp = gpu::toVulkan(depthBuffer.storeOp);
 
-        if (image::isFormatWithStencil(depthBuffer.imageFormat))
+        if (utils::isFormatWithStencil(depthBuffer.imageFormat))
         {
             attachmentList[numAttachment].stencilLoadOp = gpu::toVulkan(depthBuffer.loadOp);
             attachmentList[numAttachment].stencilStoreOp = gpu::toVulkan(depthBuffer.storeOp);

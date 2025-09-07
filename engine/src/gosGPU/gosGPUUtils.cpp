@@ -150,12 +150,12 @@ VkImageLayout gpu::toVulkan (eImageLayout s, eImageFormat fmt)
 
 	case eImageLayout::undefined:                            return VK_IMAGE_LAYOUT_UNDEFINED;
     case eImageLayout::depth_attachment_optimal:
-        if (image::isFormatWithStencil(fmt))
+        if (utils::isFormatWithStencil(fmt))
             return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
 
     case eImageLayout::depth_shader_readonly:
-        if (image::isFormatWithStencil(fmt))
+        if (utils::isFormatWithStencil(fmt))
             return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
         return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
  
@@ -269,9 +269,10 @@ VkImageLayout gpu::toVulkan (eImageLayout s)
     case eImageLayout::transfer_src:                return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     case eImageLayout::transfer_dst:                return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     case eImageLayout::presentation:                return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    case eImageLayout::depth_attachment_optimal:    return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+    case eImageLayout::depth_shader_readonly:       return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
     }
 }
-
 
 //**********************************************************
 VkAttachmentLoadOp gpu::toVulkan (eAttachmentLoadOp s)
@@ -300,3 +301,5 @@ VkAttachmentStoreOp gpu::toVulkan (eAttachmentStoreOp s)
     case eAttachmentStoreOp::none:              return VK_ATTACHMENT_STORE_OP_NONE;
     };
 }
+
+

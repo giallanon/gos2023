@@ -1,7 +1,7 @@
 #include "gos.h"
-#include "../gosAssetBuilder.h"
-#include "gosAssetBuilder_pipedef.h"
-#include "gosAssetBuilder_shader.h"
+#include "gosAssetBuilder.h"
+#include "builder_pipedef.h"
+#include "builder_shader.h"
 
 
 using namespace gos;

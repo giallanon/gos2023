@@ -1,6 +1,6 @@
 #ifndef _gosAssetBuilder_shader_h_
 #define _gosAssetBuilder_shader_h_
-#include "../gosAssetBuilderInterface.h"
+#include "gosAssetBuilderInterface.h"
 
 /* Sintassi:
 
@@ -38,7 +38,6 @@ namespace gos
             };
 
         public:
-            static bool shader_compile (const char *shaderSRCFile, const char *shaderStage, const char *spaceSeparateDefineList, const char *shaderDSTFile, bool bIncludeDebugInfo);
             static bool extractParams (const IniFileSection *sec, Params *out_params);
 
         public:

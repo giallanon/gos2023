@@ -50,6 +50,9 @@ namespace gos
 
             bool                anyError() const                            { return flag.isBitSet (FLAG__ANY_ERROR); }
 
+
+            VkCommandBuffer     debug_getHandle() { return vkCommandBuffer; }
+            
         private:
             static constexpr u8    FLAG__ANY_ERROR          = 0;
             static constexpr u8    FLAG__RENDER_PASS_BEGIN  = 1;

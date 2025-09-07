@@ -4,18 +4,6 @@
 
 using namespace gos;
 
-//********************************************************** 
-bool image::isFormatWithDepth (const eImageFormat fmt)
-{
-	return (static_cast<u8>(fmt) >= 0xE0 && static_cast<u8>(fmt)<=0xEF);
-}
-
-//********************************************************** 
-bool image::isFormatWithStencil (const eImageFormat fmt)
-{
-	return (static_cast<u8>(fmt) >= 0xEA && static_cast<u8>(fmt)<=0xEF);
-}
-
 //***********************************************
 u32 image::calcSurfaceSize (u16 width, u16 height, eImageFormat fmt, u8 mipMapNum_0toN)
 {
@@ -24,36 +12,9 @@ u32 image::calcSurfaceSize (u16 width, u16 height, eImageFormat fmt, u8 mipMapNu
 		width>>=1;
 		height>>=1;
 	}
-	return width * height * image::getFormatSize(fmt);
+	return width * height * utils::getFormatSize(fmt);
 }
 
-//********************************************************** 
-u16 image::getFormatSize (const eImageFormat fmt)
-{
-    switch (fmt)
-    {
-    default:
-        DBGBREAK;
-        return 0;
-
-    case eImageFormat::U8_RGBA_sRGB: return 4;
-    case eImageFormat::U8_RGBA: return 3;
-    case eImageFormat::U8_RGB: return 3;
-    case eImageFormat::U8_R: return 1;
-
-    case eImageFormat::U16_RGBA: return sizeof(u16)*4;
-    case eImageFormat::U16_RGB: return sizeof(u16)*3;
-    case eImageFormat::U16_R: return sizeof(u16);
-
-    case eImageFormat::U32_RGBA: return sizeof(u32)*4;
-    case eImageFormat::U32_RGB: return sizeof(u32)*3;
-    case eImageFormat::U32_R: return sizeof(u32);
-
-    case eImageFormat::F32_RGBA: return sizeof(f32)*4;
-    case eImageFormat::F32_RGB: return sizeof(f32)*3;
-    case eImageFormat::F32_R: return sizeof(f32);
-    }
-}
 
 //***********************************************
 bool image::load (gos::Allocator *allocator, const char *filePathAndName, Image *out)
@@ -173,7 +134,7 @@ bool image::getTextureData (const Image &img, u8 textureNum_0toN, u8 mipMapNum_0
 
 
 	out->compressed_height = out->uncompressed_height;
-	out->compressed_sizeOfARowInBytes = out->uncompressed_width * image::getFormatSize(header->fmt);
+	out->compressed_sizeOfARowInBytes = out->uncompressed_width * utils::getFormatSize(header->fmt);
 	
 	return true;
 }

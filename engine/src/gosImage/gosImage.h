@@ -8,9 +8,6 @@ namespace gos
 { 
 	namespace image
 	{
-		u16 	getFormatSize (const eImageFormat fmt);
-		bool 	isFormatWithDepth (const eImageFormat fmt);
-		bool 	isFormatWithStencil (const eImageFormat fmt);
 		u32		calcSurfaceSize (u16 width, u16 height, eImageFormat fmt, u8 mipMapNum_0toN=0);
 
 

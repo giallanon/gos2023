@@ -26,7 +26,7 @@
 #include "gosGPUResVtxDecl.h"
 #include "gosGPUResTexture.h"
 #include "gosGPUResSampler.h"
-#include "gosGPURenderPass_def.h"
+#include "gosGPUPipeline_def.h"
 
 namespace gos
 {
@@ -35,6 +35,9 @@ namespace gos
      */
     class GPU
     {
+    public:
+        static bool shader_compile (const char *shaderSRCFile, const char *shaderStage, const char *spaceSeparateDefineList, const char *shaderDSTFile, bool bIncludeDebugInfo);
+
     public:
         //vulkan extensions
         static PFN_vkCmdPushDescriptorSetKHR   vkCmdPushDescriptorSetKHR;
@@ -498,6 +501,7 @@ namespace gos
         u8                  swapChain_getImageCount() const                 { return static_cast<u8>(vulkan.swapChainInfo.imageCount); }
         VkImageView         swapChain_getImageView(u8 i) const              { assert(i < swapChain_getImageCount()); return vulkan.swapChainInfo.vkImageListView[i]; }
         VkExtent2D          swapChain_getImageExten2D() const               { return vulkan.swapChainInfo.imageExtent; }
+        VkImageView         swapChain_getCurImageView() const               { return vulkan.swapChainInfo.vkImageListView[currentSwapChainImageIndex]; }
 
 
         //================ oggetti di sincronizzazione 
@@ -559,7 +563,7 @@ namespace gos
         void                        deleteResource (GPUPipelineHandle &handle);
         bool                        toVulkan (const GPUPipelineHandle handle, const gpu::sPipeline **out) const;
 
-        bool                        pipeline_v2_createNew (const gpu::RenderPass_def &rpd, GPUPipelineHandle *out_handle);
+        bool                        pipeline_v2_createNew (const gpu::pipe2::Pipeline_def &rpd, gpu::pipe2::Pipeline *out);
 
         //================ depth buffer
         GPUDepthStencilHandle       depthStencil_getDefault() const                         { return defaultDepthStencil.handle; }
@@ -920,6 +924,9 @@ namespace gos
                                 return true;
                             }
 
+
+        bool                priv_descrSetLayout_build_v2 (const gpu::pipe2::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle, VkDescriptorSetLayout *out_vkHandle);
+
     private:
         gos::Allocator              *allocator;
         sWindow                     window;
@@ -952,7 +959,7 @@ namespace gos
         HandleList<GPURenderTargetHandle, gpu::RenderTarget>        renderTargetList;
         gos::FastArray<GPURenderTargetHandle>                       renderTargetHandleList;
 
-        HandleList<GPURenderPassHandle,gpu::RenderLayout>         renderLayoutList;
+        HandleList<GPURenderPassHandle,gpu::RenderLayout>           renderLayoutList;
         HandleList<GPUPipelineHandle,gpu::sPipeline>                pipelineList;
         HandleList<GPUFrameBufferHandle, gpu::FrameBuffer>          frameBufferList;
         gos::FastArray<GPUFrameBufferHandle>                        frameBufferDependentOnSwapChainList;
@@ -968,7 +975,6 @@ namespace gos
         HandleList<GPUTextureHandle,gpu::Texture>                   textureList;
         HandleList<GPUSamplerHandle, gpu::Sampler>                  samplerList;
         gos::HashMap<u32, GPUSamplerHandle>                         samplerDescrHashMap;
-        
     };
 } //namespace gos
 

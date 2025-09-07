@@ -1,90 +1,19 @@
-////////////////////////////////////////////////////////////////
-//////////// dynamic rendering /////////////////////////////////
-////////////////////////////////////////////////////////////////
-
-VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-
-    pipelineInfo.stageCount = numShader;
-    pipelineInfo.pStages = shadersCreateInfoArray;
-
-    pipelineInfo.pVertexInputState = &vertexInputInfo.vkVertexInputState;
-		//vtx declaration
-
-    pipelineInfo.pInputAssemblyState = &inputAssembly;
-		//draw primitive
-
-    pipelineInfo.pViewportState = &viewportState;
-    
-	pipelineInfo.pRasterizationState = &rasterizer;
-		//cullmode, wireframe|solid..
-		
-    pipelineInfo.pMultisampleState = &multisampling;
-    
-	pipelineInfo.pDepthStencilState = &depthStencil;
-		//zbuffer state (cmpFn)
-	
-	pipelineInfo.pColorBlendState = &colorBlending;
-		//color brend options
-		
-    pipelineInfo.pDynamicState = &dynamicState;
-    
-	pipelineInfo.layout = vkPipelineLayoutHandle;
-		//ottenuta da vkCreatePipelineLayout, indica le PUSH CONST
-	
-	
-    pipelineInfo.renderPass = VK_NULL_HANDLE
-    pipelineInfo.subpass = 0;
-	
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
-    pipelineInfo.basePipelineIndex = -1; // Optional
-
-
-
-
-////////////////////////////////////////////////////////////////
-//////////////////// pensate ///////////////////////////////////
-////////////////////////////////////////////////////////////////
-@framebuffer_def
+@pipeline_def
 {
-	//color e zbuffer (massimo 16)
-	buf: <type = col | zb>, <ImgFormat = sameAsSwapchain | U8_RGBA_sRGB | ... >, <initialLayout>, <finalLayout>, <loadOp = load | clear | dont_care>, <storeOp = store | dont_care | none>
+	//max GOSGPU__NUM_MAX_ATTACHMENT=16 rt
+	(optional)	rt: <ImgFormat = sameAsSwapchain | U8_RGBA_sRGB | ... >
 	...
-	buf:
+	(optional)	rt: <ImgFormat = sameAsSwapchain | U8_RGBA_sRGB | ... >
+
+	//max 1 zb
+	(optional)	zb: <imgFormat = BEST | ...>, <zwrite = 0|1>, <zcmpFn = LESS|...>
+
+	(optional)	cullMode: CCW					=> <mode>							=> default: eCullMode::CCW
+	(optional)	drawPrimitive: trisList			=> <primitive>						=> default: trisList
+
+	(optional)	@vtx_shader
+	(optional)	@pxl_shader
+	(optional)	@comp_shader
 }
 
 
-
-@render_pass
-{
-	(mandatory)	@framebuffer_def:
-
-	(optional)	clearcol: <attachment-index-0toN>, ( <#aarrggbb = #f000> ) | ( <depth = 1> , <stencil = 0> )
-	...
-
-
-	//mandatorio almeno 1 sub-pass, massimo 8 subpass
-	subpass
-	{
-		(mandatory)	type: gfx | compute
-		(optional)	rt: index of 1 or more <buf> definiti in @framebuffer_def
-						alternativamente
-					rt: none 	=> per indicare che non viene usato alcun rt
-					DEFAULT	=> rt:none
-		
-		(optional)	zb: <index of a buf>, <zwrite = 0|1>, <zcmpFn = LESS|...>, <stencil_enabled = 0 | 1>, <stencil_cmpFn = LESS|...>,
-						alternativamente
-					zb: none 	=> per indicare che lo zb è disabilitato
-					DEFAULT	=> zb:none
-					
-						
-		(optional)	input: vedi <rt>				=> default: none
-		(optional)	preserve: vedi <rt>				=> default: none
-
-		(optional)	cullMode: CCW					=> <mode>							=> default: eCullMode::CCW
-		(optional)	drawPrimitive: trisList			=> <primitive>						=> default: trisList
-
-		(optional)	@vtx_shader
-		(optional)	@pxl_shader
-	}
-}

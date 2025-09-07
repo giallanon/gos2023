@@ -1,6 +1,6 @@
 #ifndef _gosAssetBuilder_pipedef_h_
 #define _gosAssetBuilder_pipedef_h_
-#include "../gosAssetBuilderInterface.h"
+#include "gosAssetBuilderInterface.h"
 
 namespace gos
 {

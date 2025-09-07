@@ -1,57 +1,12 @@
 #include "gos.h"
-#include "../gosAssetBuilder.h"
+#include "gosAssetBuilder.h"
 #include "string/gosStringList.h"
-#include "gosAssetBuilder_shader.h"
+#include "builder_shader.h"
+#include "../gosGPU/gosGPU.h"
 
 
 using namespace gos;
 using namespace gos::asset;
-
-
-//********************************************
-bool Builder_shader::shader_compile (const char *shaderSRCFile, const char *shaderStage, const char *spaceSeparateDefineList, const char *shaderDSTFile, bool bIncludeDebugInfo)
-{
-    //se esistono delle define da passare al compilatore...
-    char defineList[2048];
-    memset (defineList, 0, sizeof(defineList));
-    if (NULL != spaceSeparateDefineList)
-    {
-        string::utf8::StringListParser parser;
-        parser.toStart (spaceSeparateDefineList, ' ');
-        
-        char def[256];
-        while (parser.next (def, sizeof(def)))
-        {
-            strcat_s (defineList, sizeof(defineList), "-D");
-            strcat_s (defineList, sizeof(defineList), def);
-            strcat_s (defineList, sizeof(defineList), " ");
-        }
-    }
-
-    char opt_includeDebugInfo[4];
-    if (bIncludeDebugInfo)
-        sprintf_s (opt_includeDebugInfo, sizeof(opt_includeDebugInfo), "-g");
-    else
-        opt_includeDebugInfo[0] = 0x00;
-
-    //glslc -fshader-stage=vert --target-env=vulkan1.3 lineRenderer.vert.shader -g -O -o lineRenderer.vert.spv
-    char cmd[1024];
-    sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s %s %s -O -o %s 2>&1",  shaderStage, defineList, shaderSRCFile, opt_includeDebugInfo, shaderDSTFile);
-    gos::logger::log ("%s\n", cmd);
-
-    char *result;
-    u32 len;
-    if (!gos::runShellScriptAndStoreResult (cmd, gos::getScrapAllocator(), &result, &len))
-        return false;
-
-    if (NULL == result)
-        return true;
-
-    //c'e' stato qualche errore di compilazione
-    gos::logger::err ("ERR => %s\n", result);
-    GOSFREE_SCRAP(result);
-    return false;
-}
 
 //************************************
 bool Builder_shader::extractParams (const IniFileSection *sec, Params *out_params)
@@ -194,11 +149,11 @@ bool Builder_shader::build (Context &ctx, u64 buildTimeUTC, const char *sourceFi
 
         //creo la versione ottimizzata e la versione con le debug-info. Quest'ultima
         //serve per esempio alle pipeline_def per recuprare i nomi e il formato dei descrittori
-        if (!shader_compile (filenameSRC, shaderStage, params.def, filenameDST, false))
+        if (!GPU::shader_compile (filenameSRC, shaderStage, params.def, filenameDST, false))
             return false;
 
         strcat_s (filenameDST, sizeof(filenameDST), "_d");
-        if (!shader_compile (filenameSRC, shaderStage, params.def, filenameDST, true))
+        if (!GPU::shader_compile (filenameSRC, shaderStage, params.def, filenameDST, true))
             return false;
 
     }

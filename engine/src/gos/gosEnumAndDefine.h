@@ -189,6 +189,7 @@ enum class eImageFormat : u8
     DDS_BC5			= 0xF4,
 
     //uso interno
+    _DEPTH_BEST                = 0xFE,      //usa il formato di DEPTH che GPU ha ritenuto essere il migliore
     _SAME_AS_CURRENT_SWAPCHAIN = 0xFF
 };
 
@@ -208,6 +209,7 @@ enum class eShaderType : u8
 {
 	vertexShader = 0,
 	fragmentShader = 1,
+    compute = 2,
 	unknown = 0xff
 };
 

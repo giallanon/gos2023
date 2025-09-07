@@ -31,7 +31,10 @@ namespace gos
         bool stringToEnum (const char *str, eCullMode *out);
         bool stringToEnum (const char *str, eDrawPrimitive *out);
 
-
+		u16 	        getFormatSize (const eImageFormat fmt);
+		bool 	        isFormatWithDepth (const eImageFormat fmt);
+		bool 	        isFormatWithStencil (const eImageFormat fmt);
+        
         /* ritorna il numero di bytes necessari a contenere la rappresentazione
          * in base64 di dei primi [sizeInBytesOfIn] di [in] */
         size_t      base64_howManyBytesNeededForEncoding (size_t sizeInBytesOfBufferToEncode);
