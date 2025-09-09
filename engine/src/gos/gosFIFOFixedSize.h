@@ -18,13 +18,13 @@ namespace gos
 	public:
                             FIFOFixedSize ()						{ reset(); }
 
-		void				reset()									{ iPush = iPop = 0; bFull = 0; }
+		void				reset()									{ iPush = iPop = 0; numElem = 0; }
 
-		bool				isEmpty() const							{ return (!bFull && (iPush == iPop)); }
+		bool				isEmpty() const							{ return (numElem == 0); }
 
 		void				push (const T &val)
 							{
-								if (bFull)
+								if (N == numElem)
 								{
 									assert (iPush == iPop);
 									blob[iPush++] = val;
@@ -42,8 +42,13 @@ namespace gos
 									if (iPush == N)
 										iPush = 0;
 
+									numElem++;
+#ifdef _DEBUG
 									if (iPush == iPop)
-										bFull = 1;
+									{
+										assert (N == numElem);
+									}
+#endif
 								}
 							}
 
@@ -55,7 +60,8 @@ namespace gos
 								*out_val = blob[iPop++];
 								if (N == iPop)
 									iPop = 0;
-								bFull = 0;
+								
+								numElem--;
 								return true;
 							}
 
@@ -67,11 +73,12 @@ namespace gos
 								return true;
 							}
 
+		u32 				getNElem() const 						{ return numElem; }							
 
 	private:
 		u16					iPush;	//indice dove viene inserito il push
 		u16					iPop;	//indice da dove viene fatto il pop
-		u8					bFull;
+		u32					numElem;
 		T					blob[N];
 	};
 } //namespace gos

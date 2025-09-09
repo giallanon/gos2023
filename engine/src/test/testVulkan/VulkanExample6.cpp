@@ -1,6 +1,6 @@
 #include "VulkanExample6.h"
 #include "../gosShape/gosShapeImport.h"
-
+#include "../gos/gosFIFOFixedSize.h"
 
 using namespace gos;
 
@@ -548,6 +548,8 @@ void VulkanExample6::virtual_onInputEvent (u32 actionID, i16 value, const gos::i
     case COMPILE_TIME_STR_CRC32("strafe_down"):            movement.strafeDown ((value == 1));    break;
     case COMPILE_TIME_STR_CRC32("rotateY"):                movement.rotateY ((value<0)); break;
     case COMPILE_TIME_STR_CRC32("rotateX"):                movement.rotateX ((value<0)); break;
+    //case COMPILE_TIME_STR_CRC32("rotateY"):                movement.mouseRotateY (value); break;
+    //case COMPILE_TIME_STR_CRC32("rotateX"):                movement.mouseRotateX (value); break;
     
     }
 }
@@ -557,7 +559,7 @@ void VulkanExample6::doCPUStuff ()
 {
     handleInput();
 
-    /*do some stuff
+    //do some stuff
     i32 tot = 0;
     for (u32 i=0; i<1000; i++)
     {
@@ -571,7 +573,7 @@ void VulkanExample6::doCPUStuff ()
     }
     if (tot < 0)
         printf ("A\n");
-        */
+        
     //gestione del movimento
     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
     movement.update(timeNow_msec);
@@ -637,55 +639,62 @@ void VulkanExample6::priv_mainLoop2()
     acquireImage.setup (gpu);
     presentJob.setup (gpu);
 
-    gos::FPSMegaTimer<3> megaTimer;
-    u8 bAcquiring = false;
-    megaTimer.addTimer ("cpu");
-    megaTimer.addTimer ("gpuJob");
-    megaTimer.addTimer ("acquire");
+    gos::TimerFPS cpuTimer;
+
 
     //command buffer 
     GPUCmdBufferHandle  cmdBufferHandle;
     gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
 
 
+    gos::FIFOFixedSize<gpu::AcquiredSwapchainImg, 4> acquiredList;
+
     //main loop
+    u64 nextTimePrintReport_ms = 0;
     while (bQuitApp == false)
     {
-        megaTimer.onFrameBegin(0);
+        cpuTimer.onFrameBegin();
         doCPUStuff ();
-        megaTimer.onFrameEnd(0);
+        cpuTimer.onFrameEnd();
 
         if (gpu->swapChain_wasRecreated())
+        {
+            acquiredList.reset();
             cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
+        }
 
+        //chiedo una immagine alla swapchain, ne accumulo fino a 2
+        if (acquiredList.getNElem() < 2)
+        {
+            if (acquireImage.tryAcquire ())
+                acquiredList.push (acquireImage.acquiredImg);
+        }
+
+        //se il job precedente e' stato presentato, posso schedularne uno nuovo
         if (presentJob.hasFinished())
         {
-            megaTimer.onFrameEnd(1);
-
-
-            if (false == bAcquiring)
+            //..ammesso che abvia gia' una swapchain-image disponibile
+            if (acquiredList.getNElem() > 0)
             {
-                bAcquiring = true;
-                megaTimer.onFrameBegin(2);
-            }
+                gpu::AcquiredSwapchainImg info;
+                acquiredList.pop (&info);
 
-            VkImage image;
-            if (acquireImage.tryAcquire (&image))
-            {
-                //printf ("acquired imaged %d\n", acquireImage.imageIndex);
-                megaTimer.onFrameEnd(2);
-                bAcquiring = false;
-
-                megaTimer.onFrameBegin(1);
-                recordCommandBuffer (cmdBufferHandle, image);
-                presentJob.submit (cmdBufferHandle, acquireImage.imageIndex);
+                recordCommandBuffer (cmdBufferHandle, info.image);
+                presentJob.submit (cmdBufferHandle, info.index);
             }
         }
 
-        if (megaTimer.printReport())
+
+        // un po' di statistiche
+        const u64 timenow_ms = gos::getTimeSinceStart_msec();
+        if (timenow_ms >= nextTimePrintReport_ms)
         {
-            const f32 msec = acquireImage.timerFPS.getAvgFrameTime_usec() / 1000.0f;
-            printf ("acquire: avg %.2fms [fps: %.01f]\n", msec, acquireImage.timerFPS.getAvgFPS());
+            nextTimePrintReport_ms = timenow_ms + 1000;
+
+            printf ("cpu: avg %.2fms [fps: %.01f]    gpu: avg %.2fms [fps: %.01f]    acquire: avg %.2fms [fps: %.01f]\n",
+                cpuTimer.getAvgFrameTime_ms(), cpuTimer.getAvgFPS(),
+                presentJob.timerFPS.getAvgFrameTime_ms(), presentJob.timerFPS.getAvgFPS(),
+                acquireImage.timerFPS.getAvgFrameTime_ms(), acquireImage.timerFPS.getAvgFPS());
         }
     }
 
@@ -696,18 +705,11 @@ void VulkanExample6::priv_mainLoop2()
     gpu->deleteResource (cmdBufferHandle);
 }
 
-
 //**********************************
 void VulkanExample6::priv_mainLoop3()
 {
-    gpu::AquireSwapChainImage acquireImage;
-    gpu::PresentGFXJob presentJob;
-    acquireImage.setup (gpu);
-    presentJob.setup (gpu);
-
-    gos::FPSMegaTimer<3> megaTimer;
-    u8 bAcquiring = false;
-    megaTimer.addTimer ("cpu");
+    gpu::MainLoop2 mainLoop;
+    mainLoop.setup (gpu);
 
 
     //command buffer 
@@ -715,60 +717,26 @@ void VulkanExample6::priv_mainLoop3()
     gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
 
 
-    struct Acquired
-    {
-        VkImage image;
-        u32     index;
-    };
-    gos::FastArray<Acquired> acquiredList;
-    acquiredList.setup (gos::getSysHeapAllocator(), 8);
-
-
-
     //main loop
     while (bQuitApp == false)
     {
-        megaTimer.onFrameBegin(0);
+        mainLoop.stat_onCPUFrameBegin();
         doCPUStuff ();
-        megaTimer.onFrameEnd(0);
+        mainLoop.stat_onCPUFrameEnd();
 
 
-        if (acquiredList.getNElem() < 2)
-        {
-            VkImage image;
-            if (acquireImage.tryAcquire (&image))
-            {
-                //printf ("acquired imaged %d\n", acquireImage.imageIndex);
-                Acquired elem;
-                elem.image = image;
-                elem.index = acquireImage.imageIndex;
-                acquiredList.append (elem);
-            }
-        }
+        mainLoop.run();
 
         if (gpu->swapChain_wasRecreated())
-        {
-            acquiredList.reset();
             cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
-        }
 
-        if (presentJob.hasFinished())
+
+        //se il job precedente e' stato presentato, posso schedularne uno nuovo
+        gpu::AcquiredSwapchainImg swapchainImg;
+        if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
-            if (acquiredList.getNElem() > 0)
-            {
-                VkImage image = acquiredList(0).image;
-                u32 imageIndex = acquiredList(0).index;
-                acquiredList.removeAndSwapWithLast(0);
-
-                recordCommandBuffer (cmdBufferHandle, image);
-                presentJob.submit (cmdBufferHandle, imageIndex);
-            }
-        }
-
-        if (megaTimer.printReport())
-        {
-            const f32 msec = acquireImage.timerFPS.getAvgFrameTime_usec() / 1000.0f;
-            printf ("acquire: avg %.2fms [fps: %.01f]\n", msec, acquireImage.timerFPS.getAvgFPS());
+            recordCommandBuffer (cmdBufferHandle, swapchainImg.image);
+            mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }
     }
 

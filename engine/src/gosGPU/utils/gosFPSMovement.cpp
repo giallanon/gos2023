@@ -61,6 +61,36 @@ void FPSMovement::rotateY (bool bClockwise)
 }
 
 //**************************************
+void FPSMovement::mouseRotateY (i32 num_pixel_mouse_was_moved)
+{
+    if (num_pixel_mouse_was_moved < 0)
+        //clockwise
+        rotY_rad -= (f32) rotationalSpeed_rad;
+    else
+        rotY_rad += (f32)rotationalSpeed_rad;
+}
+
+//**************************************
+void FPSMovement::mouseRotateX (i32 num_pixel_mouse_was_moved)
+{
+    printf ("%d\n", num_pixel_mouse_was_moved);
+    if (num_pixel_mouse_was_moved < 0)
+    {
+        //clockwise
+        rotX_rad -= (f32)rotationalSpeed_rad;
+        if (rotX_rad > gos::math::gradToRad(80))
+            rotX_rad = gos::math::gradToRad(80);
+    }
+    else
+    {
+        rotX_rad += (f32)rotationalSpeed_rad;
+        if (rotX_rad < -gos::math::gradToRad(60))
+            rotX_rad = -gos::math::gradToRad(60);
+    }        
+}
+
+
+//**************************************
 void FPSMovement::update (u64 timenow_msec)
 {
     if (NULL == targetPos)

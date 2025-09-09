@@ -3,6 +3,7 @@
 #include "../gosGPUEnumAndDefine.h"
 #include "../vulkan/gosGPUVulkanEnumAndDefine.h"
 #include "../../gos/dataTypes/gosTimer.h"
+#include "../../gos/gosFIFOFixedSize.h"
 
 
 namespace gos
@@ -11,20 +12,35 @@ namespace gos
 
     namespace gpu
     {
+        struct AcquiredSwapchainImg
+        {
+            VkImage image;
+            u32     index;
+        };        
+
+        /********************************
+         * @brief   AquireSwapChainImage
+         *          Classe dedicata all'acquisizione di una swapchain-image.
+         *          Chiamare tryAcquire() ripetutamente nel main loop.
+         *          Quanto questa ritorna true allora this->acquiredImg e' valida e 
+         *          puo' essere utilizzata immediatamente.
+         */
         class AquireSwapChainImage
         {
         public:
-                    AquireSwapChainImage()          { gpu = NULL; stato = eStato::idle; imageIndex=u32MAX; }
+                    AquireSwapChainImage()          { gpu = NULL; stato = eStato::idle; acquiredImg.index=u32MAX; }
                     ~AquireSwapChainImage()         { unsetup(); }
 
             void    setup (gos::GPU *gpuIN);
             void    unsetup();
-            bool    tryAcquire (VkImage *out_image);
-            void    submit (const GPUCmdBufferHandle &cmdBufferHandle);
+
+            //se ritorna true, allora this->imageIndex e this->image sono validi e utilizzabili immediatamente
+            bool    tryAcquire ();
 
         public:
-            u32             imageIndex;
-            gos::TimerFPS   timerFPS;
+            GPU                     *gpu;
+            AcquiredSwapchainImg    acquiredImg;
+            gos::TimerFPS           timerFPS;
 
         private:
             enum class eStato : u8
@@ -37,11 +53,19 @@ namespace gos
             };
 
         private:
-            GPU         *gpu;
             VkFence     fence;
             eStato      stato;
         };
 
+        /********************************
+         * @brief   PresentGFXJob
+         *          Submitta una job grafico alla GPU e si preoccupa di presentarlo appena possibile.
+         *          submit() pretende che <swapChainImageIndex> sia un valido indice ad una immagine di swapchain
+         *          precedentemente acquisita (per esempio da AquireSwapChainImage).
+         * 
+         *          hasFinished() ritona true se la classe non ha alcun lavoro in canna (ovvero ritorna true dopo che il
+         *          job e' stato presentato, oppure se non ha alcun job da gestire).
+         */        
         class PresentGFXJob
         {
         public:
@@ -54,6 +78,9 @@ namespace gos
             void    submit (const GPUCmdBufferHandle &cmdBufferHandle, u32 swapChainImageIndex);
             bool    hasFinished();
 
+        public:
+            gos::TimerFPS   timerFPS;
+            
         private:
             enum class eStato : u8
             {
@@ -67,6 +94,40 @@ namespace gos
             u32         swapChainImageIndex;
             u32         swapChainAutoID;
             eStato      stato;
+        };
+
+
+        /**************************************************
+         * MainLoop2
+         * 
+        */
+        class MainLoop2
+        {
+        public:
+                    MainLoop2 ()                    { printInfoFreq_msec = 1000; nextTimePrintInfo_msec=0; gfxJobFinished=true; }
+                    ~MainLoop2()                    { unsetup(); }
+                    
+            void    setup (gos::GPU *gpuIN)         { acquire.setup(gpuIN); gfxJob.setup(gpuIN); }
+            void    unsetup()                       { acquire.unsetup(); gfxJob.unsetup(); }
+        
+            void    run ();
+
+            bool    gfxJob_canSubmit (AcquiredSwapchainImg *out);
+            void    gfxJob_submitAndPresent (const GPUCmdBufferHandle &cmdBufferHandle, const AcquiredSwapchainImg &info);
+
+
+            void    stat_onCPUFrameBegin()                                      { cpuTimerFPS.onFrameBegin(); }
+            void    stat_onCPUFrameEnd()                                        { cpuTimerFPS.onFrameEnd(); }
+            void    stat_setPrintReportEvery (u32 msec)                         { printInfoFreq_msec = msec; }
+
+        private:
+            AquireSwapChainImage    acquire;
+            PresentGFXJob           gfxJob;
+            u64                     nextTimePrintInfo_msec;
+            u64                     printInfoFreq_msec;
+            gos::FIFOFixedSize<AcquiredSwapchainImg,4>  acquiredList;
+            gos::TimerFPS           cpuTimerFPS;
+            bool                    gfxJobFinished;
         };
 
 

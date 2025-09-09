@@ -27,6 +27,8 @@ namespace gos
         void    strafeDown (bool b)                     { priv_setStatus (STATUS_MOVING_DOWN, b); }    
         void    rotateY (bool bClockwise);
         void    rotateX (bool bClockwise);
+        void    mouseRotateY (i32 num_pixel_mouse_was_moved);
+        void    mouseRotateX (i32 num_pixel_mouse_was_moved);
 
         void    update (u64 timenow_msec);
 
