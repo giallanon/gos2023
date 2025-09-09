@@ -39,8 +39,12 @@ void TimerFPS::reset()
 bool TimerFPS::onFrameEnd()
 {
     const u64 timeNow_usec = gos::getTimeSinceStart_usec();
-    accumulatedTime_usec += (timeNow_usec - timeFrameStarted_usec);
-    numFrameCounted++;
+    if (0 != timeFrameStarted_usec)
+    {
+        accumulatedTime_usec += (timeNow_usec - timeFrameStarted_usec);
+        numFrameCounted++;
+        timeFrameStarted_usec = 0;
+    }
 
     if (timeNow_usec - timeBegin_usec >= 1000000)
     {

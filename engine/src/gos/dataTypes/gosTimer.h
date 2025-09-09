@@ -88,11 +88,11 @@ namespace gos
                 }
 
         void    setPrintReportEvery (u32 msec)              { print_report_every_msec = msec; }
-        void    printReport()
+        bool    printReport()
                 {
                     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
                     if (timeNow_msec < nextTimePrintReport_msec)
-                        return;
+                        return false;
                     nextTimePrintReport_msec = timeNow_msec + print_report_every_msec;
 
                     char s[1024];
@@ -110,6 +110,7 @@ namespace gos
                             strcat_s (s, sizeof(s), "      ");
                     }
                     printf (s);
+                    return true;
                 }    
 
 

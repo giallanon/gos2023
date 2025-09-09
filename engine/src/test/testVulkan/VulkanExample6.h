@@ -37,7 +37,7 @@ private:
 
 private:
     bool        createVertexIndexStageBuffer();
-    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle);
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, VkImage swapChainImage);
     void        doCPUStuff ();
     void        mainLoop();
     void        virtual_onInputEvent (u32 event32, i16 value, const gos::input::MouseStatus &mouseStatus, const gos::input::sButtonModifier &btnModifier);
@@ -45,7 +45,10 @@ private:
     bool        priv_setupPipeline_v1 (GPUVtxDeclHandle &vtxDeclHandle);
     bool        priv_setupPipeline_v2 (GPUShaderHandle vtxShaderHandle, GPUShaderHandle fragShaderHandle);
     bool        priv_recordCommandBuffer_v1 (gos::gpu::CmdBufferWriter &cw);
-    bool        priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw);
+    bool        priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw, VkImage swapChainImage);
+    void        priv_mainLoop1();
+    void        priv_mainLoop2();
+    void        priv_mainLoop3();
 
 private:
     gos::FastArray<gos::Shape> shapeList;

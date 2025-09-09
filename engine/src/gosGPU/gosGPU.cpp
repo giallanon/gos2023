@@ -540,12 +540,13 @@ eImageFormat GPU::swapChain_getImageFormat() const
 }
 
 //************************************
-bool GPU::swapChain_acquireImage (u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
+bool GPU::swapChain_acquireImage_ex (u32 *out_imageIndex, u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
 {
+    assert (NULL != out_imageIndex);
+
     //passando a Wayland, se uso timeout==0 spesso vkAcquireNextImageKHR ritorna VK_ERROR_OUT_OF_DEVICE_MEMORY.
     //Mettendo timeout==1, al posto di VK_ERROR_OUT_OF_DEVICE_MEMORY ho dei VK_TIMEOUT/VK_NOT_READY che tutto sommato mi vanno bene
-    if (0 == timeout_ns)
-        timeout_ns = 1;
+    //if (0 == timeout_ns)    timeout_ns = 1;
 
     bSwapChainRecreatedDuringThisFrame = false;
 
@@ -558,13 +559,12 @@ bool GPU::swapChain_acquireImage (u64 timeout_ns, VkSemaphore semaphore, VkFence
         priv_swapChain_recreate();
     }
 
-
-    const VkResult result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, timeout_ns, semaphore, fence, &currentSwapChainImageIndex);
+    const VkResult result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, timeout_ns, semaphore, fence, out_imageIndex);
 
     switch (result)
     {
     default:
-        gos::logger::err ("GPU::swapChain_acquireImage() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
+        gos::logger::err ("GPU::swapChain_acquireImage_ex() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
         return false;
 
     case VK_SUCCESS:
@@ -572,7 +572,7 @@ bool GPU::swapChain_acquireImage (u64 timeout_ns, VkSemaphore semaphore, VkFence
 
     case VK_SUBOPTIMAL_KHR:
         //posso ancora renderizzare, ma al prossimo newFrame la swapchain verra' ricreata
-        gos::logger::log (eTextColor::darkCyan, "GPU::swapChain_acquireImage() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
+        gos::logger::log (eTextColor::darkCyan, "GPU::swapChain_acquireImage_ex() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
         bRecreateSwapChainOnNextFrame = true;
         return true;
 
@@ -587,7 +587,7 @@ bool GPU::swapChain_acquireImage (u64 timeout_ns, VkSemaphore semaphore, VkFence
 }
 
 //************************************
-VkResult GPU::swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount)
+VkResult GPU::swapChain_present_ex (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount, u32 swapChainImageIndex)
 {
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -595,15 +595,29 @@ VkResult GPU::swapChain_present (const VkSemaphore *semaphoreHandleList, u32 sem
     presentInfo.pWaitSemaphores = semaphoreHandleList; //prima di presentare, aspetta che GPU segnali tutti i semafori di [semaphoreHandleList]
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &vulkan.swapChainInfo.vkSwapChain;
-    presentInfo.pImageIndices = &currentSwapChainImageIndex;
+    presentInfo.pImageIndices = &swapChainImageIndex;
     
     return vkQueuePresentKHR (vulkan.getQueueInfo(eGPUQueueType::gfx)->vkQueueHandle, &presentInfo);
+}
+
+
+//************************************
+bool GPU::swapChain_acquireImage (u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
+{
+    return swapChain_acquireImage_ex (&currentSwapChainImageIndex, timeout_ns, semaphore, fence);
+}
+
+//************************************
+VkResult GPU::swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount)
+{
+    return swapChain_present_ex (semaphoreHandleList, semaphoreCount, currentSwapChainImageIndex);
 }
 
 //**********************************************************
 bool GPU::priv_swapChain_recreate ()
 {
     bSwapChainRecreatedDuringThisFrame = true;
+    swapchainAutoID++;
     gos::logger::log (eTextColor::green, "GPU::swapChain_recreate()\n");
     gos::logger::incIndent();
 

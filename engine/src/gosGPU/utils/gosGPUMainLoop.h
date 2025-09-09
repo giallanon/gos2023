@@ -5,13 +5,71 @@
 #include "../../gos/dataTypes/gosTimer.h"
 
 
-
 namespace gos
 {
     class GPU;  //fwd decl
 
     namespace gpu
     {
+        class AquireSwapChainImage
+        {
+        public:
+                    AquireSwapChainImage()          { gpu = NULL; stato = eStato::idle; imageIndex=u32MAX; }
+                    ~AquireSwapChainImage()         { unsetup(); }
+
+            void    setup (gos::GPU *gpuIN);
+            void    unsetup();
+            bool    tryAcquire (VkImage *out_image);
+            void    submit (const GPUCmdBufferHandle &cmdBufferHandle);
+
+        public:
+            u32             imageIndex;
+            gos::TimerFPS   timerFPS;
+
+        private:
+            enum class eStato : u8
+            {
+                idle,
+                acquiring,
+                waitingFence,
+                acquired,
+                jobInProgress
+            };
+
+        private:
+            GPU         *gpu;
+            VkFence     fence;
+            eStato      stato;
+        };
+
+        class PresentGFXJob
+        {
+        public:
+            PresentGFXJob()                         { gpu = NULL; stato = eStato::idle; }
+            ~PresentGFXJob()                        { unsetup(); }
+
+            void    setup (gos::GPU *gpuIN);
+            void    unsetup();
+
+            void    submit (const GPUCmdBufferHandle &cmdBufferHandle, u32 swapChainImageIndex);
+            bool    hasFinished();
+
+        private:
+            enum class eStato : u8
+            {
+                idle,
+                jobInProgress
+            };
+
+        private:
+            GPU         *gpu;
+            VkFence     fence;
+            u32         swapChainImageIndex;
+            u32         swapChainAutoID;
+            eStato      stato;
+        };
+
+
         /**************************************************
          * MainLoop
          * 
@@ -51,8 +109,8 @@ namespace gos
             enum class eStato : u8
             {
                 waitingOnFence_inFlight,
-                waitingOnFence_swapChainReady,
-                askingNewFrame,
+                fenceWaiting_swapChainImg,
+                askingNewSwapchainImg,
                 waitingForAJob,
                 unknown
             };
@@ -63,7 +121,7 @@ namespace gos
             eStato              stato;
             VkSemaphore         semaphore_renderFinished;
             VkFence             fence_inFlight;
-            VkFence             fenceSwapChainReady;
+            VkFence             fence_swapChainImgReady;
             GPUCmdBufferHandle  commandBuffer_GFX;
 
             bool                canAccept_GFXJob;

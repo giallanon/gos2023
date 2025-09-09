@@ -487,10 +487,18 @@ namespace gos
 
 
         //================ rendering & presentazione
+        bool                swapChain_acquireImage_ex (u32 *out_imageIndex, u64 timeout_ns=UINT64_MAX, VkSemaphore semaphore=VK_NULL_HANDLE, VkFence fence=VK_NULL_HANDLE);
+        VkImage             swapChain_getImageByIndex (u32 index)           { return vulkan.swapChainInfo.vkImageList[index]; }
+        VkResult            swapChain_present_ex (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount, u32 swapChainImageIndex);
+
         bool                swapChain_acquireImage (u64 timeout_ns=UINT64_MAX, VkSemaphore semaphore=VK_NULL_HANDLE, VkFence fence=VK_NULL_HANDLE);
         bool                swapChain_wasRecreated() const                  { return bSwapChainRecreatedDuringThisFrame; }
         VkImage             swapChain_getCurImage() const                   { return vulkan.swapChainInfo.vkImageList[currentSwapChainImageIndex]; }
         VkResult            swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount);
+        
+                            //ogni volta che la swapchain viene ricreata, questo id viene incrementato.
+        u32                 swapChain_getCurrentAutoID() const              { return swapchainAutoID; }
+
 
         //================ swap chain info
         //La swap chain viene creata automaticamente da GPU::init()
@@ -941,6 +949,7 @@ namespace gos
         bool                        bRecreateSwapChainOnNextFrame;
         bool                        vSync;
         bool                        bSwapChainRecreatedDuringThisFrame;
+        u32                         swapchainAutoID;
         ToBeDeletedBuilder          toBeDeletedBuilder;
 
         GPUViewportHandle           defaultViewportHandle;

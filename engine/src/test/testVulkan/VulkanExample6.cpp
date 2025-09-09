@@ -340,7 +340,7 @@ bool VulkanExample6::createVertexIndexStageBuffer()
 
 
 //************************************
-bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
+bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, VkImage swapChainImage)
 {
     //aggiorno UBO
     ubo.objWorld.identity();
@@ -363,7 +363,7 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
 
     if (bUse_pipe_v2)
     {
-        priv_recordCommandBuffer_v2(cw);
+        priv_recordCommandBuffer_v2(cw, swapChainImage);
     }
     else
     {
@@ -404,7 +404,7 @@ bool VulkanExample6::priv_recordCommandBuffer_v1 (gos::gpu::CmdBufferWriter &cw)
 }
 
 //************************************
-bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw)
+bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw, VkImage swapChainImage)
 {
     VkCommandBuffer cmd = cw.debug_getHandle();
     
@@ -509,9 +509,9 @@ bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw)
     }
     cw  
         .imageTransition (rtToShow->image, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
-        .imageTransition (gpu->swapChain_getCurImage(), eImageLayout::undefined, eImageLayout::transfer_dst)
-        .copyImageToImage (rtToShow->image, gpu->swapChain_getCurImage(), gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
-        .imageTransition (gpu->swapChain_getCurImage(), eImageLayout::transfer_dst, eImageLayout::presentation);
+        .imageTransition (swapChainImage, eImageLayout::undefined, eImageLayout::transfer_dst)
+        .copyImageToImage (rtToShow->image, swapChainImage, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
+        .imageTransition (swapChainImage, eImageLayout::transfer_dst, eImageLayout::presentation);
 
     return true;
 }
@@ -557,7 +557,7 @@ void VulkanExample6::doCPUStuff ()
 {
     handleInput();
 
-    //do some stuff
+    /*do some stuff
     i32 tot = 0;
     for (u32 i=0; i<1000; i++)
     {
@@ -571,8 +571,7 @@ void VulkanExample6::doCPUStuff ()
     }
     if (tot < 0)
         printf ("A\n");
-
-
+        */
     //gestione del movimento
     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
     movement.update(timeNow_msec);
@@ -583,94 +582,199 @@ void VulkanExample6::doCPUStuff ()
 //**********************************
 void VulkanExample6::mainLoop()
 {
+    //priv_mainLoop1();
+    //priv_mainLoop2();
+    priv_mainLoop3();
+}
+
+//**********************************
+void VulkanExample6::priv_mainLoop1()
+{
+    gpu::MainLoop gpuLoop;
+    gpuLoop.setup (gpu);
+    gpuLoop.stat_setPrintReportEvery (10000);
+
+
+    //command buffer 
     GPUCmdBufferHandle  cmdBufferHandle;
     gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
 
-    VkSemaphore         imageAvailableSemaphore;
-    VkSemaphore         renderFinishedSemaphore;
-    gpu->semaphore_create (&imageAvailableSemaphore);
-    gpu->semaphore_create (&renderFinishedSemaphore);
+    gpuLoop.stat_setPrintReportEvery (1000);
 
-    VkFence             inFlightFence;
-    gpu->fence_create (true, &inFlightFence);
-
-
-    VkResult            result;
-    gos::TimerFPS       fpsTimer;
-    gos::Timer          cpuWaitTimer;
-    gos::Timer          frameTimer;
-    gos::Timer          acquireImageTimer;
+    //main loop
     while (bQuitApp == false)
     {
-//printf ("frame begin\n");
-        frameTimer.start();
-        fpsTimer.onFrameBegin();
+        gpuLoop.stat_onCPUFrameBegin();
+        doCPUStuff ();
+        gpuLoop.stat_onCPUFrameEnd();
+        gpuLoop.stat_printReport();
 
 
-        doCPUStuff();
-
-        //draw frames
-        cpuWaitTimer.start();
-            gpu->fence_wait (inFlightFence);
-//printf ("  CPU waited GPU fence for %ld us\n", cpuWaitTimer.elapsed_usec());
-
-        //recupero una immagine dalla swap chain, attendo per sempre e indico [imageAvailableSemaphore] come
-        //semaforo che GPU deve segnalare quando questa operazione e' ok
-        acquireImageTimer.start();
-            
-        if (gpu->swapChain_acquireImage (UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE))
+        gpuLoop.run ();
+        if (gpuLoop.swapchainRecreated())
+            cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
+        if (gpuLoop.canSubmitGFXJob())
         {
-            gpu->fence_reset (inFlightFence);
-//printf ("  CPU waited vkAcquireNextImageKHR %ld us\n", acquireImageTimer.elapsed_usec());
-        
-            //command buffer che opera su [imageIndex]
-            recordCommandBuffer(cmdBufferHandle);
-
-            //submit
-            VkCommandBuffer vkCmdBuffer;
-            gpu->toVulkan (cmdBufferHandle, &vkCmdBuffer);
-
-            VkSubmitInfo submitInfo{};
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-            VkSemaphore semaphoresToBeWaitedBeforeStarting[] = { imageAvailableSemaphore };
-            VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-            submitInfo.waitSemaphoreCount = 1;
-            submitInfo.pWaitSemaphores = semaphoresToBeWaitedBeforeStarting;
-            submitInfo.pWaitDstStageMask = waitStages;
-
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &vkCmdBuffer;
-
-            //semaforo che GPU segnalera' al termine dell'esecuzione del command buffer
-            submitInfo.signalSemaphoreCount = 1;
-            submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
-
-            //submitto il batch a GPU e indico che deve segnalare [inFlightFence] quando ha finito 
-            result = vkQueueSubmit (gpu->REMOVE_getGfxQHandle(), 1, &submitInfo, inFlightFence);
-            if (VK_SUCCESS != result)
-                gos::logger::err ("vkQueueSubmit() => %s\n", string_VkResult(result));
-
-            //presentazione
-            gpu->swapChain_present (&renderFinishedSemaphore, 1);
-//printf ("  total frame time: %ldus\n", frameTimer.elapsed_usec());
+            recordCommandBuffer (cmdBufferHandle, VK_NULL_HANDLE);
+            gpuLoop.submitGFXJob (cmdBufferHandle);
         }
 
+    }
 
-        if (fpsTimer.onFrameEnd())
+    //aspetto che GPU abbia finito tutto cio' che ha in coda
+    gpu->waitIdle();
+
+    //free
+    gpu->deleteResource (cmdBufferHandle);
+    gpuLoop.unsetup();
+}
+
+//**********************************
+void VulkanExample6::priv_mainLoop2()
+{
+    gpu::AquireSwapChainImage acquireImage;
+    gpu::PresentGFXJob presentJob;
+    acquireImage.setup (gpu);
+    presentJob.setup (gpu);
+
+    gos::FPSMegaTimer<3> megaTimer;
+    u8 bAcquiring = false;
+    megaTimer.addTimer ("cpu");
+    megaTimer.addTimer ("gpuJob");
+    megaTimer.addTimer ("acquire");
+
+    //command buffer 
+    GPUCmdBufferHandle  cmdBufferHandle;
+    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+
+
+    //main loop
+    while (bQuitApp == false)
+    {
+        megaTimer.onFrameBegin(0);
+        doCPUStuff ();
+        megaTimer.onFrameEnd(0);
+
+        if (gpu->swapChain_wasRecreated())
+            cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
+
+        if (presentJob.hasFinished())
         {
-            const float usec = fpsTimer.getAvgFrameTime_usec();
-            const float msec = usec/ 1000.0f;
-            printf ("Avg frame time: %.2fms [%.2fus] [fps: %.01f]\n", msec, usec, fpsTimer.getAvgFPS());
+            megaTimer.onFrameEnd(1);
+
+
+            if (false == bAcquiring)
+            {
+                bAcquiring = true;
+                megaTimer.onFrameBegin(2);
+            }
+
+            VkImage image;
+            if (acquireImage.tryAcquire (&image))
+            {
+                //printf ("acquired imaged %d\n", acquireImage.imageIndex);
+                megaTimer.onFrameEnd(2);
+                bAcquiring = false;
+
+                megaTimer.onFrameBegin(1);
+                recordCommandBuffer (cmdBufferHandle, image);
+                presentJob.submit (cmdBufferHandle, acquireImage.imageIndex);
+            }
+        }
+
+        if (megaTimer.printReport())
+        {
+            const f32 msec = acquireImage.timerFPS.getAvgFrameTime_usec() / 1000.0f;
+            printf ("acquire: avg %.2fms [fps: %.01f]\n", msec, acquireImage.timerFPS.getAvgFPS());
         }
     }
 
     //aspetto che GPU abbia finito tutto cio' che ha in coda
     gpu->waitIdle();
 
+    //free
     gpu->deleteResource (cmdBufferHandle);
-    gpu->semaphore_destroy (imageAvailableSemaphore);
-    gpu->semaphore_destroy (renderFinishedSemaphore);
-    gpu->fence_destroy (inFlightFence);
 }
 
+
+//**********************************
+void VulkanExample6::priv_mainLoop3()
+{
+    gpu::AquireSwapChainImage acquireImage;
+    gpu::PresentGFXJob presentJob;
+    acquireImage.setup (gpu);
+    presentJob.setup (gpu);
+
+    gos::FPSMegaTimer<3> megaTimer;
+    u8 bAcquiring = false;
+    megaTimer.addTimer ("cpu");
+
+
+    //command buffer 
+    GPUCmdBufferHandle  cmdBufferHandle;
+    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+
+
+    struct Acquired
+    {
+        VkImage image;
+        u32     index;
+    };
+    gos::FastArray<Acquired> acquiredList;
+    acquiredList.setup (gos::getSysHeapAllocator(), 8);
+
+
+
+    //main loop
+    while (bQuitApp == false)
+    {
+        megaTimer.onFrameBegin(0);
+        doCPUStuff ();
+        megaTimer.onFrameEnd(0);
+
+
+        if (acquiredList.getNElem() < 2)
+        {
+            VkImage image;
+            if (acquireImage.tryAcquire (&image))
+            {
+                //printf ("acquired imaged %d\n", acquireImage.imageIndex);
+                Acquired elem;
+                elem.image = image;
+                elem.index = acquireImage.imageIndex;
+                acquiredList.append (elem);
+            }
+        }
+
+        if (gpu->swapChain_wasRecreated())
+        {
+            acquiredList.reset();
+            cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
+        }
+
+        if (presentJob.hasFinished())
+        {
+            if (acquiredList.getNElem() > 0)
+            {
+                VkImage image = acquiredList(0).image;
+                u32 imageIndex = acquiredList(0).index;
+                acquiredList.removeAndSwapWithLast(0);
+
+                recordCommandBuffer (cmdBufferHandle, image);
+                presentJob.submit (cmdBufferHandle, imageIndex);
+            }
+        }
+
+        if (megaTimer.printReport())
+        {
+            const f32 msec = acquireImage.timerFPS.getAvgFrameTime_usec() / 1000.0f;
+            printf ("acquire: avg %.2fms [fps: %.01f]\n", msec, acquireImage.timerFPS.getAvgFPS());
+        }
+    }
+
+    //aspetto che GPU abbia finito tutto cio' che ha in coda
+    gpu->waitIdle();
+
+    //free
+    gpu->deleteResource (cmdBufferHandle);
+}

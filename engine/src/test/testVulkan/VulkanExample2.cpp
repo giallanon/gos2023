@@ -333,7 +333,7 @@ void VulkanExample2::mainLoop_3()
         if (gpu->fence_wait (inFlightFence, 0))
         {
             fpsMegaTimer.onFrameEnd (1);
-            //Chiedo a GPU una immagine dalla swap chain, non attendo nemmeno 1 attimo e indico [fenceSwapChainReady] come fence da segnalare
+            //Chiedo a GPU una immagine dalla swap chain, non attendo nemmeno 1 attimo e indico [fence_swapChainImgReady] come fence da segnalare
             //quando l'immagine e' disponibile
             //Questa fn ritorna true quando GPU e' in grado di determinare quale sara' la prossima immagine sulla quale renderizzare.
             //Quando GPU ha questa informazione, non vuol dire pero' che l'immagine e' gia' immediatamente disponibile per l'uso.
@@ -341,7 +341,7 @@ void VulkanExample2::mainLoop_3()
             if (gpu->swapChain_acquireImage (0, VK_NULL_HANDLE, fenceSwapChainReady))
             {
                 //A questo GPU ha capito quale sara' l'immagine che prima o poi mi dara', ma non e' detto che questa sia gia' disponibile
-                //Lo diventa quando [fenceSwapChainReady] e' segnalata.
+                //Lo diventa quando [fence_swapChainImgReady] e' segnalata.
                 //Fino ad allora posso farmi i fatti miei
 
                 //Intanto che aspetto che GPU renda disponibile una immagine, faccio le mie cose

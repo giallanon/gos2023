@@ -713,6 +713,8 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
             presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
         else if (listOfPresentMode.exists(VK_PRESENT_MODE_FIFO_RELAXED_KHR))
             presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+        else if (listOfPresentMode.exists(VK_PRESENT_MODE_IMMEDIATE_KHR))
+            presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
     }
     
     VkSwapchainCreateInfoKHR createInfo{};

@@ -9,7 +9,7 @@ using namespace gos::gpu;
 MainLoop::MainLoop()
 {
     gpu = NULL;
-    stato = eStato::askingNewFrame;
+    stato = eStato::askingNewSwapchainImg;
     canAccept_GFXJob = false;
 
     fpsMegaTimer.addTimer ("CPU");
@@ -35,14 +35,14 @@ void MainLoop::setup (gos::GPU *gpuIN)
     //Fence sono oggetti di sync tra GPU & CPU (a differenza dei semafori che riguardano solo la CPU)
     gpu->semaphore_create (&semaphore_renderFinished);
     gpu->fence_create (false, &fence_inFlight);
-    gpu->fence_create (false, &fenceSwapChainReady);
+    gpu->fence_create (false, &fence_swapChainImgReady);
 }
 
 //************************************************
 void MainLoop::unsetup()
 {
     gpu->semaphore_destroy (semaphore_renderFinished);
-    gpu->fence_destroy (fenceSwapChainReady);
+    gpu->fence_destroy (fence_swapChainImgReady);
     gpu->fence_destroy (fence_inFlight);
 }
 
@@ -77,36 +77,34 @@ bool MainLoop::run ()
             return false;
         gpu->fence_reset (fence_inFlight);
         fpsMegaTimer.onFrameEnd (1);
-        stato = eStato::askingNewFrame;
+        stato = eStato::askingNewSwapchainImg;
     }
 
 
-    if (eStato::askingNewFrame == stato)
+    if (eStato::askingNewSwapchainImg == stato)
     {
-        //Chiedo a GPU una immagine dalla swap chain, non attendo nemmeno 1 attimo e indico [semaphore_imageReady] come
-        //semaforo che GPU deve segnalare quando questa operazione e' ok. Indico inoltre [fenceSwapChainReady] come fence da segnalre
-        //quando l'immagine e' disponibile
-        //Questa fn ritorna quando GPU e' in grado di determinare quale sara' la prossima immagine sulla quale renderizzare.
-        //Quando GPU ha questa informazione, non vuol dire pero' che l'immagine e' gia' immediatamente disponibile per l'uso.
-        //E' per questo che si usa [semaphore_imageReady] e [fenceSwapChainReady], per sapere quando davvero l'immagine sara' disponibile
-        if (!gpu->swapChain_acquireImage (0, VK_NULL_HANDLE, fenceSwapChainReady))
+        //Chiedo a GPU una immagine dalla swap chain, non attendo nemmeno 1 attimo e indico [fence_swapChainImgReady] come
+        //oggetto che GPU deve segnalare quando questa operazione e' ok e  l'immagine e' davvero disponibile per il rendering.
+        //Se la fn ritorna true, allora poi dobbiamo attendere che [fence_swapChainImgReady] sia segnalata prima di avere davvero a disposizione
+        //l'immagine
+        if (!gpu->swapChain_acquireImage (0, VK_NULL_HANDLE, fence_swapChainImgReady))
             return false;
 
         bSwapchainRecreated = gpu->swapChain_wasRecreated();
         canAccept_GFXJob = true;
-        stato = eStato::waitingOnFence_swapChainReady;
+        stato = eStato::fenceWaiting_swapChainImg;
     }
 
-    if (eStato::waitingOnFence_swapChainReady == stato)
+    if (eStato::fenceWaiting_swapChainImg == stato)
     {
         //A questo punto GPU ha capito quale sara' l'immagine che prima o poi mi dara', ma non e' detto che questa sia gia' disponibile
-        //Lo diventa quando [fenceSwapChainReady] e' segnalata.
+        //Lo diventa quando [fence_swapChainImgReady] e' segnalata.
         //Fino ad allora posso farmi i fatti miei
 
         //Intanto che aspetto che GPU renda disponibile una immagine, faccio le mie cose
-        if (!gpu->fence_wait (fenceSwapChainReady, 0))
+        if (!gpu->fence_wait (fence_swapChainImgReady, 0))
             return canAccept_GFXJob;
-        gpu->fence_reset (fenceSwapChainReady);
+        gpu->fence_reset (fence_swapChainImgReady);
         stato = eStato::waitingForAJob;
     }
 
@@ -169,3 +167,103 @@ bool MainLoop::run ()
     return false;
 }
 
+
+//****************************
+void AquireSwapChainImage::setup (gos::GPU *gpuIN)          { gpu=gpuIN; gpu->fence_create (false, &fence); }
+void AquireSwapChainImage::unsetup()                        { if (NULL == gpu) return; gpu->fence_destroy (fence); gpu = NULL; }
+
+//*****************************************************
+bool AquireSwapChainImage::tryAcquire (VkImage *out_image)
+{
+    assert (NULL != gpu);
+    assert (NULL != out_image);
+    
+    if (eStato::idle == stato)
+    {
+        timerFPS.onFrameBegin();
+        stato = eStato::acquiring;
+    }
+
+    if (eStato::acquiring == stato)
+    {
+        if (!gpu->swapChain_acquireImage_ex (&imageIndex, 0, VK_NULL_HANDLE, fence))
+            return false;
+        stato = eStato::waitingFence;
+    }
+
+    if (eStato::waitingFence == stato)
+    {
+        if (!gpu->fence_isSignaled (fence))
+            return false;
+
+        timerFPS.onFrameEnd();
+        stato = eStato::idle;
+        gpu->fence_reset(fence);
+        *out_image = gpu->swapChain_getImageByIndex(imageIndex);
+        return true;
+    }
+
+    //se arrivo qui, e' successo qualcosa di strano perche' i casi li ho gia' gestiti tutti sopra
+    DBGBREAK;
+    return false;
+}
+
+
+
+//*****************************************************
+void PresentGFXJob::setup (gos::GPU *gpuIN)         { gpu=gpuIN; gpu->fence_create (false, &fence); }
+void PresentGFXJob::unsetup()                       { if (NULL == gpu) return; gpu->fence_destroy (fence); gpu = NULL; }
+
+//*****************************************************
+void PresentGFXJob::submit (const GPUCmdBufferHandle &cmdBufferHandle, u32 swapChainImageIndexIN)
+{
+    assert (eStato::idle == stato);
+    stato = eStato::jobInProgress;
+    swapChainImageIndex = swapChainImageIndexIN;
+    swapChainAutoID = gpu->swapChain_getCurrentAutoID();
+
+
+    VkCommandBuffer vkCommandBuffer_GFX;
+    gpu->toVulkan (cmdBufferHandle, &vkCommandBuffer_GFX);
+
+
+
+    VkPipelineStageFlags waitStages[] = { 0 }; //{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+    //dico a GPU di eseguire <cmdBufferHandle> e di segnalare <semaphore> quando il job e' terminato
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.waitSemaphoreCount = 0; //1;
+    submitInfo.pWaitSemaphores = NULL; //semaphoresToBeWaitedBeforeStarting;
+    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &vkCommandBuffer_GFX;
+
+    //semaforo che GPU segnalera' al termine dell'esecuzione di questo batch di lavoro
+    submitInfo.signalSemaphoreCount = 0; //1;
+    //submitInfo.pSignalSemaphores = &semaphore;
+
+    //submitto il batch a GPU e indico che deve segnalare <fence> quando ha finito 
+    VkResult result = vkQueueSubmit (gpu->REMOVE_getGfxQHandle(), 1, &submitInfo, fence);
+    if (VK_SUCCESS != result)
+        gos::logger::err ("vkQueueSubmit() => %s\n", string_VkResult(result));
+}
+
+//*****************************************************
+bool PresentGFXJob::hasFinished()
+{
+    if (eStato::jobInProgress == stato)
+    {
+        if (!gpu->fence_isSignaled(fence))
+            return false;
+
+        //se nel frattempo la swapchain e' stata ricreata, non posso presentare perche' l'immagine non e' + valida
+        if (swapChainAutoID == gpu->swapChain_getCurrentAutoID())
+            gpu->swapChain_present_ex (NULL, 0, swapChainImageIndex);
+
+        gpu->fence_reset(fence);
+        stato = eStato::idle;
+    }
+
+    return true;
+}
