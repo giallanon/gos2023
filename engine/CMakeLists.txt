@@ -67,7 +67,7 @@ if(BUILD_IS_DEBUG)
     add_compile_definitions(_DEBUG)
     if (MSVC)
     else()
-        add_compile_options(-Og)    #-Og should be the optimization level of choice for the standard edit-compile-debug cycle
+        #add_compile_options(-Og)    #-Og should be the optimization level of choice for the standard edit-compile-debug cycle
     endif()
 elseif(BUILD_IS_RELEASE)
     add_compile_definitions(_NDEBUG)
@@ -121,11 +121,11 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosAsset)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGPU)
 
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/simpleWorld)
+# add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
+# add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
+# add_subdirectory(${PROJECT_SOURCE_DIR}/src/simpleWorld)
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/glslParser)
+# add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/glslParser)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/assetBuilder)
 
 

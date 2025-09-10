@@ -18,6 +18,13 @@ Loader::Loader ()
 //************************************************
 Loader::~Loader()
 {
+    for (u32 i=0; i<NUM_MAX_ASSET_LOADER; i++)
+    {
+        if (NULL == loaderList[i])
+            continue;
+        GOSDELETE(localAllocator, loaderList[i]);
+    }
+
 	asset::context_close (ctx);
 }
 

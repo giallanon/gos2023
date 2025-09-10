@@ -1,0 +1,17 @@
+@vtx_shader : phong.vert.spv
+{
+  src: phong/phong.vert.shader
+  def: parola1     parola2 parola3
+}
+
+
+@vtx_shader : phong.vert.spv_v2
+{
+  src: phong/phong.vert.shader
+  def: parola2    parola1   parola3
+}
+
+@pxl_shader : phong.frag.spv
+{
+  src: phong/phong.frag.shader
+}

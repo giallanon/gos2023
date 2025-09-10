@@ -20,5 +20,11 @@ bool Loader_shader::load (Loader *assetLoader, const asset::Context &ctx, void *
 
 
 	gos::GPU *gpu = assetLoader->getGPU();
-	return gpu->vtxshader_createFromFile (s, "main", &out->handle_shader);
+	switch (this->getAssType())
+	{
+	default:
+		gos::logger::err ("asset::Loader_shader => invalid asset type\n"); return false;
+	case eAssetType::vtx_shader:	return gpu->vtxshader_createFromFile (s, "main", &out->handle_shader);
+	case eAssetType::pxl_shader:	return gpu->fragshader_createFromFile (s, "main", &out->handle_shader);
+	}
 }

@@ -1,0 +1,9 @@
+@vtx_shader : shader2.vert
+{
+    src: shader2.vert
+}
+
+@pxl_shader : shader2.frag
+{
+    src: shader2.frag
+}

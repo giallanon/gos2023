@@ -124,7 +124,7 @@ namespace gos
             u32                 nextTempNameIndex;
             u32                 nextTempSubsectionIndex;
             u32                 *depthByAssetType;
-            BuilderInterface    **builderList;
+            BuilderInterface    *builderList[NUM_MAX_ASSET_BUILDER];
         }; //class Builder
 
 

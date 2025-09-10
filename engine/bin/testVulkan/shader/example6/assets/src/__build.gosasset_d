@@ -1,0 +1,20 @@
+@vtx_shader: shader2.vert
+{
+	__decl : aaa.gosasset_d@1
+	__decl_uid : 1099653301794
+	__depth : 0
+	__assType : 1
+	src : shader2.vert
+}
+
+
+@pxl_shader: shader2.frag
+{
+	__decl : aaa.gosasset_d@6
+	__decl_uid : 1099653301794
+	__depth : 0
+	__assType : 2
+	src : shader2.frag
+}
+
+

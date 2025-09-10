@@ -53,10 +53,10 @@ void VulkanExample6::virtual_onCleanup()
 //************************************
 bool VulkanExample6::virtual_onInit ()
 {
-    //builder per aggiornare gli shader
+    //builder per ricmpilare gli shader se necessario
     {
         gos::asset::Builder builder;
-        builder.buildAll("shader/example6", true);
+        builder.rebuildAll("shader/example6", true);
     }
 
 

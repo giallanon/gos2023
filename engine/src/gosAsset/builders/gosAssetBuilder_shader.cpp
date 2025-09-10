@@ -152,7 +152,7 @@ bool Builder_shader::build (Context &ctx, u64 buildTimeUTC, const char *sourceFi
         if (!GPU::shader_compile (filenameSRC, shaderStage, params.def, filenameDST, false))
             return false;
 
-        strcat_s (filenameDST, sizeof(filenameDST), "_d");
+        strcat_s (filenameDST, sizeof(filenameDST), "d");
         if (!GPU::shader_compile (filenameSRC, shaderStage, params.def, filenameDST, true))
             return false;
 

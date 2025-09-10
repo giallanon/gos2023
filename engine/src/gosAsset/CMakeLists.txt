@@ -20,33 +20,6 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 
 
 #====================================================
-# additional include path
-include_directories(${PROJECT_SOURCE_DIR}/../gos)
-include_directories(${PROJECT_SOURCE_DIR}/../gosDB)
-include_directories(${PROJECT_SOURCE_DIR}/../gosGPU)
-
-#====================================================
-# additional include path
-# GLFW-3.38 library
-set(PATH_TO_GLFW "${PROJECT_SOURCE_DIR}/../external/glfw-3.3.8")
-include_directories(${PATH_TO_GLFW}/include)
-
-#===================================
-# vulkan library
-find_package(Vulkan REQUIRED)
-if (NOT Vulkan_FOUND)
-    message(FATAL_ERROR "Vulkan development package not found")
-else()
-    message("         vulkan version ${Vulkan_VERSION}")
-    message("         vulkan include path ${Vulkan_INCLUDE_DIRS}")
-endif()
-#target_include_directories(${BINARY_OUTPUT_FILENAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
-#target_link_libraries(${BINARY_OUTPUT_FILENAME} "${Vulkan_LIBRARIES}")
-include_directories(${Vulkan_INCLUDE_DIRS})
-
-
-
-#====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC
 loaders/gosAssetLoader_shader.h
@@ -87,4 +60,23 @@ message("         compiler flags: ${MAIN_CFLAGS}")
 # additional include path
 include_directories(${PROJECT_SOURCE_DIR}/../gos)
 include_directories(${PROJECT_SOURCE_DIR}/../gosDB)
+include_directories(${PROJECT_SOURCE_DIR}/../gosGPU)
 
+#====================================================
+# additional include path
+# GLFW-3.38 library
+set(PATH_TO_GLFW "${PROJECT_SOURCE_DIR}/../external/glfw-3.3.8")
+include_directories(${PATH_TO_GLFW}/include)
+
+#===================================
+# vulkan library
+find_package(Vulkan REQUIRED)
+if (NOT Vulkan_FOUND)
+    message(FATAL_ERROR "Vulkan development package not found")
+else()
+    message("         vulkan version ${Vulkan_VERSION}")
+    message("         vulkan include path ${Vulkan_INCLUDE_DIRS}")
+endif()
+#target_include_directories(${BINARY_OUTPUT_FILENAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
+#target_link_libraries(${BINARY_OUTPUT_FILENAME} "${Vulkan_LIBRARIES}")
+include_directories(${Vulkan_INCLUDE_DIRS})

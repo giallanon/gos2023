@@ -20,28 +20,27 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
-
-
-
-
-
 main.cpp
 )
 
 #====================================================
 # additional include path
 include_directories(${PROJECT_SOURCE_DIR}/../../gos)
-include_directories(${PROJECT_SOURCE_DIR}/../../gosDB)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosMath)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosGeom)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosShape)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosInput)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosImage)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosGPU)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosAsset)
-
-
+include_directories(${PROJECT_SOURCE_DIR}/../../gosDB.h)
 
 #====================================================
 # additional library to be linked
-set(LIBRARY_LIST "gosGPU;gosAsset;gosDB;gosImage;gosInput;gosShape;gosGeom;gosMath;gos")
+set(LIBRARY_LIST "gosAsset;gosGPU;gosDB;gosImage;gosInput;gosShape;gosGeom;gosMath;gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
-    message("         linkling libray [${libName}] => ${finalLibNameAndPath}")
+    message("         linkling additional libray [${libName}] => ${finalLibNameAndPath}")
     target_link_libraries(${BINARY_OUTPUT_FILENAME} ${finalLibNameAndPath})
 endforeach()
 
@@ -77,17 +76,4 @@ if(GOS_PLATFORM__NAME STREQUAL "linux")
     endif()
     target_link_libraries(${BINARY_OUTPUT_FILENAME} "${X11_LIBRARIES}")
 endif()
-
-#====================================================
-# info a video
-message(" ")
-message(" ")
-message("GIXINFO: prj name = ${PROJECT_NAME} v${PROJECT_VERSION}")
-message("         prj src dir = ${PROJECT_SOURCE_DIR}")
-message("         current config = ${CMAKE_BUILD_TYPE}")
-message("         ouput file = ${BINARY_OUTPUT_FILENAME}")
-get_target_property(MAIN_CFLAGS ${BINARY_OUTPUT_FILENAME} COMPILE_OPTIONS)
-message("         compiler flags: ${MAIN_CFLAGS}")
-
-
 

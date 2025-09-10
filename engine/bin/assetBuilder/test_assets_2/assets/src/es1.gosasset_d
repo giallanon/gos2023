@@ -1,0 +1,87 @@
+//ASSET-1
+//UID atteso: 0x00010000A1B9FF07
+//la versione più anonima possibile di un asset, senza nome e senza dipendenza da altri asset
+@vtx_shader
+{
+  src: es1.vert
+  define: A1
+}
+
+//ASSET-2
+//UID atteso: 0x00010000A1B9FF07
+//uguala a ASSET-1 ma con un runtimeName
+@vtx_shader : vtxshader_es1
+{
+  src: es1.vert
+}
+
+//ASSET-3
+//UID atteso: 0x00010000A1B9FF07
+//duplicato esatto dell'ASSET-1
+//il builder non dovrebbe generare un errore, ma non dovrebbe nemmeno ricompilare visto
+//che ha già fatto ASSET-1
+@vtx_shader
+{
+  src: es1.vert
+}
+
+
+//ASSET-4
+//UID atteso: 0x00010000A1B9FF07
+//duplicato esatto dell'ASSET-2, con tanto di stesso runtimeName,
+//Il builder non dovrebbe generare un errore dato che dovrebbe accorgersi che è semplicemente un dupe
+@vtx_shader : vtxshader_es1
+{
+  src: es1.vert
+}
+
+//ASSET-5
+//UID atteso: 0x00010000A1B9FF07
+//duplicato esatto dell'ASSET-1/2, ma con un runtimeName mai utilizzato
+//il builder non dovrebbe generare un errore, ma non dovrebbe nemmeno ricompilare visto
+//che ha già fatto ASSET-1.
+//Dovrebbe inoltre generare un nuovo link tra questo runtimeName e ASSET-1
+@vtx_shader : vtxshader_es1_link2
+{
+  src: es1.vert
+}
+
+
+//ASSET-6
+//UID atteso: 0x00010000AF1C8CD3
+@vtx_shader
+{
+  src: es1.vert
+  define: A6
+}
+
+//ASSET-7
+//UID atteso: 0x00010000AF1C8CD3
+@vtx_shader : vtxshader_A5
+{
+  src: es1.vert
+  define: A6
+}
+
+
+
+//ASSET-8
+//UID atteso: 0x00010000A1B9FF07
+//duplicato esatto dell'ASSET-2, con tanto di stesso runtimeName,
+//Il builder DOVREBBE generare dato che lo stesso runtimeName lo sto usando per 2 diversi asset
+/*
+@vtx_shader : vtxshader_es1
+{
+  src: es1.vert
+  define: A5
+}
+*/
+
+//ASSET-9
+//UID atteso: 0x00010000AF1C8CD3
+@pxl_shader : pxlshader_es1_A9
+{
+  src: es1.frag
+  define: A9
+}
+

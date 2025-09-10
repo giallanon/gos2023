@@ -32,7 +32,6 @@ Builder::Builder()
     //suppongo un massimo di NUM_MAX_ASSET_BUILDER tipo di asset diversi
     u32 size;
     size = sizeof(BuilderInterface*) * NUM_MAX_ASSET_BUILDER;
-    builderList = GOSALLOCT(BuilderInterface**, localAllocator, size);
     memset (builderList, 0, size);
 
     size = sizeof(u32) * NUM_MAX_ASSET_BUILDER;
@@ -56,8 +55,6 @@ Builder::~Builder()
         GOSDELETE(localAllocator, builderList[i]);
     }
 
-    GOSFREE(localAllocator, builderList);
-    builderList = NULL;
     
     GOSFREE(localAllocator, depthByAssetType);
     depthByAssetType = NULL;
@@ -356,6 +353,7 @@ bool Builder::rebuildAll (const char *baseFolder, bool bVerbose, bool doCreateAs
         {
             asset::asset_get_binfolder_name (baseFolder, s, sizeof(s));
             fs::folderDeleteAllFileWithJolly (s, "*.gosasset");
+            fs::folderDeleteAllFileWithJolly (s, "*.gosassetd");
         }
 
         //builda
