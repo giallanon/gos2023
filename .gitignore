@@ -50,3 +50,4 @@ engine/bin/glslParser/test_assets_2/assets.sqlite3
 *.gosasset_d
 
 engine/bin/assetBuilder/test_assets_2/assets/src/__dependencies.txt
+engine/bin/testVulkan/shader/example6/altro/sponza/sponza.glb

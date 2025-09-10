@@ -20,10 +20,10 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
-builders/builder_pipedef.cpp
-builders/builder_pipedef.h
-builders/builder_shader.cpp
-builders/builder_shader.h
+
+
+
+
 
 main.cpp
 )

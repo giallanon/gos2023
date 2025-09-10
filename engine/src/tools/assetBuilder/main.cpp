@@ -1,6 +1,4 @@
 #include "gosAssetBuilder.h"
-#include "builders/builder_pipedef.h"
-#include "builders/builder_shader.h"
 
 using namespace gos;
 
@@ -11,10 +9,6 @@ void test_assetBuilder2()
     const char BASE_FOLDER[] = { "test_assets_2" };
 
     asset::Builder builder;
-    builder.addBuilder<gos::asset::Builder_vtxShader>();
-    builder.addBuilder<gos::asset::Builder_pxlShader>();
-    builder.addBuilder<gos::asset::Builder_pipeDef>();
-
 
     if (!builder.buildAll(BASE_FOLDER, true))
         return;

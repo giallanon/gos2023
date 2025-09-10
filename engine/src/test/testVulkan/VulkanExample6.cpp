@@ -1,6 +1,7 @@
 #include "VulkanExample6.h"
 #include "../gosShape/gosShapeImport.h"
 #include "../gos/gosFIFOFixedSize.h"
+#include "gosAssetLoader.h"
 
 using namespace gos;
 
@@ -52,6 +53,29 @@ void VulkanExample6::virtual_onCleanup()
 //************************************
 bool VulkanExample6::virtual_onInit ()
 {
+    //builder per aggiornare gli shader
+    {
+        gos::asset::Builder builder;
+        builder.buildAll("shader/example6", true);
+    }
+
+
+    //load shader
+    {
+        gos::asset::Loader loader;
+        loader.setup ("shader/example6", gpu);
+
+        asset::Asset_shader shader;
+        if (!loader.load("shader2.vert", &shader))
+            return false;
+        vtxShaderHandle = shader.handle_shader;
+
+        if (!loader.load("shader2.frag", &shader))
+            return false;
+        fragShaderHandle = shader.handle_shader;
+    }
+
+
     //importazione modello
     {
         gos::VtxLayout vtxLayot;
@@ -72,7 +96,7 @@ bool VulkanExample6::virtual_onInit ()
         //if (!gos::shape::importFrom_glTF ("shader/example6/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("shader/example6/esempio2.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         
-        if (!gos::shape::importFrom_glTF ("shader/example6/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+        if (!gos::shape::importFrom_glTF ("shader/example6/altro/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Sponza/glTF/Sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/DamagedHelmet/glTF/DamagedHelmet.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
         //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Duck/glTF-Binary/Duck.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
@@ -111,18 +135,7 @@ bool VulkanExample6::virtual_onInit ()
         }
     }
 
-    //carico gli shader
-    fs::addAlias ("@shader", "shader/example6", eAliasPathMode::relativeToAppFolder);
-    if (!gpu->vtxshader_createFromFile ("@shader/shader2.vert.spv", "main", &vtxShaderHandle))
-    {
-        gos::logger::err ("VulkanApp::init() => can't create vert shader\n");
-        return false;
-    }
-    if (!gpu->fragshader_createFromFile ("@shader/shader2.frag.spv", "main", &fragShaderHandle))
-    {
-        gos::logger::err ("VulkanApp::init() => can't create frag shader\n");
-        return false;
-    }    
+
 
 
     //creo un descriptor pool

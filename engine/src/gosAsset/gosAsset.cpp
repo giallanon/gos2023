@@ -622,7 +622,7 @@ bool asset::res_delete (Context &ctx, const asset::UID &uid, asset::HashedUIDLis
 
 
 //*******************************************************
-void asset::asset_manufacture_fullFilename (Context &ctx, const asset::UID &uid, char *out, u32 sizeof_out)
+void asset::asset_manufacture_fullFilename (const Context &ctx, const asset::UID &uid, char *out, u32 sizeof_out)
 {
     sprintf_s (out, sizeof_out, "%s/%016" PRIX64 ".gosasset", ctx.folder_assets_bin, uid._uid);
 }

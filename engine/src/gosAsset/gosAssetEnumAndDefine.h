@@ -2,7 +2,7 @@
 #define _gosAssetEnumAndDefine_h_
 #include "gosEnumAndDefine.h"
 #include "gosHashMap.h"
-#include "gosDB.h"
+#include "../gosDB/gosDB.h"
 
 namespace gos
 {
@@ -57,7 +57,7 @@ namespace gos
 
             bool    isAnAsset() const                                       { return ( priv_extractAssetType() != 0); }
             bool    isAnAssetOfType(eAssetType s) const                     { return (static_cast<eAssetType>(priv_extractAssetType()) == s); }
-
+            eAssetType getAssetType() const                                 { return static_cast<eAssetType>(priv_extractAssetType()); }
 
             int     compare (const UID &b) const                            { if (_uid == b._uid) return 0; if (_uid > b._uid) return 1; return -1; }
             bool    operator== (const asset::UID &b) const                  { return _uid == b._uid; }

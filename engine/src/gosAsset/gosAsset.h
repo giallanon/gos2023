@@ -55,7 +55,7 @@ namespace gos
         void        asset_get_srcfolder_name (const char *baseFolder, char *out, u32 sizeof_out);
 
                     //ritorna il filename completo di path della risorsa di uid == uid
-        void        asset_manufacture_fullFilename (Context &ctx, const asset::UID &uid, char *out, u32 sizeof_out);
+        void        asset_manufacture_fullFilename (const Context &ctx, const asset::UID &uid, char *out, u32 sizeof_out);
 
         bool        asset_createUID (eAssetType assType, const void *buffer, u32 sizeof_buffer, asset::UID *out);
         bool        asset_insert (Context &ctx, const asset::UID &uid, eAssetType assType, u64 lastTimeBuilt, const char *sourceFileInfo);

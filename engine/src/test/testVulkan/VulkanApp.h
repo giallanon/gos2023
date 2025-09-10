@@ -1,6 +1,7 @@
 #ifndef _VulkanApp_h_
 #define _VulkanApp_h_
 #include "gosGPU.h"
+#include "gosAssetBuilder.h"
 #include "../gosGeom/gosGeomCamera3.h"
 #include "../gosShape/gosShape.h"
 #include "../gosGPU/utils/gosFreeMovement.h"

@@ -1,7 +1,8 @@
 #include "gosAssetBuilder.h"
 #include "gos.h"
 #include "string/gosStringIncludeDetector.h"
-
+#include "builders/gosAssetBuilder_pipedef.h"
+#include "builders/gosAssetBuilder_shader.h"
 
 using namespace gos;
 using namespace gos::asset;
@@ -37,6 +38,12 @@ Builder::Builder()
     size = sizeof(u32) * NUM_MAX_ASSET_BUILDER;
     depthByAssetType = GOSALLOCT(u32*, localAllocator, size);
     memset (depthByAssetType, 0xFF, sizeof(u32) * NUM_MAX_ASSET_BUILDER);
+
+    //default builder
+    addBuilder<gos::asset::Builder_vtxShader>();
+    addBuilder<gos::asset::Builder_pxlShader>();
+    addBuilder<gos::asset::Builder_pipeDef>();
+
 }
 
 //***********************************
