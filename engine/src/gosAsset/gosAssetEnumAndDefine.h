@@ -114,6 +114,15 @@ namespace gos
             eBuildResult    result;
         };        
 
+
+        /**
+        * @brief    asset::Handle
+        * 
+        */
+        struct Handle
+        {
+            u32 _handle;
+        };
     } //namespace asset
 
 } //namespace gos

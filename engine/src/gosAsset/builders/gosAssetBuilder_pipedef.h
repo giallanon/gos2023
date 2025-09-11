@@ -1,6 +1,35 @@
 #ifndef _gosAssetBuilder_pipedef_h_
 #define _gosAssetBuilder_pipedef_h_
 #include "../gosAssetBuilderInterface.h"
+#include "../gosGPU/gosGPUEnumAndDefine.h"
+
+/* Sintassi:
+
+@pipeline_def: pipeline1                            => il runtimeName e' opzionale come sempre
+{
+	//max 16 render target (GOSGPU__NUM_MAX_ATTACHMENT=16)
+	(optional)	rt0: <ImgFormat = U8_RGBA | ... >
+	...
+	(optional)	rt15: <ImgFormat = U8_RGBA | ... >
+
+
+	//optional,	DEFAULT => zb: _DEPTH_BEST, 1, LESS
+	(optional)	zb: <imgFormat = BEST | ...>, <zwrite = 0|1>, <zcmpFn = LESS|...>
+					oppure
+				zb: none
+				
+				
+	(optional)	cullMode: CCW					=> <mode>							=> default: eCullMode::CCW
+	(optional)	drawPrimitive: trisList			=> <primitive>						=> default: trisList
+
+	(optional)	@vtx_shader
+	(optional)	@pxl_shader
+	
+	//se esiste <vtx_shader>, da questo si ricava il vtxFormat
+	//da <vtx_shader> e <pxl_shader> si ricavano i descrittori e le push constant
+}
+
+*/
 
 namespace gos
 {
@@ -15,10 +44,20 @@ namespace gos
         public:
             struct Params
             {
-                char        param1[64];
-                char        param2[64];
-                asset::UID  uid_vtxshader;
-                asset::UID  uid_pxlshader;
+                u32             magic;    //uso interno
+                eCullMode       cullMode;
+                eDrawPrimitive  drawPrimitive;
+
+                u8              zbuffer_enabled;
+                eImageFormat    zbuffer_format;
+                bool            zbuffer_write;
+                eZFunc          zbuffer_cmpFn;
+
+                u32             numRT;
+                eImageFormat    renderTargetFormat[GOSGPU__NUM_MAX_ATTACHMENT];
+
+                asset::UID      uid_vtxshader;
+                asset::UID      uid_pxlshader;
             };
 
         public:
@@ -40,7 +79,7 @@ namespace gos
 
 
         private:
-            bool    priv_do_create_assetFile (Context &ctx, const Params &params) const;
+            bool    priv_do_create_assetFile (Context &ctx, const Params &params, const char *filenameDST) const;
             
         }; //class Builder_pipeDef
 

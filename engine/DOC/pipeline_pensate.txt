@@ -1,19 +1,25 @@
 @pipeline_def
 {
 	//max GOSGPU__NUM_MAX_ATTACHMENT=16 rt
-	(optional)	rt: <ImgFormat = sameAsSwapchain | U8_RGBA_sRGB | ... >
+	(optional)	rt: <ImgFormat = U8_RGBA | ... >
 	...
-	(optional)	rt: <ImgFormat = sameAsSwapchain | U8_RGBA_sRGB | ... >
+	(optional)	rt: <ImgFormat = U8_RGBA | ... >
 
-	//max 1 zb
+
+	//optional,	DEFAULT => zb: BEST, 1, LESS
 	(optional)	zb: <imgFormat = BEST | ...>, <zwrite = 0|1>, <zcmpFn = LESS|...>
-
+					oppure
+				zb: none
+				
+				
 	(optional)	cullMode: CCW					=> <mode>							=> default: eCullMode::CCW
 	(optional)	drawPrimitive: trisList			=> <primitive>						=> default: trisList
 
 	(optional)	@vtx_shader
 	(optional)	@pxl_shader
-	(optional)	@comp_shader
+	
+	//se esiste <vtx_shader>, da questo si ricava il vtxFormat
+	//da <vtx_shader> e <pxl_shader> si ricavano i descrittori e le push constant
 }
 
 

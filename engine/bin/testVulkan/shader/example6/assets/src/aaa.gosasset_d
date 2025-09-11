@@ -7,3 +7,22 @@
 {
     src: shader2.frag
 }
+
+
+@pipeline_def: pipedef1
+{
+	rt0: U8_RGBA
+	rt1: U8_RGBA
+	
+	zb: _DEPTH_BEST, 1, LESS
+	
+	cullMode: CCW
+	drawPrimitive: trisList
+
+	@vtx_shader
+	{
+		src: shader2.vert
+	}
+
+	@pxl_shader: shader2.frag
+}

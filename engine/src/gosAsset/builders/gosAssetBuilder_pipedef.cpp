@@ -1,7 +1,11 @@
 #include "gos.h"
+#include "../gos/gosString.h"
 #include "../gosAssetBuilder.h"
+#include "../gos/gosMagicUID.h"
 #include "gosAssetBuilder_pipedef.h"
 #include "gosAssetBuilder_shader.h"
+#include "../shader_reflect/SPVReflect.h"
+
 
 
 using namespace gos;
@@ -29,22 +33,101 @@ bool Builder_pipeDef::extractParams (const IniFileSection *sec, Params *out_para
     assert (NULL != sec);
     assert (NULL != out_params);
     
+    //setto i default
     memset (out_params, 0, sizeof(Params));
+    out_params->magic = GOS_MAGIC__ASSTE_PIPELINE_DEF;
+    out_params->cullMode = eCullMode::CCW;
+    out_params->drawPrimitive = eDrawPrimitive::trisList;
 
-    //param:param1          e' mandatorio 
-    if (!sec->get("param1", out_params->param1, sizeof(out_params->param1)))
+    out_params->zbuffer_enabled = true;
+    out_params->zbuffer_format = eImageFormat::_DEPTH_BEST;
+    out_params->zbuffer_write = true;
+    out_params->zbuffer_cmpFn = eZFunc::LESS;
+
+    //parse dell'ini
+    string::utf8::StringListParser stringParser;
+
+    //param: cullMode
+    char s[1024];
+    char s2[256];
+    if (sec->get("cullMode", s, sizeof(s)))
     {
-        logger::err ("asset::Builder_pipeDef::extractParams => can't find param <param1>\n");
-        return false;
+        if (!gos::utils::stringToEnum (s, &out_params->cullMode))
+        {
+            logger::err ("asset::Builder_pipeDef::extractParams => invalid option '%s' for <cullMode>\n", s);
+            return false;
+        }
     }
 
-    //param:param2          e' mandatorio 
-    if (!sec->get("param2", out_params->param2, sizeof(out_params->param2)))
+    //param: drawPrimitive
+    if (sec->get("drawPrimitive", s, sizeof(s)))
     {
-        logger::err ("asset::Builder_pipeDef::extractParams => can't find param <param2>\n");
-        return false;
+        if (!gos::utils::stringToEnum (s, &out_params->drawPrimitive))
+        {
+            logger::err ("asset::Builder_pipeDef::extractParams => invalid option '%s' for <drawPrimitive>\n", s);
+            return false;
+        }
     }
 
+    //param: zb
+    if (sec->get("zb", s, sizeof(s)))
+    {
+        stringParser.toStart (s, ",");
+        if (!stringParser.next(s2, sizeof(s2)))
+        {
+            logger::err ("asset::Builder_pipeDef::extractParams => invalid option '%s' for <zb>\n", s);
+            return false;
+        }
+        if (0 == strcasecmp(s2, "none"))
+        {
+            out_params->zbuffer_enabled = false;
+        }
+        else
+        {
+            //3 parametri: <imgFormat = BEST | ...>, <zwrite = 0|1>, <zcmpFn = LESS|...>
+            if (!utils::stringToEnum(s2, &out_params->zbuffer_format))
+            {
+                logger::err ("asset::Builder_pipeDef::extractParams => invalid option(1) '%s' for <zb>\n", s);
+                return false;
+            }
+
+            //zwrite
+            if (!stringParser.next(s2, sizeof(s2)))
+            {
+                logger::err ("asset::Builder_pipeDef::extractParams => invalid option(2) '%s' for <zb>\n", s);
+                return false;
+            }
+            if (string::utf8::toI32(s2) == 0)
+                out_params->zbuffer_write = false;
+
+            //cmpFn
+            if (!stringParser.next(s2, sizeof(s2)))
+            {
+                logger::err ("asset::Builder_pipeDef::extractParams => invalid option(3) '%s' for <zb>\n", s);
+                return false;
+            }
+            if (!utils::stringToEnum(s2, &out_params->zbuffer_cmpFn))
+            {
+                logger::err ("asset::Builder_pipeDef::extractParams => invalid option(3) '%s' for <zb>\n", s);
+                return false;
+            }
+        }
+    }
+
+    //render target
+    for (u32 i = 0; i < GOSGPU__NUM_MAX_ATTACHMENT; i++)
+    {
+        sprintf_s (s, sizeof(s), "rt%d", i);
+        if (!sec->get (s, s2, sizeof(s2)))
+            break;
+
+        if (!utils::stringToEnum (s2, &out_params->renderTargetFormat[out_params->numRT]))
+        {
+            logger::err ("asset::Builder_pipeDef::extractParams => invalid option '%s' for <rt[%d]>\n", s, i);
+            return false;
+        }
+        out_params->numRT++;
+    }
     return true;
 }
 
@@ -122,21 +205,161 @@ bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const char *sourceF
     
     //a questo punto devo davvero creare il file dell'asset
     if (doCreateAnAssetFile)
-        return priv_do_create_assetFile (ctx, params);
+    {
+        char filenameDST[1024];
+        asset::asset_manufacture_fullFilename (ctx, out->uid, filenameDST, sizeof(filenameDST));
+        return priv_do_create_assetFile (ctx, params, filenameDST);
+    }
 
     return true;
 }
 
 
 //************************************
-bool Builder_pipeDef::priv_do_create_assetFile (Context &ctx, const Params &params) const
+bool Builder_pipeDef::priv_do_create_assetFile (Context &ctx, const Params &params, const char *filenameDST) const
 {
+    SPVReflect reflect;
+    reflect.beginParseFromMemory();
+
     //il vtx/pxl shader esistono gia' e sono gia' stati compilati.
     //A me serva la versione con le debug info
     char s[1024];
-    asset::asset_manufacture_fullFilename (ctx, params.uid_vtxshader, s, sizeof(s));
-    strcat_s (s, sizeof(s), "_d");
+    if (params.uid_vtxshader.isValid())
+    {
+        asset::asset_manufacture_fullFilename (ctx, params.uid_vtxshader, s, sizeof(s));
+        strcat_s (s, sizeof(s), "d");
+
+        u32 fsize = 0;
+        u8 *buffer = fs::fileLoadInMemory (gos::getScrapAllocator(), s, &fsize);
+        if (NULL == buffer)
+        {
+            logger::err ("asset::Builder_pipeDef::priv_do_create_assetFile => can't read file %s\n", s);
+            return false;
+        }
+        if (!reflect.VS_parseFromMemory (buffer, fsize))
+        {
+            logger::err ("asset::Builder_pipeDef::priv_do_create_assetFile => error parsing (reflect) VS file %s\n", s);
+            return false;
+        }
+        GOSFREE_SCRAP(buffer);
+    }
+
+    if (params.uid_pxlshader.isValid())
+    {
+        asset::asset_manufacture_fullFilename (ctx, params.uid_pxlshader, s, sizeof(s));
+        strcat_s (s, sizeof(s), "d");
+
+        u32 fsize = 0;
+        u8 *buffer = fs::fileLoadInMemory (gos::getScrapAllocator(), s, &fsize);
+        if (NULL == buffer)
+        {
+            logger::err ("asset::Builder_pipeDef::priv_do_create_assetFile => can't read file %s\n", s);
+            return false;
+        }
+        if (!reflect.PS_parseFromMemory (buffer, fsize))
+        {
+            logger::err ("asset::Builder_pipeDef::priv_do_create_assetFile => error parsing (reflect) PS file %s\n", s);
+            return false;
+        }
+        GOSFREE_SCRAP(buffer);
+    }
+
+    if (!reflect.endParseFromMemory())
+    {
+        logger::err ("asset::Builder_pipeDef::priv_do_create_assetFile => error parsing (reflect), 'reflect.endParseFromMemory()'\n");
+        return false;
+    }
+
+    //ora che ho le info recuperati dagli shader, posso creare tutto quel che mi serve
+    u8 stackBuffer[2048];
+    {
+        gos::BufferW_linear buffer;
+        buffer.setupWithBase (stackBuffer, sizeof(stackBuffer), gos::getScrapAllocator(), eEndianess::big);
+
+        //magic
+        buffer.writeU32 (GOS_MAGIC__ASSTE_PIPELINE_DEF);
+
+        //uid vtx shader
+        buffer.writeU64 (params.uid_vtxshader._uid);
+
+        //uid pxl shader
+        buffer.writeU64 (params.uid_pxlshader._uid);
+
+        //cull/draw
+        buffer.writeU8 (static_cast<u8>(params.cullMode));
+        buffer.writeU8 (static_cast<u8>(params.drawPrimitive));
+
+        //zbuffer
+        buffer.writeU8 (static_cast<u8>(params.zbuffer_enabled));
+        buffer.writeU8 (static_cast<u8>(params.zbuffer_format));
+        buffer.writeU8 (static_cast<u8>(params.zbuffer_write));
+        buffer.writeU8 (static_cast<u8>(params.zbuffer_cmpFn)); 
+
+        //render target
+        buffer.writeU32 (params.numRT);
+        for (u32 i=0; i<params.numRT; i++)
+            buffer.writeU8 (static_cast<u8>(params.renderTargetFormat[i]));
+
+        //vtx declaration
+        buffer.writeU32 (reflect.vtxdecl_getNumElem());
+        for (u32 i = 0; i < reflect.vtxdecl_getNumElem(); i++)
+        {
+            u8 binding;
+            u32 offset;
+            eDataFormat fmt;
+            reflect.vtxdecl_getElemByIndex(i, &binding, &offset, &fmt);
+            buffer.writeU8 (binding);
+            buffer.writeU32 (offset);
+            buffer.writeU8 (static_cast<u8>(fmt)); 
+        }
 
 
-    return true;
+        //push constant
+        const u8 *pushconst = reflect.pushconst_getDataBlobDef();
+        u32 size = 0;
+        if (NULL != pushconst)
+            size = gos::datablob::blobDef_getSize(pushconst);
+        buffer.writeU32 (size);
+        if (size)
+            buffer.write (pushconst, size);
+
+
+        //descriptor set
+        const u32 numSet = reflect.descrset_getNumSet();
+        buffer.writeU32 (numSet);
+        for (u32 i = 0; i < numSet; i++)
+        {
+            const u32 numElem = reflect.descrset_getNumElemPerSet (i);
+            buffer.writeU32 (numElem);
+            for (u32 i2 = 0; i2 < numElem; i2++)
+            {
+                u8 binding;
+                u32 count;
+                eGPUDescriptrorType type;
+                u32 usage;
+                reflect.descrset_getElemByIndex (i, i2, &binding, &type, &count, &usage);
+
+                buffer.writeU8 (static_cast<u8>(binding)); 
+                buffer.writeU8 (static_cast<u8>(type)); 
+                buffer.writeU32 (count);
+                buffer.writeU32 (usage);
+            }
+        }
+
+        //salvo il report di reflect (per debug)
+        {
+            gos::UTF8String out;
+            out.prealloc (1024);
+            reflect.printInfo (out);
+
+            char s[1024];
+            sprintf_s (s, sizeof(s), "%s.reflect", filenameDST);
+            fs::fileSaveBuffer (s, out.getBuffer(), out.lengthInByte());
+        }
+
+        //salvo il file asset
+        return fs::fileSaveBuffer (filenameDST, stackBuffer, buffer.tell());
+
+
+    }
 }

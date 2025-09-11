@@ -28,7 +28,12 @@ static constexpr u32 GOS_MAGIC__SHAPE               = gos::magic::_makeID (0xA70
 static constexpr u32 GOS_MAGIC__VTX_LAYOUT          = gos::magic::_makeID (0xA70001, 0x01);
 
 //i magic definiti nel modulo gos::GPU con 0xA80000
-static constexpr u32 GOS_MAGIC__GPU_FRAME_BUFFER_DEF    = gos::magic::_makeID (0xA80000, 0x01);
+//static constexpr u32 GOS_MAGIC__GPU_FRAME_BUFFER_DEF    = gos::magic::_makeID (0xA80000, 0x01);
+
+
+//i magic definiti nel modulo gos::Asset con 0xA90000
+static constexpr u32 GOS_MAGIC__ASSTE_PIPELINE_DEF      = gos::magic::_makeID (0xA90000, 0x01);
+
 
 
 #endif //_gosMagicUID_h_

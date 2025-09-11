@@ -8,7 +8,7 @@ namespace gos
 	 * 	HandleT
 	 * 
 	 *	E' un 32 bit diviso in 5 sezioni (detti canali):
-	 *		A index 					=> identifica il numero massimo di handle allicabili
+	 *		A index 					=> identifica il numero massimo di handle allocabili
 	 *		B chunk						=> vedi HandleList
 	 *		C counter					=> quando un handle viene riciclato, il suo counter viene incrementato di 1 per generare un handle differente dal precedente
 	 *		D signature1 + signature2 	=> servono da PAD per raggiungere un totale di 32bit

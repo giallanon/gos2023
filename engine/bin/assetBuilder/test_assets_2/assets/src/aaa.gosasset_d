@@ -1,0 +1,4 @@
+@vtx_shader
+{
+	src: es1.vert
+}

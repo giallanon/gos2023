@@ -33,10 +33,13 @@ public:
 
     bool    save (const char *fname) const;
     bool    save (gos::File &f) const;
-
     u8*     serialize (gos::Allocator *allocator, u32 *out_sizeAllocated) const;
 
     void    printInfo() const;
+
+
+    u32     vtxdecl_getNumElem() const { return vtxDeclList.getNElem(); }
+    void    vtxdecl_getElemByIndex (u32 index, u8 *out_bindingLocation, u32 *out_offset, eDataFormat *out_fmt) const            { assert (index < vtxdecl_getNumElem()); *out_bindingLocation = vtxDeclList(index).bindingLocation; *out_offset = vtxDeclList(index).offsetInBuffer; *out_fmt = vtxDeclList(index).fmt; }
 
 protected:
     static constexpr u8     USAGE__USED_IN_VTX_SHADER       = 0;

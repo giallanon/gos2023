@@ -63,6 +63,7 @@ const char*	utils::enumToString (const eImageFormat fmt)
 		HELPER(DEPTH_F32_STENCIL_U8)
 		HELPER(DEPTH_U16_STENCIL_U8)
 		HELPER(DEPTH_U24_STENCIL_U8)
+        HELPER(_DEPTH_BEST)
     }
 
 #undef HELPER
@@ -114,20 +115,20 @@ bool utils::stringToEnum (const char *str, eImageFormat *out)
 		HELPER(F32_RGB)
 		HELPER(F32_R)
 	}
-	else if (0 == strncasecmp(str, "DEPTH_", 6))
+	else if (0 == strncasecmp(str, "DDS_", 3))
+	{
+		HELPER(DDS_BC3)
+		HELPER(DDS_BC4)
+		HELPER(DDS_BC5)
+	}
+	else
 	{
     	HELPER(DEPTH_F32)
 		HELPER(DEPTH_U16)
     	HELPER(DEPTH_F32_STENCIL_U8)
     	HELPER(DEPTH_U16_STENCIL_U8)
     	HELPER(DEPTH_U24_STENCIL_U8)
-
-	}
-	else if (0 == strncasecmp(str, "DDS_", 3))
-	{
-		HELPER(DDS_BC3)
-		HELPER(DDS_BC4)
-		HELPER(DDS_BC5)
+        HELPER(_DEPTH_BEST)
 	}
 	
 #undef HELPER	

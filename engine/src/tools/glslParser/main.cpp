@@ -134,9 +134,9 @@ int main()
     {
         fs::addAlias ("@ex", "example", eAliasPathMode::relativeToAppFolder);
 
-        test_reflect_1();   //phong
+        //test_reflect_1();   //phong
         //test_reflect_2(); //shader_noVtxDecl
-        //test_reflect_3(); //lineRenderer
+        test_reflect_3(); //lineRenderer
  
         //test_pipelineParser_1 ();
     }

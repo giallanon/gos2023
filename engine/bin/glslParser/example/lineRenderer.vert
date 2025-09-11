@@ -10,10 +10,15 @@ struct sPerInstanceData
 
 layout(std140, set = 2, binding = 0) readonly buffer SSBO_2_0
 {
+    sPerInstanceData data[];
+} perInstanceData;
+
+/*layout(std140, set = 2, binding = 0) readonly buffer SSBO_2_0
+{
     vec2 pippo[3];
     sPerInstanceData data[2];
-
 } perInstanceData;
+*/
 
 //obj data
 layout(push_constant) uniform PushConstantData

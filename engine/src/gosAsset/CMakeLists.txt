@@ -22,14 +22,21 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC
-loaders/gosAssetLoader_shader.h
-loaders/gosAssetLoader_shader.cpp
-loaders/gosAssetLoaderInterface.h
-
 builders/gosAssetBuilder_pipedef.cpp
 builders/gosAssetBuilder_pipedef.h
 builders/gosAssetBuilder_shader.cpp
 builders/gosAssetBuilder_shader.h
+
+loaders/gosAssetLoader_shader.h
+loaders/gosAssetLoader_shader.cpp
+loaders/gosAssetLoaderInterface.h
+
+shader_reflect/spirv_reflect.c
+shader_reflect/spirv_reflect.h
+shader_reflect/spirv.h
+shader_reflect/SPVReflect.cpp
+shader_reflect/SPVReflect.h
+
 
 gosAsset.cpp
 gosAsset.h
@@ -39,9 +46,10 @@ gosAssetBuilder.h
 gosAssetBuilderInterface.cpp
 gosAssetBuilderInterface.h
 gosAssetEnumAndDefine.h
+gosAssetHub.h
 gosAssetLoader.cpp
 gosAssetLoader.h
- )
+  "gosAssetHub.h")
 
 
 #====================================================

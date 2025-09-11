@@ -9,7 +9,6 @@ using namespace gos;
 //************************************
 VulkanExample6::VulkanExample6()
 {
-    bUse_pipe_v2 = true;
     shapeList.setup (gos::getSysHeapAllocator(), 64);
     nextTimeSwapRT_msec = 0;
 }
@@ -56,7 +55,7 @@ bool VulkanExample6::virtual_onInit ()
     //builder per ricmpilare gli shader se necessario
     {
         gos::asset::Builder builder;
-        builder.rebuildAll("shader/example6", true);
+        builder.buildAll("shader/example6", true);
     }
 
 
@@ -158,44 +157,8 @@ bool VulkanExample6::virtual_onInit ()
 
 
     //creazione pipeline
-    if (bUse_pipe_v2)
-    {
-        if (!priv_setupPipeline_v2(vtxShaderHandle, fragShaderHandle))
-            return false;
-    }
-    else
-    {
-        //Vtx declaration
-        GPUVtxDeclHandle vtxDeclHandle;
-        gpu->vtxDecl_createNew (&vtxDeclHandle)
-            .addStream(eVtxStreamInputRate::perVertex)
-            .addLayout (0, offsetof(Vertex, pos), eDataFormat::_3f32)
-            .addLayout (1, offsetof(Vertex, tutv0), eDataFormat::_2f32)
-            .addLayout (2, offsetof(Vertex, normal), eDataFormat::_3f32)
-            .end();
-        if (vtxDeclHandle.isInvalid())
-        {
-            gos::logger::err ("VulkanApp::init() => can't create vtxDeclHandle\n");
-            return false;
-        }        
-        
-        if (!priv_setupPipeline_v1(vtxDeclHandle))  
-            return false;
-
-        //non mi serve piu'
-        gpu->deleteResource (vtxDeclHandle);
-
-        //frame buffers
-        gpu->frameBuffer_createNew (renderPassHandle, &frameBufferHandle)
-            .bindRenderTarget (gpu->renderTarget_getDefault())
-            .bindDepthStencil (gpu->depthStencil_getDefault())
-            .end();
-        if (frameBufferHandle.isInvalid())
-        {
-            gos::logger::err ("VulkanApp::init() => can't create frameBufferHandle\n");
-            return false;
-        }    
-    }
+    if (!priv_setupPipeline_v2(vtxShaderHandle, fragShaderHandle))
+        return false;
     
 
     //alloco una istanza del descriptorSet
@@ -208,59 +171,6 @@ bool VulkanExample6::virtual_onInit ()
 
     return true;
 }    
-
-//************************************
-bool VulkanExample6::priv_setupPipeline_v1(GPUVtxDeclHandle &vtxDeclHandle)
-{
-    //creo il render pass
-    gpu->renderPass_createNew (&renderPassHandle)
-        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
-        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eImageLayout::undefined, eImageLayout::depth_shader_readonly, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)
-        .addSubpass_GFX()
-            .writeToRenderTarget(0)
-            .writeToDepthStencil()
-        .end()
-    .end();
-    if (renderPassHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create renderTaskLayout\n");
-        return false;
-    }
-
-
-    //Creo il descriptorSet layout  con un solo UNIFORM BUFFER per il VTX SHADER
-    gpu->descrSetLayout_create(&descrSetLayoutHandle)
-        .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT)
-        .end();
-    if (descrSetLayoutHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create descriptor set\n");
-        return false;
-    }
-
-    //creo la pipeline
-    gpu->pipeline_createNew (renderPassHandle, &pipelineHandle)
-        .addShader (vtxShaderHandle)
-        .addShader (fragShaderHandle)
-        .setVtxDecl (vtxDeclHandle)
-        //.setWireframe(true)
-        .depthStencil()
-            .zbuffer_enable(true)
-            .zbuffer_enableWrite(true)
-            .zbuffer_setFn (eZFunc::LESS)
-        .end() //depth stencil
-        .setCullMode (eCullMode::CCW)
-        .setDrawPrimitive (eDrawPrimitive::trisList)
-        .descriptor_add (descrSetLayoutHandle)
-        .end ();
-
-    if (pipelineHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
-        return false;
-    }
-    return true;
-}
 
 //************************************
 bool VulkanExample6::priv_setupPipeline_v2 (GPUShaderHandle vtxShaderHandle, GPUShaderHandle fragShaderHandle)
@@ -305,13 +215,6 @@ bool VulkanExample6::priv_setupPipeline_v2 (GPUShaderHandle vtxShaderHandle, GPU
 
 
     return true;
-    /*
-    gpu::Framebuffer_def fbd;
-    {
-        fbd.reset();
-        fbd.add (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store);
-        fbd.add (gpu->depthStencil_getDefaultFormat(), eImageLayout::undefined, eImageLayout::depth_shader_readonly, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care);
-    }*/
 }
 
 
@@ -374,47 +277,11 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, V
     gos::gpu::CmdBufferWriter cw;
     cw.begin (gpu, cmdBufferHandle);
 
-    if (bUse_pipe_v2)
-    {
-        priv_recordCommandBuffer_v2(cw, swapChainImage);
-    }
-    else
-    {
-        priv_recordCommandBuffer_v1(cw);
-    }
-    
+    priv_recordCommandBuffer_v2(cw, swapChainImage);
 
     return cw.end();                 
 }
 
-//************************************
-bool VulkanExample6::priv_recordCommandBuffer_v1 (gos::gpu::CmdBufferWriter &cw)
-{
-    cw
-        .setViewport (gpu->viewport_getDefault())
-        .setClearColor (0, gos::ColorHDR(0, 0.1f, 0.3f))
-        .setDepthBufferColor(1, 0)
-        .renderPass_begin (renderPassHandle, frameBufferHandle)
-            .bindVtxBuffer(vtxBufferHandle)
-            .bindIdxBufferU16(idxBufferHandle)
-
-            .bindPipeline (pipelineHandle)
-            .bindDescriptorSet (descrSetInstancerHandle, 0);
-
-    u32 firstIndex = 0;
-    u32 firstVtx = 0;
-    for (u32 i=0; i<shapeList.getNElem(); i++)
-    {
-        const gos::Shape *myShape = &shapeList(i);
-        cw.drawIndexed (myShape->numIdx, 1, firstIndex, firstVtx, 0);
-
-        firstIndex += myShape->numIdx;
-        firstVtx += myShape->numVtx;
-    }
-
-    cw.renderPass_end();            
-    return true;       
-}
 
 //************************************
 bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw, VkImage swapChainImage)
@@ -597,51 +464,8 @@ void VulkanExample6::doCPUStuff ()
 //**********************************
 void VulkanExample6::mainLoop()
 {
-    //priv_mainLoop1();
     //priv_mainLoop2();
     priv_mainLoop3();
-}
-
-//**********************************
-void VulkanExample6::priv_mainLoop1()
-{
-    gpu::MainLoop gpuLoop;
-    gpuLoop.setup (gpu);
-    gpuLoop.stat_setPrintReportEvery (10000);
-
-
-    //command buffer 
-    GPUCmdBufferHandle  cmdBufferHandle;
-    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
-
-    gpuLoop.stat_setPrintReportEvery (1000);
-
-    //main loop
-    while (bQuitApp == false)
-    {
-        gpuLoop.stat_onCPUFrameBegin();
-        doCPUStuff ();
-        gpuLoop.stat_onCPUFrameEnd();
-        gpuLoop.stat_printReport();
-
-
-        gpuLoop.run ();
-        if (gpuLoop.swapchainRecreated())
-            cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
-        if (gpuLoop.canSubmitGFXJob())
-        {
-            recordCommandBuffer (cmdBufferHandle, VK_NULL_HANDLE);
-            gpuLoop.submitGFXJob (cmdBufferHandle);
-        }
-
-    }
-
-    //aspetto che GPU abbia finito tutto cio' che ha in coda
-    gpu->waitIdle();
-
-    //free
-    gpu->deleteResource (cmdBufferHandle);
-    gpuLoop.unsetup();
 }
 
 //**********************************

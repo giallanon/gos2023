@@ -50,15 +50,12 @@ bool GPU::shader_compile (const char *shaderSRCFile, const char *shaderStage, co
         }
     }
 
-    char opt_includeDebugInfo[4];
-    if (bIncludeDebugInfo)
-        sprintf_s (opt_includeDebugInfo, sizeof(opt_includeDebugInfo), "-g");
-    else
-        opt_includeDebugInfo[0] = 0x00;
-
     //glslc -fshader-stage=vert --target-env=vulkan1.3 lineRenderer.vert.shader -g -O -o lineRenderer.vert.spv
     char cmd[1024];
-    sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s %s %s -O -o %s 2>&1",  shaderStage, defineList, shaderSRCFile, opt_includeDebugInfo, shaderDSTFile);
+    if (bIncludeDebugInfo)
+        sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s %s -g -O0 -o %s 2>&1",  shaderStage, defineList, shaderSRCFile, shaderDSTFile);
+    else
+        sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s %s -O -o %s 2>&1",  shaderStage, defineList, shaderSRCFile, shaderDSTFile);
     gos::logger::log ("%s\n", cmd);
 
     char *result;

@@ -28,6 +28,7 @@ namespace gos
         bool    writeU8  (u8 data)                                      { return priv_writeU8At  (cursor, data, true); }
         bool    writeU16 (u16 data)                                     { return priv_writeU16At (cursor, data, true); }
         bool    writeU32 (u32 data)                                     { return priv_writeU32At (cursor, data, true); }
+        bool    writeU64 (u64 data)                                     { return priv_writeU64At (cursor, data, true); }
 
                 //write: scrivono il dato alla posizione <offset> e NON muovono il cursore. Ritornano false se non e' stato
                 //possibile scrivere
@@ -35,6 +36,7 @@ namespace gos
         bool    writeU8At  (u32 offset, u8 data)                        { return priv_writeU8At  (offset, data, false); }
         bool    writeU16At (u32 offset, u16 data)                       { return priv_writeU16At (offset, data, false); }
         bool    writeU32At (u32 offset, u32 data)                       { return priv_writeU32At (offset, data, false); }
+        bool    writeU64At (u32 offset, u64 data)                       { return priv_writeU64At (offset, data, false); }
 
                 //inseriscono degli 0 fino a che <cursor> non diventa un multiplo di 4 o 8
         bool    writePadUntilMultiplo4();
@@ -60,6 +62,7 @@ namespace gos
         bool    priv_writeU8At  (u32 offset, u8 data, bool bMoveCursor);
         bool    priv_writeU16At (u32 offset, u16 data, bool bMoveCursor);
         bool    priv_writeU32At (u32 offset, u32 data, bool bMoveCursor);
+        bool    priv_writeU64At (u32 offset, u64 data, bool bMoveCursor);
 
     private:
         u32     maxWritePos;

@@ -1,7 +1,7 @@
 #version 450
 
 //uniform
-layout(set = 0, binding = 0) uniform UniformBufferObject 
+layout(set = 0, binding = 0) uniform UBO_0_0 
 {
     mat4 camView;
     mat4 camProj;

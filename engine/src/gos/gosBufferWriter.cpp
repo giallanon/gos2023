@@ -113,3 +113,16 @@ bool BufferW_interface::priv_writeU32At (u32 offset, u32 data, bool bMoveCursor)
     
     return priv_writeAt (offset, temp, 4, bMoveCursor);
 }
+
+//*********************************** 
+bool BufferW_interface::priv_writeU64At (u32 offset, u64 data, bool bMoveCursor)
+{
+    u8 temp[8];
+    
+    if (eEndianess::big == endianess)
+        gos::utils::bufferWriteU64 (temp, data);
+    else
+        gos::utils::bufferWriteU64_LSB_MSB (temp, data);
+    
+    return priv_writeAt (offset, temp, 8, bMoveCursor);
+}
