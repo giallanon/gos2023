@@ -61,7 +61,7 @@ bool VulkanExample6::virtual_onInit ()
 
     //load shader
     {
-        gos::asset::Loader loader;
+        /*gos::asset::Loader loader;
         loader.setup ("shader/example6", gpu);
 
         asset::Asset_shader shader;
@@ -71,8 +71,23 @@ bool VulkanExample6::virtual_onInit ()
 
         if (!loader.load("shader2.frag", &shader))
             return false;
-        fragShaderHandle = shader.handle_shader;
+        fragShaderHandle = shader.handle_shader;*/
     }
+    theHub.setup ("shader/example6", gpu);
+    {
+        asset::Handle handle;
+        theHub.getHandle("shader2.vert", &handle);
+
+        const asset::Asset_shader *shader;
+        shader = theHub.getAsset<asset::Asset_shader> (handle);
+        vtxShaderHandle = shader->handle_shader;
+
+
+        theHub.getHandle("shader2.frag", &handle);
+        shader = theHub.getAsset<asset::Asset_shader> (handle);
+        fragShaderHandle = shader->handle_shader;
+    }
+
 
 
     //importazione modello

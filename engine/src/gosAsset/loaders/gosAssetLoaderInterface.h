@@ -6,22 +6,6 @@
 
 namespace gos
 {
-    /**
-     * @brief   Asset
-     *
-     */
-    class Asset
-    {
-    public:
-                     Asset()                 { }
-        virtual     ~Asset()                { }
-
-    public:
-        asset::UID  uid;
-    };
-
-
-
     namespace asset
     {
         class Loader;   //fwd decl
@@ -34,15 +18,21 @@ namespace gos
         class LoaderInterface
         {
         public:
-            LoaderInterface (eAssetType assTypeIN) { assType = assTypeIN; }
-            virtual         ~LoaderInterface() { }
+                            LoaderInterface (eAssetType assTypeIN)                                                                  { assType = assTypeIN; }
+            virtual         ~LoaderInterface()                                                                                      { }
 
-            eAssetType      getAssType() const { return assType; }
-            virtual bool    load (Loader *assetLoader, const asset::Context &ctx, void *in_out_asset) = 0;
+
+            virtual bool    load (Loader *assetLoader, const asset::Context &ctx, const asset::UID &uid, void *in_out_asset) = 0;
+            virtual u32     getSizeOfData() const = 0;
+
+
+            eAssetType      getAssType() const                                                                                      { return assType; }
 
         private:
             eAssetType assType;
         }; //class LoaderInterface
+
+
 
     } //namespace asset
 } //namespace gos

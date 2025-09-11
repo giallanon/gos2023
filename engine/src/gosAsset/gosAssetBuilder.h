@@ -2,7 +2,7 @@
 #define _gosAssetBuilder_h_
 #include "logger/gosLoggerNull.h"
 #include "gosAsset.h"
-#include "gosAssetBuilderInterface.h"
+#include "builders/gosAssetBuilderInterface.h"
 
 namespace gos
 {

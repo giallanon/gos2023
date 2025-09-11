@@ -26,6 +26,9 @@ builders/gosAssetBuilder_pipedef.cpp
 builders/gosAssetBuilder_pipedef.h
 builders/gosAssetBuilder_shader.cpp
 builders/gosAssetBuilder_shader.h
+builders/gosAssetBuilderInterface.cpp
+builders/gosAssetBuilderInterface.h
+
 
 loaders/gosAssetLoader_shader.h
 loaders/gosAssetLoader_shader.cpp
@@ -43,13 +46,13 @@ gosAsset.h
 gosAssetBuilder_dep.cpp
 gosAssetBuilder.cpp
 gosAssetBuilder.h
-gosAssetBuilderInterface.cpp
-gosAssetBuilderInterface.h
 gosAssetEnumAndDefine.h
+gosAssetHub.cpp
 gosAssetHub.h
 gosAssetLoader.cpp
 gosAssetLoader.h
-  "gosAssetHub.h")
+
+)
 
 
 #====================================================

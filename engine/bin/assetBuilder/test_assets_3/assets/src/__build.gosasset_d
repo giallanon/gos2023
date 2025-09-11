@@ -1,0 +1,85 @@
+@vtx_shader: vs_1
+{
+	__decl : aaa.gosasset_d@1
+	__decl_uid : 1099653301794
+	__depth : 0
+	__assType : 1
+	src : es1.vert
+}
+
+
+@pxl_shader: ps_1
+{
+	__decl : aaa.gosasset_d@6
+	__decl_uid : 1099653301794
+	__depth : 0
+	__assType : 2
+	src : es1.frag
+}
+
+
+@pipeline_def: pipe_1
+{
+	__decl : aaa.gosasset_d@11
+	__decl_uid : 1099653301794
+	__depth : 1
+	__assType : 3
+	rt0 : U8_RGBA
+	@vtx_shader: vs_1
+	{
+		__decl : aaa.gosasset_d@14
+		__depth : 0
+		__assType : 1
+	}
+	@pxl_shader: ps_1
+	{
+		__decl : aaa.gosasset_d@15
+		__depth : 0
+		__assType : 2
+	}
+}
+
+
+@vtx_shader: __assname_000000
+{
+	__decl : aaa.gosasset_d@21
+	__decl_uid : 1099653301794
+	__depth : 0
+	__assType : 1
+	src : es1.vert
+	def : pippo
+}
+
+
+@pxl_shader: __assname_000001
+{
+	__decl : aaa.gosasset_d@27
+	__decl_uid : 1099653301794
+	__depth : 0
+	__assType : 2
+	src : es2.frag
+}
+
+
+@pipeline_def: pipe_2
+{
+	__decl : aaa.gosasset_d@18
+	__decl_uid : 1099653301794
+	__depth : 1
+	__assType : 3
+	rt0 : U8_RGBA
+	@vtx_shader: __assname_000000
+	{
+		__decl : aaa.gosasset_d@21
+		__depth : 0
+		__assType : 1
+	}
+	@pxl_shader: __assname_000001
+	{
+		__decl : aaa.gosasset_d@27
+		__depth : 0
+		__assType : 2
+	}
+}
+
+

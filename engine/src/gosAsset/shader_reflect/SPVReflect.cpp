@@ -1130,7 +1130,7 @@ void SPVReflect::descrset_getElemByIndex  (u32 set, u8 index, u8 *out_binding, e
             }
 
             assert (i < descrSetList.getNElem());
-            assert (i < descrSetList(i).set == set);
+            assert (descrSetList(i).set == set);
             *out_binding = descrSetList(i).binding;
             *out_type = descrSetList(i).vulkanDescrType;
 

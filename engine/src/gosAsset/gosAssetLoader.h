@@ -35,15 +35,14 @@ namespace gos
             bool    load (const asset::UID &uid, TASSET *out)
             {
                 const eAssetType assType = uid.getAssetType();
-                LoaderInterface *loader = priv_getLoader (assType);
+                LoaderInterface *loader = getLoader (assType);
                 if (NULL == loader)
                 {
                     DBGBREAK;
                     return false;
                 }
 
-                out->uid = uid;
-                if (loader->load (this, ctx, out))
+                if (loader->load (this, ctx, uid, out))
                     return true;
 
                 gos::logger::err ("asset::Loader::Load (%016" PRIX64 ") => asset not found\n", uid._uid);
@@ -54,7 +53,7 @@ namespace gos
             bool    load (const char *runtimeName, TASSET *out)
             {
                 asset::UID uid;
-                if (!priv_runtimeNameToUID(runtimeName, &uid))
+                if (!runtimeNameToUID(runtimeName, &uid))
                 {
                     gos::logger::err ("asset::Loader::Load('%s') => asset not found\n", runtimeName);
                     return false;
@@ -72,7 +71,9 @@ namespace gos
 
 
 
-            gos::GPU*   getGPU() const                                      { return gpu; }
+            gos::GPU*           getGPU() const                                      { return gpu; }
+            LoaderInterface*    getLoader (eAssetType assType);
+            bool                runtimeNameToUID (const char *runtimeName, asset::UID *out);
 
 
         private:
@@ -80,8 +81,6 @@ namespace gos
 
         private:
             bool    priv_addLoader (LoaderInterface *loader);
-            LoaderInterface*   priv_getLoader (eAssetType assType);
-            bool    priv_runtimeNameToUID (const char *runtimeName, asset::UID *out);
 
         private:
             gos::Allocator      *localAllocator;

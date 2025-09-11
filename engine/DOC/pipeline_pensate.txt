@@ -23,3 +23,13 @@
 }
 
 
+
+
+handle:
+	è un runtimeName
+	e come tale punta ad un asset::UID
+
+Hub
+	maniente un elenco di asset::UID con il loro stato (loaded, unloaded...)
+
+	asset con sotto asset sono normali asset::UID che nella loro struttra dati contengono degli asset::UID figli

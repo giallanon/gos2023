@@ -1,10 +1,36 @@
 #include "gosAssetBuilderInterface.h"
-#include "gosAsset.h"
+#include "../gosAsset.h"
 
 
 using namespace gos;
 using namespace gos::asset;
 
+
+//******************************************
+bool BuilderInterface::prot_isOneOfThis (const char *paramName, ...) const
+{
+    if (paramName[0] == '_' && paramName[1] == '_')
+        return true;
+        
+    va_list args;
+    va_start (args, paramName);
+    
+    bool ret = false;
+    while (1)
+    {
+        const char *s = va_arg(args, const char*);
+        if (NULL == s)
+            break;
+        if (strcmp (paramName, s) == 0)
+        {
+            ret = true;
+            break;
+        }
+    }
+
+    va_end (args);
+    return ret;
+}
 
 //******************************************
 bool BuilderInterface::prot_needResolvedSubsection (Context &ctx, const gos::IniFileSection *sec, eAssetType assType, asset::UID *out_uid) const

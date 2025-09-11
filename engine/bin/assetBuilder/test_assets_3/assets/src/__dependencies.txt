@@ -1,0 +1,124 @@
+
+
+========================== RESOURCES LIST ==========================
+
+Resource UID     | Type         | Name
+-----------------+--------------+--------------------------------
+000001000871C622 | gosasset_d   | "aaa.gosasset_d" 
+
+  depends on (0): 
+
+  required by (6): 000100003BB5979B  00010000A74CB739  0002000023DD5D52  000200004F2561D6  00030000A22EF03D  00030000CF57C8EB  
+	000100003BB5979B | asset    | vtx_shader   | aaa.gosasset_d@1           | "vs_1" 
+		00030000CF57C8EB | asset    | pipeline_def | aaa.gosasset_d@11          | "pipe_1" 
+	0002000023DD5D52 | asset    | pxl_shader   | aaa.gosasset_d@6           | "ps_1" 
+		00030000CF57C8EB | asset    | pipeline_def | aaa.gosasset_d@11          | "pipe_1" 
+	00010000A74CB739 | asset    | vtx_shader   | aaa.gosasset_d@21          | "" 
+		00030000A22EF03D | asset    | pipeline_def | aaa.gosasset_d@18          | "pipe_2" 
+	000200004F2561D6 | asset    | pxl_shader   | aaa.gosasset_d@27          | "" 
+		00030000A22EF03D | asset    | pipeline_def | aaa.gosasset_d@18          | "pipe_2" 
+	00030000CF57C8EB | asset    | pipeline_def | aaa.gosasset_d@11          | "pipe_1" 
+	00030000A22EF03D | asset    | pipeline_def | aaa.gosasset_d@18          | "pipe_2" 
+
+-----------------+--------------+--------------------------------
+0000020042AC516D | shader_txt   | "es2.frag" 
+
+  depends on (0): 
+
+  required by (2): 000200004F2561D6  00030000A22EF03D  
+	000200004F2561D6 | asset    | pxl_shader   | aaa.gosasset_d@27          | "" 
+		00030000A22EF03D | asset    | pipeline_def | aaa.gosasset_d@18          | "pipe_2" 
+
+-----------------+--------------+--------------------------------
+000002006FD446E5 | shader_txt   | "es1.frag" 
+
+  depends on (0): 
+
+  required by (2): 0002000023DD5D52  00030000CF57C8EB  
+	0002000023DD5D52 | asset    | pxl_shader   | aaa.gosasset_d@6           | "ps_1" 
+		00030000CF57C8EB | asset    | pipeline_def | aaa.gosasset_d@11          | "pipe_1" 
+
+-----------------+--------------+--------------------------------
+00000200A3A9DDCA | shader_txt   | "es1.vert" 
+
+  depends on (0): 
+
+  required by (4): 000100003BB5979B  00010000A74CB739  00030000A22EF03D  00030000CF57C8EB  
+	000100003BB5979B | asset    | vtx_shader   | aaa.gosasset_d@1           | "vs_1" 
+		00030000CF57C8EB | asset    | pipeline_def | aaa.gosasset_d@11          | "pipe_1" 
+	00010000A74CB739 | asset    | vtx_shader   | aaa.gosasset_d@21          | "" 
+		00030000A22EF03D | asset    | pipeline_def | aaa.gosasset_d@18          | "pipe_2" 
+
+
+
+========================== ASSETS LIST ==========================
+
+Asset UID        | Type         | Declared in                | runtimeName-list
+-----------------+--------------+--------------------------------
+000100003BB5979B | vtx_shader   | aaa.gosasset_d@1           | "vs_1" 
+
+  depends on (2): 000001000871C622  00000200A3A9DDCA  
+	000001000871C622 | resource | gosasset_d   | "aaa.gosasset_d"
+	00000200A3A9DDCA | resource | shader_txt   | "es1.vert"
+
+  required by (1): 00030000CF57C8EB  
+	00030000CF57C8EB | asset    | pipeline_def | aaa.gosasset_d@11          | "pipe_1" 
+
+-----------------+--------------+--------------------------------
+00010000A74CB739 | vtx_shader   | aaa.gosasset_d@21          | 
+
+  depends on (2): 000001000871C622  00000200A3A9DDCA  
+	000001000871C622 | resource | gosasset_d   | "aaa.gosasset_d"
+	00000200A3A9DDCA | resource | shader_txt   | "es1.vert"
+
+  required by (1): 00030000A22EF03D  
+	00030000A22EF03D | asset    | pipeline_def | aaa.gosasset_d@18          | "pipe_2" 
+
+-----------------+--------------+--------------------------------
+0002000023DD5D52 | pxl_shader   | aaa.gosasset_d@6           | "ps_1" 
+
+  depends on (2): 000001000871C622  000002006FD446E5  
+	000001000871C622 | resource | gosasset_d   | "aaa.gosasset_d"
+	000002006FD446E5 | resource | shader_txt   | "es1.frag"
+
+  required by (1): 00030000CF57C8EB  
+	00030000CF57C8EB | asset    | pipeline_def | aaa.gosasset_d@11          | "pipe_1" 
+
+-----------------+--------------+--------------------------------
+000200004F2561D6 | pxl_shader   | aaa.gosasset_d@27          | 
+
+  depends on (2): 000001000871C622  0000020042AC516D  
+	000001000871C622 | resource | gosasset_d   | "aaa.gosasset_d"
+	0000020042AC516D | resource | shader_txt   | "es2.frag"
+
+  required by (1): 00030000A22EF03D  
+	00030000A22EF03D | asset    | pipeline_def | aaa.gosasset_d@18          | "pipe_2" 
+
+-----------------+--------------+--------------------------------
+00030000A22EF03D | pipeline_def | aaa.gosasset_d@18          | "pipe_2" 
+
+  depends on (5): 000001000871C622  0000020042AC516D  00000200A3A9DDCA  00010000A74CB739  000200004F2561D6  
+	000001000871C622 | resource | gosasset_d   | "aaa.gosasset_d"
+	00010000A74CB739 | asset    | vtx_shader   | aaa.gosasset_d@21          | "" 
+		000001000871C622 | resource | gosasset_d   | "aaa.gosasset_d"
+		00000200A3A9DDCA | resource | shader_txt   | "es1.vert"
+	000200004F2561D6 | asset    | pxl_shader   | aaa.gosasset_d@27          | "" 
+		000001000871C622 | resource | gosasset_d   | "aaa.gosasset_d"
+		0000020042AC516D | resource | shader_txt   | "es2.frag"
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+00030000CF57C8EB | pipeline_def | aaa.gosasset_d@11          | "pipe_1" 
+
+  depends on (5): 000001000871C622  000002006FD446E5  00000200A3A9DDCA  000100003BB5979B  0002000023DD5D52  
+	000001000871C622 | resource | gosasset_d   | "aaa.gosasset_d"
+	000100003BB5979B | asset    | vtx_shader   | aaa.gosasset_d@1           | "vs_1" 
+		000001000871C622 | resource | gosasset_d   | "aaa.gosasset_d"
+		00000200A3A9DDCA | resource | shader_txt   | "es1.vert"
+	0002000023DD5D52 | asset    | pxl_shader   | aaa.gosasset_d@6           | "ps_1" 
+		000001000871C622 | resource | gosasset_d   | "aaa.gosasset_d"
+		000002006FD446E5 | resource | shader_txt   | "es1.frag"
+
+  required by (0): 
+

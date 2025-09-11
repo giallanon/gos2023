@@ -1304,7 +1304,7 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreat
             }
 
             //troppi errori..termino prematuramente
-            if (num_errors > 5)
+            if (num_errors > 0)
             {
                 bEsci = true;
                 break;

@@ -1,6 +1,6 @@
 #ifndef _gosAssetBuilderInterface_h_
 #define _gosAssetBuilderInterface_h_
-#include "gosAssetEnumAndDefine.h"
+#include "../gosAssetEnumAndDefine.h"
 #include "gosIniFile.h"
 
 namespace gos
@@ -28,6 +28,7 @@ namespace gos
         protected:
             bool            prot_needResolvedSubsection (Context &ctx, const gos::IniFileSection *sec, eAssetType assType, asset::UID *out_uid) const;
             bool            prot_needResource (Context &ctx, eResType resType, const char *resName, asset::UID *out_uid) const;
+            bool            prot_isOneOfThis (const char *paramName, ...) const;
 
         private:
             eAssetType assType;

@@ -12,7 +12,7 @@ namespace gos
         * @brief    Asset_shader;
         * 
         */
-        class Asset_shader : public gos::Asset
+        class Asset_shader
         {
         public:
             GPUShaderHandle handle_shader;
@@ -29,7 +29,9 @@ namespace gos
                     Loader_shader (eAssetType assType) : LoaderInterface (assType)          { }
             virtual ~Loader_shader()                                                        { }
 
-            bool    load (Loader *assetLoader, const asset::Context &ctx, void *in_out_asset);
+            bool    load (Loader *assetLoader, const asset::Context &ctx, const asset::UID &uid, void *in_out_asset);
+            u32     getSizeOfData() const                                                   { return static_cast<u32>(sizeof(Asset_shader)); } 
+
             
         }; //class Loader_shader
 

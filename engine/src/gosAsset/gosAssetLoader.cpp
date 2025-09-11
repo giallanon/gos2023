@@ -57,7 +57,7 @@ bool Loader::priv_addLoader (LoaderInterface *loader)
 }
 
 //***********************************
-LoaderInterface* Loader::priv_getLoader (eAssetType assType)
+LoaderInterface* Loader::getLoader (eAssetType assType)
 {
     const u32 index = static_cast<u8>(assType);
     assert (index < NUM_MAX_ASSET_LOADER);
@@ -65,7 +65,7 @@ LoaderInterface* Loader::priv_getLoader (eAssetType assType)
 }
 
 //************************************************
-bool Loader::priv_runtimeNameToUID (const char *runtimeName, asset::UID *out)
+bool Loader::runtimeNameToUID (const char *runtimeName, asset::UID *out)
 {
     return asset::rtname_exists (ctx, runtimeName, out);
 }

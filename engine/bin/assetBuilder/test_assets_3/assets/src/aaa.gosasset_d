@@ -1,0 +1,31 @@
+@vtx_shader : vs_1
+{
+	src: es1.vert
+}
+
+@pxl_shader :ps_1
+{
+	src: es1.frag
+}
+
+@pipeline_def: pipe_1
+{
+	rt0: U8_RGBA
+	@vtx_shader: vs_1
+	@pxl_shader: ps_1
+}
+
+@pipeline_def: pipe_2
+{
+	rt0: U8_RGBA
+	@vtx_shader
+	{
+		src: es1.vert
+		def: pippo
+	}
+
+	@pxl_shader
+	{
+		src: es2.frag
+	}
+}

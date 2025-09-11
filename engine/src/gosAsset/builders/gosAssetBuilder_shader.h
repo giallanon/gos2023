@@ -1,6 +1,6 @@
 #ifndef _gosAssetBuilder_shader_h_
 #define _gosAssetBuilder_shader_h_
-#include "../gosAssetBuilderInterface.h"
+#include "gosAssetBuilderInterface.h"
 
 /* Sintassi:
 
@@ -30,17 +30,6 @@ namespace gos
         class Builder_shader : public BuilderInterface
         {
         public:
-            struct Params
-            {
-                char        src[128];
-                char        def[1024];
-                asset::UID  uid__resource_shader_txt;
-            };
-
-        public:
-            static bool extractParams (const IniFileSection *sec, Params *out_params);
-
-        public:
             /**
              * @brief   calc_depth e' mandatorio, va implementato in tutti i Builder.
                         Per una descrizione piu' accurata del significato, vedi gosAssetBuilder_pipedef
@@ -53,6 +42,19 @@ namespace gos
 
             bool        build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out);
             
+
+        private:
+            struct Params
+            {
+                char        src[128];
+                char        def[1024];
+                asset::UID  uid__resource_shader_txt;
+            };
+
+        private:
+            bool priv_extractParams (const IniFileSection *sec, Params *out_params);
+
+
         }; //class Builder_shader
 
 

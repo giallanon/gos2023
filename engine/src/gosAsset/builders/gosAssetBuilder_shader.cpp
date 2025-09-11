@@ -9,7 +9,7 @@ using namespace gos;
 using namespace gos::asset;
 
 //************************************
-bool Builder_shader::extractParams (const IniFileSection *sec, Params *out_params)
+bool Builder_shader::priv_extractParams (const IniFileSection *sec, Params *out_params)
 {
     assert (NULL != sec);
     assert (NULL != out_params);
@@ -62,7 +62,20 @@ bool Builder_shader::extractParams (const IniFileSection *sec, Params *out_param
             strcat_s (out_params->def, sizeof(out_params->def), " ");
             strcat_s (out_params->def, sizeof(out_params->def), list(i).getBuffer());
         }
-    }    
+    }
+
+
+    //per evitare problemi, controllo che ci siano solo ed esattamente i parametri che mi aspetto
+    for (u32 i=0; i<sec->getNIdentifier(); i++)
+    {
+        const char *paramName = sec->getIdentifierByIndex(i);
+        if (!prot_isOneOfThis(paramName, "src", "def", NULL))
+        {
+            gos::logger::err ("asset::Builder_shader::extractParams => <%s> is not a valid one\n", paramName);
+            return false;
+        }
+    }
+
 
     return true;
 }
@@ -78,7 +91,7 @@ bool Builder_shader::build (Context &ctx, u64 buildTimeUTC, const char *sourceFi
 
     //parse della sezione
     Params params;
-    if (!extractParams(sec, &params))
+    if (!priv_extractParams(sec, &params))
     {
         gos::logger::err ("error parsing IniFileSection\n");
         return false;

@@ -28,7 +28,7 @@ u32 Builder_pipeDef::calc_depth()
 }
 
 //************************************
-bool Builder_pipeDef::extractParams (const IniFileSection *sec, Params *out_params)
+bool Builder_pipeDef::priv_extractParams (const IniFileSection *sec, Params *out_params)
 {
     assert (NULL != sec);
     assert (NULL != out_params);
@@ -128,6 +128,21 @@ bool Builder_pipeDef::extractParams (const IniFileSection *sec, Params *out_para
         }
         out_params->numRT++;
     }
+
+
+
+    //per evitare problemi, controllo che ci siano solo ed esattamente i parametri che mi aspetto
+    for (u32 i=0; i<sec->getNIdentifier(); i++)
+    {
+        const char *paramName = sec->getIdentifierByIndex(i);
+        if (!prot_isOneOfThis(paramName, "rt0", "rt1", "rt2", "rt3", "rt4", "rt5", "rt6", "rt7", "rt8", "rt9", "rt10", "rt11", "rt12",
+                "rt13", "rt14", "rt15", "zb", "cullMode", "drawPrimitive", NULL))
+        {
+            gos::logger::err ("asset::Builder_shader::extractParams => <%s> is not a valid one\n", paramName);
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -142,7 +157,7 @@ bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const char *sourceF
 
     //parse della sezione
     Params params;
-    if (!extractParams(sec, &params))
+    if (!priv_extractParams(sec, &params))
     {
         gos::logger::err ("error parsing IniFileSection\n");
         return false;

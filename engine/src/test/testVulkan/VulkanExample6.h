@@ -1,7 +1,7 @@
 #ifndef _VulkanExample6_h_
 #define _VulkanExample6_h_
 #include "VulkanApp.h"
-
+#include "gosAssetHub.h"
 
 /************************************
  *  VulkanExample6
@@ -74,6 +74,8 @@ private:
     GPURenderTargetHandle   rt1;
     GPURenderTargetHandle   rt2;
     GPURenderTargetHandle   rt3;
+
+    gos::asset::Hub  theHub;
 };
 
 

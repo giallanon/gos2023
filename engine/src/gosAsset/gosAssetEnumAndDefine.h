@@ -115,14 +115,7 @@ namespace gos
         };        
 
 
-        /**
-        * @brief    asset::Handle
-        * 
-        */
-        struct Handle
-        {
-            u32 _handle;
-        };
+
     } //namespace asset
 
 } //namespace gos
