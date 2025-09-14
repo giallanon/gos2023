@@ -30,17 +30,21 @@ void VulkanExample6::virtual_onCleanup()
     }
     shapeList.unsetup();
 
+
+    const asset::Asset_pipe *pipe;
+    if (theHub.getAssetWithTimeout(assetPipe, 5000, &pipe))
+    {
+        theHub.unload (assetPipe);
+        theHub.unload (assetPipe2);
+    }
+
+
     gpu->deleteResource (idxBufferHandle);
     gpu->deleteResource (stgBufferHandle);
     gpu->deleteResource (vtxBufferHandle);
-    gpu->deleteResource (vtxShaderHandle);
-    gpu->deleteResource (fragShaderHandle);
-    gpu->deleteResource (pipelineHandle);
-    gpu->deleteResource (renderPassHandle);
-    gpu->deleteResource (frameBufferHandle);
     gpu->deleteResource (uboHandle);
     gpu->deleteResource (descrSetInstancerHandle);
-    gpu->deleteResource (descrSetLayoutHandle);
+    
     gpu->deleteResource (descrPoolHandle);
 
     gpu->deleteResource(rt1);
@@ -113,7 +117,7 @@ bool VulkanExample6::priv_loadModel()
 //************************************
 bool VulkanExample6::virtual_onInit ()
 {
-    //builder per ricmpilare gli shader se necessario
+    //builder per ricompilare gli asset se necessario
     {
         gos::asset::Builder builder;
         builder.buildAll("shader/example6", true);
@@ -121,7 +125,8 @@ bool VulkanExample6::virtual_onInit ()
 
     //theHub
     theHub.setup ("shader/example6", gpu);
-    theHub.getHandle("pipe_1", &assetPipe, true);
+    theHub.getHandle("pipe_1", &assetPipe);
+    theHub.getHandle("pipe_2", &assetPipe2);
 
 
     //importazione modello
@@ -151,14 +156,6 @@ bool VulkanExample6::virtual_onInit ()
     if (!priv_setupPipeline_v2())
         return false;
     
-
-    //alloco una istanza del descriptorSet
-    if (!gpu->descrSetInstance_createNew (descrPoolHandle, descrSetLayoutHandle, &descrSetInstancerHandle))
-    {
-        gos::logger::err ("VulkanApp::init() => can't create descriptorSet instance\n");
-        return false;
-    }
-
     //risorse di rendering
     const eImageFormat IMG_FORMAT = eImageFormat::U8_RGBA;
     if (!gpu->renderTarget_create ("0-", "0-", IMG_FORMAT, &rt1))
@@ -169,6 +166,19 @@ bool VulkanExample6::virtual_onInit ()
 
     if (!gpu->renderTarget_create ("0-", "0-", eImageFormat::U8_RGBA, &rt3))
         return false;      
+
+
+
+    //alloco una istanza del descriptorSet
+    const asset::Asset_pipe *pipe;
+    if (theHub.getAssetWithTimeout(assetPipe, 2000, &pipe))
+    {    
+        if (!gpu->descrSetInstance_createNew (descrPoolHandle, pipe->pipe.descrset_handle_defList[0], &descrSetInstancerHandle))
+        {
+            gos::logger::err ("VulkanApp::init() => can't create descriptorSet instance\n");
+            return false;
+        }
+    }
 
     return true;
 }    
@@ -183,39 +193,12 @@ bool VulkanExample6::priv_setupPipeline_v2 ()
         if (theHub.getAsset(assetPipe, &pipe))
             break;
     }
-    vtxShaderHandle = pipe->handle_vtxshader;
-    fragShaderHandle = pipe->handle_pxlshader;
-    pipelineHandle = pipe->pipe.pipeline_handle;
-    descrSetLayoutHandle = pipe->pipe.descrset_handle_defList[0];
-
-    /*gpu::pipe2::Pipeline_def def;
-    def.reset();
-    
-
-    def.vtxStream_add(eVtxStreamInputRate::perVertex)
-        .add (0, offsetof(Vertex, pos), eDataFormat::_3f32)
-        .add (1, offsetof(Vertex, tutv0), eDataFormat::_2f32)
-        .add (2, offsetof(Vertex, normal), eDataFormat::_3f32);
+    // vtxShaderHandle = pipe->handle_vtxshader;
+    // fragShaderHandle = pipe->handle_pxlshader;
+    // pipelineHandle = pipe->pipe.pipeline_handle;
+    // descrSetLayoutHandle = pipe->pipe.descrset_handle_defList[0];
 
     
-    def.descriptorset_add()
-        .add (0, eGPUDescriptrorType::UNIFORM_BUFFER, 1, eGPUDescriptrorUsageFlag::vtx_shader);
-
-
-    def.add_rt (IMG_FORMAT);
-    def.add_rt (eImageFormat::U8_RGBA);
-
-    def.shader_add (vtxShaderHandle);
-    def.shader_add (fragShaderHandle);
-
-
-    gpu::pipe2::Pipeline pipeline;
-    if (!gpu->pipeline_v2_createNew (def, &pipeline))
-        return false;
-    pipelineHandle = pipeline.pipeline_handle;
-    descrSetLayoutHandle = pipeline.descrset_handle_defList[0];
-*/
-
     return true;
 }
 
@@ -284,14 +267,14 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, V
     gos::gpu::CmdBufferWriter cw;
     cw.begin (gpu, cmdBufferHandle);
 
-    priv_recordCommandBuffer_v2(cw, swapChainImage);
+    priv_recordCommandBuffer_v2(cw, swapChainImage, pipe);
 
     return cw.end();                 
 }
 
 
 //************************************
-bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw, VkImage swapChainImage)
+bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw, VkImage swapChainImage, const asset::Asset_pipe *pipe)
 {
     VkCommandBuffer cmd = cw.debug_getHandle();
     
@@ -356,10 +339,8 @@ bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw,
     cw.imageTransition (rt2_info->image, eImageLayout::undefined, eImageLayout::color_attachment_optimal);
     cw.imageTransition (zBuffer_info->image, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
     vkCmdBeginRendering (cmd, &renderingInfo);
-        //.setClearColor (0, gos::ColorHDR(0, 0.1f, 0.3f))
-        //.setDepthBufferColor(1, 0)
-        //.renderPass_begin (renderPassHandle, frameBufferHandle)
-    cw.bindPipeline (pipelineHandle);
+
+    cw.bindPipeline (pipe->pipe.pipeline_handle);
     cw.bindDescriptorSet (descrSetInstancerHandle, 0);
     cw.bindVtxBuffer(vtxBufferHandle);
     cw.bindIdxBufferU16(idxBufferHandle);

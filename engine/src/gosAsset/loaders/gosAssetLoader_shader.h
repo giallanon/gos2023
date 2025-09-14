@@ -30,6 +30,8 @@ namespace gos
             virtual ~Loader_shader()                                                        { }
 
             bool    load (Loader *assetLoader, const asset::Context &ctx, const asset::UID &uid, void *in_out_asset);
+            void    unload (Loader *assetLoader, const asset::Context &ctx, const asset::UID &uid, void *ptToAssetData);
+
             u32     getSizeOfData() const                                                   { return static_cast<u32>(sizeof(Asset_shader)); } 
 
             

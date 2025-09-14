@@ -14,8 +14,8 @@ namespace gos
         class Asset_pipe
         {
         public:
-            GPUShaderHandle         handle_vtxshader;
-            GPUShaderHandle         handle_pxlshader;
+            //GPUShaderHandle         handle_vtxshader;
+            //GPUShaderHandle         handle_pxlshader;
             gpu::pipe2::Pipeline    pipe;
         };
 
@@ -31,6 +31,8 @@ namespace gos
             virtual ~Loader_pipe()                                                          { }
 
             bool    load (Loader *assetLoader, const asset::Context &ctx, const asset::UID &uid, void *in_out_asset);
+            void    unload (Loader *assetLoader, const asset::Context &ctx, const asset::UID &uid, void *ptToAssetData);
+
             u32     getSizeOfData() const                                                   { return static_cast<u32>(sizeof(Asset_pipe)); } 
 
             

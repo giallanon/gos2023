@@ -9,6 +9,21 @@
 using namespace gos;
 using namespace gos::asset;
 
+//******************************************************
+void Loader_pipe::unload (Loader *assetLoader, const asset::Context &ctx, const asset::UID &uid, void *ptToAssetData)
+{
+	Asset_pipe *asset = static_cast <Asset_pipe*>(ptToAssetData);
+	
+    gos::GPU *gpu = assetLoader->getGPU();
+    for (u32 i=0; i<asset->pipe.descrset_num; i++)
+    {
+        gpu->deleteResource (asset->pipe.descrset_handle_defList[i]);
+    }
+
+    gpu->deleteResource (asset->pipe.pipeline_handle);
+    //gpu->deleteResource (asset->handle_vtxshader);
+    //gpu->deleteResource (asset->handle_pxlshader);
+}
 
 //******************************************************
 bool Loader_pipe::load (Loader *assetLoader, const asset::Context &ctx, const asset::UID &uid, void *in_out_asset)
@@ -51,14 +66,14 @@ bool Loader_pipe::load (Loader *assetLoader, const asset::Context &ctx, const as
         const Asset_shader *shader;
         uid._uid = reader.readU64 ();
         assetLoader->getTheHub()->internalUSE_getExistingAssetByUID(uid, &shader);
-        out->handle_vtxshader = shader->handle_shader;
+        //out->handle_vtxshader = shader->handle_shader;
         def.shader_add (shader->handle_shader);
         
 
         //uid pxl shader
         uid._uid = reader.readU64 ();
         assetLoader->getTheHub()->internalUSE_getExistingAssetByUID(uid, &shader);
-        out->handle_pxlshader = shader->handle_shader;
+        //out->handle_pxlshader = shader->handle_shader;
         def.shader_add (shader->handle_shader);
 
         //cull/draw

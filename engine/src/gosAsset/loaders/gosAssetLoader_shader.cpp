@@ -29,3 +29,10 @@ bool Loader_shader::load (Loader *assetLoader, const asset::Context &ctx, const 
 	case eAssetType::pxl_shader:	return gpu->fragshader_createFromFile (s, "main", &out->handle_shader);
 	}
 }
+
+//******************************************************
+void Loader_shader::unload (Loader *assetLoader, const asset::Context &ctx, const asset::UID &uid, void *ptToAssetData)
+{
+	Asset_shader *asset = static_cast <Asset_shader*>(ptToAssetData);
+	assetLoader->getGPU()->deleteResource (asset->handle_shader);
+}

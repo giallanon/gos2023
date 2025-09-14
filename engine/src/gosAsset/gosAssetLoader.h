@@ -34,17 +34,25 @@ namespace gos
                     }
 
 
-            bool    load (const asset::UID &uid, void *out)
+            bool    load (const asset::UID &uid, void *ptToAssetData)
             {
                 const eAssetType assType = uid.getAssetType();
                 LoaderInterface *loader = getLoader (assType);
                 if (loader)
-                    return loader->load (this, ctx, uid, out);
+                    return loader->load (this, ctx, uid, ptToAssetData);
                 return false;
             }
 
+            void    unload (const asset::UID &uid, void *ptToAssetData)
+            {
+                const eAssetType assType = uid.getAssetType();
+                LoaderInterface *loader = getLoader (assType);
+                if (loader)
+                    loader->unload (this, ctx, uid, ptToAssetData);
+            }            
+
             template<class TASSET>
-            bool    load (const asset::UID &uid, TASSET *out)
+            bool    load (const asset::UID &uid, TASSET *ptToAssetData)
             {
                 const eAssetType assType = uid.getAssetType();
                 LoaderInterface *loader = getLoader (assType);
@@ -54,7 +62,7 @@ namespace gos
                     return false;
                 }
 
-                if (loader->load (theHub, this, ctx, uid, out))
+                if (loader->load (theHub, this, ctx, uid, ptToAssetData))
                     return true;
 
                 gos::logger::err ("asset::Loader::Load (%016" PRIX64 ") => asset not found\n", uid._uid);
@@ -62,7 +70,7 @@ namespace gos
             }
 
             template<class TASSET>
-            bool    load (const char *runtimeName, TASSET *out)
+            bool    load (const char *runtimeName, TASSET *ptToAssetData)
             {
                 asset::UID uid;
                 if (!runtimeNameToUID(runtimeName, &uid))
@@ -70,15 +78,15 @@ namespace gos
                     gos::logger::err ("asset::Loader::Load('%s') => asset not found\n", runtimeName);
                     return false;
                 }
-                return load<TASSET>(uid, out);
+                return load<TASSET>(uid, ptToAssetData);
             }
 
             template<class TASSET>
-            bool    load (const u64 uidIN, TASSET *out)
+            bool    load (const u64 uidIN, TASSET *ptToAssetData)
             {
                 asset::UID uid;
                 uid._uid = uidIN;
-                return load<TASSET>(uid, out);
+                return load<TASSET>(uid, ptToAssetData);
             }
 
 

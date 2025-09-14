@@ -84,6 +84,43 @@ bool Hub::setup (const char *baseFolderIN, gos::GPU *gpuIN)
     return true;
 }
 
+//***************************************
+void Hub::update (u64 timenow_msec)
+{
+    static constexpr u8 NUM_MAX_MESSAGES = 16;
+    thread::sMsg msgList[NUM_MAX_MESSAGES];
+
+    const u64 timeout_msec = timenow_msec + 15;
+    u32 nMsg;
+    while (0 != (nMsg = thread::popMultipleMsg(msgq_2R, msgList, NUM_MAX_MESSAGES)))
+    {
+        for (u32 i=0; i<nMsg; i++)
+        {
+            switch (msgList[i].what)
+            {
+            default:
+                DBGBREAK;
+                break;
+
+            case THREADMSG_2_CHANGE_STATUS:
+                //il thread mi segnala che devo cambiare stato ad una risorsa
+                {
+                    void *pt = (void*)msgList[i].paramU64;
+                    sHeader *header = static_cast<sHeader*>(pt);
+                    header->external_status = static_cast<eStatusPublic> (msgList[i].bufferSize);
+                }
+                break;
+            }
+
+            thread::deleteMsg (msgList[i]);
+        }
+
+        lastTimeUpdateWasCalled_msec = gos::getTimeSinceStart_msec();
+        if (lastTimeUpdateWasCalled_msec >= timeout_msec)
+            break;
+    }
+}
+
 /***************************************
  * ritorna true se l'asset esisteva gia'
  */
@@ -115,12 +152,20 @@ bool Hub::priv_findOrAddAsset (const asset::UID &uid, void **out_pt)
 
     sHeader *header = static_cast<sHeader*>(pt);
     memset (header, 0, sizeof(sHeader));
-    header->external_status = eStatus::notLoaded;
-    header->internal_status = eStatus::notLoaded;
+    header->external_status = eStatusPublic::notLoaded;
+    header->internal_status = eStatusInternal::unloaded;
     header->uid = uid;
     return false;
 }
 
+//***************************************
+void* Hub::priv_getExistingAssetByUID (const asset::UID &uid)
+{
+    void *pt = NULL;
+    if (knownAssetsList.find(uid, &pt))
+        return pt;
+    return NULL;
+}
 
 //***************************************
 bool Hub::getHandle (const char *runtimeName, Handle *out, bool bScheduleLoadNow )
@@ -143,7 +188,7 @@ bool Hub::getHandle (const char *runtimeName, Handle *out, bool bScheduleLoadNow
         header->numHandleUsingThisAsset = 1;    
     }
 
-    if (bScheduleLoadNow && header->external_status == eStatus::notLoaded)
+    if (bScheduleLoadNow && header->external_status == eStatusPublic::notLoaded)
         priv_scheduleLoad (out->_pt);
 
     return true;
@@ -153,7 +198,7 @@ bool Hub::getHandle (const char *runtimeName, Handle *out, bool bScheduleLoadNow
 void Hub::priv_scheduleLoad (void *pt)
 {
     sHeader *header = static_cast<sHeader*>(pt);
-    assert (eStatus::notLoaded == header->external_status);
+    assert (eStatusPublic::notLoaded == header->external_status);
 
     //gestisco le dipendenze di questo asset. Se lui dipende da altri, prima devo caricare
     //gli altri
@@ -172,31 +217,31 @@ void Hub::priv_scheduleLoad (void *pt)
             {
             default:
                 DBGBREAK;
-                header->external_status = eStatus::error;
+                header->external_status = eStatusPublic::error;
                 return;
 
-            case eStatus::ready:
+            case eStatusPublic::ready:
                 break;
 
-            case eStatus::notLoaded:
-                headerChild->external_status = eStatus::loading;
+            case eStatusPublic::notLoaded:
+                headerChild->external_status = eStatusPublic::loading;
                 thread::pushMsg (msgq_1W, THREADMSG_1_LOAD, (u64)ptChild);
                 break;
 
-            case eStatus::loading:
+            case eStatusPublic::loading:
                 //il child e' gia' in fase di caricamento.
                 //Non c'e' pericolo ad aggiungere il caricamente di me stesso visto che il thread processa i load in
                 //maniera sequenziale. Tempo che arriva a processare il mio caricamento, mio figlio e' gia' online
                 break;
 
-            case eStatus::unloading:
+            case eStatusPublic::unloading:
                 //non so bene come gestiure la cosa, ci pensero' + avanti
                 DBGBREAK;
                 break;
             
-            case eStatus::error:
+            case eStatusPublic::error:
                 //mio figlio e' in errore, devo andare in errore anche io
-                header->external_status = eStatus::error;
+                header->external_status = eStatusPublic::error;
                 return;
             }
 
@@ -204,43 +249,39 @@ void Hub::priv_scheduleLoad (void *pt)
     }
 
     //schedulo il caricamento di <pt>
-    header->external_status = eStatus::loading;
+    header->external_status = eStatusPublic::loading;
     thread::pushMsg (msgq_1W, THREADMSG_1_LOAD, (u64)pt);
 }
 
 //***************************************
-void Hub::update (u64 timenow_msec)
+void Hub::priv_unload (void *pt)
 {
-    static constexpr u8 NUM_MAX_MESSAGES = 16;
-    thread::sMsg msgList[NUM_MAX_MESSAGES];
+    sHeader *header = static_cast<sHeader*>(pt);
+ 
+    if (eStatusPublic::ready != header->external_status && eStatusPublic::loading != header->external_status)
+        return;
 
-    const u64 timeout_msec = timenow_msec + 15;
-    u32 nMsg;
-    while (0 != (nMsg = thread::popMultipleMsg(msgq_2R, msgList, NUM_MAX_MESSAGES)))
+    //intanto inizio a unloadere me stesso
+    header->external_status = eStatusPublic::unloading;
+    thread::pushMsg (msgq_1W, THREADMSG_1_UNLOAD, (u64)pt);
+
+    //se dipendo da qualcuno, vedo se e' il caso di unloadare anche lui
+    if (header->uid.getAssetDepth() < 2)
+        return;
+
+    asset::asset_get_runtime_dependecies_list (*loader.getContext(), header->uid, true, &fastUIDList);
+    for (u32 i=0; i<fastUIDList.getNElem(); i++)
     {
-        for (u32 i=0; i<nMsg; i++)
+        void *ptToChild = priv_getExistingAssetByUID (fastUIDList(i));
+        assert (NULL != ptToChild);
+
+        sHeader *headerChild = static_cast<sHeader*>(ptToChild);
+        if (headerChild->numAssetUsingThissAsset > 0)
         {
-            switch (msgList[i].what)
-            {
-            default:
-                DBGBREAK;
-                break;
-
-            case THREADMSG_2_CHANGE_STATUS:
-                //il thread mi segnala che devo cambiare stato ad una risorsa
-                {
-                    void *pt = (void*)msgList[i].paramU64;
-                    sHeader *header = static_cast<sHeader*>(pt);
-                    header->external_status = static_cast<eStatus> (msgList[i].bufferSize);
-                }
-                break;
-            }
-
-            thread::deleteMsg (msgList[i]);
+            headerChild->numAssetUsingThissAsset--;
+            if (0 == headerChild->numAssetUsingThissAsset)
+                priv_unload(ptToChild);
         }
-
-        lastTimeUpdateWasCalled_msec = gos::getTimeSinceStart_msec();
-        if (lastTimeUpdateWasCalled_msec >= timeout_msec)
-            break;
     }
+
 }

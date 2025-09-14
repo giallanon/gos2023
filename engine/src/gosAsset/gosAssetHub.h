@@ -30,12 +30,19 @@ namespace gos
 		class Hub
 		{
 		public:
-			enum class eStatus : u8
+			enum class eStatusPublic : u8
 			{
 				ready		= 0,
 				notLoaded	= 1,		//ho allocato spazio in RAM ma non ho mai chiamato il suo loader
 				loading		= 2,		//il loader la sta caricando
 				unloading	= 3,		//il loader la sta scaricando
+				error 		= 0xff		//errore fatale, probabilmente il loader non e' riuscito a caricarla, questo asset e' spacciato per sempre
+			};
+
+			enum class eStatusInternal : u8
+			{
+				loaded		= 0,
+				unloaded 	= 1,
 				error 		= 0xff		//errore fatale, probabilmente il loader non e' riuscito a caricarla, questo asset e' spacciato per sempre
 			};
 
@@ -48,6 +55,30 @@ namespace gos
 
 			// false se <runtimeName> non e' un nome valido
 			bool	getHandle (const char *runtimeName, Handle *out, bool bScheduleLoadNow = false);
+
+			// chiedi di unloadare un asset e le sue dipendenze
+			void 	unload (const Handle &h)													{ priv_unload(h._pt); }
+
+			//funziona come getAsset<> ma questa looppa per un tot di tempo in attesa che l'asset
+			//diventi ready
+			template<class TASSET>
+			bool 	getAssetWithTimeout (const Handle &h, u64 timeout_msec, const TASSET **out)
+			{
+				timeout_msec += gos::getTimeSinceStart_msec();
+				while (1)
+				{
+					const u64 timenow_msec = gos::getTimeSinceStart_msec();
+					update(timenow_msec);
+
+					if (getAsset<TASSET>(h, out))
+						return true;
+
+					if (timenow_msec >= timeout_msec)
+						return false;
+				}
+				return false;
+			}
+
 
 			//se ritorna true, puoi usare la risorsa, altrimenti no, provaci al prossimo giro
 			template<class TASSET>
@@ -69,24 +100,22 @@ namespace gos
 					DBGBREAK;
 					return false;
 
-				case eStatus::ready:
+				case eStatusPublic::ready:
 					{
 						void *ptToAsset = (void*) (static_cast<const u8*>(h._pt) + sizeof(sHeader));
 						*out = static_cast<const TASSET*> (ptToAsset);
 					}
 					return true;
 
-				case eStatus::notLoaded:
+				case eStatusPublic::notLoaded:
 					//dato che mi hanno chiesto l'asset, e questo non era caricato, 
 					//schedulo il caricamento ora
 					priv_scheduleLoad (h._pt);
 					return false;
 
-				case eStatus::loading:
-					return false;
-
-				case eStatus::unloading:
-				case eStatus::error:
+				case eStatusPublic::loading:
+				case eStatusPublic::unloading:
+				case eStatusPublic::error:
 					return false;
 				}
 			}
@@ -96,12 +125,12 @@ namespace gos
 			template<class TASSET>
 			bool 	internalUSE_getExistingAssetByUID (const asset::UID &uid, const TASSET **out)
 			{
-				void *pt = NULL;
-				if (knownAssetsList.find(uid, &pt))
+				void *pt = priv_getExistingAssetByUID(uid);
+				if (NULL != pt)
 				{
 #ifdef _DEBUG
 					const sHeader *header = static_cast<sHeader*>(pt);
-					assert (eStatus::ready == header->internal_status);
+					assert (eStatusInternal::loaded == header->internal_status);
 #endif
 
 					void *ptToAsset = (void*) (static_cast<const u8*>(pt) + sizeof(sHeader));
@@ -122,6 +151,7 @@ namespace gos
 		private:
 			static constexpr u32		THREADMSG_1_DIE		= 0xff;
 			static constexpr u32		THREADMSG_1_LOAD	= 0x01;
+			static constexpr u32		THREADMSG_1_UNLOAD	= 0x02;
 
 			static constexpr u32		THREADMSG_2_CHANGE_STATUS 	= 0x01;
 
@@ -138,8 +168,8 @@ namespace gos
 
 			struct sHeader
 			{
-				eStatus 	external_status;	//questa viene manipolata da TheHUB e rifletto lo stato della risorsa visto da "fuori"
-				eStatus 	internal_status;	//questa e' ad uso interno del thread di loader. Quando ci sono significativi cambi di stato, il thread lo segnala
+				eStatusPublic	external_status;	//questa viene manipolata da TheHUB e rifletto lo stato della risorsa visto da "fuori"
+				eStatusInternal	internal_status;	//questa e' ad uso interno del thread di loader. Quando ci sono significativi cambi di stato, il thread lo segnala
 				u8 			pad2;				//a theHub via msgQ (vedi update) e TheHub aggiorna external_status di conseguenza
 				u8 			pad3;
 
@@ -151,12 +181,14 @@ namespace gos
 
 		private:
 			static i16	ThreadFN_main (void *params);
-			static void	ThreadFN_changeStatus (const HThreadMsgW &msgqW, sHeader *header, eStatus newStatus);
+			static void	ThreadFN_changeStatus (const HThreadMsgW &msgqW, sHeader *header, eStatusPublic newStatus);
 
 		private:
 			void 		priv_free ();
 			void 		priv_scheduleLoad (void *pt);
 			bool 		priv_findOrAddAsset (const asset::UID &uid, void **out_pt);
+			void* 		priv_getExistingAssetByUID (const asset::UID &uid);
+			void 		priv_unload (void *pt);
 
 		private:
 			LocalAllocator		*localAllocator;

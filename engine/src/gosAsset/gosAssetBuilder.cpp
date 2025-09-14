@@ -1268,13 +1268,23 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreat
         return 0;
     }
 
+    u32 maxDepth = 1;
+    for (u32 i=0; i<NUM_MAX_ASSET_BUILDER; i++)
+    {
+        if (u32MAX == depthByAssetTypeList[i])
+            continue;
+        if (depthByAssetTypeList[i] > maxDepth)
+            maxDepth = depthByAssetTypeList[i];
+    }
+
     //buildo gli asset in ordine di "__depth", dal piu' semplice al piu' complesso
     u32 num_errors = 0;
-    u32 depth = 1;
-    bool bEsci = false;
-    while (bEsci == false)
+    for (u32 depth=1; depth<=maxDepth; depth++)
     {
-        bEsci = true;
+        //troppi errori..termino prematuramente
+        if (num_errors > 0)
+            break;
+
         for (u32 secnum=0; secnum<numSection; secnum++)
         {
             IniFileSection *sec = ini.getSubsectionByIndex(secnum);
@@ -1282,7 +1292,6 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreat
                 continue;
 
             //segno che questa sezione l'ho processata cosi' al prossimo giro la skippo
-            bEsci = false;
             sec->set ("__depth", u32MAX, false);
 
             //recupero asset-type
@@ -1319,16 +1328,7 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreat
                 num_errors += priv_build_iniSection (doCreateAssetsFile, sec, uid_of_iniFile, fromSRC, builder, runtimeName);
                 logger->decIndent();
             }
-
-            //troppi errori..termino prematuramente
-            if (num_errors > 0)
-            {
-                bEsci = true;
-                break;
-            }
         }
-
-        depth++;
     }
 
     return num_errors;

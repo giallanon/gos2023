@@ -21,6 +21,7 @@ namespace gos
 
 
             virtual bool    load (Loader *assetLoader, const asset::Context &ctx, const asset::UID &uid, void *in_out_asset) = 0;
+            virtual void    unload (Loader *assetLoader, const asset::Context &ctx, const asset::UID &uid, void *ptToAssetData) = 0;
             virtual u32     getSizeOfData() const = 0;
 
 

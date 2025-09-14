@@ -7,9 +7,8 @@ using namespace gos::asset;
 
 
 //***************************************
-void	Hub::ThreadFN_changeStatus (const HThreadMsgW &msgqW, sHeader *header, eStatus newStatus)
+void	Hub::ThreadFN_changeStatus (const HThreadMsgW &msgqW, sHeader *header, eStatusPublic newStatus)
 {
-    header->internal_status = newStatus;
     thread::pushMsg (msgqW, THREADMSG_2_CHANGE_STATUS, (u64)header, NULL, static_cast<u32>(newStatus));
 }
 
@@ -47,6 +46,9 @@ i16	Hub::ThreadFN_main (void *paramsIN)
         {
             for (u32 i=0; i<nMsg; i++)
             {
+                void *pt = (void*)msgList[i].paramU64;
+                sHeader *header = static_cast<sHeader*>(pt);
+
                 switch (msgList[i].what)
                 {
                 default:
@@ -58,20 +60,31 @@ i16	Hub::ThreadFN_main (void *paramsIN)
                     break;
 
                 case THREADMSG_1_LOAD:
+                    if (header->internal_status == eStatusInternal::unloaded)
                     {
-                        void *pt = (void*)msgList[i].paramU64;
-                        sHeader *header = static_cast<sHeader*>(pt);
-                        assert (header->internal_status == eStatus::notLoaded);
-
-                        header->internal_status = eStatus::loading;
                         void *ptToAssetData = (void*) (static_cast<u8*>(pt) + sizeof(sHeader));
                         if (loader->load (header->uid, ptToAssetData))
-                            ThreadFN_changeStatus (msgqW, header, eStatus::ready);
+                        {
+                            header->internal_status = eStatusInternal::loaded;
+                            ThreadFN_changeStatus (msgqW, header, eStatusPublic::ready);
+                        }
                         else
                         {
-                            ThreadFN_changeStatus (msgqW, header, eStatus::error);
+                            header->internal_status = eStatusInternal::error;
+                            ThreadFN_changeStatus (msgqW, header, eStatusPublic::error);
                             logger->err ("asset::Hub::ThreadFN_main() => LOAD => error loading asset %016" PRIX64 "\n");
                         }
+                    }
+                    break;
+
+                case THREADMSG_1_UNLOAD:
+                    if (header->internal_status == eStatusInternal::loaded)
+                    {
+                        void *ptToAssetData = (void*) (static_cast<u8*>(pt) + sizeof(sHeader));
+                        
+                        header->internal_status = eStatusInternal::unloaded;
+                        loader->unload (header->uid, ptToAssetData);
+                        ThreadFN_changeStatus (msgqW, header, eStatusPublic::notLoaded);
                     }
                     break;
                 }

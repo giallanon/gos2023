@@ -44,7 +44,7 @@ private:
 
     bool        priv_loadModel();
     bool        priv_setupPipeline_v2 ();
-    bool        priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw, VkImage swapChainImage);
+    bool        priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw, VkImage swapChainImage, const gos::asset::Asset_pipe *pipe);
     void        priv_mainLoop2();
     void        priv_mainLoop3();
 
@@ -59,14 +59,7 @@ private:
     GPUIdxBufferHandle      idxBufferHandle;
     GPUStgBufferHandle      stgBufferHandle;
 
-    GPUPipelineHandle       pipelineHandle;
-    GPUShaderHandle         vtxShaderHandle;
-    GPUShaderHandle         fragShaderHandle;
-    GPURenderPassHandle     renderPassHandle;
-    GPUFrameBufferHandle    frameBufferHandle;
-
     GPUDescrPoolHandle      descrPoolHandle;
-    GPUDescrSetLayoutHandle descrSetLayoutHandle;
     GPUDescrSetInstanceHandle descrSetInstancerHandle;
     GPUUniformBufferHandle  uboHandle;
     
@@ -78,6 +71,7 @@ private:
 
     gos::asset::Hub         theHub;
     gos::asset::Handle      assetPipe;
+    gos::asset::Handle      assetPipe2;
 };
 
 
