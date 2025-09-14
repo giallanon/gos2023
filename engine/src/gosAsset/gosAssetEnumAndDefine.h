@@ -11,9 +11,11 @@ namespace gos
         __DO__NOT__USE  = 0,
         vtx_shader      = 1,
         pxl_shader      = 2,
-        pipeline_def    = 3,
+        pipe            = 3,
         texture2D       = 4,
         shape           = 5,
+
+        DEBUG_ASSET     = 31
     };
 
     namespace asset
@@ -44,6 +46,17 @@ namespace gos
             error               = 0xff
         };
         
+
+        /******************
+         * @brief   UID
+         *          E' logicamente composto da 2 u32
+         *          La parte bassa e' un CRC32 che dipende dai parametri di buil
+         *          La parte alta:
+         *              0x00            => limitazione dovuta a sqllite che tratta tutto come signed integer
+         *              eAssetType      => se identifica un asset, allora questo byte != 0
+         *              eResouceType    => se identifica una risorsa, allora questo byte != 0
+         *              asset_depth     => se identifica un asset, allora questo byte indica la "depth" come ritornata dal builder specifico della risorsa
+         */
         struct UID
         {
             u64 _uid;
@@ -58,6 +71,8 @@ namespace gos
             bool    isAnAsset() const                                       { return ( priv_extractAssetType() != 0); }
             bool    isAnAssetOfType(eAssetType s) const                     { return (static_cast<eAssetType>(priv_extractAssetType()) == s); }
             eAssetType getAssetType() const                                 { return static_cast<eAssetType>(priv_extractAssetType()); }
+
+            u8      getAssetDepth() const                                   { assert(isAnAsset()); return static_cast<u8>((_uid >> 32) & 0xFF); }
 
             int     compare (const UID &b) const                            { if (_uid == b._uid) return 0; if (_uid > b._uid) return 1; return -1; }
             bool    operator== (const asset::UID &b) const                  { return _uid == b._uid; }
@@ -85,7 +100,8 @@ namespace gos
         };
 
 
-        typedef gos::HashMap<asset::UID, u64>  HashedUIDList;
+        typedef gos::HashMap<asset::UID, u64>   HashedUIDList;
+        typedef gos::FastArray<asset::UID>      FastUIDList;
 
 
         struct Context

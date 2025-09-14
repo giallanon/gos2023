@@ -54,15 +54,16 @@ namespace test2
         HThreadMsgR hMsgQRead = param->hMsgQRead;
 
         //questo thread rimane in attesa di ricevere msg
-        gos::Event hEventMsgArrived;
+        /*gos::Event hEventMsgArrived;
         TEST_ASSERT(true == gos::thread::getMsgQEvent (hMsgQRead, &hEventMsgArrived));
-
         TEST_ASSERT(true == gos::thread::eventWait (hEventMsgArrived, 3000));
+        */
+        TEST_ASSERT(true == gos::thread::waitForAnEvent(hMsgQRead, 3000));
 
         gos::thread::sMsg msg;
         TEST_ASSERT(true == gos::thread::popMsg (hMsgQRead, &msg));
         TEST_ASSERT(2133 == msg.what);
-        TEST_ASSERT(23738 == msg.paramU32);
+        TEST_ASSERT(23738 == msg.paramU64);
         TEST_ASSERT(3 == msg.bufferSize);
         TEST_ASSERT(memcmp (msg.buffer, "die", 3) == 0);
         gos::thread::deleteMsg (msg);
@@ -148,7 +149,7 @@ namespace test3
         gos::thread::sMsg msg;
         TEST_ASSERT(true == gos::thread::popMsg (hRead, &msg));
         TEST_ASSERT(2133 == msg.what);
-        TEST_ASSERT(23738 == msg.paramU32);
+        TEST_ASSERT(23738 == msg.paramU64);
         TEST_ASSERT(3 == msg.bufferSize);
         TEST_ASSERT(memcmp (msg.buffer, "die", 3) == 0);
         gos::thread::deleteMsg (msg);

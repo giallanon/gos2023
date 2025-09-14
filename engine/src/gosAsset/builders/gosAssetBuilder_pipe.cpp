@@ -2,7 +2,7 @@
 #include "../gos/gosString.h"
 #include "../gosAssetBuilder.h"
 #include "../gos/gosMagicUID.h"
-#include "gosAssetBuilder_pipedef.h"
+#include "gosAssetBuilder_pipe.h"
 #include "gosAssetBuilder_shader.h"
 #include "../shader_reflect/SPVReflect.h"
 
@@ -12,7 +12,7 @@ using namespace gos;
 using namespace gos::asset;
 
 //************************************
-u32 Builder_pipeDef::calc_depth()
+u32 Builder_pipe::calc_depth()
 {
     static constexpr u32 BASE_DEPTH = 1; //1 perche' io dipendo da almeno un altro asset
     u32 depth = 0;
@@ -28,14 +28,14 @@ u32 Builder_pipeDef::calc_depth()
 }
 
 //************************************
-bool Builder_pipeDef::priv_extractParams (const IniFileSection *sec, Params *out_params)
+bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_params)
 {
     assert (NULL != sec);
     assert (NULL != out_params);
     
     //setto i default
     memset (out_params, 0, sizeof(Params));
-    out_params->magic = GOS_MAGIC__ASSTE_PIPELINE_DEF;
+    out_params->magic = GOS_MAGIC__ASSET_PIPELINE_DEF;
     out_params->cullMode = eCullMode::CCW;
     out_params->drawPrimitive = eDrawPrimitive::trisList;
 
@@ -54,7 +54,7 @@ bool Builder_pipeDef::priv_extractParams (const IniFileSection *sec, Params *out
     {
         if (!gos::utils::stringToEnum (s, &out_params->cullMode))
         {
-            logger::err ("asset::Builder_pipeDef::extractParams => invalid option '%s' for <cullMode>\n", s);
+            logger::err ("asset::Builder_pipe::extractParams => invalid option '%s' for <cullMode>\n", s);
             return false;
         }
     }
@@ -64,9 +64,16 @@ bool Builder_pipeDef::priv_extractParams (const IniFileSection *sec, Params *out
     {
         if (!gos::utils::stringToEnum (s, &out_params->drawPrimitive))
         {
-            logger::err ("asset::Builder_pipeDef::extractParams => invalid option '%s' for <drawPrimitive>\n", s);
+            logger::err ("asset::Builder_pipe::extractParams => invalid option '%s' for <drawPrimitive>\n", s);
             return false;
         }
+    }
+
+    //param: wireframe
+    if (sec->get("wireframe", s, sizeof(s)))
+    {
+        if (string::utf8::toI32(s) != 0)
+            out_params->bWireframe = 1;
     }
 
     //param: zb
@@ -75,7 +82,7 @@ bool Builder_pipeDef::priv_extractParams (const IniFileSection *sec, Params *out
         stringParser.toStart (s, ",");
         if (!stringParser.next(s2, sizeof(s2)))
         {
-            logger::err ("asset::Builder_pipeDef::extractParams => invalid option '%s' for <zb>\n", s);
+            logger::err ("asset::Builder_pipe::extractParams => invalid option '%s' for <zb>\n", s);
             return false;
         }
         if (0 == strcasecmp(s2, "none"))
@@ -87,14 +94,14 @@ bool Builder_pipeDef::priv_extractParams (const IniFileSection *sec, Params *out
             //3 parametri: <imgFormat = BEST | ...>, <zwrite = 0|1>, <zcmpFn = LESS|...>
             if (!utils::stringToEnum(s2, &out_params->zbuffer_format))
             {
-                logger::err ("asset::Builder_pipeDef::extractParams => invalid option(1) '%s' for <zb>\n", s);
+                logger::err ("asset::Builder_pipe::extractParams => invalid option(1) '%s' for <zb>\n", s);
                 return false;
             }
 
             //zwrite
             if (!stringParser.next(s2, sizeof(s2)))
             {
-                logger::err ("asset::Builder_pipeDef::extractParams => invalid option(2) '%s' for <zb>\n", s);
+                logger::err ("asset::Builder_pipe::extractParams => invalid option(2) '%s' for <zb>\n", s);
                 return false;
             }
             if (string::utf8::toI32(s2) == 0)
@@ -103,12 +110,12 @@ bool Builder_pipeDef::priv_extractParams (const IniFileSection *sec, Params *out
             //cmpFn
             if (!stringParser.next(s2, sizeof(s2)))
             {
-                logger::err ("asset::Builder_pipeDef::extractParams => invalid option(3) '%s' for <zb>\n", s);
+                logger::err ("asset::Builder_pipe::extractParams => invalid option(3) '%s' for <zb>\n", s);
                 return false;
             }
             if (!utils::stringToEnum(s2, &out_params->zbuffer_cmpFn))
             {
-                logger::err ("asset::Builder_pipeDef::extractParams => invalid option(3) '%s' for <zb>\n", s);
+                logger::err ("asset::Builder_pipe::extractParams => invalid option(3) '%s' for <zb>\n", s);
                 return false;
             }
         }
@@ -123,7 +130,7 @@ bool Builder_pipeDef::priv_extractParams (const IniFileSection *sec, Params *out
 
         if (!utils::stringToEnum (s2, &out_params->renderTargetFormat[out_params->numRT]))
         {
-            logger::err ("asset::Builder_pipeDef::extractParams => invalid option '%s' for <rt[%d]>\n", s, i);
+            logger::err ("asset::Builder_pipe::extractParams => invalid option '%s' for <rt[%d]>\n", s2, i);
             return false;
         }
         out_params->numRT++;
@@ -136,7 +143,7 @@ bool Builder_pipeDef::priv_extractParams (const IniFileSection *sec, Params *out
     {
         const char *paramName = sec->getIdentifierByIndex(i);
         if (!prot_isOneOfThis(paramName, "rt0", "rt1", "rt2", "rt3", "rt4", "rt5", "rt6", "rt7", "rt8", "rt9", "rt10", "rt11", "rt12",
-                "rt13", "rt14", "rt15", "zb", "cullMode", "drawPrimitive", NULL))
+                "rt13", "rt14", "rt15", "zb", "cullMode", "drawPrimitive", "wireframe", NULL))
         {
             gos::logger::err ("asset::Builder_shader::extractParams => <%s> is not a valid one\n", paramName);
             return false;
@@ -147,7 +154,7 @@ bool Builder_pipeDef::priv_extractParams (const IniFileSection *sec, Params *out
 }
 
 //************************************
-bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out)
+bool Builder_pipe::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out)
 {
     assert (ctx.isValid());
     assert (NULL != sec);
@@ -179,7 +186,7 @@ bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const char *sourceF
 
 
     //calcolo assetUID
-    if (!asset::asset_createUID (getAssType(), &params, sizeof(Params), &out->uid))
+    if (!asset::asset_createUID (getAssType(), calc_depth(), &params, sizeof(Params), &out->uid))
     {
         gos::logger::err ("error generating assetUID\n");
         return false;
@@ -211,6 +218,7 @@ bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const char *sourceF
 
     //aggiungo le sue dipendenze
     if (!asset::depend_add (ctx, out->uid, uid_of_iniFile)) return false;
+
     if (!asset::depend_add (ctx, out->uid, params.uid_vtxshader)) return false;
     if (!asset::depend_add (ctx, out->uid, params.uid_pxlshader)) return false;
 
@@ -231,13 +239,13 @@ bool Builder_pipeDef::build (Context &ctx, u64 buildTimeUTC, const char *sourceF
 
 
 //************************************
-bool Builder_pipeDef::priv_do_create_assetFile (Context &ctx, const Params &params, const char *filenameDST) const
+bool Builder_pipe::priv_do_create_assetFile (Context &ctx, const Params &params, const char *filenameDST) const
 {
     SPVReflect reflect;
     reflect.beginParseFromMemory();
 
     //il vtx/pxl shader esistono gia' e sono gia' stati compilati.
-    //A me serva la versione con le debug info
+    //A me pero' serve la versione con le debug info
     char s[1024];
     if (params.uid_vtxshader.isValid())
     {
@@ -248,12 +256,12 @@ bool Builder_pipeDef::priv_do_create_assetFile (Context &ctx, const Params &para
         u8 *buffer = fs::fileLoadInMemory (gos::getScrapAllocator(), s, &fsize);
         if (NULL == buffer)
         {
-            logger::err ("asset::Builder_pipeDef::priv_do_create_assetFile => can't read file %s\n", s);
+            logger::err ("asset::Builder_pipe::priv_do_create_assetFile => can't read file %s\n", s);
             return false;
         }
         if (!reflect.VS_parseFromMemory (buffer, fsize))
         {
-            logger::err ("asset::Builder_pipeDef::priv_do_create_assetFile => error parsing (reflect) VS file %s\n", s);
+            logger::err ("asset::Builder_pipe::priv_do_create_assetFile => error parsing (reflect) VS file %s\n", s);
             return false;
         }
         GOSFREE_SCRAP(buffer);
@@ -268,12 +276,12 @@ bool Builder_pipeDef::priv_do_create_assetFile (Context &ctx, const Params &para
         u8 *buffer = fs::fileLoadInMemory (gos::getScrapAllocator(), s, &fsize);
         if (NULL == buffer)
         {
-            logger::err ("asset::Builder_pipeDef::priv_do_create_assetFile => can't read file %s\n", s);
+            logger::err ("asset::Builder_pipe::priv_do_create_assetFile => can't read file %s\n", s);
             return false;
         }
         if (!reflect.PS_parseFromMemory (buffer, fsize))
         {
-            logger::err ("asset::Builder_pipeDef::priv_do_create_assetFile => error parsing (reflect) PS file %s\n", s);
+            logger::err ("asset::Builder_pipe::priv_do_create_assetFile => error parsing (reflect) PS file %s\n", s);
             return false;
         }
         GOSFREE_SCRAP(buffer);
@@ -281,7 +289,7 @@ bool Builder_pipeDef::priv_do_create_assetFile (Context &ctx, const Params &para
 
     if (!reflect.endParseFromMemory())
     {
-        logger::err ("asset::Builder_pipeDef::priv_do_create_assetFile => error parsing (reflect), 'reflect.endParseFromMemory()'\n");
+        logger::err ("asset::Builder_pipe::priv_do_create_assetFile => error parsing (reflect), 'reflect.endParseFromMemory()'\n");
         return false;
     }
 
@@ -292,7 +300,7 @@ bool Builder_pipeDef::priv_do_create_assetFile (Context &ctx, const Params &para
         buffer.setupWithBase (stackBuffer, sizeof(stackBuffer), gos::getScrapAllocator(), eEndianess::big);
 
         //magic
-        buffer.writeU32 (GOS_MAGIC__ASSTE_PIPELINE_DEF);
+        buffer.writeU32 (GOS_MAGIC__ASSET_PIPELINE_DEF);
 
         //uid vtx shader
         buffer.writeU64 (params.uid_vtxshader._uid);
@@ -303,6 +311,7 @@ bool Builder_pipeDef::priv_do_create_assetFile (Context &ctx, const Params &para
         //cull/draw
         buffer.writeU8 (static_cast<u8>(params.cullMode));
         buffer.writeU8 (static_cast<u8>(params.drawPrimitive));
+        buffer.writeU8 (static_cast<u8>(params.bWireframe));
 
         //zbuffer
         buffer.writeU8 (static_cast<u8>(params.zbuffer_enabled));

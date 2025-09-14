@@ -1,0 +1,92 @@
+#include "gosAssetHub.h"
+#include "gosAsset.h"
+
+
+using namespace gos;
+using namespace gos::asset;
+
+
+//***************************************
+void	Hub::ThreadFN_changeStatus (const HThreadMsgW &msgqW, sHeader *header, eStatus newStatus)
+{
+    header->internal_status = newStatus;
+    thread::pushMsg (msgqW, THREADMSG_2_CHANGE_STATUS, (u64)header, NULL, static_cast<u32>(newStatus));
+}
+
+//***************************************
+i16	Hub::ThreadFN_main (void *paramsIN)
+{
+    HThreadMsgR         msgqR;
+    HThreadMsgW         msgqW;
+    asset::Loader		*loader = NULL;
+    gos::Logger			*logger;
+
+    //copia dei params
+    {
+        const sThreadParams *params = reinterpret_cast<const sThreadParams*>(paramsIN);
+        msgqR = params->msgqR;
+        msgqW = params->msgqW;
+        loader = params->loader;
+        logger = params->logger;
+
+        //segnalo che sono partito
+        thread::eventFire (params->hEvent_started);
+    }
+
+
+    bool bQuit = false;
+    while (bQuit == false)
+    {
+        if (!thread::waitForAnEvent (msgqR, u32MAX))
+            break;
+
+        static constexpr u8 NUM_MAX_MESSAGES = 16;
+        thread::sMsg msgList[NUM_MAX_MESSAGES];
+        u32 nMsg;
+        while (0 != (nMsg = thread::popMultipleMsg(msgqR, msgList, NUM_MAX_MESSAGES)))
+        {
+            for (u32 i=0; i<nMsg; i++)
+            {
+                switch (msgList[i].what)
+                {
+                default:
+                    DBGBREAK;
+                    break;
+
+                case THREADMSG_1_DIE:
+                    bQuit = true;
+                    break;
+
+                case THREADMSG_1_LOAD:
+                    {
+                        void *pt = (void*)msgList[i].paramU64;
+                        sHeader *header = static_cast<sHeader*>(pt);
+                        assert (header->internal_status == eStatus::notLoaded);
+
+                        header->internal_status = eStatus::loading;
+                        void *ptToAssetData = (void*) (static_cast<u8*>(pt) + sizeof(sHeader));
+                        if (loader->load (header->uid, ptToAssetData))
+                            ThreadFN_changeStatus (msgqW, header, eStatus::ready);
+                        else
+                        {
+                            ThreadFN_changeStatus (msgqW, header, eStatus::error);
+                            logger->err ("asset::Hub::ThreadFN_main() => LOAD => error loading asset %016" PRIX64 "\n");
+                        }
+                    }
+                    break;
+                }
+
+                thread::deleteMsg (msgList[i]);
+            }
+
+            if (bQuit)
+                break;
+        }
+    }
+
+    //TODO:: eliminare tutti i messaggi pendendi nel caso in cui ci siano ancora
+    //risorse da unloadare
+
+    return 0;
+}
+

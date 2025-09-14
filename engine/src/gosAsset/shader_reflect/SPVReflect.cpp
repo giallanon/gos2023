@@ -818,6 +818,7 @@ void SPVReflect::priv_descriptor_parseVar (const SpvReflectShaderModule *module,
 
     case SpvOpTypeSampler:
     case SpvOpTypeImage:
+    case SpvOpTypeSampledImage:
         e.root = Node::createNew();
         sprintf_s (e.root->name, sizeof(e.root->name), "%s", var->name);
         e.root->usage = e.usage;
@@ -1134,7 +1135,7 @@ void SPVReflect::descrset_getElemByIndex  (u32 set, u8 index, u8 *out_binding, e
             *out_binding = descrSetList(i).binding;
             *out_type = descrSetList(i).vulkanDescrType;
 
-            *out_arraySize = 0;
+            *out_arraySize = 1;
             if (descrSetList(i).root->isArray())
             {
                 *out_arraySize = descrSetList(i).root->other.asArray.numElem[0];

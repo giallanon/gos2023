@@ -81,7 +81,7 @@ namespace gos
             bool    priv_addBuilder (BuilderInterface *builder, u32 asset_depth);
             BuilderInterface*   priv_getBuilder (eAssetType assType);
 
-            u32     priv_getDepthByAssetType (eAssetType assType) const                                         { assert (static_cast<u8>(assType) < NUM_MAX_ASSET_BUILDER); return depthByAssetType[static_cast<u8>(assType)]; }
+            u32     priv_getDepthByAssetType (eAssetType assType) const                                         { assert (static_cast<u8>(assType) < NUM_MAX_ASSET_BUILDER); return depthByAssetTypeList[static_cast<u8>(assType)]; }
             void    priv_closeAllContext();
 
 
@@ -123,7 +123,7 @@ namespace gos
             u64                 buildTimeUTC;
             u32                 nextTempNameIndex;
             u32                 nextTempSubsectionIndex;
-            u32                 *depthByAssetType;
+            u32                 depthByAssetTypeList[NUM_MAX_ASSET_BUILDER];
             BuilderInterface    *builderList[NUM_MAX_ASSET_BUILDER];
         }; //class Builder
 

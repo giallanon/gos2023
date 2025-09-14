@@ -106,7 +106,7 @@ bool Builder_shader::build (Context &ctx, u64 buildTimeUTC, const char *sourceFi
     }    
 
     //calcolo assetUID
-    if (!asset::asset_createUID (getAssType(), &params, sizeof(Params), &out->uid))
+    if (!asset::asset_createUID (getAssType(), calc_depth(), &params, sizeof(Params), &out->uid))
     {
         gos::logger::err ("error generating assetUID\n");
         return false;

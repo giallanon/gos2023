@@ -60,7 +60,7 @@ void platform::eventFire (const OSEvent &ev)
 }
 
 //*******************************************************
-bool platform::eventWait (const OSEvent &ev, size_t timeoutMSec)
+bool platform::eventWait (const OSEvent &ev, u32 timeout_msec)
 {
     /*struct epoll_event events;
     if (epoll_pwait(ev.h, &events, 1, timeoutMSec, NULL) <= 0)
@@ -69,7 +69,7 @@ bool platform::eventWait (const OSEvent &ev, size_t timeoutMSec)
     while(1)
     {
         struct epoll_event events;
-        const int ret = epoll_pwait(ev.h, &events, 1, timeoutMSec, NULL);
+        const int ret = epoll_pwait(ev.h, &events, 1, timeout_msec, NULL);
         if (ret > 0)
             return true;
 

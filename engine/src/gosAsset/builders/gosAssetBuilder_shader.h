@@ -34,7 +34,7 @@ namespace gos
              * @brief   calc_depth e' mandatorio, va implementato in tutti i Builder.
                         Per una descrizione piu' accurata del significato, vedi gosAssetBuilder_pipedef
             */
-            static u32  calc_depth()                                                                     { return 0; }
+            static u32  calc_depth()                                                                     { return 1; }
 
         public:
                         Builder_shader (eAssetType assTypeIN) : BuilderInterface (assTypeIN)            { }

@@ -1,4 +1,5 @@
 #include "gosAssetLoader_shader.h"
+#include "../gosAssetHub.h"
 #include "../gosAssetLoader.h"
 #include "../gosAsset.h"
 

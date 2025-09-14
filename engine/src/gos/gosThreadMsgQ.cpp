@@ -12,7 +12,7 @@ using namespace gos;
 struct sGOSThreadInfo
 {
     platform::OSThread      	osThreadHandle;
-	GOSThreadHandle					gosHandle;
+	GOSThreadHandle				gosHandle;
 	GOS_ThreadMainFunction		fn;
 	void 						*userParam;
 };
@@ -205,7 +205,7 @@ void thread::deleteMsgQ (HThreadMsgR &handleR, UNUSED_PARAM(HThreadMsgW &handleW
 //**************************************************************
 u32 thread::calcSizeNeededToSerializeMsg (const sMsg &msg)
 {
-    return sizeof(msg.what) + sizeof(msg.paramU32) + sizeof(msg.bufferSize) + msg.bufferSize;
+    return sizeof(msg.what) + sizeof(msg.paramU64) + sizeof(msg.bufferSize) + msg.bufferSize;
 }
 
 //**************************************************************
@@ -220,14 +220,9 @@ u32 thread::serializeMsg (const sMsg &msg, u8 *out_buffer, u32 sizeof_out_buffer
     }
 
     u32 ct = 0;
-    gos::utils::bufferWriteU16 (&out_buffer[ct], msg.what);
-    ct += 2;
-
-    gos::utils::bufferWriteU32 (&out_buffer[ct], msg.paramU32);
-    ct += 4;
-
-    gos::utils::bufferWriteU32 (&out_buffer[ct], msg.bufferSize);
-    ct += 4;
+    ct += gos::utils::bufferWriteU32 (&out_buffer[ct], msg.what);
+    ct += gos::utils::bufferWriteU32 (&out_buffer[ct], msg.bufferSize);
+    ct += gos::utils::bufferWriteU64 (&out_buffer[ct], msg.paramU64);
 
     if (msg.bufferSize)
     {
@@ -240,18 +235,19 @@ u32 thread::serializeMsg (const sMsg &msg, u8 *out_buffer, u32 sizeof_out_buffer
 }
 
 //**************************************************************
-u32 thread::deserializMsg (const u8 *buffer, u16 *out_what, u32 *out_paramU32, u32 *out_bufferSize, const u8 **out_bufferPt)
+u32 thread::deserializMsg (const u8 *buffer, u32 *out_what, u64 *out_paramU64, u32 *out_bufferSize, const u8 **out_bufferPt)
 {
     u32 ct = 0;
 
-    *out_what = gos::utils::bufferReadU16 (&buffer[ct]);
-    ct += 2;
-
-    *out_paramU32 = gos::utils::bufferReadU32 (&buffer[ct]);
+    *out_what = gos::utils::bufferReadU32 (&buffer[ct]);
     ct += 4;
 
     *out_bufferSize = gos::utils::bufferReadU32 (&buffer[ct]);
     ct += 4;
+
+    *out_paramU64 = gos::utils::bufferReadU32 (&buffer[ct]);
+    ct += 8;
+
 
     if (0 == *out_bufferSize)
         *out_bufferPt = NULL;
@@ -266,7 +262,7 @@ u32 thread::deserializMsg (const u8 *buffer, u16 *out_what, u32 *out_paramU32, u
 
 
 //**************************************************************
-void thread::pushMsg (const HThreadMsgW &h, u16 what, u32 paramU32, const void *src, u32 sizeInBytes)
+void thread::pushMsg (const HThreadMsgW &h, u32 what, u64 paramU64, const void *src, u32 sizeInBytes)
 {
     sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hWrite);
 
@@ -276,7 +272,7 @@ void thread::pushMsg (const HThreadMsgW &h, u16 what, u32 paramU32, const void *
     thread::sMsg msg;
     memset (&msg, 0x00, sizeof(msg));
     msg.what = what;
-    msg.paramU32 = paramU32;
+    msg.paramU64 = paramU64;
     if (src && sizeInBytes>0)
     {
         msg.bufferSize = sizeInBytes;
@@ -296,7 +292,7 @@ void thread::pushMsg (const HThreadMsgW &h, u16 what, u32 paramU32, const void *
 }
 
 //**************************************************************
-void thread::pushMsg2Buffer (const HThreadMsgW &h, u16 what, u32 paramU32, const void *src1, u32 sizeInBytes1, const void *src2, u32 sizeInBytes2)
+void thread::pushMsg2Buffer (const HThreadMsgW &h, u32 what, u64 paramU64, const void *src1, u32 sizeInBytes1, const void *src2, u32 sizeInBytes2)
 {
     sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hWrite);
 
@@ -306,7 +302,7 @@ void thread::pushMsg2Buffer (const HThreadMsgW &h, u16 what, u32 paramU32, const
     thread::sMsg msg;
     memset (&msg, 0x00, sizeof(msg));
     msg.what = what;
-    msg.paramU32 = paramU32;
+    msg.paramU64 = paramU64;
     msg.buffer = NULL;
     msg.bufferSize = 0;
 
@@ -332,7 +328,16 @@ void thread::pushMsg2Buffer (const HThreadMsgW &h, u16 what, u32 paramU32, const
 }
 
 //**************************************************************
-bool thread::getMsgQEvent (const HThreadMsgR &h, gos::Event *out_hEvent)
+bool thread::waitForAnEvent (const HThreadMsgR &h, u32 timeout_msec)
+{
+    sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hRead);
+    if (NULL == s)
+        return false;
+    return thread::eventWait (s->hEvent, timeout_msec);
+}
+
+//**************************************************************
+bool thread::msgQ_getHEvent (const HThreadMsgR &h, gos::Event *out_hEvent)
 {
     sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hRead);
 
@@ -354,6 +359,31 @@ bool thread::popMsg (const HThreadMsgR &h, thread::sMsg *out_msg)
     MUTEX_UNLOCK (s->cs);
 
     return ret;
+}
+
+/**************************************************************
+ * Questa e' una ottimizzazione della + semplice popMsg.
+ * Punta a usare uno solo LOCK per recuperare una manciata di messaggi in un colpo solo.
+ * Ritorna il num di messaggi poppati
+ */
+u32 thread::popMultipleMsg (const HThreadMsgR &h, sMsg *out_msgArray, u32 numMaxMessagesToPop)
+{
+    sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hRead);
+    if (NULL == s)
+        return false;
+
+    u32 ret = 0;
+    MUTEX_LOCK (s->cs);
+        while (numMaxMessagesToPop--)
+        {
+            if (!s->fifo->pop(&out_msgArray[ret]))
+                break;
+            ret++;
+        }
+    MUTEX_UNLOCK (s->cs);
+
+    return ret;
+    
 }
 
 //**************************************************************

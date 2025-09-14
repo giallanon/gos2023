@@ -161,7 +161,7 @@ OSWaitableGrp::sRecord* OSWaitableGrp::priv_addMsgQ (const HThreadMsgR &hRead)
     sRecord *s = priv_newRecord (EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP | EPOLLET);
     s->originType = eWaitEventOrigin::msgQ;
     s->origin.ifMsgQ.hMsgQRead = hRead;
-    gos::thread::getMsgQEvent (hRead, &s->origin.ifMsgQ.event);
+    gos::thread::msgQ_getHEvent (hRead, &s->origin.ifMsgQ.event);
 
     int fd = s->origin.ifMsgQ.event.osEvt.evfd;
     int err = epoll_ctl (hfd, EPOLL_CTL_ADD, fd, &s->eventInfo);

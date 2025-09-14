@@ -27,10 +27,11 @@ namespace gos
     {
         struct sMsg
         {
-            u16         what;
-            u32         paramU32;
-            void        *buffer;
+            u32         what;
             u32         bufferSize;
+            u64         paramU64;
+            void        *buffer;
+            
         };
 
 
@@ -67,20 +68,24 @@ namespace gos
         
         u32             calcSizeNeededToSerializeMsg (const sMsg &msg);
         u32             serializeMsg (const sMsg &msg, u8 *out_buffer, u32 sizeof_out_buffer);
-        u32             deserializMsg (const u8 *buffer, u16 *out_what, u32 *out_paramU32, u32 *out_bufferSize, const u8 **out_bufferPt);
+        u32             deserializMsg (const u8 *buffer, u32 *out_what, u64 *out_paramU64, u32 *out_bufferSize, const u8 **out_bufferPt);
 
-                        //read
-        bool            getMsgQEvent (const HThreadMsgR &h, gos::Event *out_hEvent);
-        bool            popMsg (const HThreadMsgR &h, sMsg *out_msg);
-        void            deleteMsg (const sMsg &msg);
+                        //wait
+        bool            waitForAnEvent (const HThreadMsgR &h, u32 timeout_msec);
+        bool            msgQ_getHEvent (const HThreadMsgR &h, gos::Event *out_hEvent);
 
                         //write
-        void            pushMsg (const HThreadMsgW &h, u16 what, u32 paramU32, const void *src, u32 sizeInBytes);
-        inline void     pushMsg (const HThreadMsgW &h, u16 what, u32 paramU32)                                           { pushMsg(h, what, paramU32, NULL, 0); }
-        inline void     pushMsg (const HThreadMsgW &h, u16 what, const void *src, u32 sizeInBytes)                       { pushMsg(h, what, 0, src, sizeInBytes); }
-        void            pushMsg2Buffer (const HThreadMsgW &h, u16 what, u32 paramU32, const void *src1, u32 sizeInBytes1, const void *src2, u32 sizeInBytes2);
+        void            pushMsg (const HThreadMsgW &h, u32 what, u64 paramU64, const void *src, u32 sizeInBytes);
+        inline void     pushMsg (const HThreadMsgW &h, u32 what, u64 paramU64)                                           { pushMsg(h, what, paramU64, NULL, 0); }
+        inline void     pushMsg (const HThreadMsgW &h, u32 what, const void *src, u32 sizeInBytes)                       { pushMsg(h, what, 0, src, sizeInBytes); }
+        void            pushMsg2Buffer (const HThreadMsgW &h, u32 what, u64 paramU64, const void *src1, u32 sizeInBytes1, const void *src2, u32 sizeInBytes2);
                             //appende src2 subito dopo src1. Il msg.bufferSize diventa size1+size2.
                             //E' solo una fn di comodo
+
+                        //read
+        bool            popMsg (const HThreadMsgR &h, sMsg *out_msg);
+        u32             popMultipleMsg (const HThreadMsgR &h, sMsg *out_msgArray, u32 numMaxMessagesToPop);
+        void            deleteMsg (const sMsg &msg);
 
     } //namespace thread
 

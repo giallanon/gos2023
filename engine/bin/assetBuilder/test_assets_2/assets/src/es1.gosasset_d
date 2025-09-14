@@ -4,7 +4,7 @@
 @vtx_shader
 {
   src: es1.vert
-  define: A1
+  def: A1
 }
 
 //ASSET-2
@@ -52,7 +52,7 @@
 @vtx_shader
 {
   src: es1.vert
-  define: A6
+  def: A6
 }
 
 //ASSET-7
@@ -60,7 +60,7 @@
 @vtx_shader : vtxshader_A5
 {
   src: es1.vert
-  define: A6
+  def: A6
 }
 
 
@@ -82,6 +82,6 @@
 @pxl_shader : pxlshader_es1_A9
 {
   src: es1.frag
-  define: A9
+  def: A9
 }
 

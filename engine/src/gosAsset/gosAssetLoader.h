@@ -1,12 +1,15 @@
 #ifndef _gosAssetLoader_h_
 #define _gosAssetLoader_h_
 #include "loaders/gosAssetLoader_shader.h"
-
+#include "loaders/gosAssetLoader_pipe.h"
 
 namespace gos
 {
     namespace asset
     {
+        class Hub; //fwd decl
+
+
         /**
         * @brief    Loader;
         * 
@@ -17,7 +20,7 @@ namespace gos
                     Loader ();
                     ~Loader();
 
-            bool    setup (const char *baseFolder, gos::GPU *gpu);
+            bool    setup (const char *baseFolder, gos::GPU *gpu, asset::Hub *theHub);
 
 
             template<class TLOADER>
@@ -31,6 +34,15 @@ namespace gos
                     }
 
 
+            bool    load (const asset::UID &uid, void *out)
+            {
+                const eAssetType assType = uid.getAssetType();
+                LoaderInterface *loader = getLoader (assType);
+                if (loader)
+                    return loader->load (this, ctx, uid, out);
+                return false;
+            }
+
             template<class TASSET>
             bool    load (const asset::UID &uid, TASSET *out)
             {
@@ -42,7 +54,7 @@ namespace gos
                     return false;
                 }
 
-                if (loader->load (this, ctx, uid, out))
+                if (loader->load (theHub, this, ctx, uid, out))
                     return true;
 
                 gos::logger::err ("asset::Loader::Load (%016" PRIX64 ") => asset not found\n", uid._uid);
@@ -70,11 +82,11 @@ namespace gos
             }
 
 
-
-            gos::GPU*           getGPU() const                                      { return gpu; }
+            gos::GPU*           getGPU() const                                                      { return gpu; }
             LoaderInterface*    getLoader (eAssetType assType);
             bool                runtimeNameToUID (const char *runtimeName, asset::UID *out);
-
+            asset::Context*     getContext()                                                        { return &ctx;}
+            asset::Hub*         getTheHub() const                                                   { return theHub; }
 
         private:
             static constexpr u8 NUM_MAX_ASSET_LOADER = 32;
@@ -84,6 +96,7 @@ namespace gos
 
         private:
             gos::Allocator      *localAllocator;
+            asset::Hub          *theHub;
             gos::GPU            *gpu;
             asset::Context      ctx;
             LoaderInterface     *loaderList[NUM_MAX_ASSET_LOADER];

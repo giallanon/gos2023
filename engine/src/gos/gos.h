@@ -244,7 +244,7 @@ namespace gos
 		inline void     eventDestroy (gos::Event &ev)											{ platform::eventDestroy (ev.osEvt); }
 		inline bool		eventCompare (const gos::Event &a, const gos::Event &b)					{ return platform::eventCompare(a.osEvt, b.osEvt); }
 		inline void     eventFire (const gos::Event &ev)										{ platform::eventFire (ev.osEvt); }
-		inline bool     eventWait (const gos::Event &ev, size_t timeoutMSec)					{ return platform::eventWait (ev.osEvt, timeoutMSec); }
+		inline bool     eventWait (const gos::Event &ev, u32 timeoutMSec)						{ return platform::eventWait (ev.osEvt, timeoutMSec); }
 		inline void     eventSetInvalid (gos::Event &ev)										{ platform::eventSetInvalid (ev.osEvt); }
 		inline bool		eventIsInvalid (const gos::Event &ev)									{ return platform::eventIsInvalid (ev.osEvt); }
 

@@ -1,5 +1,5 @@
-#ifndef _gosGPURenderPass_def_h_
-#define _gosGPURenderPass_def_h_
+#ifndef _gosGPUPipeline_def_h_
+#define _gosGPUPipeline_def_h_
 #include "gosGPUEnumAndDefine.h"
 #include "vulkan/gosGPUVulkanEnumAndDefine.h"
 #include "vulkan/gosGPUVulkan.h"
@@ -111,9 +111,10 @@ namespace gos
             struct Pipeline
             {
             public:
+                GPUPipelineHandle           pipeline_handle;
                 u32                         descrset_num;
                 GPUDescrSetLayoutHandle     descrset_handle_defList[GOSGPU__NUM_MAX_DESCRIPTOR_SETS];
-                GPUPipelineHandle           pipeline_handle;
+                
 
             public:
                 void reset()
@@ -153,7 +154,7 @@ namespace gos
                     drawPrimitive = eDrawPrimitive::trisList;
                     bWireframe = false;
 
-                    zbuffer_enabled = true; 
+                    zbuffer_enabled = false; 
                     zbuffer_format = eImageFormat::_DEPTH_BEST;
                     zbuffer_write=true; zbuffer_cmpFn = eZFunc::LESS;
                     zbuffer_clearCol.depth = 1; zbuffer_clearCol.stencil = 0;
@@ -164,12 +165,13 @@ namespace gos
 
                 void                set_cullMode (eCullMode m)                                                          { cullMode = m; }
                 void                set_drawPrimitive (eDrawPrimitive p)                                                { drawPrimitive = p; }
+                void                enable_wireframe()                                                                  { bWireframe = true; }
 
                 void                set_zbuffer (eImageFormat fmt, bool zwriteIN=true, eZFunc zfuncIN=eZFunc::LESS)     { assert (gos::utils::isFormatWithDepth(fmt) || fmt==eImageFormat::_DEPTH_BEST); zbuffer_enabled = true; zbuffer_format=fmt; zbuffer_write=zwriteIN; zbuffer_cmpFn=zfuncIN; }
 
                 void                add_rt (eImageFormat fmt)                                                           { assert (numRT < GOSGPU__NUM_MAX_ATTACHMENT); renderTargetFormat[numRT] = fmt; numRT++; }
 
-                void                shader_add (GPUShaderHandle &handle)                                                { assert (numShader < GOSGPU__NUM_MAX_SHADER_PER_PIPELINE); shaderHandleList[numShader++] = handle; }
+                void                shader_add (const GPUShaderHandle &handle)                                          { assert (numShader < GOSGPU__NUM_MAX_SHADER_PER_PIPELINE); shaderHandleList[numShader++] = handle; }
 
                 void                pushConst_add (u16 offset, u16 sizeInByte, VkShaderStageFlags stageFlags)
                 {
@@ -221,4 +223,4 @@ namespace gos
     } //namespace gpu
 } //namespace gos
 
-#endif //_gosGPURenderPass_def_h_
+#endif //_gosGPUPipeline_def_h_

@@ -48,75 +48,34 @@ void VulkanExample6::virtual_onCleanup()
     gpu->deleteResource(rt3);
 }    
 
-
 //************************************
-bool VulkanExample6::virtual_onInit ()
+bool VulkanExample6::priv_loadModel()
 {
-    //builder per ricmpilare gli shader se necessario
-    {
-        gos::asset::Builder builder;
-        builder.buildAll("shader/example6", true);
-    }
+    gos::VtxLayout vtxLayot;
+    shape::VtxLayoutWriter writer(&vtxLayot);
+    writer.begin()
+        .addPos3(offsetof(Vertex, pos))
+        .addTexCoord(offsetof(Vertex, tutv0))
+        .addNorm3(offsetof(Vertex, normal))
+    .end();
 
-
-    //load shader
-    {
-        /*gos::asset::Loader loader;
-        loader.setup ("shader/example6", gpu);
-
-        asset::Asset_shader shader;
-        if (!loader.load("shader2.vert", &shader))
-            return false;
-        vtxShaderHandle = shader.handle_shader;
-
-        if (!loader.load("shader2.frag", &shader))
-            return false;
-        fragShaderHandle = shader.handle_shader;*/
-    }
-    theHub.setup ("shader/example6", gpu);
-    {
-        asset::Handle handle;
-        theHub.getHandle("shader2.vert", &handle);
-
-        const asset::Asset_shader *shader;
-        shader = theHub.getAsset<asset::Asset_shader> (handle);
-        vtxShaderHandle = shader->handle_shader;
-
-
-        theHub.getHandle("shader2.frag", &handle);
-        shader = theHub.getAsset<asset::Asset_shader> (handle);
-        fragShaderHandle = shader->handle_shader;
-    }
-
-
-
-    //importazione modello
-    {
-        gos::VtxLayout vtxLayot;
-        shape::VtxLayoutWriter writer(&vtxLayot);
-        writer.begin()
-            .addPos3(offsetof(Vertex, pos))
-            .addTexCoord(offsetof(Vertex, tutv0))
-            .addNorm3(offsetof(Vertex, normal))
-        .end();
+    //gos::shape::importFrom_dae ("shader/example6/esempio.dae", vtxLayot, gos::getSysHeapAllocator(), shapeList);
+    //gos::shape::importFrom_dae ("shader/example6/omino/omino2.dae", vtxLayot, gos::getSysHeapAllocator(), shapeList);
+    //gos::shape::importFrom_dae ("shader/example6/sponza/sponza.dae", vtxLayot, gos::getSysHeapAllocator(), shapeList);
     
-        //gos::shape::importFrom_dae ("shader/example6/esempio.dae", vtxLayot, gos::getSysHeapAllocator(), shapeList);
-        //gos::shape::importFrom_dae ("shader/example6/omino/omino2.dae", vtxLayot, gos::getSysHeapAllocator(), shapeList);
-        //gos::shape::importFrom_dae ("shader/example6/sponza/sponza.dae", vtxLayot, gos::getSysHeapAllocator(), shapeList);
-        
-        //if (!gos::shape::importFrom_glTF ("shader/example6/cubo-normal.mapped/cubo.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-        //if (!gos::shape::importFrom_glTF ("shader/example6/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-        //if (!gos::shape::importFrom_glTF ("shader/example6/angolo.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-        //if (!gos::shape::importFrom_glTF ("shader/example6/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-        //if (!gos::shape::importFrom_glTF ("shader/example6/esempio2.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-        
-        if (!gos::shape::importFrom_glTF ("shader/example6/altro/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-        //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Sponza/glTF/Sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-        //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/DamagedHelmet/glTF/DamagedHelmet.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-        //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Duck/glTF-Binary/Duck.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-        //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/BrainStem/glTF-Binary/BrainStem.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-        
-    }
+    //if (!gos::shape::importFrom_glTF ("shader/example6/cubo-normal.mapped/cubo.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    //if (!gos::shape::importFrom_glTF ("shader/example6/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    //if (!gos::shape::importFrom_glTF ("shader/example6/angolo.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    //if (!gos::shape::importFrom_glTF ("shader/example6/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    //if (!gos::shape::importFrom_glTF ("shader/example6/esempio2.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    
+    if (!gos::shape::importFrom_glTF ("shader/example6/altro/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Sponza/glTF/Sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/DamagedHelmet/glTF/DamagedHelmet.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Duck/glTF-Binary/Duck.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/BrainStem/glTF-Binary/BrainStem.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    
+
 
     //creo vtx/idx/staging buffer
     if (!createVertexIndexStageBuffer())
@@ -148,9 +107,26 @@ bool VulkanExample6::virtual_onInit ()
             idxBufferSize += sizeof(u16) * myShape->numIdx;
         }
     }
+    return true;
+}
+
+//************************************
+bool VulkanExample6::virtual_onInit ()
+{
+    //builder per ricmpilare gli shader se necessario
+    {
+        gos::asset::Builder builder;
+        builder.buildAll("shader/example6", true);
+    }
+
+    //theHub
+    theHub.setup ("shader/example6", gpu);
+    theHub.getHandle("pipe_1", &assetPipe, true);
 
 
-
+    //importazione modello
+    priv_loadModel();
+    
 
     //creo un descriptor pool
     gpu->descrPool_createNew (&descrPoolHandle)
@@ -172,7 +148,7 @@ bool VulkanExample6::virtual_onInit ()
 
 
     //creazione pipeline
-    if (!priv_setupPipeline_v2(vtxShaderHandle, fragShaderHandle))
+    if (!priv_setupPipeline_v2())
         return false;
     
 
@@ -183,15 +159,8 @@ bool VulkanExample6::virtual_onInit ()
         return false;
     }
 
-
-    return true;
-}    
-
-//************************************
-bool VulkanExample6::priv_setupPipeline_v2 (GPUShaderHandle vtxShaderHandle, GPUShaderHandle fragShaderHandle)
-{
-    const eImageFormat IMG_FORMAT = eImageFormat::U8_RGBA;
     //risorse di rendering
+    const eImageFormat IMG_FORMAT = eImageFormat::U8_RGBA;
     if (!gpu->renderTarget_create ("0-", "0-", IMG_FORMAT, &rt1))
         return false;
 
@@ -199,10 +168,27 @@ bool VulkanExample6::priv_setupPipeline_v2 (GPUShaderHandle vtxShaderHandle, GPU
         return false;
 
     if (!gpu->renderTarget_create ("0-", "0-", eImageFormat::U8_RGBA, &rt3))
-        return false;        
+        return false;      
 
+    return true;
+}    
+
+//************************************
+bool VulkanExample6::priv_setupPipeline_v2 ()
+{
     //pipeline def
-    gpu::pipe2::Pipeline_def def;
+    const asset::Asset_pipe *pipe;
+    while (1)
+    {
+        if (theHub.getAsset(assetPipe, &pipe))
+            break;
+    }
+    vtxShaderHandle = pipe->handle_vtxshader;
+    fragShaderHandle = pipe->handle_pxlshader;
+    pipelineHandle = pipe->pipe.pipeline_handle;
+    descrSetLayoutHandle = pipe->pipe.descrset_handle_defList[0];
+
+    /*gpu::pipe2::Pipeline_def def;
     def.reset();
     
 
@@ -222,12 +208,13 @@ bool VulkanExample6::priv_setupPipeline_v2 (GPUShaderHandle vtxShaderHandle, GPU
     def.shader_add (vtxShaderHandle);
     def.shader_add (fragShaderHandle);
 
+
     gpu::pipe2::Pipeline pipeline;
     if (!gpu->pipeline_v2_createNew (def, &pipeline))
         return false;
     pipelineHandle = pipeline.pipeline_handle;
     descrSetLayoutHandle = pipeline.descrset_handle_defList[0];
-
+*/
 
     return true;
 }
@@ -273,6 +260,11 @@ bool VulkanExample6::createVertexIndexStageBuffer()
 //************************************
 bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, VkImage swapChainImage)
 {
+    const asset::Asset_pipe *pipe;
+    if (!theHub.getAsset(assetPipe, &pipe))
+        return false;
+
+
     //aggiorno UBO
     ubo.objWorld.identity();
     ubo.camView = cam.getMatV();
@@ -573,6 +565,7 @@ void VulkanExample6::priv_mainLoop3()
     while (bQuitApp == false)
     {
         mainLoop.stat_onCPUFrameBegin();
+        theHub.update (gos::getTimeSinceStart_msec());
         doCPUStuff ();
         mainLoop.stat_onCPUFrameEnd();
 

@@ -5,6 +5,7 @@
 
 using namespace gos;
 
+#define GOS_ASSET__DB_VERSION           4
 #define GOS_ASSET__PATH_TO_ASSETS_BIN   "assets/bin"
 #define GOS_ASSET__PATH_TO_ASSETS_SRC   "assets/src"
 
@@ -49,8 +50,9 @@ const char* asset::enumToString (const eAssetType s)
         case eAssetType::vtx_shader:        return "vtx_shader";
         case eAssetType::pxl_shader:        return "pxl_shader";
         case eAssetType::texture2D:         return "texture2D";
-        case eAssetType::pipeline_def:      return "pipeline_def";
+        case eAssetType::pipe:              return "pipe";
         case eAssetType::shape:             return "shape";
+        case eAssetType::DEBUG_ASSET:       return "DEBUG_ASSET";
     }
 }
 
@@ -69,8 +71,9 @@ bool asset::stringToEnum (const char *str, eAssetType *out)
     HELPER(vtx_shader)
 	HELPER(pxl_shader)
     HELPER(texture2D)
-	HELPER(pipeline_def)
+	HELPER(pipe)
     HELPER(shape)
+    HELPER(DEBUG_ASSET);
 
 #undef HELPER	
 	return false;
@@ -136,12 +139,12 @@ static bool asset_create_emptyDB (const char *dbFile, DBHandle &db)
         //table: version
         sprintf_s (s, sizeof(s), "CREATE TABLE version (\
 ID INTEGER NOT NULL DEFAULT 1 PRIMARY KEY,\
-ver UNSIGNED INT1 NOT NULL DEFAULT 1)\
+ver UNSIGNED INT1 NOT NULL DEFAULT 0)\
 ");
             if (!db::exec (db, s))
                 break;
 
-            sprintf_s (s, sizeof(s), "INSERT INTO version (ID,ver) VALUES(1,1)");
+            sprintf_s (s, sizeof(s), "INSERT INTO version (ID,ver) VALUES(1,%d)", GOS_ASSET__DB_VERSION);
             if (!db::exec (db, s))
                 break;
 
@@ -177,14 +180,18 @@ src VARCHAR(128) NOT NULL)\
 
 
             //table: GOS_ASSET__TABLE_DEPENDS
-      /*      sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET__TABLE_DEPENDS " (\
-ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,\
-UID UNSIGNED INT8 NOT NULL,\
-childUID UNSIGNED INT8 NOT NULL\
-)");*/
             sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET__TABLE_DEPENDS " (\
 UID UNSIGNED INT8 NOT NULL,\
 childUID UNSIGNED INT8 NOT NULL,\
+PRIMARY KEY('UID','childUID'))");
+        if (!db::exec (db, s))
+                break;
+
+            //table: GOS_ASSET__TABLE_DEPENDS_RUNTIME 
+            sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET__TABLE_DEPENDS_RUNTIME " (\
+UID UNSIGNED INT8 NOT NULL,\
+childUID UNSIGNED INT8 NOT NULL,\
+childDepth UNSIGNED INT1 NOT NULL,\
 PRIMARY KEY('UID','childUID'))");
         if (!db::exec (db, s))
                 break;
@@ -219,6 +226,20 @@ static bool asset_openDB (DBHandle &db, const char *baseFolder, const char *dbNa
     {
         if (!db::open (fullDBFilePathAndName, &db))
             return false;
+
+        //verifico che la versione sia corretta
+        db::RST rst;
+        if (db::query (db, "SELECT ver FROM version WHERE ID=1", &rst))
+        {
+            if (rst.fetchRow())
+            {
+                if (GOS_ASSET__DB_VERSION != rst.getValAsU32(0))
+                {
+                    gos::logger::err ("asset::asset_openDB(): wrong DB version, expected ver=%d\n", GOS_ASSET__DB_VERSION);
+                    return false;
+                }
+            }
+        }
     }
 
     return true;
@@ -640,7 +661,7 @@ void asset::asset_get_srcfolder_name (const char *baseFolder, char *out, u32 siz
 }
 
 //*******************************************************
-bool asset::asset_createUID (eAssetType assTypeIN, const void *buffer, u32 sizeof_buffer, asset::UID *out)
+bool asset::asset_createUID (eAssetType assTypeIN, u8 asset_depth, const void *buffer, u32 sizeof_buffer, asset::UID *out)
 {
     assert (out != NULL);
 
@@ -666,9 +687,14 @@ bool asset::asset_createUID (eAssetType assTypeIN, const void *buffer, u32 sizeo
     out->_uid = utils::crc32(blob, sizeof_blob);
 
     //uso il penultimo byte MSB per metterci l'assType
-    u64 assetType = static_cast<u64>(assTypeIN);
-    assetType <<= 48;
-    out->_uid |= assetType;
+    u64 uu = static_cast<u64>(assTypeIN);
+    uu <<= 48;
+    out->_uid |= uu;
+
+    //ci metto anche l'asset depth
+    uu = static_cast<u64>(asset_depth);
+    uu <<= 32;
+    out->_uid |= uu;
 
     GOSFREE_SCRAP(blob);
     return true;
@@ -725,6 +751,10 @@ bool asset__do_asset_delete_ric (asset::Context &ctx, const asset::UID &uid, ass
         return false;
 
     sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET__TABLE_DEPENDS " WHERE UID=%" PRIu64 "", uid._uid);
+    if (!db::exec (ctx.db, s))
+        return false;
+
+    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET__TABLE_DEPENDS_RUNTIME " WHERE UID=%" PRIu64 "", uid._uid);
     if (!db::exec (ctx.db, s))
         return false;
 
@@ -898,6 +928,40 @@ bool asset::asset_get_dependecies_list (Context &ctx, const asset::UID &uid, boo
                 return false;
         }
     }
+    return true;
+}
+
+//*******************************************************
+bool asset::asset_get_runtime_dependecies_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::FastUIDList *out)
+{
+    assert (NULL != out);
+    assert (uid.isAnAsset());
+
+    if (bClearListOnStart)
+        out->reset();
+
+    if (!ctx.isValid())
+    {
+        logger::err ("asset_get_runtime_dependecies_list (%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        return false;
+    }
+
+    db::RST rst;
+    char s[256];
+    sprintf_s (s, sizeof(s), "SELECT childUID FROM " GOS_ASSET__TABLE_DEPENDS_RUNTIME " WHERE UID=%" PRIu64 " ORDER BY childDepth ASC", uid._uid);
+    if (!db::query (ctx.db, s, &rst))
+    {
+        logger::err ("asset_get_runtime_dependecies_list (%" PRIu64 ") => error querying\n",  uid._uid);
+        return false;
+    }
+
+    while (rst.fetchRow())
+    {
+        asset::UID childUID;
+        childUID._uid = rst.getValAsU64(0);
+        out->append (childUID);
+    }
+
     return true;
 }
 
@@ -1085,3 +1149,20 @@ bool asset::depend_add (Context &ctx, const asset::UID &uid_padre, const asset::
     return false;
 }
 
+//*******************************************************
+bool asset::dependRT_add (Context &ctx, const asset::UID &uid_padre, const asset::UID &uid_figlio, u8 depth_figlio)
+{
+    if (!ctx.isValid())
+    {
+        logger::err ("dependRT_add(%016" PRIX64 ",%016" PRIX64 ") => invalid ctx\n", uid_padre._uid, uid_figlio._uid);
+        return false;
+    }
+
+    char s[128];
+    sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET__TABLE_DEPENDS_RUNTIME " (UID,childUID,childDepth) VALUES(%" PRIu64 ",%" PRIu64 ",%d)", uid_padre._uid, uid_figlio._uid, depth_figlio);
+    if (db::exec (ctx.db, s))
+        return true;
+
+    logger::err ("dependRT_add(%016" PRIX64 ",%016" PRIX64 ") => error inserting into table\n", uid_padre._uid, uid_figlio._uid);
+    return false;
+}

@@ -1,9 +1,8 @@
 //PIPE-1
 //UID atteso: 0x00030000363E07CB
-@pipeline_def
+@pipe
 {
-    param1: pippo
-    param2: pluto
+    rt0: U8_RGBA
 
     //questo shader è completamente nuovo, esclusivamente definito qui
     //UID: 0x000100007A92635A
@@ -22,10 +21,9 @@
 //PIPE-2
 //UID atteso: 0x00030000363E07CB
 //identico a pipe 1, non dovrebbe creare problemi
-@pipeline_def
+@pipe
 {
-    param1: pippo
-    param2: pluto
+    rt0: U8_RGBA
 
     //questo shader è completamente nuovo, esclusivamente definito qui
     //UID: 0x000100007A92635A
@@ -44,10 +42,9 @@
 //PIPE-3
 //UID atteso: 0x00030000363E07CB
 //identico a pipe 1, ma con un runtimeName
-@pipeline_def: pipedef_es2_3
+@pipe: pipedef_es2_3
 {
-    param1: pippo
-    param2: pluto
+    rt0: U8_RGBA
 
     //questo shader è completamente nuovo, esclusivamente definito qui
     //UID: 0x000100007A92635A
@@ -60,16 +57,16 @@
     @pxl_shader : pipedef_es2_3-pxlshader
     {
       src: es2.frag
+      def: aa
     }
 }
 
 //PIPE-4
 //UID atteso: 0x000300004879D320
 //identico a pipe 1, ma con un runtimeName
-@pipeline_def: pipedef_es2_4
+@pipe: pipedef_es2_4
 {
-    param1: pippo
-    param2: pluto
+    rt0: U8_RGBA
 
     @vtx_shader: vtxshader_es1
 
@@ -81,11 +78,9 @@
 //PIPE-5
 //UID atteso: 0x000300000C7DCA31
 //use 2 eshader già definiti in es1 per cui non dovrebbero generare nuovi asset ma solo linkare agli esistenti
-@pipeline_def : pipedef_es2_5
+@pipe : pipedef_es2_5
 {
-    param1: pippo
-    param2: pluto
-
+    rt0: U8_RGBA
 
     @vtx_shader
     {

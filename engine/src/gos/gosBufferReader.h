@@ -20,6 +20,7 @@ namespace gos
                 //read: avanzano il cursore
         bool    readAndCopyHere (void *dst, u32 howManyByte)            { if (readAtAndCopyHere (cursor, dst, howManyByte)) { cursor += howManyByte; return true; } return false; }
         u8      readU8  ()                                              { u8 ret; if (priv_readU8At(cursor, &ret)) { cursor++; return ret; } DBGBREAK; return 0; }
+        bool    readBool()                                              { if (0 == readU8()) return false; return true; }
         u16     readU16 ()                                              { u16 ret; if (priv_readU16At(cursor, &ret)) { cursor += sizeof(ret); return ret; } DBGBREAK; return 0; }
         u32     readU32 ()                                              { u32 ret; if (priv_readU32At(cursor, &ret)) { cursor += sizeof(ret); return ret; } DBGBREAK; return 0; }
         u64     readU64 ()                                              { u64 ret; if (priv_readU64At(cursor, &ret)) { cursor += sizeof(ret); return ret; } DBGBREAK; return 0; }
@@ -27,6 +28,7 @@ namespace gos
                 //readAt: legge nella posizione <offset> lasciando inalterato <cursor>
         bool    readAtAndCopyHere (u32 offset, void *dst, u32 howManyByte) const    { const u32 finalOffset = offset + howManyByte; if (finalOffset > bufferSize) return false; memcpy (dst, &buffer[offset], howManyByte); return true; }
         u8      readU8At  (u32 offset) const                                        { u8 ret; if (priv_readU8At(offset, &ret)) return ret; DBGBREAK; return 0; }
+        bool    readBoolAt(u32 offset) const                                        { if (0 == readU8At(offset)) return false; return true; }
         u16     readU16At (u32 offset) const                                        { u16 ret; if (priv_readU16At(offset, &ret)) return ret; DBGBREAK; return 0; }
         u32     readU32At (u32 offset) const                                        { u32 ret; if (priv_readU32At(offset, &ret)) return ret; DBGBREAK; return 0; }
         u64     readU64At (u32 offset) const                                        { u64 ret; if (priv_readU64At(offset, &ret)) return ret; DBGBREAK; return 0; }

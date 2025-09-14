@@ -3,13 +3,11 @@
 #include "../gosAssetEnumAndDefine.h"
 #include "../../gosGPU/gosGPUEnumAndDefine.h"
 
-
 namespace gos
 {
     namespace asset
     {
         class Loader;   //fwd decl
-
 
         /**
          * @brief   LoaderInterface
@@ -27,6 +25,7 @@ namespace gos
 
 
             eAssetType      getAssType() const                                                                                      { return assType; }
+
 
         private:
             eAssetType assType;

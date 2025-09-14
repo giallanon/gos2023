@@ -26,6 +26,7 @@ namespace gos
                 //possibile scrivere
         bool    write (const void *src, u32 howManyByte)                { return priv_writeAt    (cursor, src, howManyByte, true); }
         bool    writeU8  (u8 data)                                      { return priv_writeU8At  (cursor, data, true); }
+        bool    writeBool(bool data)                                    { const u8 b = data ? 1: 0; return priv_writeU8At (cursor, b, true); }
         bool    writeU16 (u16 data)                                     { return priv_writeU16At (cursor, data, true); }
         bool    writeU32 (u32 data)                                     { return priv_writeU32At (cursor, data, true); }
         bool    writeU64 (u64 data)                                     { return priv_writeU64At (cursor, data, true); }
@@ -34,6 +35,7 @@ namespace gos
                 //possibile scrivere
         bool    writeAt (u32 offset, const void *src, u32 howManyByte)  { return priv_writeAt    (offset, src, howManyByte, false); }
         bool    writeU8At  (u32 offset, u8 data)                        { return priv_writeU8At  (offset, data, false); }
+        bool    writeBoolAt(bool data)                                  { const u8 b = data ? 1: 0; return priv_writeU8At (cursor, b, true); }
         bool    writeU16At (u32 offset, u16 data)                       { return priv_writeU16At (offset, data, false); }
         bool    writeU32At (u32 offset, u32 data)                       { return priv_writeU32At (offset, data, false); }
         bool    writeU64At (u32 offset, u64 data)                       { return priv_writeU64At (offset, data, false); }

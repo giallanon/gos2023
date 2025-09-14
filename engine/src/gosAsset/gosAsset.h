@@ -6,10 +6,11 @@ namespace gos
 {
     namespace asset
     {
-        #define GOS_ASSET__TABLE_ASSET_LIST     "assetList"
-        #define GOS_ASSET__TABLE_RES_LIST       "resList"
-        #define GOS_ASSET__TABLE_RUNTIME_NAME   "rtnameList"
-        #define GOS_ASSET__TABLE_DEPENDS        "depends"
+        #define GOS_ASSET__TABLE_ASSET_LIST         "assetList"
+        #define GOS_ASSET__TABLE_RES_LIST           "resList"
+        #define GOS_ASSET__TABLE_RUNTIME_NAME       "rtnameList"
+        #define GOS_ASSET__TABLE_DEPENDS            "depends"
+        #define GOS_ASSET__TABLE_DEPENDS_RUNTIME    "dependsRT"
 
 
         const char* enumToString (const eResType s);
@@ -57,7 +58,7 @@ namespace gos
                     //ritorna il filename completo di path della risorsa di uid == uid
         void        asset_manufacture_fullFilename (const Context &ctx, const asset::UID &uid, char *out, u32 sizeof_out);
 
-        bool        asset_createUID (eAssetType assType, const void *buffer, u32 sizeof_buffer, asset::UID *out);
+        bool        asset_createUID (eAssetType assType, u8 asset_depth, const void *buffer, u32 sizeof_buffer, asset::UID *out);
         bool        asset_insert (Context &ctx, const asset::UID &uid, eAssetType assType, u64 lastTimeBuilt, const char *sourceFileInfo);
         
                     //elimina uid dal DB, elimina tutti gli asset che dipendono da uid, elimina tutti i runtimeName associati a UID
@@ -71,6 +72,7 @@ namespace gos
 
                     //ritorna in <out> tutti gli asset e le risorse da cui questo asset dipende (ricorsivamente)
         bool        asset_get_dependecies_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out);
+        bool        asset_get_runtime_dependecies_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::FastUIDList *out);
 
                     //ritorna in <out> tutti gli asset che dipendono da questo asset (ricorsivamente)
         bool        asset_get_requireBy_list (Context &ctx, const asset::UID &uid, bool bClearListOnStart, asset::HashedUIDList *out, asset::eFilter filter);
@@ -85,6 +87,8 @@ namespace gos
 
         //================ dependencies
         bool        depend_add (Context &ctx, const asset::UID &padre, const asset::UID &figlio);
+        bool        dependRT_add (Context &ctx, const asset::UID &padre, const asset::UID &figlio, u8 depth_figlio);
+
 
         
     } //namespace res

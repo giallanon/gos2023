@@ -1,5 +1,6 @@
 #include "gosAssetLoader.h"
 #include "gosAsset.h"
+#include "gosAssetHub.h"
 
 using namespace gos;
 using namespace gos::asset;
@@ -13,6 +14,7 @@ Loader::Loader ()
 	memset (loaderList, 0, sizeof(loaderList));
     addLoader<Loader_vtxShader>();
     addLoader<Loader_pxlShader>();
+    addLoader<Loader_pipe>();
 }
 
 //************************************************
@@ -29,12 +31,13 @@ Loader::~Loader()
 }
 
 //************************************************
-bool Loader::setup (const char *baseFolder, gos::GPU *gpuIN)
+bool Loader::setup (const char *baseFolder, gos::GPU *gpuIN, asset::Hub *theHubIN)
 {
     if (ctx.isValid())
         asset::context_close (ctx);
 
     gpu = gpuIN;
+    theHub = theHubIN;
 	return asset::context_open (baseFolder, &ctx);
 }
 

@@ -42,7 +42,8 @@ private:
     void        mainLoop();
     void        virtual_onInputEvent (u32 event32, i16 value, const gos::input::MouseStatus &mouseStatus, const gos::input::sButtonModifier &btnModifier);
 
-    bool        priv_setupPipeline_v2 (GPUShaderHandle vtxShaderHandle, GPUShaderHandle fragShaderHandle);
+    bool        priv_loadModel();
+    bool        priv_setupPipeline_v2 ();
     bool        priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw, VkImage swapChainImage);
     void        priv_mainLoop2();
     void        priv_mainLoop3();
@@ -75,7 +76,8 @@ private:
     GPURenderTargetHandle   rt2;
     GPURenderTargetHandle   rt3;
 
-    gos::asset::Hub  theHub;
+    gos::asset::Hub         theHub;
+    gos::asset::Handle      assetPipe;
 };
 
 

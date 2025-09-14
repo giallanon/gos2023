@@ -1,5 +1,5 @@
-#ifndef _gosAssetBuilder_pipedef_h_
-#define _gosAssetBuilder_pipedef_h_
+#ifndef _gosAssetBuilder_pipe_h_
+#define _gosAssetBuilder_pipe_h_
 #include "gosAssetBuilderInterface.h"
 #include "../gosGPU/gosGPUEnumAndDefine.h"
 
@@ -21,6 +21,7 @@
 				
 	(optional)	cullMode: CCW					=> <mode>							=> default: eCullMode::CCW
 	(optional)	drawPrimitive: trisList			=> <primitive>						=> default: trisList
+    (optional)	wireframe: 0|1                                                      => default: 0
 
 	(optional)	@vtx_shader
 	(optional)	@pxl_shader
@@ -36,10 +37,10 @@ namespace gos
     namespace asset
     {
         /**
-         * @brief Builder_pipeDef
+         * @brief Builder_pipe
          *
          */
-        class Builder_pipeDef : public BuilderInterface
+        class Builder_pipe : public BuilderInterface
         {
         public:
             /**
@@ -51,8 +52,8 @@ namespace gos
             static u32  calc_depth();
 
         public:
-                    Builder_pipeDef () : BuilderInterface (eAssetType::pipeline_def)                { }
-                    ~Builder_pipeDef()                                                              { }
+                    Builder_pipe () : BuilderInterface (eAssetType::pipe)                       { }
+                    ~Builder_pipe()                                                             { }
 
             bool    build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out);
 
@@ -63,6 +64,7 @@ namespace gos
                 u32             magic;    //uso interno
                 eCullMode       cullMode;
                 eDrawPrimitive  drawPrimitive;
+                u8              bWireframe;
 
                 u8              zbuffer_enabled;
                 eImageFormat    zbuffer_format;
@@ -80,10 +82,10 @@ namespace gos
             bool    priv_extractParams (const IniFileSection *sec, Params *out_params);
             bool    priv_do_create_assetFile (Context &ctx, const Params &params, const char *filenameDST) const;
             
-        }; //class Builder_pipeDef
+        }; //class Builder_pipe
 
     } //namespace asset
 } //namespace gos
 
-#endif //_gosAssetBuilder_pipedef_h_
+#endif //_gosAssetBuilder_pipe_h_
 

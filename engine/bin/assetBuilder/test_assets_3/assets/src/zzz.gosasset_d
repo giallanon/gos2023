@@ -1,0 +1,10 @@
+@DEBUG_ASSET: debug_asset_01
+{
+    @vtx_shader
+    {
+      src: es2.vert
+    }
+
+    @pipe: pipe_2
+}
+

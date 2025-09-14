@@ -10,7 +10,7 @@ void test_assetBuilder2()
 
     asset::Builder builder;
 
-    if (!builder.buildAll(BASE_FOLDER, true))
+    if (!builder.rebuildAll(BASE_FOLDER, true))
         return;
     
     builder.save_dependencies_report(BASE_FOLDER);

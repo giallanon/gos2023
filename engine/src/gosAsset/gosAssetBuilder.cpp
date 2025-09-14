@@ -1,8 +1,9 @@
 #include "gosAssetBuilder.h"
 #include "gos.h"
 #include "string/gosStringIncludeDetector.h"
-#include "builders/gosAssetBuilder_pipedef.h"
+#include "builders/gosAssetBuilder_pipe.h"
 #include "builders/gosAssetBuilder_shader.h"
+#include "builders/gosAssetBuilder_DEBUG_ASSET.h"
 
 using namespace gos;
 using namespace gos::asset;
@@ -35,13 +36,13 @@ Builder::Builder()
     memset (builderList, 0, size);
 
     size = sizeof(u32) * NUM_MAX_ASSET_BUILDER;
-    depthByAssetType = GOSALLOCT(u32*, localAllocator, size);
-    memset (depthByAssetType, 0xFF, sizeof(u32) * NUM_MAX_ASSET_BUILDER);
+    memset (depthByAssetTypeList, 0xFF, sizeof(depthByAssetTypeList));
 
     //default builder
     addBuilder<gos::asset::Builder_vtxShader>();
     addBuilder<gos::asset::Builder_pxlShader>();
-    addBuilder<gos::asset::Builder_pipeDef>();
+    addBuilder<gos::asset::Builder_pipe>();
+    addBuilder<gos::asset::Builder_DEBUG_ASSET>();
 
 }
 
@@ -55,10 +56,7 @@ Builder::~Builder()
         GOSDELETE(localAllocator, builderList[i]);
     }
 
-    
-    GOSFREE(localAllocator, depthByAssetType);
-    depthByAssetType = NULL;
-    
+   
     priv_closeAllContext();
 }
 
@@ -81,7 +79,7 @@ bool Builder::priv_addBuilder (BuilderInterface *builder, u32 asset_depth)
     if (NULL == builderList[index])
     {
         builderList[index] = builder;
-        depthByAssetType[index] = asset_depth;
+        depthByAssetTypeList[index] = asset_depth;
         return true;
     }
     
@@ -806,8 +804,27 @@ u32 Builder::priv_do_build (Context &ctx, bool doCreateAssetsFile)
                 }
                 else
                 {
-                    if (!priv_explodeScript_ric (iniExploded.getRoot(), ini.getRoot(), name, uid))
-                        num_errors++;
+                    for (u32 i2=0; i2<ini.getNSubsection(); i2++)
+                    {
+                        //deve essere di tipo direttiva, altrimenti e' un errore
+                        gos::IniFileSection *sub = ini.getSubsectionByIndex(i2);
+                        if (sub->name.getBuffer()[0] != '@')
+                        {
+                            logger->err ("invalid subsection, it must start with @\n");
+                            num_errors++;
+                        }                
+                        else
+                        {
+                            if (!sub->exists ("__value"))
+                            {
+                                //gli devo assegnare un __value
+                                sprintf_s (s, sizeof(s), "__assname_%06d", nextTempNameIndex++);
+                                sub->set ("__value", s);
+                            }                        
+                            if (!priv_explodeScript_ric (iniExploded.getRoot(), sub, name, uid))
+                                num_errors++;
+                        }
+                    }
                 }
             }
             logger->decIndent();
@@ -1253,7 +1270,7 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreat
 
     //buildo gli asset in ordine di "__depth", dal piu' semplice al piu' complesso
     u32 num_errors = 0;
-    u32 depth = 0;
+    u32 depth = 1;
     bool bEsci = false;
     while (bEsci == false)
     {
@@ -1323,12 +1340,36 @@ u32 Builder::priv_build_iniSection (bool doCreateAssetsFile, const IniFileSectio
     asset::sBuildResult result;
     if (!builder->build (ctx, buildTimeUTC, sourceFileInfo, uid_of_iniFile, sec, doCreateAssetsFile, &result))
         return 1;
+    assert (result.uid.getAssetDepth() == priv_getDepthByAssetType (result.uid.getAssetType()));
 
     //report a video del risultato della build
     eTextColor color = eTextColor::green;
     if (eBuildResult::was_already_built == result.result)
         color = eTextColor::darkBlue;
     logger->log (color, "%016" PRIX64 " [%-17s] \n", result.uid._uid, asset::enumToString(result.result));
+
+
+    //calcolo e scrivo le dipendenze runtime di questo asset
+    //Per "dipendenze runtime" intendo una lista di altri asset (e non risorse) dai quali questo asset dipende
+    if (eBuildResult::just_built == result.result)
+    {
+        if (result.uid.getAssetDepth() > 1)
+        {
+            HashedUIDList   hashList1 (localAllocator, 256);
+            asset::asset_get_dependecies_list (ctx, result.uid, true, &hashList1);
+
+            auto list = hashList1._queryList();
+            for (u32 i=0; i<list->getNElem(); i++)
+            {
+                asset::UID childUID;
+                childUID = list->queryElem(i).key;
+                if (childUID.isAnAsset())
+                {
+                    asset::dependRT_add (ctx, result.uid, childUID, priv_getDepthByAssetType (childUID.getAssetType()));
+                }
+            }
+        }    
+    }
 
 
     /*  ok, l'asset e' stato buildato con successo ed e' stato inserito nel DB
@@ -1363,3 +1404,5 @@ u32 Builder::priv_build_iniSection (bool doCreateAssetsFile, const IniFileSectio
     logger->err ("runtimeName '%s' is already linked to UID=%016" PRIX64 " (use another name)\n", runtimeName, uid._uid);
     return 1;
 }
+
+

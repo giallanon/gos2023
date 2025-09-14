@@ -1,8 +1,18 @@
+@vtx_shader: __assname_000000
+{
+	__decl : aaa.gosasset_d@1
+	__decl_uid : 1099653301794
+	__depth : 1
+	__assType : 1
+	src : es1.vert
+}
+
+
 @vtx_shader: phong.vert.spv
 {
 	__decl : phong.gosasset_d@1
 	__decl_uid : 1101013672356
-	__depth : 0
+	__depth : 1
 	__assType : 1
 	src : phong/phong.vert.shader
 	def : "parola1     parola2 parola3"
@@ -13,7 +23,7 @@
 {
 	__decl : phong.gosasset_d@8
 	__decl_uid : 1101013672356
-	__depth : 0
+	__depth : 1
 	__assType : 1
 	src : phong/phong.vert.shader
 	def : "parola2    parola1   parola3"
@@ -24,20 +34,20 @@
 {
 	__decl : phong.gosasset_d@14
 	__decl_uid : 1101013672356
-	__depth : 0
+	__depth : 1
 	__assType : 2
 	src : phong/phong.frag.shader
 }
 
 
-@vtx_shader: __assname_000000
+@vtx_shader: __assname_000001
 {
 	__decl : es1.gosasset_d@4
 	__decl_uid : 1103642656033
-	__depth : 0
+	__depth : 1
 	__assType : 1
 	src : es1.vert
-	define : A1
+	def : A1
 }
 
 
@@ -45,17 +55,17 @@
 {
 	__decl : es1.gosasset_d@13
 	__decl_uid : 1103642656033
-	__depth : 0
+	__depth : 1
 	__assType : 1
 	src : es1.vert
 }
 
 
-@vtx_shader: __assname_000001
+@vtx_shader: __assname_000002
 {
 	__decl : es1.gosasset_d@23
 	__decl_uid : 1103642656033
-	__depth : 0
+	__depth : 1
 	__assType : 1
 	src : es1.vert
 }
@@ -65,7 +75,7 @@
 {
 	__decl : es1.gosasset_d@33
 	__decl_uid : 1103642656033
-	__depth : 0
+	__depth : 1
 	__assType : 1
 	src : es1.vert
 }
@@ -75,20 +85,20 @@
 {
 	__decl : es1.gosasset_d@44
 	__decl_uid : 1103642656033
-	__depth : 0
+	__depth : 1
 	__assType : 1
 	src : es1.vert
 }
 
 
-@vtx_shader: __assname_000002
+@vtx_shader: __assname_000003
 {
 	__decl : es1.gosasset_d@52
 	__decl_uid : 1103642656033
-	__depth : 0
+	__depth : 1
 	__assType : 1
 	src : es1.vert
-	define : A6
+	def : A6
 }
 
 
@@ -96,10 +106,10 @@
 {
 	__decl : es1.gosasset_d@60
 	__decl_uid : 1103642656033
-	__depth : 0
+	__depth : 1
 	__assType : 1
 	src : es1.vert
-	define : A6
+	def : A6
 }
 
 
@@ -107,94 +117,81 @@
 {
 	__decl : es1.gosasset_d@82
 	__decl_uid : 1103642656033
-	__depth : 0
+	__depth : 1
 	__assType : 2
 	src : es1.frag
-	define : A9
+	def : A9
 }
 
 
 @vtx_shader: __assname_000004
 {
-	__decl : es2.gosasset_d@10
-	__decl_uid : 1103775225899
-	__depth : 0
+	__decl : es3.gosasset_d@4
+	__decl_uid : 1103703292717
+	__depth : 1
 	__assType : 1
 	src : es2.vert
 }
 
 
-@pxl_shader: __assname_000005
+@DEBUG_ASSET: debug_asset_01
 {
-	__decl : es2.gosasset_d@16
+	__decl : es3.gosasset_d@2
+	__decl_uid : 1103703292717
+	__depth : 3
+	__assType : 31
+	@vtx_shader: __assname_000004
+	{
+		__decl : es3.gosasset_d@4
+		__depth : 1
+		__assType : 1
+	}
+	@pipe: pipedef_es2_3
+	{
+		__decl : es3.gosasset_d@9
+		__depth : 2
+		__assType : 3
+	}
+}
+
+
+@vtx_shader: __assname_000006
+{
+	__decl : es2.gosasset_d@9
 	__decl_uid : 1103775225899
-	__depth : 0
+	__depth : 1
+	__assType : 1
+	src : es2.vert
+}
+
+
+@pxl_shader: __assname_000007
+{
+	__decl : es2.gosasset_d@15
+	__decl_uid : 1103775225899
+	__depth : 1
 	__assType : 2
 	src : es2.frag
 }
 
 
-@pipeline_def: __assname_000003
+@pipe: __assname_000005
 {
 	__decl : es2.gosasset_d@3
 	__decl_uid : 1103775225899
-	__depth : 1
+	__depth : 2
 	__assType : 3
-	param1 : pippo
-	param2 : pluto
-	@vtx_shader: __assname_000004
+	rt0 : U8_RGBA
+	@vtx_shader: __assname_000006
 	{
-		__decl : es2.gosasset_d@10
-		__depth : 0
+		__decl : es2.gosasset_d@9
+		__depth : 1
 		__assType : 1
 	}
-	@pxl_shader: __assname_000005
+	@pxl_shader: __assname_000007
 	{
-		__decl : es2.gosasset_d@16
-		__depth : 0
-		__assType : 2
-	}
-}
-
-
-@vtx_shader: __assname_000007
-{
-	__decl : es2.gosasset_d@32
-	__decl_uid : 1103775225899
-	__depth : 0
-	__assType : 1
-	src : es2.vert
-}
-
-
-@pxl_shader: __assname_000008
-{
-	__decl : es2.gosasset_d@38
-	__decl_uid : 1103775225899
-	__depth : 0
-	__assType : 2
-	src : es2.frag
-}
-
-
-@pipeline_def: __assname_000006
-{
-	__decl : es2.gosasset_d@25
-	__decl_uid : 1103775225899
-	__depth : 1
-	__assType : 3
-	param1 : pippo
-	param2 : pluto
-	@vtx_shader: __assname_000007
-	{
-		__decl : es2.gosasset_d@32
-		__depth : 0
-		__assType : 1
-	}
-	@pxl_shader: __assname_000008
-	{
-		__decl : es2.gosasset_d@38
-		__depth : 0
+		__decl : es2.gosasset_d@15
+		__depth : 1
 		__assType : 2
 	}
 }
@@ -202,9 +199,51 @@
 
 @vtx_shader: __assname_000009
 {
-	__decl : es2.gosasset_d@54
+	__decl : es2.gosasset_d@30
 	__decl_uid : 1103775225899
-	__depth : 0
+	__depth : 1
+	__assType : 1
+	src : es2.vert
+}
+
+
+@pxl_shader: __assname_000010
+{
+	__decl : es2.gosasset_d@36
+	__decl_uid : 1103775225899
+	__depth : 1
+	__assType : 2
+	src : es2.frag
+}
+
+
+@pipe: __assname_000008
+{
+	__decl : es2.gosasset_d@24
+	__decl_uid : 1103775225899
+	__depth : 2
+	__assType : 3
+	rt0 : U8_RGBA
+	@vtx_shader: __assname_000009
+	{
+		__decl : es2.gosasset_d@30
+		__depth : 1
+		__assType : 1
+	}
+	@pxl_shader: __assname_000010
+	{
+		__decl : es2.gosasset_d@36
+		__depth : 1
+		__assType : 2
+	}
+}
+
+
+@vtx_shader: __assname_000011
+{
+	__decl : es2.gosasset_d@51
+	__decl_uid : 1103775225899
+	__depth : 1
 	__assType : 1
 	src : es2.vert
 }
@@ -212,65 +251,64 @@
 
 @pxl_shader: pipedef_es2_3-pxlshader
 {
-	__decl : es2.gosasset_d@60
+	__decl : es2.gosasset_d@57
 	__decl_uid : 1103775225899
-	__depth : 0
+	__depth : 1
 	__assType : 2
 	src : es2.frag
+	def : aa
 }
 
 
-@pipeline_def: pipedef_es2_3
+@pipe: pipedef_es2_3
 {
-	__decl : es2.gosasset_d@47
+	__decl : es2.gosasset_d@45
 	__decl_uid : 1103775225899
-	__depth : 1
+	__depth : 2
 	__assType : 3
-	param1 : pippo
-	param2 : pluto
-	@vtx_shader: __assname_000009
+	rt0 : U8_RGBA
+	@vtx_shader: __assname_000011
 	{
-		__decl : es2.gosasset_d@54
-		__depth : 0
+		__decl : es2.gosasset_d@51
+		__depth : 1
 		__assType : 1
 	}
 	@pxl_shader: pipedef_es2_3-pxlshader
 	{
-		__decl : es2.gosasset_d@60
-		__depth : 0
+		__decl : es2.gosasset_d@57
+		__depth : 1
 		__assType : 2
 	}
 }
 
 
-@pipeline_def: pipedef_es2_4
+@pipe: pipedef_es2_4
 {
-	__decl : es2.gosasset_d@69
+	__decl : es2.gosasset_d@67
 	__decl_uid : 1103775225899
-	__depth : 1
+	__depth : 2
 	__assType : 3
-	param1 : pippo
-	param2 : pluto
+	rt0 : U8_RGBA
 	@vtx_shader: vtxshader_es1
 	{
-		__decl : es2.gosasset_d@74
-		__depth : 0
+		__decl : es2.gosasset_d@71
+		__depth : 1
 		__assType : 1
 	}
 	@pxl_shader: pipedef_es2_3-pxlshader
 	{
-		__decl : es2.gosasset_d@77
-		__depth : 0
+		__decl : es2.gosasset_d@74
+		__depth : 1
 		__assType : 2
 	}
 }
 
 
-@vtx_shader: __assname_000010
+@vtx_shader: __assname_000012
 {
-	__decl : es2.gosasset_d@90
+	__decl : es2.gosasset_d@85
 	__decl_uid : 1103775225899
-	__depth : 0
+	__depth : 1
 	__assType : 1
 	src : es1.vert
 	def : A1
@@ -279,33 +317,32 @@
 
 @pxl_shader: ps2
 {
-	__decl : es2.gosasset_d@96
+	__decl : es2.gosasset_d@91
 	__decl_uid : 1103775225899
-	__depth : 0
+	__depth : 1
 	__assType : 2
 	src : es1.frag
 	def : A9
 }
 
 
-@pipeline_def: pipedef_es2_5
+@pipe: pipedef_es2_5
 {
-	__decl : es2.gosasset_d@84
+	__decl : es2.gosasset_d@81
 	__decl_uid : 1103775225899
-	__depth : 1
+	__depth : 2
 	__assType : 3
-	param1 : pippo
-	param2 : pluto
-	@vtx_shader: __assname_000010
+	rt0 : U8_RGBA
+	@vtx_shader: __assname_000012
 	{
-		__decl : es2.gosasset_d@90
-		__depth : 0
+		__decl : es2.gosasset_d@85
+		__depth : 1
 		__assType : 1
 	}
 	@pxl_shader: ps2
 	{
-		__decl : es2.gosasset_d@96
-		__depth : 0
+		__decl : es2.gosasset_d@91
+		__depth : 1
 		__assType : 2
 	}
 }

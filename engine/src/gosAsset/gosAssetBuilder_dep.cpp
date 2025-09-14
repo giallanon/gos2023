@@ -181,6 +181,7 @@ static u32 Builder__print_requiredBy  (gos::UTF8String &out, Context &ctx, const
 
 static void Builder__do_print (asset::Context &ctx, gos::UTF8String &out, db::RST &rstAssetList)
 {
+    asset::FastUIDList fastUIDList(gos::getScrapAllocator(), 64);    
     asset::HashedUIDList listUID;
     listUID.setup (gos::getScrapAllocator(), 64);    
 
@@ -276,6 +277,18 @@ static void Builder__do_print (asset::Context &ctx, gos::UTF8String &out, db::RS
             out << out2;
         }        
 
+        //lista delle "dipendenze runtime"
+        if (uid.isAnAsset())
+        {
+            asset::asset_get_runtime_dependecies_list (ctx, uid, true, &fastUIDList);
+
+            out << "\n" << "  runtime dep list: ";
+            for (u32 i=0; i<fastUIDList.getNElem(); i++)
+            {
+                out << STRFMT("%016" PRIX64 "", fastUIDList(i)._uid) << "  ";
+            }
+            out << "\n";            
+        }
 
         out << "\n";
     }

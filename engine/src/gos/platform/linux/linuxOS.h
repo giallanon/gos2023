@@ -59,7 +59,7 @@ namespace platform
     bool            eventCreate (OSEvent *out_ev);
     void            eventDestroy (OSEvent &ev);
     void            eventFire (const OSEvent &ev);
-    bool            eventWait (const OSEvent &ev, size_t timeoutMSec);
+    bool            eventWait (const OSEvent &ev, u32 timeout_msec);
 	inline void     eventSetInvalid (OSEvent &ev)										{ ev.evfd = -1; }
 	inline bool		eventIsInvalid (const OSEvent &ev)									{ return (ev.evfd == -1); }
 	inline bool		eventCompare (const OSEvent &a, const OSEvent &b)					{ return (a.evfd == b.evfd); }

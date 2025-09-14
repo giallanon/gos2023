@@ -59,7 +59,7 @@ namespace platform
 	inline void     eventDestroy (OSEvent &ev)											{ ::CloseHandle(ev.h); ev.h = INVALID_HANDLE_VALUE; }
 	inline bool		eventCompare(const OSEvent &a, const OSEvent &b)					{ return (a.h == b.h); }
 	inline void     eventFire (const OSEvent &ev)										{ ::SetEvent(ev.h); }
-	inline bool     eventWait (const OSEvent &ev, size_t timeoutMSec)					{ if (WAIT_OBJECT_0 == ::WaitForSingleObject(ev.h, (u32)timeoutMSec)) return true; return false; }
+	inline bool     eventWait (const OSEvent &ev, u32 timeout_msec)					    { if (WAIT_OBJECT_0 == ::WaitForSingleObject(ev.h, timeout_msec)) return true; return false; }
 	inline void     eventSetInvalid(OSEvent &ev)										{ ev.h = INVALID_HANDLE_VALUE; }
 	inline bool		eventIsInvalid(const OSEvent &ev)									{ return (ev.h == INVALID_HANDLE_VALUE);  }
 

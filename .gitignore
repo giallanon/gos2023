@@ -51,3 +51,5 @@ engine/bin/assetBuilder/test_assets_2/assets/src/__dependencies.txt
 engine/bin/testVulkan/shader/example6/altro/sponza/sponza.glb
 
 *.gosassetd
+
+*.reflect
