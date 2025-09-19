@@ -171,7 +171,7 @@ OSWaitableGrp::sRecord* OSWaitableGrp::priv_addMsgQ (const HThreadMsgR &hRead)
 	sRecord *s = priv_newRecord();
 	s->originType = eWaitEventOrigin::msgQ;
 	s->origin.msgQ.hRead = hRead;
-	gos::thread::getMsgQEvent (hRead, &s->origin.msgQ.evt);
+	gos::thread::msgQ_getHEvent (hRead, &s->origin.msgQ.evt);
 	return s;
 }
 
@@ -182,7 +182,7 @@ void OSWaitableGrp::removeMsgQ (const HThreadMsgR &hRead)
 	gos::Allocator *allocator = gos::getSysHeapAllocator();
 
 	gos::Event hMsgQEvent;
-	gos::thread::getMsgQEvent (hRead, &hMsgQEvent);
+	gos::thread::msgQ_getHEvent (hRead, &hMsgQEvent);
 	
 	sRecord *q = NULL;
 	sRecord *p = base;
