@@ -1,13 +1,13 @@
 #ifndef _VulkanExample7_h_
 #define _VulkanExample7_h_
 #include "VulkanApp.h"
+#include "gosAssetHub.h"
 
 
 /************************************
  *  VulkanExample7
  * 
- *  Un semplice triangolo!
- */
+  */
 class VulkanExample7 : public VulkanApp
 {
 public:
@@ -20,15 +20,19 @@ public:
     void        virtual_explain();
 
 private:    
-    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle);
+    void        doCPUStuff ();
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, VkImage swapChainImage);
+    bool        do_recordCommandBuffer (gos::gpu::pipe2::CmdBufferWriter2 &cw, VkImage swapChainImage);
 
 private:
+    gos::asset::Hub         theHub;
+    gos::asset::Handle      assetPipe1;
+    gos::asset::Handle      assetPipe2;
+    GPUVtxBufferHandle      vtxBufferHandle;
+    GPUIdxBufferHandle      idxBufferHandle;
     GPURenderTargetHandle   rt1;
-    GPUPipelineHandle       pipelineHandle;
-    GPUShaderHandle         vtxShaderHandle;
-    GPUShaderHandle         fragShaderHandle;
-    GPURenderPassHandle   renderPassHandle;
-    GPUFrameBufferHandle    frameBufferHandle;
+    u32                     vtxoffset2, idxoffset2;
+
 };
 
 

@@ -264,8 +264,12 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, V
         .bindUniformBuffer (0, uboHandle)
         .end();
 
-    gos::gpu::CmdBufferWriter cw;
-    cw.begin (gpu, cmdBufferHandle);
+    
+    
+    gos::gpu::pipe2::CmdBufferWriter2 cw;
+    cw
+        .begin (gpu, cmdBufferHandle)
+        .setViewport (gpu->viewport_getDefault());
 
     priv_recordCommandBuffer_v2(cw, swapChainImage, pipe);
 
@@ -274,78 +278,26 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, V
 
 
 //************************************
-bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw, VkImage swapChainImage, const asset::Asset_pipe *pipe)
+bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::pipe2::CmdBufferWriter2 &cw, VkImage swapChainImage, const asset::Asset_pipe *pipe)
 {
-    VkCommandBuffer cmd = cw.debug_getHandle();
-    
+    GPUDepthStencilHandle zbHandle = gpu->depthStencil_getDefault();
 
-    //const gpu::RenderTarget     *hRT1_info = gpu->getInfo (gpu->renderTarget_getDefault());
-    const gpu::DepthStencil     *zBuffer_info = gpu->getInfo (gpu->depthStencil_getDefault());
-    const gpu::RenderTarget     *rt1_info = gpu->getInfo (rt1);
-    const gpu::RenderTarget     *rt2_info = gpu->getInfo (rt2);
-    
-    //.requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
-    VkRenderingAttachmentInfo   attachInfoList[2];
-    memset (attachInfoList, 0, sizeof(attachInfoList));
-        attachInfoList[0].sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-        attachInfoList[0].imageView = rt1_info->view;
-        attachInfoList[0].imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR;
-        attachInfoList[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachInfoList[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachInfoList[0].clearValue.color.float32[0] = 0; //r
-        attachInfoList[0].clearValue.color.float32[1] = 0.1f; //g
-        attachInfoList[0].clearValue.color.float32[2] = 0.1f; //b
-        attachInfoList[0].clearValue.color.float32[3] = 1.0f; //a
+    cw
+        .imageTransition (rt1, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
+        .imageTransition (rt2, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
+        .imageTransition (zbHandle, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);        
 
-        attachInfoList[1].sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-        attachInfoList[1].imageView = rt2_info->view;
-        attachInfoList[1].imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR;
-        attachInfoList[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachInfoList[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachInfoList[1].clearValue.color.float32[0] = 1; //r
-        attachInfoList[1].clearValue.color.float32[1] = 0; //g
-        attachInfoList[1].clearValue.color.float32[2] = 0; //b
-        attachInfoList[1].clearValue.color.float32[3] = 1; //a        
+    auto &rr = cw.beginRender();
+    rr
+        .withRenderArea (rt1)
+        .withRT (rt1, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.1f))
+        .withRT (rt2, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(1.0f, 0, 0))
+        .withZB (zbHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)    
 
-
-    //.requireZBuffer (gpu->depthStencil_getDefaultFormat(), eImageLayout::undefined, eImageLayout::depth_shader_readonly, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)
-    VkRenderingAttachmentInfo   zBufferAttach;
-    memset (&zBufferAttach, 0, sizeof(zBufferAttach));
-        zBufferAttach.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-        zBufferAttach.imageView = zBuffer_info->view;
-        zBufferAttach.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL_KHR;
-        zBufferAttach.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        zBufferAttach.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        zBufferAttach.clearValue.depthStencil.depth = 1;
-
-
-
-    VkRenderingInfo renderingInfo;
-    memset (&renderingInfo, 0, sizeof(renderingInfo));
-        renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-        renderingInfo.renderArea.extent.width = rt1_info->resolvedW;
-        renderingInfo.renderArea.extent.height = rt1_info->resolvedH;
-        renderingInfo.layerCount = 1;
-        renderingInfo.colorAttachmentCount = 2;
-        renderingInfo.pColorAttachments = attachInfoList;
-        renderingInfo.pDepthAttachment = &zBufferAttach;
-    
-
-    cw.setViewport (gpu->viewport_getDefault());
-
-
-    //cw.imageTransition (gpu->swapChain_getCurImage(), eImageLayout::undefined, eImageLayout::color_attachment_optimal);
-    cw.imageTransition (rt1_info->image, eImageLayout::undefined, eImageLayout::color_attachment_optimal);
-    cw.imageTransition (rt2_info->image, eImageLayout::undefined, eImageLayout::color_attachment_optimal);
-    cw.imageTransition (zBuffer_info->image, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
-    vkCmdBeginRendering (cmd, &renderingInfo);
-
-    cw.bindPipeline (pipe->pipe.pipeline_handle);
-    cw.bindDescriptorSet (descrSetInstancerHandle, 0);
-    cw.bindVtxBuffer(vtxBufferHandle);
-    cw.bindIdxBufferU16(idxBufferHandle);
-
-
+        .bindPipeline (pipe->pipe.pipeline_handle)
+        .bindDescriptorSet (descrSetInstancerHandle, 0)
+        .bindVtxBuffer(vtxBufferHandle)
+        .bindIdxBufferU16(idxBufferHandle);
 
     //draw
     u32 firstIndex = 0;
@@ -353,32 +305,28 @@ bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw,
     for (u32 i=0; i<shapeList.getNElem(); i++)
     {
         const gos::Shape *myShape = &shapeList(i);
-        
-        //cw.drawIndexed (myShape->numIdx, 1, firstIndex, firstVtx, 0);
-        vkCmdDrawIndexed (cmd, myShape->numIdx, 1, firstIndex, firstVtx, 0);
+
+        rr.drawIndexed (myShape->numIdx, 1, firstIndex, firstVtx, 0);
 
         firstIndex += myShape->numIdx;
         firstVtx += myShape->numVtx;
     }
-    
-    //end
-    vkCmdEndRendering (cmd);
+    rr.endRender();
 
-    //cw.imageTransition (gpu->swapChain_getCurImage(), eImageLayout::color_attachment_optimal, eImageLayout::presentation);
-    
-    //copio RT1 nella immagine di swapchain corrente
+
+    //copio RT1/RT2 nella immagine di swapchain corrente a turno
     if (gos::getTimeSinceStart_msec() > nextTimeSwapRT_msec)
     {
         nextTimeSwapRT_msec = static_cast<u32>(gos::getTimeSinceStart_msec() + 2000);
-        if (rt1_info == rtToShow)
-            rtToShow = rt2_info;
+        if (rt1 == rtToShow)
+            rtToShow = rt2;
         else
-            rtToShow = rt1_info;
+            rtToShow = rt1;
     }
     cw  
-        .imageTransition (rtToShow->image, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
+        .imageTransition (rtToShow, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
         .imageTransition (swapChainImage, eImageLayout::undefined, eImageLayout::transfer_dst)
-        .copyImageToImage (rtToShow->image, swapChainImage, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
+        .copyImageToImage (rtToShow, swapChainImage, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
         .imageTransition (swapChainImage, eImageLayout::transfer_dst, eImageLayout::presentation);
 
     return true;

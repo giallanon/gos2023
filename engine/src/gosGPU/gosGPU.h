@@ -26,7 +26,7 @@
 #include "gosGPUResVtxDecl.h"
 #include "gosGPUResTexture.h"
 #include "gosGPUResSampler.h"
-#include "gosGPUPipeline_def.h"
+#include "pipe2/gosGPUPipe2_pipeline_def.h"
 
 namespace gos
 {

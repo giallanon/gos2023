@@ -3,6 +3,7 @@
 #include "VulkanApp.h"
 #include "gosAssetHub.h"
 
+
 /************************************
  *  VulkanExample6
  */
@@ -44,7 +45,7 @@ private:
 
     bool        priv_loadModel();
     bool        priv_setupPipeline_v2 ();
-    bool        priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter &cw, VkImage swapChainImage, const gos::asset::Asset_pipe *pipe);
+    bool        priv_recordCommandBuffer_v2 (gos::gpu::pipe2::CmdBufferWriter2 &cw, VkImage swapChainImage, const gos::asset::Asset_pipe *pipe);
     void        priv_mainLoop2();
     void        priv_mainLoop3();
 
@@ -64,7 +65,7 @@ private:
     GPUUniformBufferHandle  uboHandle;
     
     u32                     nextTimeSwapRT_msec;
-    const gos::gpu::RenderTarget      *rtToShow;
+    GPURenderTargetHandle   rtToShow;
     GPURenderTargetHandle   rt1;
     GPURenderTargetHandle   rt2;
     GPURenderTargetHandle   rt3;

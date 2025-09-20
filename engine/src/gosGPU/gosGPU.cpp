@@ -2943,6 +2943,14 @@ bool GPU::pipeline_v2_createNew (const gpu::pipe2::Pipeline_def &rpd, gpu::pipe2
     assert (NULL != out);
     out->reset();
 
+#ifdef _DEBUG
+    if (0 == rpd.numRT && !rpd.zbuffer_enabled)
+    {
+        //non hai definito nemmeno 1 rt e nemmeno lo ZB, mi sa che e' un errore
+        DBGBREAK;
+    }
+#endif
+
     VkResult result;
     VkGraphicsPipelineCreateInfo pipelineCreateInfo;
     memset (&pipelineCreateInfo, 0, sizeof(pipelineCreateInfo));
@@ -3033,41 +3041,51 @@ bool GPU::pipeline_v2_createNew (const gpu::pipe2::Pipeline_def &rpd, gpu::pipe2
     VkPipelineVertexInputStateCreateInfo vkVertexInputStateCreateInfo;
     VkVertexInputBindingDescription vxtBindingDescrList[GOSGPU__NUM_MAX_VXTDECL_STREAM];
     VkVertexInputAttributeDescription vtxAttributeDescrList[GOSGPU__NUM_MAX_VXTDECL_STREAM * GOSGPU__NUM_MAX_VTXDECL_ATTR];
-    pipelineCreateInfo.pVertexInputState = VK_NULL_HANDLE;
-    if (0 != rpd.numVtxStream)
+    pipelineCreateInfo.pVertexInputState = &vkVertexInputStateCreateInfo;
     {
-        u32 totNumAttributeDescr = 0;
-        for (u32 i=0; i<rpd.numVtxStream; i++)
+        memset (&vkVertexInputStateCreateInfo, 0, sizeof(vkVertexInputStateCreateInfo));
+        vkVertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        out->vtx_numStream = static_cast<u8>(rpd.numVtxStream);
+        if (0 == rpd.numVtxStream)
         {
-            vxtBindingDescrList[i].binding = i;
-
-            if (eVtxStreamInputRate::perInstance == rpd.vtxStreamList[i].inputRate)
-                vxtBindingDescrList[i].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
-            else
-                vxtBindingDescrList[i].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-            vxtBindingDescrList[i].stride = rpd.vtxStreamList[i].calcStride();
-
-            for (u32 i2=0; i2<rpd.vtxStreamList[i].numLayout; i2++)
-            {
-                vtxAttributeDescrList[totNumAttributeDescr].binding  = rpd.vtxStreamList[i].streamIndex;
-                vtxAttributeDescrList[totNumAttributeDescr].location = rpd.vtxStreamList[i].list[i2].bindingLocation;
-                vtxAttributeDescrList[totNumAttributeDescr].offset = rpd.vtxStreamList[i].list[i2].offset;
-                vtxAttributeDescrList[totNumAttributeDescr].format = gos::gpu::toVulkan (rpd.vtxStreamList[i].list[i2].format);
-                
-                totNumAttributeDescr++;
-            }            
+            vkVertexInputStateCreateInfo.vertexBindingDescriptionCount = 0;
+            vkVertexInputStateCreateInfo.pVertexBindingDescriptions = nullptr; // Optional
+            vkVertexInputStateCreateInfo.vertexAttributeDescriptionCount = 0;
+            vkVertexInputStateCreateInfo.pVertexAttributeDescriptions = nullptr; // Optional
         }
+        else
+        {
+            u32 totNumAttributeDescr = 0;
+            for (u32 i=0; i<rpd.numVtxStream; i++)
+            {
+                vxtBindingDescrList[i].binding = i;
 
-        pipelineCreateInfo.pVertexInputState = &vkVertexInputStateCreateInfo;
-            memset (&vkVertexInputStateCreateInfo, 0, sizeof(vkVertexInputStateCreateInfo));
-            vkVertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+                if (eVtxStreamInputRate::perInstance == rpd.vtxStreamList[i].inputRate)
+                    vxtBindingDescrList[i].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+                else
+                    vxtBindingDescrList[i].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+                vxtBindingDescrList[i].stride = rpd.vtxStreamList[i].calcStride();
+                out->vtx_stridePerStream[i] = static_cast<u8>( vxtBindingDescrList[i].stride );
+                
+
+                for (u32 i2=0; i2<rpd.vtxStreamList[i].numLayout; i2++)
+                {
+                    vtxAttributeDescrList[totNumAttributeDescr].binding  = rpd.vtxStreamList[i].streamIndex;
+                    vtxAttributeDescrList[totNumAttributeDescr].location = rpd.vtxStreamList[i].list[i2].bindingLocation;
+                    vtxAttributeDescrList[totNumAttributeDescr].offset = rpd.vtxStreamList[i].list[i2].offset;
+                    vtxAttributeDescrList[totNumAttributeDescr].format = gos::gpu::toVulkan (rpd.vtxStreamList[i].list[i2].format);
+                    
+                    totNumAttributeDescr++;
+                }            
+            }
+
             vkVertexInputStateCreateInfo.vertexBindingDescriptionCount = rpd.numVtxStream;
             vkVertexInputStateCreateInfo.pVertexBindingDescriptions = vxtBindingDescrList;
             vkVertexInputStateCreateInfo.vertexAttributeDescriptionCount = totNumAttributeDescr;
             vkVertexInputStateCreateInfo.pVertexAttributeDescriptions = vtxAttributeDescrList;        
+        }
     }
-
 
     //input assemply (aka draw primitive)
     VkPipelineInputAssemblyStateCreateInfo inputAssembly;
@@ -3119,7 +3137,7 @@ bool GPU::pipeline_v2_createNew (const gpu::pipe2::Pipeline_def &rpd, gpu::pipe2
     {
         memset (&depthStencil, 0, sizeof(depthStencil));
         depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        depthStencil.depthTestEnable = (rpd.zbuffer_enabled != 0xff) ? VK_TRUE : VK_FALSE;
+        depthStencil.depthTestEnable = (rpd.zbuffer_enabled) ? VK_TRUE : VK_FALSE;
         depthStencil.depthWriteEnable = rpd.zbuffer_write ? VK_TRUE : VK_FALSE;
         depthStencil.depthCompareOp = gpu::toVulkan (rpd.zbuffer_cmpFn);
         depthStencil.depthBoundsTestEnable = VK_FALSE;
@@ -3249,7 +3267,10 @@ bool GPU::pipeline_v2_createNew (const gpu::pipe2::Pipeline_def &rpd, gpu::pipe2
         pipeline_rendering_create_info.pColorAttachmentFormats = colorAttachmentsFormat;
         for (u32 i=0; i<rpd.numRT; i++)
         {
-            colorAttachmentsFormat[i] = gpu::toVulkan(rpd.renderTargetFormat[i]);
+            if (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN == rpd.renderTargetFormat[i])
+                colorAttachmentsFormat[i] = vulkan.swapChainInfo.imageFormat;
+            else
+                colorAttachmentsFormat[i] = gpu::toVulkan(rpd.renderTargetFormat[i]);
         }
 
     }

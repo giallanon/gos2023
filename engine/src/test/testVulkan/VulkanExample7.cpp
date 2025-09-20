@@ -1,6 +1,7 @@
 #include "VulkanExample7.h"
 
 
+
 using namespace gos;
 
 
@@ -12,120 +13,160 @@ void VulkanExample7::virtual_explain()
 //************************************
 void VulkanExample7::virtual_onCleanup() 
 {
-    gpu->deleteResource (vtxShaderHandle);
-    gpu->deleteResource (fragShaderHandle);
-    gpu->deleteResource (pipelineHandle);
-    gpu->deleteResource (renderPassHandle);
-    gpu->deleteResource (frameBufferHandle);
-    gpu->deleteResource (rt1);
+    theHub.unload (assetPipe1);
+    theHub.unload (assetPipe2);
+
+    gpu->deleteResource(vtxBufferHandle);
+    gpu->deleteResource(idxBufferHandle);
+    gpu->deleteResource(rt1);
 }    
 
 
 //************************************
 bool VulkanExample7::virtual_onInit ()
 {
-    //creo un renderLayout
-    gpu->renderPass_createNew (&renderPassHandle)
-        .requireRendertarget (eImageFormat::U8_RGBA, eImageLayout::undefined, eImageLayout::transfer_src, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
-        .addSubpass_GFX()
-            .writeToRenderTarget(0)
-        .end()
-    .end();
-    if (renderPassHandle.isInvalid())
+    //builder per ricompilare gli asset se necessario
     {
-        gos::logger::err ("VulkanApp::init() => can't create renderTaskLayout\n");
+        gos::asset::Builder builder;
+        builder.buildAll("shader/example7", true);
+    }
+
+    //theHub
+    theHub.setup ("shader/example7", gpu);
+    theHub.getHandle("pipe_1", &assetPipe1);
+    theHub.getHandle("pipe_2", &assetPipe2);
+
+    const asset::Asset_pipe *thePipe;
+    theHub.getAssetWithTimeout (assetPipe1, 5000, &thePipe);
+
+    //risorse di rendering
+    const eImageFormat IMG_FORMAT = eImageFormat::U8_RGBA;
+    if (!gpu->renderTarget_create ("0-", "0-", IMG_FORMAT, &rt1))
+        return false;
+
+
+    //vtx buffer
+    if (!gpu->vertexBuffer_create (32 * thePipe->pipe.vtx_stridePerStream[0], eVIBufferMode::shared_cpuW_autoSync, &vtxBufferHandle))
+    {
+        gos::logger::err ("VulkanApp::virtual_onInit() => gpu->vertexBuffer_create() failed\n");
+        return false;
+    }
+
+    //INDEX BUFFER
+    if (!gpu->indexBuffer_create (64 * sizeof(u16), eVIBufferMode::shared_cpuW_autoSync, &idxBufferHandle))
+    {
+        gos::logger::err ("VulkanApp::virtual_onInit() => gpu->indexBuffer_create() failed\n");
         return false;
     }
 
 
-
-    //creo un RT grosso tanto quanto la swapchain
-    if (!gpu->renderTarget_create ("0-", "0-", eImageFormat::U8_RGBA, &rt1))
+    //tris 1
     {
-        gos::logger::err ("VulkanApp::init() => can't create render target\n");
-        return false;
+        struct Vertex1
+        {
+            u32     x;
+            u32     y;
+            vec3f   rgb;
+        };
+
+        Vertex1 vtxSRC[8];
+
+        vtxSRC[0].x = 1;   vtxSRC[0].y = 1;   vtxSRC[0].rgb.set(1,0,0);
+        vtxSRC[1].x = 100; vtxSRC[1].y = 1;   vtxSRC[1].rgb.set(0,1,0);
+        vtxSRC[2].x = 100; vtxSRC[2].y = 200; vtxSRC[2].rgb.set(0,0,1);
+        vtxSRC[3].x = 1;   vtxSRC[3].y = 200; vtxSRC[3].rgb.set(1,1,0);
+        gpu->writeAndSync (vtxBufferHandle, 0, vtxSRC, sizeof(Vertex1) * 4);
+
+        u16 indexSRC[6] = { 0, 1, 2,    2, 3, 0 };
+        gpu->writeAndSync (idxBufferHandle, 0, indexSRC, sizeof(u16) * 6);
     }
 
-    //creo un frame buffer per il renderLayout
-    gpu->frameBuffer_createNew (renderPassHandle, &frameBufferHandle)
-        //.bindRenderTarget (gpu->renderTarget_getDefault())
-        .bindRenderTarget (rt1)
-        .end();
-    if (frameBufferHandle.isInvalid())
     {
-        gos::logger::err ("VulkanApp::init() => can't create frameBufferHandle\n");
-        return false;
+        struct Vertex2
+        {
+            u32     x;
+            u32     y;
+            vec2f   tutv;
+        };
+        Vertex2 vtxSRC[8];
+
+        vtxoffset2 = sizeof(Vertex2)*8;
+            vtxSRC[0].x = 300; vtxSRC[0].y = 1;   vtxSRC[0].tutv.set (0,0);
+            vtxSRC[1].x = 500; vtxSRC[1].y = 1;   vtxSRC[1].tutv.set (1,0);
+            vtxSRC[2].x = 500; vtxSRC[2].y = 200; vtxSRC[2].tutv.set (1,1);
+            vtxSRC[3].x = 300; vtxSRC[3].y = 200; vtxSRC[3].tutv.set (0,1);
+            gpu->writeAndSync (vtxBufferHandle, vtxoffset2, vtxSRC, sizeof(Vertex2) * 4);
+
+        idxoffset2 = sizeof(u16)*8;
+            const u16 indexSRC[6] = { 0, 1, 2,    2, 3, 0 };
+            gpu->writeAndSync (idxBufferHandle, idxoffset2, indexSRC, sizeof(u16) * 6);
     }
 
 
-
-    //carico gli shader
-    if (!gpu->vtxshader_createFromFile ("shader/example1/shader.vert.spv", "main", &vtxShaderHandle))
-    {
-        gos::logger::err ("VulkanApp::init() => can't create vert shader\n");
-        return false;
-    }
-    if (!gpu->fragshader_createFromFile ("shader/example1/shader.frag.spv", "main", &fragShaderHandle))
-    {
-        gos::logger::err ("VulkanApp::init() => can't create frag shader\n");
-        return false;
-    }
-
-    //creo la pipeline
-    gpu->pipeline_createNew (renderPassHandle, &pipelineHandle)
-        .addShader (vtxShaderHandle)
-        .addShader (fragShaderHandle)
-        .setVtxDecl (GPUVtxDeclHandle::INVALID())
-        .depthStencil()
-            .zbuffer_enable(true)
-            .zbuffer_enableWrite(true)
-            .zbuffer_setFn (eZFunc::LESS)
-            .stencil_enable(false)
-            .end()
-        .end ();
-        
-    if (pipelineHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
-        return false;
-    }
 
     return true;
 }    
 
 
 //************************************
-bool VulkanExample7::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
+bool VulkanExample7::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, VkImage swapChainImage)
 {
-    gos::gpu::CmdBufferWriter cw;
-
-    cw.begin (gpu, cmdBufferHandle)
-        .setViewport (gpu->viewport_getDefault())
-        .bindPipeline (pipelineHandle)
-        .setClearColor (0, gos::ColorHDR(0, 0, 0))
-        .setDepthBufferColor(1, 0)
-        .renderPass_begin (renderPassHandle, frameBufferHandle)
-            .draw(3, 1, 0, 0)
-        .renderPass_end();
-
-
-    //ora voglio copiare il contenuto di RT1 (che ho appena renderizzato) nella immagine della swap-chain corrente
-    VkImage swapChainImage = gpu->swapChain_getCurImage();
-    const gpu::RenderTarget *rtInfo = gpu->getInfo (rt1);
-
-    cw  
-        //.imageTransition (rtInfo->image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+    gos::gpu::pipe2::CmdBufferWriter2 cw;
+    cw
+        .begin (gpu, cmdBufferHandle)
         .imageTransition (swapChainImage, eImageLayout::undefined, eImageLayout::transfer_dst)
-        .copyImageToImage (rtInfo->image, swapChainImage, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
-        .imageTransition (swapChainImage, eImageLayout::transfer_dst, eImageLayout::presentation);
-        
+        .setViewport (gpu->viewport_getDefault());
 
-    cw.end();    
+    do_recordCommandBuffer (cw, swapChainImage);
+    cw.imageTransition (swapChainImage, eImageLayout::transfer_dst, eImageLayout::presentation);    
+    return cw.end();
+}
 
+bool VulkanExample7::do_recordCommandBuffer (gpu::pipe2::CmdBufferWriter2 &cw, VkImage swapChainImage)
+{
+    const asset::Asset_pipe *pipe;
+    if (!theHub.getAsset(assetPipe1, &pipe))
+        return false;
+    
+    const asset::Asset_pipe *pipe2;
+    if (!theHub.getAsset(assetPipe2, &pipe2))
+        return false;
 
+    GPUDepthStencilHandle zbHandle = gpu->depthStencil_getDefault();
+    vec2f screenWH;
+    screenWH.set (gpu->swapChain_getWidth(), gpu->swapChain_getHeight());
+
+    cw
+    .imageTransition (rt1, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
+    .imageTransition (zbHandle, eImageLayout::undefined, eImageLayout::depth_attachment_optimal)
+    .beginRender()
+        .withRenderArea (rt1)
+        .withRT (rt1, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.1f))
+        .withZB (zbHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)
+        .bindPipeline (pipe->pipe.pipeline_handle)
+        .bindVtxBuffer(vtxBufferHandle)
+        .bindIdxBufferU16(idxBufferHandle)
+        .pushConstant (0, &screenWH, sizeof(screenWH))
+        .drawIndexed (6, 1, 0, 0, 0)
+
+        .bindPipeline (pipe2->pipe.pipeline_handle)
+        .bindVtxBuffer(vtxBufferHandle, vtxoffset2)
+        .bindIdxBufferU16(idxBufferHandle, idxoffset2)
+        .drawIndexed (6, 1, 0, 0, 0)
+        .endRender()
+    .imageTransition (rt1, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
+    .copyImageToImage (rt1, swapChainImage, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D());        
 
     return true;
 }
+
+//**********************************
+void VulkanExample7::doCPUStuff ()
+{
+    handleInput();
+}
+
+
 
 /************************************
  * renderizza inviando command buffer a GPU e poi aspettando che questa
@@ -133,94 +174,43 @@ bool VulkanExample7::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
  */
 void VulkanExample7::virtual_onRun()
 {
+    gpu::MainLoop2 mainLoop;
+    mainLoop.setup (gpu);
+
+
+    //command buffer 
     GPUCmdBufferHandle  cmdBufferHandle;
     gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
 
 
-    VkSemaphore         imageAvailableSemaphore;
-    VkSemaphore         renderFinishedSemaphore;
-    gpu->semaphore_create (&imageAvailableSemaphore);
-    gpu->semaphore_create (&renderFinishedSemaphore);
-
-    VkFence             inFlightFence;
-    gpu->fence_create (true, &inFlightFence);
-
-
-    VkResult            result;
-    gos::TimerFPS       fpsTimer;
-    gos::Timer          cpuWaitTimer;
-    gos::Timer          frameTimer;
-    gos::Timer          acquireImageTimer;
+    //main loop
     while (bQuitApp == false)
     {
-//printf ("frame begin\n");
-        frameTimer.start();
-        fpsTimer.onFrameBegin();
+        mainLoop.stat_onCPUFrameBegin();
+        theHub.update (gos::getTimeSinceStart_msec());
+        doCPUStuff ();
+        mainLoop.stat_onCPUFrameEnd();
 
-        handleInput();
 
-        //draw frames
-        cpuWaitTimer.start();
-            gpu->fence_wait (inFlightFence);
-//printf ("  CPU waited GPU fence for %ld us\n", cpuWaitTimer.elapsed_usec());
+        mainLoop.run();
 
-        //recupero una immagine dalla swap chain, attendo per sempre e indico [imageAvailableSemaphore] come
-        //semaforo che GPU deve segnalare quando questa operazione e' ok
-        acquireImageTimer.start();
-            
-        if (gpu->swapChain_acquireImage (UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE))
+        // if (gpu->swapChain_wasRecreated())
+        //     cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
+
+
+        //se il job precedente e' stato presentato, posso schedularne uno nuovo
+        gpu::AcquiredSwapchainImg swapchainImg;
+        if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
-            gpu->fence_reset (inFlightFence);
-//printf ("  CPU waited vkAcquireNextImageKHR %ld us\n", acquireImageTimer.elapsed_usec());
-        
-            //command buffer che opera su [imageIndex]
-            recordCommandBuffer(cmdBufferHandle);
-
-            //submit
-            VkCommandBuffer vkCmdBuffer;
-            gpu->toVulkan (cmdBufferHandle, &vkCmdBuffer);
-
-            VkSubmitInfo submitInfo{};
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-            VkSemaphore semaphoresToBeWaitedBeforeStarting[] = { imageAvailableSemaphore };
-            VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-            submitInfo.waitSemaphoreCount = 1;
-            submitInfo.pWaitSemaphores = semaphoresToBeWaitedBeforeStarting;
-            submitInfo.pWaitDstStageMask = waitStages;
-
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &vkCmdBuffer;
-
-            //semaforo che GPU segnalera' al termine dell'esecuzione del command buffer
-            submitInfo.signalSemaphoreCount = 1;
-            submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
-
-            //submitto il batch a GPU e indico che deve segnalare [inFlightFence] quando ha finito 
-            result = vkQueueSubmit (gpu->REMOVE_getGfxQHandle(), 1, &submitInfo, inFlightFence);
-            if (VK_SUCCESS != result)
-                gos::logger::err ("vkQueueSubmit() => %s\n", string_VkResult(result));
-
-            //presentazione
-            gpu->swapChain_present (&renderFinishedSemaphore, 1);
-//printf ("  total frame time: %ldus\n", frameTimer.elapsed_usec());
-        }
-
-
-        if (fpsTimer.onFrameEnd())
-        {
-            const float usec = fpsTimer.getAvgFrameTime_usec();
-            const float msec = usec/ 1000.0f;
-            printf ("Avg frame time: %.2fms [%.2fus] [fps: %.01f]\n", msec, usec, fpsTimer.getAvgFPS());
+            recordCommandBuffer (cmdBufferHandle, swapchainImg.image);
+            mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }
     }
 
     //aspetto che GPU abbia finito tutto cio' che ha in coda
     gpu->waitIdle();
 
+    //free
     gpu->deleteResource (cmdBufferHandle);
-    gpu->semaphore_destroy (imageAvailableSemaphore);
-    gpu->semaphore_destroy (renderFinishedSemaphore);
-    gpu->fence_destroy (inFlightFence);
 }
 

@@ -20,6 +20,11 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC 
+pipe2/gosGPUPipe2_cmdBufferWriter_BeginRend.cpp
+pipe2/gosGPUPipe2_cmdBufferWriter.cpp
+pipe2/gosGPUPipe2_cmdBufferWriter.h
+pipe2/gosGPUPipe2_pipeline_def.h
+
 vulkan/gosGPUVukanHelpers.cpp
 vulkan/gosGPUVukanHelpers.h
 vulkan/gosGPUVulkan.cpp
@@ -51,7 +56,6 @@ gosGPUCmdBufferWriter.h
 gosGPUDescrSetInstanceWriter.cpp
 gosGPUDescrSetInstanceWriter.h
 gosGPUEnumAndDefine.h
-gosGPUPipeline_def.h
 gosGPUResBuffer.h
 gosGPUResCommandBuffer.h
 gosGPUResDepthStencil.h

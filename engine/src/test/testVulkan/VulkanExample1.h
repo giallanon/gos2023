@@ -20,18 +20,12 @@ public:
     void        virtual_explain();
 
 private:    
-    static bool recordCommandBuffer (gos::GPU *gpu, 
-                                    const GPURenderPassHandle &renderPassHandle, 
-                                    const GPUFrameBufferHandle &frameBufferHandle,
-                                    const GPUPipelineHandle &pipelineHandle,
-                                    VkCommandBuffer *out_commandBuffer);
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::AcquiredSwapchainImg &swapChainImage);
 
 private:
-    GPUPipelineHandle       pipelineHandle;
-    GPUShaderHandle         vtxShaderHandle;
-    GPUShaderHandle         fragShaderHandle;
-    GPURenderPassHandle   renderPassHandle;
-    GPUFrameBufferHandle    frameBufferHandle;
+    GPUShaderHandle             vtxShaderHandle;
+    GPUShaderHandle             fragShaderHandle;
+    gos::gpu::pipe2::Pipeline   pipeline;
 };
 
 

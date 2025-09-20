@@ -1,9 +1,9 @@
-#ifndef _gosGPUPipeline_def_h_
-#define _gosGPUPipeline_def_h_
-#include "gosGPUEnumAndDefine.h"
-#include "vulkan/gosGPUVulkanEnumAndDefine.h"
-#include "vulkan/gosGPUVulkan.h"
-#include "../gos/gosUtils.h"
+#ifndef _gosGPUPipe2_pipeline_def_h_
+#define _gosGPUPipe2_pipeline_def_h_
+#include "../gosGPUEnumAndDefine.h"
+#include "../vulkan/gosGPUVulkanEnumAndDefine.h"
+#include "../vulkan/gosGPUVulkan.h"
+#include "../../gos/gosUtils.h"
 
 namespace gos
 {
@@ -114,6 +114,9 @@ namespace gos
                 GPUPipelineHandle           pipeline_handle;
                 u32                         descrset_num;
                 GPUDescrSetLayoutHandle     descrset_handle_defList[GOSGPU__NUM_MAX_DESCRIPTOR_SETS];
+
+                u8                          vtx_numStream;
+                u8                          vtx_stridePerStream[GOSGPU__NUM_MAX_VXTDECL_STREAM];
                 
 
             public:
@@ -123,6 +126,9 @@ namespace gos
                     for (u32 i=0; i<GOSGPU__NUM_MAX_DESCRIPTOR_SETS; i++)
                         descrset_handle_defList[i].setInvalid();
                     pipeline_handle.setInvalid();
+                    
+                    vtx_numStream = 0;
+                    memset (vtx_stridePerStream, 0, sizeof(vtx_stridePerStream));
                 }
             }; //Pipeline
 
@@ -156,7 +162,8 @@ namespace gos
 
                     zbuffer_enabled = false; 
                     zbuffer_format = eImageFormat::_DEPTH_BEST;
-                    zbuffer_write=true; zbuffer_cmpFn = eZFunc::LESS;
+                    zbuffer_write=false;
+                    zbuffer_cmpFn = eZFunc::LESS;
                     zbuffer_clearCol.depth = 1; zbuffer_clearCol.stencil = 0;
                     
                     numRT = 0;
@@ -205,7 +212,7 @@ namespace gos
                 eDrawPrimitive  drawPrimitive;
                 bool            bWireframe;
 
-                u8              zbuffer_enabled;
+                bool            zbuffer_enabled;
                 eImageFormat    zbuffer_format;
                 bool            zbuffer_write;                              //valido solo se zbIndex != 0xff
                 eZFunc          zbuffer_cmpFn;                              //valido solo se zbIndex != 0xff
@@ -223,4 +230,5 @@ namespace gos
     } //namespace gpu
 } //namespace gos
 
-#endif //_gosGPUPipeline_def_h_
+#endif //#define _gosGPUPipe2_pipeline_def_h_
+

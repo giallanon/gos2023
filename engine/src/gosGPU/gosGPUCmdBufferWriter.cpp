@@ -270,7 +270,7 @@ GPUCMDWR& gpu::CmdBufferWriter::bindDescriptorSet (const GPUDescrSetInstanceHand
 }
 
 //***********************************************
-GPUCMDWR& gpu::CmdBufferWriter::bindVtxBuffer (const GPUVtxBufferHandle handle)
+GPUCMDWR& gpu::CmdBufferWriter::bindVtxBuffer (const GPUVtxBufferHandle handle, u32 offsetIN)
 {
     while (1)
     {
@@ -289,7 +289,7 @@ GPUCMDWR& gpu::CmdBufferWriter::bindVtxBuffer (const GPUVtxBufferHandle handle)
         static const u8 VTXBUFFER__FIRST_VTX_STREAM_INDEX = 0;
         static const u8 VTXBUFFER__NUM_STREAM = 1;
         VkBuffer        vtxBufferList[VTXBUFFER__NUM_STREAM] = { vkVtxBuffer };
-        VkDeviceSize    vtxBufferOffsetsList[VTXBUFFER__NUM_STREAM] = {0};    
+        VkDeviceSize    vtxBufferOffsetsList[VTXBUFFER__NUM_STREAM] = { offsetIN };    
         vkCmdBindVertexBuffers (vkCommandBuffer, VTXBUFFER__FIRST_VTX_STREAM_INDEX, VTXBUFFER__NUM_STREAM, vtxBufferList, vtxBufferOffsetsList);
         break;
     }
@@ -334,7 +334,7 @@ GPUCMDWR& gpu::CmdBufferWriter::bindVtxBuffers (const GPUVtxBufferHandle handleS
 }
 
 //***********************************************
-GPUCMDWR& gpu::CmdBufferWriter::bindIdxBufferU16 (const GPUIdxBufferHandle handle)
+GPUCMDWR& gpu::CmdBufferWriter::bindIdxBufferU16 (const GPUIdxBufferHandle handle, u32 offsetIN)
 {
     while (1)
     {
@@ -350,7 +350,7 @@ GPUCMDWR& gpu::CmdBufferWriter::bindIdxBufferU16 (const GPUIdxBufferHandle handl
         }            
 
         //bindo il vtx buffer a partire dal layout=0
-        vkCmdBindIndexBuffer (vkCommandBuffer, vkIdxBuffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer (vkCommandBuffer, vkIdxBuffer, offsetIN, VK_INDEX_TYPE_UINT16);
         break;
     }
 

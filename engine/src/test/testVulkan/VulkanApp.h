@@ -6,6 +6,7 @@
 #include "../gosShape/gosShape.h"
 #include "../gosGPU/utils/gosFreeMovement.h"
 #include "../gosGPU/utils/gosFPSMovement.h"
+#include "../gosGPU/pipe2/gosGPUPipe2_cmdBufferWriter.h"
 
 /*************************************************
  *  VulkanApp

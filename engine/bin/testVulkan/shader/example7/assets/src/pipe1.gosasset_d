@@ -1,0 +1,16 @@
+@pipe: pipe_1
+{
+	rt0: U8_RGBA
+	
+	zb: _DEPTH_BEST, 1, LESS
+	
+	@vtx_shader
+	{
+		src: shader1.vert
+	}
+
+	@pxl_shader
+	{
+		src: shader1.frag
+	}
+}
