@@ -14,7 +14,7 @@ void VulkanExample1::virtual_onCleanup()
 {
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
-    gpu->deleteResource (pipeline.pipeline_handle);
+    pipeline.deleteResources(gpu);
 }    
 
 
@@ -35,12 +35,13 @@ bool VulkanExample1::virtual_onInit ()
     
     //pipeline
     gpu::pipe2::Pipeline_def def;
-    def.reset();
-    def.set_cullMode (eCullMode::CCW);
-    def.set_drawPrimitive (eDrawPrimitive::trisList);
-    def.shader_add (vtxShaderHandle);
-    def.shader_add (fragShaderHandle);
-    def.add_rt (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN);
+    def
+        .reset()
+        .set_cullMode (eCullMode::CCW)
+        .set_drawPrimitive (eDrawPrimitive::trisList)
+        .shader_add (vtxShaderHandle)
+        .shader_add (fragShaderHandle)
+        .add_rt (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN);
 
 
     if (!gpu->pipeline_v2_createNew (def, &pipeline))
@@ -64,7 +65,7 @@ bool VulkanExample1::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
         .imageTransition (swapChainImage.image, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
         .beginRender()
             .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
-            .withRT (gpu->swapChain_getImageView(swapChainImage.index), eAttachmentLoadOp::clear, eAttachmentStoreOp::store, gos::ColorHDR(0,0.01f,0))
+            .withRT (gpu->swapChain_getImageView(swapChainImage.index), eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0,0.01f,0))
             .bindPipeline (pipeline.pipeline_handle)
             .draw(3, 1, 0, 0)
             .endRender()

@@ -2862,7 +2862,7 @@ bool GPU::toVulkan (const GPUSamplerHandle handle, VkSampler *out) const
  * 
  * 
  *************************************************************************************************************/
-bool GPU::priv_descrSetLayout_build_v2 (const gpu::pipe2::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle, VkDescriptorSetLayout *out_vkHandle)
+bool GPU::priv_descrSetLayout_build_v2 (const gpu::pipe2::Pipeline_def::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle, VkDescriptorSetLayout *out_vkHandle)
 {
     //TODO: cachare i descriptor-set ed eventualmente riutilizzarli visto che sono dei descrittori, non e' necessario
     //      crearne N diversi che descrivono la stessa cosa

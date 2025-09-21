@@ -15,14 +15,7 @@ void Loader_pipe::unload (Loader *assetLoader, const asset::Context &ctx, const 
 	Asset_pipe *asset = static_cast <Asset_pipe*>(ptToAssetData);
 	
     gos::GPU *gpu = assetLoader->getGPU();
-    for (u32 i=0; i<asset->pipe.descrset_num; i++)
-    {
-        gpu->deleteResource (asset->pipe.descrset_handle_defList[i]);
-    }
-
-    gpu->deleteResource (asset->pipe.pipeline_handle);
-    //gpu->deleteResource (asset->handle_vtxshader);
-    //gpu->deleteResource (asset->handle_pxlshader);
+    asset->pipe.deleteResources (gpu);
 }
 
 //******************************************************

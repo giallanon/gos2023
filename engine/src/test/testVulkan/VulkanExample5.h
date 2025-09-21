@@ -115,8 +115,7 @@ private:
 
 private:
     void        priv_doCPUStuff();
-    void        priv_mainLoop();
-    bool        priv_recordCommandBuffer (gos::gpu::CmdBufferWriter &cw);
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::AcquiredSwapchainImg &swapChainImage);
     void        priv_setSphere_ON_OFF (i16 mouseX, i16 mouseY, bool b);
     void        priv_drawGrid ();
     void        priv_runMarchingSquare();
@@ -142,16 +141,13 @@ private:
     GPUIdxBufferHandle      idxBufferHandle;
     GPUStgBufferHandle      stgBufferHandle;
 
-    GPUPipelineHandle       pipelineHandle;
-    GPUShaderHandle         vtxShaderHandle;
-    GPUShaderHandle         fragShaderHandle;
-    GPURenderPassHandle   renderPassHandle;
-    GPUFrameBufferHandle    frameBufferHandle;
+    gos::gpu::pipe2::Pipeline   pipeline;
+    GPUShaderHandle             vtxShaderHandle;
+    GPUShaderHandle             fragShaderHandle;
 
-    GPUDescrPoolHandle      descrPoolHandle;
-    GPUDescrSetLayoutHandle descrSetLayoutHandle;
-    GPUDescrSetInstanceHandle descrSetInstancerHandle;
-    GPUUniformBufferHandle  uboHandle;
+    GPUDescrPoolHandle          descrPoolHandle;
+    GPUDescrSetInstanceHandle   descrSetInstancerHandle;
+    GPUUniformBufferHandle      uboHandle;
 
 
     sMSQ2                   gpuMSQ2;

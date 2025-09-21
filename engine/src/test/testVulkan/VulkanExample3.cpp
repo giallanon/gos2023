@@ -15,7 +15,6 @@ VulkanExample3::VulkanExample3()
 //************************************
 void VulkanExample3::virtual_explain()
 {
-    gos::logger::log ("Introduzione della class GPUMainLoop, che si occupa di gestire la sync con i frame!\n");
     gos::logger::log ("Esperimenti con Vtx Buffer di tipo 'GPU only'\n");
     gos::logger::log ("Introduzione idx buffer\n");
 }
@@ -29,9 +28,7 @@ void VulkanExample3::virtual_onCleanup()
     gpu->deleteResource (vtxBufferHandle);
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
-    gpu->deleteResource (pipelineHandle);
-    gpu->deleteResource (renderPassHandle);
-    gpu->deleteResource (frameBufferHandle);
+    pipeline.deleteResources(gpu);
 }    
 
 
@@ -64,44 +61,6 @@ bool VulkanExample3::virtual_onInit ()
 
     copyIntoVtxBuffer ();
 
-    //Vtx declaration
-    GPUVtxDeclHandle vtxDeclHandle;
-    gpu->vtxDecl_createNew (&vtxDeclHandle)
-        .addStream(eVtxStreamInputRate::perVertex)
-        .addLayout (0, offsetof(Vertex, pos), eDataFormat::_2f32)        //position
-        .addLayout (1, offsetof(Vertex, colorRGB), eDataFormat::_3f32)   //color
-        .end();
-    if (vtxDeclHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create vtxDeclHandle\n");
-        return false;
-    }
-
-
-    //creo il render pass
-    gpu->renderPass_createNew (&renderPassHandle)
-        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
-        .addSubpass_GFX()
-            .writeToRenderTarget(0)
-        .end()
-    .end();
-    if (renderPassHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create renderTaskLayout\n");
-        return false;
-    }
-
-    //frame buffers
-    gpu->frameBuffer_createNew (renderPassHandle, &frameBufferHandle)
-        .bindRenderTarget (gpu->renderTarget_getDefault())
-        .end();
-    if (frameBufferHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create frameBufferHandle\n");
-        return false;
-    }        
-
-
     //carico gli shader
     fs::addAlias ("@shader", "shader/example3", eAliasPathMode::relativeToAppFolder);
     if (!gpu->vtxshader_createFromFile ("@shader/shader.vert.spv", "main", &vtxShaderHandle))
@@ -115,28 +74,26 @@ bool VulkanExample3::virtual_onInit ()
         return false;
     }
 
-    //creo la pipeline
-    gpu->pipeline_createNew (renderPassHandle, &pipelineHandle)
-        .addShader (vtxShaderHandle)
-        .addShader (fragShaderHandle)
-        .setVtxDecl (vtxDeclHandle)
-        .depthStencil()
-            .zbuffer_enable(true)
-            .zbuffer_enableWrite(true)
-            .zbuffer_setFn (eZFunc::LESS)
-            .stencil_enable(false)
-        .end()  //depth stencil
-        .end ();
-        
-    if (pipelineHandle.isInvalid())
+    //pipeline
+    gpu::pipe2::Pipeline_def def;
+    def
+        .reset()
+        .set_cullMode (eCullMode::CCW)
+        .set_drawPrimitive (eDrawPrimitive::trisList)
+        .shader_add (vtxShaderHandle)
+        .shader_add (fragShaderHandle)
+        .add_rt (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN)
+        .vtxStream_add (eVtxStreamInputRate::perVertex)
+            .add(0, offsetof(Vertex, pos), eDataFormat::_2f32)
+            .add(1, offsetof(Vertex, colorRGB), eDataFormat::_3f32)
+            .endVtxStream();
+
+
+    if (!gpu->pipeline_v2_createNew (def, &pipeline))
     {
         gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
         return false;
-    }
-
-
-    //non mi serve piu'
-    gpu->deleteResource (vtxDeclHandle);
+    };
 
     return true;
 }    
@@ -201,145 +158,39 @@ void VulkanExample3::moveVertex()
 }
 
 //************************************
-bool VulkanExample3::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle)
+bool VulkanExample3::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gpu::AcquiredSwapchainImg &swapChainImage)
 {
-    VkCommandBuffer vkCommandBuffer;
-    if (!gpu->toVulkan (cmdBufferHandle, &vkCommandBuffer))
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid cmdBufferHandle\n");
-        return false;
-    }
+    gos::gpu::pipe2::CmdBufferWriter2 cw;
+    cw
+        .begin (gpu, cmdBufferHandle)
+        .setViewport (gpu->viewport_getDefault())
+        .imageTransition (swapChainImage.image, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
+        .beginRender()
+            .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
+            .withRT (gpu->swapChain_getImageView(swapChainImage.index), eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0,0,0))
+            .bindPipeline (pipeline.pipeline_handle)
+            .bindVtxBuffer(vtxBufferHandle)
+            .bindIdxBufferU16(idxBufferHandle)
 
-    //recupero il vulkan render pass
-    VkRenderPass vkRenderPassHandle = VK_NULL_HANDLE;
-    if (!gpu->toVulkan (renderPassHandle, &vkRenderPassHandle))
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid renderPassHandle\n");
-        return false;
-    }
+            //draw primitive:
+            //      num-index => num di vertici che verranno passati al vxtshader
+            //      num-instances => 1 come minimo
+            //      ofsset-idxBuffer  => passare 1 significa che si parte dall'indice [1] dell'idxBuffer (quindi non parliamo di un offset in byte)
+            //      index-base = specifies an offset to add to the indices in the index buffer.
+            //      offset-instancin = non lo so...            
+            .drawIndexed(NUM_INDEX, 1, 0, 0, 0)
+            
+            .endRender()
+        .imageTransition (swapChainImage.image, eImageLayout::color_attachment_optimal, eImageLayout::presentation)
+        .end();
 
-    //recupero il frame buffer
-    VkFramebuffer vkFrameBufferHandle;
-    u32 renderAreaW;
-    u32 renderAreaH;
-    if (!gpu->toVulkan (frameBufferHandle, &vkFrameBufferHandle, &renderAreaW, &renderAreaH))
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid frameBufferHandle\n");
-        return false;
-    }
-
-    //recupero vulkan pipeline
-    const gpu::sPipeline *pipelineInfo;
-    if (!gpu->toVulkan (pipelineHandle, &pipelineInfo))
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid pipelineHandle\n");
-        return false;
-    }
-
-    //recupero il vtxBuffer
-    VkBuffer vkVtxBuffer;
-    if (!gpu->toVulkan (vtxBufferHandle, &vkVtxBuffer))
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid vtxBufferHandle\n");
-        return false;
-    }
-
-    //recupero il idxBuffer
-    VkBuffer vkIdxBuffer;
-    if (!gpu->toVulkan (idxBufferHandle, &vkIdxBuffer))
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid idxBufferHandle\n");
-        return false;
-    }
-
-    //begin command buffer
-    VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = 0; // Optional
-        beginInfo.pInheritanceInfo = nullptr; // Optional
-
-    VkResult result = vkBeginCommandBuffer (vkCommandBuffer, &beginInfo);
-    if (VK_SUCCESS != result)
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => vkBeginCommandBuffer() => %s\n", string_VkResult(result));
-        return false;
-    }
-
-    //begin render pass
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.01f, 1.0f}}};
-    VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = vkRenderPassHandle;
-        renderPassInfo.framebuffer = vkFrameBufferHandle;
-        renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = { renderAreaW, renderAreaH };
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues = &clearColor;    
-
-    vkCmdBeginRenderPass (vkCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    
-    //bindo la pipeline
-    vkCmdBindPipeline (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineInfo->vkPipelineHandle);
-
-    //bindo il vtx buffer a partire dal layout=0
-    static const u8 VTXBUFFER__FIRST_VTX_STREAM_INDEX = 0;
-    static const u8 VTXBUFFER__NUM_STREAM = 1;
-    VkBuffer        vtxBufferList[VTXBUFFER__NUM_STREAM] = { vkVtxBuffer };
-    VkDeviceSize    vtxBufferOffsetsList[VTXBUFFER__NUM_STREAM] = {0};    
-    vkCmdBindVertexBuffers (vkCommandBuffer, VTXBUFFER__FIRST_VTX_STREAM_INDEX, VTXBUFFER__NUM_STREAM, vtxBufferList, vtxBufferOffsetsList);
-
-    //bindo idxBuffer
-    vkCmdBindIndexBuffer (vkCommandBuffer, vkIdxBuffer, 0, VK_INDEX_TYPE_UINT16);
-
-
-    //setto la viewport
-    const gos::gpu::Viewport *viewport = gpu->viewport_get(gpu->viewport_getDefault());
-    VkViewport vkViewport {0.0f, 0.0f, (viewport->getW_f32()), viewport->getH_f32(), 0.0f, 1.0f };
-    vkCmdSetViewport(vkCommandBuffer, 0, 1, &vkViewport);
-
-    VkRect2D scissor { 0, 0, viewport->getW(), viewport->getH() };
-    vkCmdSetScissor (vkCommandBuffer, 0, 1, &scissor);
-
-    //draw primitive:
-    //      num-index => num di vertici che verranno passati al vxtshader
-    //      num-instances => 1 come minimo
-    //      ofsset-idxBuffer  => passare 1 significa che si parte dall'indice [1] dell'idxBuffer (quindi non parliamo di un offset in byte)
-    //      index-base = specifies an offset to add to the indices in the index buffer.
-    //      offset-instancin = non lo so...
-    vkCmdDrawIndexed(vkCommandBuffer, NUM_INDEX, 1, 0, 0, 0);
-
-    //fine del render pass
-    vkCmdEndRenderPass (vkCommandBuffer);
-
-    //fine del command buffer
-    result = vkEndCommandBuffer (vkCommandBuffer);
-    if (VK_SUCCESS != result)
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => vkEndCommandBuffer() => %s\n", string_VkResult(result));
-        return false;
-    }    
-    
+        
     return true;
-}
-
-/************************************
- * renderizza inviando command buffer a GPU e poi aspettando che questa
- * abbia finito il suo lavoro
- */
-void VulkanExample3::virtual_onRun()
-{
-    fpsMegaTimer.addTimer ("CPU");
-    fpsMegaTimer.addTimer ("GPU");
-    fpsMegaTimer.addTimer ("FPS");
-
-    mainLoop();
 }
 
 //**********************************
 void VulkanExample3::doCPUStuff ()
 {
-    fpsMegaTimer.onFrameBegin(0);
-
     handleInput();
 
     //prepare vtx
@@ -359,37 +210,42 @@ void VulkanExample3::doCPUStuff ()
     }
     if (tot < 0)
         printf ("A\n");
-
-
-    fpsMegaTimer.onFrameEnd(0);
-    fpsMegaTimer.printReport();
 }
 
 
-//**********************************
-void VulkanExample3::mainLoop()
+/************************************
+ * renderizza inviando command buffer a GPU e poi aspettando che questa
+ * abbia finito il suo lavoro
+ */
+void VulkanExample3::virtual_onRun()
 {
-    gpu::MainLoop gpuLoop;
-    gpuLoop.setup (gpu);
+    gpu::MainLoop2 mainLoop;
+    mainLoop.setup (gpu);
+
 
     //command buffer 
     GPUCmdBufferHandle  cmdBufferHandle;
     gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
 
+
     //main loop
     while (bQuitApp == false)
     {
-        doCPUStuff ();
+        mainLoop.stat_onCPUFrameBegin();
+        doCPUStuff();
+        mainLoop.stat_onCPUFrameEnd();
 
 
-        gpuLoop.run ();
-        if (gpuLoop.canSubmitGFXJob())
+        mainLoop.run();
+
+        //se il job precedente e' stato presentato, posso schedularne uno nuovo
+        gpu::AcquiredSwapchainImg swapchainImg;
+        if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
             copyIntoVtxBuffer();
-            recordCommandBuffer (cmdBufferHandle);
-            gpuLoop.submitGFXJob (cmdBufferHandle);
+            recordCommandBuffer (cmdBufferHandle, swapchainImg);
+            mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }
-
     }
 
     //aspetto che GPU abbia finito tutto cio' che ha in coda
@@ -397,6 +253,6 @@ void VulkanExample3::mainLoop()
 
     //free
     gpu->deleteResource (cmdBufferHandle);
-    gpuLoop.unsetup();
 }
+
 

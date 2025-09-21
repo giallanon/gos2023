@@ -22,7 +22,8 @@ public:
 
     void    end();
 
-    bool    recordCommandBuffer (gos::gpu::CmdBufferWriter &cw, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam);
+    //bool    recordCommandBuffer (gos::gpu::pipe2::CmdBufferWriter2::BeginRend &cw, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam);
+    bool    recordCommandBuffer (gos::gpu::pipe2::CmdBufferWriter2 &cw, VkImageView rt, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam);
 
 private:
     struct sVertex
@@ -46,16 +47,15 @@ private:
     gos::vec3f                  curColor;
     sUniformBufferObject        ubo;
 
-    GPUVtxBufferHandle      hVtxBuffer;
-    GPUIdxBufferHandle      hIdxBuffer;
-    GPUShaderHandle         hVtxShader;
-    GPUShaderHandle         hFragShader;
-    GPUPipelineHandle       hPipeline;
-    GPUUniformBufferHandle  hUBO;
-    GPUDescrSetLayoutHandle hDescrSetLayout;
-    GPUDescrSetInstanceHandle hDescrSetInstance;
-    GPURenderPassHandle   hRenderLayout;
-    GPUFrameBufferHandle    hFrameBuffer;
+    GPUVtxBufferHandle          hVtxBuffer;
+    GPUIdxBufferHandle          hIdxBuffer;
+
+    GPUShaderHandle             hVtxShader;
+    GPUShaderHandle             hFragShader;
+    gos::gpu::pipe2::Pipeline   pipeline;
+
+    GPUUniformBufferHandle      hUBO;
+    GPUDescrSetInstanceHandle   hDescrSetInstance;
 };
 
 

@@ -23,31 +23,14 @@ SimpleLineRenderer::~SimpleLineRenderer ()
     gpu->deleteResource (hVtxShader);
     gpu->deleteResource (hFragShader);
     gpu->deleteResource (hDescrSetInstance);
-    gpu->deleteResource (hDescrSetLayout);
-    gpu->deleteResource (hPipeline);
+    pipeline.deleteResources(gpu);
     gpu->deleteResource (hUBO);
-    gpu->deleteResource (hRenderLayout);
-    gpu->deleteResource (hFrameBuffer);
 }
 
 //*****************************
 bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHandle)
 {
     gpu = gpuIN;
-
-    //vtx declaration
-    GPUVtxDeclHandle vtxDeclHandle;
-    gpu->vtxDecl_createNew (&vtxDeclHandle)
-        .addStream(eVtxStreamInputRate::perVertex)
-            .addLayout (0, offsetof(sVertex, pos), eDataFormat::_3f32)
-            .addLayout (1, offsetof(sVertex, col), eDataFormat::_3f32)
-        .end();
-    if (vtxDeclHandle.isInvalid())
-    {
-        gos::logger::err ("SimpleLineRenderer::setup() => can't create vtxDeclHandle\n");
-        return false;
-    }
-
 
     //carico gli shader
     if (!gpu->vtxshader_createFromFile ("@shader/lineShader.vert.spv", "main", &hVtxShader))
@@ -61,61 +44,29 @@ bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHa
         return false;
     }
 
-    //Creo il descriptorSet layout  con un solo UNIFORM BUFFER per il VTX SHADER
-    gpu->descrSetLayout_create (&hDescrSetLayout)
-        .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT)
-        .end();
-    if (hDescrSetLayout.isInvalid())
+    //pipeline
+    gpu::pipe2::Pipeline_def def;
+    def
+        .reset()
+        .set_cullMode (eCullMode::NONE)
+        .set_drawPrimitive (eDrawPrimitive::lineList)
+        .shader_add (hVtxShader)
+        .shader_add (hFragShader)
+        .add_rt (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN)
+        .set_zbuffer (eImageFormat::_DEPTH_BEST, false, eZFunc::ALWAYS)
+        .vtxStream_add (eVtxStreamInputRate::perVertex)
+            .add (00, offsetof(sVertex, pos), eDataFormat::_3f32)
+            .add (1, offsetof(sVertex, col), eDataFormat::_3f32)
+            .endVtxStream()
+        .descriptorset_add()
+            .add (0, eGPUDescriptrorType::UNIFORM_BUFFER, 1, eGPUDescriptrorUsageFlag::vtx_shader)
+            .endDescriptorSet();
+
+    if (!gpu->pipeline_v2_createNew (def, &pipeline))
     {
-        gos::logger::err ("SimpleLineRenderer::setup() => can't create descriptor set\n");
+        gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
         return false;
-    }
-
-
-    //creo il render pass
-    gpu->renderPass_createNew (&hRenderLayout)
-        //.requireRendertarget (gpu->swapChain_getImageFormat(), eRenderTargetUsage::storage_color_attachment_optimal, eRenderTargetUsage::presentation, false)
-        //.requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::load, eAttachmentStoreOp::store)
-        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::presentation, eImageLayout::presentation, eAttachmentLoadOp::load, eAttachmentStoreOp::store)
-        .addSubpass_GFX()
-            .writeToRenderTarget(0)
-        .end()
-    .end();
-    if (hRenderLayout.isInvalid())
-    {
-        gos::logger::err ("SimpleLineRenderer::setup() => can't create renderTaskLayout\n");
-        return false;
-    }
-
-    //frame buffers
-    gpu->frameBuffer_createNew (hRenderLayout, &hFrameBuffer)
-        .bindRenderTarget (gpu->renderTarget_getDefault())
-        .end();
-    if (hFrameBuffer.isInvalid())
-    {
-        gos::logger::err ("SimpleLineRenderer::setup() => can't create frameBufferHandle\n");
-    }        
-
-    //creo la pipeline
-    gpu->pipeline_createNew (hRenderLayout, &hPipeline)
-        .addShader (hVtxShader)
-        .addShader (hFragShader)
-        .setVtxDecl (vtxDeclHandle)
-        .setCullMode (eCullMode::NONE)
-        .setDrawPrimitive (eDrawPrimitive::lineList)
-        .descriptor_add (hDescrSetLayout)
-        //.setWireframe(true)
-        .end ();
-
-    if (hPipeline.isInvalid())
-    {
-        gos::logger::err ("SimpleLineRenderer::setup() => can't create pipeline\n");
-        return false;
-    }
-
-    //non mi serve piu'
-    gpu->deleteResource (vtxDeclHandle);
-
+    };    
 
     //creo un buffer per UBO
     if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eVIBufferMode::shared_cpuW_autoSync, &hUBO))
@@ -125,7 +76,7 @@ bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHa
     }
     
     //alloco una istanza del descriptorSet
-    if (!gpu->descrSetInstance_createNew (descrPoolHandle, hDescrSetLayout, &hDescrSetInstance))
+    if (!gpu->descrSetInstance_createNew (descrPoolHandle, pipeline.descrset_handle_defList[0], &hDescrSetInstance))
     {
         gos::logger::err ("SimpleLineRenderer::setup() => can't create descriptorSet instance\n");
         return false;
@@ -185,7 +136,7 @@ void SimpleLineRenderer::end()
 }
 
 //*****************************
-bool SimpleLineRenderer::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam)
+bool SimpleLineRenderer::recordCommandBuffer (gpu::pipe2::CmdBufferWriter2 &cw, VkImageView rt, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam)
 {
     if (vtxList.getNElem() == 0)
         return false;
@@ -233,17 +184,22 @@ bool SimpleLineRenderer::recordCommandBuffer (gpu::CmdBufferWriter &cw, GPUStgBu
         .bindUniformBuffer (0, hUBO)
         .end();
 
+    // cw
+    //     .bindPipeline (pipeline.pipeline_handle)
+    //     .bindDescriptorSet (hDescrSetInstance, 0)
+    //     .bindVtxBuffer (hVtxBuffer)
+    //     .bindIdxBufferU16 (hIdxBuffer)
+    //     .drawIndexed (idxList.getNElem(), 1, 0, 0, 0);
 
-    cw
-        //.setViewport (gpu->viewport_getDefault())
-        .bindPipeline (hPipeline)
+    cw.beginRender()
+        .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
+        .withRT (rt, eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
+        .bindPipeline (pipeline.pipeline_handle)
         .bindDescriptorSet (hDescrSetInstance, 0)
-        //.setClearColor (0, gos::ColorHDR(0.1f, 1.0f, 0.0f))
-        .renderPass_begin (hRenderLayout, hFrameBuffer)
-            .bindVtxBuffer (hVtxBuffer)
-            .bindIdxBufferU16 (hIdxBuffer)
-            .drawIndexed (idxList.getNElem(), 1, 0, 0, 0)
-        .renderPass_end();
+        .bindVtxBuffer (hVtxBuffer)
+        .bindIdxBufferU16 (hIdxBuffer)
+        .drawIndexed (idxList.getNElem(), 1, 0, 0, 0)
+        .endRender();
 
     return true;
 }    

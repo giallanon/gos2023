@@ -35,7 +35,7 @@ bool fs::SpecialPathResolver::addAlias (const char *alias, const char *realPathN
 {
     assert (alias[0] == '@');
 
-    const sAlias *s = priv_findAlias(alias);
+    const sAlias *s = priv_findAlias(&alias[1]);
     if (NULL != s)
     {
         gos::logger::err ("fs::addAlias(%s,%s) => alias already exists and point to %s\n", alias, realPathNoSlash, s->realPathNoSlash);

@@ -36,14 +36,13 @@ void VulkanExample5::virtual_onCleanup()
     gpu->deleteResource (idxBufferHandle);
     gpu->deleteResource (stgBufferHandle);
     gpu->deleteResource (vtxBufferHandle);
+
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
-    gpu->deleteResource (pipelineHandle);
-    gpu->deleteResource (renderPassHandle);
-    gpu->deleteResource (frameBufferHandle);
+    pipeline.deleteResources(gpu);
+
     gpu->deleteResource (uboHandle);
     gpu->deleteResource (descrSetInstancerHandle);
-    gpu->deleteResource (descrSetLayoutHandle);
     gpu->deleteResource (descrPoolHandle);
     priv_freeMSQ2();
 }    
@@ -160,49 +159,59 @@ bool VulkanExample5::virtual_onInit ()
         }
     }
 
-    //Vtx declaration
-    GPUVtxDeclHandle vtxDeclHandle;
-    gpu->vtxDecl_createNew (&vtxDeclHandle)
-        .addStream(eVtxStreamInputRate::perVertex)
-            .addLayout (0, offsetof(Vertex, pos), eDataFormat::_3f32)       //position
-            .addLayout (1, offsetof(Vertex, norm), eDataFormat::_3f32)      //normal
-        .addStream (eVtxStreamInputRate::perInstance)
-            .addLayout (2, offsetof(sPerInstanceData, pos), eDataFormat::_3f32)       //position
-            .addLayout (3, offsetof(sPerInstanceData, color), eDataFormat::_3f32)
-            .addLayout (4, offsetof(sPerInstanceData, scale), eDataFormat::_3f32)
-        .end();
-    if (vtxDeclHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create vtxDeclHandle\n");
-        return false;
-    }
+    // //Vtx declaration
+    // GPUVtxDeclHandle vtxDeclHandle;
+    // gpu->vtxDecl_createNew (&vtxDeclHandle)
+    //     .addStream(eVtxStreamInputRate::perVertex)
+    //         .addLayout (0, offsetof(Vertex, pos), eDataFormat::_3f32)       //position
+    //         .addLayout (1, offsetof(Vertex, norm), eDataFormat::_3f32)      //normal
+    //     .addStream (eVtxStreamInputRate::perInstance)
+    //         .addLayout (2, offsetof(sPerInstanceData, pos), eDataFormat::_3f32)       //position
+    //         .addLayout (3, offsetof(sPerInstanceData, color), eDataFormat::_3f32)
+    //         .addLayout (4, offsetof(sPerInstanceData, scale), eDataFormat::_3f32)
+    //     .end();
+    // if (vtxDeclHandle.isInvalid())
+    // {
+    //     gos::logger::err ("VulkanApp::init() => can't create vtxDeclHandle\n");
+    //     return false;
+    // }
 
 
-    //creo il render pass
-    gpu->renderPass_createNew (&renderPassHandle)
-        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
-        .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eImageLayout::undefined, eImageLayout::depth_shader_readonly, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
-        .addSubpass_GFX()
-            .writeToRenderTarget(0)
-            .writeToDepthStencil()
-        .end()
-    .end();
-    if (renderPassHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create renderTaskLayout\n");
-        return false;
-    }
+    // //creo il render pass
+    // gpu->renderPass_createNew (&renderPassHandle)
+    //     .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
+    //     .requireZBuffer (gpu->depthStencil_getDefaultFormat(), eImageLayout::undefined, eImageLayout::depth_shader_readonly, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
+    //     .addSubpass_GFX()
+    //         .writeToRenderTarget(0)
+    //         .writeToDepthStencil()
+    //     .end()
+    // .end();
+    // if (renderPassHandle.isInvalid())
+    // {
+    //     gos::logger::err ("VulkanApp::init() => can't create renderTaskLayout\n");
+    //     return false;
+    // }
 
-    //frame buffers
-    gpu->frameBuffer_createNew (renderPassHandle, &frameBufferHandle)
-        .bindRenderTarget (gpu->renderTarget_getDefault())
-        .bindDepthStencil (gpu->depthStencil_getDefault())
-        .end();
-    if (frameBufferHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create frameBufferHandle\n");
-        return false;
-    }        
+    // //frame buffers
+    // gpu->frameBuffer_createNew (renderPassHandle, &frameBufferHandle)
+    //     .bindRenderTarget (gpu->renderTarget_getDefault())
+    //     .bindDepthStencil (gpu->depthStencil_getDefault())
+    //     .end();
+    // if (frameBufferHandle.isInvalid())
+    // {
+    //     gos::logger::err ("VulkanApp::init() => can't create frameBufferHandle\n");
+    //     return false;
+    // }        
+
+    // //Creo il descriptorSet layout  con un solo UNIFORM BUFFER per il VTX SHADER
+    // gpu->descrSetLayout_create (&descrSetLayoutHandle)
+    //     .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT)
+    //     .end();
+    // if (descrSetLayoutHandle.isInvalid())
+    // {
+    //     gos::logger::err ("VulkanApp::init() => can't create descriptor set\n");
+    //     return false;
+    // }
 
 
     //carico gli shader
@@ -218,41 +227,61 @@ bool VulkanExample5::virtual_onInit ()
         return false;
     }
 
-    //Creo il descriptorSet layout  con un solo UNIFORM BUFFER per il VTX SHADER
-    gpu->descrSetLayout_create (&descrSetLayoutHandle)
-        .add_uniformBuffer (VK_SHADER_STAGE_VERTEX_BIT)
-        .end();
-    if (descrSetLayoutHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create descriptor set\n");
-        return false;
-    }
 
-    //creo la pipeline
-    gpu->pipeline_createNew (renderPassHandle, &pipelineHandle)
-        .addShader (vtxShaderHandle)
-        .addShader (fragShaderHandle)
-        .setVtxDecl (vtxDeclHandle)
-        .depthStencil()
-            .zbuffer_enable(true)
-            .zbuffer_enableWrite(true)
-            .zbuffer_setFn (eZFunc::LESS)
-            .stencil_enable(false)
-        .end() //depth stencil
-        .setCullMode (eCullMode::CCW)
-        .setDrawPrimitive (eDrawPrimitive::trisList)
-        .descriptor_add (descrSetLayoutHandle)
-        //.setWireframe(true)
-        .end ();
 
-    if (pipelineHandle.isInvalid())
+    //pipeline
+    gpu::pipe2::Pipeline_def def;
+    def
+        .reset()
+        .shader_add (vtxShaderHandle)
+        .shader_add (fragShaderHandle)
+        .add_rt (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN)
+        .set_zbuffer(eImageFormat::_DEPTH_BEST)
+        .vtxStream_add (eVtxStreamInputRate::perVertex)
+            .add (0, offsetof(Vertex, pos), eDataFormat::_3f32)       //position
+            .add (1, offsetof(Vertex, norm), eDataFormat::_3f32)      //normal
+            .endVtxStream()
+        .vtxStream_add (eVtxStreamInputRate::perInstance)
+            .add (2, offsetof(sPerInstanceData, pos), eDataFormat::_3f32)       //position
+            .add (3, offsetof(sPerInstanceData, color), eDataFormat::_3f32)
+            .add (4, offsetof(sPerInstanceData, scale), eDataFormat::_3f32)    
+            .endVtxStream()
+        .descriptorset_add()
+            .add (0, eGPUDescriptrorType::UNIFORM_BUFFER, 1, eGPUDescriptrorUsageFlag::vtx_shader)
+            .endDescriptorSet();
+
+    if (!gpu->pipeline_v2_createNew (def, &pipeline))
     {
         gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
         return false;
-    }
+    };    
 
-    //non mi serve piu'
-    gpu->deleteResource (vtxDeclHandle);
+
+    // //creo la pipeline
+    // gpu->pipeline_createNew (renderPassHandle, &pipelineHandle)
+    //     .addShader (vtxShaderHandle)
+    //     .addShader (fragShaderHandle)
+    //     .setVtxDecl (vtxDeclHandle)
+    //     .depthStencil()
+    //         .zbuffer_enable(true)
+    //         .zbuffer_enableWrite(true)
+    //         .zbuffer_setFn (eZFunc::LESS)
+    //         .stencil_enable(false)
+    //     .end() //depth stencil
+    //     .setCullMode (eCullMode::CCW)
+    //     .setDrawPrimitive (eDrawPrimitive::trisList)
+    //     .descriptor_add (descrSetLayoutHandle)
+    //     //.setWireframe(true)
+    //     .end ();
+
+    // if (pipelineHandle.isInvalid())
+    // {
+    //     gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
+    //     return false;
+    // }
+
+    // //non mi serve piu'
+    // gpu->deleteResource (vtxDeclHandle);
 
     
     //creo un buffer per UBO
@@ -275,7 +304,7 @@ bool VulkanExample5::virtual_onInit ()
     }
 
     //alloco una istanza del descriptorSet
-    if (!gpu->descrSetInstance_createNew (descrPoolHandle, descrSetLayoutHandle, &descrSetInstancerHandle))
+    if (!gpu->descrSetInstance_createNew (descrPoolHandle, pipeline.descrset_handle_defList[0], &descrSetInstancerHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create descriptorSet instance\n");
         return false;
@@ -301,46 +330,6 @@ bool VulkanExample5::virtual_onInit ()
     priv_runMarchingSquare();
 
     
-    return true;
-}
-
-//************************************
-bool VulkanExample5::priv_recordCommandBuffer (gpu::CmdBufferWriter &cw)
-{
-    world->updateInstanceVB (stgBufferHandle);
-
-    //upload di UBO su GPU
-    ubo.camView = cam.getMatV();
-    ubo.camProj = cam.getMatP();
-    //ubo.lightDir.set (-0.4f, -1, 0.2f, 0);
-    ubo.lightDir.set (0, -1, 0, 0);
-    ubo.lightDir.normalize();
-    gpu->writeAndSync (uboHandle, 0, &ubo, sizeof(sUniformBufferObject));            
-
-    gos::gpu::DescrSetInstanceWriter descrWriter;
-    descrWriter.begin (gpu, descrSetInstancerHandle)
-        .bindUniformBuffer (0, uboHandle)
-        .end();
-
-
-    cw.setViewport (gpu->viewport_getDefault())
-        .bindPipeline (pipelineHandle)
-        .bindDescriptorSet (descrSetInstancerHandle, 0)
-        .setClearColor (0, gos::ColorHDR(0, 0, 0))
-        .setDepthBufferColor(1, 0)
-        .renderPass_begin (renderPassHandle, frameBufferHandle)
-            .bindVtxBuffers(vtxBufferHandle, world->hVBInstance)
-            .bindIdxBufferU16(idxBufferHandle)
-            .drawIndexed (myShape.numIdx, world->getNumInstances(), 0, 0, 0);
-
-        if (gpuMSQ2.numIdx)
-        {
-            cw.bindIdxBufferU16(gpuMSQ2.idxBufferHandle)
-                .bindVtxBuffer(gpuMSQ2.vtxBufferHandle)
-                .drawIndexed (gpuMSQ2.numIdx, 1, 0, 0, 0);
-        }
-
-        cw.renderPass_end();
     return true;
 }
 
@@ -521,19 +510,6 @@ void VulkanExample5::priv_runMarchingSquare()
     
 }
 
-//************************************
-void VulkanExample5::virtual_onRun()
-{
-    //camera
-    cam.setPerspectiveFovLH (gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
-    //cam.pos.identity(); cam.pos.warp (0, 0, -19); cam.pos.lookAt (vec3f(0,0,0));
-    cam.pos.identity(); cam.pos.warp (0, 30, 0); cam.pos.rotateMeAboutMyX (math::gradToRad(-90));
-    
-    cam.markUpdated();
-
-    movement.bind (&cam.pos);
-    priv_mainLoop();
-}
 
 //**********************************
 void VulkanExample5::priv_doCPUStuff ()
@@ -546,42 +522,127 @@ void VulkanExample5::priv_doCPUStuff ()
     cam.markUpdated();
 }
 
+//************************************
+bool VulkanExample5::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::AcquiredSwapchainImg &swapChainImage)
+{
+    world->updateInstanceVB (stgBufferHandle);
+
+    //upload di UBO su GPU
+    ubo.camView = cam.getMatV();
+    ubo.camProj = cam.getMatP();
+    //ubo.lightDir.set (-0.4f, -1, 0.2f, 0);
+    ubo.lightDir.set (0, -1, 0, 0);
+    ubo.lightDir.normalize();
+    gpu->writeAndSync (uboHandle, 0, &ubo, sizeof(sUniformBufferObject));            
+
+    gos::gpu::DescrSetInstanceWriter descrWriter;
+    descrWriter.begin (gpu, descrSetInstancerHandle)
+        .bindUniformBuffer (0, uboHandle)
+        .end();
+
+
+    GPUDepthStencilHandle hZB = gpu->depthStencil_getDefault();
+    gos::gpu::pipe2::CmdBufferWriter2 cw;
+    cw
+        .begin (gpu, cmdBufferHandle)
+        .setViewport (gpu->viewport_getDefault())
+        .imageTransition (swapChainImage.image, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
+        .imageTransition (hZB, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
+    
+
+    auto &rend = cw.beginRender();
+    rend
+        .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
+        .withRT (gpu->swapChain_getImageView(swapChainImage.index), eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0, 0))
+        .withZB (hZB, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, 1.0f, 0)
+        .bindPipeline (pipeline.pipeline_handle)
+        .bindDescriptorSet (descrSetInstancerHandle, 0)
+        .bindVtxBuffers(vtxBufferHandle, world->hVBInstance)
+        .bindIdxBufferU16(idxBufferHandle)
+        .drawIndexed (myShape.numIdx, world->getNumInstances(), 0, 0, 0);
+
+        if (gpuMSQ2.numIdx)
+        {
+            rend
+                .bindIdxBufferU16(gpuMSQ2.idxBufferHandle)
+                .bindVtxBuffer(gpuMSQ2.vtxBufferHandle)
+                .drawIndexed (gpuMSQ2.numIdx, 1, 0, 0, 0);
+        }
+    rend.endRender();
+
+    //line->recordCommandBuffer (rend, stgBufferHandle, cam);
+    line->recordCommandBuffer (cw, gpu->swapChain_getImageView(swapChainImage.index), stgBufferHandle, cam);
+    
+
+//    rend.endRender();
+    cw
+        .imageTransition (swapChainImage.image, eImageLayout::color_attachment_optimal, eImageLayout::presentation)
+        .end();
+
+
+    // cw.setViewport (gpu->viewport_getDefault())
+    //     .bindPipeline (pipelineHandle)
+    //     .bindDescriptorSet (descrSetInstancerHandle, 0)
+    //     .setClearColor (0, gos::ColorHDR(0, 0, 0))
+    //     .setDepthBufferColor(1, 0)
+    //     .renderPass_begin (renderPassHandle, frameBufferHandle)
+    //         .bindVtxBuffers(vtxBufferHandle, world->hVBInstance)
+    //         .bindIdxBufferU16(idxBufferHandle)
+    //         .drawIndexed (myShape.numIdx, world->getNumInstances(), 0, 0, 0);
+
+    //     if (gpuMSQ2.numIdx)
+    //     {
+    //         cw.bindIdxBufferU16(gpuMSQ2.idxBufferHandle)
+    //             .bindVtxBuffer(gpuMSQ2.vtxBufferHandle)
+    //             .drawIndexed (gpuMSQ2.numIdx, 1, 0, 0, 0);
+    //     }
+
+    //     cw.renderPass_end();
+    return true;
+}
 
 //**********************************
-void VulkanExample5::priv_mainLoop()
+void VulkanExample5::virtual_onRun()
 {
-    gpu::MainLoop gpuLoop;
-    gpuLoop.setup (gpu);
-    gpuLoop.stat_setPrintReportEvery (10000);
+    //camera
+    cam.setPerspectiveFovLH (gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
+    //cam.pos.identity(); cam.pos.warp (0, 0, -19); cam.pos.lookAt (vec3f(0,0,0));
+    cam.pos.identity(); cam.pos.warp (0, 30, 0); cam.pos.rotateMeAboutMyX (math::gradToRad(-90));
+    
+    cam.markUpdated();
 
+    movement.bind (&cam.pos);
+    
+    
+    
+    gpu::MainLoop2 mainLoop;
+    mainLoop.setup (gpu);
 
     //command buffer 
     GPUCmdBufferHandle  cmdBufferHandle;
     gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
 
-    gos::gpu::CmdBufferWriter cw;
 
     //main loop
     while (bQuitApp == false)
     {
-        gpuLoop.stat_onCPUFrameBegin();
-        priv_doCPUStuff ();
-        gpuLoop.stat_onCPUFrameEnd();
-        gpuLoop.stat_printReport();
+        mainLoop.stat_onCPUFrameBegin();
+        priv_doCPUStuff();
+        mainLoop.stat_onCPUFrameEnd();
 
 
-        gpuLoop.run ();
-        if (gpuLoop.swapchainRecreated())
+        mainLoop.run();
+
+        if (gpu->swapChain_wasRecreated())
             cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
-        if (gpuLoop.canSubmitGFXJob())
-        {
-            cw.begin (gpu, cmdBufferHandle);
-                priv_recordCommandBuffer (cw);
-                line->recordCommandBuffer (cw, stgBufferHandle, cam);
-            cw.end();
-            gpuLoop.submitGFXJob (cmdBufferHandle);
-        }
 
+        //se il job precedente e' stato presentato, posso schedularne uno nuovo
+        gpu::AcquiredSwapchainImg swapchainImg;
+        if (mainLoop.gfxJob_canSubmit(&swapchainImg))
+        {
+            recordCommandBuffer (cmdBufferHandle, swapchainImg);
+            mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
+        }
     }
 
     //aspetto che GPU abbia finito tutto cio' che ha in coda
@@ -589,7 +650,6 @@ void VulkanExample5::priv_mainLoop()
 
     //free
     gpu->deleteResource (cmdBufferHandle);
-    gpuLoop.unsetup();
 }
 
 

@@ -23,6 +23,7 @@ add_library(${BINARY_OUTPUT_FILENAME} STATIC
 pipe2/gosGPUPipe2_cmdBufferWriter_BeginRend.cpp
 pipe2/gosGPUPipe2_cmdBufferWriter.cpp
 pipe2/gosGPUPipe2_cmdBufferWriter.h
+pipe2/gosGPUPipe2_pipeline_def.cpp
 pipe2/gosGPUPipe2_pipeline_def.h
 
 vulkan/gosGPUVukanHelpers.cpp

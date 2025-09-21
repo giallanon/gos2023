@@ -7,10 +7,14 @@
 
 namespace gos
 {
+    class GPU; //fwd
+
     namespace gpu
     {
         namespace pipe2
         {
+            class Pipeline_def; //fwd
+
             /****************************************
              * @brief 
              * 
@@ -39,68 +43,11 @@ namespace gos
              * @brief 
              * 
              */
-            struct DescriptorSet
-            {
-            public:
-                void            reset(VkDescriptorSetLayoutCreateFlags flagIN)      { flag=flagIN; numDescriptor=0; memset(list, 0, sizeof(list)); }
-
-                                //per <usageFlags> vedi eGPUDescriptrorUsageFlag
-                DescriptorSet&  add (u32 binding, eGPUDescriptrorType type, u32 count, u32 usageFlagsIN)
-                { 
-                    assert(numDescriptor<GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET);
-                    list[numDescriptor].binding = binding;
-                    list[numDescriptor].descrType = type;
-                    list[numDescriptor].count = count;
-                    list[numDescriptor].usageFlags = usageFlagsIN;
-                    numDescriptor++;
-                    return *this;
-                }
-
-            public:
-                VkDescriptorSetLayoutCreateFlags flag;
-                u32             numDescriptor;
-                Descriptor      list[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
-            }; //DescriptorSet
-
-
-            /****************************************
-             * @brief 
-             * 
-             */
             struct VtxLayout
             {
 			    u8              bindingLocation;
 			    eDataFormat     format;
 			    u8              offset;
-            };
-
-            /****************************************
-             * @brief 
-             * 
-             */
-            struct VtxStream
-            {
-            public:
-                void        reset(u8 streamIndexIN, eVtxStreamInputRate inputRateIN)    { streamIndex = streamIndexIN; inputRate=inputRateIN; numLayout=0; }
-                VtxStream&  add (u8 bindingLocation, u8 offset, eDataFormat fmt)        { assert (numLayout < GOSGPU__NUM_MAX_VTXDECL_ATTR); list[numLayout].bindingLocation = bindingLocation; list[numLayout].offset = offset; list[numLayout].format = fmt; numLayout++; return (*this); }
-
-                u32     calcStride() const
-                {
-                    u32 ret = 0;
-                    for (u8 i=0; i<numLayout; i++)
-                    {
-                        const u32 n = list[i].offset + gos::dataformat::getSize (list[i].format);
-                        if (n > ret)
-                            ret = n;
-                    }
-                    return ret;
-                }                    
-                
-            public:
-                u8                  streamIndex;
-                eVtxStreamInputRate inputRate;
-                u8                  numLayout;
-                VtxLayout           list[GOSGPU__NUM_MAX_VTXDECL_ATTR];
             };
 
 
@@ -130,6 +77,9 @@ namespace gos
                     vtx_numStream = 0;
                     memset (vtx_stridePerStream, 0, sizeof(vtx_stridePerStream));
                 }
+
+                void deleteResources (gos::GPU *gpu);
+
             }; //Pipeline
 
 
@@ -146,9 +96,77 @@ namespace gos
                     f32 stencil;
                 };
 
+                struct VtxStream
+                {
+                public:
+                    VtxStream&      add (u8 bindingLocation, u8 offset, eDataFormat fmt)        { assert (numLayout < GOSGPU__NUM_MAX_VTXDECL_ATTR); list[numLayout].bindingLocation = bindingLocation; list[numLayout].offset = offset; list[numLayout].format = fmt; numLayout++; return (*this); }
+                    Pipeline_def&   endVtxStream()                                                 { return *def; }
+
+
+                    u32             calcStride() const
+                    {
+                        u32 ret = 0;
+                        for (u8 i=0; i<numLayout; i++)
+                        {
+                            const u32 n = list[i].offset + gos::dataformat::getSize (list[i].format);
+                            if (n > ret)
+                                ret = n;
+                        }
+                        return ret;
+                    }                    
+                    
+                public:
+                    u8                  streamIndex;
+                    eVtxStreamInputRate inputRate;
+                    u8                  numLayout;
+                    VtxLayout           list[GOSGPU__NUM_MAX_VTXDECL_ATTR];
+
+                private:
+                                    VtxStream()                         { def = NULL; }
+                                    ~VtxStream()                        { }
+                    void            priv_setup (Pipeline_def *defIN, u8 streamIndexIN, eVtxStreamInputRate inputRateIN)    { def = defIN; streamIndex = streamIndexIN; inputRate=inputRateIN; numLayout=0; }
+
+                private:
+                    Pipeline_def    *def;
+
+                friend Pipeline_def;
+                };                
+
+                struct DescriptorSet
+                {
+                public:
+                                    //per <usageFlags> vedi eGPUDescriptrorUsageFlag
+                    DescriptorSet&  add (u32 binding, eGPUDescriptrorType type, u32 count, u32 usageFlagsIN)
+                    { 
+                        assert(numDescriptor<GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET);
+                        list[numDescriptor].binding = binding;
+                        list[numDescriptor].descrType = type;
+                        list[numDescriptor].count = count;
+                        list[numDescriptor].usageFlags = usageFlagsIN;
+                        numDescriptor++;
+                        return *this;
+                    }
+                    Pipeline_def&   endDescriptorSet()                                                          { return *def; }
+
+
+                public:
+                    VkDescriptorSetLayoutCreateFlags flag;
+                    u32             numDescriptor;
+                    Descriptor      list[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
+
+                private:
+                                    DescriptorSet()                                                                 { }
+                                    ~DescriptorSet()                                                                { }
+                    void            priv_setup(Pipeline_def *defIN, VkDescriptorSetLayoutCreateFlags flagIN)        { def=defIN; flag=flagIN; numDescriptor=0; memset(list, 0, sizeof(list)); }
+
+                private:
+                    Pipeline_def    *def;
+
+                friend Pipeline_def;
+                };
 
             public:
-                void reset()
+                Pipeline_def&   reset()
                 {
                     numPushConst = 0;
                     memset (pushConstList, 0, sizeof(pushConstList));
@@ -167,31 +185,33 @@ namespace gos
                     zbuffer_clearCol.depth = 1; zbuffer_clearCol.stencil = 0;
                     
                     numRT = 0;
+                    return *this;
                }
 
 
-                void                set_cullMode (eCullMode m)                                                          { cullMode = m; }
-                void                set_drawPrimitive (eDrawPrimitive p)                                                { drawPrimitive = p; }
-                void                enable_wireframe()                                                                  { bWireframe = true; }
+                Pipeline_def&   set_cullMode (eCullMode m)                                                          { cullMode = m; return *this; }
+                Pipeline_def&   set_drawPrimitive (eDrawPrimitive p)                                                { drawPrimitive = p; return *this; }
+                Pipeline_def&   enable_wireframe()                                                                  { bWireframe = true; return *this; }
 
-                void                set_zbuffer (eImageFormat fmt, bool zwriteIN=true, eZFunc zfuncIN=eZFunc::LESS)     { assert (gos::utils::isFormatWithDepth(fmt) || fmt==eImageFormat::_DEPTH_BEST); zbuffer_enabled = true; zbuffer_format=fmt; zbuffer_write=zwriteIN; zbuffer_cmpFn=zfuncIN; }
+                Pipeline_def&   set_zbuffer (eImageFormat fmt, bool zwriteIN=true, eZFunc zfuncIN=eZFunc::LESS)     { assert (gos::utils::isFormatWithDepth(fmt) || fmt==eImageFormat::_DEPTH_BEST); zbuffer_enabled = true; zbuffer_format=fmt; zbuffer_write=zwriteIN; zbuffer_cmpFn=zfuncIN; return *this; }
 
-                void                add_rt (eImageFormat fmt)                                                           { assert (numRT < GOSGPU__NUM_MAX_ATTACHMENT); renderTargetFormat[numRT] = fmt; numRT++; }
+                Pipeline_def&   add_rt (eImageFormat fmt)                                                           { assert (numRT < GOSGPU__NUM_MAX_ATTACHMENT); renderTargetFormat[numRT] = fmt; numRT++; return *this; }
 
-                void                shader_add (const GPUShaderHandle &handle)                                          { assert (numShader < GOSGPU__NUM_MAX_SHADER_PER_PIPELINE); shaderHandleList[numShader++] = handle; }
+                Pipeline_def&   shader_add (const GPUShaderHandle &handle)                                          { assert (numShader < GOSGPU__NUM_MAX_SHADER_PER_PIPELINE); shaderHandleList[numShader++] = handle; return *this; }
 
-                void                pushConst_add (u16 offset, u16 sizeInByte, VkShaderStageFlags stageFlags)
+                Pipeline_def&   pushConst_add (u16 offset, u16 sizeInByte, VkShaderStageFlags stageFlags)
                 {
                     assert (numPushConst < GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE);
                     pushConstList[numPushConst].offset = offset;
                     pushConstList[numPushConst].sizeInByte = sizeInByte;
                     pushConstList[numPushConst].stageFlags = stageFlags;
                     numPushConst++;
+                    return *this;
                 }
 
-                DescriptorSet&      descriptorset_add (VkDescriptorSetLayoutCreateFlags flag=0)                         { assert (numDescrSet < GOSGPU__NUM_MAX_DESCRIPTOR_SETS); descriptorSetList[numDescrSet].reset (flag); return descriptorSetList[numDescrSet++]; }
+                DescriptorSet&  descriptorset_add (VkDescriptorSetLayoutCreateFlags flag=0)                         { assert (numDescrSet < GOSGPU__NUM_MAX_DESCRIPTOR_SETS); descriptorSetList[numDescrSet].priv_setup (this, flag); return descriptorSetList[numDescrSet++]; }
                         
-                VtxStream&          vtxStream_add (eVtxStreamInputRate inputRateIN)                                     { assert (numVtxStream<GOSGPU__NUM_MAX_VXTDECL_STREAM); vtxStreamList[numVtxStream].reset(numVtxStream, inputRateIN); return vtxStreamList[numVtxStream++]; }
+                VtxStream&      vtxStream_add (eVtxStreamInputRate inputRateIN)                                     { assert (numVtxStream<GOSGPU__NUM_MAX_VXTDECL_STREAM); vtxStreamList[numVtxStream].priv_setup(this, numVtxStream, inputRateIN); return vtxStreamList[numVtxStream++]; }
 
 
 

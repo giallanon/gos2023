@@ -30,7 +30,7 @@ private:
 private:
     bool        createVertexIndexStageBuffer();
     void        moveVertex();
-    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle);
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::AcquiredSwapchainImg &swapChainImage);
     bool        copyIntoVtxBuffer();
     void        doCPUStuff ();
     void        mainLoop();
@@ -41,7 +41,6 @@ private:
     static const u8     NUM_INDEX = 6;
 
 private:
-    gos::FPSMegaTimer<3>    fpsMegaTimer;
     Vertex                  vertexList[NUM_VERTEX];
     u16                     indexList[NUM_INDEX];
 
@@ -49,15 +48,13 @@ private:
     f32                     direction;
     void                    *ptToMappedStagingBuffer;
 
-    GPUVtxBufferHandle      vtxBufferHandle;
-    GPUIdxBufferHandle      idxBufferHandle;
-    GPUStgBufferHandle      stgBufferHandle;
-
-    GPUPipelineHandle       pipelineHandle;
-    GPUShaderHandle         vtxShaderHandle;
-    GPUShaderHandle         fragShaderHandle;
-    GPURenderPassHandle   renderPassHandle;
-    GPUFrameBufferHandle    frameBufferHandle;
+    GPUVtxBufferHandle          vtxBufferHandle;
+    GPUIdxBufferHandle          idxBufferHandle;
+    GPUStgBufferHandle          stgBufferHandle;
+    
+    gos::gpu::pipe2::Pipeline   pipeline;
+    GPUShaderHandle             vtxShaderHandle;
+    GPUShaderHandle             fragShaderHandle;
 };
 
 

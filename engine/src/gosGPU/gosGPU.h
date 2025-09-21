@@ -27,6 +27,7 @@
 #include "gosGPUResTexture.h"
 #include "gosGPUResSampler.h"
 #include "pipe2/gosGPUPipe2_pipeline_def.h"
+#include "pipe2/gosGPUPipe2_cmdBufferWriter.h"
 
 namespace gos
 {
@@ -933,7 +934,7 @@ namespace gos
                             }
 
 
-        bool                priv_descrSetLayout_build_v2 (const gpu::pipe2::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle, VkDescriptorSetLayout *out_vkHandle);
+        bool                priv_descrSetLayout_build_v2 (const gpu::pipe2::Pipeline_def::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle, VkDescriptorSetLayout *out_vkHandle);
 
     private:
         gos::Allocator              *allocator;

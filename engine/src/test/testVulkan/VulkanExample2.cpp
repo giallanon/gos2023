@@ -24,19 +24,13 @@ void VulkanExample2::virtual_onCleanup()
     gpu->deleteResource (vtxBufferHandle);
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
-    gpu->deleteResource (pipelineHandle);
-    gpu->deleteResource (renderPassHandle);
-    gpu->deleteResource (frameBufferHandle);
+    pipeline.deleteResources(gpu);
 }    
 
 
 //************************************
 bool VulkanExample2::virtual_onInit ()
 {
-    fpsMegaTimer.addTimer ("CPU");
-    fpsMegaTimer.addTimer ("GPU");
-    fpsMegaTimer.addTimer ("FPS");
-
     //vertici
     vertexList[0].pos.set (0.0f, -0.5f);
     vertexList[0].colorRGB.set (1.0f, 0.0f, 0.0f);
@@ -46,48 +40,12 @@ bool VulkanExample2::virtual_onInit ()
     vertexList[2].colorRGB.set (0.0f, 0.0f, 1.0f);
 
 
-    if (!createVertexBuffer())
+    //vertex buffer
+    if (!gpu->vertexBuffer_create (sizeof(Vertex) * NUM_VERTEX, eVIBufferMode::shared_cpuW_autoSync, &vtxBufferHandle))
     {
-        gos::logger::err ("VulkanApp::init() => can't create VtxBuffer\n");
+        gos::logger::err ("VulkanApp::virtual_onInit() => gpu->vertexBuffer_create() failed\n");
         return false;
     }
-
-    //Vtx declaration
-    GPUVtxDeclHandle vtxDeclHandle;
-    gpu->vtxDecl_createNew (&vtxDeclHandle)
-        .addStream(eVtxStreamInputRate::perVertex)
-        .addLayout (0, offsetof(Vertex, pos), eDataFormat::_2f32)        //position
-        .addLayout (1, offsetof(Vertex, colorRGB), eDataFormat::_3f32)   //color
-        .end();
-    if (vtxDeclHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create vtxDeclHandle\n");
-        return false;
-    }
-
-
-    //creo il render pass
-    gpu->renderPass_createNew (&renderPassHandle)
-        .requireRendertarget (gpu->swapChain_getImageFormat(), eImageLayout::undefined, eImageLayout::presentation, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
-        .addSubpass_GFX()
-            .writeToRenderTarget(0)
-        .end()
-    .end();
-    if (renderPassHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create renderTaskLayout\n");
-        return false;
-    }
-
-    //frame buffers
-    gpu->frameBuffer_createNew (renderPassHandle, &frameBufferHandle)
-        .bindRenderTarget (gpu->renderTarget_getDefault())
-        .end();
-    if (frameBufferHandle.isInvalid())
-    {
-        gos::logger::err ("VulkanApp::init() => can't create frameBufferHandle\n");
-        return false;
-    }        
 
 
     //carico gli shader
@@ -102,44 +60,30 @@ bool VulkanExample2::virtual_onInit ()
         return false;
     }
 
-    //creo la pipeline
-    gpu->pipeline_createNew (renderPassHandle, &pipelineHandle)
-        .addShader (vtxShaderHandle)
-        .addShader (fragShaderHandle)
-        .setVtxDecl (vtxDeclHandle)
-        .depthStencil()
-            .zbuffer_enable(true)
-            .zbuffer_enableWrite(true)
-            .zbuffer_setFn (eZFunc::LESS)
-            .stencil_enable(false)
-            .end()
-        .end ();
-        
-    if (pipelineHandle.isInvalid())
+    //pipeline
+    gpu::pipe2::Pipeline_def def;
+    def
+        .reset()
+        .set_cullMode (eCullMode::CCW)
+        .set_drawPrimitive (eDrawPrimitive::trisList)
+        .shader_add (vtxShaderHandle)
+        .shader_add (fragShaderHandle)
+        .add_rt (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN)
+        .vtxStream_add (eVtxStreamInputRate::perVertex)
+            .add(0, 0, eDataFormat::_2f32)
+            .add(1, 8, eDataFormat::_3f32)
+            .endVtxStream();
+
+
+    if (!gpu->pipeline_v2_createNew (def, &pipeline))
     {
         gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
         return false;
-    }
-
-
-    //non mi serve piu'
-    gpu->deleteResource (vtxDeclHandle);
+    };
 
     return true;
 }    
 
-
-//************************************
-bool VulkanExample2::createVertexBuffer()
-{
-    const u32 sizeInByte = sizeof(Vertex) * NUM_VERTEX;
-    if (!gpu->vertexBuffer_create (sizeInByte, eVIBufferMode::shared_cpuW_autoSync, &vtxBufferHandle))
-    {
-        gos::logger::err ("VulkanApp::createVertexBuffer() => gpu->vertexBuffer_create() failed\n");
-        return false;
-    }
-    return true;
-}
 
 
 //************************************
@@ -162,126 +106,30 @@ void VulkanExample2::moveVertex()
 }
 
 //************************************
-bool VulkanExample2::recordCommandBuffer (gos::GPU *gpuIN, 
-                                            const GPURenderPassHandle &renderPassHandle, 
-                                            const GPUFrameBufferHandle &frameBufferHandle,
-                                            const GPUPipelineHandle &pipelineHandle,
-                                            const GPUVtxBufferHandle &vtxBufferHandle,
-                                            VkCommandBuffer *out_commandBuffer)
+bool VulkanExample2::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gpu::AcquiredSwapchainImg &swapChainImage)
 {
-    assert (out_commandBuffer);
+    gos::gpu::pipe2::CmdBufferWriter2 cw;
+    cw
+        .begin (gpu, cmdBufferHandle)
+        .setViewport (gpu->viewport_getDefault())
+        .imageTransition (swapChainImage.image, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
+        .beginRender()
+            .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
+            .withRT (gpu->swapChain_getImageView(swapChainImage.index), eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0,0,0))
+            .bindPipeline (pipeline.pipeline_handle)
+            .bindVtxBuffer(vtxBufferHandle)
+            .draw(NUM_VERTEX, 1, 0, 0)
+            .endRender()
+        .imageTransition (swapChainImage.image, eImageLayout::color_attachment_optimal, eImageLayout::presentation)
+        .end();
 
-    //recupero il vulkan render pass
-    VkRenderPass vkRenderPassHandle = VK_NULL_HANDLE;
-    if (!gpuIN->toVulkan (renderPassHandle, &vkRenderPassHandle))
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid renderPassHandle\n");
-        return false;
-    }
-
-    //recupero il frame buffer
-    VkFramebuffer vkFrameBufferHandle;
-    u32 renderAreaW;
-    u32 renderAreaH;
-    if (!gpuIN->toVulkan (frameBufferHandle, &vkFrameBufferHandle, &renderAreaW, &renderAreaH))
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid frameBufferHandle\n");
-        return false;
-    }
-
-    //recupero vulkan pipeline
-    const gpu::sPipeline *pipelineInfo;
-    if (!gpuIN->toVulkan (pipelineHandle, &pipelineInfo))
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid pipelineHandle\n");
-        return false;
-    }
-
-    //recupero il vtxBuffer
-    VkBuffer vkVtxBuffer;
-    if (!gpuIN->toVulkan (vtxBufferHandle, &vkVtxBuffer))
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => invalid vtxBufferHandle\n");
-        return false;
-    }
-
-
-    //begin command buffer
-    VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = 0; // Optional
-        beginInfo.pInheritanceInfo = nullptr; // Optional
-
-    VkResult result = vkBeginCommandBuffer (*out_commandBuffer, &beginInfo);
-    if (VK_SUCCESS != result)
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => vkBeginCommandBuffer() => %s\n", string_VkResult(result));
-        return false;
-    }
-
-    //begin render pass
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-    VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = vkRenderPassHandle;
-        renderPassInfo.framebuffer = vkFrameBufferHandle;
-        renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = { renderAreaW, renderAreaH };
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues = &clearColor;    
-
-    vkCmdBeginRenderPass (*out_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    
-    //bindo la pipeline
-    vkCmdBindPipeline (*out_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineInfo->vkPipelineHandle);
-
-    //bindo il vtx buffer a partire dal layout=0
-    static const u8 VTXBUFFER__FIRST_VTX_STREAM_INDEX = 0;
-    static const u8 VTXBUFFER__NUM_STREAM = 1;
-    VkBuffer        vtxBufferList[VTXBUFFER__NUM_STREAM] = { vkVtxBuffer };
-    VkDeviceSize    vtxBufferOffsetsList[VTXBUFFER__NUM_STREAM] = {0};    
-    vkCmdBindVertexBuffers (*out_commandBuffer, VTXBUFFER__FIRST_VTX_STREAM_INDEX, VTXBUFFER__NUM_STREAM, vtxBufferList, vtxBufferOffsetsList);
-
-
-    //setto la viewport
-    const gos::gpu::Viewport *viewport = gpuIN->viewport_get(gpuIN->viewport_getDefault());
-    VkViewport vkViewport {0.0f, 0.0f, (viewport->getW_f32()), viewport->getH_f32(), 0.0f, 1.0f };
-    vkCmdSetViewport(*out_commandBuffer, 0, 1, &vkViewport);
-
-    VkRect2D scissor { 0, 0, viewport->getW(), viewport->getH() };
-    vkCmdSetScissor (*out_commandBuffer, 0, 1, &scissor);
-
-    //draw primitive
-    vkCmdDraw (*out_commandBuffer, NUM_VERTEX, 1, 0, 0);
-
-    //fine del render pass
-    vkCmdEndRenderPass (*out_commandBuffer);
-
-    //fine del command buffer
-    result = vkEndCommandBuffer (*out_commandBuffer);
-    if (VK_SUCCESS != result)
-    {
-        gos::logger::err ("VulkanApp::recordCommandBuffer() => vkEndCommandBuffer() => %s\n", string_VkResult(result));
-        return false;
-    }    
-    
+        
     return true;
-}
-
-/************************************
- * renderizza inviando command buffer a GPU e poi aspettando che questa
- * abbia finito il suo lavoro
- */
-void VulkanExample2::virtual_onRun()
-{
-    mainLoop_3();
 }
 
 //**********************************
 void VulkanExample2::doCPUStuff ()
 {
-    fpsMegaTimer.onFrameBegin(0);
-
     handleInput();
 
     moveVertex();
@@ -300,115 +148,46 @@ void VulkanExample2::doCPUStuff ()
     }
     if (tot < 0)
         printf ("A\n");
-
-
-    fpsMegaTimer.onFrameEnd(0);
-    fpsMegaTimer.printReport();
 }
 
-
-//**********************************
-void VulkanExample2::mainLoop_3()
+/************************************
+ * renderizza inviando command buffer a GPU e poi aspettando che questa
+ * abbia finito il suo lavoro
+ */
+void VulkanExample2::virtual_onRun()
 {
+    gpu::MainLoop2 mainLoop;
+    mainLoop.setup (gpu);
+
+
+    //command buffer 
     GPUCmdBufferHandle  cmdBufferHandle;
     gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
-        
-    //I semafori sono oggetti di sync tra GPU & GPU (non e' un errore e' proprio GPU-GPU)
-    //Fence sono oggetti di sync tra GPU & CPU (a differenza dei semafori che riguardano solo la CPU)
-    VkSemaphore         semaphore_renderFinished;
-    //VkSemaphore         semaphore_imageReady;
-    VkFence             inFlightFence;
-    VkFence             fenceSwapChainReady;
-    gpu->semaphore_create (&semaphore_renderFinished);
-    //gpu->semaphore_create (&semaphore_imageReady);
-    gpu->fence_create (true, &inFlightFence);
-    gpu->fence_create (false, &fenceSwapChainReady);
 
 
-    VkResult            result;
+    //main loop
     while (bQuitApp == false)
     {
-        doCPUStuff ();
-        //attende che il precedente batch sia terminato
-        if (gpu->fence_wait (inFlightFence, 0))
+        mainLoop.stat_onCPUFrameBegin();
+        doCPUStuff();
+        mainLoop.stat_onCPUFrameEnd();
+
+
+        mainLoop.run();
+
+        //se il job precedente e' stato presentato, posso schedularne uno nuovo
+        gpu::AcquiredSwapchainImg swapchainImg;
+        if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
-            fpsMegaTimer.onFrameEnd (1);
-            //Chiedo a GPU una immagine dalla swap chain, non attendo nemmeno 1 attimo e indico [fence_swapChainImgReady] come fence da segnalare
-            //quando l'immagine e' disponibile
-            //Questa fn ritorna true quando GPU e' in grado di determinare quale sara' la prossima immagine sulla quale renderizzare.
-            //Quando GPU ha questa informazione, non vuol dire pero' che l'immagine e' gia' immediatamente disponibile per l'uso.
-            assert (false == gpu->fence_isSignaled(fenceSwapChainReady));
-            if (gpu->swapChain_acquireImage (0, VK_NULL_HANDLE, fenceSwapChainReady))
-            {
-                //A questo GPU ha capito quale sara' l'immagine che prima o poi mi dara', ma non e' detto che questa sia gia' disponibile
-                //Lo diventa quando [fence_swapChainImgReady] e' segnalata.
-                //Fino ad allora posso farmi i fatti miei
-
-                //Intanto che aspetto che GPU renda disponibile una immagine, faccio le mie cose
-                while (!gpu->fence_wait (fenceSwapChainReady, 0))
-                {
-                    doCPUStuff ();
-                }
-                assert (true == gpu->fence_isSignaled(fenceSwapChainReady));
-
-                fpsMegaTimer.onFrameEnd(2);
-                fpsMegaTimer.onFrameBegin(2);
-
-                //arrivo qui quando GPU mi ha finalmente dato l'immagine
-                fpsMegaTimer.onFrameBegin(1);
-
-                gpu->fence_reset (fenceSwapChainReady);
-                gpu->fence_reset (inFlightFence);
-            
-                //command buffer: indica il lavoro che GPU deve fare
-                VkCommandBuffer vkCommandBuffer;
-                gpu->toVulkan (cmdBufferHandle, &vkCommandBuffer);
-                recordCommandBuffer (gpu, renderPassHandle, frameBufferHandle, pipelineHandle, vtxBufferHandle, &vkCommandBuffer);
-
-                //submit del command buffer
-                {
-                    //indico a GPU che quando questo bacth di lavoro arriva nello state di presentazione [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT],
-                    //allora, prima di iniziare quello stage, deve aspettare che il semaforo [semaphore_imageReady] sia segnalato (il che implica
-                    //che GPU ha finalmente a disposizione l'immagine che ci ha promesso in newFram()
-                    //
-                    //Questo batch quindi segnala 2 cose quando ha finito:
-                    //  1- renderFinishedSemaphore (che serve a GPU per far partire la present()
-                    //  2- inFlightFence che serve a CPU per sapere che il lavoro che ha submittato e' stato completato
-                    VkPipelineStageFlags waitStages[] = {0}; //{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-                    //VkSemaphore semaphoresToBeWaitedBeforeStarting[] = { semaphore_imageReady }; 
-
-                    VkSubmitInfo submitInfo{};
-                        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-                        submitInfo.waitSemaphoreCount = 0; //1;
-                        submitInfo.pWaitSemaphores = NULL; //semaphoresToBeWaitedBeforeStarting;
-                        submitInfo.pWaitDstStageMask = waitStages;
-                        submitInfo.commandBufferCount = 1;        
-                        submitInfo.pCommandBuffers = &vkCommandBuffer;
-
-                        //semaforo che GPU segnalera' al termine dell'esecuzione di questo batch di lavoro
-                        submitInfo.signalSemaphoreCount = 1;
-                        submitInfo.pSignalSemaphores = &semaphore_renderFinished;
-
-                        //submitto il batch a GPU e indico che deve segnalare [inFlightFence] quando ha finito 
-                        result = vkQueueSubmit (gpu->REMOVE_getGfxQHandle(), 1, &submitInfo, inFlightFence);
-                        if (VK_SUCCESS != result)
-                            gos::logger::err ("vkQueueSubmit() => %s\n", string_VkResult(result));
-                }
-
-                //presentazione
-                //Indico a GPU che deve attendere [renderFinishedSemaphore] prima di presentare
-                gpu->swapChain_present (&semaphore_renderFinished, 1);
-            }
+            recordCommandBuffer (cmdBufferHandle, swapchainImg);
+            mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }
     }
 
     //aspetto che GPU abbia finito tutto cio' che ha in coda
     gpu->waitIdle();
 
+    //free
     gpu->deleteResource (cmdBufferHandle);
-    //gpu->semaphore_destroy (semaphore_imageReady);
-    gpu->semaphore_destroy (semaphore_renderFinished);
-    gpu->fence_destroy (fenceSwapChainReady);
-    gpu->fence_destroy (inFlightFence);
 }
 

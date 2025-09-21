@@ -24,37 +24,23 @@ private:
         gos::vec3f  colorRGB;
     };
 
-private:    
-    static bool recordCommandBuffer (gos::GPU *gpu, 
-                                    const GPURenderPassHandle &renderPassHandle, 
-                                    const GPUFrameBufferHandle &frameBufferHandle,
-                                    const GPUPipelineHandle &pipelineHandle,
-                                    const GPUVtxBufferHandle &vtxBufferHandle,
-                                    VkCommandBuffer *out_commandBuffer);
-
 private:
-    bool        createVertexBuffer();
     void        moveVertex();
-
     void        doCPUStuff ();
-
-    void        mainLoop_3();
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::AcquiredSwapchainImg &swapChainImage);
 
 private:
     static const u8     NUM_VERTEX = 3;
 
 private:
-    gos::FPSMegaTimer<3>    fpsMegaTimer;
     Vertex                  vertexList[NUM_VERTEX];
     u64                     nextTimeMoveVtx_msec;
     f32                     direction;
 
-    GPUVtxBufferHandle      vtxBufferHandle;
-    GPUPipelineHandle       pipelineHandle;
-    GPUShaderHandle         vtxShaderHandle;
-    GPUShaderHandle         fragShaderHandle;
-    GPURenderPassHandle   renderPassHandle;
-    GPUFrameBufferHandle    frameBufferHandle;
+    GPUVtxBufferHandle          vtxBufferHandle;
+    GPUShaderHandle             vtxShaderHandle;
+    GPUShaderHandle             fragShaderHandle;
+    gos::gpu::pipe2::Pipeline   pipeline;
 };
 
 

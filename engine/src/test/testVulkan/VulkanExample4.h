@@ -50,13 +50,13 @@ private:
 
 private:
     bool        createVertexIndexStageBuffer();
-    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle);
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::AcquiredSwapchainImg &swapChainImage);
     void        doCPUStuff ();
     void        mainLoop();
     void        virtual_onInputEvent (u32 event32, i16 value, const gos::input::MouseStatus &mouseStatus, const gos::input::sButtonModifier &btnModifier);
 
 private:
-    gos::Shape       myShape;
+    gos::Shape              myShape;
     sUniformBufferObject    ubo;
     sAnimation              anim;
     gos::geom::Camera3      cam;
@@ -67,14 +67,11 @@ private:
     GPUIdxBufferHandle      idxBufferHandle;
     GPUStgBufferHandle      stgBufferHandle;
 
-    GPUPipelineHandle       pipelineHandle;
+    gos::gpu::pipe2::Pipeline   pipeline;
     GPUShaderHandle         vtxShaderHandle;
     GPUShaderHandle         fragShaderHandle;
-    GPURenderPassHandle   renderPassHandle;
-    GPUFrameBufferHandle    frameBufferHandle;
 
     GPUDescrPoolHandle      descrPoolHandle;
-    GPUDescrSetLayoutHandle descrSetLayoutHandle;
     GPUDescrSetInstanceHandle descrSetInstancerHandle;
     GPUUniformBufferHandle  uboHandle;
     GPUTextureHandle        texHandle;
