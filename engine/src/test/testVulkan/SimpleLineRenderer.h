@@ -52,7 +52,7 @@ private:
 
     GPUShaderHandle             hVtxShader;
     GPUShaderHandle             hFragShader;
-    gos::gpu::pipe2::Pipeline   pipeline;
+    GPUPipelineHandle           pipelineHandle;
 
     GPUUniformBufferHandle      hUBO;
     GPUDescrSetInstanceHandle   hDescrSetInstance;

@@ -50,7 +50,7 @@ private:
 
 private:
     bool        createVertexIndexStageBuffer();
-    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::AcquiredSwapchainImg &swapChainImage);
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::SwapchainImg &swapChainImage);
     void        doCPUStuff ();
     void        mainLoop();
     void        virtual_onInputEvent (u32 event32, i16 value, const gos::input::MouseStatus &mouseStatus, const gos::input::sButtonModifier &btnModifier);
@@ -67,7 +67,7 @@ private:
     GPUIdxBufferHandle      idxBufferHandle;
     GPUStgBufferHandle      stgBufferHandle;
 
-    gos::gpu::pipe2::Pipeline   pipeline;
+    GPUPipelineHandle       pipelineHandle;
     GPUShaderHandle         vtxShaderHandle;
     GPUShaderHandle         fragShaderHandle;
 

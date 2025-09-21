@@ -130,24 +130,6 @@ namespace gos
         bool    exists (VkPresentModeKHR mode) const;
     };    
 
-    /*=======================================================
-     * In base alla [vtxDecl], crea la struct necessaria a Vulkan durante
-     * la creazione di una pipeline
-     */
-    class VkPipelineVertexInputStage
-    {
-    public:
-                VkPipelineVertexInputStage()                    { }
-        bool    build (const GPU *gpu, const GPUVtxDeclHandle handle);
-
-    public:
-        VkPipelineVertexInputStateCreateInfo vkVertexInputState;
-
-    private:
-        VkVertexInputBindingDescription vxtBindingDescrList[8];
-        VkVertexInputAttributeDescription vtxAttributeDescrList[64];
-    };
-
 
     class VkPhyDeviceFeatures
     {

@@ -10,6 +10,9 @@
 typedef gos::HandleT< 5,3,4, 4,16>	GOSWinHandle;		//2^5=32 => num totale di oggetti, divisi in chunk da 2^3=8
 
 
+typedef void (*GOSWindowCallbackFN_onResize)(int newW, int newH, void *userpt);
+
+
 #define GOS_BUTTON_MOUSE_LEFT       0
 #define GOS_BUTTON_MOUSE_RIGHT      1
 #define GOS_BUTTON_MOUSE_MIDDLE     2

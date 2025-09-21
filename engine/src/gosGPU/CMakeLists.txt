@@ -23,7 +23,6 @@ add_library(${BINARY_OUTPUT_FILENAME} STATIC
 pipe2/gosGPUPipe2_cmdBufferWriter_BeginRend.cpp
 pipe2/gosGPUPipe2_cmdBufferWriter.cpp
 pipe2/gosGPUPipe2_cmdBufferWriter.h
-pipe2/gosGPUPipe2_pipeline_def.cpp
 pipe2/gosGPUPipe2_pipeline_def.h
 
 vulkan/gosGPUVukanHelpers.cpp
@@ -44,16 +43,9 @@ utils/gosGPUVBIBManager.h
 
 
 gosGPU_DescriptorPoolBuilder.cpp
-gosGPU_DescriptorSetLayoutBuilder.cpp
-gosGPU_FrameBuffersBuilder.cpp
 gosGPU_ImmediateTransferCmd.cpp
-gosGPU_PipelineBuilder.cpp
-gosGPU_RenderPassBuilder.cpp
-gosGPU_VtxDeclBuilder.cpp
 gosGPU.cpp
 gosGPU.h
-gosGPUCmdBufferWriter.cpp
-gosGPUCmdBufferWriter.h
 gosGPUDescrSetInstanceWriter.cpp
 gosGPUDescrSetInstanceWriter.h
 gosGPUEnumAndDefine.h
@@ -63,14 +55,11 @@ gosGPUResDepthStencil.h
 gosGPUResDescrPool.h
 gosGPUResDescrSetInstance.h
 gosGPUResDescrSetLayout.h
-gosGPUResFrameBuffer.h
-gosGPUResRenderLayout.h
 gosGPUResRenderTarget.h
 gosGPUResSampler.h
 gosGPUResShader.h
 gosGPUResTexture.h
 gosGPUResViewport.h
-gosGPUResVtxDecl.h
 
 gosGPUUtils.cpp
 gosGPUUtils.h

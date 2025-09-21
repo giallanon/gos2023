@@ -115,7 +115,7 @@ private:
 
 private:
     void        priv_doCPUStuff();
-    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::AcquiredSwapchainImg &swapChainImage);
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::SwapchainImg &swapChainImage);
     void        priv_setSphere_ON_OFF (i16 mouseX, i16 mouseY, bool b);
     void        priv_drawGrid ();
     void        priv_runMarchingSquare();
@@ -141,7 +141,7 @@ private:
     GPUIdxBufferHandle      idxBufferHandle;
     GPUStgBufferHandle      stgBufferHandle;
 
-    gos::gpu::pipe2::Pipeline   pipeline;
+    GPUPipelineHandle           pipelineHandle;
     GPUShaderHandle             vtxShaderHandle;
     GPUShaderHandle             fragShaderHandle;
 

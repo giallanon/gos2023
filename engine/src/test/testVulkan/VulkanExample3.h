@@ -30,7 +30,7 @@ private:
 private:
     bool        createVertexIndexStageBuffer();
     void        moveVertex();
-    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::AcquiredSwapchainImg &swapChainImage);
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::SwapchainImg &swapChainImage);
     bool        copyIntoVtxBuffer();
     void        doCPUStuff ();
     void        mainLoop();
@@ -52,7 +52,7 @@ private:
     GPUIdxBufferHandle          idxBufferHandle;
     GPUStgBufferHandle          stgBufferHandle;
     
-    gos::gpu::pipe2::Pipeline   pipeline;
+    GPUPipelineHandle           pipelineHandle;
     GPUShaderHandle             vtxShaderHandle;
     GPUShaderHandle             fragShaderHandle;
 };

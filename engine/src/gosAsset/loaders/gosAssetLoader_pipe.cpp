@@ -15,7 +15,7 @@ void Loader_pipe::unload (Loader *assetLoader, const asset::Context &ctx, const 
 	Asset_pipe *asset = static_cast <Asset_pipe*>(ptToAssetData);
 	
     gos::GPU *gpu = assetLoader->getGPU();
-    asset->pipe.deleteResources (gpu);
+    gpu->deleteResource (asset->handle_pipe);
 }
 
 //******************************************************
@@ -155,7 +155,7 @@ bool Loader_pipe::load (Loader *assetLoader, const asset::Context &ctx, const as
         }        
 
         //creo la pipe
-        if (!assetLoader->getGPU()->pipeline_v2_createNew (def, &out->pipe))
+        if (!assetLoader->getGPU()->pipeline_createNew (def, &out->handle_pipe))
             return false;
 
 

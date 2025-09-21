@@ -198,16 +198,6 @@ namespace gos
 			u8              offset;
 		};
 
-		struct sPipeline
-		{
-			void    reset ()                        { vkPipelineLayoutHandle = VK_NULL_HANDLE; vkPipelineHandle = VK_NULL_HANDLE; memset (pushContantList, 0, sizeof(pushContantList)); }
-
-			VkPipelineLayout    vkPipelineLayoutHandle;
-			VkPipeline          vkPipelineHandle;
-			VkPushConstantRange pushContantList[GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE];
-		};  
-
-
 		struct sMappedBuffer
 		{
             void            *host_pt;
@@ -215,7 +205,14 @@ namespace gos
             u32             offset;
             u32             size;
 		};
-	} //namespace gpu
+	
+        struct SwapchainImg
+        {
+            VkImage 	image;
+            VkImageView	imageView;
+            u32     	imageIndex;
+        };     
+    } //namespace gpu
 
 
 

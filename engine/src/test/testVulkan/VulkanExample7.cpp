@@ -46,7 +46,9 @@ bool VulkanExample7::virtual_onInit ()
 
 
     //vtx buffer
-    if (!gpu->vertexBuffer_create (32 * thePipe->pipe.vtx_stridePerStream[0], eVIBufferMode::shared_cpuW_autoSync, &vtxBufferHandle))
+    const gpu::Pipeline2 *pipeInfo = NULL;
+    gpu->toVulkan(thePipe->handle_pipe, &pipeInfo);
+    if (!gpu->vertexBuffer_create (32 * pipeInfo->vtx_stridePerStream[0], eVIBufferMode::shared_cpuW_autoSync, &vtxBufferHandle))
     {
         gos::logger::err ("VulkanApp::virtual_onInit() => gpu->vertexBuffer_create() failed\n");
         return false;
@@ -143,13 +145,13 @@ bool VulkanExample7::do_recordCommandBuffer (gpu::pipe2::CmdBufferWriter2 &cw, V
         .withRenderArea (rt1)
         .withRT (rt1, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.1f))
         .withZB (zbHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)
-        .bindPipeline (pipe->pipe.pipeline_handle)
+        .bindPipeline (pipe->handle_pipe)
         .bindVtxBuffer(vtxBufferHandle)
         .bindIdxBufferU16(idxBufferHandle)
         .pushConstant (0, &screenWH, sizeof(screenWH))
         .drawIndexed (6, 1, 0, 0, 0)
 
-        .bindPipeline (pipe2->pipe.pipeline_handle)
+        .bindPipeline (pipe2->handle_pipe)
         .bindVtxBuffer(vtxBufferHandle, vtxoffset2)
         .bindIdxBufferU16(idxBufferHandle, idxoffset2)
         .drawIndexed (6, 1, 0, 0, 0)
@@ -199,7 +201,7 @@ void VulkanExample7::virtual_onRun()
 
 
         //se il job precedente e' stato presentato, posso schedularne uno nuovo
-        gpu::AcquiredSwapchainImg swapchainImg;
+        gpu::SwapchainImg swapchainImg;
         if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
             recordCommandBuffer (cmdBufferHandle, swapchainImg.image);

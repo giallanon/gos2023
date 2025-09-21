@@ -1,1 +1,0 @@
-Esiste al solo scopo di fare in modo che git crei questa directory

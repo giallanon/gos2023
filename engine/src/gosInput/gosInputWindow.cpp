@@ -1,15 +1,17 @@
 #include "gosInputWindow.h"
 #include "gosInput.h"
 #include "gosInputContext.h"
+#include "../gos/gos.h"
 
 using namespace gos;
 using namespace gos::input;
 
-void 	GOSInputWindow_KB_key_callback (GLFWwindow* window, int key, UNUSED_PARAM(int scancode), int action, int mods);
-void 	GOSInputWindow_mouse_movement_callback (GLFWwindow* window, double xpos, double ypos);
-void 	GOSInputWindow_mouse_button_callback (GLFWwindow* window, int button, int action, int mods);
-void    GOSInputWindow_mouse_wheel_callback (GLFWwindow* window, double xoffset, double yoffset);
-void    GOSInputWindow_close_callback (GLFWwindow* window);
+static void GOSInputWindow_KB_key_callback (GLFWwindow* window, int key, UNUSED_PARAM(int scancode), int action, int mods);
+static void GOSInputWindow_mouse_movement_callback (GLFWwindow* window, double xpos, double ypos);
+static void GOSInputWindow_mouse_button_callback (GLFWwindow* window, int button, int action, int mods);
+static void GOSInputWindow_mouse_wheel_callback (GLFWwindow* window, double xoffset, double yoffset);
+static void GOSInputWindow_close_callback (GLFWwindow* window);
+void GOSInputWindow_resize_callback (GLFWwindow* window, int w, int h);
 
 //*******************************
 Window::Window (GLFWwindow *glfwHandleIN) : evtList1(1024), evtList2(1024)
@@ -25,11 +27,15 @@ Window::Window (GLFWwindow *glfwHandleIN) : evtList1(1024), evtList2(1024)
 	curEvtList = &evtList2;
 	curBtnModifier.reset();
     
+    callback_onResize_fn = NULL;
+    callback_onResize_userPt = NULL;
+    
     resolving.list = NULL;
     resolving.mouseStatus.reset();
 
 	glfwSetWindowUserPointer (glfwHandle, this);
     glfwSetWindowCloseCallback (glfwHandle, GOSInputWindow_close_callback);
+    glfwSetWindowSizeCallback (glfwHandle, GOSInputWindow_resize_callback);
 
     //gestione kb: vedi https://www.glfw.org/docs/latest/input.html
     glfwSetKeyCallback (glfwHandle, GOSInputWindow_KB_key_callback);
@@ -143,6 +149,14 @@ u32 Window::resolveEvents_nextActionID (i16 *out_value)
 }
 
 //************************************
+void Window::_onEvent_resize (int w, int h)
+{
+    if (NULL == callback_onResize_fn)
+        return;
+    callback_onResize_fn (w, h, callback_onResize_userPt);
+}
+
+//************************************
 void GOSInputWindow_close_callback (GLFWwindow* window)
 {
     glfwSetWindowShouldClose (window, false);
@@ -150,6 +164,15 @@ void GOSInputWindow_close_callback (GLFWwindow* window)
     input::Window *win = reinterpret_cast<input::Window*> (glfwGetWindowUserPointer(window));
     win->addButtonEvt (input::eOrigin::window, GOS_BUTTON_WINDOW_CLOSE, eButtonStatus::pressed);
 }
+
+//************************************
+void GOSInputWindow_resize_callback (GLFWwindow* window, int w, int h)
+{
+    input::Window *win = reinterpret_cast<input::Window*> (glfwGetWindowUserPointer(window));
+    win->_onEvent_resize (w, h);
+}
+
+
 
 //************************************
 void GOSInputWindow_mouse_movement_callback (GLFWwindow* window, double xpos, double ypos)

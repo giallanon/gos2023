@@ -58,6 +58,7 @@ namespace gos
 		void			window_setMouseMode (const GOSWinHandle &handle, eMouseMode mode);
 		void			window_toggleMouseMode (const GOSWinHandle &handle);
 		void			window_toggleFullscreen(const GOSWinHandle &handle);
+		void			window_trapOn_resize (const GOSWinHandle &handle, GOSWindowCallbackFN_onResize fn, void *userPt);
 
 		/************************************************************************************************************
 		 *

@@ -27,7 +27,7 @@ private:
 private:
     void        moveVertex();
     void        doCPUStuff ();
-    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::AcquiredSwapchainImg &swapChainImage);
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::SwapchainImg &swapChainImage);
 
 private:
     static const u8     NUM_VERTEX = 3;
@@ -37,10 +37,10 @@ private:
     u64                     nextTimeMoveVtx_msec;
     f32                     direction;
 
-    GPUVtxBufferHandle          vtxBufferHandle;
-    GPUShaderHandle             vtxShaderHandle;
-    GPUShaderHandle             fragShaderHandle;
-    gos::gpu::pipe2::Pipeline   pipeline;
+    GPUVtxBufferHandle      vtxBufferHandle;
+    GPUShaderHandle         vtxShaderHandle;
+    GPUShaderHandle         fragShaderHandle;
+    GPUPipelineHandle       pipelineHandle;
 };
 
 

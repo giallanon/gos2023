@@ -14,9 +14,7 @@ namespace gos
         class Asset_pipe
         {
         public:
-            //GPUShaderHandle         handle_vtxshader;
-            //GPUShaderHandle         handle_pxlshader;
-            gpu::pipe2::Pipeline    pipe;
+            GPUPipelineHandle handle_pipe;
         };
 
 

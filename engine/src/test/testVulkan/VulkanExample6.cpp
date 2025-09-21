@@ -153,8 +153,8 @@ bool VulkanExample6::virtual_onInit ()
 
 
     //creazione pipeline
-    if (!priv_setupPipeline_v2())
-        return false;
+    const asset::Asset_pipe *pipe;
+    theHub.getAssetWithTimeout (assetPipe, 5000, &pipe);
     
     //risorse di rendering
     const eImageFormat IMG_FORMAT = eImageFormat::U8_RGBA;
@@ -170,37 +170,14 @@ bool VulkanExample6::virtual_onInit ()
 
 
     //alloco una istanza del descriptorSet
-    const asset::Asset_pipe *pipe;
-    if (theHub.getAssetWithTimeout(assetPipe, 2000, &pipe))
-    {    
-        if (!gpu->descrSetInstance_createNew (descrPoolHandle, pipe->pipe.descrset_handle_defList[0], &descrSetInstancerHandle))
-        {
-            gos::logger::err ("VulkanApp::init() => can't create descriptorSet instance\n");
-            return false;
-        }
+    if (!gpu->pipeline_createDescrSetInstance (pipe->handle_pipe, 0, descrPoolHandle, &descrSetInstancerHandle))
+    {
+        gos::logger::err ("VulkanApp::init() => can't create descriptorSet instance\n");
+        return false;
     }
 
     return true;
 }    
-
-//************************************
-bool VulkanExample6::priv_setupPipeline_v2 ()
-{
-    //pipeline def
-    const asset::Asset_pipe *pipe;
-    while (1)
-    {
-        if (theHub.getAsset(assetPipe, &pipe))
-            break;
-    }
-    // vtxShaderHandle = pipe->handle_vtxshader;
-    // fragShaderHandle = pipe->handle_pxlshader;
-    // pipelineHandle = pipe->pipe.pipeline_handle;
-    // descrSetLayoutHandle = pipe->pipe.descrset_handle_defList[0];
-
-    
-    return true;
-}
 
 
 //************************************
@@ -294,7 +271,7 @@ bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::pipe2::CmdBufferWrit
         .withRT (rt2, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(1.0f, 0, 0))
         .withZB (zbHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)    
 
-        .bindPipeline (pipe->pipe.pipeline_handle)
+        .bindPipeline (pipe->handle_pipe)
         .bindDescriptorSet (descrSetInstancerHandle, 0)
         .bindVtxBuffer(vtxBufferHandle)
         .bindIdxBufferU16(idxBufferHandle);
@@ -400,87 +377,6 @@ void VulkanExample6::doCPUStuff ()
 //**********************************
 void VulkanExample6::mainLoop()
 {
-    //priv_mainLoop2();
-    priv_mainLoop3();
-}
-
-//**********************************
-void VulkanExample6::priv_mainLoop2()
-{
-    gpu::AquireSwapChainImage acquireImage;
-    gpu::PresentGFXJob presentJob;
-    acquireImage.setup (gpu);
-    presentJob.setup (gpu);
-
-    gos::TimerFPS cpuTimer;
-
-
-    //command buffer 
-    GPUCmdBufferHandle  cmdBufferHandle;
-    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
-
-
-    gos::FIFOFixedSize<gpu::AcquiredSwapchainImg, 4> acquiredList;
-
-    //main loop
-    u64 nextTimePrintReport_ms = 0;
-    while (bQuitApp == false)
-    {
-        cpuTimer.onFrameBegin();
-        doCPUStuff ();
-        cpuTimer.onFrameEnd();
-
-        if (gpu->swapChain_wasRecreated())
-        {
-            acquiredList.reset();
-            cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
-        }
-
-        //chiedo una immagine alla swapchain, ne accumulo fino a 2
-        if (acquiredList.getNElem() < 2)
-        {
-            if (acquireImage.tryAcquire ())
-                acquiredList.push (acquireImage.acquiredImg);
-        }
-
-        //se il job precedente e' stato presentato, posso schedularne uno nuovo
-        if (presentJob.hasFinished())
-        {
-            //..ammesso che abvia gia' una swapchain-image disponibile
-            if (acquiredList.getNElem() > 0)
-            {
-                gpu::AcquiredSwapchainImg info;
-                acquiredList.pop (&info);
-
-                recordCommandBuffer (cmdBufferHandle, info.image);
-                presentJob.submit (cmdBufferHandle, info.index);
-            }
-        }
-
-
-        // un po' di statistiche
-        const u64 timenow_ms = gos::getTimeSinceStart_msec();
-        if (timenow_ms >= nextTimePrintReport_ms)
-        {
-            nextTimePrintReport_ms = timenow_ms + 1000;
-
-            printf ("cpu: avg %.2fms [fps: %.01f]    gpu: avg %.2fms [fps: %.01f]    acquire: avg %.2fms [fps: %.01f]\n",
-                cpuTimer.getAvgFrameTime_ms(), cpuTimer.getAvgFPS(),
-                presentJob.timerFPS.getAvgFrameTime_ms(), presentJob.timerFPS.getAvgFPS(),
-                acquireImage.timerFPS.getAvgFrameTime_ms(), acquireImage.timerFPS.getAvgFPS());
-        }
-    }
-
-    //aspetto che GPU abbia finito tutto cio' che ha in coda
-    gpu->waitIdle();
-
-    //free
-    gpu->deleteResource (cmdBufferHandle);
-}
-
-//**********************************
-void VulkanExample6::priv_mainLoop3()
-{
     gpu::MainLoop2 mainLoop;
     mainLoop.setup (gpu);
 
@@ -506,7 +402,7 @@ void VulkanExample6::priv_mainLoop3()
 
 
         //se il job precedente e' stato presentato, posso schedularne uno nuovo
-        gpu::AcquiredSwapchainImg swapchainImg;
+        gpu::SwapchainImg swapchainImg;
         if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
             recordCommandBuffer (cmdBufferHandle, swapchainImg.image);

@@ -5,6 +5,7 @@
 #include "../vulkan/gosGPUVulkan.h"
 #include "../../gos/gosBit.h"
 #include "../../gos/gosUtils.h"
+#include "../gosGPUResPipeline2.h"
 
 namespace gos
 {
@@ -68,7 +69,7 @@ namespace gos
                     VkRenderingAttachmentInfo   zBufferAttach;
                     u32                         renderAreaW;
                     u32                         renderAreaH;
-                    const gpu::sPipeline        *curPipeline;
+                    const gpu::Pipeline2        *curPipeline;
 
                 friend CmdBufferWriter2;
                 };

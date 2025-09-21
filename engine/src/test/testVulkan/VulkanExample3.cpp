@@ -28,7 +28,7 @@ void VulkanExample3::virtual_onCleanup()
     gpu->deleteResource (vtxBufferHandle);
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
-    pipeline.deleteResources(gpu);
+    gpu->deleteResource (pipelineHandle);
 }    
 
 
@@ -89,7 +89,7 @@ bool VulkanExample3::virtual_onInit ()
             .endVtxStream();
 
 
-    if (!gpu->pipeline_v2_createNew (def, &pipeline))
+    if (!gpu->pipeline_createNew (def, &pipelineHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
         return false;
@@ -158,7 +158,7 @@ void VulkanExample3::moveVertex()
 }
 
 //************************************
-bool VulkanExample3::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gpu::AcquiredSwapchainImg &swapChainImage)
+bool VulkanExample3::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gpu::SwapchainImg &swapChainImage)
 {
     gos::gpu::pipe2::CmdBufferWriter2 cw;
     cw
@@ -167,8 +167,8 @@ bool VulkanExample3::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
         .imageTransition (swapChainImage.image, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
         .beginRender()
             .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
-            .withRT (gpu->swapChain_getImageView(swapChainImage.index), eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0,0,0))
-            .bindPipeline (pipeline.pipeline_handle)
+            .withRT (swapChainImage.imageView, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0,0,0))
+            .bindPipeline (pipelineHandle)
             .bindVtxBuffer(vtxBufferHandle)
             .bindIdxBufferU16(idxBufferHandle)
 
@@ -239,7 +239,7 @@ void VulkanExample3::virtual_onRun()
         mainLoop.run();
 
         //se il job precedente e' stato presentato, posso schedularne uno nuovo
-        gpu::AcquiredSwapchainImg swapchainImg;
+        gpu::SwapchainImg swapchainImg;
         if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
             copyIntoVtxBuffer();

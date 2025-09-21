@@ -29,7 +29,7 @@ void VulkanExample4::virtual_onCleanup()
 
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
-    pipeline.deleteResources(gpu);
+    gpu->deleteResource (pipelineHandle);
 
     gpu->deleteResource (uboHandle);
     gpu->deleteResource (descrSetInstancerHandle);
@@ -167,7 +167,7 @@ bool VulkanExample4::virtual_onInit ()
             .add (1, eGPUDescriptrorType::COMBINED_IMAGE_SAMPLER, 1, eGPUDescriptrorUsageFlag::pxl_shader)
             .endDescriptorSet();
 
-    if (!gpu->pipeline_v2_createNew (def, &pipeline))
+    if (!gpu->pipeline_createNew (def, &pipelineHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
         return false;
@@ -194,7 +194,7 @@ bool VulkanExample4::virtual_onInit ()
     }
 
     //alloco una istanza del descriptorSet
-    if (!gpu->descrSetInstance_createNew (descrPoolHandle, pipeline.descrset_handle_defList[0], &descrSetInstancerHandle))
+    if (!gpu->pipeline_createDescrSetInstance (pipelineHandle, 0, descrPoolHandle, &descrSetInstancerHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create descriptorSet instance\n");
         return false;
@@ -325,7 +325,7 @@ void VulkanExample4::doCPUStuff ()
 }
 
 //************************************
-bool VulkanExample4::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gpu::AcquiredSwapchainImg &swapChainImage)
+bool VulkanExample4::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gpu::SwapchainImg &swapChainImage)
 {
     //aggiorno UBO
     static u8 bind_once = 0;
@@ -350,9 +350,9 @@ bool VulkanExample4::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
         .imageTransition (hZB, eImageLayout::undefined, eImageLayout::depth_attachment_optimal)
         .beginRender()
             .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
-            .withRT (gpu->swapChain_getImageView(swapChainImage.index), eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.3f))
+            .withRT (swapChainImage.imageView, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.3f))
             .withZB (hZB, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, 1.0f, 0)
-            .bindPipeline (pipeline.pipeline_handle)
+            .bindPipeline (pipelineHandle)
             .bindDescriptorSet(descrSetInstancerHandle, 0)
             .bindVtxBuffer(vtxBufferHandle)
             .bindIdxBufferU16(idxBufferHandle)
@@ -405,7 +405,7 @@ void VulkanExample4::virtual_onRun()
             cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
 
         //se il job precedente e' stato presentato, posso schedularne uno nuovo
-        gpu::AcquiredSwapchainImg swapchainImg;
+        gpu::SwapchainImg swapchainImg;
         if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
             recordCommandBuffer (cmdBufferHandle, swapchainImg);

@@ -44,10 +44,7 @@ private:
     void        virtual_onInputEvent (u32 event32, i16 value, const gos::input::MouseStatus &mouseStatus, const gos::input::sButtonModifier &btnModifier);
 
     bool        priv_loadModel();
-    bool        priv_setupPipeline_v2 ();
     bool        priv_recordCommandBuffer_v2 (gos::gpu::pipe2::CmdBufferWriter2 &cw, VkImage swapChainImage, const gos::asset::Asset_pipe *pipe);
-    void        priv_mainLoop2();
-    void        priv_mainLoop3();
 
 private:
     gos::FastArray<gos::Shape> shapeList;

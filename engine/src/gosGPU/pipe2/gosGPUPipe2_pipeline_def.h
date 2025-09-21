@@ -52,38 +52,6 @@ namespace gos
 
 
             /****************************************
-             * @brief   Pipeline
-             * 
-             */
-            struct Pipeline
-            {
-            public:
-                GPUPipelineHandle           pipeline_handle;
-                u32                         descrset_num;
-                GPUDescrSetLayoutHandle     descrset_handle_defList[GOSGPU__NUM_MAX_DESCRIPTOR_SETS];
-
-                u8                          vtx_numStream;
-                u8                          vtx_stridePerStream[GOSGPU__NUM_MAX_VXTDECL_STREAM];
-                
-
-            public:
-                void reset()
-                {
-                    descrset_num = 0;
-                    for (u32 i=0; i<GOSGPU__NUM_MAX_DESCRIPTOR_SETS; i++)
-                        descrset_handle_defList[i].setInvalid();
-                    pipeline_handle.setInvalid();
-                    
-                    vtx_numStream = 0;
-                    memset (vtx_stridePerStream, 0, sizeof(vtx_stridePerStream));
-                }
-
-                void deleteResources (gos::GPU *gpu);
-
-            }; //Pipeline
-
-
-            /****************************************
              * @brief   Pipeline_def
              * 
              */

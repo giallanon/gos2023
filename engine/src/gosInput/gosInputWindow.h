@@ -40,6 +40,11 @@ namespace gos
 								glfwGetWindowSize (glfwHandle, &storedW, &storedH);
                             }
 
+			void 			trap_onResize (GOSWindowCallbackFN_onResize fn, void *userpt)			{ callback_onResize_fn = fn; callback_onResize_userPt=userpt; }
+
+		public:
+			void			_onEvent_resize (int w, int h);
+
 		public:
             void        	*userpt;
 			i32				lastMouseX;
@@ -49,6 +54,7 @@ namespace gos
             int 			storedY;
             int 			storedW;
             int 			storedH;
+
 
 		private:
 			struct sResolving
@@ -70,6 +76,8 @@ namespace gos
 			EvtList			evtList1;
 			EvtList			evtList2;
 			sResolving		resolving;
+			GOSWindowCallbackFN_onResize	callback_onResize_fn;
+			void 			*callback_onResize_userPt;
 		};
 		
 	} //namespace input

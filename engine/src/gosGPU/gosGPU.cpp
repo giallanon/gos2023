@@ -29,6 +29,12 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL GOS_vulkanDebugCallback (VkDebugUtilsMessa
     return VK_FALSE;
 }
 
+//********************************************************** 
+static void GOSGPU_trapOnWindowResize (int w, int h, void *userpt)
+{
+    GPU *gpu = reinterpret_cast<GPU*>(userpt);
+    gpu->_internal__onWindowResized(w, h);
+}
 
 //********************************************************** 
 bool GPU::shader_compile (const char *shaderSRCFile, const char *shaderStage, const char *spaceSeparateDefineList, const char *shaderDSTFile, bool bIncludeDebugInfo)
@@ -80,10 +86,9 @@ GPU::GPU()
     vkSurface = VK_NULL_HANDLE;
     vkDebugMessenger = VK_NULL_HANDLE;
     defaultViewportHandle.setInvalid();
-    defaultRTHandle.setInvalid();
     defaultDepthStencil.handle.setInvalid();
     currentSwapChainImageIndex = 0;
-    bRecreateSwapChainOnNextFrame = false;
+    timeToRecreateSwapchain_msec = 0;
     bSwapChainRecreatedDuringThisFrame = false;
     helperStagingBuffer.setInvalid();
 }
@@ -120,11 +125,6 @@ void GPU::deinit()
         toBeDeletedBuilder.deleteAll();
         toBeDeletedBuilder.unsetup();
 
-        frameBufferDependentOnSwapChainList.unsetup();
-
-        //elimino l'handle del default RT
-        renderTargetList.release (defaultRTHandle);
-
         deleteResource(defaultDepthStencil.handle);
         //depthStencilList.release(defaultDepthStencil.handle);
 
@@ -155,7 +155,6 @@ bool GPU::init (GOSWinHandle mainWin, bool vSyncIN)
 
     //liste varie
     toBeDeletedBuilder.setup();
-    frameBufferDependentOnSwapChainList.setup (allocator, 128);
 
 
     //init vero e proprio
@@ -164,7 +163,8 @@ bool GPU::init (GOSWinHandle mainWin, bool vSyncIN)
     {
         //if (!priv_initWindowSystem (width, height, appName))
         //    break;
-        this->window.winH = mainWin;
+        this->window.winHandle = mainWin;
+        input::window_trapOn_resize (mainWin, GOSGPU_trapOnWindowResize, this);
 
         if (!priv_initHandleLists())
             break;
@@ -179,18 +179,6 @@ bool GPU::init (GOSWinHandle mainWin, bool vSyncIN)
 
     //default viewport
     viewport_create ("0", "0", "0-", "0-", &defaultViewportHandle);
-
-    //default render target che e' in sostanza bindata alla viewport
-    {
-        gpu::RenderTarget *rt = renderTargetList.reserve (&defaultRTHandle);
-        rt->reset();
-        rt->format = vulkan.swapChainInfo.imageFormat;
-        rt->image = VK_NULL_HANDLE;
-        rt->vkMemHandle = VK_NULL_HANDLE;
-        rt->view = NULL;
-        rt->width = vulkan.swapChainInfo.imageExtent.width;
-        rt->height = vulkan.swapChainInfo.imageExtent.height;
-    }
 
     //default depth stencil
     {
@@ -362,7 +350,6 @@ bool GPU::priv_initHandleLists()
 {
     gos::logger::log ("GPU::priv_initHandleLists()\n");
     shaderList.setup (allocator);
-    vtxDeclList.setup (allocator);
 
     viewportlList.setup (allocator);
     viewportHandleList.setup (allocator, 32);   //questa mi serve per tenere traccia di tutti gli handle creati dato che durante il resize della window, devo andare ad aggiustare tutte le viewport
@@ -373,9 +360,7 @@ bool GPU::priv_initHandleLists()
     renderTargetList.setup (allocator);
     renderTargetHandleList.setup (allocator, 64);   //questa mi serve per tenere traccia di tutti gli handle creati dato che durante il resize della window, devo andare ad aggiustare tutte i rt buffer (nel caso che siano bindati alla dimensione della vport)
 
-    renderLayoutList.setup (allocator);
     pipelineList.setup (allocator);
-    frameBufferList.setup (allocator);
     vtxBufferList.setup (allocator);
     staginBufferList.setup (allocator);
     idxBufferList.setup (allocator);
@@ -397,8 +382,7 @@ void  GPU::priv_deinitandleLists()
     gos::logger::log ("GPU::priv_deinitandleLists()\n");
     
     shaderList.unsetup();
-    vtxDeclList.unsetup();
-
+    
     viewportlList.unsetup();
     viewportHandleList.unsetup();
 
@@ -408,9 +392,7 @@ void  GPU::priv_deinitandleLists()
     renderTargetList.unsetup ();
     renderTargetHandleList.unsetup();
 
-    renderLayoutList.unsetup ();
     pipelineList.unsetup();
-    frameBufferList.unsetup();
     vtxBufferList.unsetup();
     staginBufferList.unsetup();
     idxBufferList.unsetup();
@@ -537,54 +519,75 @@ eImageFormat GPU::swapChain_getImageFormat() const
 }
 
 //************************************
-bool GPU::swapChain_acquireImage_ex (u32 *out_imageIndex, u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
+bool GPU::swapChain_acquireImage (gos::gpu::SwapchainImg *out, u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
 {
-    assert (NULL != out_imageIndex);
-
-    //passando a Wayland, se uso timeout==0 spesso vkAcquireNextImageKHR ritorna VK_ERROR_OUT_OF_DEVICE_MEMORY.
-    //Mettendo timeout==1, al posto di VK_ERROR_OUT_OF_DEVICE_MEMORY ho dei VK_TIMEOUT/VK_NOT_READY che tutto sommato mi vanno bene
-    //if (0 == timeout_ns)    timeout_ns = 1;
+    assert (NULL != out);
 
     bSwapChainRecreatedDuringThisFrame = false;
 
     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
     toBeDeletedBuilder.check (timeNow_msec);
 
-    if (bRecreateSwapChainOnNextFrame)
+    //se ho in canna un rebuild della swapchain, lo faccio ora
+    if (timeToRecreateSwapchain_msec)
     {
-        bRecreateSwapChainOnNextFrame = false;
-        priv_swapChain_recreate();
+        if (timeNow_msec >= timeToRecreateSwapchain_msec)
+        {
+            timeToRecreateSwapchain_msec = 0;
+            priv_swapChain_recreate();
+        }
+        else
+            return false;
+
     }
 
-    const VkResult result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, timeout_ns, semaphore, fence, out_imageIndex);
+    u32 imageIndex;
+    const VkResult result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, timeout_ns, semaphore, fence, &imageIndex);
 
     switch (result)
     {
     default:
-        gos::logger::err ("GPU::swapChain_acquireImage_ex() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
-        return false;
+        gos::logger::err ("GPU::swapChain_acquireImage() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
+        break;
 
     case VK_SUCCESS:
+        out->imageIndex = imageIndex;
+        out->image = vulkan.swapChainInfo.vkImageList[imageIndex];
+        out->imageView = vulkan.swapChainInfo.vkImageListView[imageIndex];
         return true;
 
     case VK_SUBOPTIMAL_KHR:
-        //posso ancora renderizzare, ma al prossimo newFrame la swapchain verra' ricreata
-        gos::logger::log (eTextColor::darkCyan, "GPU::swapChain_acquireImage_ex() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
-        bRecreateSwapChainOnNextFrame = true;
+        //posso ancora renderizzare, ma schedulo un rebuild della swapchain
+        out->imageIndex = imageIndex;
+        out->image = vulkan.swapChainInfo.vkImageList[imageIndex];
+        out->imageView = vulkan.swapChainInfo.vkImageListView[imageIndex];
+
+        if (0 == timeToRecreateSwapchain_msec)
+        {
+            gos::logger::log (eTextColor::yellow, "GPU::swapChain_acquireImage() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
+            timeToRecreateSwapchain_msec = timeNow_msec + 1000;
+        }
         return true;
 
     case VK_ERROR_OUT_OF_DATE_KHR:
         priv_swapChain_recreate();
-        return false;
+        break;
 
     case VK_TIMEOUT:
     case VK_NOT_READY:
-        return false;
+        break;
     }
+
+
+    out->imageIndex = u32MAX;
+    out->image = VK_NULL_HANDLE;
+    out->imageView = VK_NULL_HANDLE;
+    return false;
+
 }
 
 //************************************
-VkResult GPU::swapChain_present_ex (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount, u32 swapChainImageIndex)
+VkResult GPU::swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount, u32 imageIndex)
 {
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -592,22 +595,9 @@ VkResult GPU::swapChain_present_ex (const VkSemaphore *semaphoreHandleList, u32 
     presentInfo.pWaitSemaphores = semaphoreHandleList; //prima di presentare, aspetta che GPU segnali tutti i semafori di [semaphoreHandleList]
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &vulkan.swapChainInfo.vkSwapChain;
-    presentInfo.pImageIndices = &swapChainImageIndex;
+    presentInfo.pImageIndices = &imageIndex;
     
     return vkQueuePresentKHR (vulkan.getQueueInfo(eGPUQueueType::gfx)->vkQueueHandle, &presentInfo);
-}
-
-
-//************************************
-bool GPU::swapChain_acquireImage (u64 timeout_ns, VkSemaphore semaphore, VkFence fence)
-{
-    return swapChain_acquireImage_ex (&currentSwapChainImageIndex, timeout_ns, semaphore, fence);
-}
-
-//************************************
-VkResult GPU::swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount)
-{
-    return swapChain_present_ex (semaphoreHandleList, semaphoreCount, currentSwapChainImageIndex);
 }
 
 //**********************************************************
@@ -620,16 +610,19 @@ bool GPU::priv_swapChain_recreate ()
 
     int width = 0;
     int height = 0;
+    GLFWwindow *glfWin = window.getGLF();
+    glfwGetFramebufferSize (glfWin, &width, &height);
     while (width == 0 || height == 0) 
     {
         gos::logger::log ("windows size is weird (w=%d, h=%d), waiting...\n", width, height);
 
-        GLFWwindow *glfWin = window.getGLF();
-        glfwGetFramebufferSize (glfWin, &width, &height);
         glfwWaitEvents();
+        //glfwGetWindowSize (glfWin, &width, &height);
+        glfwGetFramebufferSize (glfWin, &width, &height);
     }
 
     //attendo che Vulkan sia in idle
+    gos::logger::log ("target windows size is (w=%d, h=%d), waiting vulkan idle...\n", width, height);
     bool ret = true;
     vkDeviceWaitIdle (vulkan.dev);
 
@@ -646,14 +639,6 @@ bool GPU::priv_swapChain_recreate ()
     //attuale dimensione della vport
     const i16 vportW = (i16)vulkan.swapChainInfo.imageExtent.width;
     const i16 vportH = (i16)vulkan.swapChainInfo.imageExtent.height;
-    //aggiorno le info del default RT
-    {
-        gpu::RenderTarget *rt;
-        priv_fromHandleToPointer (renderTargetList, defaultRTHandle, &rt);
-        rt->format = vulkan.swapChainInfo.imageFormat;
-        rt->width = vulkan.swapChainInfo.imageExtent.width;
-        rt->height = vulkan.swapChainInfo.imageExtent.height;
-    }
 
     //aggiorno tutte le viewport che hanno una dimensione/posizione relativa
     u32 n = viewportHandleList.getNElem();
@@ -696,21 +681,6 @@ bool GPU::priv_swapChain_recreate ()
         }
     }
 
-    //ricreo tutti i FrameBuffer che sono dipendenti dalla swapchain
-    n = frameBufferDependentOnSwapChainList.getNElem();
-    for (u32 i=0; i<n; i++)
-    {
-        GPUFrameBufferHandle handle = frameBufferDependentOnSwapChainList(i);
-
-        gpu::FrameBuffer *sFB;
-        if (priv_fromHandleToPointer (frameBufferList, handle, &sFB))
-        {
-            gos::logger::verbose ("recreating FrameBuffer handle=0x%08X\n", handle.viewAsU32());
-            priv_frameBuffer_deleteFromStruct (sFB);
-            priv_frameBuffer_recreate (sFB);
-        }
-    }
-
     //fine
     gos::logger::decIndent();
     return ret;  
@@ -726,6 +696,13 @@ void  GPU::waitIdle()
 void  GPU::waitIdle (eGPUQueueType q)
 {
     vkQueueWaitIdle (vulkan.getQueueInfo(q)->vkQueueHandle);
+}
+
+//************************************
+void  GPU::_internal__onWindowResized (int w, int h)
+{
+    gos::logger::log ("window resized, new size (%d,%d)\n", w,h);
+    this->timeToRecreateSwapchain_msec = gos::getTimeSinceStart_msec() + 500;
 }
 
 //************************************
@@ -754,8 +731,6 @@ void  GPU::toggleFullscreen()
     }
 
     gos::logger::decIndent();
-
-    bRecreateSwapChainOnNextFrame = true;
 }
 
 //************************************
@@ -764,7 +739,7 @@ void GPU::vsync_enable (bool b)
     if (vSync == b)
         return;
     vSync = b;
-    bRecreateSwapChainOnNextFrame = true;
+    timeToRecreateSwapchain_msec = gos::getTimeSinceStart_msec() + 200;
 }
 
 
@@ -885,85 +860,6 @@ eShaderType GPU::shader_getType (const GPUShaderHandle shaderHandle) const
         return shader->_shaderType;
     return eShaderType::unknown;
 }
-
-
-
-
-
-
-/************************************************************************************************************
- * VtxDecl
- * 
- * 
- *************************************************************************************************************/
-GPU::VtxDeclBuilder& GPU::vtxDecl_createNew (GPUVtxDeclHandle *out_handle)
-{
-    out_handle->setInvalid();
-    vtxDeclBuilder.priv_begin(this, out_handle);
-    return vtxDeclBuilder;
-}
-
-
-//************************************
-void GPU::deleteResource (GPUVtxDeclHandle &handle)
-{
-    gpu::VtxDecl *s;
-    if (priv_fromHandleToPointer(vtxDeclList, handle, &s))
-    {
-        s->reset();
-        vtxDeclList.release(handle);
-    }
-    handle.setInvalid();
-}
-
-//************************************
-void GPU::priv_vxtDecl_onBuilderEnds (VtxDeclBuilder *builder)
-{
-    builder->handle->setInvalid();
-
-    if (!builder->priv_isValid())
-        return;
-
-    //creo un nuovo handle per la vtxDecl
-    gpu::VtxDecl *vtxDecl = vtxDeclList.reserve (builder->handle);
-    if (NULL == vtxDecl)
-    {
-        gos::logger::err ("GPU::priv_vxtDecl_onBuilderEnds() => unable to reserve a new handle\n");
-        return;
-    }
-
-    //fillo vtxDecl con i dati raccolti dal builder
-    vtxDecl->reset();
-    vtxDecl->stream_setNum (builder->numStreamIndex);
-    for (u8 i=0; i<builder->numStreamIndex; i++)
-        vtxDecl->stream_setInputRate (i, builder->inputRatePerStream[i]);
-
-    vtxDecl->attr_setNum (builder->numAttributeDesc);
-    for (u8 i=0; i<builder->numAttributeDesc; i++)
-    {
-        vtxDecl->attr_setStreamIndex (i, builder->attributeDesc[i].streamIndex);
-        vtxDecl->attr_setBindingLocation (i, builder->attributeDesc[i].bindingLocation);
-        vtxDecl->attr_setDataFormat (i, builder->attributeDesc[i].format);
-        vtxDecl->attr_setOffset (i, builder->attributeDesc[i].offset);
-    }
-}
-
-//************************************
-bool GPU::vtxDecl_query (const GPUVtxDeclHandle handle, gpu::VtxDecl *out) const
-{
-    assert (out);
-    gpu::VtxDecl *p;
-    if (priv_fromHandleToPointer(vtxDeclList, handle, &p))
-    {
-        //ritorno una copia dell'oggetto, non il pt all'oggetto
-        (*out) = (*p);
-        return true;
-    }
-
-    out->reset();
-    return false;
-}
-
 
 
 
@@ -1350,409 +1246,6 @@ const gpu::DepthStencil* GPU::getInfo (const GPUDepthStencilHandle handle) const
     if (priv_fromHandleToPointer (depthStencilList, handle, &s))
         return s;
     return NULL;
-}
-
-
-/************************************************************************************************************
- * FrameBuffer
- * 
- * 
- *************************************************************************************************************/
-GPU::FrameBuffersBuilder& GPU::frameBuffer_createNew (const GPURenderPassHandle &renderPassHandle, GPUFrameBufferHandle *out_handle)
-{
-    assert (NULL != out_handle);
-    out_handle->setInvalid();
-
-    FrameBuffersBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::FrameBuffersBuilder) (this, renderPassHandle, out_handle);
-    return *builder;
-}
-
-//************************************
-bool GPU::priv_frameBuffer_onBuilderEnds (FrameBuffersBuilder *builder)
-{
-    //aggiungo il builder alla lista dei builder da deletare
-    toBeDeletedBuilder.add(builder);
-
-    if (builder->anyError())
-        return false;
-        
-
-    GPUFrameBufferHandle handle;
-    gpu::FrameBuffer *s = frameBufferList.reserve (&handle);
-    if (NULL == s)
-    {
-        gos::logger::err ("GPU::priv_frameBuffer_onBuilderEnds() => can't reserve a handle!\n");
-        return false;
-    }
-
-
-    //Fillo la struttura con i dati di creazione recuperati dal builder
-    s->reset();
-    s->width = builder->width;
-    s->height = builder->height;
-
-    
-    //render layout. Mi accerto che sia valido
-    gpu::RenderLayout *sRL;
-    if (!priv_fromHandleToPointer (renderLayoutList, builder->renderPassHandle, &sRL))
-    {
-        gos::logger::err ("GPU::priv_frameBuffer_onBuilderEnds() => invalid renderPassHandle\n");
-        frameBufferList.release (handle);
-        return false;
-    }
-    s->renderPassHandle = builder->renderPassHandle;
-    
-
-    //depthstencil. Se le sue dimensioni non sono assolute, allora vuol dire che dipendono dalla
-    //dimensione della swapchain e quindi questo framBuffer devo marcalco come "bound to swapchain"
-    //per poterlo ricreare in auto quando la swapchain cambia
-    s->depthStencilHandle = builder->depthStencilHandle;
-    if (s->depthStencilHandle.isValid())
-    {
-        gpu::DepthStencil *ds;
-        if (!priv_fromHandleToPointer (depthStencilList, s->depthStencilHandle, &ds))
-        {
-            gos::logger::err ("GPU::priv_frameBuffer_onBuilderEnds() => invalid depthstencil handle\n");
-            frameBufferList.release (handle);
-            return false;
-        }
-        
-        if (ds->width.isRelative() || ds->height.isRelative())
-            s->boundToSwapChain = true;
-    }
-
-    //render target
-    s->numRenderTaget = builder->numRenderTarget;
-    for (u32 i=0;i<builder->numRenderTarget;i++)
-    {
-        const GPURenderTargetHandle rt = builder->renderTargetHandleList[i];
-        s->renderTargetHandleList[i] = rt;
-
-        if (rt == defaultRTHandle)
-        {
-            //ci stiamo bindando al default RT
-            s->boundToSwapChain = true;
-            s->boundToMainRT = true;
-        }
-        else
-        {
-            //come per il deptStencil, devo verificare se il RT e' a dimensioni assolute o relative
-            gpu::RenderTarget *sRT;
-            if (!priv_fromHandleToPointer (renderTargetList, rt, &sRT))
-            {
-                gos::logger::err ("GPU::priv_frameBuffer_onBuilderEnds() => invalid render target handle at index %d\n", i);
-                frameBufferList.release (handle);
-                return false;
-            }
-
-            if (sRT->width.isRelative() || sRT->height.isRelative())
-                s->boundToSwapChain = true;
-        }
-    }
-
-
-    //tutto ok
-    *builder->out_handle = handle;
-    if (s->boundToSwapChain)
-        frameBufferDependentOnSwapChainList.append(handle);
-    priv_frameBuffer_recreate (s);
-
-
-    gos::logger::verbose ("created FrameBuffer handle=0x%08X\n", handle.viewAsU32());
-    return true;
-}
-
-//************************************
-void GPU::deleteResource (GPUFrameBufferHandle &handle)
-{
-    gpu::FrameBuffer *s;
-    if (priv_fromHandleToPointer (frameBufferList, handle, &s))
-    {
-        if (s->boundToSwapChain)
-            frameBufferDependentOnSwapChainList.findAndRemove(handle);
-        priv_frameBuffer_deleteFromStruct (s);
-        s->reset();
-        frameBufferList.release (handle);
-    }
-
-    handle.setInvalid();
-}
-
-//************************************
-void GPU::priv_frameBuffer_deleteFromStruct (gpu::FrameBuffer *s)
-{
-    if (s->boundToMainRT)
-    {
-        for (u32 i=0; i<s->numFrameBuffer; i++)
-            vkDestroyFramebuffer (vulkan.dev, s->vkFrameBufferList[i], nullptr);
-    }
-    else
-    {
-        vkDestroyFramebuffer (vulkan.dev, s->vkFrameBufferList[0], nullptr);
-    }
-}
-
-//************************************
-bool GPU::priv_frameBuffer_recreate (gpu::FrameBuffer *s)
-{
-    //render area
-    s->resolve ((i16)vulkan.swapChainInfo.imageExtent.width, (i16)vulkan.swapChainInfo.imageExtent.height);
-
-    gos::logger::verbose ("GPU::priv_frameBuffer_recreate() => frame buffer size: %d %d\n", s->resolvedW, s->resolvedH);
-    gos::logger::incIndent();
-    const bool ret = priv_frameBuffer_do_recreate(s);
-    gos::logger::decIndent();
-    return ret;
-}
-bool GPU::priv_frameBuffer_do_recreate (gpu::FrameBuffer *s)
-{
-    //render layout
-    gpu::RenderLayout *sRL;
-    if (!priv_fromHandleToPointer (renderLayoutList, s->renderPassHandle, &sRL))
-    {
-        gos::logger::err ("invalid handler\n");
-        return false;
-    }
-
-    //Se sono bindato al mainRT, devo creare N VulkanFrameBuffer, 1 per ogni immagine della swapchain
-    s->numFrameBuffer = 1;
-    if (s->boundToMainRT)
-        s->numFrameBuffer = vulkan.swapChainInfo.imageCount;
-
-    for (u32 t=0; t<s->numFrameBuffer; t++)
-    {
-        //render target
-        VkImageView imageViewList[GOSGPU__NUM_MAX_ATTACHMENT + 1];
-        u32 nViewList = 0;
-
-        for (u32 i=0; i<s->numRenderTaget; i++)
-        {
-            if (s->renderTargetHandleList[i] == defaultRTHandle)
-            {
-                assert (s->boundToMainRT);
-                imageViewList[nViewList++] = vulkan.swapChainInfo.vkImageListView[t];
-            }
-            else
-            {
-                gpu::RenderTarget *sRT;
-                if (!priv_fromHandleToPointer (renderTargetList, s->renderTargetHandleList[i], &sRT))
-                    return false;
-
-                assert (NULL != sRT->view);
-                imageViewList[nViewList++] = sRT->view;
-            }
-        }
-
-        //depthStencil
-        if (s->depthStencilHandle.isValid())
-        {
-            gpu::DepthStencil *zb;
-            if (!priv_fromHandleToPointer (depthStencilList, s->depthStencilHandle, &zb))
-                return false;
-            gos::logger::log ("depth stencile size: %d %d\n", zb->resolvedW, zb->resolvedH);
-            imageViewList[nViewList++] = zb->view;
-        }
-
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = sRL->vkRenderPassHandle;
-        framebufferInfo.attachmentCount = nViewList;
-        framebufferInfo.pAttachments = imageViewList;
-        framebufferInfo.width = s->resolvedW;
-        framebufferInfo.height = s->resolvedH;
-        framebufferInfo.layers = 1;
-
-        const VkResult result = vkCreateFramebuffer(vulkan.dev, &framebufferInfo, nullptr, &s->vkFrameBufferList[t]);
-        if (VK_SUCCESS != result)
-        {
-            gos::logger::err ("vkCreateFramebuffer => %s\n", string_VkResult(result));
-            return false;
-        }
-    }
-
-    return true;
-}
-
-//************************************
-bool GPU::toVulkan (const GPUFrameBufferHandle handle, VkFramebuffer *out, u32 *out_renderAreaW, u32 *out_renderAreaH) const
-{
-    assert (NULL != out);
-    assert (NULL != out_renderAreaW);
-    assert (NULL != out_renderAreaH);
-
-    gpu::FrameBuffer *s;
-    if (!priv_fromHandleToPointer (frameBufferList, handle, &s))
-    {
-        *out = VK_NULL_HANDLE;
-        gos::logger::err ("GPU::frameBuffer_toVulkan() => invalid handle\n");
-        return false;        
-    }
-
-    *out_renderAreaW = s->resolvedW;
-    *out_renderAreaH = s->resolvedH;
-
-    if (s->boundToMainRT)
-        *out = s->vkFrameBufferList[this->currentSwapChainImageIndex];
-    else
-        *out = s->vkFrameBufferList[0];
-
-    return true;
-}
-
-
-
-/************************************************************************************************************
- * RenderTaskLayout
- * 
- * 
- *************************************************************************************************************/
-GPU::RenderPassBuilder& GPU::renderPass_createNew (GPURenderPassHandle *out_handle)
-{
-    assert (NULL != out_handle);
-    out_handle->setInvalid();
-
-    RenderPassBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::RenderPassBuilder) (this, out_handle);
-    return *builder;
-}
-
-//************************************
-bool GPU::priv_renderLayout_onBuilderEnds (RenderPassBuilder *builder)
-{
-    //aggiungo il builder alla lista dei builder da deletare
-    toBeDeletedBuilder.add(builder);
-
-    if (builder->anyError())
-        return false;
-        
-    gpu::RenderLayout *s = renderLayoutList.reserve (builder->out_handle);
-    if (NULL == s)
-    {
-        gos::logger::err ("GPU::priv_renderLayout_onBuilderEnds() => can't reserve a handle!\n");
-        return false;
-    }
-
-    s->vkRenderPassHandle = builder->vkRenderPassHandle;
-    s->numColorBuffer = builder->numRenderTargetInfo;
-    s->numAttachment = builder->numRenderTargetInfo;
-    if (builder->depthBuffer.isRequired)
-    {
-        s->numAttachment++;
-        s->indexOfDepthStencilBuffer = builder->depthBuffer.indexOfDepthStencilAttachment;
-    }
-    else
-    {
-        s->indexOfDepthStencilBuffer = 0xff;
-    }
-    return true;
-}
-
-//************************************
-void GPU::deleteResource (GPURenderPassHandle &handle)
-{
-    gpu::RenderLayout *s;
-    if (renderLayoutList.fromHandleToPointer (handle, &s))
-    {
-        vkDestroyRenderPass (vulkan.dev, s->vkRenderPassHandle, nullptr);
-        s->reset();
-        renderLayoutList.release (handle);
-    }
-
-    handle.setInvalid();
-}
-
-//************************************
-const gpu::RenderLayout* GPU::getInfo (const GPURenderPassHandle handle) const
-{
-    gpu::RenderLayout *s;
-    if (priv_fromHandleToPointer (renderLayoutList, handle, &s))
-        return s;
-    return NULL;
-}
-
-//************************************
-bool GPU::toVulkan (const GPURenderPassHandle handle, VkRenderPass *out) const
-{
-    gpu::RenderLayout *s;
-    if (priv_fromHandleToPointer(renderLayoutList, handle, &s))
-    {
-        *out = s->vkRenderPassHandle;
-        return true;
-    }
-
-    gos::logger::err ("GPU::renderLayout_toVulkan() => invalid handle\n");
-    return false;
-}
-
-
-
-
-/************************************************************************************************************
- * Pipeline
- * 
- * 
- *************************************************************************************************************/
-GPU::PipelineBuilder& GPU::pipeline_createNew (const GPURenderPassHandle &renderPassHandle, GPUPipelineHandle *out_handle)
-{
-    assert (NULL != out_handle);
-    out_handle->setInvalid();
-
-    PipelineBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::PipelineBuilder) (this, renderPassHandle, out_handle);
-    return *builder;
-}
-
-//************************************
-bool GPU::priv_pipeline_onBuilderEnds (PipelineBuilder *builder)
-{
-    //aggiungo il builder alla lista dei builder da deletare
-    toBeDeletedBuilder.add(builder);
-
-    if (builder->anyError())
-        return false;
-        
-    gpu::sPipeline *s = pipelineList.reserve (builder->out_handle);
-    if (NULL == s)
-    {
-        gos::logger::err ("GPU::priv_pipeline_onBuilderEnds() => can't reserve a handle!\n");
-        return false;
-    }
-
-    s->reset();
-    s->vkPipelineLayoutHandle = builder->vkPipelineLayoutHandle;
-    s->vkPipelineHandle = builder->vkPipelineHandle;
-    if (builder->pushConstantList.getNElem())
-        memcpy (s->pushContantList, builder->pushConstantList._queryPointer(), sizeof(VkPushConstantRange) * builder->pushConstantList.getNElem());
-    return true;
-}
-
-//************************************
-void GPU::deleteResource (GPUPipelineHandle &handle)
-{
-    gpu::sPipeline *s;
-    if (pipelineList.fromHandleToPointer (handle, &s))
-    {
-        vkDestroyPipelineLayout (vulkan.dev, s->vkPipelineLayoutHandle, nullptr);
-        vkDestroyPipeline (vulkan.dev, s->vkPipelineHandle, nullptr);
-        s->reset();
-        pipelineList.release (handle);
-    }
-
-    handle.setInvalid();
-}
-
-//************************************
-bool GPU::toVulkan (const GPUPipelineHandle handle, const gpu::sPipeline **out) const
-{
-    gpu::sPipeline *s;
-    if (pipelineList.fromHandleToPointer (handle, &s))
-    {
-        *out = s;
-        return true;
-    }
-
-    *out = NULL;
-    gos::logger::err ("GPU::pipeline_toVulkan() => invalid handle\n");
-    DBGBREAK;
-    return false;
 }
 
 
@@ -2232,96 +1725,10 @@ bool GPU::toVulkan (const GPUStorageBufferHandle handle, VkBuffer *out, u32 *out
 
 
 /************************************************************************************************************
- * DescriptorSet Layput
+ * DescriptorSet Layout
  * 
  * 
  *************************************************************************************************************/
-GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_create (GPUDescrSetLayoutHandle *out_handle)
-{
-    assert (NULL != out_handle);
-    out_handle->setInvalid();
-
-    DescriptorSetLayoutBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::DescriptorSetLayoutBuilder) (this, 0, out_handle);
-    return *builder;
-}
-
-GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_create_pushable (GPUDescrSetLayoutHandle *out_handle)
-{
-    assert (NULL != out_handle);
-    out_handle->setInvalid();
-
-    DescriptorSetLayoutBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::DescriptorSetLayoutBuilder) (this, VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR, out_handle);
-    return *builder;
-}
-
-GPU::DescriptorSetLayoutBuilder& GPU::descrSetLayout_create_updAfterBind (GPUDescrSetLayoutHandle *out_handle)
-{
-    assert (NULL != out_handle);
-    out_handle->setInvalid();
-
-    DescriptorSetLayoutBuilder *builder = GOSNEW(gos::getScrapAllocator(), GPU::DescriptorSetLayoutBuilder) (this, VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT, out_handle);
-    return *builder;
-}
-
-//************************************
-bool GPU::priv_descrSetLayout_onBuilderEnds (DescriptorSetLayoutBuilder *builder)
-{
-    //aggiungo il builder alla lista dei builder da deletare
-    toBeDeletedBuilder.add(builder);
-
-    if (builder->anyError())
-        return false;
-
-    VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsCreateInfo {};
-    VkDescriptorBindingFlags bindingFlags[GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
-
-    //TODO: cachare i descriptor-set ed eventualmente riutilizzarli visto che sono dei descrittori, non e' necessario
-    //      crearne N diversi che descrivono la stessa cosa
-    VkDescriptorSetLayoutCreateInfo creatInfo{};
-    creatInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    creatInfo.flags = builder->createFlag;
-    creatInfo.bindingCount = builder->numDescriptor;
-    creatInfo.pBindings = builder->list;
-
-    if ((creatInfo.flags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT) != 0)
-    {
-        for (u32 i=0; i<builder->numDescriptor; i++)
-        {
-            bindingFlags[i] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
-        }
-
-        bindingFlagsCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-        bindingFlagsCreateInfo.pNext = nullptr;
-        bindingFlagsCreateInfo.bindingCount = builder->numDescriptor;
-        bindingFlagsCreateInfo.pBindingFlags = bindingFlags;
-
-        creatInfo.pNext = &bindingFlagsCreateInfo;
-    }
-    else
-    {
-        creatInfo.pNext = NULL;
-    }
-
-    VkDescriptorSetLayout vkHandle;
-    VkResult result = vkCreateDescriptorSetLayout (vulkan.dev, &creatInfo, nullptr, &vkHandle);
-    if (VK_SUCCESS != result)
-    {
-        gos::logger::err ("GPU::priv_descrSetLayout_onBuilderEnds () => vkCreateDescriptorSetLayout failed => %s\n", string_VkResult(result));
-        return false;
-    }
-
-    gpu::DescrSetLayout *s = descrSetLayoutList.reserve (builder->out_handle);
-    if (NULL == s)
-    {
-        gos::logger::err ("GPU::priv_descrSetLayout_onBuilderEnds() => can't reserve a handle!\n");
-        return false;
-    }
-    s->reset();
-    s->vkHandle = vkHandle;
-    return true;
-}
-
-//************************************
 void GPU::deleteResource (GPUDescrSetLayoutHandle &handle)
 {
     gpu::DescrSetLayout *s;
@@ -2937,11 +2344,76 @@ bool GPU::priv_descrSetLayout_build_v2 (const gpu::pipe2::Pipeline_def::Descript
     return true;
 }
 
+/************************************************************************************************************
+ * Pipeline
+ * 
+ * 
+ *************************************************************************************************************/
+void GPU::deleteResource (GPUPipelineHandle &handle)
+{
+    gpu::Pipeline2 *s;
+    if (pipelineList.fromHandleToPointer (handle, &s))
+    {
+        vkDestroyPipelineLayout (vulkan.dev, s->vkPipelineLayoutHandle, nullptr);
+        vkDestroyPipeline (vulkan.dev, s->vkPipelineHandle, nullptr);
+        for (u32 i=0; i<s->descrset_num; i++)
+            deleteResource (s->descrset_handle_defList[i]);
+        s->reset();
+        pipelineList.release (handle);
+    }
+
+    handle.setInvalid();
+}
+
 //************************************
-bool GPU::pipeline_v2_createNew (const gpu::pipe2::Pipeline_def &rpd, gpu::pipe2::Pipeline *out)
+bool GPU::toVulkan (const GPUPipelineHandle handle, const gpu::Pipeline2 **out) const
+{
+    gpu::Pipeline2 *s;
+    if (pipelineList.fromHandleToPointer (handle, &s))
+    {
+        *out = s;
+        return true;
+    }
+
+    *out = NULL;
+    gos::logger::err ("GPU::pipeline_toVulkan() => invalid handle\n");
+    DBGBREAK;
+    return false;
+}
+
+//************************************
+bool GPU::pipeline_createNew (const gpu::pipe2::Pipeline_def &rpd, GPUPipelineHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+
+    //riservo un handle
+    gpu::Pipeline2 *s = pipelineList.reserve (out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::pipeline_createNew() => can't reserve a handle!\n");
+        return false;
+    }
+    s->reset();
+
+    if (!priv_pipeline2_doCreate(rpd, s))
+    {
+        gos::logger::err ("GPU::pipeline_createNew() => error creating the pipe!\n");
+        pipelineList.release(*out_handle);
+        out_handle->setInvalid();
+        return false;
+    }
+
+    return true;
+}
+
+//************************************
+bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pipeline2 *out)
 {
     assert (NULL != out);
     out->reset();
+    
 
 #ifdef _DEBUG
     if (0 == rpd.numRT && !rpd.zbuffer_enabled)
@@ -2985,7 +2457,7 @@ bool GPU::pipeline_v2_createNew (const gpu::pipe2::Pipeline_def &rpd, gpu::pipe2
             out->descrset_num++;
             if (!priv_descrSetLayout_build_v2 (rpd.descriptorSetList[i], &out->descrset_handle_defList[i], &descrSetLayoutHandleList[i]))
             {
-                gos::logger::err ("GPU::pipeline_v2_createNew() => error creating descriptset\n");
+                gos::logger::err ("GPU::pipeline_createNew() => error creating descriptset\n");
                 return false;
             }
         }
@@ -2993,7 +2465,7 @@ bool GPU::pipeline_v2_createNew (const gpu::pipe2::Pipeline_def &rpd, gpu::pipe2
         result = vkCreatePipelineLayout (vulkan.dev, &pipelineLayoutInfo, nullptr, &pipelineCreateInfo.layout);
         if (VK_SUCCESS != result)
         {
-            gos::logger::err ("GPU::pipeline_v2_createNew() => vkCreatePipelineLayout() => %s\n", string_VkResult(result));
+            gos::logger::err ("GPU::pipeline_createNew() => vkCreatePipelineLayout() => %s\n", string_VkResult(result));
             return false;
         }
     }
@@ -3013,7 +2485,7 @@ bool GPU::pipeline_v2_createNew (const gpu::pipe2::Pipeline_def &rpd, gpu::pipe2
             switch (shader_getType(handle))
             {
             default:
-                gos::logger::err ("GPU::pipeline_v2_createNew => unsupported shader type\n");
+                gos::logger::err ("GPU::pipeline_createNew => unsupported shader type\n");
                 DBGBREAK;
                 return false;
                 break;
@@ -3276,31 +2748,41 @@ bool GPU::pipeline_v2_createNew (const gpu::pipe2::Pipeline_def &rpd, gpu::pipe2
     }
 
 
-
-
     VkPipeline vkPipelineHandle;
     result = vkCreateGraphicsPipelines (vulkan.dev, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &vkPipelineHandle);
     if (VK_SUCCESS != result)
     {
-        gos::logger::err ("GPU::pipeline_v2_createNew => vkCreateGraphicsPipelines() error: %s\n", string_VkResult(result)); 
+        gos::logger::err ("GPU::pipeline_createNew => vkCreateGraphicsPipelines() error: %s\n", string_VkResult(result)); 
         return false;
     }
 
 
     //riservo un handle
-    gpu::sPipeline *s = pipelineList.reserve (&out->pipeline_handle);
-    if (NULL == s)
+    out->vkPipelineLayoutHandle = pipelineCreateInfo.layout;
+    out->vkPipelineHandle = vkPipelineHandle;
+    if (rpd.numPushConst)
+        memcpy (out->pushContantList, pushConstantRangeList, sizeof(VkPushConstantRange) * rpd.numPushConst);
+    return true;    
+}
+
+//************************************
+bool GPU::pipeline_createDescrSetInstance (const GPUPipelineHandle pipelineHandle, u8 descrSetNum, const GPUDescrPoolHandle &poolHandle, GPUDescrSetInstanceHandle *out_handle)
+{
+    const gpu::Pipeline2 *s;
+    if (!toVulkan (pipelineHandle, &s))
+        return false;
+
+    if (descrSetNum >= s->descrset_num)
     {
-        gos::logger::err ("GPU::pipeline_v2_createNew() => can't reserve a handle!\n");
+        DBGBREAK;
         return false;
     }
 
-    s->reset();
-    s->vkPipelineLayoutHandle = pipelineCreateInfo.layout;
-    s->vkPipelineHandle = vkPipelineHandle;
-    if (rpd.numPushConst)
-        memcpy (s->pushContantList, pushConstantRangeList, sizeof(VkPushConstantRange) * rpd.numPushConst);
-    return true;    
-    
-
+    return descrSetInstance_createNew (poolHandle, s->descrset_handle_defList[descrSetNum], out_handle);
 }
+
+
+
+
+
+

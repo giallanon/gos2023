@@ -265,6 +265,14 @@ bool input::window_getUserPointer (const GOSWinHandle &handle, void **out_userPt
 }
 
 //*****************************************
+void input::window_trapOn_resize (const GOSWinHandle &handle, GOSWindowCallbackFN_onResize fn, void *userPt)
+{
+    input::Window *win = gos_input_getWindowFromHandle (handle);
+    if (NULL != win)
+        win->trap_onResize (fn, userPt);
+}
+
+//*****************************************
 void input::window_setMouseMode (const GOSWinHandle &handle, eMouseMode mode)
 {
     input::Window *win = gos_input_getWindowFromHandle (handle);

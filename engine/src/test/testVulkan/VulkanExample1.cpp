@@ -14,7 +14,7 @@ void VulkanExample1::virtual_onCleanup()
 {
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
-    pipeline.deleteResources(gpu);
+    gpu->deleteResource (pipelineHandle);
 }    
 
 
@@ -44,7 +44,7 @@ bool VulkanExample1::virtual_onInit ()
         .add_rt (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN);
 
 
-    if (!gpu->pipeline_v2_createNew (def, &pipeline))
+    if (!gpu->pipeline_createNew (def, &pipelineHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
         return false;
@@ -56,7 +56,7 @@ bool VulkanExample1::virtual_onInit ()
 
 
 //************************************
-bool VulkanExample1::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gpu::AcquiredSwapchainImg &swapChainImage)
+bool VulkanExample1::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gpu::SwapchainImg &swapChainImage)
 {
     gos::gpu::pipe2::CmdBufferWriter2 cw;
     cw
@@ -65,8 +65,8 @@ bool VulkanExample1::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
         .imageTransition (swapChainImage.image, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
         .beginRender()
             .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
-            .withRT (gpu->swapChain_getImageView(swapChainImage.index), eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0,0.01f,0))
-            .bindPipeline (pipeline.pipeline_handle)
+            .withRT (swapChainImage.imageView, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0,0.01f,0))
+            .bindPipeline (pipelineHandle)
             .draw(3, 1, 0, 0)
             .endRender()
         .imageTransition (swapChainImage.image, eImageLayout::color_attachment_optimal, eImageLayout::presentation)
@@ -102,7 +102,7 @@ void VulkanExample1::virtual_onRun()
         mainLoop.run();
 
         //se il job precedente e' stato presentato, posso schedularne uno nuovo
-        gpu::AcquiredSwapchainImg swapchainImg;
+        gpu::SwapchainImg swapchainImg;
         if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
             recordCommandBuffer (cmdBufferHandle, swapchainImg);

@@ -1,83 +1,10 @@
 #include "gosGPUVukanHelpers.h"
 #include "../gosGPU.h"
-#include "../gosGPUResVtxDecl.h"
 #include "../gosGPUUtils.h"
 #include "../../gos/gos.h"
 
 using namespace gos;
 
-
-/*************************************************************************************+
- * 
- * VkPipelineVertexInputStage
- * 
- * 
- ************************************/
-bool VkPipelineVertexInputStage::build (const GPU *gpu, const GPUVtxDeclHandle handle)
-{
-    const u32 numInputBindingDesc = sizeof(vxtBindingDescrList) / sizeof(VkVertexInputBindingDescription);
-    const u32 numAttributeDesc = sizeof(vtxAttributeDescrList) / sizeof(VkVertexInputAttributeDescription);
-
-    memset (&vkVertexInputState, 0, sizeof(vkVertexInputState));
-    vkVertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    if (handle.isInvalid())
-    {
-        vkVertexInputState.vertexBindingDescriptionCount = 0;
-        vkVertexInputState.pVertexBindingDescriptions = nullptr; // Optional
-        vkVertexInputState.vertexAttributeDescriptionCount = 0;
-        vkVertexInputState.pVertexAttributeDescriptions = nullptr; // Optional
-        return true;
-    }
-
-    //recupera la descrizione della vtxDecl
-    gpu::VtxDecl vtxDecl;
-    if (!gpu->vtxDecl_query (handle, &vtxDecl))
-    {
-        DBGBREAK;
-        return false;
-    }
-
-    if (vtxDecl.stream_getNum() > numInputBindingDesc)
-        return false;
-    if (vtxDecl.attr_getNum() > numAttributeDesc)
-        return false;
-
-    u32 totNumAttributeDescr=0;
-    for (u8 i=0; i<vtxDecl.stream_getNum(); i++)
-    {        
-        vxtBindingDescrList[i].binding = i;
-
-        if (eVtxStreamInputRate::perInstance == vtxDecl.stream_getInputRate(i))
-            vxtBindingDescrList[i].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
-        else
-            vxtBindingDescrList[i].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-        vxtBindingDescrList[i].stride = vtxDecl.stream_getStrideInByte(i);
-
-        u8 firstIndex;
-        u8 numDescrInStream;
-        vtxDecl.attr_getList (i, &firstIndex, &numDescrInStream);
-        for (u8 i2=0; i2<numDescrInStream; i2++)
-        {
-            vtxAttributeDescrList[totNumAttributeDescr].binding =  vtxDecl.attr_getStreamIndex(firstIndex);
-            vtxAttributeDescrList[totNumAttributeDescr].location = vtxDecl.attr_getBindingLocation(firstIndex);
-            vtxAttributeDescrList[totNumAttributeDescr].offset = vtxDecl.attr_getOffset(firstIndex);
-            vtxAttributeDescrList[totNumAttributeDescr].format = gos::gpu::toVulkan (vtxDecl.attr_getDataFormat(firstIndex));
-            
-            totNumAttributeDescr++;
-            firstIndex++;
-        }
-    }
-
-    assert (totNumAttributeDescr == vtxDecl.attr_getNum());
-
-    vkVertexInputState.vertexBindingDescriptionCount = vtxDecl.stream_getNum();
-    vkVertexInputState.pVertexBindingDescriptions = vxtBindingDescrList;
-    vkVertexInputState.vertexAttributeDescriptionCount = vtxDecl.attr_getNum();
-    vkVertexInputState.pVertexAttributeDescriptions = vtxAttributeDescrList;
-    return true;
-}
 
 
 

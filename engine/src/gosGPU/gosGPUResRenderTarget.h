@@ -35,11 +35,11 @@ namespace gos
                             }                            
 
         public:
-            gos::Dim2D      width;
-            gos::Dim2D      height;
-            u32             resolvedW;
-            u32             resolvedH;
-            u64             memoryAllocated;
+            gos::Dim2D          width;
+            gos::Dim2D          height;
+            u32                 resolvedW;
+            u32                 resolvedH;
+            u64                 memoryAllocated;
 
             VkFormat            format;
             VkImage             image;

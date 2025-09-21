@@ -23,7 +23,7 @@ SimpleLineRenderer::~SimpleLineRenderer ()
     gpu->deleteResource (hVtxShader);
     gpu->deleteResource (hFragShader);
     gpu->deleteResource (hDescrSetInstance);
-    pipeline.deleteResources(gpu);
+    gpu->deleteResource (pipelineHandle);
     gpu->deleteResource (hUBO);
 }
 
@@ -62,7 +62,7 @@ bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHa
             .add (0, eGPUDescriptrorType::UNIFORM_BUFFER, 1, eGPUDescriptrorUsageFlag::vtx_shader)
             .endDescriptorSet();
 
-    if (!gpu->pipeline_v2_createNew (def, &pipeline))
+    if (!gpu->pipeline_createNew (def, &pipelineHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
         return false;
@@ -76,7 +76,7 @@ bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHa
     }
     
     //alloco una istanza del descriptorSet
-    if (!gpu->descrSetInstance_createNew (descrPoolHandle, pipeline.descrset_handle_defList[0], &hDescrSetInstance))
+    if (!gpu->pipeline_createDescrSetInstance (pipelineHandle, 0, descrPoolHandle, &hDescrSetInstance))
     {
         gos::logger::err ("SimpleLineRenderer::setup() => can't create descriptorSet instance\n");
         return false;
@@ -185,7 +185,7 @@ bool SimpleLineRenderer::recordCommandBuffer (gpu::pipe2::CmdBufferWriter2 &cw, 
         .end();
 
     // cw
-    //     .bindPipeline (pipeline.pipeline_handle)
+    //     .bindPipeline (pipelineHandle)
     //     .bindDescriptorSet (hDescrSetInstance, 0)
     //     .bindVtxBuffer (hVtxBuffer)
     //     .bindIdxBufferU16 (hIdxBuffer)
@@ -194,7 +194,7 @@ bool SimpleLineRenderer::recordCommandBuffer (gpu::pipe2::CmdBufferWriter2 &cw, 
     cw.beginRender()
         .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
         .withRT (rt, eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
-        .bindPipeline (pipeline.pipeline_handle)
+        .bindPipeline (pipelineHandle)
         .bindDescriptorSet (hDescrSetInstance, 0)
         .bindVtxBuffer (hVtxBuffer)
         .bindIdxBufferU16 (hIdxBuffer)
