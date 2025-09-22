@@ -13,7 +13,7 @@ namespace gos
     {
         namespace pipe2
         {
-            class Pipeline_def; //fwd
+            struct Pipeline_def; //fwd
 
             /****************************************
              * @brief 

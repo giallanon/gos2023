@@ -185,7 +185,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindPipeline (const GPUPipeli
 
         
     gpu->toVulkan (pipelineHandle, &curPipeline);
-    assert (NULL != pipe);
+    assert (NULL != curPipeline);
     vkCmdBindPipeline (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curPipeline->vkPipelineHandle);
     
     return *this;        

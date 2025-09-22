@@ -136,7 +136,7 @@ bool VulkanExample7::do_recordCommandBuffer (gpu::pipe2::CmdBufferWriter2 &cw, V
 
     GPUDepthStencilHandle zbHandle = gpu->depthStencil_getDefault();
     vec2f screenWH;
-    screenWH.set (gpu->swapChain_getWidth(), gpu->swapChain_getHeight());
+    screenWH.set ((f32)gpu->swapChain_getWidth(), (f32)gpu->swapChain_getHeight());
 
     cw
     .imageTransition (rt1, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
