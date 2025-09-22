@@ -1,5 +1,5 @@
 #include "VulkanExample7.h"
-
+#include "../gosImage/gosImageBuilder.h"
 
 
 using namespace gos;
@@ -14,11 +14,14 @@ void VulkanExample7::virtual_explain()
 void VulkanExample7::virtual_onCleanup() 
 {
     theHub.unload (assetPipe1);
-    theHub.unload (assetPipe2);
 
     gpu->deleteResource(vtxBufferHandle);
     gpu->deleteResource(idxBufferHandle);
     gpu->deleteResource(rt1);
+
+    gpu->deleteResource (texHandle);
+    gpu->deleteResource(descrSetInstanceHandle);
+    gpu->deleteResource(descrPoolHandle);
 }    
 
 
@@ -34,7 +37,6 @@ bool VulkanExample7::virtual_onInit ()
     //theHub
     theHub.setup ("shader/example7", gpu);
     theHub.getHandle("pipe_1", &assetPipe1);
-    theHub.getHandle("pipe_2", &assetPipe2);
 
     const asset::Asset_pipe *thePipe;
     theHub.getAssetWithTimeout (assetPipe1, 5000, &thePipe);
@@ -62,78 +64,115 @@ bool VulkanExample7::virtual_onInit ()
     }
 
 
-    //tris 1
+    //quad 1
+    static constexpr u32 TEX_WIDTH = 830;
+    static constexpr u32 TEX_HEIGHT = 413;
     {
         struct Vertex1
         {
             u32     x;
             u32     y;
-            vec3f   rgb;
+            vec2f   tutv;
         };
 
+        static constexpr u32 X = 0;
+        static constexpr u32 Y = 0;
         Vertex1 vtxSRC[8];
 
-        vtxSRC[0].x = 1;   vtxSRC[0].y = 1;   vtxSRC[0].rgb.set(1,0,0);
-        vtxSRC[1].x = 100; vtxSRC[1].y = 1;   vtxSRC[1].rgb.set(0,1,0);
-        vtxSRC[2].x = 100; vtxSRC[2].y = 200; vtxSRC[2].rgb.set(0,0,1);
-        vtxSRC[3].x = 1;   vtxSRC[3].y = 200; vtxSRC[3].rgb.set(1,1,0);
+        vtxSRC[0].x = X;            vtxSRC[0].y = Y;            vtxSRC[0].tutv.set (0,0);
+        vtxSRC[1].x = X+TEX_WIDTH-1;    vtxSRC[1].y = Y;            vtxSRC[1].tutv.set (1,0);
+        vtxSRC[2].x = X+TEX_WIDTH-1;    vtxSRC[2].y = Y+TEX_HEIGHT-1;   vtxSRC[2].tutv.set (1,1);
+        vtxSRC[3].x = X;            vtxSRC[3].y = Y+TEX_HEIGHT-1;   vtxSRC[3].tutv.set (0,1);
         gpu->writeAndSync (vtxBufferHandle, 0, vtxSRC, sizeof(Vertex1) * 4);
 
         u16 indexSRC[6] = { 0, 1, 2,    2, 3, 0 };
         gpu->writeAndSync (idxBufferHandle, 0, indexSRC, sizeof(u16) * 6);
     }
 
+    //creo il sampler
+    gpu->sampler_create (gpu::SamplerDesc(), &samplerHandle);
+
+    
+    //carico una texture
     {
-        struct Vertex2
+        gos::Image im;
+/*        gos::image::Builder builder;
+        builder.begin (gos::getScrapAllocator(), &im)
+            .beginTexture2D (eImageFormat::U8_RGBA, TEX_WIDTH, TEX_HEIGHT, 1)
+            .setMipMapDataFromFile (0, "shader/example7/res/03-image/godus_01.png", image::Builder::eFilter::sRGB_to_RGB)
+            .endTexture2D()
+        .end();
+        if (builder.anyError())
         {
-            u32     x;
-            u32     y;
-            vec2f   tutv;
-        };
-        Vertex2 vtxSRC[8];
-
-        vtxoffset2 = sizeof(Vertex2)*8;
-            vtxSRC[0].x = 300; vtxSRC[0].y = 1;   vtxSRC[0].tutv.set (0,0);
-            vtxSRC[1].x = 500; vtxSRC[1].y = 1;   vtxSRC[1].tutv.set (1,0);
-            vtxSRC[2].x = 500; vtxSRC[2].y = 200; vtxSRC[2].tutv.set (1,1);
-            vtxSRC[3].x = 300; vtxSRC[3].y = 200; vtxSRC[3].tutv.set (0,1);
-            gpu->writeAndSync (vtxBufferHandle, vtxoffset2, vtxSRC, sizeof(Vertex2) * 4);
-
-        idxoffset2 = sizeof(u16)*8;
-            const u16 indexSRC[6] = { 0, 1, 2,    2, 3, 0 };
-            gpu->writeAndSync (idxBufferHandle, idxoffset2, indexSRC, sizeof(u16) * 6);
+            gos::logger::err ("VulkanApp::init() => can't build image'\n");
+            return false;
+        }
+        image::save (im, "shader/example7/godus_01.gosimage");
+        image::free (gos::getScrapAllocator(), im);
+        */
+        image::load (gos::getScrapAllocator(), "shader/example7/godus_01.gosimage", &im);
+        gpu->texture_create2D (&im, 0, &texHandle);
+        image::free (gos::getScrapAllocator(), im);
     }
 
 
+    //creo un descriptor pool
+    gpu->descrPool_createNew (&descrPoolHandle)
+        .setMaxNumDescriptorSet(4)
+        .addPool_uniformBuffer()
+        .addPool_combinedTextureAndSampler(1)
+        .end();
+    if (descrPoolHandle.isInvalid())
+    {
+        gos::logger::err ("VulkanApp::init() => can't create descriptor pool\n");
+        return false;
+    }
+
+    //alloco una istanza del descriptorSet
+    if (!gpu->pipeline_createDescrSetInstance (thePipe->handle_pipe, 0, descrPoolHandle, &descrSetInstanceHandle))
+    {
+        gos::logger::err ("VulkanApp::init() => can't create descriptorSet instance\n");
+        return false;
+    }
 
     return true;
 }    
 
 
 //************************************
-bool VulkanExample7::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, VkImage swapChainImage)
+bool VulkanExample7::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gpu::SwapchainImg &swapchainImg)
 {
+    //aggiorno UBO
+    static u8 bind_once = 0;
+    if (0 == bind_once)
+    {
+        bind_once = 1;
+
+        gos::gpu::DescrSetInstanceWriter descrWriter;
+        descrWriter.begin (gpu, descrSetInstanceHandle)
+            .bindCombinedTextureAndSampler (0, texHandle, samplerHandle)
+            .end();
+    }
+
+
     gos::gpu::pipe2::CmdBufferWriter2 cw;
     cw
         .begin (gpu, cmdBufferHandle)
-        .imageTransition (swapChainImage, eImageLayout::undefined, eImageLayout::transfer_dst)
+        .imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)
         .setViewport (gpu->viewport_getDefault());
 
-    do_recordCommandBuffer (cw, swapChainImage);
-    cw.imageTransition (swapChainImage, eImageLayout::transfer_dst, eImageLayout::presentation);    
+    do_recordCommandBuffer (cw, swapchainImg);
+    cw.imageTransition (swapchainImg.image, eImageLayout::transfer_dst, eImageLayout::presentation);    
     return cw.end();
 }
 
-bool VulkanExample7::do_recordCommandBuffer (gpu::pipe2::CmdBufferWriter2 &cw, VkImage swapChainImage)
+//************************************
+bool VulkanExample7::do_recordCommandBuffer (gpu::pipe2::CmdBufferWriter2 &cw, gpu::SwapchainImg &swapchainImg)
 {
     const asset::Asset_pipe *pipe;
     if (!theHub.getAsset(assetPipe1, &pipe))
         return false;
     
-    const asset::Asset_pipe *pipe2;
-    if (!theHub.getAsset(assetPipe2, &pipe2))
-        return false;
-
     GPUDepthStencilHandle zbHandle = gpu->depthStencil_getDefault();
     vec2f screenWH;
     screenWH.set ((f32)gpu->swapChain_getWidth(), (f32)gpu->swapChain_getHeight());
@@ -146,18 +185,14 @@ bool VulkanExample7::do_recordCommandBuffer (gpu::pipe2::CmdBufferWriter2 &cw, V
         .withRT (rt1, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.1f))
         .withZB (zbHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)
         .bindPipeline (pipe->handle_pipe)
+        .bindDescriptorSet(descrSetInstanceHandle, 0)
         .bindVtxBuffer(vtxBufferHandle)
         .bindIdxBufferU16(idxBufferHandle)
         .pushConstant (0, &screenWH, sizeof(screenWH))
         .drawIndexed (6, 1, 0, 0, 0)
-
-        .bindPipeline (pipe2->handle_pipe)
-        .bindVtxBuffer(vtxBufferHandle, vtxoffset2)
-        .bindIdxBufferU16(idxBufferHandle, idxoffset2)
-        .drawIndexed (6, 1, 0, 0, 0)
         .endRender()
     .imageTransition (rt1, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
-    .copyImageToImage (rt1, swapChainImage, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D());        
+    .copyImageToImage (rt1, swapchainImg.image, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D());        
 
     return true;
 }
@@ -204,7 +239,7 @@ void VulkanExample7::virtual_onRun()
         gpu::SwapchainImg swapchainImg;
         if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
-            recordCommandBuffer (cmdBufferHandle, swapchainImg.image);
+            recordCommandBuffer (cmdBufferHandle, swapchainImg);
             mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }
     }

@@ -1,6 +1,7 @@
 #include "gosImageBuilder.h"
 #include "loader/stb_image.h"
 #include "../gos/gos.h"
+#include "../gos/dataTypes/gosColorHDR.h"
 
 
 using namespace gos;
@@ -83,7 +84,7 @@ Builder& Builder::beginTexture2D (eImageFormat format, u16 width, u16 height, u8
 }
 
 //************************************************************
-Builder& Builder::setMipMapDataMemory (u8 mipMapNum_0toN, const void *imgData, u32 sizeOfImgData)
+Builder& Builder::setMipMapDataMemory (u8 mipMapNum_0toN, const void *imgData, u32 sizeOfImgData, eFilter filter)
 {
 	if (anyError())
 		return *this;
@@ -114,11 +115,43 @@ Builder& Builder::setMipMapDataMemory (u8 mipMapNum_0toN, const void *imgData, u
 	}
 
 	memcpy (&textureData[offset], imgData, sizeOfImgData);
+
+
+	//filtri
+	if (eFilter::sRGB_to_RGB == filter)
+	{
+		u32 ct = offset;
+		for (u32 x = 0; x < texHeader.width; x++)
+		{
+			for (u32 y = 0; y < texHeader.height; y++)
+			{
+				u32 startOffset = offset;
+				u8 r = textureData[offset++];
+				u8 g = textureData[offset++];
+				u8 b = textureData[offset++];
+				u8 a = textureData[offset++];
+
+				gos::ColorHDR col;
+				col.setU8_argb(a, r, g, b);
+				col.sRGBToLinear();
+
+				const u32 argb = col.toU32ARGB();
+
+				textureData[startOffset++] = (u8)((argb & 0x00FF0000) >> 16);
+				textureData[startOffset++] = (u8)((argb & 0x0000FF00) >> 8);
+				textureData[startOffset++] = (u8)((argb & 0x000000FF));
+				textureData[startOffset++] = (u8)((argb & 0xFF000000) >> 24);
+			}
+		}
+	}
+
+
+
 	return *this;
 }
 
 //************************************************************
-Builder& Builder::setMipMapDataFromFile (u8 mipMapNum_0toN, const char *filename)
+Builder& Builder::setMipMapDataFromFile (u8 mipMapNum_0toN, const char *filename, eFilter filter)
 {
 	if (anyError())
 		return *this;
@@ -150,7 +183,7 @@ Builder& Builder::setMipMapDataFromFile (u8 mipMapNum_0toN, const char *filename
 		}	
 		else
 		{
-			setMipMapDataMemory (mipMapNum_0toN, rgba, width * height * 4);
+			setMipMapDataMemory (mipMapNum_0toN, rgba, width * height * 4, filter);
 			stbi_image_free (rgba);
 		}
 	}	
@@ -182,7 +215,7 @@ Builder& Builder::endTexture2D()
 }
 
 //************************************************************
-Builder& Builder::buildTexture2DFromFile (eImageFormat format, const char *filename)
+Builder& Builder::buildTexture2DFromFile (eImageFormat format, const char *filename, eFilter filter)
 {
 	if (anyError())
 		return *this;
@@ -208,7 +241,7 @@ Builder& Builder::buildTexture2DFromFile (eImageFormat format, const char *filen
 		else
 		{
 			beginTexture2D (format, width, height, 1);
-			setMipMapDataMemory (0, rgba, width * height * 4);
+			setMipMapDataMemory (0, rgba, width * height * 4, filter);
 			stbi_image_free (rgba);
 		}
 	}	

@@ -750,7 +750,7 @@ u16 utils::getFormatSize (const eImageFormat fmt)
         return 0;
 
     case eImageFormat::U8_RGBA_sRGB: return 4;
-    case eImageFormat::U8_RGBA: return 3;
+    case eImageFormat::U8_RGBA: return 4;
     case eImageFormat::U8_RGB: return 3;
     case eImageFormat::U8_R: return 1;
 

@@ -21,17 +21,21 @@ public:
 
 private:    
     void        doCPUStuff ();
-    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, VkImage swapChainImage);
-    bool        do_recordCommandBuffer (gos::gpu::pipe2::CmdBufferWriter2 &cw, VkImage swapChainImage);
+    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::SwapchainImg &swapchainImg);
+    bool        do_recordCommandBuffer (gos::gpu::pipe2::CmdBufferWriter2 &cw, gos::gpu::SwapchainImg &swapchainImg);
 
 private:
     gos::asset::Hub         theHub;
     gos::asset::Handle      assetPipe1;
-    gos::asset::Handle      assetPipe2;
     GPUVtxBufferHandle      vtxBufferHandle;
     GPUIdxBufferHandle      idxBufferHandle;
     GPURenderTargetHandle   rt1;
-    u32                     vtxoffset2, idxoffset2;
+
+    GPUTextureHandle        texHandle;
+    GPUSamplerHandle        samplerHandle;
+    GPUDescrPoolHandle      descrPoolHandle;
+    GPUDescrSetInstanceHandle descrSetInstanceHandle;
+
 
 };
 

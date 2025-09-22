@@ -10,10 +10,10 @@ layout(push_constant) uniform sPushData
 //Input
 layout(location = 0) in int in_screenX;     //posizione del pixel in screen coordinate da (0,0) a (window_width -1, window_height -1)
 layout(location = 1) in int in_screenY;
-layout(location = 2) in vec3 in_rgb;
+layout(location = 2) in vec2 in_tutv;
 
 //output
-layout(location = 0) out vec3 out_colorRGB;
+layout(location = 0) out vec2 out_tutv;
 
 
 void main() 
@@ -27,5 +27,5 @@ void main()
     gl_Position.z = 0;
     gl_Position.w = 1;
 
-    out_colorRGB = in_rgb;
+    out_tutv = in_tutv;
 }

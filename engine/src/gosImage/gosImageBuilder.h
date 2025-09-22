@@ -14,21 +14,28 @@ namespace gos
 		class Builder
 		{
 		public:
+			enum class eFilter : u8
+			{
+				none = 0,
+				sRGB_to_RGB
+			};
+
+		public:
 						Builder();
 						~Builder();
 
 			Builder&	begin (gos::Allocator *allocator, Image *out_img);
 			
 			Builder&	beginTexture2D (eImageFormat format, u16 width, u16 height, u8 nMipMap);
-			Builder&		setMipMapDataMemory (u8 mipMapNum_0toN, const void *imgData, u32 sizeOfImgData);
-			Builder&		setMipMapDataFromFile (u8 mipMapNum_0toN, const char *filename);
+			Builder&		setMipMapDataMemory (u8 mipMapNum_0toN, const void *imgData, u32 sizeOfImgData, eFilter filter);
+			Builder&		setMipMapDataFromFile (u8 mipMapNum_0toN, const char *filename, eFilter filter);
 			Builder&	endTexture2D();
 
 			/**
 			 * @brief accetta file di tipo TGA, BMP, JPG, PNG
 			 * Al momento NON crea nessuna mipmap
 			 */
-			Builder&	buildTexture2DFromFile (eImageFormat format, const char *fileName);
+			Builder&	buildTexture2DFromFile (eImageFormat format, const char *fileName, eFilter filter);
 
 
 			bool		end();
