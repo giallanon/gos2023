@@ -41,7 +41,9 @@
         "cstdlib": "cpp",
         "hash_map": "cpp",
         "hash_set": "cpp",
-        "initializer_list": "cpp"
+        "initializer_list": "cpp",
+        "valarray": "cpp",
+        "map": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.compilerPath": "/usr/bin/g++-13"

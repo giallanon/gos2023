@@ -50,6 +50,7 @@ void VulkanExample6::virtual_onCleanup()
     gpu->deleteResource(rt1);
     gpu->deleteResource(rt2);
     gpu->deleteResource(rt3);
+    gpu->deleteResource (zbufferHandle);
 }    
 
 //************************************
@@ -145,9 +146,16 @@ bool VulkanExample6::virtual_onInit ()
     }
 
     //creo un buffer per UBO
-    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eVIBufferMode::shared_cpuW_autoSync, &uboHandle))
+    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eMemAccessMode::shared_cpuW_autoSync, &uboHandle))
     {
         gos::logger::err ("VulkanApp::init() => GPU::uniformBuffer_create\n");
+        return false;
+    }
+
+    //zbuffer
+    if (!gpu->zbuffer_create ("0-", "0-", eImageFormat::_DEPTH_BEST, &zbufferHandle))
+    {
+        gos::logger::err ("VulkanApp::init() => GPU::zbuffer_create\n");
         return false;
     }
 
@@ -193,14 +201,14 @@ bool VulkanExample6::createVertexIndexStageBuffer()
         totNumIdx += myShape->numIdx;
     }
 
-    if (!gpu->vertexBuffer_create (totNumVtx * sizeof(Vertex), eVIBufferMode::onGPU, &vtxBufferHandle))
+    if (!gpu->vertexBuffer_create (totNumVtx * sizeof(Vertex), eMemAccessMode::onGPU, &vtxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->vertexBuffer_create() failed\n");
         return false;
     }
 
     //INDEX BUFFER
-    if (!gpu->indexBuffer_create (totNumIdx * sizeof(u16), eVIBufferMode::onGPU, &idxBufferHandle))
+    if (!gpu->indexBuffer_create (totNumIdx * sizeof(u16), eMemAccessMode::onGPU, &idxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->indexBuffer_create() failed\n");
         return false;
@@ -257,19 +265,17 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, V
 //************************************
 bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::pipe2::CmdBufferWriter2 &cw, VkImage swapChainImage, const asset::Asset_pipe *pipe)
 {
-    GPUDepthStencilHandle zbHandle = gpu->depthStencil_getDefault();
-
     cw
         .imageTransition (rt1, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
         .imageTransition (rt2, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
-        .imageTransition (zbHandle, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);        
+        .imageTransition (zbufferHandle, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);        
 
     auto &rr = cw.beginRender();
     rr
         .withRenderArea (rt1)
         .withRT (rt1, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.1f))
         .withRT (rt2, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(1.0f, 0, 0))
-        .withZB (zbHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)    
+        .withZB (zbufferHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)    
 
         .bindPipeline (pipe->handle_pipe)
         .bindDescriptorSet (descrSetInstancerHandle, 0)

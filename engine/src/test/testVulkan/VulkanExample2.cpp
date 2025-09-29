@@ -41,7 +41,7 @@ bool VulkanExample2::virtual_onInit ()
 
 
     //vertex buffer
-    if (!gpu->vertexBuffer_create (sizeof(Vertex) * NUM_VERTEX, eVIBufferMode::shared_cpuW_autoSync, &vtxBufferHandle))
+    if (!gpu->vertexBuffer_create (sizeof(Vertex) * NUM_VERTEX, eMemAccessMode::shared_cpuW_autoSync, &vtxBufferHandle))
     {
         gos::logger::err ("VulkanApp::virtual_onInit() => gpu->vertexBuffer_create() failed\n");
         return false;

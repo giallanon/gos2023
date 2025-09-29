@@ -35,6 +35,7 @@ void VulkanExample4::virtual_onCleanup()
     gpu->deleteResource (descrSetInstancerHandle);
     gpu->deleteResource (descrPoolHandle);
     gpu->deleteResource (texHandle);
+    gpu->deleteResource (zbufferHandle);
 
 }    
 
@@ -102,7 +103,7 @@ bool VulkanExample4::virtual_onInit ()
         image::save (im, "texture/faccia_2mipmap.gosimage");
 */
         image::load (gos::getScrapAllocator(), "texture/faccia_2mipmap.gosimage", &im);
-        gpu->texture_create2D (&im, 0, &texHandle);
+        gpu->texture_create2D (&im, 0, eMemAccessMode::onGPU, &texHandle);
         image::free (gos::getScrapAllocator(), im);
     }
 
@@ -148,6 +149,14 @@ bool VulkanExample4::virtual_onInit ()
         return false;
     }
 
+    //zbuffer
+    if (!gpu->zbuffer_create ("0-", "0-", eImageFormat::_DEPTH_BEST, &zbufferHandle))
+    {
+        gos::logger::err ("VulkanApp::init() => GPU::zbuffer_create\n");
+        return false;
+    }
+
+
     //pipeline
     gpu::pipe2::Pipeline_def def;
     def
@@ -174,7 +183,7 @@ bool VulkanExample4::virtual_onInit ()
     };
 
     //creo un buffer per UBO
-    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eVIBufferMode::shared_cpuW_autoSync, &uboHandle))
+    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eMemAccessMode::shared_cpuW_autoSync, &uboHandle))
     {
         gos::logger::err ("VulkanApp::init() => GPU::uniformBuffer_create\n");
         return false;
@@ -209,14 +218,14 @@ bool VulkanExample4::virtual_onInit ()
 bool VulkanExample4::createVertexIndexStageBuffer()
 {
     const u32 sizeInByte = sizeof(Vertex) * myShape.numVtx;
-    if (!gpu->vertexBuffer_create (sizeInByte, eVIBufferMode::onGPU, &vtxBufferHandle))
+    if (!gpu->vertexBuffer_create (sizeInByte, eMemAccessMode::onGPU, &vtxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->vertexBuffer_create() failed\n");
         return false;
     }
 
     //INDEX BUFFER
-    if (!gpu->indexBuffer_create (sizeof(u16)*myShape.numIdx, eVIBufferMode::onGPU, &idxBufferHandle))
+    if (!gpu->indexBuffer_create (sizeof(u16)*myShape.numIdx, eMemAccessMode::onGPU, &idxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->indexBuffer_create() failed\n");
         return false;
@@ -341,17 +350,16 @@ bool VulkanExample4::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
     }
 
         
-    GPUDepthStencilHandle hZB = gpu->depthStencil_getDefault();
     gos::gpu::pipe2::CmdBufferWriter2 cw;
     cw
         .begin (gpu, cmdBufferHandle)
         .setViewport (gpu->viewport_getDefault())
         .imageTransition (swapChainImage.image, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
-        .imageTransition (hZB, eImageLayout::undefined, eImageLayout::depth_attachment_optimal)
+        .imageTransition (zbufferHandle, eImageLayout::undefined, eImageLayout::depth_attachment_optimal)
         .beginRender()
             .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
             .withRT (swapChainImage.imageView, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.3f))
-            .withZB (hZB, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, 1.0f, 0)
+            .withZB (zbufferHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, 1.0f, 0)
             .bindPipeline (pipelineHandle)
             .bindDescriptorSet(descrSetInstancerHandle, 0)
             .bindVtxBuffer(vtxBufferHandle)

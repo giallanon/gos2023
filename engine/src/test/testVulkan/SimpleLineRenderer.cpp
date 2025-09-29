@@ -69,7 +69,7 @@ bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHa
     };    
 
     //creo un buffer per UBO
-    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eVIBufferMode::shared_cpuW_autoSync, &hUBO))
+    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eMemAccessMode::shared_cpuW_autoSync, &hUBO))
     {
         gos::logger::err ("SimpleLineRenderer::setup() => GPU::uniformBuffer_create\n");
         return false;
@@ -148,7 +148,7 @@ bool SimpleLineRenderer::recordCommandBuffer (gpu::pipe2::CmdBufferWriter2 &cw, 
         bNeedUpdate = false;
 
         gpu->deleteResource (hVtxBuffer);
-        if (!gpu->vertexBuffer_create (sizeof(sVertex) * vtxList.getNElem(), eVIBufferMode::onGPU, &hVtxBuffer))
+        if (!gpu->vertexBuffer_create (sizeof(sVertex) * vtxList.getNElem(), eMemAccessMode::onGPU, &hVtxBuffer))
         {
             gos::logger::err ("SimpleLineRenderer::recordCommandBuffer() => gpu->vertexBuffer_create() failed\n");
             return false;
@@ -161,7 +161,7 @@ bool SimpleLineRenderer::recordCommandBuffer (gpu::pipe2::CmdBufferWriter2 &cw, 
         }        
 
         gpu->deleteResource (hIdxBuffer);
-        if (!gpu->indexBuffer_create (sizeof(u16) * idxList.getNElem(), eVIBufferMode::onGPU, &hIdxBuffer))
+        if (!gpu->indexBuffer_create (sizeof(u16) * idxList.getNElem(), eMemAccessMode::onGPU, &hIdxBuffer))
         {
             gos::logger::err ("SimpleLineRenderer::recordCommandBuffer() => gpu->indexBuffer_create() failed\n");
             return false;

@@ -30,7 +30,7 @@ namespace gos
                                 mapped_offset = 0;
                                 mapped_size = 0;
                                 bufferSize = 0;
-                                mode = eVIBufferMode::unknown;
+                                mode = eMemAccessMode::invalid;
                                 memoryAllocated = 0;
                             }
 
@@ -38,7 +38,7 @@ namespace gos
         public:
             VkBuffer        vkHandle;
             VkDeviceMemory  _vkMemHandle;
-            eVIBufferMode   mode;
+            eMemAccessMode   mode;
             u64             memoryAllocated;
 
             u32             bufferSize;

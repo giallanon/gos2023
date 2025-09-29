@@ -190,7 +190,7 @@ void VulkanExample5::World::updateInstanceVB (GPUStgBufferHandle hStgBuffer)
 
     const u32 numInstances = dimx*dimy;
     //vtx buffer (stream 1)
-    if (!gpu->vertexBuffer_create (sizeof(sPerInstanceData) * numInstances, eVIBufferMode::onGPU, &hVBInstance))
+    if (!gpu->vertexBuffer_create (sizeof(sPerInstanceData) * numInstances, eMemAccessMode::onGPU, &hVBInstance))
     {
         gos::logger::err ("VulkanExample5::World::updateInstanceVB() => gpu->vertexBuffer_create() failed\n");
         return;

@@ -44,6 +44,8 @@ void VulkanExample5::virtual_onCleanup()
     gpu->deleteResource (uboHandle);
     gpu->deleteResource (descrSetInstancerHandle);
     gpu->deleteResource (descrPoolHandle);
+
+    gpu->deleteResource (zbufferHandle);
     priv_freeMSQ2();
 }    
 
@@ -123,14 +125,14 @@ bool VulkanExample5::virtual_onInit ()
  
 
     //vtx buffer (stream 0)
-    if (!gpu->vertexBuffer_create (sizeof(Vertex) * myShape.numVtx, eVIBufferMode::onGPU, &vtxBufferHandle))
+    if (!gpu->vertexBuffer_create (sizeof(Vertex) * myShape.numVtx, eMemAccessMode::onGPU, &vtxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->vertexBuffer_create() failed\n");
         return false;
     }
 
     //index buffer
-    if (!gpu->indexBuffer_create (sizeof(u16)*myShape.numIdx, eVIBufferMode::onGPU, &idxBufferHandle))
+    if (!gpu->indexBuffer_create (sizeof(u16)*myShape.numIdx, eMemAccessMode::onGPU, &idxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->indexBuffer_create() failed\n");
         return false;
@@ -173,7 +175,12 @@ bool VulkanExample5::virtual_onInit ()
         return false;
     }
 
-
+    //zbuffer
+    if (!gpu->zbuffer_create ("0-", "0-", eImageFormat::_DEPTH_BEST, &zbufferHandle))
+    {
+        gos::logger::err ("VulkanApp::init() => GPU::zbuffer_create\n");
+        return false;
+    }
 
     //pipeline
     gpu::pipe2::Pipeline_def def;
@@ -205,7 +212,7 @@ bool VulkanExample5::virtual_onInit ()
 
    
     //creo un buffer per UBO
-    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eVIBufferMode::shared_cpuW_autoSync, &uboHandle))
+    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eMemAccessMode::shared_cpuW_autoSync, &uboHandle))
     {
         gos::logger::err ("VulkanApp::init() => GPU::uniformBuffer_create\n");
         return false;
@@ -415,11 +422,11 @@ void VulkanExample5::priv_runMarchingSquare()
                 vtx[i].norm = vtxList(i).norm;
             }
 
-            gpu->vertexBuffer_create (sizeof(Vertex) * gpuMSQ2.numVtx, eVIBufferMode::onGPU, &gpuMSQ2.vtxBufferHandle);
+            gpu->vertexBuffer_create (sizeof(Vertex) * gpuMSQ2.numVtx, eMemAccessMode::onGPU, &gpuMSQ2.vtxBufferHandle);
             gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, vtx, gpuMSQ2.vtxBufferHandle, 0, sizeof(Vertex) * gpuMSQ2.numVtx);
             GOSFREE(gos::getScrapAllocator(), vtx);
 
-            gpu->indexBuffer_create (sizeof(u16) * gpuMSQ2.numIdx, eVIBufferMode::onGPU, &gpuMSQ2.idxBufferHandle);
+            gpu->indexBuffer_create (sizeof(u16) * gpuMSQ2.numIdx, eMemAccessMode::onGPU, &gpuMSQ2.idxBufferHandle);
             gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, idxList._queryPointer() , gpuMSQ2.idxBufferHandle, 0, sizeof(u16) * gpuMSQ2.numIdx);
         }
         vtxList.unsetup();
@@ -461,20 +468,19 @@ bool VulkanExample5::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
         .end();
 
 
-    GPUDepthStencilHandle hZB = gpu->depthStencil_getDefault();
     gos::gpu::pipe2::CmdBufferWriter2 cw;
     cw
         .begin (gpu, cmdBufferHandle)
         .setViewport (gpu->viewport_getDefault())
         .imageTransition (swapChainImage.image, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
-        .imageTransition (hZB, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
+        .imageTransition (zbufferHandle, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
     
 
     auto &rend = cw.beginRender();
     rend
         .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
         .withRT (swapChainImage.imageView, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0, 0))
-        .withZB (hZB, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, 1.0f, 0)
+        .withZB (zbufferHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, 1.0f, 0)
         .bindPipeline (pipelineHandle)
         .bindDescriptorSet (descrSetInstancerHandle, 0)
         .bindVtxBuffers(vtxBufferHandle, world->hVBInstance)

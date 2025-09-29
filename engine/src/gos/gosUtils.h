@@ -60,7 +60,8 @@ namespace gos
         u32         crc32 (const char *str);
 
         inline u32  calcNextMultipleOf4 (u32 num)                                                   { const u32 pad = (num % 4); if (0 == pad) return num; return num + 4-pad; }
-                    
+        u32         calcClosestPowerOf2 (u32 num);
+                    //ritorna la potenza del 2 piu' vicina e che sia maggiore uguale a num
 
 
         /**********************************************************

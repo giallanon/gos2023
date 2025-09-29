@@ -52,7 +52,7 @@ private:
     gos::geom::Camera3      cam;
     gos::FPSMovement        movement;
 
-
+    GPUDepthStencilHandle   zbufferHandle;
     GPUVtxBufferHandle      vtxBufferHandle;
     GPUIdxBufferHandle      idxBufferHandle;
     GPUStgBufferHandle      stgBufferHandle;

@@ -27,9 +27,15 @@ loader/stb_image.h
 
 gosImage.cpp
 gosImage.h
+gosImageBufferA.cpp
+gosImageBufferA.h
+gosImageBufferRGBA.cpp
+gosImageBufferRGBA.h
 gosImageBuilder.cpp
 gosImageBuilder.h
 gosImageEnumAndDefine.h
+gosImageUtils.cpp
+gosImageUtils.h
 )
 
 #stb_image.cpp tira un sacco di warning per cui aggiungo queste opzioni di compilazione per non vederli

@@ -203,6 +203,18 @@ CmdBufferWriter2& CmdBufferWriter2::copyImageToImage (const GPURenderTargetHandl
 }
 
 //***********************************************
+CmdBufferWriter2& CmdBufferWriter2::copyImageToImage (const GPURenderTargetHandle &rtSRC, const GPURenderTargetHandle &rtDST, const VkExtent2D &srcSize, const VkExtent2D &dstSize)
+{
+    const gpu::RenderTarget *rtSRC_info = gpu->getInfo (rtSRC);
+    assert (NULL != rtSRC_info);
+
+    const gpu::RenderTarget *rtDST_info = gpu->getInfo (rtDST);
+    assert (NULL != rtDST_info);
+
+    return copyImageToImage (rtSRC_info->image, rtDST_info->image, srcSize, dstSize);
+}
+
+//***********************************************
 CmdBufferWriter2::BeginRend& CmdBufferWriter2::beginRender()
 {
     beginRend.priv_setup (gpu, this, vkCommandBuffer);

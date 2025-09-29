@@ -120,7 +120,6 @@ Builder& Builder::setMipMapDataMemory (u8 mipMapNum_0toN, const void *imgData, u
 	//filtri
 	if (eFilter::sRGB_to_RGB == filter)
 	{
-		u32 ct = offset;
 		for (u32 x = 0; x < texHeader.width; x++)
 		{
 			for (u32 y = 0; y < texHeader.height; y++)

@@ -26,7 +26,7 @@ namespace gos
 
 			Builder&	begin (gos::Allocator *allocator, Image *out_img);
 			
-			Builder&	beginTexture2D (eImageFormat format, u16 width, u16 height, u8 nMipMap);
+			Builder&	beginTexture2D (eImageFormat formatDST, u16 width, u16 height, u8 nMipMap);
 			Builder&		setMipMapDataMemory (u8 mipMapNum_0toN, const void *imgData, u32 sizeOfImgData, eFilter filter);
 			Builder&		setMipMapDataFromFile (u8 mipMapNum_0toN, const char *filename, eFilter filter);
 			Builder&	endTexture2D();

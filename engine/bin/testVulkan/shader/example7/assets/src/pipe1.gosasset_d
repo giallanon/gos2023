@@ -2,7 +2,7 @@
 {
 	rt0: U8_RGBA
 	
-	zb: _DEPTH_BEST, 1, LESS
+	zb: none
 	
 	@vtx_shader
 	{

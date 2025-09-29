@@ -767,3 +767,17 @@ u16 utils::getFormatSize (const eImageFormat fmt)
     case eImageFormat::F32_R: return sizeof(f32);
     }
 }
+
+//********************************************************** 
+u32 utils::calcClosestPowerOf2 (u32 num)
+{
+    if (0 == num)
+        return 0;
+
+    u32 ret = 1;
+    while (ret < num)
+    {
+        ret <<=1;
+    }
+    return ret;    
+}

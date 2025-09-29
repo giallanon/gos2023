@@ -80,7 +80,7 @@ void VBIBManager::add (const void *vtx, u32 numVtx, const u16 *idx, u32 numIndex
         {
             index = vbList.getNElem();
             vbList[index].numFree = numVtxPerBuffer;
-            gpu->vertexBuffer_create (numVtxPerBuffer * sizeOfAVertex, eVIBufferMode::onGPU, &vbList[index].handle);
+            gpu->vertexBuffer_create (numVtxPerBuffer * sizeOfAVertex, eMemAccessMode::onGPU, &vbList[index].handle);
         }
 
         *out_vtxStart = numVtxPerBuffer - vbList(index).numFree;
@@ -111,7 +111,7 @@ void VBIBManager::add (const void *vtx, u32 numVtx, const u16 *idx, u32 numIndex
         {
             index = ibList.getNElem();
             ibList[index].numFree = numIdxPerBuffer;
-            gpu->indexBuffer_create (numIdxPerBuffer * sizeof(u16), eVIBufferMode::onGPU, &ibList[index].handle);
+            gpu->indexBuffer_create (numIdxPerBuffer * sizeof(u16), eMemAccessMode::onGPU, &ibList[index].handle);
         }
 
         *out_idxStart = numIdxPerBuffer - ibList(index).numFree;

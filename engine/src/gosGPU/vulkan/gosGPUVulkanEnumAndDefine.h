@@ -202,9 +202,18 @@ namespace gos
 		{
             void            *host_pt;
 			VkDeviceMemory  _vkMemHandle;
+            u64             size;
             u32             offset;
-            u32             size;
 		};
+
+		struct sMappedImage
+		{
+            void            *host_image_pt; //questo punta direttamente al buffer con l'immagine
+			VkDeviceMemory  _vkMemHandle;
+            u64             size;
+            u32             offset;
+            u32             rowPitch;
+		};        
 	
         struct SwapchainImg
         {

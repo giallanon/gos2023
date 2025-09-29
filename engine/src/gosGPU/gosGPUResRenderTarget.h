@@ -26,6 +26,7 @@ namespace gos
                                 vkMemHandle = VK_NULL_HANDLE;
                                 view = VK_NULL_HANDLE;
                                 usage = 0;
+                                memAccessMode = eMemAccessMode::invalid;
                             }
 
             void            resolve (i16 w, i16 h)                     
@@ -39,7 +40,8 @@ namespace gos
             gos::Dim2D          height;
             u32                 resolvedW;
             u32                 resolvedH;
-            u64                 memoryAllocated;
+            u32                 memoryAllocated;
+            eMemAccessMode      memAccessMode;
 
             VkFormat            format;
             VkImage             image;

@@ -48,6 +48,7 @@ namespace gos
                                     p8[4] = 0x02;
 
                                 p8 += DEBUG_HEADER_SIZE;
+
                                 return p8;
                             }
 

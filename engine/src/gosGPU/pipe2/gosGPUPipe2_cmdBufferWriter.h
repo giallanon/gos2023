@@ -87,6 +87,7 @@ namespace gos
                 
                 CmdBufferWriter2&   copyImageToImage (const VkImage &source, const VkImage &destination, const VkExtent2D &srcSize, const VkExtent2D &dstSize);
                 CmdBufferWriter2&   copyImageToImage (const GPURenderTargetHandle &rtHandle, const VkImage &destination, const VkExtent2D &srcSize, const VkExtent2D &dstSize);
+                CmdBufferWriter2&   copyImageToImage (const GPURenderTargetHandle &rtSRC, const GPURenderTargetHandle &rtDST, const VkExtent2D &srcSize, const VkExtent2D &dstSize);
 
 
                 BeginRend&          beginRender();

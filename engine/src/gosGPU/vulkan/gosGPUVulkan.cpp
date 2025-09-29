@@ -206,7 +206,7 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
 }
 
 //*********************************************
-bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, const VkSurfaceKHR &vkSurface, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion, sPhyDeviceInfo *out)
+bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, const VkSurfaceKHR &vkSurfaceKHR, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion, sPhyDeviceInfo *out)
 {
     gos::Allocator *allocator = gos::getScrapAllocator();
     gos::logger::log ("vulkanScanPhysicalDevices\n");
@@ -313,61 +313,66 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
                     list.printQueueFamilyInfo(i2);
 
                     //deve assolutamente supoprtare la fn di PRESENT
-                    VkBool32 bIsSupportedKHR = false;
-                    vkGetPhysicalDeviceSurfaceSupportKHR (deviceList[i], i2, vkSurface, &bIsSupportedKHR);
-                    if (!bIsSupportedKHR)
-                        gos::logger::log (eTextColor::red, "does NOT support PRESENT to KHR surface\n");
-                    else
+                    if (VK_NULL_HANDLE != vkSurfaceKHR)
                     {
-                        //determino il tipo di Q supportate
-                        if (u32MAX == selectedQueue_gfx.familyIndex)
+                        VkBool32 bIsSupportedKHR = false;
+                        vkGetPhysicalDeviceSurfaceSupportKHR (deviceList[i], i2, vkSurfaceKHR, &bIsSupportedKHR);
+                        if (!bIsSupportedKHR)
                         {
-                            if (list.support_VK_QUEUE_GRAPHICS_BIT(i2))
-                            {
-                                selectedQueue_gfx.familyIndex = i2;
-                                selectedQueue_gfx.count = list.get(i2)->queueCount;
-                            }
+                            gos::logger::log (eTextColor::red, "does NOT support PRESENT to KHR surface\n");
+                            gos::logger::decIndent();
+                            continue;
                         }
+                    }
 
-                        if (list.support_VK_QUEUE_COMPUTE_BIT(i2))
+                    //determino il tipo di Q supportate
+                    if (u32MAX == selectedQueue_gfx.familyIndex)
+                    {
+                        if (list.support_VK_QUEUE_GRAPHICS_BIT(i2))
                         {
-                            if (u32MAX == selectedQueue_compute.familyIndex)
+                            selectedQueue_gfx.familyIndex = i2;
+                            selectedQueue_gfx.count = list.get(i2)->queueCount;
+                        }
+                    }
+
+                    if (list.support_VK_QUEUE_COMPUTE_BIT(i2))
+                    {
+                        if (u32MAX == selectedQueue_compute.familyIndex)
+                        {
+                            selectedQueue_compute.familyIndex = i2;
+                            selectedQueue_compute.count = list.get(i2)->queueCount;
+                        }
+                        else
+                        {
+                            //preferisco una Q che supporti COMPUTE ma non supporti GFX, nella speranza di avere
+                            //una Q di compute pura, preferibilmente diversa da quella gfx
+                            if (!list.support_VK_QUEUE_GRAPHICS_BIT(i2))
                             {
                                 selectedQueue_compute.familyIndex = i2;
                                 selectedQueue_compute.count = list.get(i2)->queueCount;
                             }
-                            else
-                            {
-                                //preferisco una Q che supporti COMPUTE ma non supporti GFX, nella speranza di avere
-                                //una Q di compute pura, preferibilmente diversa da quella gfx
-                                if (!list.support_VK_QUEUE_GRAPHICS_BIT(i2))
-                                {
-                                    selectedQueue_compute.familyIndex = i2;
-                                    selectedQueue_compute.count = list.get(i2)->queueCount;
-                                }
-                            }
                         }
+                    }
 
 
-                        //cerco di trovare una Q dedicata al transfer che supporti espressamente solo quello
-                        if (list.support_VK_QVK_QUEUE_TRANSFER_BIT(i2) && !list.support_VK_QUEUE_GRAPHICS_BIT(i2) && !list.support_VK_QUEUE_COMPUTE_BIT(i2))
+                    //cerco di trovare una Q dedicata al transfer che supporti espressamente solo quello
+                    if (list.support_VK_QVK_QUEUE_TRANSFER_BIT(i2) && !list.support_VK_QUEUE_GRAPHICS_BIT(i2) && !list.support_VK_QUEUE_COMPUTE_BIT(i2))
+                    {
+                        if (u32MAX == selectedQueue_transfer.familyIndex)
                         {
-                            if (u32MAX == selectedQueue_transfer.familyIndex)
+                            selectedQueue_transfer.familyIndex = i2;
+                            selectedQueue_transfer.count = list.get(i2)->queueCount;
+                        }
+                        else
+                        {
+                            if (list.get(i2)->queueCount > selectedQueue_transfer.count)
                             {
                                 selectedQueue_transfer.familyIndex = i2;
                                 selectedQueue_transfer.count = list.get(i2)->queueCount;
                             }
-                            else
-                            {
-                                if (list.get(i2)->queueCount > selectedQueue_transfer.count)
-                                {
-                                    selectedQueue_transfer.familyIndex = i2;
-                                    selectedQueue_transfer.count = list.get(i2)->queueCount;
-                                }
-                            }
                         }
-
                     }
+
                     gos::logger::decIndent();
                 }
 
@@ -659,15 +664,17 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
 }
 
 //*********************************************
-bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurface, bool bVSync, sSwapChainInfo *out)
+bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfaceKHR, bool bVSync, sSwapChainInfo *out)
 {
+    assert (VK_NULL_HANDLE != vkSurfaceKHR);
+
     gos::logger::log("vulkanCreateSwapChain\n");
     gos::logger::incIndent();
 
     gos::Allocator *allocator = gos::getScrapAllocator();
 
     VkSurfaceCapabilitiesKHR vkSurfCapabilities;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkan.phyDevInfo.vkDev, vkSurface, &vkSurfCapabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkan.phyDevInfo.vkDev, vkSurfaceKHR, &vkSurfCapabilities);
     gos::logger::log ("surf capab\n");
     gos::logger::incIndent();
     gos::logger::log ("min/max image count:%d;%d\n", vkSurfCapabilities.minImageCount, vkSurfCapabilities.maxImageCount);
@@ -675,11 +682,11 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
     gos::logger::decIndent();
 
     VPhyDevicekSurfaceFormatKHRList listOfSurfaceFormat;
-    listOfSurfaceFormat.build (allocator, vulkan.phyDevInfo.vkDev, vkSurface);
+    listOfSurfaceFormat.build (allocator, vulkan.phyDevInfo.vkDev, vkSurfaceKHR);
     listOfSurfaceFormat.printInfo();
 
     VPhyDevicekSurfacePresentModesKHRList listOfPresentMode;
-    listOfPresentMode.build (allocator, vulkan.phyDevInfo.vkDev, vkSurface);
+    listOfPresentMode.build (allocator, vulkan.phyDevInfo.vkDev, vkSurfaceKHR);
     listOfPresentMode.printInfo();
 
 
@@ -719,7 +726,7 @@ bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfac
     
     VkSwapchainCreateInfoKHR createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = vkSurface;
+    createInfo.surface = vkSurfaceKHR;
     createInfo.minImageCount = out->imageCount;
     createInfo.imageFormat = out->imageFormat;
     createInfo.imageColorSpace = out->colorSpace;
@@ -992,8 +999,8 @@ bool gos::vulkanDeleteCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whic
 }
 
 //*********************************************
-bool gos::vulkanCreateImage2D (sVkDevice &vulkan, u32 dimx, u32 dimy, u8 nMipMap, VkFormat fmt, VkMemoryPropertyFlags memProps, 
-                                VkImageUsageFlags usage, VkImageTiling tiling, VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte)
+bool gos::vulkanCreateImage2D (sVkDevice &vulkan, u32 dimx, u32 dimy, u8 nMipMap, VkFormat fmt, eMemAccessMode memAccessMode, 
+                                VkImageUsageFlags usage, VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte)
 {
     assert (NULL != out_imagehandle);
     assert (NULL != out_vkMemHandle);
@@ -1003,21 +1010,48 @@ bool gos::vulkanCreateImage2D (sVkDevice &vulkan, u32 dimx, u32 dimy, u8 nMipMap
     *out_vkMemHandle = VK_NULL_HANDLE;
     *out_sizeInByte = 0;
 
+    VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+
+    VkMemoryPropertyFlags vkMemProperties;
+    switch (memAccessMode)
+    {
+    default:
+        gos::logger::err ("GPU::texture_create2D() => invalid mode %d => '%s' \n", memAccessMode, gpu::enumToString(memAccessMode));
+        return false;
+        break;
+
+    case eMemAccessMode::onGPU:
+        vkMemProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        break;
+
+    case eMemAccessMode::shared_cpuW_autoSync:
+        vkMemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        //prob qui ci vuole tiling = VK_IMAGE_TILING_LINEAR;
+        break;
+
+    case eMemAccessMode::shared_cpuW_manualSync:
+        vkMemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        //prob qui ci vuole tiling = VK_IMAGE_TILING_LINEAR;
+        break;
+
+    case eMemAccessMode::readback:
+        vkMemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+        tiling = VK_IMAGE_TILING_LINEAR;
+        break;
+    }         
     
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = static_cast<uint32_t>(dimx);
-    imageInfo.extent.height = static_cast<uint32_t>(dimy);
-    imageInfo.extent.depth = 1;
+    imageInfo.format = fmt;
+    imageInfo.extent = { static_cast<uint32_t>(dimx), static_cast<uint32_t>(dimy), 1 };
     imageInfo.mipLevels = nMipMap;
     imageInfo.arrayLayers = 1;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;    
     imageInfo.tiling = tiling;
-    imageInfo.format = fmt;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = usage;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;    
     imageInfo.flags = 0; // Optional
 
     //creo immagine
@@ -1036,7 +1070,7 @@ bool gos::vulkanCreateImage2D (sVkDevice &vulkan, u32 dimx, u32 dimy, u8 nMipMap
     VkMemoryAllocateInfo memAllloc{};
 	memAllloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	memAllloc.allocationSize = memReqs.size;
-    vulkanGetMemoryType (vulkan.phyDevInfo, memReqs.memoryTypeBits, memProps, &memAllloc.memoryTypeIndex);
+    vulkanGetMemoryType (vulkan.phyDevInfo, memReqs.memoryTypeBits, vkMemProperties, &memAllloc.memoryTypeIndex);
 
     if (!vulkanAllocMemory (vulkan, &memAllloc, nullptr, out_vkMemHandle))
     {

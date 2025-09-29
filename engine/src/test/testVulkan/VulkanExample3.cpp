@@ -103,7 +103,7 @@ bool VulkanExample3::virtual_onInit ()
 bool VulkanExample3::createVertexIndexStageBuffer()
 {
     const u32 sizeInByte = sizeof(Vertex) * NUM_VERTEX;
-    if (!gpu->vertexBuffer_create (sizeInByte, eVIBufferMode::onGPU, &vtxBufferHandle))
+    if (!gpu->vertexBuffer_create (sizeInByte, eMemAccessMode::onGPU, &vtxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->vertexBuffer_create() failed\n");
         return false;
@@ -116,7 +116,7 @@ bool VulkanExample3::createVertexIndexStageBuffer()
         return false;
     }
 
-    if (!gpu->indexBuffer_create (sizeof(u16)*NUM_INDEX, eVIBufferMode::onGPU, &idxBufferHandle))
+    if (!gpu->indexBuffer_create (sizeof(u16)*NUM_INDEX, eMemAccessMode::onGPU, &idxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->indexBuffer_create() failed\n");
         return false;

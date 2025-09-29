@@ -318,6 +318,13 @@ enum class eDataBlobElemType : u8
     arrayType = 2
 };
 
+enum class eClip2D : u8
+{
+    outside		= 0,
+    inside		= 1,
+    intersect	= 2
+};
+
 namespace gos
 {
     struct sGOSInit

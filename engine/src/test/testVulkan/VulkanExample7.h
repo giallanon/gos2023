@@ -24,17 +24,26 @@ private:
     bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::SwapchainImg &swapchainImg);
     bool        do_recordCommandBuffer (gos::gpu::pipe2::CmdBufferWriter2 &cw, gos::gpu::SwapchainImg &swapchainImg);
 
+    bool        sampleImage (GPUCmdBufferHandle &cmdBufferHandle, u32 dstW, u32 dstH);
+
 private:
     gos::asset::Hub         theHub;
     gos::asset::Handle      assetPipe1;
     GPUVtxBufferHandle      vtxBufferHandle;
     GPUIdxBufferHandle      idxBufferHandle;
     GPURenderTargetHandle   rt1;
+    GPURenderTargetHandle   rtReadback;
 
     GPUTextureHandle        texHandle;
     GPUSamplerHandle        samplerHandle;
     GPUDescrPoolHandle      descrPoolHandle;
     GPUDescrSetInstanceHandle descrSetInstanceHandle;
+
+    GPUViewportHandle       viewportHandle;
+    u32                     tex_width;
+    u32                     tex_height;
+    u32                     rt_width;
+    u32                     rt_height;
 
 
 };

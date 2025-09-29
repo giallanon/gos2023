@@ -105,7 +105,7 @@ namespace gos
         void                deinit();
 
         //================ window stuff
-        GOSWinHandle        getWindow()                                     { return window.winHandle; }
+        GOSWinHandle        getWindow()                                     { return mainWindow.winHandle; }
         void                toggleFullscreen();
         bool                vsync_isEnabled() const                         { return vSync; }
         void                vsync_enable (bool b);
@@ -162,18 +162,20 @@ namespace gos
         
 
 
-        //================ depth buffer
-        GPUDepthStencilHandle       depthStencil_getDefault() const                         { return defaultDepthStencil.handle; }
-        eImageFormat                depthStencil_getDefaultFormat() const                   { return defaultDepthStencil.gosFormat; }
-        bool                        depthStencil_create (const eImageFormat fmt, const gos::Dim2D &w, const gos::Dim2D &h, bool bWithStencil, GPUDepthStencilHandle *out_handle);
+        //================ zbuffer
+        eImageFormat		        zbuffer_getBestFormat() const                                                                                               { return zbuffer_bestFmt_noStencil; }
+        eImageFormat		        zbuffer_getBestFormat (bool bWithStencil) const                                                                             { if (bWithStencil) return zbuffer_bestFmt_withStencil; return zbuffer_bestFmt_noStencil; }
+        bool				        zbuffer_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, GPUDepthStencilHandle *out_handle)        { return zbuffer_create (dimx, dimy, fmt, eMemAccessMode::onGPU, out_handle); }
+        bool				        zbuffer_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, eMemAccessMode memAccessMode, GPUDepthStencilHandle *out_handle);
         void                        deleteResource (GPUDepthStencilHandle &handle);
         const gpu::DepthStencil*    getInfo (const GPUDepthStencilHandle handle) const;
 
         //================ render target
-		bool				        renderTarget_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, GPURenderTargetHandle *out_handle);
+		bool				        renderTarget_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, GPURenderTargetHandle *out_handle)       { return renderTarget_create (dimx, dimy, fmt, eMemAccessMode::onGPU, out_handle); }
+        bool				        renderTarget_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, eMemAccessMode memAccessMode, GPURenderTargetHandle *out_handle);
         void                        deleteResource (GPURenderTargetHandle &handle);
         const gpu::RenderTarget*    getInfo (const GPURenderTargetHandle handle) const;
-
+        bool                        map (const GPURenderTargetHandle handle, gpu::sMappedImage *out) const;
 
         //================ Pipeline
         bool    pipeline_createNew (const gpu::pipe2::Pipeline_def &rpd, GPUPipelineHandle *out_handle);
@@ -202,11 +204,14 @@ namespace gos
 
         //================ buffer unmapping / manualSync
         void    buffer_unmap (gpu::sMappedBuffer &m);
-        void    buffer_manualSync (const gpu::sMappedBuffer *list, u32 numElemInList);
+        void    buffer_manualSync_cpuWrite (const gpu::sMappedBuffer *list, u32 numElemInList);
+        void    buffer_manualSync_cpuRead (const gpu::sMappedBuffer *list, u32 numElemInList);
 
+        void    image_unmap (gpu::sMappedImage &m);
+        void    image_manualSync_cpuRead (const gpu::sMappedImage *list, u32 numElemInList);
 
         //================ vertex buffer
-        bool    vertexBuffer_create (u32 sizeInByte, eVIBufferMode mode, GPUVtxBufferHandle *out_handle);
+        bool    vertexBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUVtxBufferHandle *out_handle);
         void    deleteResource (GPUVtxBufferHandle &handle)                                                             { priv_bufferDestroy (vtxBufferList, handle); }
         bool    toVulkan (const GPUVtxBufferHandle handle, VkBuffer *out) const;
         bool    writeAndSync (const GPUVtxBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (vtxBufferList, handle, offsetDST, src, sizeInByte); }
@@ -214,21 +219,21 @@ namespace gos
 
         
         //================ index buffer
-        bool    indexBuffer_create (u32 sizeInByte, eVIBufferMode mode, GPUIdxBufferHandle *out_handle);
+        bool    indexBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUIdxBufferHandle *out_handle);
         void    deleteResource (GPUIdxBufferHandle &handle)                                                             { priv_bufferDestroy (idxBufferList, handle); }
         bool    toVulkan (const GPUIdxBufferHandle handle, VkBuffer *out) const;
         bool    writeAndSync (const GPUIdxBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (idxBufferList, handle, offsetDST, src, sizeInByte); }
         bool    map (const GPUIdxBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (idxBufferList, handle, offsetDST, sizeInByte, out); }
 
         //================ uniform buffer
-        bool    uniformBuffer_create (u32 sizeInByte, eVIBufferMode mode, GPUUniformBufferHandle *out_handle);
+        bool    uniformBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUUniformBufferHandle *out_handle);
         void    deleteResource (GPUUniformBufferHandle &handle)                                                             { priv_bufferDestroy (uniformBufferList, handle); }
         bool    toVulkan (const GPUUniformBufferHandle handle, VkBuffer *out, u32 *out_bufferSize) const;
         bool    writeAndSync (const GPUUniformBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (uniformBufferList, handle, offsetDST, src, sizeInByte); }
         bool    map (const GPUUniformBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (uniformBufferList, handle, offsetDST, sizeInByte, out); }
 
         //================ storage buffer
-        bool    storageBuffer_create (u32 sizeInByte, eVIBufferMode mode, GPUStorageBufferHandle *out_handle);
+        bool    storageBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUStorageBufferHandle *out_handle);
         void    deleteResource (GPUStorageBufferHandle &handle)                                                             { priv_bufferDestroy (storageBufferList, handle); }
         bool    toVulkan (const GPUStorageBufferHandle handle, VkBuffer *out, u32 *out_bufferSize) const;
         bool    writeAndSync (const GPUStorageBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (storageBufferList, handle, offsetDST, src, sizeInByte); }
@@ -262,10 +267,11 @@ namespace gos
 
 							
         //================ texture
-		bool    texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, const void *srcDATA, GPUTextureHandle *out_handle);
-        bool    texture_create2D (const gos::Image *im, u8 srcTextureNum, GPUTextureHandle *out_handle);
-        void    deleteResource (GPUTextureHandle &handle);
-        bool    toVulkan (const GPUTextureHandle handle, VkImageView *out) const;
+		bool                texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, GPUTextureHandle *out_handle);
+        bool                texture_create2D (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, GPUTextureHandle *out_handle);
+        void                deleteResource (GPUTextureHandle &handle);
+        const gpu::Texture* getInfo (const GPUTextureHandle handle) const;
+        bool                toVulkan (const GPUTextureHandle handle, VkImageView *out) const;
 
         //================ sampler
         bool    sampler_create (const gpu::SamplerDesc &desc, GPUSamplerHandle *out_handle);
@@ -304,6 +310,9 @@ namespace gos
                                 input::window_getGLF (winHandle, &glfWin);
                                 return glfWin;
                             }
+
+            bool            isValid() const                             { return winHandle.isValid(); }
+
         public:
             GOSWinHandle winHandle;
             int storedX;
@@ -312,13 +321,6 @@ namespace gos
             int storedH;
         };
 
-        
-        struct sDefaultDepthStencil
-        {
-            GPUDepthStencilHandle   handle;
-            VkFormat                vkFormat;
-            eImageFormat            gosFormat;
-        };
 
 
         class ToBeDeletedBuilder
@@ -410,7 +412,7 @@ namespace gos
         bool                immediateTransferCmd_begin();
         bool                immediateTransferCmd_end();
 
-        bool                priv_bufferCreate (VkBufferUsageFlags vkUsage, u32 sizeInByte, bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ, eVIBufferMode mode, gpu::Buffer *out);
+        bool                priv_bufferCreate (VkBufferUsageFlags vkUsage, u32 sizeInByte, bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ, eMemAccessMode mode, gpu::Buffer *out);
         bool                priv_bufferMap (const GPUVtxBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
 
                             template<class THandleList, class THandle>
@@ -429,7 +431,7 @@ namespace gos
 
                             
         /**
-         * @brief valido solo per i buffer creati con eVIBufferMode::shared_cpuW_autoSync
+         * @brief valido solo per i buffer creati con eMemAccessMode::shared_cpuW_autoSync
          * <out> viene memcpiato nel buffer a partire da <offsetDST> per un totale di <sizeInByte> byte.
          * La sincronizzazione con GPU e' automatica
          */
@@ -446,13 +448,13 @@ namespace gos
                                     return false;
                                 }
 
-                                if (eVIBufferMode::shared_cpuW_autoSync != s->mode)
+                                if (eMemAccessMode::shared_cpuW_autoSync != s->mode)
                                 {
                                     gos::logger::err ("GPU::priv_bufferWriteAndSync() => invalid buffer mode [%s]\n", gpu::enumToString(s->mode));
                                     return false;
                                 }
 
-                                //i buffer eVIBufferMode::shared_cpuW_autoSync sono sempre totalmente mappati all'atto della creazione
+                                //i buffer eMemAccessMode::shared_cpuW_autoSync sono sempre totalmente mappati all'atto della creazione
                                 if (sizeInByte > s->bufferSize)
                                 {
                                     gos::logger::err ("GPU::priv_bufferWriteAndSync() => invalid params1 (%d, %d). Buffer size is %d\n", offsetDST, sizeInByte, s->bufferSize);
@@ -482,7 +484,7 @@ namespace gos
                                     return false;
                                 }
 
-                                if (eVIBufferMode::shared_cpuW_manualSync != s->mode)
+                                if (eMemAccessMode::shared_cpuW_manualSync != s->mode)
                                 {
                                     gos::logger::err ("GPU::priv_bufferMap() => invalid buffer mode. Buffer mode must be [shared_cpuW_manualSync], current mode is %s\n", gpu::enumToString(s->mode));
                                     return false;
@@ -519,9 +521,9 @@ namespace gos
 
     private:
         gos::Allocator              *allocator;
-        sWindow                     window;
+        sWindow                     mainWindow;
         VkInstance                  vkInstance;
-        VkSurfaceKHR                vkSurface;
+        VkSurfaceKHR                vkSurfaceKHR;
         VkDebugUtilsMessengerEXT    vkDebugMessenger;
         sVkDevice                   vulkan;
         VkSurfaceCapabilitiesKHR    vkSurfCapabilities;
@@ -534,7 +536,8 @@ namespace gos
         ToBeDeletedBuilder          toBeDeletedBuilder;
 
         GPUViewportHandle           defaultViewportHandle;
-        sDefaultDepthStencil        defaultDepthStencil;
+        eImageFormat                zbuffer_bestFmt_noStencil;
+        eImageFormat                zbuffer_bestFmt_withStencil;
 
         ImmediateTransferCmd        helperImmediateTransferCmd;
         GPUStgBufferHandle          helperStagingBuffer;

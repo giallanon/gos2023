@@ -12,7 +12,7 @@ namespace gos
      */
     bool    vulkanCreateInstance (VkInstance *out, const gos::StringList &requiredValidationLayerList, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion);
 
-    bool    vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, const VkSurfaceKHR &vkSurface, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion, sPhyDeviceInfo *out);
+    bool    vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, const VkSurfaceKHR &vkSurfaceKHR, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion, sPhyDeviceInfo *out);
 
     /*********************************************
      * Dato il [vkPhyDevice] e una lista di estensioni richieste [requiredExtensionList], crea il device logico
@@ -20,7 +20,7 @@ namespace gos
      */
     bool    vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion, sVkDevice *out_vulkan);
 
-    bool    vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurface, bool bVSync, sSwapChainInfo *out);
+    bool    vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfaceKHR, bool bVSync, sSwapChainInfo *out);
 
     bool    vulkanFindBestDepthOnlyFormat (const sPhyDeviceInfo &vkPhyDevInfo, VkFormat *out_depthFormat);
 
@@ -40,9 +40,8 @@ namespace gos
     bool    vulkanCreateCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer *out_handle);
     bool    vulkanDeleteCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer &vkHandle);
 
-    bool    vulkanCreateImage2D (sVkDevice &vulkan, u32 dimx, u32 dimy, u8 numMipMap, VkFormat fmt, VkMemoryPropertyFlags memProps, 
-                                VkImageUsageFlags usage, VkImageTiling tiling,
-                                VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte);
+    bool    vulkanCreateImage2D (sVkDevice &vulkan, u32 dimx, u32 dimy, u8 numMipMap, VkFormat fmt, eMemAccessMode memAccessMode, 
+                                VkImageUsageFlags usage, VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte);
 
 
 } //namespace gos

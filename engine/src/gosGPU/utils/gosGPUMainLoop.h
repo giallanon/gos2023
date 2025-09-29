@@ -52,7 +52,7 @@ namespace gos
         };
 
         /********************************
-         * @brief   PresentGFXJob
+         * @brief   GFXJob
          *          Submitta una job grafico alla GPU e si preoccupa di presentarlo appena possibile.
          *          submit() pretende che <swapChainImageIndex> sia un valido indice ad una immagine di swapchain
          *          precedentemente acquisita (per esempio da AquireSwapChainImage).
@@ -60,16 +60,17 @@ namespace gos
          *          hasFinished() ritona true se la classe non ha alcun lavoro in canna (ovvero ritorna true dopo che il
          *          job e' stato presentato, oppure se non ha alcun job da gestire).
          */        
-        class PresentGFXJob
+        class GFXJob
         {
         public:
-                    PresentGFXJob()                         { gpu = NULL; stato = eStato::idle; }
-                    ~PresentGFXJob()                        { unsetup(); }
+                    GFXJob()                         { gpu = NULL; stato = eStato::idle; }
+                    ~GFXJob()                        { unsetup(); }
 
             void    setup (gos::GPU *gpuIN);
             void    unsetup();
 
-            void    submit (const GPUCmdBufferHandle &cmdBufferHandle, const gos::gpu::SwapchainImg &swapchainImg);
+            void    submitAndPresent (const GPUCmdBufferHandle &cmdBufferHandle, const gos::gpu::SwapchainImg &swapchainImg)    { priv_submit (cmdBufferHandle, swapchainImg.imageIndex); }
+            void    submit (const GPUCmdBufferHandle &cmdBufferHandle)                                                          { priv_submit (cmdBufferHandle, u32MAX); }
             bool    hasFinished();
 
         public:
@@ -82,6 +83,8 @@ namespace gos
                 jobInProgress
             };
 
+        private:
+            void        priv_submit (const GPUCmdBufferHandle &cmdBufferHandle, u32 swapChainImageIndex);
         private:
             GPU         *gpu;
             VkFence     fence;
@@ -116,7 +119,7 @@ namespace gos
 
         private:
             AquireSwapChainImage    acquire;
-            PresentGFXJob           gfxJob;
+            GFXJob           gfxJob;
             u64                     nextTimePrintInfo_msec;
             u64                     printInfoFreq_msec;
             gos::FIFOFixedSize<SwapchainImg,4>  acquiredList;

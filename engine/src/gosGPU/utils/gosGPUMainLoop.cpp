@@ -50,23 +50,22 @@ bool AquireSwapChainImage::tryAcquire ()
 
 /************************************************************************************
  *
- *  PresentGFXJob
+ *  GFXJob
  * 
  *************************************************************************************/
-void PresentGFXJob::setup (gos::GPU *gpuIN)         { gpu=gpuIN; gpu->fence_create (false, &fence); }
-void PresentGFXJob::unsetup()                       { if (NULL == gpu) return; gpu->fence_destroy (fence); gpu = NULL; }
-void PresentGFXJob::submit (const GPUCmdBufferHandle &cmdBufferHandle, const gos::gpu::SwapchainImg &swapchainImg)
+void GFXJob::setup (gos::GPU *gpuIN)         { gpu=gpuIN; gpu->fence_create (false, &fence); }
+void GFXJob::unsetup()                       { if (NULL == gpu) return; gpu->fence_destroy (fence); gpu = NULL; }
+void GFXJob::priv_submit (const GPUCmdBufferHandle &cmdBufferHandle, u32 swapChainImageIndexIN)
 {
     assert (eStato::idle == stato);
     timerFPS.onFrameBegin();
     stato = eStato::jobInProgress;
-    swapChainImageIndex = swapchainImg.imageIndex;
+    swapChainImageIndex = swapChainImageIndexIN;
     swapChainAutoID = gpu->swapChain_getCurrentAutoID();
 
 
     VkCommandBuffer vkCommandBuffer_GFX;
     gpu->toVulkan (cmdBufferHandle, &vkCommandBuffer_GFX);
-
 
 
     VkPipelineStageFlags waitStages[] = { 0 }; //{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -89,12 +88,12 @@ void PresentGFXJob::submit (const GPUCmdBufferHandle &cmdBufferHandle, const gos
     if (VK_SUCCESS != result)
     {
         stato = eStato::idle;
-        gos::logger::err ("PresentGFXJob::submit() => vkQueueSubmit() => %s\n", string_VkResult(result));
+        gos::logger::err ("GFXJob::submit() => vkQueueSubmit() => %s\n", string_VkResult(result));
     }
 }
 
 //*****************************************************
-bool PresentGFXJob::hasFinished()
+bool GFXJob::hasFinished()
 {
     if (eStato::jobInProgress == stato)
     {
@@ -105,7 +104,7 @@ bool PresentGFXJob::hasFinished()
         stato = eStato::idle;
         
         //se nel frattempo la swapchain e' stata ricreata, non posso presentare perche' l'immagine non e' + valida
-        if (swapChainAutoID == gpu->swapChain_getCurrentAutoID())
+        if (u32MAX != swapChainImageIndex && swapChainAutoID == gpu->swapChain_getCurrentAutoID())
             gpu->swapChain_present (NULL, 0, swapChainImageIndex);
     }
 
@@ -159,5 +158,5 @@ bool MainLoop2::gfxJob_canSubmit (SwapchainImg *out)
 
 void MainLoop2::gfxJob_submitAndPresent (const GPUCmdBufferHandle &cmdBufferHandle, const SwapchainImg &info)
 {
-    gfxJob.submit (cmdBufferHandle, info);
+    gfxJob.submitAndPresent (cmdBufferHandle, info);
 }

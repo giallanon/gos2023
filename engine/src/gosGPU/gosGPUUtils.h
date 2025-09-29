@@ -8,7 +8,7 @@ namespace gos
 {
     namespace gpu
     {
-        const char*     enumToString (eVIBufferMode s);
+        const char*     enumToString (eMemAccessMode s);
         const char*     enumToString (eGPUQueueType s);
 
         VkFormat                toVulkan (eDataFormat f);

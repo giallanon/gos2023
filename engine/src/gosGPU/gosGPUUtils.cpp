@@ -6,15 +6,17 @@ using namespace gos;
 
 
 //*************************************************************************
-const char* gpu::enumToString (eVIBufferMode s)
+const char* gpu::enumToString (eMemAccessMode s)
 {
     switch (s)
     {
     default:                                        return "??INVALID-VALUE??";
-    case eVIBufferMode::onGPU:                      return "onGPU";
-    case eVIBufferMode::shared_cpuW_autoSync:       return "shared_cpuW_autoSync";
-    case eVIBufferMode::shared_cpuW_manualSync:     return "shared_cpuW_manualSync";
-    case eVIBufferMode::unknown:                    return "unknown";
+    case eMemAccessMode::invalid:                    return "invalid";
+    case eMemAccessMode::onGPU:                      return "onGPU";
+    case eMemAccessMode::shared_cpuW_autoSync:       return "shared_cpuW_autoSync";
+    case eMemAccessMode::shared_cpuW_manualSync:     return "shared_cpuW_manualSync";
+    case eMemAccessMode::readback:                  return "readback";      
+    
     }
 }
 

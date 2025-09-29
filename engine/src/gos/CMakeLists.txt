@@ -25,10 +25,13 @@ add_library(${BINARY_OUTPUT_FILENAME} STATIC
 
 dataTypes/gosColorHDR.cpp
 dataTypes/gosColorHDR.h
+dataTypes/gosColorU32.cpp
+dataTypes/gosColorU32.h
 dataTypes/gosDate.cpp
 dataTypes/gosDate.h
 dataTypes/gosDateTime.cpp
 dataTypes/gosDateTime.h
+dataTypes/gosPoint2.h
 dataTypes/gosPosDim2D.cpp
 dataTypes/gosPosDim2D.h
 dataTypes/gosTime24.cpp
