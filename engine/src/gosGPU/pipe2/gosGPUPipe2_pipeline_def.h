@@ -21,11 +21,15 @@ namespace gos
              */
             struct PushConst
             {
-                VkShaderStageFlags  stageFlags;
-                u16                 offset;
-                u16                 sizeInByte;
-            };
+            public:
+                void    reset()     { offset = sizeInByte = 0; shaderTypeList.clear(); }
 
+            public:
+                u16             offset;
+                u16             sizeInByte;
+                ShaderTypeList  shaderTypeList;
+            };
+            
             /****************************************
              * @brief 
              * 
@@ -137,7 +141,8 @@ namespace gos
                 Pipeline_def&   reset()
                 {
                     numPushConst = 0;
-                    memset (pushConstList, 0, sizeof(pushConstList));
+                    for (u32 i=0; i<GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE; i++)
+                        pushConstList[i].reset();
 
                     numDescrSet = 0;
                     numShader = 0;
@@ -167,12 +172,12 @@ namespace gos
 
                 Pipeline_def&   shader_add (const GPUShaderHandle &handle)                                          { assert (numShader < GOSGPU__NUM_MAX_SHADER_PER_PIPELINE); shaderHandleList[numShader++] = handle; return *this; }
 
-                Pipeline_def&   pushConst_add (u16 offset, u16 sizeInByte, VkShaderStageFlags stageFlags)
+                Pipeline_def&   pushConst_add (u16 offset, u16 sizeInByte, ShaderTypeList shaderTypeList)
                 {
                     assert (numPushConst < GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE);
                     pushConstList[numPushConst].offset = offset;
                     pushConstList[numPushConst].sizeInByte = sizeInByte;
-                    pushConstList[numPushConst].stageFlags = stageFlags;
+                    pushConstList[numPushConst].shaderTypeList = shaderTypeList;
                     numPushConst++;
                     return *this;
                 }

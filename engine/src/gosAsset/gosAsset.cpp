@@ -49,7 +49,7 @@ const char* asset::enumToString (const eAssetType s)
         case eAssetType::__DO__NOT__USE:    return "!__DO__NOT__USE";
         case eAssetType::vtx_shader:        return "vtx_shader";
         case eAssetType::pxl_shader:        return "pxl_shader";
-        case eAssetType::texture2D:         return "texture2D";
+        case eAssetType::tex2D:         return "tex2D";
         case eAssetType::pipe:              return "pipe";
         case eAssetType::shape:             return "shape";
         case eAssetType::DEBUG_ASSET:       return "DEBUG_ASSET";
@@ -70,7 +70,7 @@ bool asset::stringToEnum (const char *str, eAssetType *out)
     //HELPER(__DO__NOT__USE)
     HELPER(vtx_shader)
 	HELPER(pxl_shader)
-    HELPER(texture2D)
+    HELPER(tex2D)
 	HELPER(pipe)
     HELPER(shape)
     HELPER(DEBUG_ASSET);
@@ -601,7 +601,7 @@ bool asset::res_delete (Context &ctx, const asset::UID &uid, asset::HashedUIDLis
     const u32 n = depList->getNElem();
     for (u32 i=0; i<n; i++)
     {
-        if (!asset::asset_delete (ctx, uid, out_CAN_BE_NULL_list_of_deleted_asset, bClearListOnStart))
+        if (!asset::asset_deleteFromDB (ctx, uid, out_CAN_BE_NULL_list_of_deleted_asset, bClearListOnStart))
         {
             ret = false;
             break;
@@ -774,25 +774,25 @@ bool asset__do_asset_delete_ric (asset::Context &ctx, const asset::UID &uid, ass
     return true;
 }
 
-bool asset::asset_delete (Context &ctx, const asset::UID &uid, asset::HashedUIDList *out_CAN_BE_NULL_list_of_deleted_asset, bool bClearListOnStart)
+bool asset::asset_deleteFromDB (Context &ctx, const asset::UID &uid, asset::HashedUIDList *out_CAN_BE_NULL_list_of_deleted_asset, bool bClearListOnStart)
 {
     assert (uid.isAnAsset());
 
     if (!ctx.isValid())
     {
-        logger::err ("asset_delete (%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        logger::err ("asset_deleteFromDB (%" PRIu64 ") => invalid ctx\n",  uid._uid);
         return false;
     }
     
     if (!uid.isAnAsset())
     {
-        logger::err ("asset_delete (%" PRIu64 ") => UID is not an ASSET uid\n",  uid._uid);
+        logger::err ("asset_deleteFromDB (%" PRIu64 ") => UID is not an ASSET uid\n",  uid._uid);
         return false;
     }
 
     if (!db::transaction_begin(ctx.db))
     {
-        logger::err ("asset_delete (%" PRIu64 ") => transaction_begin failed, DB has not been touched\n",  uid._uid);
+        logger::err ("asset_deleteFromDB (%" PRIu64 ") => transaction_begin failed, DB has not been touched\n",  uid._uid);
         return false;
     }
 
@@ -812,13 +812,13 @@ bool asset::asset_delete (Context &ctx, const asset::UID &uid, asset::HashedUIDL
     if (!ret)
     {
         db::transaction_rollback(ctx.db);
-        logger::err ("asset_delete (%" PRIu64 ") => error deleting asset. DB has been rolled-back\n",  uid._uid);
+        logger::err ("asset_deleteFromDB (%" PRIu64 ") => error deleting asset. DB has been rolled-back\n",  uid._uid);
         return false;
     }        
 
     if (!db::transaction_commit (ctx.db))
     {
-        logger::err ("asset_delete (%" PRIu64 ") => transaction_commit failed... not sure what to do\n",  uid._uid);
+        logger::err ("asset_deleteFromDB (%" PRIu64 ") => transaction_commit failed... not sure what to do\n",  uid._uid);
         return false;
     }
         

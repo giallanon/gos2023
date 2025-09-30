@@ -1,6 +1,7 @@
 #ifndef _gosAssetBuilderInterface_h_
 #define _gosAssetBuilderInterface_h_
 #include "../gosAssetEnumAndDefine.h"
+#include "../gosGPU/gosGPU.h"
 #include "gosIniFile.h"
 
 namespace gos
@@ -23,7 +24,7 @@ namespace gos
             eAssetType      getAssType() const                                              { return assType; }
 
 
-            virtual bool    build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out) = 0;
+            virtual bool    build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, gos::GPU *gpu, sBuildResult *out) = 0;
             
         protected:
             bool            prot_needResolvedSubsection (Context &ctx, const gos::IniFileSection *sec, eAssetType assType, asset::UID *out_uid) const;

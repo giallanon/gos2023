@@ -212,7 +212,7 @@ namespace gos
 			VkDeviceMemory  _vkMemHandle;
             u64             size;
             u32             offset;
-            u32             rowPitch;
+            u32             row_stride;
 		};        
 	
         struct SwapchainImg

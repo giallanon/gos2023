@@ -178,7 +178,7 @@ bool VulkanExample6::virtual_onInit ()
 
 
     //alloco una istanza del descriptorSet
-    if (!gpu->pipeline_createDescrSetInstance (pipe->handle_pipe, 0, descrPoolHandle, &descrSetInstancerHandle))
+    if (!gpu->descrSetInstance_create (descrPoolHandle, pipe->handle_pipe, 0, &descrSetInstancerHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create descriptorSet instance\n");
         return false;

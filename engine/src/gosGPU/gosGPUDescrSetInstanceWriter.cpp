@@ -20,7 +20,8 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::begin (gos::GPU *gpuIN
     imageList.num = 0;
     numWriteDescr = 0;
 
-    if (!gpu->toVulkan (descrSetInstanceHandle, &vkDescrSetHandle))
+    descrSetInstHandle = gpu->getInfo (descrSetInstanceHandle);
+    if (NULL == descrSetInstHandle)
     {
         bAnyError = true;
         gos::logger::err ("DescrSetInstanceWriter::begin() => invalid DescrSetInstance handle\n");
@@ -42,28 +43,26 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindUniformBuffer (u32
         return *this;
     }
     
-    VkBuffer vkBufferHandle;
-    u32 bufferSize;
-    if (!gpu->toVulkan (handle, &vkBufferHandle, &bufferSize))
+    const gpu::Buffer *buffer = gpu->getInfo(handle);
+    if (NULL == buffer)
     {
         gos::logger::err ("DescrSetInstanceWriter::bindUniformBuffer() => invalid uniform buffer handle\n");
         return *this;
     }        
-
-
+ 
     //buffer descr
     VkDescriptorBufferInfo *p = &bufferList.list[bufferList.num++];
     memset (p, 0, sizeof(VkDescriptorBufferInfo));
-    p->buffer = vkBufferHandle;
+    p->buffer = buffer->vkHandle;
     p->offset = 0;
-    p->range = bufferSize;
+    p->range = buffer->bufferSize;
 
 
     //write descr
     VkWriteDescriptorSet *d = &writeDescrList[numWriteDescr++];
     memset (d, 0, sizeof(VkWriteDescriptorSet));
     d->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    d->dstSet = vkDescrSetHandle;
+    d->dstSet = descrSetInstHandle->vkHandle;
     d->dstBinding = binding;
     d->dstArrayElement = dstArrayElem;
 
@@ -80,15 +79,14 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindStorageBuffer (u32
     if (bAnyError)
         return *this;
     
-    VkBuffer vkBufferHandle;
-    u32 bufferSize;
-    if (!gpu->toVulkan (handle, &vkBufferHandle, &bufferSize))
+    const gpu::Buffer *buffer = gpu->getInfo(handle);
+    if (NULL == buffer)
     {
         gos::logger::err ("DescrSetInstanceWriter::bindStorageBuffer() => invalid uniform buffer handle\n");
         return *this;
     }        
 
-    return priv_bindBuffer (binding, vkBufferHandle, bufferSize, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, dstArrayElem);
+    return priv_bindBuffer (binding, buffer->vkHandle, buffer->bufferSize, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, dstArrayElem);
 }
 
 //***************************** 
@@ -97,15 +95,14 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindDynamicStorageBuff
     if (bAnyError)
         return *this;
     
-    VkBuffer vkBufferHandle;
-    u32 bufferSize;
-    if (!gpu->toVulkan (handle, &vkBufferHandle, &bufferSize))
+    const gpu::Buffer *buffer = gpu->getInfo(handle);
+    if (NULL == buffer)
     {
         gos::logger::err ("DescrSetInstanceWriter::bindDynamicStorageBuffer() => invalid uniform buffer handle\n");
         return *this;
     }        
 
-    return priv_bindBuffer (binding, vkBufferHandle, sizeOfOneElement, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 0);
+    return priv_bindBuffer (binding, buffer->vkHandle, sizeOfOneElement, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 0);
 }
 
 //***************************** 
@@ -132,7 +129,7 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::priv_bindBuffer (u32 b
     VkWriteDescriptorSet *d = &writeDescrList[numWriteDescr++];
     memset (d, 0, sizeof(VkWriteDescriptorSet));
     d->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    d->dstSet = vkDescrSetHandle;
+    d->dstSet = descrSetInstHandle->vkHandle;
     d->dstBinding = binding;
     d->dstArrayElement = dstArrayElem;
 
@@ -162,8 +159,8 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindCombinedTextureAnd
         return *this;
     }        
 
-    VkSampler vkSampler;
-    if (!gpu->toVulkan (samplerHandle, &vkSampler))
+    const gpu::Sampler *sampler = gpu->getInfo (samplerHandle);
+    if (NULL == sampler)
     {
         gos::logger::err ("DescrSetInstanceWriter::bindTextureAndSampler() => invalid sampler handle\n");
         return *this;
@@ -174,14 +171,14 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindCombinedTextureAnd
     memset (p, 0, sizeof(VkDescriptorImageInfo));
     p->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     p->imageView = vkImgView;
-    p->sampler = vkSampler;
+    p->sampler = sampler->vkHandle;
 
 
     //write descr
     VkWriteDescriptorSet *d = &writeDescrList[numWriteDescr++];
     memset (d, 0, sizeof(VkWriteDescriptorSet));
     d->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    d->dstSet = vkDescrSetHandle;
+    d->dstSet = descrSetInstHandle->vkHandle;
     d->dstBinding = binding;
     d->dstArrayElement = dstArrayElem;
 
@@ -205,8 +202,8 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindSamplerInArray  (u
         return *this;
     }
 
-    VkSampler vkSampler;
-    if (!gpu->toVulkan (handle, &vkSampler))
+    const gpu::Sampler *sampler = gpu->getInfo(handle);
+    if (NULL == sampler)
     {
         gos::logger::err ("DescrSetInstanceWriter::bindSamplerInArray() => invalid sampler handle\n");
         return *this;
@@ -216,13 +213,13 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindSamplerInArray  (u
     VkDescriptorImageInfo *p = &imageList.list[imageList.num++];
     memset (p, 0, sizeof(VkDescriptorImageInfo));
     p->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    p->sampler = vkSampler;    
+    p->sampler = sampler->vkHandle;    
 
     //write descr
     VkWriteDescriptorSet *d = &writeDescrList[numWriteDescr++];
     memset (d, 0, sizeof(VkWriteDescriptorSet));
     d->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    d->dstSet = vkDescrSetHandle;
+    d->dstSet = descrSetInstHandle->vkHandle;
     d->dstBinding = binding;
     d->dstArrayElement = dstArrayElem;
 
@@ -262,7 +259,7 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindTextureInArray (u3
     VkWriteDescriptorSet *d = &writeDescrList[numWriteDescr++];
     memset (d, 0, sizeof(VkWriteDescriptorSet));
     d->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    d->dstSet = vkDescrSetHandle;
+    d->dstSet = descrSetInstHandle->vkHandle;
     d->dstBinding = binding;
     d->dstArrayElement = dstArrayElem;
 

@@ -193,6 +193,12 @@ enum class eImageFormat : u8
     _SAME_AS_CURRENT_SWAPCHAIN = 0xFF
 };
 
+enum class eImageTiling : u8
+{
+    optimal = 0,
+    linear = 1
+};
+
 enum class eDrawPrimitive : u8
 {
 	pointList = 0,
@@ -207,10 +213,42 @@ enum class eDrawPrimitive : u8
 
 enum class eShaderType : u8
 {
-	vertexShader = 0,
-	fragmentShader = 1,
-    compute = 2,
-	unknown = 0xff
+    none        = 0x00,
+	vtxShader   = 0x01,
+	pxlShader   = 0x02,
+    compute     = 0x04
+};
+
+class ShaderTypeList
+{
+public:
+    ShaderTypeList ()                                                                   { bitmask = 0; }
+    ShaderTypeList (eShaderType t1)                                                     { bitmask = (u32)t1; }
+    ShaderTypeList (eShaderType t1, eShaderType t2)                                     { bitmask = (u32)t1; bitmask |= (u32)t2; }
+    ShaderTypeList (eShaderType t1, eShaderType t2, eShaderType t3)                     { bitmask = (u32)t1; bitmask |= (u32)t2; bitmask |= (u32)t3; }
+    ShaderTypeList (eShaderType t1, eShaderType t2, eShaderType t3, eShaderType t4)     { bitmask = (u32)t1; bitmask |= (u32)t2; bitmask |= (u32)t3; bitmask |= (u32)t4; }
+
+    void            clear()                                                             { bitmask=0; }
+    ShaderTypeList& operator|= (const eShaderType &b)                                   { bitmask |= (u32)b; return *this; }
+    
+    void            beginEnum (u32 *iter) const                                         { *iter = 0x01; }
+    bool            fetch(u32 &iter, eShaderType *out) const
+    {
+        while (iter < 0x0100)
+        {
+            if ((bitmask & iter) != 0)
+            {
+                *out = static_cast<eShaderType>(iter);
+                iter <<= 1;
+                return true;
+            }
+            iter <<= 1;
+        }
+        return false;
+    }
+
+public:
+    u32  bitmask;
 };
 
 enum class eZFunc : u8

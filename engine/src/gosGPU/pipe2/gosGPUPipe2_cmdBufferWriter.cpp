@@ -51,7 +51,7 @@ CmdBufferWriter2& CmdBufferWriter2::setViewport (const GPUViewportHandle handle)
 {
     if (!anyError())
     {
-        const gos::gpu::Viewport *viewport = gpu->viewport_get(handle);
+        const gos::gpu::Viewport *viewport = gpu->getInfo(handle);
 
         VkViewport vkViewport {0.0f, 0.0f, (viewport->getW_f32()), viewport->getH_f32(), 0.0f, 1.0f };
         vkCmdSetViewport(vkCommandBuffer, 0, 1, &vkViewport);

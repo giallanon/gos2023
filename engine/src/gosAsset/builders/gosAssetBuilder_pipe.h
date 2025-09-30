@@ -2,6 +2,8 @@
 #define _gosAssetBuilder_pipe_h_
 #include "gosAssetBuilderInterface.h"
 #include "../gosGPU/gosGPUEnumAndDefine.h"
+#include "../gos/gosBufferWriter.h"
+#include "../gos/gosDataBlob.h"
 
 /* Sintassi:
 
@@ -46,7 +48,7 @@ namespace gos
             /**
              * @brief   calc_dept e' mandatorio, va implementato in tutti i Builder.
                         Il <dept> indica quando profonda e' la descrizione testuale di questo asset.
-                        Se l'asset non dipende da nessun altro asset, la sua dept e' 0  (vedi vtx_shader per esempio).
+                        Se l'asset non dipende da nessun altro asset, la sua dept e' 1  (vedi vtx_shader per esempio).
                         Se l'asset dipende da almeno un'altro asset, allora la sua dept e' 1 piu' la dept
                         piu' alta tra tutti gli asset da cui dipende*/
             static u32  calc_depth();
@@ -55,7 +57,7 @@ namespace gos
                     Builder_pipe () : BuilderInterface (eAssetType::pipe)                       { }
                     ~Builder_pipe()                                                             { }
 
-            bool    build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out);
+            bool    build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, gos::GPU *gpu, sBuildResult *out);
 
 
         private:
@@ -81,6 +83,7 @@ namespace gos
         private:
             bool    priv_extractParams (const IniFileSection *sec, Params *out_params);
             bool    priv_do_create_assetFile (Context &ctx, const Params &params, const char *filenameDST) const;
+            u32     priv_writePushConstant_rec (gos::BufferW_linear &buffer, gos::datablob::DefElem &elem) const;
             
         }; //class Builder_pipe
 

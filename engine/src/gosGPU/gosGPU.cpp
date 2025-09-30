@@ -255,7 +255,8 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
     //cerco un physical device che sia appropriato
     {
         gos::StringList vkDevice_requiredExtensionList(scrapAllocator);
-        vkDevice_requiredExtensionList.add (VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        if (mainWindow.isValid())
+            vkDevice_requiredExtensionList.add (VK_KHR_SWAPCHAIN_EXTENSION_NAME);
         vkDevice_requiredExtensionList.add (VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
         vkDevice_requiredExtensionList.add (VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
         //vkDevice_requiredExtensionList.add (VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
@@ -507,6 +508,39 @@ void GPU::fence_resetMany (const VkFence *fenceHandleList, u32 fenceCount)
 {
     vkResetFences (vulkan.dev, fenceCount, fenceHandleList);
 }
+
+//************************************
+bool GPU::isImage2DFmtSupported (eImageFormat fmtIN, eImageTiling tilingIN) const
+{
+    VkImageFormatProperties2 out;
+    VkPhysicalDeviceImageFormatInfo2 fmt;
+
+    memset (&out, 0, sizeof(out));
+    out.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2;
+
+    memset (&fmt, 0, sizeof(fmt));
+    fmt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2;
+    fmt.format = gpu::toVulkan(fmtIN);
+    fmt.type = VK_IMAGE_TYPE_2D;
+    
+    switch (tilingIN)
+    {
+    default:
+        DBGBREAK;
+        return false;
+    case eImageTiling::optimal: fmt.tiling = VK_IMAGE_TILING_OPTIMAL; break;
+    case eImageTiling::linear: fmt.tiling = VK_IMAGE_TILING_LINEAR; break;
+    }
+    
+    fmt.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    VkResult result = vkGetPhysicalDeviceImageFormatProperties2 (vulkan.phyDevInfo.vkDev, &fmt, &out);
+    if (VK_SUCCESS == result)
+        return true;
+        
+    gos::logger::log ("WARN: isImage2DFmtSupported(%s,%s) => not supported\n", gos::utils::enumToString(fmtIN), gos::utils::enumToString(tilingIN));
+    return false;
+}
+
 
 //************************************
 eImageFormat GPU::swapChain_getImageFormat() const
@@ -819,9 +853,9 @@ bool GPU::priv_shader_createFromMemory (const u8 *buffer, u32 bufferSize, eShade
     }
 
     shader->reset();
-    shader->_vkHandle = vkHandle;
-    shader->_shaderType = shaderType;
-    sprintf_s (shader->_mainFnName, sizeof(shader->_mainFnName), "%s", mainFnName);
+    shader->vkHandle = vkHandle;
+    shader->shaderType = shaderType;
+    sprintf_s (shader->mainFnName, sizeof(shader->mainFnName), "%s", mainFnName);
     return true;
 }
 
@@ -831,8 +865,8 @@ void GPU::deleteResource (GPUShaderHandle &shaderHandle)
     gpu::Shader *shader;
     if (priv_fromHandleToPointer(shaderList, shaderHandle, &shader))
     {
-        if (VK_NULL_HANDLE != shader->_vkHandle)
-            vkDestroyShaderModule (vulkan.dev, shader->_vkHandle, nullptr);
+        if (VK_NULL_HANDLE != shader->vkHandle)
+            vkDestroyShaderModule (vulkan.dev, shader->vkHandle, nullptr);
         
         shader->reset();
         shaderList.release(shaderHandle);
@@ -841,30 +875,14 @@ void GPU::deleteResource (GPUShaderHandle &shaderHandle)
 }
 
 //************************************
-VkShaderModule GPU::shader_getVkHandle (const GPUShaderHandle shaderHandle) const
+const gpu::Shader* GPU::getInfo (const GPUShaderHandle handle) const
 {
-    gpu::Shader *shader;
-    if (priv_fromHandleToPointer(shaderList, shaderHandle, &shader))
-        return shader->_vkHandle;
-    return VK_NULL_HANDLE;
-}
+    gpu::Shader *s;
+    if (priv_fromHandleToPointer(shaderList, handle, &s))
+        return s;
 
-//************************************
-const char* GPU::shader_getMainFnName (const GPUShaderHandle shaderHandle) const
-{
-    gpu::Shader *shader;
-    if (priv_fromHandleToPointer(shaderList, shaderHandle, &shader))
-        return shader->_mainFnName;
+    gos::logger::err ("GPU::shader_geInfo() => invalid handle\n");
     return NULL;
-}
-
-//************************************
-eShaderType GPU::shader_getType (const GPUShaderHandle shaderHandle) const
-{
-    gpu::Shader *shader;
-    if (priv_fromHandleToPointer(shaderList, shaderHandle, &shader))
-        return shader->_shaderType;
-    return eShaderType::unknown;
 }
 
 
@@ -928,7 +946,7 @@ void GPU::deleteResource (GPUViewportHandle &handle)
 }
 
 //************************************
-const gpu::Viewport* GPU::viewport_get (const GPUViewportHandle &handle) const
+const gpu::Viewport* GPU::getInfo (const GPUViewportHandle &handle) const
 {
     gos::gpu::Viewport *v;
     if (!viewportlList.fromHandleToPointer (handle, &v))
@@ -1094,13 +1112,13 @@ bool GPU::map (const GPURenderTargetHandle handle, gpu::sMappedImage *out) const
 
     out->size = subResourceLayout.size;
     out->offset = subResourceLayout.offset;
-    out->rowPitch = subResourceLayout.rowPitch;
+    out->row_stride = subResourceLayout.rowPitch;
     out->_vkMemHandle = s->vkMemHandle;
     return true;
 }
 
 /************************************************************************************************************
- * DepthStencil
+ * zbuffer
  * 
  * 
  *************************************************************************************************************/
@@ -1519,8 +1537,8 @@ void GPU::deleteResource (GPUStgBufferHandle &handle)
 //************************************
 bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy)
 {
-    VkBuffer dstBuffer;
-    if (!toVulkan (handleDST, &dstBuffer))
+    gpu::Buffer *dstBuffer;
+    if (!priv_fromHandleToPointer(vtxBufferList, handleDST, &dstBuffer))
     {
         gos::logger::err ("GPU::stagingBuffer_uploadToGPUBuffer() => invalid handleDST\n");
         return false;
@@ -1539,7 +1557,7 @@ bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, c
 
     //copio lo staging buffer nel buffer in GPU
     helperImmediateTransferCmd.begin();
-    helperImmediateTransferCmd.copyBuffer (s->vkHandle, dstBuffer, 0, offsetDST, howManyByteToCopy);
+    helperImmediateTransferCmd.copyBuffer (s->vkHandle, dstBuffer->vkHandle, 0, offsetDST, howManyByteToCopy);
     helperImmediateTransferCmd.end();
     return true;
 }
@@ -1547,8 +1565,8 @@ bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, c
 //************************************
 bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy)
 {
-    VkBuffer dstBuffer;
-    if (!toVulkan (handleDST, &dstBuffer))
+    gpu::Buffer *dstBuffer;
+    if (!priv_fromHandleToPointer(idxBufferList, handleDST, &dstBuffer))
     {
         gos::logger::err ("GPU::stagingBuffer_uploadToGPUBuffer() => invalid handleDST\n");
         return false;
@@ -1567,7 +1585,7 @@ bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, c
 
     //copia di stgBuffer nel buffer in GPU
     helperImmediateTransferCmd.begin();
-    helperImmediateTransferCmd.copyBuffer (s->vkHandle, dstBuffer, 0, offsetDST, howManyByteToCopy);
+    helperImmediateTransferCmd.copyBuffer (s->vkHandle, dstBuffer->vkHandle, 0, offsetDST, howManyByteToCopy);
     helperImmediateTransferCmd.end();
     return true;
 }
@@ -1607,18 +1625,14 @@ bool GPU::vertexBuffer_create (u32 sizeInByte, eMemAccessMode modeIN, GPUVtxBuff
 }
 
 //************************************
-bool GPU::toVulkan (const GPUVtxBufferHandle handle, VkBuffer *out) const
+const gpu::Buffer* GPU::getInfo (const GPUVtxBufferHandle handle) const
 {
     gpu::Buffer *s;
     if (priv_fromHandleToPointer(vtxBufferList, handle, &s))
-    {
-        *out = s->vkHandle;
-        return true;
-    }
+        return s;
 
-    *out = VK_NULL_HANDLE;
-    gos::logger::err ("GPU::vertexBuffer_toVulkan() => invalid handle\n");
-    return false;    
+    gos::logger::err ("GPU::vertexBuffer_getInfo() => invalid handle\n");
+    return NULL;
 }
 
 
@@ -1656,18 +1670,13 @@ bool GPU::indexBuffer_create (u32 sizeInByte, eMemAccessMode modeIN, GPUIdxBuffe
 }
 
 //************************************
-bool GPU::toVulkan (const GPUIdxBufferHandle handle, VkBuffer *out) const
+const gpu::Buffer* GPU::getInfo (const GPUIdxBufferHandle handle) const
 {
     gpu::Buffer *s;
     if (priv_fromHandleToPointer(idxBufferList, handle, &s))
-    {
-        *out = s->vkHandle;
-        return true;
-    }
-
-    *out = VK_NULL_HANDLE;
-    gos::logger::err ("GPU::indexBuffer_toVulkan() => invalid handle\n");
-    return false;    
+        return s;
+    gos::logger::err ("GPU::indexBuffer_getInfo() => invalid handle\n");
+    return NULL;
 }
 
 
@@ -1704,23 +1713,15 @@ bool GPU::uniformBuffer_create (u32 sizeInByte, eMemAccessMode modeIN, GPUUnifor
 }
 
 //************************************
-bool GPU::toVulkan (const GPUUniformBufferHandle handle, VkBuffer *out, u32 *out_bufferSize) const
+const gpu::Buffer* GPU::getInfo (const GPUUniformBufferHandle handle) const
 {
-    assert (NULL != out);
-    assert (NULL != out_bufferSize);
-
     gpu::Buffer *s;
     if (priv_fromHandleToPointer (uniformBufferList, handle, &s))
-    {
-        *out = s->vkHandle;
-        *out_bufferSize = s->bufferSize;
-        return true;
-    }
-
-    *out = VK_NULL_HANDLE;
-    gos::logger::err ("GPU::uniformBuffer_toVulkan() => invalid handle\n");
-    return false;    
+        return s;
+    gos::logger::err ("GPU::uniformBuffer_getInfo() => invalid handle\n");
+    return NULL;
 }
+
 
 
 
@@ -1762,22 +1763,13 @@ bool GPU::storageBuffer_create (u32 sizeInByte, eMemAccessMode modeIN, GPUStorag
 }
 
 //************************************
-bool GPU::toVulkan (const GPUStorageBufferHandle handle, VkBuffer *out, u32 *out_bufferSize) const
+const gpu::Buffer* GPU::getInfo (const GPUStorageBufferHandle handle) const
 {
-    assert (NULL != out);
-    assert (NULL != out_bufferSize);
-
     gpu::Buffer *s;
     if (priv_fromHandleToPointer (storageBufferList, handle, &s))
-    {
-        *out = s->vkHandle;
-        *out_bufferSize = s->bufferSize;
-        return true;
-    }
-
-    *out = VK_NULL_HANDLE;
-    gos::logger::err ("GPU::storageBuffer_toVulkan() => invalid handle\n");
-    return false;    
+        return s;
+    gos::logger::err ("GPU::storageBuffer_getInfo() => invalid handle\n");
+    return NULL;
 }
 
 
@@ -1908,7 +1900,7 @@ bool GPU::toVulkan (const GPUDescrPoolHandle handle, VkDescriptorPool *out) cons
  * 
  * 
  *************************************************************************************************************/
-bool GPU::descrSetInstance_createNew (const GPUDescrPoolHandle &poolHandle, const GPUDescrSetLayoutHandle &descrSetLayoutHandle, GPUDescrSetInstanceHandle *out_handle)
+bool GPU::descrSetInstance_create (const GPUDescrPoolHandle &poolHandle, const GPUDescrSetLayoutHandle &descrSetLayoutHandle, GPUDescrSetInstanceHandle *out_handle)
 {
     assert (NULL != out_handle);
     out_handle->setInvalid();
@@ -1916,7 +1908,7 @@ bool GPU::descrSetInstance_createNew (const GPUDescrPoolHandle &poolHandle, cons
     gpu::DescrPool *pool;
     if (!descrPoolList.fromHandleToPointer (poolHandle, &pool))
     {
-        gos::logger::err ("GPU::descrSetInstance_createNew() => invalid pool handle\n");
+        gos::logger::err ("GPU::descrSetInstance_create() => invalid pool handle\n");
         return false;
     }
 
@@ -1924,7 +1916,7 @@ bool GPU::descrSetInstance_createNew (const GPUDescrPoolHandle &poolHandle, cons
     VkDescriptorSetLayout vkDescSetLayoutHandle;
     if (!toVulkan (descrSetLayoutHandle, &vkDescSetLayoutHandle))
     {
-        gos::logger::err ("GPU::descrSetInstance_createNew() => invalid descrSetLayoutHandle handle\n");
+        gos::logger::err ("GPU::descrSetInstance_create() => invalid descrSetLayoutHandle handle\n");
         return false;
     }
 
@@ -1932,7 +1924,7 @@ bool GPU::descrSetInstance_createNew (const GPUDescrPoolHandle &poolHandle, cons
     gpu::DescrSetInstance *s = descrSetInstanceList.reserve (out_handle);
     if (NULL == s)
     {
-        gos::logger::err ("GPU::descrSetInstance_createNew() => can't reserve a handle!\n");
+        gos::logger::err ("GPU::descrSetInstance_create() => can't reserve a handle!\n");
         descrSetInstanceList.release(*out_handle);
         return false;
     }
@@ -1956,7 +1948,7 @@ bool GPU::descrSetInstance_createNew (const GPUDescrPoolHandle &poolHandle, cons
 
     s->reset();
     descrSetInstanceList.release(*out_handle);
-    gos::logger::err ("GPU::descrSetInstance_createNew () => vkAllocateDescriptorSets failed => %s\n", string_VkResult(result));
+    gos::logger::err ("GPU::descrSetInstance_create () => vkAllocateDescriptorSets failed => %s\n", string_VkResult(result));
     return false;
 }
 
@@ -1976,18 +1968,13 @@ void GPU::deleteResource (GPUDescrSetInstanceHandle &handle)
 }
 
 //************************************
-bool GPU::toVulkan (const GPUDescrSetInstanceHandle handle, VkDescriptorSet *out) const
+const gpu::DescrSetInstance* GPU::getInfo (const GPUDescrSetInstanceHandle handle) const
 {
     gpu::DescrSetInstance *s;
-    if (priv_fromHandleToPointer(descrSetInstanceList,handle, &s))
-    {
-        *out = s->vkHandle;
-        return true;
-    }
-
-    *out = VK_NULL_HANDLE;
-    gos::logger::err ("GPU::descrSetInstance_toVulkan() => invalid handle\n");
-    return false;    
+    if (priv_fromHandleToPointer (descrSetInstanceList, handle, &s))
+        return s;
+    gos::logger::err ("GPU::descrSetInstance_getInfo() => invalid handle\n");
+    return NULL;
 }
 
 
@@ -2316,19 +2303,16 @@ void GPU::priv_samplerDelete (GPUSamplerHandle &handle)
 }
 
 //************************************
-bool GPU::toVulkan (const GPUSamplerHandle handle, VkSampler *out) const
+const gpu::Sampler* GPU::getInfo (const GPUSamplerHandle handle) const
 {
     gpu::Sampler *s;
-    if (priv_fromHandleToPointer(samplerList,handle, &s))
-    {
-        *out = s->vkHandle;
-        return true;
-    }
+    if (samplerList.fromHandleToPointer (handle, &s))
+        return s;
 
-    *out = VK_NULL_HANDLE;
-    gos::logger::err ("GPU::sampler_toVulkan() => invalid handle\n");
-    return false;    
+    gos::logger::err ("GPU::sampler_geInfo() => invalid handle\n");
+    return NULL;
 }
+
 
 
 /************************************************************************************************************
@@ -2433,20 +2417,15 @@ void GPU::deleteResource (GPUPipelineHandle &handle)
 }
 
 //************************************
-bool GPU::toVulkan (const GPUPipelineHandle handle, const gpu::Pipeline2 **out) const
+const gpu::Pipeline2* GPU::getInfo (const GPUPipelineHandle handle) const
 {
     gpu::Pipeline2 *s;
     if (pipelineList.fromHandleToPointer (handle, &s))
-    {
-        *out = s;
-        return true;
-    }
-
-    *out = NULL;
-    gos::logger::err ("GPU::pipeline_toVulkan() => invalid handle\n");
-    DBGBREAK;
-    return false;
+        return s;
+    gos::logger::err ("GPU::pipeline_geInfo() => invalid handle\n");
+    return NULL;
 }
+
 
 //************************************
 bool GPU::pipeline_createNew (const gpu::pipe2::Pipeline_def &rpd, GPUPipelineHandle *out_handle)
@@ -2499,25 +2478,112 @@ bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pip
     
     //Pipeline layout
     //Serve ad indicare il numero/tipo di "const push" disponibili alla pipe e il numero/tipo di descriptorSets della pipe
-    VkPushConstantRange         pushConstantRangeList[GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE];
     pipelineCreateInfo.layout = VK_NULL_HANDLE;
     {
+        //in pipeline_def ho dichiarato una serie di pushConst indicandone l'offeset e lo shader di appartenenza
+        //In base a questi dati, devo creare una serie di pushConstantRange, uno per ogni tipo diverso di shader
+        struct PCRange
+        {
+            VkShaderStageFlags    stageFlags;
+            u32 start_offset;
+            u32 end_offset;
+        };
+        PCRange pcRangeList[GOSGPU__NUM_MAX_PUSH_CONSTANT_RANGE_PER_PIPELINE];
+        for (u32 i=0; i<GOSGPU__NUM_MAX_PUSH_CONSTANT_RANGE_PER_PIPELINE; i++)
+        {
+            pcRangeList[i].stageFlags = 0;
+            pcRangeList[i].start_offset = u32MAX;
+            pcRangeList[i].end_offset = 0;
+        }
+
+        for (u32 i=0; i< rpd.numPushConst; i++)
+        {
+            const ShaderTypeList shaderTypeList = rpd.pushConstList[i].shaderTypeList;
+
+            //computo gli stageFlags di questa pushConst
+            VkShaderStageFlags stageFlags = 0;
+            {
+                u32 iter;
+                eShaderType shaderType;
+                shaderTypeList.beginEnum (&iter);
+                while (shaderTypeList.fetch(iter, &shaderType))
+                {
+                    switch (shaderType)
+                    {
+                    default:
+                        gos::logger::err ("GPU::pipeline_createNew() => invalid shaderType for pushContant\n");
+                        return false;
+                    case eShaderType::vtxShader: stageFlags = VK_SHADER_STAGE_VERTEX_BIT; break;
+                    case eShaderType::pxlShader: stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; break;
+                    case eShaderType::compute:   stageFlags = VK_SHADER_STAGE_COMPUTE_BIT; break;
+                    }                    
+                }
+            }
+
+            //in base agli <stageFlags>, determino a quale range appartiene
+            u32 whichRange = 0xff;
+            for (u32 i2=0; i2<GOSGPU__NUM_MAX_PUSH_CONSTANT_RANGE_PER_PIPELINE; i2++)
+            {
+                if (pcRangeList[i2].stageFlags == stageFlags)
+                {
+                    whichRange = i2;
+                    break;
+                }
+
+                if (0 == pcRangeList[i2].stageFlags)
+                {
+                    pcRangeList[i2].stageFlags = stageFlags;
+                    whichRange = i2;
+                    break;
+                }                
+            }
+            if (0xFF == whichRange)
+            {
+                gos::logger::err ("GPU::pipeline_createNew() => too many ranges for pushContant\n");
+                return false;
+            }
+
+            //aggiorno le info di questa pushConst
+            const u32 size = rpd.pushConstList[i].sizeInByte;
+            u32 offset = rpd.pushConstList[i].offset;
+
+            out->pcList[i].offset = offset;
+            out->pcList[i].size = size;
+            out->pcList[i].whichRange = (u8)whichRange;
+
+            //aggiorno gli offset min/max del range
+            if (pcRangeList[whichRange].start_offset > offset)
+                pcRangeList[whichRange].start_offset = offset;
+
+            offset += size;
+            if (pcRangeList[whichRange].end_offset < offset)
+                pcRangeList[whichRange].end_offset = offset;
+        }
+
+        //riporto le info sui range in <out>
+        out->pcRange_num = 0;
+        for (u32 i=0; i<GOSGPU__NUM_MAX_PUSH_CONSTANT_RANGE_PER_PIPELINE; i++)
+        {
+            if (u32MAX == pcRangeList[i].start_offset)
+                continue;
+
+            out->pcRange_list[out->pcRange_num].offset = pcRangeList[i].start_offset;
+            out->pcRange_list[out->pcRange_num].size = pcRangeList[i].end_offset - pcRangeList[i].start_offset;
+            out->pcRange_list[out->pcRange_num].stageFlags = pcRangeList[i].stageFlags;
+            out->pcRange_num++;
+        }
+
+
         VkPipelineLayoutCreateInfo  pipelineLayoutInfo{};
         VkDescriptorSetLayout       descrSetLayoutHandleList[GOSGPU__NUM_MAX_DESCRIPTOR_SETS*GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
         
         memset (&pipelineLayoutInfo, 0, sizeof(pipelineLayoutInfo));
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.pushConstantRangeCount = rpd.numPushConst;
-        pipelineLayoutInfo.pPushConstantRanges = pushConstantRangeList;
+        pipelineLayoutInfo.pushConstantRangeCount = out->pcRange_num;
+        pipelineLayoutInfo.pPushConstantRanges = out->pcRange_list;
         pipelineLayoutInfo.setLayoutCount = rpd.numDescrSet;
         pipelineLayoutInfo.pSetLayouts = descrSetLayoutHandleList;
 
-        for (u32 i=0; i< rpd.numPushConst; i++)
-        {
-            pushConstantRangeList[i].offset = rpd.pushConstList[i].offset;
-            pushConstantRangeList[i].size = rpd.pushConstList[i].sizeInByte;
-            pushConstantRangeList[i].stageFlags = rpd.pushConstList[i].stageFlags;
-        }
 
         for (u32 i=0; i<rpd.numDescrSet; i++)
         {
@@ -2549,7 +2615,8 @@ bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pip
             const GPUShaderHandle handle = rpd.shaderHandleList[i];            
             shadersCreateInfoArray[i].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 
-            switch (shader_getType(handle))
+            const gpu::Shader *shader = getInfo(handle);
+            switch (shader->shaderType)
             {
             default:
                 gos::logger::err ("GPU::pipeline_createNew => unsupported shader type\n");
@@ -2557,11 +2624,11 @@ bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pip
                 return false;
                 break;
 
-            case eShaderType::vertexShader:
+            case eShaderType::vtxShader:
                 shadersCreateInfoArray[i].stage = VK_SHADER_STAGE_VERTEX_BIT;
                 break;
 
-            case eShaderType::fragmentShader:
+            case eShaderType::pxlShader:
                 shadersCreateInfoArray[i].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
                 break;
             
@@ -2570,8 +2637,8 @@ bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pip
                 break;        
             }
             
-            shadersCreateInfoArray[i].module = shader_getVkHandle(handle);
-            shadersCreateInfoArray[i].pName = shader_getMainFnName(handle);
+            shadersCreateInfoArray[i].module = shader->vkHandle;
+            shadersCreateInfoArray[i].pName = shader->mainFnName;
         }
     }
 
@@ -2827,16 +2894,14 @@ bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pip
     //riservo un handle
     out->vkPipelineLayoutHandle = pipelineCreateInfo.layout;
     out->vkPipelineHandle = vkPipelineHandle;
-    if (rpd.numPushConst)
-        memcpy (out->pushContantList, pushConstantRangeList, sizeof(VkPushConstantRange) * rpd.numPushConst);
     return true;    
 }
 
 //************************************
-bool GPU::pipeline_createDescrSetInstance (const GPUPipelineHandle pipelineHandle, u8 descrSetNum, const GPUDescrPoolHandle &poolHandle, GPUDescrSetInstanceHandle *out_handle)
+bool GPU::descrSetInstance_create (const GPUDescrPoolHandle &poolHandle, const GPUPipelineHandle pipelineHandle, u8 descrSetNum, GPUDescrSetInstanceHandle *out_handle)
 {
-    const gpu::Pipeline2 *s;
-    if (!toVulkan (pipelineHandle, &s))
+    const gpu::Pipeline2 *s = getInfo(pipelineHandle);
+    if (NULL == s)
         return false;
 
     if (descrSetNum >= s->descrset_num)
@@ -2845,7 +2910,7 @@ bool GPU::pipeline_createDescrSetInstance (const GPUPipelineHandle pipelineHandl
         return false;
     }
 
-    return descrSetInstance_createNew (poolHandle, s->descrset_handle_defList[descrSetNum], out_handle);
+    return descrSetInstance_create (poolHandle, s->descrset_handle_defList[descrSetNum], out_handle);
 }
 
 

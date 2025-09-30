@@ -53,6 +53,7 @@ namespace gos
                     void                priv_setup  (GPU *gpuIN, CmdBufferWriter2 *cmdBufferWriterIN, VkCommandBuffer vkCommandBufferIN);
                     void                priv_setError();
                     void                priv_recordBeginRenderingIfNeeded();
+                    void                priv_flushPushConst();
 
                 private:
                     static constexpr u8         FLAG__ANY_ERROR                         = 0;
@@ -70,6 +71,7 @@ namespace gos
                     u32                         renderAreaW;
                     u32                         renderAreaH;
                     const gpu::Pipeline2        *curPipeline;
+                    u8                          pushConstBuffer[128];
 
                 friend CmdBufferWriter2;
                 };

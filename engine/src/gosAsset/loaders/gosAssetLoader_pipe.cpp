@@ -111,23 +111,12 @@ bool Loader_pipe::load (Loader *assetLoader, const asset::Context &ctx, const as
 
         //push constant
         n = reader.readU32 ();
-        if (n)
+        while (n--)
         {
-            gos::datablob::DefReader dblobReader;
-            dblobReader.setup (reader.getPointer(reader.tell()));
-            reader.advanceCursor (n);
-
-            datablob::DefElem elem;
-            dblobReader.beginEnumerate(&elem);
-            do
-            {
-                VkShaderStageFlags stageFlags = 0;
-                if ((elem.getUserData() & 0x01) != 0)
-                    stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
-                if ((elem.getUserData() & 0x02) != 0)
-                    stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
-                def.pushConst_add (elem.getOffset(), elem.getPaddedSize(), stageFlags);
-            } while (elem.next());
+            const u32 offset = reader.readU32();
+            const u32 paddedSize = reader.readU32();
+            const eShaderType shaderType = static_cast<eShaderType> (reader.readU32());
+            def.pushConst_add (offset, paddedSize, shaderType);
         }
 
 

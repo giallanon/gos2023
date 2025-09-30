@@ -14,3 +14,20 @@
 		src: shader1.frag
 	}
 }
+
+@pipe: pipe_2
+{
+	rt0: U8_RGBA
+
+	zb: none
+
+	@vtx_shader
+	{
+		src: shader2.vert
+	}
+
+	@pxl_shader
+	{
+		src: shader2.frag
+	}
+}

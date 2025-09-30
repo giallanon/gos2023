@@ -29,6 +29,8 @@ VkEx5MarchingSquare.cpp
 VkEx5MarchingSquare.h
 VulkanApp.cpp
 VulkanApp.h
+VulkanAppNoWin.cpp
+VulkanAppNoWin.h
 VulkanExample1.cpp
 VulkanExample1.h
 VulkanExample2.cpp

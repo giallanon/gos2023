@@ -184,7 +184,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindPipeline (const GPUPipeli
         return *this;
 
         
-    gpu->toVulkan (pipelineHandle, &curPipeline);
+    curPipeline = gpu->getInfo (pipelineHandle);
     assert (NULL != curPipeline);
     vkCmdBindPipeline (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curPipeline->vkPipelineHandle);
     
@@ -206,8 +206,8 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindDescriptorSet (const GPUD
     }        
 
     //recupero il descrSetInstance
-    VkDescriptorSet vkDescrSetHandle;
-    if (!gpu->toVulkan (handle, &vkDescrSetHandle))
+    const gpu::DescrSetInstance *ds = gpu->getInfo(handle);
+    if (NULL == ds)
     {
         gos::logger::err ("gpu::pipe2::CmdBufferWriter::bindDescriptorSet() => invalid descrSetInstace handle\n");
         priv_setError();
@@ -215,9 +215,9 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindDescriptorSet (const GPUD
     }           
 
     if (u32MAX == dynamicOffset)
-        vkCmdBindDescriptorSets (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curPipeline->vkPipelineLayoutHandle, set, 1, &vkDescrSetHandle, 0, nullptr);
+        vkCmdBindDescriptorSets (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curPipeline->vkPipelineLayoutHandle, set, 1, &ds->vkHandle, 0, nullptr);
     else
-        vkCmdBindDescriptorSets (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curPipeline->vkPipelineLayoutHandle, set, 1, &vkDescrSetHandle, 1, &dynamicOffset);
+        vkCmdBindDescriptorSets (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curPipeline->vkPipelineLayoutHandle, set, 1, &ds->vkHandle, 1, &dynamicOffset);
             
     return *this;
 }
@@ -229,8 +229,8 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindVtxBuffer (const GPUVtxBu
     if (anyError())
         return *this;
 
-    VkBuffer vkVtxBuffer;
-    if (!gpu->toVulkan (handle, &vkVtxBuffer))
+    const gpu::Buffer *vtxBuffer = gpu->getInfo(handle);
+    if (NULL == vtxBuffer)
     {
         gos::logger::err ("gpu::pipe2::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
         priv_setError();
@@ -240,7 +240,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindVtxBuffer (const GPUVtxBu
     //bindo il vtx buffer a partire dal layout=0
     static const u8 VTXBUFFER__FIRST_VTX_STREAM_INDEX = 0;
     static const u8 VTXBUFFER__NUM_STREAM = 1;
-    VkBuffer        vtxBufferList[VTXBUFFER__NUM_STREAM] = { vkVtxBuffer };
+    VkBuffer        vtxBufferList[VTXBUFFER__NUM_STREAM] = { vtxBuffer->vkHandle };
     VkDeviceSize    vtxBufferOffsetsList[VTXBUFFER__NUM_STREAM] = { offsetIN };    
     vkCmdBindVertexBuffers (vkCommandBuffer, VTXBUFFER__FIRST_VTX_STREAM_INDEX, VTXBUFFER__NUM_STREAM, vtxBufferList, vtxBufferOffsetsList);
 
@@ -255,16 +255,16 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindVtxBuffers (const GPUVtxB
     if (anyError())
         return *this;
 
-    VkBuffer vkVtxBuffer0;
-    if (!gpu->toVulkan (handleStream0, &vkVtxBuffer0))
+    const gpu::Buffer *vtxBuffer0 = gpu->getInfo (handleStream0);
+    if (NULL == vtxBuffer0)
     {
         gos::logger::err ("gpu::pipe2::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
         priv_setError();
         return *this;
     }            
 
-    VkBuffer vkVtxBuffer1;
-    if (!gpu->toVulkan (handleStream1, &vkVtxBuffer1))
+    const gpu::Buffer *vtxBuffer1 = gpu->getInfo (handleStream1);
+    if (NULL == vtxBuffer1)
     {
         gos::logger::err ("gpu::pipe2::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
         priv_setError();
@@ -274,7 +274,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindVtxBuffers (const GPUVtxB
     //bindo il vtx buffer a partire dal layout=0
     static const u8 VTXBUFFER__FIRST_VTX_STREAM_INDEX = 0;
     static const u8 VTXBUFFER__NUM_STREAM = 2;
-    VkBuffer        vtxBufferList[VTXBUFFER__NUM_STREAM] = { vkVtxBuffer0, vkVtxBuffer1 };
+    VkBuffer        vtxBufferList[VTXBUFFER__NUM_STREAM] = { vtxBuffer0->vkHandle, vtxBuffer1->vkHandle };
     VkDeviceSize    vtxBufferOffsetsList[VTXBUFFER__NUM_STREAM] = {0};    
     vkCmdBindVertexBuffers (vkCommandBuffer, VTXBUFFER__FIRST_VTX_STREAM_INDEX, VTXBUFFER__NUM_STREAM, vtxBufferList, vtxBufferOffsetsList);
 
@@ -289,15 +289,15 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindIdxBufferU16 (const GPUId
     if (anyError())
         return *this;
 
-    VkBuffer vkIdxBuffer;
-    if (!gpu->toVulkan (handle, &vkIdxBuffer))
+    const gpu::Buffer *idxBuffer = gpu->getInfo (handle);
+    if (NULL == idxBuffer)
     {
         gos::logger::err ("gpu::pipe2::CmdBufferWriter::bindIdxBufferU16() => invalid idxBufferHandle\n");
         priv_setError();
         return *this;
     }            
 
-    vkCmdBindIndexBuffer (vkCommandBuffer, vkIdxBuffer, offsetIN, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer (vkCommandBuffer, idxBuffer->vkHandle, offsetIN, VK_INDEX_TYPE_UINT16);
     return *this;
 }
 
@@ -322,20 +322,33 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::pushConstant (u8 whichOne, co
         return *this;
     }
 
-    if (curPipeline->pushContantList[whichOne].size != sizeof_data)
+    if (curPipeline->pcList[whichOne].size != sizeof_data)
     {
         gos::logger::err ("gpu::pipe2::CmdBufferWriter::pushConstant(%d) => size does not match\n", whichOne);
         priv_setError();
         return *this;
     }
 
-    vkCmdPushConstants (vkCommandBuffer, curPipeline->vkPipelineLayoutHandle, 
-                        curPipeline->pushContantList[whichOne].stageFlags,
-                        curPipeline->pushContantList[whichOne].offset,
-                        curPipeline->pushContantList[whichOne].size,
-                        data);
+    //copio il valore della push const nel buffer interno della pipe
+    //e pusho l'intero rnge alla GPU solo prima di una draw...
+    const u32 offset = curPipeline->pcList[whichOne].offset;
+    memcpy (&pushConstBuffer[offset], data, sizeof_data);
 
     return *this;
+}
+
+//*********************************
+void CmdBufferWriter2::BeginRend::priv_flushPushConst()
+{
+    for (u32 i=0; i<curPipeline->pcRange_num; i++)
+    {
+        const u32 offset = curPipeline->pcRange_list[i].offset;
+        vkCmdPushConstants (vkCommandBuffer, curPipeline->vkPipelineLayoutHandle, 
+                                curPipeline->pcRange_list[i].stageFlags,
+                                offset,
+                                curPipeline->pcRange_list[i].size,
+                                &pushConstBuffer[offset]);
+    }
 }
 
 //*********************************
@@ -352,6 +365,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::drawIndexed (u32 indexCount, 
         return *this;
     }
        
+    priv_flushPushConst();
     vkCmdDrawIndexed(vkCommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
     return *this;
 }
@@ -370,6 +384,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::draw (u32 vtxCount, u32 insta
         return *this;
     }
 
+    priv_flushPushConst();
     vkCmdDraw (vkCommandBuffer, vtxCount, instanceCount, firstVtx, firstInstance);        
     return *this;
 }

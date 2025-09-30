@@ -27,7 +27,7 @@ bool VulkanExample1::virtual_onInit ()
         gos::logger::err ("VulkanApp::init() => can't create vert shader\n");
         return false;
     }
-    if (!gpu->fragshader_createFromFile ("shader/example1/shader.frag.spv", "main", &fragShaderHandle))
+    if (!gpu->pxlshader_createFromFile ("shader/example1/shader.frag.spv", "main", &fragShaderHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create frag shader\n");
         return false;

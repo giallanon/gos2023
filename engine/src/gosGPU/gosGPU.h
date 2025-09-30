@@ -104,30 +104,6 @@ namespace gos
         bool                init (GOSWinHandle mainWin, bool vSync);
         void                deinit();
 
-        //================ window stuff
-        GOSWinHandle        getWindow()                                     { return mainWindow.winHandle; }
-        void                toggleFullscreen();
-        bool                vsync_isEnabled() const                         { return vSync; }
-        void                vsync_enable (bool b);
-
-
-        //================ swap chain info
-        //La swap chain viene creata automaticamente da GPU::init()
-        bool                swapChain_acquireImage (gos::gpu::SwapchainImg *out, u64 timeout_ns=UINT64_MAX, VkSemaphore semaphore=VK_NULL_HANDLE, VkFence fence=VK_NULL_HANDLE);
-        VkResult            swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount, u32 imageIndex);
-
-        bool                swapChain_wasRecreated() const                  { return bSwapChainRecreatedDuringThisFrame; }
-                            //ogni volta che la swapchain viene ricreata, questo id viene incrementato.
-        u32                 swapChain_getCurrentAutoID() const              { return swapchainAutoID; }
-
-        u32                 swapChain_getWidth() const                      { return vulkan.swapChainInfo.imageExtent.width; }
-        u32                 swapChain_getHeight() const                     { return vulkan.swapChainInfo.imageExtent.height; }
-        f32                 swapChain_calcAspectRatio() const               { return (f32)swapChain_getWidth() / (f32)swapChain_getHeight(); }
-        eImageFormat        swapChain_getImageFormat() const;
-        u8                  swapChain_getImageCount() const                 { return static_cast<u8>(vulkan.swapChainInfo.imageCount); }
-        VkExtent2D          swapChain_getImageExten2D() const               { return vulkan.swapChainInfo.imageExtent; }
-
-
         //================ oggetti di sincronizzazione 
         void                waitIdle();
         void                waitIdle(eGPUQueueType q);
@@ -147,6 +123,32 @@ namespace gos
 
         bool                fence_isSignaled  (const VkFence &fenceHandle);
 
+        //=================== supporto ai vari formati di immagine
+        bool                isImage2DFmtSupported (eImageFormat fmt, eImageTiling tiling) const;
+        
+        
+        //================ window stuff
+        GOSWinHandle        getWindow()                                     { return mainWindow.winHandle; }
+        void                toggleFullscreen();
+        bool                vsync_isEnabled() const                         { return vSync; }
+        void                vsync_enable (bool b);
+
+        //================ swap chain info
+        //Ammesso che una valida <mainWin> sia fornita, allora la swap chain viene creata automaticamente da GPU::init()
+        bool                swapChain_acquireImage (gos::gpu::SwapchainImg *out, u64 timeout_ns=UINT64_MAX, VkSemaphore semaphore=VK_NULL_HANDLE, VkFence fence=VK_NULL_HANDLE);
+        VkResult            swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount, u32 imageIndex);
+
+        bool                swapChain_wasRecreated() const                  { return bSwapChainRecreatedDuringThisFrame; }
+                            //ogni volta che la swapchain viene ricreata, questo id viene incrementato.
+        u32                 swapChain_getCurrentAutoID() const              { return swapchainAutoID; }
+
+        u32                 swapChain_getWidth() const                      { return vulkan.swapChainInfo.imageExtent.width; }
+        u32                 swapChain_getHeight() const                     { return vulkan.swapChainInfo.imageExtent.height; }
+        f32                 swapChain_calcAspectRatio() const               { return (f32)swapChain_getWidth() / (f32)swapChain_getHeight(); }
+        eImageFormat        swapChain_getImageFormat() const;
+        u8                  swapChain_getImageCount() const                 { return static_cast<u8>(vulkan.swapChainInfo.imageCount); }
+        VkExtent2D          swapChain_getImageExten2D() const               { return vulkan.swapChainInfo.imageExtent; }
+
 
         //================ viewport
         //E' possibile creare tante viewport
@@ -154,21 +156,13 @@ namespace gos
         //accessibile tramite viewport_getDefault()
         //Le viewport vengono automaticamente ridimensionate a seguito di un swapChain_recreate()
         bool                    viewport_create (const gos::Pos2D &x,const gos::Pos2D &y, const gos::Dim2D &w, const gos::Dim2D &h, GPUViewportHandle *out_handle);
-        const gpu::Viewport*    viewport_get (const GPUViewportHandle &handle) const;
+        const gpu::Viewport*    getInfo (const GPUViewportHandle &handle) const;
         void                    deleteResource (GPUViewportHandle &handle);
 
-        /* ritorna la viewport di default che e' sempre garantito essere aggiornata alle attuali dimensioni della main window */
+        /* ritorna la viewport di default che e' sempre garantito essere aggiornata alle attuali dimensioni della <mainWindow> */
         GPUViewportHandle       viewport_getDefault () const                { return defaultViewportHandle; }
         
 
-
-        //================ zbuffer
-        eImageFormat		        zbuffer_getBestFormat() const                                                                                               { return zbuffer_bestFmt_noStencil; }
-        eImageFormat		        zbuffer_getBestFormat (bool bWithStencil) const                                                                             { if (bWithStencil) return zbuffer_bestFmt_withStencil; return zbuffer_bestFmt_noStencil; }
-        bool				        zbuffer_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, GPUDepthStencilHandle *out_handle)        { return zbuffer_create (dimx, dimy, fmt, eMemAccessMode::onGPU, out_handle); }
-        bool				        zbuffer_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, eMemAccessMode memAccessMode, GPUDepthStencilHandle *out_handle);
-        void                        deleteResource (GPUDepthStencilHandle &handle);
-        const gpu::DepthStencil*    getInfo (const GPUDepthStencilHandle handle) const;
 
         //================ render target
 		bool				        renderTarget_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, GPURenderTargetHandle *out_handle)       { return renderTarget_create (dimx, dimy, fmt, eMemAccessMode::onGPU, out_handle); }
@@ -177,12 +171,36 @@ namespace gos
         const gpu::RenderTarget*    getInfo (const GPURenderTargetHandle handle) const;
         bool                        map (const GPURenderTargetHandle handle, gpu::sMappedImage *out) const;
 
+        //================ zbuffer
+        bool				        zbuffer_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, GPUDepthStencilHandle *out_handle)        { return zbuffer_create (dimx, dimy, fmt, eMemAccessMode::onGPU, out_handle); }
+        bool				        zbuffer_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, eMemAccessMode memAccessMode, GPUDepthStencilHandle *out_handle);
+        void                        deleteResource (GPUDepthStencilHandle &handle);
+        const gpu::DepthStencil*    getInfo (const GPUDepthStencilHandle handle) const;
+        eImageFormat		        zbuffer_getBestFormat() const                                                                                               { return zbuffer_bestFmt_noStencil; }
+        eImageFormat		        zbuffer_getBestFormat (bool bWithStencil) const                                                                             { if (bWithStencil) return zbuffer_bestFmt_withStencil; return zbuffer_bestFmt_noStencil; }
+
+
         //================ Pipeline
-        bool    pipeline_createNew (const gpu::pipe2::Pipeline_def &rpd, GPUPipelineHandle *out_handle);
-        bool    pipeline_createDescrSetInstance (const GPUPipelineHandle pipelineHandle, u8 descrSetNum, const GPUDescrPoolHandle &poolHandle, GPUDescrSetInstanceHandle *out_handle);
-        void    deleteResource (GPUPipelineHandle &handle);
-        bool    toVulkan (const GPUPipelineHandle handle, const gpu::Pipeline2 **out) const;
+        bool                        pipeline_createNew (const gpu::pipe2::Pipeline_def &rpd, GPUPipelineHandle *out_handle);
+        void                        deleteResource (GPUPipelineHandle &handle);
+        const gpu::Pipeline2*       getInfo (const GPUPipelineHandle handle) const;
         
+        //================ descriptor pool
+        DescriptorPoolBuilder&      descrPool_createNew (GPUDescrPoolHandle *out_handle);
+        void                        deleteResource (GPUDescrPoolHandle &handle);
+        bool                        toVulkan (const GPUDescrPoolHandle handle, VkDescriptorPool *out) const;
+
+        //================ descriptorSet layout
+        void                deleteResource (GPUDescrSetLayoutHandle &handle);
+        bool                toVulkan (const GPUDescrSetLayoutHandle handle, VkDescriptorSetLayout *out) const;
+
+        //================ descriptorSetInstance
+        bool                        descrSetInstance_create (const GPUDescrPoolHandle &poolHandle, const GPUDescrSetLayoutHandle &descrSetLayoutHandle, GPUDescrSetInstanceHandle *out_handle);
+        bool                        descrSetInstance_create (const GPUDescrPoolHandle &poolHandle, const GPUPipelineHandle pipelineHandle, u8 descrSetNum, GPUDescrSetInstanceHandle *out_handle);
+        void                        deleteResource (GPUDescrSetInstanceHandle &handle);
+        const gpu::DescrSetInstance* getInfo (const GPUDescrSetInstanceHandle handle) const;
+
+
         
         //================ command buffer
         bool    cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle);
@@ -207,65 +225,48 @@ namespace gos
         void    buffer_manualSync_cpuWrite (const gpu::sMappedBuffer *list, u32 numElemInList);
         void    buffer_manualSync_cpuRead (const gpu::sMappedBuffer *list, u32 numElemInList);
 
+        //================ image unmapping / manualSync
         void    image_unmap (gpu::sMappedImage &m);
         void    image_manualSync_cpuRead (const gpu::sMappedImage *list, u32 numElemInList);
 
         //================ vertex buffer
-        bool    vertexBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUVtxBufferHandle *out_handle);
-        void    deleteResource (GPUVtxBufferHandle &handle)                                                             { priv_bufferDestroy (vtxBufferList, handle); }
-        bool    toVulkan (const GPUVtxBufferHandle handle, VkBuffer *out) const;
-        bool    writeAndSync (const GPUVtxBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (vtxBufferList, handle, offsetDST, src, sizeInByte); }
-        bool    map (const GPUVtxBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (vtxBufferList, handle, offsetDST, sizeInByte, out); }
-
+        bool                vertexBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUVtxBufferHandle *out_handle);
+        void                deleteResource (GPUVtxBufferHandle &handle)                                                             { priv_bufferDestroy (vtxBufferList, handle); }
+        const gpu::Buffer*  getInfo (const GPUVtxBufferHandle handle) const;
+        bool                writeAndSync (const GPUVtxBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (vtxBufferList, handle, offsetDST, src, sizeInByte); }
+        bool                map (const GPUVtxBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (vtxBufferList, handle, offsetDST, sizeInByte, out); }
         
         //================ index buffer
-        bool    indexBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUIdxBufferHandle *out_handle);
-        void    deleteResource (GPUIdxBufferHandle &handle)                                                             { priv_bufferDestroy (idxBufferList, handle); }
-        bool    toVulkan (const GPUIdxBufferHandle handle, VkBuffer *out) const;
-        bool    writeAndSync (const GPUIdxBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (idxBufferList, handle, offsetDST, src, sizeInByte); }
-        bool    map (const GPUIdxBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (idxBufferList, handle, offsetDST, sizeInByte, out); }
+        bool                indexBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUIdxBufferHandle *out_handle);
+        void                deleteResource (GPUIdxBufferHandle &handle)                                                             { priv_bufferDestroy (idxBufferList, handle); }
+        const gpu::Buffer*  getInfo (const GPUIdxBufferHandle handle) const;
+        bool                writeAndSync (const GPUIdxBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (idxBufferList, handle, offsetDST, src, sizeInByte); }
+        bool                map (const GPUIdxBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (idxBufferList, handle, offsetDST, sizeInByte, out); }
 
         //================ uniform buffer
-        bool    uniformBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUUniformBufferHandle *out_handle);
-        void    deleteResource (GPUUniformBufferHandle &handle)                                                             { priv_bufferDestroy (uniformBufferList, handle); }
-        bool    toVulkan (const GPUUniformBufferHandle handle, VkBuffer *out, u32 *out_bufferSize) const;
-        bool    writeAndSync (const GPUUniformBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (uniformBufferList, handle, offsetDST, src, sizeInByte); }
-        bool    map (const GPUUniformBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (uniformBufferList, handle, offsetDST, sizeInByte, out); }
+        bool                uniformBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUUniformBufferHandle *out_handle);
+        void                deleteResource (GPUUniformBufferHandle &handle)                                                             { priv_bufferDestroy (uniformBufferList, handle); }
+        const gpu::Buffer*  getInfo (const GPUUniformBufferHandle handle) const;
+        bool                writeAndSync (const GPUUniformBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (uniformBufferList, handle, offsetDST, src, sizeInByte); }
+        bool                map (const GPUUniformBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (uniformBufferList, handle, offsetDST, sizeInByte, out); }
 
         //================ storage buffer
-        bool    storageBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUStorageBufferHandle *out_handle);
-        void    deleteResource (GPUStorageBufferHandle &handle)                                                             { priv_bufferDestroy (storageBufferList, handle); }
-        bool    toVulkan (const GPUStorageBufferHandle handle, VkBuffer *out, u32 *out_bufferSize) const;
-        bool    writeAndSync (const GPUStorageBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (storageBufferList, handle, offsetDST, src, sizeInByte); }
-        bool    map (const GPUStorageBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (storageBufferList, handle, offsetDST, sizeInByte, out); }
+        bool                storageBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUStorageBufferHandle *out_handle);
+        void                deleteResource (GPUStorageBufferHandle &handle)                                                             { priv_bufferDestroy (storageBufferList, handle); }
+        const gpu::Buffer*  getInfo (const GPUStorageBufferHandle handle) const;
+        bool                writeAndSync (const GPUStorageBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (storageBufferList, handle, offsetDST, src, sizeInByte); }
+        bool                map (const GPUStorageBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (storageBufferList, handle, offsetDST, sizeInByte, out); }
 
         //================ shader
-        bool    vtxshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)            { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::vertexShader, mainFnName, out_shaderHandle); }
-        bool    vtxshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                          { return priv_shader_createFromFile (filename, eShaderType::vertexShader, mainFnName, out_shaderHandle); }
+        bool                vtxshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)            { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::vtxShader, mainFnName, out_shaderHandle); }
+        bool                vtxshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                          { return priv_shader_createFromFile (filename, eShaderType::vtxShader, mainFnName, out_shaderHandle); }
         
-        bool    fragshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)           { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::fragmentShader, mainFnName, out_shaderHandle); }
-        bool    fragshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                         { return priv_shader_createFromFile (filename, eShaderType::fragmentShader, mainFnName, out_shaderHandle); }
+        bool                pxlshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)           { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::pxlShader, mainFnName, out_shaderHandle); }
+        bool                pxlshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                         { return priv_shader_createFromFile (filename, eShaderType::pxlShader, mainFnName, out_shaderHandle); }
             
-        VkShaderModule      shader_getVkHandle (const GPUShaderHandle shaderHandle) const;
-        const char*         shader_getMainFnName (const GPUShaderHandle shaderHandle) const;
-        eShaderType         shader_getType (const GPUShaderHandle shaderHandle) const;
+        const gpu::Shader*  getInfo (const GPUShaderHandle handle) const;
         void                deleteResource (GPUShaderHandle &shaderHandle);
 
-        //================ descriptor pool
-        DescriptorPoolBuilder& descrPool_createNew (GPUDescrPoolHandle *out_handle);
-        void                deleteResource (GPUDescrPoolHandle &handle);
-        bool                toVulkan (const GPUDescrPoolHandle handle, VkDescriptorPool *out) const;
-
-        //================ descriptorSet layout
-        void    deleteResource (GPUDescrSetLayoutHandle &handle);
-        bool    toVulkan (const GPUDescrSetLayoutHandle handle, VkDescriptorSetLayout *out) const;
-
-        //================ descriptorSetInstance
-        bool    descrSetInstance_createNew (const GPUDescrPoolHandle &poolHandle, const GPUDescrSetLayoutHandle &descrSetLayoutHandle, GPUDescrSetInstanceHandle *out_handle);
-        void    deleteResource (GPUDescrSetInstanceHandle &handle);
-        bool    toVulkan (const GPUDescrSetInstanceHandle handle, VkDescriptorSet *out) const;
-
-							
         //================ texture
 		bool                texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, GPUTextureHandle *out_handle);
         bool                texture_create2D (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, GPUTextureHandle *out_handle);
@@ -274,8 +275,8 @@ namespace gos
         bool                toVulkan (const GPUTextureHandle handle, VkImageView *out) const;
 
         //================ sampler
-        bool    sampler_create (const gpu::SamplerDesc &desc, GPUSamplerHandle *out_handle);
-        bool    toVulkan (const GPUSamplerHandle handle, VkSampler *out) const;
+        bool                sampler_create (const gpu::SamplerDesc &desc, GPUSamplerHandle *out_handle);
+        const gpu::Sampler* getInfo (const GPUSamplerHandle handle) const;
         //void                deleteResource (GPUSamplerHandle &handle);
         //                      delete resource NON esiste perche' i Sampler sono mantenuti per sempre da GPU e sharati nel caso
         //                      in cui si richiedano N sampler con le stesse caratteristiche

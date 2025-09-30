@@ -63,7 +63,7 @@ namespace gos
         
                     //elimina uid dal DB, elimina tutti gli asset che dipendono da uid, elimina tutti i runtimeName associati a UID
                     //Opzionalmente ritorna in <out> la lista degli asset che sono stati rimossi (compreso se stesso)
-        bool        asset_delete (Context &ctx, const asset::UID &uid, asset::HashedUIDList *out_CAN_BE_NULL_list_of_deleted_asset=NULL, bool bClearListOnStart=true);
+        bool        asset_deleteFromDB (Context &ctx, const asset::UID &uid, asset::HashedUIDList *out_CAN_BE_NULL_list_of_deleted_asset=NULL, bool bClearListOnStart=true);
         
                     //ritorna 0 se <uid> non esiste
         u64         asset_query_lastTimeBuilt (Context &ctx, const asset::UID &uid);

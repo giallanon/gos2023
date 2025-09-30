@@ -26,6 +26,16 @@ bool utils::stringIsTrueOrFalse (const char *val, bool *out)
     return false;
 }
 
+//***********************************************
+const char*	utils::enumToString (const eImageTiling s)
+{
+    switch (s)
+    {
+    default: return "invalid value";
+    ENUM_TO_STRING_CASE(eImageTiling, optimal);
+    ENUM_TO_STRING_CASE(eImageTiling, linear);
+    }
+}
 
 //***********************************************
 const char*	utils::enumToString (const eImageFormat fmt)

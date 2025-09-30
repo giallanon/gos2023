@@ -10,6 +10,9 @@ namespace gos
 
     namespace gpu
     {
+        struct DescrSetInstance; //fwd
+
+        
         /**********************************************
          * DescrSetInstanceWriter
          * 
@@ -49,7 +52,7 @@ namespace gos
 
         private:
             gos::GPU                        *gpu;
-            VkDescriptorSet                 vkDescrSetHandle;
+            const gpu::DescrSetInstance     *descrSetInstHandle;
 
             sBufferInfo                     bufferList;
             sImageInfo                      imageList;

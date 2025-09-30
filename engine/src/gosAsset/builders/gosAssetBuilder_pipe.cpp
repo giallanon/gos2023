@@ -154,7 +154,7 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
 }
 
 //************************************
-bool Builder_pipe::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out)
+bool Builder_pipe::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, gos::GPU *gpu, sBuildResult *out)
 {
     assert (ctx.isValid());
     assert (NULL != sec);
@@ -339,14 +339,25 @@ bool Builder_pipe::priv_do_create_assetFile (Context &ctx, const Params &params,
 
 
         //push constant
-        const u8 *pushconst = reflect.pushconst_getDataBlobDef();
-        u32 size = 0;
-        if (NULL != pushconst)
-            size = gos::datablob::blobDef_getSize(pushconst);
-        buffer.writeU32 (size);
-        if (size)
-            buffer.write (pushconst, size);
+        {
+            const u8 *pushconst = reflect.pushconst_getDataBlobDef();
+            const u32 buffer_pos = buffer.tell();
 
+            u32 numPushConstant = 0;
+            buffer.writeU32 (numPushConstant);
+            if (NULL != pushconst)
+            {
+                //devo "linearizzare" il dataBlob
+                gos::datablob::DefReader dblobReader;
+                dblobReader.setup (pushconst);
+
+                datablob::DefElem elem;
+                dblobReader.beginEnumerate(&elem);
+                numPushConstant = priv_writePushConstant_rec (buffer, elem);
+            }
+
+            buffer.writeU32At (buffer_pos, numPushConstant);
+        }
 
         //descriptor set
         const u32 numSet = reflect.descrset_getNumSet();
@@ -383,7 +394,53 @@ bool Builder_pipe::priv_do_create_assetFile (Context &ctx, const Params &params,
 
         //salvo il file asset
         return fs::fileSaveBuffer (filenameDST, stackBuffer, buffer.tell());
-
-
     }
+}
+
+//************************************
+u32 Builder_pipe::priv_writePushConstant_rec (gos::BufferW_linear &buffer, datablob::DefElem &elem) const
+{
+    u32 ret = 0;
+
+    do
+    {
+        switch (elem.getType())
+        {
+        default:
+            //TODO
+            DBGBREAK;
+            break;
+
+        case eDataBlobElemType::simpleType:
+            {
+                ShaderTypeList shaderTypeList;
+                if ((elem.getUserData() & 0x01) != 0)
+                    shaderTypeList |= eShaderType::vtxShader;
+
+                if ((elem.getUserData() & 0x02) != 0)
+                    shaderTypeList |= eShaderType::pxlShader;
+
+                buffer.writeU32 (elem.getOffset());
+                buffer.writeU32 (elem.getPaddedSize());
+                buffer.writeU32 (static_cast<u32>(shaderTypeList.bitmask));
+                ret++;
+            }
+            break;
+
+        case eDataBlobElemType::structType:
+            {
+                datablob::DefElem elemChild;
+                if (elem.getFirstChild(&elemChild))
+                    ret += priv_writePushConstant_rec (buffer, elemChild);
+            }
+            break;
+
+        case eDataBlobElemType::arrayType:
+            //TODO
+            DBGBREAK;
+            break;
+
+        }
+    } while (elem.next());
+    return ret;
 }

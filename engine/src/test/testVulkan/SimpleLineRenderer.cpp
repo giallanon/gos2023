@@ -38,7 +38,7 @@ bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHa
         gos::logger::err ("SimpleLineRenderer::setup() => can't create vert shader\n");
         return false;
     }
-    if (!gpu->fragshader_createFromFile ("@shader/lineShader.frag.spv", "main", &hFragShader))
+    if (!gpu->pxlshader_createFromFile ("@shader/lineShader.frag.spv", "main", &hFragShader))
     {
         gos::logger::err ("SimpleLineRenderer::setup() => can't create frag shader\n");
         return false;
@@ -76,7 +76,7 @@ bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHa
     }
     
     //alloco una istanza del descriptorSet
-    if (!gpu->pipeline_createDescrSetInstance (pipelineHandle, 0, descrPoolHandle, &hDescrSetInstance))
+    if (!gpu->descrSetInstance_create (descrPoolHandle, pipelineHandle, 0, &hDescrSetInstance))
     {
         gos::logger::err ("SimpleLineRenderer::setup() => can't create descriptorSet instance\n");
         return false;

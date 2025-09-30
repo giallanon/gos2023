@@ -12,7 +12,7 @@ namespace gos
         vtx_shader      = 1,
         pxl_shader      = 2,
         pipe            = 3,
-        texture2D       = 4,
+        tex2D           = 4,
         shape           = 5,
 
         DEBUG_ASSET     = 31

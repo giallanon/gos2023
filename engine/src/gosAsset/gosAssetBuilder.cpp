@@ -28,6 +28,7 @@ const char* Builder::enumToString (const eBuildStatus s)
 Builder::Builder()
 {
     localAllocator = gos::getSysHeapAllocator();
+    gpu = NULL;
     logger = &loggerNull;
     
     //suppongo un massimo di NUM_MAX_ASSET_BUILDER tipo di asset diversi
@@ -352,6 +353,7 @@ bool Builder::rebuildAll (const char *baseFolder, bool bVerbose, bool doCreateAs
             asset::asset_get_binfolder_name (baseFolder, s, sizeof(s));
             fs::folderDeleteAllFileWithJolly (s, "*.gosasset");
             fs::folderDeleteAllFileWithJolly (s, "*.gosassetd");
+            fs::folderDeleteAllFileWithJolly (s, "*.gosasset.reflect");
         }
 
         //builda
@@ -663,7 +665,7 @@ u32 Builder::priv_do_build (Context &ctx, bool doCreateAssetsFile)
 
                     //elimino l'asset dal DB e dal disco e popolo una nuova lista di asset dipendenti da questo asset.
                     //Questi andranno a loro volta eliminati
-                    if (!asset::asset_delete (ctx, uid, hashList2, false))
+                    if (!asset::asset_deleteFromDB (ctx, uid, hashList2, false))
                     {
                         num_errors++;
                         return num_errors;
@@ -699,6 +701,17 @@ u32 Builder::priv_do_build (Context &ctx, bool doCreateAssetsFile)
             //elimino fisicamente l'asset dal disk
             asset::asset_manufacture_fullFilename (ctx, uid, s, sizeof(s));
             fs::fileDelete(s);
+
+            if (uid.isAnAssetOfType(eAssetType::vtx_shader) || uid.isAnAssetOfType(eAssetType::pxl_shader))
+            {
+                strcat_s (s, sizeof(s), "d");
+                fs::fileDelete(s);
+            }
+            else if (uid.isAnAssetOfType(eAssetType::pipe))
+            {
+                strcat_s (s, sizeof(s), ".reflect");
+                fs::fileDelete(s);
+            }
 
         }
     }
@@ -1338,7 +1351,7 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreat
 u32 Builder::priv_build_iniSection (bool doCreateAssetsFile, const IniFileSection *sec, const asset::UID &uid_of_iniFile, const char *sourceFileInfo, BuilderInterface *builder, const char *runtimeName)
 {
     asset::sBuildResult result;
-    if (!builder->build (ctx, buildTimeUTC, sourceFileInfo, uid_of_iniFile, sec, doCreateAssetsFile, &result))
+    if (!builder->build (ctx, buildTimeUTC, sourceFileInfo, uid_of_iniFile, sec, doCreateAssetsFile, gpu, &result))
         return 1;
     assert (result.uid.getAssetDepth() == priv_getDepthByAssetType (result.uid.getAssetType()));
 

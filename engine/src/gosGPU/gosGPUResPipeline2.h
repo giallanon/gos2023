@@ -14,9 +14,20 @@ namespace gos
         struct Pipeline2
         {
         public:
+            struct sPushConst
+            {
+                u8  offset;
+                u8  size;
+                u8  whichRange;
+            };
+
+        public:
 			VkPipelineLayout            vkPipelineLayoutHandle;
 			VkPipeline                  vkPipelineHandle;
-			VkPushConstantRange         pushContantList[GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE];
+
+            u16                         pcRange_num;
+			VkPushConstantRange         pcRange_list[GOSGPU__NUM_MAX_PUSH_CONSTANT_RANGE_PER_PIPELINE];
+            sPushConst                  pcList[GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE];
 
             u32                         descrset_num;
             GPUDescrSetLayoutHandle     descrset_handle_defList[GOSGPU__NUM_MAX_DESCRIPTOR_SETS];
@@ -31,7 +42,8 @@ namespace gos
                 vkPipelineLayoutHandle = VK_NULL_HANDLE;
                 vkPipelineHandle = VK_NULL_HANDLE;
                 
-                memset (pushContantList, 0, sizeof(pushContantList));
+                pcRange_num = 0;
+                memset (&pcList, 0xff, sizeof(pcList));
                 
                 descrset_num = 0;
                 for (u32 i=0; i<GOSGPU__NUM_MAX_DESCRIPTOR_SETS; i++)

@@ -1,5 +1,6 @@
 #include "gosImageBufferRGBA.h"
 #include "loader/stb_image.h"
+#include "../gos/dataTypes/gosColorHDR.h"
 
 using namespace gos;
 using namespace gos::image;
@@ -770,4 +771,31 @@ bool BufferRGBA::saveAsTGA (const char *filename) const
 
 	GOSFREE_SCRAP(tga);
 	return true;
+}
+
+//***********************************************************
+void BufferRGBA::convert_sRGB_to_RGB()
+{
+	const u32 size = _w * _h * 4;
+	u32 ct = 0;
+	while (ct < size)
+	{
+		u32 startCT = ct;
+		const u8 r = _bufferRGBA[ct++];
+		const u8 g = _bufferRGBA[ct++];
+		const u8 b = _bufferRGBA[ct++];
+		const u8 a = _bufferRGBA[ct++];
+
+		gos::ColorHDR col;
+		col.setU8_argb(a, r, g, b);
+		col.sRGBToLinear();
+
+		const u32 argb = col.toU32ARGB();
+
+		_bufferRGBA[startCT++] = (u8)((argb & 0x00FF0000) >> 16);
+		_bufferRGBA[startCT++] = (u8)((argb & 0x0000FF00) >> 8);
+		_bufferRGBA[startCT++] = (u8)((argb & 0x000000FF));
+		_bufferRGBA[startCT] = (u8)((argb & 0xFF000000) >> 24);
+
+	}
 }

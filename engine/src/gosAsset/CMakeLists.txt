@@ -28,6 +28,8 @@ builders/gosAssetBuilder_pipe.cpp
 builders/gosAssetBuilder_pipe.h
 builders/gosAssetBuilder_shader.cpp
 builders/gosAssetBuilder_shader.h
+builders/gosAssetBuilder_tex2D.cpp
+builders/gosAssetBuilder_tex2D.h
 builders/gosAssetBuilderInterface.cpp
 builders/gosAssetBuilderInterface.h
 
@@ -76,6 +78,7 @@ message("         compiler flags: ${MAIN_CFLAGS}")
 include_directories(${PROJECT_SOURCE_DIR}/../gos)
 include_directories(${PROJECT_SOURCE_DIR}/../gosDB)
 include_directories(${PROJECT_SOURCE_DIR}/../gosGPU)
+include_directories(${PROJECT_SOURCE_DIR}/../gosImage)
 
 #====================================================
 # additional include path

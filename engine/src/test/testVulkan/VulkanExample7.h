@@ -1,18 +1,19 @@
 #ifndef _VulkanExample7_h_
 #define _VulkanExample7_h_
-#include "VulkanApp.h"
+#include "VulkanAppNoWin.h"
 #include "gosAssetHub.h"
+#include "../gosImage/gosImageBufferRGBA.h"
 
 
 /************************************
  *  VulkanExample7
  * 
   */
-class VulkanExample7 : public VulkanApp
+class VulkanExample7 : public VulkanAppNoWin
 {
 public:
     
-                VulkanExample7()                    { }
+                VulkanExample7();
 
     bool        virtual_onInit ();
     void        virtual_onRun();
@@ -20,15 +21,14 @@ public:
     void        virtual_explain();
 
 private:    
-    void        doCPUStuff ();
-    bool        recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::SwapchainImg &swapchainImg);
-    bool        do_recordCommandBuffer (gos::gpu::pipe2::CmdBufferWriter2 &cw, gos::gpu::SwapchainImg &swapchainImg);
-
-    bool        sampleImage (GPUCmdBufferHandle &cmdBufferHandle, u32 dstW, u32 dstH);
+    bool        sampleImage1 (GPUCmdBufferHandle &cmdBufferHandle, u32 dstW, u32 dstH);
+    bool        sampleImage2 (GPUCmdBufferHandle &cmdBufferHandle, u32 dstW, u32 dstH);
+    void        save (const gos::gpu::sMappedImage &src, u32 srcW, u32 srcH);
 
 private:
     gos::asset::Hub         theHub;
     gos::asset::Handle      assetPipe1;
+    gos::asset::Handle      assetPipe2;
     GPUVtxBufferHandle      vtxBufferHandle;
     GPUIdxBufferHandle      idxBufferHandle;
     GPURenderTargetHandle   rt1;
@@ -44,6 +44,8 @@ private:
     u32                     tex_height;
     u32                     rt_width;
     u32                     rt_height;
+
+    bool bUsePipe1;
 
 
 };

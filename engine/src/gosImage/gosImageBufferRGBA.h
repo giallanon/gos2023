@@ -32,7 +32,7 @@ namespace gos
 			static void		bltMask (BufferRGBA &dst, i16 xDST, i16 yDST, const BufferA &src, u16 x1, u16 y1, i16 dimx, i16 dimy, u8 r, u8 g, u8 b);
 			static void		bltMask (BufferRGBA &dst, i16 xDST, i16 yDST, const u8 *srcBufferA, u16 srcBufferW, u16 srcBufferH, u16 x1, u16 y1, i16 dimx, i16 dimy, u8 r, u8 g, u8 b);
 
-			
+		public:
 							//============================ fn
 							BufferRGBA()																	{ _bufferRGBA = NULL; _w = _h = 0; }
 							~BufferRGBA()																	{ }
@@ -48,6 +48,8 @@ namespace gos
 
 			void			clear (u8 r, u8 g, u8 b, u8 a = 0xff);
 			void			clear (const gos::ColorU32 &col)											{ clear (col.r(), col.g(), col.b(), col.a()); }
+
+			void 			convert_sRGB_to_RGB();
 
 			void			putPixel (i16 x, i16 y, u8 r, u8 g, u8 b, u8 a = 0xff);
 			void			putPixel (const gos::Point2 &p, u8 r, u8 g, u8 b, u8 a = 0xff)				{ putPixel (p.x, p.y, r, g, b, a); }

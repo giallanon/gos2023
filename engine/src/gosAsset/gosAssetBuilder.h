@@ -39,6 +39,8 @@ namespace gos
                         return false;
                     }
 
+            void    setGPU (gos::GPU *gpuIN)                                                                { gpu = gpuIN; }
+
             bool    rebuildAll (const char *baseFolder, bool bVerbose, bool doCreateAssetsFile = true);
             bool    buildAll (const char *baseFolder, bool bVerbose, bool doCreateAssetsFile = true);
 
@@ -114,6 +116,7 @@ namespace gos
 
         private:
             gos::Allocator      *localAllocator;
+            gos::GPU            *gpu;
             gos::Logger         *logger;
             gos::LoggerNull     loggerNull;
             

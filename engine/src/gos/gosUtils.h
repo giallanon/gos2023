@@ -11,6 +11,7 @@ namespace gos
         const char* enumToString (eSocketError s);
         const char*	enumToString (const eDataFormat e);
         const char*	enumToString (const eImageFormat e);
+        const char*	enumToString (const eImageTiling e);
         const char*	enumToString (const eImageLayout e);
         const char*	enumToString (const eAttachmentLoadOp e);
         const char*	enumToString (const eAttachmentStoreOp e);

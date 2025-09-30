@@ -143,7 +143,7 @@ bool VulkanExample4::virtual_onInit ()
         gos::logger::err ("VulkanApp::init() => can't create vert shader\n");
         return false;
     }
-    if (!gpu->fragshader_createFromFile ("@shader/shader.frag.spv", "main", &fragShaderHandle))
+    if (!gpu->pxlshader_createFromFile ("@shader/shader.frag.spv", "main", &fragShaderHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create frag shader\n");
         return false;
@@ -203,7 +203,7 @@ bool VulkanExample4::virtual_onInit ()
     }
 
     //alloco una istanza del descriptorSet
-    if (!gpu->pipeline_createDescrSetInstance (pipelineHandle, 0, descrPoolHandle, &descrSetInstancerHandle))
+    if (!gpu->descrSetInstance_create (descrPoolHandle, pipelineHandle, 0, &descrSetInstancerHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create descriptorSet instance\n");
         return false;

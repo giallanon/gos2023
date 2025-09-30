@@ -20,34 +20,42 @@ void runExample (gos::GPU *gpu, const char *title)
     }
 }
 
-
-//******************************** 
-void test1 (GOSWinHandle &mainWin)
+template<class VKAPP_NOWIN>
+void runExampleNoWin (gos::GPU *gpu)
 {
-    gos::GPU gpu;
-    if (gpu.init (mainWin, false))
+    VKAPP_NOWIN app;
+    if (app.init(gpu))
     {
-        //runExample<VulkanExample1>(&gpu, "VulkanExample1");
-        //runExample<VulkanExample2>(&gpu, "VulkanExample2");
-        //runExample<VulkanExample3>(&gpu, "VulkanExample3");
-        runExample<VulkanExample4>(&gpu, "VulkanExample4");
-        //runExample<VulkanExample5>(&gpu, "VulkanExample5");
-        //runExample<VulkanExample6>(&gpu, "VulkanExample6");
-        //runExample<VulkanExample7>(&gpu, "VulkanExample7");
-        gpu.deinit();
+        app.run();
+        app.cleanup();
     }
 }
-
 
 //******************************** 
 void testWithWindow()
 {
-    GOSWinHandle mainWin;
-    if (gos::input::window_create (1024, 768, gos::getAppName(), &mainWin))
+    if (gos::input::init())
     {
-        test1 (mainWin);
-        gos::input::window_destroy (mainWin);
+        GOSWinHandle mainWin;
+        if (gos::input::window_create (1024, 768, gos::getAppName(), &mainWin))
+        {
+            gos::GPU gpu;
+            if (gpu.init (mainWin, false))
+            {
+                // runExample<VulkanExample1>(&gpu, "VulkanExample1");
+                // runExample<VulkanExample2>(&gpu, "VulkanExample2");
+                // runExample<VulkanExample3>(&gpu, "VulkanExample3");
+                // runExample<VulkanExample4>(&gpu, "VulkanExample4");
+                // runExample<VulkanExample5>(&gpu, "VulkanExample5");
+                runExample<VulkanExample6>(&gpu, "VulkanExample6");
+                gpu.deinit();
+            }
+            gos::input::window_destroy (mainWin);
+        }
+
+        gos::input::deinit();
     }
+
 }
 
 //******************************** 
@@ -56,7 +64,7 @@ void testWindoless()
     gos::GPU gpu;
     if (gpu.init (GOSWinHandle::INVALID(), false))
     {
-        runExample<VulkanExample7>(&gpu, "VulkanExample7");
+        runExampleNoWin<VulkanExample7>(&gpu);  // VulkanExample7
         gpu.deinit();
     }
 }
@@ -70,13 +78,9 @@ int main()
     init.setLogMode (gos::sGOSInit::eLogMode::both_console_and_file);
     if (gos::init (init, "testVulkan"))
     {
-        if (gos::input::init())
-        {
-            testWindoless();
-            //testWithWindow();
+        testWindoless();
+        //testWithWindow();
 
-            gos::input::deinit();
-        }
         gos::deinit();
     }
 
