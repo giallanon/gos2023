@@ -2,6 +2,7 @@
 #define _gosAssetLoader_h_
 #include "loaders/gosAssetLoader_shader.h"
 #include "loaders/gosAssetLoader_pipe.h"
+#include "loaders/gosAssetLoader_tex2D.h"
 
 namespace gos
 {

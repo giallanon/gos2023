@@ -25,7 +25,7 @@ namespace gos
             static void         save_dependencies_report (const char *baseFolder, asset::eFilter filter = eFilter::both);
 
         public:
-                    Builder();
+                    Builder (gos::GPU *gpuIN);
                     ~Builder();
 
                     template<class TBUILDER>
@@ -38,8 +38,6 @@ namespace gos
                         GOSDELETE(localAllocator, builder);
                         return false;
                     }
-
-            void    setGPU (gos::GPU *gpuIN)                                                                { gpu = gpuIN; }
 
             bool    rebuildAll (const char *baseFolder, bool bVerbose, bool doCreateAssetsFile = true);
             bool    buildAll (const char *baseFolder, bool bVerbose, bool doCreateAssetsFile = true);

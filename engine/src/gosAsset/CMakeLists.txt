@@ -28,6 +28,7 @@ builders/gosAssetBuilder_pipe.cpp
 builders/gosAssetBuilder_pipe.h
 builders/gosAssetBuilder_shader.cpp
 builders/gosAssetBuilder_shader.h
+builders/gosAssetBuilder_tex2D_shaders.h
 builders/gosAssetBuilder_tex2D.cpp
 builders/gosAssetBuilder_tex2D.h
 builders/gosAssetBuilderInterface.cpp
@@ -37,6 +38,8 @@ loaders/gosAssetLoader_pipe.cpp
 loaders/gosAssetLoader_pipe.h
 loaders/gosAssetLoader_shader.h
 loaders/gosAssetLoader_shader.cpp
+loaders/gosAssetLoader_tex2D.cpp
+loaders/gosAssetLoader_tex2D.h
 loaders/gosAssetLoaderInterface.h
 
 shader_reflect/spirv_reflect.c

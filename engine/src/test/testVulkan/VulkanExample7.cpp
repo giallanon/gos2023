@@ -39,8 +39,9 @@ bool VulkanExample7::virtual_onInit ()
 {
     //builder per ricompilare gli asset se necessario
     {
-        gos::asset::Builder builder;
-        builder.buildAll("shader/example7", true);
+        gos::asset::Builder builder(gpu);
+        if (!builder.buildAll("shader/example7", true))
+            return false;
     }
 
     //theHub

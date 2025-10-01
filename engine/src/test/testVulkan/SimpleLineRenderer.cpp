@@ -59,7 +59,7 @@ bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHa
             .add (1, offsetof(sVertex, col), eDataFormat::_3f32)
             .endVtxStream()
         .descriptorset_add()
-            .add (0, eGPUDescriptrorType::UNIFORM_BUFFER, 1, eGPUDescriptrorUsageFlag::vtx_shader)
+            .add (0, eGPUDescriptrorType::UNIFORM_BUFFER, 1, eGPUDescriptrorUsage::vtx_shader)
             .endDescriptorSet();
 
     if (!gpu->pipeline_createNew (def, &pipelineHandle))

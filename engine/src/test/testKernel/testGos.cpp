@@ -781,7 +781,7 @@ namespace test7
     }
 }
 
-
+//********************************************
 namespace test8
 {
     int run1()
@@ -846,6 +846,7 @@ namespace test8
     }    
 }
 
+//********************************************
 namespace test9_eDataFormat
 {
     int run()
@@ -925,7 +926,7 @@ namespace test9_eDataFormat
     }    
 }
 
-
+//********************************************
 namespace test10_eImageFormat
 {
     int run()
@@ -973,6 +974,61 @@ namespace test10_eImageFormat
     }
 }
 
+//********************************************
+namespace test11_enum_bitmask
+{
+    enum class eProva : u8
+    {
+        none = 0,
+        bit0 = 0x01,
+        bit1 = 0x02,
+        bit2 = 0x04,
+        bit3 = 0x08,
+        bit4 = 0x10,
+        bit5 = 0x20,
+        bit6 = 0x40,
+        bit7 = 0x80
+    };
+
+    DECL_ENUM_BITMASK_CLASS(eProva);
+    
+    int fn1 (eProvaBitmask bm)
+    {
+        return bm.isset(eProva::bit0);
+    }
+
+
+    int run()
+    {
+        eProvaBitmask bm;
+        bm = eProva::none;      TEST_ASSERT(bm.bitmask == 0);
+        bm = eProva::bit0;      TEST_ASSERT(bm.bitmask == 0x01);
+        bm |= eProva::bit1;     TEST_ASSERT(bm.bitmask == 0x03);
+
+        bm.zero();             TEST_ASSERT(bm.bitmask == 0);
+        bm = eProva::bit4 | eProva::bit0;   TEST_ASSERT(bm.bitmask == 0x11);
+        bm = bm | eProva::bit7; TEST_ASSERT(bm.bitmask == 0x91);
+
+        eProva p;
+        u8 mask = 0;
+        u8 iter;
+        bm.beginFetch(&iter);
+        while (bm.fetch(iter, &p))
+        {
+            mask |= (u8)p;
+        }
+        TEST_ASSERT(mask == bm.bitmask);
+        
+        TEST_ASSERT( fn1(bm) == true );
+        bm.bitclear (eProva::bit0);
+        TEST_ASSERT( fn1(bm) == false );
+
+
+        return 0;
+    }
+}
+
+
 
 } //namespace test_gos
 
@@ -989,5 +1045,6 @@ void testGos (Tester &tester)
     tester.run("test8 string hash(1)", test_gos::test8::run1);
     tester.run("test8 string hash(2)", test_gos::test8::run2);
     tester.run("test9 eDataFormat", test_gos::test9_eDataFormat::run);
-    tester.run("test9 eImageFormat", test_gos::test10_eImageFormat::run);
+    tester.run("test10 eImageFormat", test_gos::test10_eImageFormat::run);
+    tester.run("test11 enum-bitmask", test_gos::test11_enum_bitmask::run);
 }

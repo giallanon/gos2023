@@ -36,7 +36,7 @@ namespace gos
                     Builder_DEBUG_ASSET () : BuilderInterface (eAssetType::DEBUG_ASSET)                { }
                     ~Builder_DEBUG_ASSET()                                                              { }
 
-            bool    build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, gos::GPU *gpu, sBuildResult *out);
+            bool    build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out);
 
 
         private:

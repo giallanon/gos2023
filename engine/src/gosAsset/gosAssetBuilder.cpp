@@ -4,6 +4,7 @@
 #include "builders/gosAssetBuilder_pipe.h"
 #include "builders/gosAssetBuilder_shader.h"
 #include "builders/gosAssetBuilder_DEBUG_ASSET.h"
+#include "builders/gosAssetBuilder_tex2D.h"
 
 using namespace gos;
 using namespace gos::asset;
@@ -25,10 +26,10 @@ const char* Builder::enumToString (const eBuildStatus s)
 }
 
 //***********************************
-Builder::Builder()
+Builder::Builder(gos::GPU *gpuIN)
 {
     localAllocator = gos::getSysHeapAllocator();
-    gpu = NULL;
+    gpu = gpuIN;
     logger = &loggerNull;
     
     //suppongo un massimo di NUM_MAX_ASSET_BUILDER tipo di asset diversi
@@ -44,6 +45,7 @@ Builder::Builder()
     addBuilder<gos::asset::Builder_pxlShader>();
     addBuilder<gos::asset::Builder_pipe>();
     addBuilder<gos::asset::Builder_DEBUG_ASSET>();
+    addBuilder<gos::asset::Builder_tex2D>();
 
 }
 
@@ -54,6 +56,7 @@ Builder::~Builder()
     {
         if (NULL == builderList[i])
             continue;
+        builderList[i]->deinitOnce();
         GOSDELETE(localAllocator, builderList[i]);
     }
 
@@ -81,6 +84,7 @@ bool Builder::priv_addBuilder (BuilderInterface *builder, u32 asset_depth)
     {
         builderList[index] = builder;
         depthByAssetTypeList[index] = asset_depth;
+        builder->initOnce(gpu);
         return true;
     }
     
@@ -1351,7 +1355,7 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreat
 u32 Builder::priv_build_iniSection (bool doCreateAssetsFile, const IniFileSection *sec, const asset::UID &uid_of_iniFile, const char *sourceFileInfo, BuilderInterface *builder, const char *runtimeName)
 {
     asset::sBuildResult result;
-    if (!builder->build (ctx, buildTimeUTC, sourceFileInfo, uid_of_iniFile, sec, doCreateAssetsFile, gpu, &result))
+    if (!builder->build (ctx, buildTimeUTC, sourceFileInfo, uid_of_iniFile, sec, doCreateAssetsFile, &result))
         return 1;
     assert (result.uid.getAssetDepth() == priv_getDepthByAssetType (result.uid.getAssetType()));
 

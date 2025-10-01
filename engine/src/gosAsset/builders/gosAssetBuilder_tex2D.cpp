@@ -3,12 +3,122 @@
 #include "../gosAssetBuilder.h"
 #include "../gosImage/gosImageBufferRGBA.h"
 #include "gosAssetBuilder_tex2D.h"
+#include "gosAssetBuilder_tex2D_shaders.h"
 
 
 using namespace gos;
 using namespace gos::asset;
 
+//************************************
+Builder_tex2D::Builder_tex2D () : BuilderInterface (eAssetType::tex2D)
+{ 
+    gpu = NULL;
+    samplerHandle.setInvalid();
+}
 
+//************************************
+void Builder_tex2D::initOnce (gos::GPU *gpuIN)
+{ 
+    gpu = gpuIN; 
+}
+
+//************************************
+bool Builder_tex2D::priv_create_GPUResourceOnce()
+{
+    assert (NULL != gpu);
+
+    if (samplerHandle.isValid())
+        return true;
+
+    if (!gpu->sampler_create (gpu::SamplerDesc(), &samplerHandle))
+    {
+        gos::logger::err ("gpu->sampler_create() => failed\n");
+        return false;
+    }
+
+    if (pipeHandle.isInvalid())
+    {
+        bool ret = true;
+
+        GPUShaderHandle vtxShaderHandle;
+        {
+            if (!gpu->vtxshader_createFromMemory (GOS__BUILDER_TEX2D_VTX_SHADER, sizeof(GOS__BUILDER_TEX2D_VTX_SHADER), "main", &vtxShaderHandle))
+            {
+                gos::logger::err ("gpu->vtxshader_createFromMemory() => failed\n");
+                ret = false;
+            }
+        }
+
+        GPUShaderHandle pxlShaderHandle;
+        if (ret)
+        {
+            if (!gpu->pxlshader_createFromMemory (GOS__BUILDER_TEX2D_PXL_SHADER, sizeof(GOS__BUILDER_TEX2D_PXL_SHADER), "main", &pxlShaderHandle))
+            {
+                gos::logger::err ("gpu->pxlshader_createFromMemory() => failed\n");
+                ret = false;
+            }
+        }
+
+        if (ret)
+        {
+            gpu::pipe2::Pipeline_def def;
+            def
+                .reset()
+                .add_rt (eImageFormat::U8_RGBA)
+                .shader_add (vtxShaderHandle)
+                .shader_add (pxlShaderHandle)
+                .pushConst_add (0, 8, eShaderType::vtxShader)   //screenWH
+                .pushConst_add (8, 8, eShaderType::vtxShader)   //quadSize
+                .descriptorset_add ()
+                    .add(0, eGPUDescriptrorType::COMBINED_IMAGE_SAMPLER, 1, eGPUDescriptrorUsage::pxl_shader)
+                    .endDescriptorSet()
+                ;
+
+            if (!gpu->pipeline_createNew (def, &pipeHandle))
+            {
+                gos::logger::err ("gpu->pipeline_createNew() => failed\n");
+                ret = false;
+            }
+        }
+
+        gpu->deleteResource(vtxShaderHandle);
+        gpu->deleteResource(pxlShaderHandle);
+        if (!ret)
+            return false;
+    }
+
+
+    //creo un descriptor pool
+    gpu->descrPool_createNew (&descrPoolHandle)
+        .setMaxNumDescriptorSet(1)
+        .addPool_combinedTextureAndSampler(1)
+        .end();
+    if (descrPoolHandle.isInvalid())
+    {
+        gos::logger::err ("gpu->descrPool_createNew() => failed\n");
+        return false;
+    }
+
+    //alloco una istanza del descriptorSet
+    if (!gpu->descrSetInstance_create (descrPoolHandle, pipeHandle, 0, &descrSetInstanceHandle))
+    {
+        gos::logger::err ("gpu->descrSetInstance_create() => failed\n");
+        return false;
+    }    
+
+    return true;
+}
+
+//************************************
+void Builder_tex2D::deinitOnce()
+{
+    //gpu->deleteResource (samplerHandle); non serve, ci pensa GPU da sola
+    gpu->deleteResource(pipeHandle);
+    gpu->deleteResource(descrSetInstanceHandle);
+    gpu->deleteResource(descrPoolHandle);
+    gpu = NULL;
+
+}
 
 //************************************
 bool Builder_tex2D::priv_extractParams (const IniFileSection *sec, Params *out_params)
@@ -89,7 +199,7 @@ bool Builder_tex2D::priv_extractParams (const IniFileSection *sec, Params *out_p
 }
 
 //************************************
-bool Builder_tex2D::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, gos::GPU *gpu, sBuildResult *out)
+bool Builder_tex2D::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out)
 {
     assert (ctx.isValid());
     assert (NULL != sec);
@@ -164,7 +274,7 @@ bool Builder_tex2D::build (Context &ctx, u64 buildTimeUTC, const char *sourceFil
     {
         char filenameDST[1024];
         asset::asset_manufacture_fullFilename (ctx, out->uid, filenameDST, sizeof(filenameDST));
-        return priv_do_create_assetFile (ctx, params, gpu, filenameDST);
+        return priv_do_create_assetFile (ctx, params, filenameDST);
     }
 
     return true;
@@ -172,10 +282,16 @@ bool Builder_tex2D::build (Context &ctx, u64 buildTimeUTC, const char *sourceFil
 
 
 //************************************
-bool Builder_tex2D::priv_do_create_assetFile (Context &ctx, const Params &params, gos::GPU *gpu, const char *filenameDST) const
+bool Builder_tex2D::priv_do_create_assetFile (Context &ctx, const Params &params, const char *filenameDST)
 {
     bool result = false;
     char s[1024];
+
+    //se necessario creo le risorse di GPU comuni a tutte le volte che buildo questo tipo di asset
+    if (!priv_create_GPUResourceOnce())
+        return false;
+
+
 
     //carico l'immagine e creo la texture in GPU
     GPUTextureHandle texHandle;
@@ -209,13 +325,12 @@ bool Builder_tex2D::priv_do_create_assetFile (Context &ctx, const Params &params
         }
     }
 
-    //creo i render target
+    //creo i render target dimensionati in base alla texture caricata
     const u32 rt_width = gos::utils::calcClosestPowerOf2(srcImg_dimx);
     const u32 rt_height = gos::utils::calcClosestPowerOf2(srcImg_dimy);
-    GPUViewportHandle viewportHandle;
+    GPUViewportHandle   viewportHandle;
     GPURenderTargetHandle rt1;
     GPURenderTargetHandle rtReadback;
-    GPUSamplerHandle samplerHandle;
 
     while (1)
     {
@@ -235,26 +350,217 @@ bool Builder_tex2D::priv_do_create_assetFile (Context &ctx, const Params &params
             break;
         }
 
-        if (!gpu->sampler_create (gpu::SamplerDesc(), &samplerHandle))
-        {
-            gos::logger::err ("gpu->renderTarget_create(rtReadback) => failed\n");
-            result = false; 
-            break;
-        }
-
         break;
     }
 
     if (result)
     {
+        //calcola il num massimo di mip-map ottenibili
+        u32 dim = srcImg_dimx;
+        if (srcImg_dimy < dim)
+            dim = srcImg_dimy;
+
+        u32 numMipMap = 1;
+        while (dim > 32)
+        {
+            dim/=2;
+            numMipMap++;
+        }
+
+        if (u32MAX != params.dstNumMipMap)
+        {
+            if (params.dstNumMipMap < numMipMap)
+                numMipMap = params.dstNumMipMap;
+        }
+
+        //preparo image::builder
+        gos::Image  image;
+        image::Builder builder;
+        builder.begin (gos::getSysHeapAllocator(), &image);
+        builder.beginTexture2D (params.dstFmt, srcImg_dimx, srcImg_dimy, numMipMap);
+
+        //aggiorno il descriptor-set con la texture
+        gos::gpu::DescrSetInstanceWriter descrWriter;
+        descrWriter.begin (gpu, descrSetInstanceHandle)
+            .bindCombinedTextureAndSampler (0, texHandle, samplerHandle)
+            .end();        
+
+        //crea le mipmap
+        GPUCmdBufferHandle  cmdBufferHandle;
+        gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+
+        gpu::GFXJob job;
+        job.setup (gpu);
+
+        for (u32 i=0; i<numMipMap; i++)
+        {
+            //job per la GPU
+            {
+                vec2f screenWH;
+                screenWH.set ((f32)rt_width, (f32)rt_height);
+
+                vec2f quadWH;
+                quadWH.set ((f32)srcImg_dimx, (f32)srcImg_dimy);
+
+                gos::gpu::pipe2::CmdBufferWriter2 cw;
+                cw
+                    .begin (gpu, cmdBufferHandle)
+                    .setViewport (viewportHandle)
+                    .imageTransition (rt1, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
+                    .imageTransition (rtReadback, eImageLayout::undefined, eImageLayout::transfer_dst)
+                    .beginRender()
+                        .withRenderArea (rt1)
+                        .withRT (rt1, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 1.0f, 0))
+                        .bindPipeline (pipeHandle)
+                        .bindDescriptorSet(descrSetInstanceHandle, 0)
+                        .pushConstant (0, &screenWH, sizeof(screenWH))
+                        .pushConstant (1, &quadWH, sizeof(quadWH))
+                    .draw (6, 1, 0, 0)
+                    .endRender()
+                    .imageTransition (rt1, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
+                    .copyImageToImage (rt1, rtReadback, { rt_width, rt_height}, { rt_width, rt_height} )
+                    .imageTransition (rtReadback, eImageLayout::transfer_dst, eImageLayout::general)
+                .end();            
+
+                job.submit (cmdBufferHandle);
+                while (!job.hasFinished())
+                    gpu->waitIdle();
+            }
+
+            gpu::sMappedImage m;
+            if (gpu->map (rtReadback, &m))
+            {
+                gpu->image_manualSync_cpuRead(&m ,1);
+                if (!priv_save (m, builder, params.dstFmt, srcImg_dimx, srcImg_dimy, i, numMipMap-i))
+                    result = false;
+                gpu->image_unmap (m);
+            }
+
+            srcImg_dimx/=2;
+            srcImg_dimy/=2;
+
+            if (!result)
+                break;
+        }        
+        job.unsetup();
+        gpu->deleteResource (cmdBufferHandle);
+
+        builder.endTexture2D();
+        if (!builder.end())
+        {
+            gos::logger::err ("builder.end() => failed\n");
+            result = false; 
+        }
+
+        //salvo l'asset
+        if (result)
+            gos::image::save (image, filenameDST);
+        gos::image::free (gos::getSysHeapAllocator(), image);
     }
 
 
-    //free gpu resource
-    gpu->deleteResource (texHandle);
+    //free gpu resource    
     gpu->deleteResource (viewportHandle);
+    gpu->deleteResource (texHandle);
     gpu->deleteResource (rt1);
     gpu->deleteResource (rtReadback);
     
-    return false;
+    return result;
+}
+
+//************************************
+bool Builder_tex2D::priv_save (const gpu::sMappedImage &src, gos::image::Builder &imgBuilder, eImageFormat dstFmt, u32 srcW, u32 srcH, u32 mipMapNum_0toN, u32 numPallini)
+{
+    gos::Allocator *allocator = gos::getSysHeapAllocator();
+    image::BufferRGBA rgba;
+
+    rgba.alloc (allocator, (u16)srcW, (u16)srcH);
+    rgba.clear (255,0,0,255);
+
+    const u32 dst_row_stride = srcW * 4;
+    const u8 *srcPT = reinterpret_cast<const u8*>(src.host_image_pt);
+
+    u32 ctSRC = 0;
+    u32 ctDST = 0;
+    for (u32 y=0; y<srcH; y++)
+    {
+        //src e' in formato U8_RGBA
+        memcpy (&rgba._bufferRGBA[ctDST], &srcPT[ctSRC], dst_row_stride);
+        ctSRC += src.row_stride;
+        ctDST += dst_row_stride;
+    }
+
+    /*per debug ci metto dei pallini sulle mip-map
+    const u32 radius = 10;
+    u32 x = radius+2;
+    for (u32 i=0; i<numPallini; i++)
+    {
+        rgba.circle (x, radius+2, radius, 255, 255, 255);
+        x += (radius+5);
+    }
+
+    //sempre per debug salvo l'output
+    char s[1024];
+    sprintf_s (s, sizeof(s), "out_%d_%d.tga", srcW, srcH);
+    rgba.saveAsTGA (s);
+    */
+
+    //aggiorno il builder dell'image
+    const u32 rgba_size = rgba.getSize();
+    bool result = true;
+    switch (dstFmt)
+    {
+    default:
+        gos::logger::err ("invalid dst format\n");
+        result = false;
+        break;
+
+    case eImageFormat::U8_RGBA:
+        imgBuilder.setMipMapDataMemory (mipMapNum_0toN, rgba.getBuffer(), rgba_size, image::Builder::eFilter::none);
+        break;
+
+    case eImageFormat::U8_RGB:
+        {
+            u8 *buffer = GOSALLOC_SCRAPT(u8*, srcW*srcH*3);
+            ctSRC = 0;
+            ctDST = 0;
+            while (ctSRC < rgba_size)
+            {
+                const u8 r = rgba._bufferRGBA[ctSRC++];
+                const u8 g = rgba._bufferRGBA[ctSRC++];
+                const u8 b = rgba._bufferRGBA[ctSRC++];
+                ctSRC++;
+
+                buffer[ctDST++] = r;
+                buffer[ctDST++] = g;
+                buffer[ctDST++] = b;
+            }
+            imgBuilder.setMipMapDataMemory (mipMapNum_0toN, buffer, ctDST, image::Builder::eFilter::none);
+            GOSFREE_SCRAP(buffer);
+        }
+        break;
+
+    case eImageFormat::U8_R:
+        {
+            u8 *buffer = GOSALLOC_SCRAPT(u8*, srcW*srcH);
+            ctSRC = 0;
+            ctDST = 0;
+            while (ctSRC < rgba_size)
+            {
+                const u8 r = rgba._bufferRGBA[ctSRC++];
+                ctSRC++;
+                ctSRC++;
+                ctSRC++;
+
+                buffer[ctDST++] = r;
+            }
+            imgBuilder.setMipMapDataMemory (mipMapNum_0toN, buffer, ctDST, image::Builder::eFilter::none);
+            GOSFREE_SCRAP(buffer);
+        }
+        break;        
+    }
+
+
+    rgba.free (allocator);
+    return result;
 }

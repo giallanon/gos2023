@@ -22,12 +22,12 @@ namespace gos
             struct PushConst
             {
             public:
-                void    reset()     { offset = sizeInByte = 0; shaderTypeList.clear(); }
+                void    reset()     { offset = sizeInByte = 0; shaderTypeBitmask.zero(); }
 
             public:
-                u16             offset;
-                u16             sizeInByte;
-                ShaderTypeList  shaderTypeList;
+                u16                 offset;
+                u16                 sizeInByte;
+                eShaderTypeBitmask  shaderTypeBitmask;
             };
             
             /****************************************
@@ -37,10 +37,13 @@ namespace gos
             struct Descriptor
             {
             public:
-                u32                 binding;
-                eGPUDescriptrorType descrType;
-                u32                 usageFlags; 
-                u32                 count;
+                void    reset() { binding=0; descrType=eGPUDescriptrorType::UNKNOWN; usageBitmask.zero(); count = 0; }
+
+            public:
+                u32                         binding;
+                eGPUDescriptrorType         descrType;
+                eGPUDescriptrorUsageBitmask usageBitmask; 
+                u32                         count;
             };
 
             /****************************************
@@ -108,13 +111,13 @@ namespace gos
                 {
                 public:
                                     //per <usageFlags> vedi eGPUDescriptrorUsageFlag
-                    DescriptorSet&  add (u32 binding, eGPUDescriptrorType type, u32 count, u32 usageFlagsIN)
+                    DescriptorSet&  add (u32 binding, eGPUDescriptrorType type, u32 count, eGPUDescriptrorUsageBitmask usageBitmaskIN)
                     { 
                         assert(numDescriptor<GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET);
                         list[numDescriptor].binding = binding;
                         list[numDescriptor].descrType = type;
                         list[numDescriptor].count = count;
-                        list[numDescriptor].usageFlags = usageFlagsIN;
+                        list[numDescriptor].usageBitmask = usageBitmaskIN;
                         numDescriptor++;
                         return *this;
                     }
@@ -129,7 +132,7 @@ namespace gos
                 private:
                                     DescriptorSet()                                                                 { }
                                     ~DescriptorSet()                                                                { }
-                    void            priv_setup(Pipeline_def *defIN, VkDescriptorSetLayoutCreateFlags flagIN)        { def=defIN; flag=flagIN; numDescriptor=0; memset(list, 0, sizeof(list)); }
+                    void            priv_setup(Pipeline_def *defIN, VkDescriptorSetLayoutCreateFlags flagIN)        { def=defIN; flag=flagIN; numDescriptor=0; for (u32 i=0;i<GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET;i++) { list[i].reset(); } }
 
                 private:
                     Pipeline_def    *def;
@@ -172,12 +175,12 @@ namespace gos
 
                 Pipeline_def&   shader_add (const GPUShaderHandle &handle)                                          { assert (numShader < GOSGPU__NUM_MAX_SHADER_PER_PIPELINE); shaderHandleList[numShader++] = handle; return *this; }
 
-                Pipeline_def&   pushConst_add (u16 offset, u16 sizeInByte, ShaderTypeList shaderTypeList)
+                Pipeline_def&   pushConst_add (u16 offset, u16 sizeInByte, eShaderTypeBitmask shaderTypeBitmask)
                 {
                     assert (numPushConst < GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE);
                     pushConstList[numPushConst].offset = offset;
                     pushConstList[numPushConst].sizeInByte = sizeInByte;
-                    pushConstList[numPushConst].shaderTypeList = shaderTypeList;
+                    pushConstList[numPushConst].shaderTypeBitmask = shaderTypeBitmask;
                     numPushConst++;
                     return *this;
                 }

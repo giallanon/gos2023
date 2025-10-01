@@ -102,7 +102,12 @@ bool VulkanExample4::virtual_onInit ()
         }
         image::save (im, "texture/faccia_2mipmap.gosimage");
 */
-        image::load (gos::getScrapAllocator(), "texture/faccia_2mipmap.gosimage", &im);
+        if (!image::load (gos::getScrapAllocator(), "texture/faccia_2mipmap.gosimage", &im))
+        //if (!image::load (gos::getScrapAllocator(), "shader/example7/assets/bin/000400019D760073.gosasset", &im))
+        {
+            gos::logger::err ("VulkanApp::init() => can't load image'\n");
+            return false;
+        }
         gpu->texture_create2D (&im, 0, eMemAccessMode::onGPU, &texHandle);
         image::free (gos::getScrapAllocator(), im);
     }
@@ -172,8 +177,8 @@ bool VulkanExample4::virtual_onInit ()
             .add (3, offsetof(Vertex, tutv0), eDataFormat::_2f32)     //texCoord
             .endVtxStream()
         .descriptorset_add()
-            .add (0, eGPUDescriptrorType::UNIFORM_BUFFER, 1, eGPUDescriptrorUsageFlag::vtx_shader)
-            .add (1, eGPUDescriptrorType::COMBINED_IMAGE_SAMPLER, 1, eGPUDescriptrorUsageFlag::pxl_shader)
+            .add (0, eGPUDescriptrorType::UNIFORM_BUFFER, 1, eGPUDescriptrorUsage::vtx_shader)
+            .add (1, eGPUDescriptrorType::COMBINED_IMAGE_SAMPLER, 1, eGPUDescriptrorUsage::pxl_shader)
             .endDescriptorSet();
 
     if (!gpu->pipeline_createNew (def, &pipelineHandle))
@@ -275,7 +280,7 @@ void VulkanExample4::doCPUStuff ()
             mat4x4f matR;
 
             anim.nextTimeRotate_msec = timeNow_msec + 16;
-            anim.rotation_grad+=1.0f;
+            anim.rotation_grad+=0.2f;
             //anim.zPos += anim.zInc;
             if (anim.zPos >= 10 || anim.zPos < 0)
                 anim.zInc = -anim.zInc;

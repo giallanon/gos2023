@@ -57,7 +57,7 @@ namespace gos
                     Builder_pipe () : BuilderInterface (eAssetType::pipe)                       { }
                     ~Builder_pipe()                                                             { }
 
-            bool    build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, gos::GPU *gpu, sBuildResult *out);
+            bool    build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out);
 
 
         private:

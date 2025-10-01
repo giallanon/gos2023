@@ -1,0 +1,18 @@
+@tex2D: facciaTexture
+{
+	src: faccia512x512.jpg
+	srcColorSpace:	sRGB
+
+	dstNumMipMap: max
+	dstFmt:U8_RGBA
+}
+
+@tex2D: faccia256Texture
+{
+	src: Tiling_procedural_textures.png
+	srcColorSpace:	sRGB
+
+	dstNumMipMap: max
+	dstFmt:U8_RGBA
+}
+

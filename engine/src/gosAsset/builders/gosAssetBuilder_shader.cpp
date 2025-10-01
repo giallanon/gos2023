@@ -81,7 +81,7 @@ bool Builder_shader::priv_extractParams (const IniFileSection *sec, Params *out_
 }
 
 //************************************
-bool Builder_shader::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, gos::GPU *gpu, sBuildResult *out)
+bool Builder_shader::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out)
 {
     assert (ctx.isValid());
     assert (NULL != sec);

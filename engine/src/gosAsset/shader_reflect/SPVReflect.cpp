@@ -1119,7 +1119,7 @@ u32 SPVReflect::descrset_getNumElemPerSet (u32 set)
 }
 
 //***************************************************
-void SPVReflect::descrset_getElemByIndex  (u32 set, u8 index, u8 *out_binding, eGPUDescriptrorType *out_type, u32 *out_arraySize, u32 *out_usage) const
+void SPVReflect::descrset_getElemByIndex  (u32 set, u8 index, u8 *out_binding, eGPUDescriptrorType *out_type, u32 *out_arraySize, eGPUDescriptrorUsageBitmask *out_usage) const
 {
     for (u32 i = 0; i < descrSetList.getNElem(); i++)
     {
@@ -1143,11 +1143,11 @@ void SPVReflect::descrset_getElemByIndex  (u32 set, u8 index, u8 *out_binding, e
             else if (descrSetList(i).root->isDynamicArray())
                 *out_arraySize = u32MAX;
 
-            *out_usage = 0;
+            out_usage->zero();
             if (descrSetList(i).usage.isBitSet(USAGE__USED_IN_VTX_SHADER))
-                *out_usage |= eGPUDescriptrorUsageFlag::vtx_shader;
+                *out_usage |= eGPUDescriptrorUsage::vtx_shader;
             if (descrSetList(i).usage.isBitSet(USAGE__USED_IN_FRAG_SHADER))
-                *out_usage |= eGPUDescriptrorUsageFlag::pxl_shader;
+                *out_usage |= eGPUDescriptrorUsage::pxl_shader;
 
             return;
         }

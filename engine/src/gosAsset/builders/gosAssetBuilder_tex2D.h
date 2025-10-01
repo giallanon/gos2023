@@ -2,6 +2,7 @@
 #define _gosAssetBuilder_tex2D_h_
 #include "gosAssetBuilderInterface.h"
 #include "../gosGPU/gosGPUEnumAndDefine.h"
+#include "../gosImage/gosImageBuilder.h"
 
 /* Sintassi:
 
@@ -33,10 +34,12 @@ namespace gos
             static u32  calc_depth()                                                            { return 1; }
 
         public:
-                    Builder_tex2D () : BuilderInterface (eAssetType::tex2D)                     { }
+                    Builder_tex2D ();
                     ~Builder_tex2D()                                                            { }
 
-            bool    build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, gos::GPU *gpu, sBuildResult *out);
+            void    initOnce (gos::GPU *gpuIN);
+            void    deinitOnce();
+            bool    build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out);
 
 
         private:
@@ -51,7 +54,17 @@ namespace gos
 
         private:
             bool    priv_extractParams (const IniFileSection *sec, Params *out_params);
-            bool    priv_do_create_assetFile (Context &ctx, const Params &params, gos::GPU *gpu, const char *filenameDST) const;
+            bool    priv_do_create_assetFile (Context &ctx, const Params &params, const char *filenameDST);
+            bool    priv_create_GPUResourceOnce();
+            bool    priv_save (const gpu::sMappedImage &src, gos::image::Builder &builder, eImageFormat dstFmt, u32 srcW, u32 srcH, u32 mipMapNum_0toN, u32 numPallini);
+
+        private:
+            gos::GPU            *gpu;
+            GPUSamplerHandle    samplerHandle;
+            GPUPipelineHandle   pipeHandle;
+            GPUDescrPoolHandle  descrPoolHandle;
+            GPUDescrSetInstanceHandle descrSetInstanceHandle;
+
             
         }; //class Builder_tex2D
 

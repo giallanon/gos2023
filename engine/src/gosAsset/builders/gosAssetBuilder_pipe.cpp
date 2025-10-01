@@ -154,7 +154,7 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
 }
 
 //************************************
-bool Builder_pipe::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, gos::GPU *gpu, sBuildResult *out)
+bool Builder_pipe::build (Context &ctx, u64 buildTimeUTC, const char *sourceFileInfo, const asset::UID &uid_of_iniFile, const IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out)
 {
     assert (ctx.isValid());
     assert (NULL != sec);
@@ -371,13 +371,13 @@ bool Builder_pipe::priv_do_create_assetFile (Context &ctx, const Params &params,
                 u8 binding;
                 u32 count;
                 eGPUDescriptrorType type;
-                u32 usage;
+                eGPUDescriptrorUsageBitmask usage;
                 reflect.descrset_getElemByIndex (i, i2, &binding, &type, &count, &usage);
 
                 buffer.writeU8 (static_cast<u8>(binding)); 
                 buffer.writeU8 (static_cast<u8>(type)); 
                 buffer.writeU32 (count);
-                buffer.writeU32 (usage);
+                buffer.writeU32 (usage.bitmask);
             }
         }
 
@@ -413,7 +413,7 @@ u32 Builder_pipe::priv_writePushConstant_rec (gos::BufferW_linear &buffer, datab
 
         case eDataBlobElemType::simpleType:
             {
-                ShaderTypeList shaderTypeList;
+                eShaderTypeBitmask shaderTypeList;
                 if ((elem.getUserData() & 0x01) != 0)
                     shaderTypeList |= eShaderType::vtxShader;
 

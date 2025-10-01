@@ -49,7 +49,7 @@ namespace gos
         u32         descrset_getNumElemPerSet (u32 set);
 
                     // out_usage e' una bitmask di eGPUDescriptrorUsageFlag
-        void        descrset_getElemByIndex  (u32 set, u8 index, u8 *out_binding, eGPUDescriptrorType *out_type, u32 *out_arraySize, u32 *out_usage) const;
+        void        descrset_getElemByIndex  (u32 set, u8 index, u8 *out_binding, eGPUDescriptrorType *out_type, u32 *out_arraySize, eGPUDescriptrorUsageBitmask *out_usage) const;
         
 
     protected:

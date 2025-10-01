@@ -25,7 +25,7 @@ typedef void (*GOS_ConsoleTrap_CTRL_C)(void *userParam);
 typedef i16 (*GOS_ThreadMainFunction)(void *userParam);
 
 #include "helpers/debugbreak.h"
-
+#include "helpers/gosEnumBitmask.h"
 
 //================================================================
 enum class eEndianess : u8
@@ -219,37 +219,10 @@ enum class eShaderType : u8
     compute     = 0x04
 };
 
-class ShaderTypeList
-{
-public:
-    ShaderTypeList ()                                                                   { bitmask = 0; }
-    ShaderTypeList (eShaderType t1)                                                     { bitmask = (u32)t1; }
-    ShaderTypeList (eShaderType t1, eShaderType t2)                                     { bitmask = (u32)t1; bitmask |= (u32)t2; }
-    ShaderTypeList (eShaderType t1, eShaderType t2, eShaderType t3)                     { bitmask = (u32)t1; bitmask |= (u32)t2; bitmask |= (u32)t3; }
-    ShaderTypeList (eShaderType t1, eShaderType t2, eShaderType t3, eShaderType t4)     { bitmask = (u32)t1; bitmask |= (u32)t2; bitmask |= (u32)t3; bitmask |= (u32)t4; }
+//dichiara il tipo <eShaderTypeBitmask>
+DECL_ENUM_BITMASK_CLASS(eShaderType);
 
-    void            clear()                                                             { bitmask=0; }
-    ShaderTypeList& operator|= (const eShaderType &b)                                   { bitmask |= (u32)b; return *this; }
-    
-    void            beginEnum (u32 *iter) const                                         { *iter = 0x01; }
-    bool            fetch(u32 &iter, eShaderType *out) const
-    {
-        while (iter < 0x0100)
-        {
-            if ((bitmask & iter) != 0)
-            {
-                *out = static_cast<eShaderType>(iter);
-                iter <<= 1;
-                return true;
-            }
-            iter <<= 1;
-        }
-        return false;
-    }
 
-public:
-    u32  bitmask;
-};
 
 enum class eZFunc : u8
 {
@@ -341,13 +314,18 @@ enum class eGPUDescriptrorType : u8    //sono pari pari ai corrispondenti enum d
     UNKNOWN = 0xff
 };
 
-enum eGPUDescriptrorUsageFlag
+enum class eGPUDescriptrorUsage : u32
 {
-    vtx_shader  = 0x00000001,       //aka VK_SHADER_STAGE_VERTEX_BIT = 0x00000001,
-    geom_shader = 0x00000008,       //aka VK_SHADER_STAGE_GEOMETRY_BIT = 0x00000008,
-    pxl_shader  = 0x00000010,       //aka VK_SHADER_STAGE_FRAGMENT_BIT = 0x00000010,
-    compute_shader = 0x00000020     //aka VK_SHADER_STAGE_COMPUTE_BIT = 0x00000020,
+    none            = 0,
+    vtx_shader      = 0x00000001,       //aka VK_SHADER_STAGE_VERTEX_BIT = 0x00000001,
+    geom_shader     = 0x00000008,       //aka VK_SHADER_STAGE_GEOMETRY_BIT = 0x00000008,
+    pxl_shader      = 0x00000010,       //aka VK_SHADER_STAGE_FRAGMENT_BIT = 0x00000010,
+    compute_shader  = 0x00000020        //aka VK_SHADER_STAGE_COMPUTE_BIT = 0x00000020,
 };
+
+//dichiara il tipo <eGPUDescriptrorUsageBitmask>
+DECL_ENUM_BITMASK_CLASS(eGPUDescriptrorUsage);
+
 
 enum class eDataBlobElemType : u8
 {

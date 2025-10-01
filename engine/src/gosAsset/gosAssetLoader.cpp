@@ -15,6 +15,7 @@ Loader::Loader ()
     addLoader<Loader_vtxShader>();
     addLoader<Loader_pxlShader>();
     addLoader<Loader_pipe>();
+    addLoader<Loader_tex2D>();
 }
 
 //************************************************

@@ -41,6 +41,7 @@ dataTypes/gosTimer.h
 
 helpers/base64.cpp
 helpers/debugbreak.h
+helpers/gosEnumBitmask.h
 helpers/mtrand.cpp
 helpers/mtrand.h
 helpers/sha1.cpp

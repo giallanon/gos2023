@@ -45,9 +45,9 @@ void testWithWindow()
                 // runExample<VulkanExample1>(&gpu, "VulkanExample1");
                 // runExample<VulkanExample2>(&gpu, "VulkanExample2");
                 // runExample<VulkanExample3>(&gpu, "VulkanExample3");
-                // runExample<VulkanExample4>(&gpu, "VulkanExample4");
+                 runExample<VulkanExample4>(&gpu, "VulkanExample4");
                 // runExample<VulkanExample5>(&gpu, "VulkanExample5");
-                runExample<VulkanExample6>(&gpu, "VulkanExample6");
+                //runExample<VulkanExample6>(&gpu, "VulkanExample6");
                 gpu.deinit();
             }
             gos::input::window_destroy (mainWin);
@@ -78,8 +78,8 @@ int main()
     init.setLogMode (gos::sGOSInit::eLogMode::both_console_and_file);
     if (gos::init (init, "testVulkan"))
     {
-        testWindoless();
-        //testWithWindow();
+        //testWindoless();
+        testWithWindow();
 
         gos::deinit();
     }

@@ -120,7 +120,7 @@ bool VulkanExample6::virtual_onInit ()
 {
     //builder per ricompilare gli asset se necessario
     {
-        gos::asset::Builder builder;
+        gos::asset::Builder builder(gpu);
         builder.buildAll("shader/example6", true);
     }
 

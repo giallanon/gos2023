@@ -133,7 +133,8 @@ bool Loader_pipe::load (Loader *assetLoader, const asset::Context &ctx, const as
                 const u8 binding = reader.readU8();
                 const eGPUDescriptrorType type = static_cast<eGPUDescriptrorType>(reader.readU8());
                 const u32 count = reader.readU32();
-                const u32 usage = reader.readU32();
+                eGPUDescriptrorUsageBitmask usage;
+                usage.bitmask = reader.readU32();
 
                 //TODO
                 //u32MAX == count => uso questa cosa per indicare i buffer dinamici, ci devo ancora lavorare per bene

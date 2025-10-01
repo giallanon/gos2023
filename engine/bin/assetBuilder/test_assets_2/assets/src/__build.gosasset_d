@@ -40,6 +40,32 @@
 }
 
 
+@tex2D: facciaTexture
+{
+	__decl : texture.gosasset_d@1
+	__decl_uid : 1101586939654
+	__depth : 1
+	__assType : 4
+	src : faccia512x512.jpg
+	srcColorSpace : sRGB
+	dstNumMipMap : max
+	dstFmt : U8_RGBA
+}
+
+
+@tex2D: faccia256Texture
+{
+	__decl : texture.gosasset_d@10
+	__decl_uid : 1101586939654
+	__depth : 1
+	__assType : 4
+	src : Tiling_procedural_textures.png
+	srcColorSpace : sRGB
+	dstNumMipMap : max
+	dstFmt : U8_RGBA
+}
+
+
 @vtx_shader: __assname_000001
 {
 	__decl : es1.gosasset_d@4

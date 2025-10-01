@@ -258,11 +258,11 @@ namespace gos
         bool                map (const GPUStorageBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (storageBufferList, handle, offsetDST, sizeInByte, out); }
 
         //================ shader
-        bool                vtxshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)            { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::vtxShader, mainFnName, out_shaderHandle); }
-        bool                vtxshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                          { return priv_shader_createFromFile (filename, eShaderType::vtxShader, mainFnName, out_shaderHandle); }
+        bool                vtxshader_createFromMemory (const void *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)      { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::vtxShader, mainFnName, out_shaderHandle); }
+        bool                vtxshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                      { return priv_shader_createFromFile (filename, eShaderType::vtxShader, mainFnName, out_shaderHandle); }
         
-        bool                pxlshader_createFromMemory (const u8 *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)           { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::pxlShader, mainFnName, out_shaderHandle); }
-        bool                pxlshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                         { return priv_shader_createFromFile (filename, eShaderType::pxlShader, mainFnName, out_shaderHandle); }
+        bool                pxlshader_createFromMemory (const void *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)      { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::pxlShader, mainFnName, out_shaderHandle); }
+        bool                pxlshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                      { return priv_shader_createFromFile (filename, eShaderType::pxlShader, mainFnName, out_shaderHandle); }
             
         const gpu::Shader*  getInfo (const GPUShaderHandle handle) const;
         void                deleteResource (GPUShaderHandle &shaderHandle);
@@ -396,7 +396,7 @@ namespace gos
                             }
 
         bool                priv_shader_createFromFile (const char *filename, eShaderType shaderType, const char *mainFnName, GPUShaderHandle *out_shaderHandle);
-        bool                priv_shader_createFromMemory (const u8 *buffer, u32 bufferSize, eShaderType shaderType, const char *mainFnName, GPUShaderHandle *out_shaderHandle);
+        bool                priv_shader_createFromMemory (const void *buffer, u32 bufferSize, eShaderType shaderType, const char *mainFnName, GPUShaderHandle *out_shaderHandle);
 
 
         bool                priv_depthStencil_createFromStruct (gos::gpu::DepthStencil &depthStencil);

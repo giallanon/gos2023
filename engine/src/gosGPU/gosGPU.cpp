@@ -825,14 +825,14 @@ bool GPU::priv_shader_createFromFile (const char *filename, eShaderType shaderTy
 }
 
 //**********************************************************
-bool GPU::priv_shader_createFromMemory (const u8 *buffer, u32 bufferSize, eShaderType shaderType, const char *mainFnName, GPUShaderHandle *out_shaderHandle)
+bool GPU::priv_shader_createFromMemory (const void *bufferIN, u32 bufferSize, eShaderType shaderType, const char *mainFnName, GPUShaderHandle *out_shaderHandle)
 {
     assert (NULL != out_shaderHandle);
 
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = bufferSize;
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(buffer);
+    createInfo.pCode = reinterpret_cast<const uint32_t*>(bufferIN);
     
     VkShaderModule vkHandle;
     const VkResult result = vkCreateShaderModule(vulkan.dev, &createInfo, nullptr, &vkHandle);
@@ -2332,7 +2332,7 @@ bool GPU::priv_descrSetLayout_build_v2 (const gpu::pipe2::Pipeline_def::Descript
     for (u32 i=0; i<ds.numDescriptor; i++)
     {
         bindingList[i].binding = ds.list[i].binding;
-        bindingList[i].stageFlags = ds.list[i].usageFlags;
+        bindingList[i].stageFlags = ds.list[i].usageBitmask.bitmask;
         bindingList[i].descriptorCount = ds.list[i].count;
 
         switch (ds.list[i].descrType)
@@ -2498,15 +2498,15 @@ bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pip
 
         for (u32 i=0; i< rpd.numPushConst; i++)
         {
-            const ShaderTypeList shaderTypeList = rpd.pushConstList[i].shaderTypeList;
+            const eShaderTypeBitmask shaderTypeBitmask = rpd.pushConstList[i].shaderTypeBitmask;
 
             //computo gli stageFlags di questa pushConst
             VkShaderStageFlags stageFlags = 0;
             {
-                u32 iter;
+                u8 iter;
                 eShaderType shaderType;
-                shaderTypeList.beginEnum (&iter);
-                while (shaderTypeList.fetch(iter, &shaderType))
+                shaderTypeBitmask.beginFetch (&iter);
+                while (shaderTypeBitmask.fetch(iter, &shaderType))
                 {
                     switch (shaderType)
                     {

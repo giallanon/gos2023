@@ -91,7 +91,7 @@ namespace gos
 			u8*				getBuffer() const																{ return _bufferRGBA; }
 			u16				getW() const																	{ return _w; }
 			u16				getH() const																	{ return _h; }
-
+			u32 			getSize() const 																{ return _w * _h * 4; }	
 
 		private:
 			static void		priv_do_putPixel (const BufferRGBA &dst, i16 x, i16 y, u8 r, u8 g, u8 b, u8 a);
