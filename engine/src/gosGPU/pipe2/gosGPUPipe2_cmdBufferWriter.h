@@ -31,7 +31,7 @@ namespace gos
                     BeginRend&  withRenderArea (const GPURenderTargetHandle &rtHandle);
                     BeginRend&  withRT (const VkImageView &source, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp, const gos::ColorHDR &color = ColorHDR(0,0,0));
                     BeginRend&  withRT (const GPURenderTargetHandle &rtHandle, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp, const gos::ColorHDR &color = ColorHDR(0,0,0));
-                    BeginRend&  withZB (const GPUDepthStencilHandle &zbHandle, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp, f32 clearValue_depth=1.0f, u32 clearValue_stencil=0);
+                    BeginRend&  withZB (const GPUZBufferHandle &zbHandle, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp, f32 clearValue_depth=1.0f, u32 clearValue_stencil=0);
 
                     BeginRend&  bindPipeline (const GPUPipelineHandle handle);
                     BeginRend&  bindDescriptorSet (const GPUDescrSetInstanceHandle handle, u8 set, u32 dynamicOffset = u32MAX);
@@ -85,7 +85,7 @@ namespace gos
 
                 CmdBufferWriter2&   imageTransition (const VkImage &image, const eImageLayout currentLayout, const eImageLayout newLayout);
                 CmdBufferWriter2&   imageTransition (const GPURenderTargetHandle &rtHandle, const eImageLayout currentLayout, const eImageLayout newLayout);
-                CmdBufferWriter2&   imageTransition (const GPUDepthStencilHandle &zbHandle, const eImageLayout currentLayout, const eImageLayout newLayout);
+                CmdBufferWriter2&   imageTransition (const GPUZBufferHandle &zbHandle, const eImageLayout currentLayout, const eImageLayout newLayout);
                 
                 CmdBufferWriter2&   copyImageToImage (const VkImage &source, const VkImage &destination, const VkExtent2D &srcSize, const VkExtent2D &dstSize);
                 CmdBufferWriter2&   copyImageToImage (const GPURenderTargetHandle &rtHandle, const VkImage &destination, const VkExtent2D &srcSize, const VkExtent2D &dstSize);

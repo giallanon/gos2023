@@ -94,7 +94,7 @@ CmdBufferWriter2& CmdBufferWriter2::imageTransition (const GPURenderTargetHandle
 }
 
 //***********************************************
-CmdBufferWriter2& CmdBufferWriter2::imageTransition (const GPUDepthStencilHandle &zbHandle, const eImageLayout currentLayout, const eImageLayout newLayout)
+CmdBufferWriter2& CmdBufferWriter2::imageTransition (const GPUZBufferHandle &zbHandle, const eImageLayout currentLayout, const eImageLayout newLayout)
 {
     const gpu::DepthStencil *zBuffer_info = gpu->getInfo (zbHandle);
     assert (NULL != zBuffer_info);

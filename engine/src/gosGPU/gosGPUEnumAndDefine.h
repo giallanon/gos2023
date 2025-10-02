@@ -20,7 +20,7 @@
 
 
 //A per "num max di handle", B per "num di chunk", C per "counter"
-typedef gos::HandleT< 5,3,16, 0,8>	GPUDepthStencilHandle;		//2^5=32 => num totale di oggetti, divisi in chunk da 2^3=8
+typedef gos::HandleT< 5,3,16, 0,8>	GPUZBufferHandle;			//2^5=32 => num totale di oggetti, divisi in chunk da 2^3=8
 typedef gos::HandleT< 5,5,16, 0,6>	GPUViewportHandle;			//2^5=32 => num totale di oggetti, divisi in chunk da 2^5=32
 typedef gos::HandleT< 6,5,16, 0,5>	GPURenderTargetHandle;		//2^6=64 => num totale di oggetti, divisi in chunk da 2^5=32
 typedef gos::HandleT< 6,5,16, 1,4>	GPUDescrPoolHandle;			//2^6=64 => num totale di oggetti, divisi in chunk da 2^5=32

@@ -1122,7 +1122,7 @@ bool GPU::map (const GPURenderTargetHandle handle, gpu::sMappedImage *out) const
  * 
  * 
  *************************************************************************************************************/
-bool GPU::zbuffer_create (const gos::Dim2D &widthIN, const gos::Dim2D &heightIN, eImageFormat fmt, eMemAccessMode memAccessMode, GPUDepthStencilHandle *out_handle)
+bool GPU::zbuffer_create (const gos::Dim2D &widthIN, const gos::Dim2D &heightIN, eImageFormat fmt, eMemAccessMode memAccessMode, GPUZBufferHandle *out_handle)
 {
     assert (NULL != out_handle);
 
@@ -1160,7 +1160,7 @@ bool GPU::zbuffer_create (const gos::Dim2D &widthIN, const gos::Dim2D &heightIN,
 }
 
 //************************************
-void GPU::deleteResource (GPUDepthStencilHandle &handle)
+void GPU::deleteResource (GPUZBufferHandle &handle)
 {
     gos::gpu::DepthStencil *s;
     if (depthStencilList.fromHandleToPointer (handle, &s))
@@ -1272,7 +1272,7 @@ void GPU::priv_depthStencil_deleteFromStruct (gos::gpu::DepthStencil &depthStenc
 }
 
 //************************************
-const gpu::DepthStencil* GPU::getInfo (const GPUDepthStencilHandle handle) const
+const gpu::DepthStencil* GPU::getInfo (const GPUZBufferHandle handle) const
 {
     gpu::DepthStencil *s;
     if (priv_fromHandleToPointer (depthStencilList, handle, &s))

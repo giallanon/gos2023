@@ -10,7 +10,7 @@ namespace gos
         /****************************************************
          * DepthStencil
          * 
-         * struttura interna accessibile tramite i metodi di GPU utilizzando uno GPUDepthStencilHandle
+         * struttura interna accessibile tramite i metodi di GPU utilizzando uno GPUZBufferHandle
          * La dimensione di un DepthStencil puo' essere legata alla dimensione della viewport
          */
         struct DepthStencil

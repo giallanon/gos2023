@@ -107,7 +107,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::withRT (const GPURenderTarget
 }
 
 //*********************************
-CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::withZB (const GPUDepthStencilHandle &zbHandle, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp, f32 clearValue_depth, u32 clearValue_stencil)
+CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::withZB (const GPUZBufferHandle &zbHandle, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp, f32 clearValue_depth, u32 clearValue_stencil)
 {
     if (anyError())
         return *this;

@@ -71,7 +71,7 @@ private:
     GPUShaderHandle         vtxShaderHandle;
     GPUShaderHandle         fragShaderHandle;
 
-    GPUDepthStencilHandle   zbufferHandle;
+    GPUZBufferHandle   zbufferHandle;
     GPUDescrPoolHandle      descrPoolHandle;
     GPUDescrSetInstanceHandle descrSetInstancerHandle;
     GPUUniformBufferHandle  uboHandle;

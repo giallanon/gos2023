@@ -172,10 +172,10 @@ namespace gos
         bool                        map (const GPURenderTargetHandle handle, gpu::sMappedImage *out) const;
 
         //================ zbuffer
-        bool				        zbuffer_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, GPUDepthStencilHandle *out_handle)        { return zbuffer_create (dimx, dimy, fmt, eMemAccessMode::onGPU, out_handle); }
-        bool				        zbuffer_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, eMemAccessMode memAccessMode, GPUDepthStencilHandle *out_handle);
-        void                        deleteResource (GPUDepthStencilHandle &handle);
-        const gpu::DepthStencil*    getInfo (const GPUDepthStencilHandle handle) const;
+        bool				        zbuffer_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, GPUZBufferHandle *out_handle)        { return zbuffer_create (dimx, dimy, fmt, eMemAccessMode::onGPU, out_handle); }
+        bool				        zbuffer_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, eImageFormat fmt, eMemAccessMode memAccessMode, GPUZBufferHandle *out_handle);
+        void                        deleteResource (GPUZBufferHandle &handle);
+        const gpu::DepthStencil*    getInfo (const GPUZBufferHandle handle) const;
         eImageFormat		        zbuffer_getBestFormat() const                                                                                               { return zbuffer_bestFmt_noStencil; }
         eImageFormat		        zbuffer_getBestFormat (bool bWithStencil) const                                                                             { if (bWithStencil) return zbuffer_bestFmt_withStencil; return zbuffer_bestFmt_noStencil; }
 
@@ -546,8 +546,8 @@ namespace gos
         HandleList<GPUShaderHandle, gpu::Shader>                    shaderList;
         HandleList<GPUViewportHandle, gpu::Viewport>                viewportlList;
         gos::FastArray<GPUViewportHandle>                           viewportHandleList;
-        HandleList<GPUDepthStencilHandle, gpu::DepthStencil>        depthStencilList;
-        gos::FastArray<GPUDepthStencilHandle>                       depthStencilHandleList;
+        HandleList<GPUZBufferHandle, gpu::DepthStencil>        depthStencilList;
+        gos::FastArray<GPUZBufferHandle>                       depthStencilHandleList;
         HandleList<GPURenderTargetHandle, gpu::RenderTarget>        renderTargetList;
         gos::FastArray<GPURenderTargetHandle>                       renderTargetHandleList;
 

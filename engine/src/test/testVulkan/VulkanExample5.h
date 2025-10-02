@@ -141,7 +141,7 @@ private:
     GPUIdxBufferHandle      idxBufferHandle;
     GPUStgBufferHandle      stgBufferHandle;
 
-    GPUDepthStencilHandle       zbufferHandle;
+    GPUZBufferHandle       zbufferHandle;
     GPUPipelineHandle           pipelineHandle;
     GPUShaderHandle             vtxShaderHandle;
     GPUShaderHandle             fragShaderHandle;
