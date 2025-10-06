@@ -10,7 +10,7 @@
 #include "protocol/gosProtocolBuffer.h"
 
 //A per "num max di handle", B per "num di chunk", C per "counter"
-typedef gos::HandleT<10,6,16, 0,0>	HSokServerClientHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^6=64
+GOS_DECL_HANDLE(10,6,16, HSokServerClientHandle);		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^6=64
 
 //handle per la gestione dei client
 struct HSokServerClient

@@ -31,10 +31,10 @@ namespace test1
 //********************************************
 namespace test2
 {
-    template<u32 A, u32 B, u32 C, u32 SIG_1, u32 SIG_2>
+    template<u32 A, u32 B, u32 C>
     int testHandle()
     {
-        constexpr u32 D = SIG_1 + SIG_2;
+        constexpr u32 D = 32 - (A+B+C);
         const u32 NUM_MAX[4] = {
             (u32)((0x0001 << A)),
             (u32)((0x0001 << B)),
@@ -50,7 +50,7 @@ namespace test2
         };
 
 
-        gos::HandleT<A, B, C, SIG_1,SIG_2> handle1;
+        gos::HandleT<A, B, C> handle1;
 
         //incremento di 1 tutti i singoli canali, uno alla volta e verifico che gli altri canali non ne siano affetti	
         for (u8 channelNum = 0; channelNum < 4; channelNum++)
@@ -60,9 +60,9 @@ namespace test2
             //Lo scopo e' vedere che quel canale si incrementa correttamente e che gli altri canali mantengono
             //il loro valore originale
             handle1.set_indexValue (MAX_VALUE[0]); 
-            handle1.setChunkValue (MAX_VALUE[1]); 
-            handle1.setCounterValue(MAX_VALUE[2]);
-            handle1.setPADValue (MAX_VALUE[3]); 
+            handle1.set_chunkValue (MAX_VALUE[1]); 
+            handle1.set_counterValue(MAX_VALUE[2]);
+            handle1.set_extraValue (MAX_VALUE[3]); 
             
             u32 testValue = 0;
             handle1.debug_setValueByIndex (channelNum, testValue);
@@ -84,9 +84,9 @@ namespace test2
 
             //Come sopra, ma stavolta metto tutti i canali a 0
             handle1.set_indexValue (0); 
-            handle1.setChunkValue (0); 
-            handle1.setCounterValue(0);
-            handle1.setPADValue (0); 
+            handle1.set_chunkValue (0); 
+            handle1.set_counterValue(0);
+            handle1.set_extraValue (0); 
             
             testValue = 0;
             handle1.debug_setValueByIndex (channelNum, testValue);
@@ -115,31 +115,30 @@ namespace test2
     {
         int err;
         
-        err = testHandle<16,8,8, 0,0>(); TEST_ASSERT(err==0);
-        err = testHandle<16,7,8, 0,1>(); TEST_ASSERT(err==0);
-        err = testHandle<16,6,8, 0,2>(); TEST_ASSERT(err==0);
-        err = testHandle<16,5,8, 0,3>(); TEST_ASSERT(err==0);
-        err = testHandle<16,4,8, 0,4>(); TEST_ASSERT(err==0);
-        err = testHandle<16,3,8, 0,5>(); TEST_ASSERT(err==0);
-        err = testHandle<16,2,8, 0,6>(); TEST_ASSERT(err==0);
-        err = testHandle<16,1,8, 0,7>(); TEST_ASSERT(err==0);
+        err = testHandle<16,8,8>(); TEST_ASSERT(err==0);
+        err = testHandle<16,7,8>(); TEST_ASSERT(err==0);
+        err = testHandle<16,5,8>(); TEST_ASSERT(err==0);
+        err = testHandle<16,4,8>(); TEST_ASSERT(err==0);
+        err = testHandle<16,3,8>(); TEST_ASSERT(err==0);
+        err = testHandle<16,2,8>(); TEST_ASSERT(err==0);
+        err = testHandle<16,1,8>(); TEST_ASSERT(err==0);
 
-        err = testHandle<10,6,16, 0,0>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,15, 0,1>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,14, 0,2>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,13, 0,3>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,12, 0,4>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,11, 0,5>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,10, 0,6>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,9,  0,7>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,8,  0,8>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,7,  0,9>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,6,  0,10>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,5,  0,11>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,4,  0,12>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,3,  0,13>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,2,  0,14>(); TEST_ASSERT(err==0);
-        err = testHandle<10,6,1,  0,15>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,16>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,15>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,14>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,13>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,12>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,11>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,10>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,9>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,8>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,7>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,6>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,5>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,4>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,3>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,2>(); TEST_ASSERT(err==0);
+        err = testHandle<10,6,1>(); TEST_ASSERT(err==0);
 
         return 0;
     }
@@ -162,7 +161,7 @@ namespace test3
         const u8 INDEXbit	= 16;
         const u8 CHUNKbit	= 2;
         const u8 COUNTERbit = 3;
-        typedef gos::HandleT< INDEXbit, CHUNKbit, COUNTERbit, 0, 11> MyHandle;
+        GOS_DECL_HANDLE(INDEXbit, CHUNKbit, COUNTERbit, MyHandle);
 
         gos::HandleList<MyHandle, sMyData> hl;
         const u32 NMAXHANDLE = MyHandle::getNumMaxHandle();
@@ -178,10 +177,10 @@ namespace test3
         {
             MyHandle handle;
             sMyData *s = hl.reserve(&handle);
-            TEST_ASSERT (handle.getChunkValue() == 0);
+            TEST_ASSERT (handle._handle.get_chunkValue() == 0);
             TEST_FAIL_IF(!s || handle.isInvalid());
-            TEST_FAIL_IF(handle.getCounterValue() != 1);
-            TEST_FAIL_IF(handle.get_indexValue() != i);
+            TEST_FAIL_IF(handle._handle.get_counterValue() != 1);
+            TEST_FAIL_IF(handle._handle.get_indexValue() != i);
 
             s->a = (u8)(i & 0xFF);
             s->b = (u16)(i & 0xFFFF);
@@ -205,10 +204,10 @@ namespace test3
         {
             MyHandle handle;
             sMyData *s = hl.reserve(&handle);
-            TEST_ASSERT (handle.getChunkValue() == 1);
+            TEST_ASSERT (handle._handle.get_chunkValue() == 1);
             TEST_FAIL_IF (!s || handle.isInvalid());
-            TEST_FAIL_IF (handle.getCounterValue() != 1);
-            TEST_FAIL_IF (handle.get_indexValue() != i);
+            TEST_FAIL_IF (handle._handle.get_counterValue() != 1);
+            TEST_FAIL_IF (handle._handle.get_indexValue() != i);
 
             s->a = (u8)(i & 0xFF);
             s->b = (u16)(i & 0xFFFF);
@@ -243,31 +242,31 @@ namespace test3
             MyHandle h;
             sMyData *s = hl.reserve(&h);
             TEST_FAIL_IF (NULL == s || h.isInvalid());
-            TEST_ASSERT (h.get_indexValue() == 0);
-            TEST_ASSERT (h.getCounterValue() == 2);
-            TEST_ASSERT (h.getChunkValue() == 0);
+            TEST_ASSERT (h._handle.get_indexValue() == 0);
+            TEST_ASSERT (h._handle.get_counterValue() == 2);
+            TEST_ASSERT (h._handle.get_chunkValue() == 0);
 
             MyHandle h2;
             s = hl.reserve(&h2);
             TEST_FAIL_IF(NULL == s || h2.isInvalid());
-            TEST_ASSERT (h2.get_indexValue() == 1);
-            TEST_ASSERT (h2.getCounterValue() == 2);
-            TEST_ASSERT (h.getChunkValue() == 0);
+            TEST_ASSERT (h2._handle.get_indexValue() == 1);
+            TEST_ASSERT (h2._handle.get_counterValue() == 2);
+            TEST_ASSERT (h._handle.get_chunkValue() == 0);
 
             hl.release(h);
             hl.release(h2);
 
             s = hl.reserve(&h);
             TEST_FAIL_IF (NULL == s || h.isInvalid());
-            TEST_ASSERT (h.get_indexValue() == 1);
-            TEST_ASSERT (h.getCounterValue() == 3);
-            TEST_ASSERT (h.getChunkValue() == 0);
+            TEST_ASSERT (h._handle.get_indexValue() == 1);
+            TEST_ASSERT (h._handle.get_counterValue() == 3);
+            TEST_ASSERT (h._handle.get_chunkValue() == 0);
 
             s = hl.reserve(&h2);
             TEST_FAIL_IF (NULL == s || h2.isInvalid());
-            TEST_ASSERT (h2.get_indexValue() == 0);
-            TEST_ASSERT (h2.getCounterValue() == 3);
-            TEST_ASSERT (h.getChunkValue() == 0);
+            TEST_ASSERT (h2._handle.get_indexValue() == 0);
+            TEST_ASSERT (h2._handle.get_counterValue() == 3);
+            TEST_ASSERT (h._handle.get_chunkValue() == 0);
 
             hl.release(h);
             hl.release(h2);
@@ -990,7 +989,7 @@ namespace test11_enum_bitmask
         bit7 = 0x80
     };
 
-    DECL_ENUM_BITMASK_CLASS(eProva);
+    GOS_DECL_ENUM_BITMASK_CLASS(eProva);
     
     int fn1 (eProvaBitmask bm)
     {

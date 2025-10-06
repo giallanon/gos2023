@@ -37,19 +37,25 @@ namespace gos
 	 *	A => con (A>0 && A <= 16) 	=> 2^A e' il num max di handle allocabili 
 	 *	B => con (B>0 && B <= 16)	=> 2^B e' li num di chunck, ovvero quandi handle vengono allocati per ogni chunk (vedi HandleList<>)
 	 *	C => con (C>0 && C <= 16)	=> 2^C e' la dimensione del [counter]. 
-	 *	D => con (D>=0)				=> 2^D per pad fino a raggiungere A+B+C+D = 32 
+	 *	D => con (D>=0)				=> 2^D per pad fino a raggiungere A+B+C+D = 32 (calcolata automaticamente)
 	 *
 	 *  A + B + C + D == 32
 	*/
-	template<int A, int B, int C, int SIGNATURE_1, int SIGNATURE_2>
+	template<int A, int B, int C>
 	struct HandleT
 	{
 	private:
-		static const constexpr u32	D = SIGNATURE_1 + SIGNATURE_2;
+		static const constexpr u32	D = 32 - (A + B + C);
 		static const constexpr u32	MASKSHIFT_0 = D + C + B;
 		static const constexpr u32	MASKSHIFT_1 = D + C;
 		static const constexpr u32	MASKSHIFT_2 = D;
 		static const constexpr u32	MASKSHIFT_3 = 0;
+
+		static_assert (D < 32);
+		static_assert (A + B + C + D == 32);
+		static_assert (A>0 && A<=16);
+		static_assert (B>0 && B<=16);
+		static_assert (C>0 && C<=16);
 		
 		static const constexpr u32	MASK_0 = static_cast<u32> (((u64)((0x0000000000000001 << A) - 1) << (u64)MASKSHIFT_0) & 0x00000000FFFFFFFF);
 		static const constexpr u32	MASK_1 = static_cast<u32> (((u64)((0x0000000000000001 << B) - 1) << (u64)MASKSHIFT_1) & 0x00000000FFFFFFFF);
@@ -57,7 +63,7 @@ namespace gos
 		static const constexpr u32	MASK_3 = static_cast<u32> (((u64)((0x0000000000000001 << D) - 1) << (u64)MASKSHIFT_3) & 0x00000000FFFFFFFF);
 
 	public:
-		typedef HandleT<A, B, C, SIGNATURE_1, SIGNATURE_2> ThisHandle;
+		typedef HandleT<A, B, C> ThisHandle;
 
 	public:
 		static ThisHandle			INVALID()								{ static ThisHandle hINVALID; hINVALID.setInvalid(); return hINVALID; }
@@ -65,7 +71,7 @@ namespace gos
 		static constexpr u8			getNumBitsIndex()						{ return A; }
 		static constexpr u8			getNumBitsChunk()						{ return B; }
 		static constexpr u8			getNumBitsCounter()						{ return C; }
-		static constexpr u8			getNumBitsUser()						{ return D; }
+		static constexpr u8			getNumBitsExtra()						{ return D; }
 		
 		static constexpr u32		getNumMaxHandle()						{ return (u32)(0x0001 << A); }
 		static constexpr u32		getNumMaxChunk()						{ return (u32)(0x0001 << B); }
@@ -73,7 +79,7 @@ namespace gos
 		static constexpr u32		getNumMaxHandlePerChunk()				{ return (getNumMaxHandle() >> B); }
 
 	public:
-					HandleT()								{ assert (A + B + C + D == 32); assert(A>0 && A<=16); assert(B>0 && B<=16); assert(C>0 && C<=16); setInvalid(); }
+					HandleT()								{ setInvalid(); }
 
 		bool		operator== (const ThisHandle &b) const  { return (id == b.id); }
 		bool		operator!= (const ThisHandle &b) const  { return (id != b.id); }
@@ -82,10 +88,13 @@ namespace gos
 		bool		isInvalid() const						{ return (id == u32MAX); }
 		bool		isValid() const							{ return (id != u32MAX); }
 
+		void		setFromU32 (u32 u)						{ id = u; }
+		u32			viewAsU32() const						{ return id; }
+
 		u32			get_indexValue() const					{ return ((id & MASK_0) >> MASKSHIFT_0); }
-		u32			getChunkValue() const					{ return ((id & MASK_1) >> MASKSHIFT_1); }
-		u32			getCounterValue() const					{ return ((id & MASK_2) >> MASKSHIFT_2); }
-		u32			getPADValue() const						
+		u32			get_chunkValue() const					{ return ((id & MASK_1) >> MASKSHIFT_1); }
+		u32			get_counterValue() const				{ return ((id & MASK_2) >> MASKSHIFT_2); }
+		u32			get_extraValue() const						
 					{ 
 						if constexpr (D==0)
 							return 0; 
@@ -94,9 +103,9 @@ namespace gos
 					}
 
 		void		set_indexValue(u32 value)				{ id &= ~(MASK_0);  id |= ((value << MASKSHIFT_0) & MASK_0); }
-		void		setChunkValue(u32 value)				{ id &= ~(MASK_1);  id |= ((value << MASKSHIFT_1) & MASK_1); }
-		void		setCounterValue(u32 value)				{ id &= ~(MASK_2);  id |= ((value << MASKSHIFT_2) & MASK_2); }
-		void		setPADValue(u32 value)					
+		void		set_chunkValue(u32 value)				{ id &= ~(MASK_1);  id |= ((value << MASKSHIFT_1) & MASK_1); }
+		void		set_counterValue(u32 value)				{ id &= ~(MASK_2);  id |= ((value << MASKSHIFT_2) & MASK_2); }
+		void		set_extraValue(u32 value)					
 					{ 
 						if constexpr (D==0)
 							return; 
@@ -108,32 +117,30 @@ namespace gos
 					}
 
 		u32			inc_indexValue()						{ u32 v = get_indexValue();  v++; set_indexValue(v); return get_indexValue(); }
-		u32			incChunkValue()							{ u32 v = getChunkValue();  v++; setChunkValue(v); return getChunkValue(); }
-		u32			incCounterValue()						{ u32 v = getCounterValue();  v++; setCounterValue(v); return getCounterValue(); }
-		u32			incPADValue()
+		u32			inc_chunkValue()							{ u32 v = get_chunkValue();  v++; set_chunkValue(v); return get_chunkValue(); }
+		u32			inc_counterValue()						{ u32 v = get_counterValue();  v++; set_counterValue(v); return get_counterValue(); }
+		u32			inc_extraValue()
 					{ 
 						if constexpr (D==0)
 							return 0; 
 						else 
 						{
-							u32 v = getPADValue();  
+							u32 v = get_extraValue();  
 							v++; 
-							setPADValue(v); 
-							return getPADValue(); 
+							set_extraValue(v); 
+							return get_extraValue(); 
 						}
 					}
 
-		void		setFromU32 (u32 u)						{ id = u; }
-		u32			viewAsU32() const						{ return id; }
 
 		u32			debug_getValueByIndex(u8 which) const 
 		{ 
 			switch (which)
 			{
 			case 0: return get_indexValue();
-			case 1: return getChunkValue();
-			case 2: return getCounterValue();
-			case 3: return getPADValue();
+			case 1: return get_chunkValue();
+			case 2: return get_counterValue();
+			case 3: return get_extraValue();
 			default: DBGBREAK; return 0;
 			}
 		}
@@ -142,9 +149,9 @@ namespace gos
 			switch (which)
 			{
 			case 0: return inc_indexValue();
-			case 1: return incChunkValue();
-			case 2: return incCounterValue();
-			case 3: return incPADValue();
+			case 1: return inc_chunkValue();
+			case 2: return inc_counterValue();
+			case 3: return inc_extraValue();
 			default: DBGBREAK; return 0;
 			}
 		}
@@ -153,9 +160,9 @@ namespace gos
 			switch (which)
 			{
 			case 0: set_indexValue(value); return;
-			case 1: setChunkValue(value); return;
-			case 2: setCounterValue(value); return;
-			case 3: setPADValue(value); return;
+			case 1: set_chunkValue(value); return;
+			case 2: set_counterValue(value); return;
+			case 3: set_extraValue(value); return;
 			default: DBGBREAK;
 			}
 		}
@@ -164,6 +171,37 @@ namespace gos
 		u32			id;
 	};
 
+
+	#define GOS_DECL_HANDLE(A,B,C, HANDLE_TYPENAME)\
+	struct HANDLE_TYPENAME\
+	{ \
+	public:\
+		static HANDLE_TYPENAME		INVALID()								{ static HANDLE_TYPENAME hINVALID; hINVALID.setInvalid(); return hINVALID; }\
+	\
+		static constexpr u8			getNumBitsIndex()						{ return gos::HandleT<A,B,C>::getNumBitsIndex(); }\
+		static constexpr u8			getNumBitsChunk()						{ return gos::HandleT<A,B,C>::getNumBitsChunk(); }\
+		static constexpr u8			getNumBitsCounter()						{ return gos::HandleT<A,B,C>::getNumBitsCounter(); }\
+		static constexpr u8			getNumBitsUser()						{ return gos::HandleT<A,B,C>::getNumBitsExtra(); }\
+	\
+		static constexpr u32		getNumMaxHandle()						{ return gos::HandleT<A,B,C>::getNumMaxHandle(); }\
+		static constexpr u32		getNumMaxChunk()						{ return gos::HandleT<A,B,C>::getNumMaxChunk(); }\
+		static constexpr u32		getNumMaxCounter()						{ return gos::HandleT<A,B,C>::getNumMaxCounter(); }\
+		static constexpr u32		getNumMaxHandlePerChunk()				{ return gos::HandleT<A,B,C>::getNumMaxHandlePerChunk(); }\
+	\
+	public:\
+		void		setInvalid()											{ _handle.setInvalid(); }\
+		bool		isInvalid() const										{ return _handle.isInvalid(); }\
+		bool		isValid() const											{ return _handle.isValid(); }\
+	\
+		bool		operator== (const HANDLE_TYPENAME &b) const  			{ return (_handle == b._handle); }\
+		bool		operator!= (const HANDLE_TYPENAME &b) const  			{ return (_handle != b._handle); }\
+	\
+		void		setFromU32 (u32 u)										{ _handle.setFromU32(u); }\
+		u32			viewAsU32() const										{ return _handle.viewAsU32(); }\
+	\
+	public:\
+		gos::HandleT<A,B,C> _handle;\
+	};\
 
 
 
@@ -184,6 +222,9 @@ namespace gos
 	template <typename HANDLE, typename DATASTRUCT>
 	class HandleList
 	{
+		static_assert (HANDLE::getNumBitsIndex() <= 16);
+		static_assert (HANDLE::getNumBitsCounter() <= 16);
+
 	public:
 					HandleList()
 					{
@@ -195,9 +236,6 @@ namespace gos
 
 		void		setup (Allocator *allocatorIN)
 					{
-						assert (HANDLE::getNumBitsIndex() <= 16);
-						assert (HANDLE::getNumBitsCounter() <= 16);
-			
 						allocator = allocatorIN;
 			
 						constexpr u32 nChunk = HANDLE::getNumMaxChunk();
@@ -256,10 +294,10 @@ namespace gos
 					sRecord *ret = &chunkList[i][indexReturned];
 					firstFree[i] = ret->nextFree;
 
-					out_handle->setFromU32(0);
-					out_handle->setChunkValue(i);
-					out_handle->set_indexValue(indexReturned);
-					out_handle->setCounterValue(ret->curCounter);
+					out_handle->_handle.setFromU32(0);
+					out_handle->_handle.set_chunkValue(i);
+					out_handle->_handle.set_indexValue(indexReturned);
+					out_handle->_handle.set_counterValue(ret->curCounter);
 					return &ret->userData;
 				}
 			}
@@ -278,9 +316,9 @@ namespace gos
 				return;
 			}
 
-			const u32 chunk = handle.getChunkValue();
-			const u32 index = handle.get_indexValue();
-			r->curCounter = (u16)handle.incCounterValue();
+			const u32 chunk = handle._handle.get_chunkValue();
+			const u32 index = handle._handle.get_indexValue();
+			r->curCounter = (u16)handle._handle.inc_counterValue();
 			r->nextFree = (u16)firstFree[chunk];
 			handle.setInvalid();
 
@@ -334,9 +372,9 @@ namespace gos
 					{
 						if (h.isInvalid())
 							return NULL;
-						const u32	chunk = h.getChunkValue();
-						const u32	index = h.get_indexValue();
-						const u32	counter = h.getCounterValue();
+						const u32	chunk = h._handle.get_chunkValue();
+						const u32	index = h._handle.get_indexValue();
+						const u32	counter = h._handle.get_counterValue();
 
 			#ifdef _DEBUG
 						assert(chunk < HANDLE::getNumMaxChunk());

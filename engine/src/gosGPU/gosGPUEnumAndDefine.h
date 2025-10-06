@@ -20,22 +20,22 @@
 
 
 //A per "num max di handle", B per "num di chunk", C per "counter"
-typedef gos::HandleT< 5,3,16, 0,8>	GPUZBufferHandle;			//2^5=32 => num totale di oggetti, divisi in chunk da 2^3=8
-typedef gos::HandleT< 5,5,16, 0,6>	GPUViewportHandle;			//2^5=32 => num totale di oggetti, divisi in chunk da 2^5=32
-typedef gos::HandleT< 6,5,16, 0,5>	GPURenderTargetHandle;		//2^6=64 => num totale di oggetti, divisi in chunk da 2^5=32
-typedef gos::HandleT< 6,5,16, 1,4>	GPUDescrPoolHandle;			//2^6=64 => num totale di oggetti, divisi in chunk da 2^5=32
-typedef gos::HandleT< 8,5,16, 0,3>	GPUPipelineHandle;			//2^8=256 => num totale di oggetti, divisi in chunk da 2^5=32
-typedef gos::HandleT< 8,5,15, 0,4>	GPUSamplerHandle;			//2^8=256 => num totale di oggetti, divisi in chunk da 2^5=32
-typedef gos::HandleT< 8,6,16, 0,2>	GPUCmdBufferHandle;			//2^8=256 => num totale di oggetti, divisi in chunk da 2^6=64
-typedef gos::HandleT<10,7,14, 0,1>	GPUVtxBufferHandle;			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-typedef gos::HandleT<10,7,14, 1,0>	GPUIdxBufferHandle;			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-typedef gos::HandleT<10,7,13, 0,2>	GPUStgBufferHandle;			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-typedef gos::HandleT<10,8,12, 0,2>	GPUDescrSetLayoutHandle;	//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-typedef gos::HandleT<10,8,12, 1,1>	GPUDescrSetInstanceHandle;	//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-typedef gos::HandleT<10,8,12, 2,0>	GPUUniformBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-typedef gos::HandleT<14,8,8,  0,2>	GPUStorageBufferHandle;		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-typedef gos::HandleT<14,8,10, 0,0>	GPUShaderHandle;			//2^14=16384 => num totale di oggetti, divisi in chunk da 2^8=256
-typedef gos::HandleT<16,10,6, 0,0>	GPUTextureHandle;			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^10=1024
+GOS_DECL_HANDLE( 5,3,16, GPUZBufferHandle);			//2^5=32 => num totale di oggetti, divisi in chunk da 2^3=8
+GOS_DECL_HANDLE( 5,5,16, GPUViewportHandle);			//2^5=32 => num totale di oggetti, divisi in chunk da 2^5=32
+GOS_DECL_HANDLE( 6,5,16, GPURenderTargetHandle);		//2^6=64 => num totale di oggetti, divisi in chunk da 2^5=32
+GOS_DECL_HANDLE( 6,5,16, GPUDescrPoolHandle);			//2^6=64 => num totale di oggetti, divisi in chunk da 2^5=32
+GOS_DECL_HANDLE( 8,5,16, GPUPipelineHandle);			//2^8=256 => num totale di oggetti, divisi in chunk da 2^5=32
+GOS_DECL_HANDLE( 8,5,15, GPUSamplerHandle);			//2^8=256 => num totale di oggetti, divisi in chunk da 2^5=32
+GOS_DECL_HANDLE( 8,6,16, GPUCmdBufferHandle);			//2^8=256 => num totale di oggetti, divisi in chunk da 2^6=64
+GOS_DECL_HANDLE(10,7,14, GPUVtxBufferHandle);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
+GOS_DECL_HANDLE(10,7,14, GPUIdxBufferHandle);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
+GOS_DECL_HANDLE(10,7,13, GPUStgBufferHandle);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
+GOS_DECL_HANDLE(10,8,12, GPUDescrSetLayoutHandle);	//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
+GOS_DECL_HANDLE(10,8,12, GPUDescrSetInstanceHandle);	//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
+GOS_DECL_HANDLE(10,8,12, GPUUniformBufferHandle);		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
+GOS_DECL_HANDLE(14,8,8,  GPUStorageBufferHandle);		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
+GOS_DECL_HANDLE(14,8,10, GPUShaderHandle);			//2^14=16384 => num totale di oggetti, divisi in chunk da 2^8=256
+GOS_DECL_HANDLE(16,10,6, GPUTextureHandle);			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^10=1024
 
 
 enum class eVtxStreamInputRate : u8

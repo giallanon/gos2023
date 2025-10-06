@@ -220,7 +220,7 @@ enum class eShaderType : u8
 };
 
 //dichiara il tipo <eShaderTypeBitmask>
-DECL_ENUM_BITMASK_CLASS(eShaderType);
+GOS_DECL_ENUM_BITMASK_CLASS(eShaderType);
 
 
 
@@ -324,7 +324,7 @@ enum class eGPUDescriptrorUsage : u32
 };
 
 //dichiara il tipo <eGPUDescriptrorUsageBitmask>
-DECL_ENUM_BITMASK_CLASS(eGPUDescriptrorUsage);
+GOS_DECL_ENUM_BITMASK_CLASS(eGPUDescriptrorUsage);
 
 
 enum class eDataBlobElemType : u8

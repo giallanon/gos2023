@@ -3,7 +3,7 @@
 #include <type_traits>
 
 /**
- * la macro DECL_ENUM_BITMASK_CLASS() definisce una struct di comodo per utilizzare gli enum a mo' di bitmask.
+ * la macro GOS_DECL_ENUM_BITMASK_CLASS() definisce una struct di comodo per utilizzare gli enum a mo' di bitmask.
  * 
  * Data una enum del tipo
  * enum class ePippo : u8
@@ -14,7 +14,7 @@
  * }
  * 
  * allora
- *  DECL_ENUM_BITMASK_CLASS(ePippo)
+ *  GOS_DECL_ENUM_BITMASK_CLASS(ePippo)
  * dichiara una struct di nome
  *  ePippoBitmask
  * sulla quale e' possibile usare ePippo come una bitmask con operazioni del tipo:
@@ -68,7 +68,7 @@ public:
 
 
 
-#define DECL_ENUM_BITMASK_CLASS(TENUM)\
+#define GOS_DECL_ENUM_BITMASK_CLASS(TENUM)\
     \
     typedef EnumBitmask_TPL<TENUM>   TENUM##Bitmask; \
     \
