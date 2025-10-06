@@ -459,12 +459,12 @@ u32 Builder::priv_do_build (Context &ctx, bool doCreateAssetsFile)
     //degli UID degli asset che sono stati eliminati dal DB
     HashedUIDList   deletedAssetList (localAllocator, 256);
 
-    //<scriptToBeRebuilt> lista dei .gosasset_d che devo builare
+    //<scriptToBeRebuilt> lista dei .gosasset_d che devo buildare
     HashedUIDList   toBeRebuiltScriptList (localAllocator, 32);    
     HashedUIDList   deletedScriptList (localAllocator, 15);
     HashedUIDList   deletedResList (localAllocator, 15);
 
-    //elenco delle risorse che sono stati modificati, cancellati o creati nuovi
+    //elenco delle risorse che sono stati modificate, cancellate o create nuove
     {
         ResList resourceList(localAllocator, 256);
         {
@@ -481,12 +481,7 @@ u32 Builder::priv_do_build (Context &ctx, bool doCreateAssetsFile)
             return num_errors;
 
 
-
         //Esamino la lista delle risorse.
-        //Al secondo giro:
-        //  inserisco le NEW nel DB
-        //  gestisco le MODIFIED/DELETED
-        //  ignoro il resto
         bool bAnyShaderResourceToProcess = false;
         for (u32 i=0; i<resourceList.getNElem(); i++)
         {   
@@ -655,7 +650,7 @@ u32 Builder::priv_do_build (Context &ctx, bool doCreateAssetsFile)
                 asset::UID uid;
                 uid = tempList->queryElem(i).key;
 
-                //se nnn e' un asset che ho gia' eliminato in precedenza...
+                //se non e' un asset che ho gia' eliminato in precedenza...
                 if (deletedAssetList.insertIfNotExists(uid, 0))
                 {
                     num_deleted++;
@@ -857,7 +852,8 @@ u32 Builder::priv_do_build (Context &ctx, bool doCreateAssetsFile)
     //finalmente posso buildare per davvero!!
     logger->log (eTextColor::blue, "Now building...\n");
     logger->incIndent();
-    num_errors = priv_build_explodedIniFileInFolder (iniExploded, doCreateAssetsFile);
+    FastUIDList newlyCreatedAssetList(gos::getSysHeapAllocator(), 256);
+    num_errors = priv_build_explodedIniFileInFolder (iniExploded, doCreateAssetsFile, newlyCreatedAssetList);
     logger->decIndent();
     if (0 != num_errors)
         return num_errors;    
@@ -867,6 +863,49 @@ u32 Builder::priv_do_build (Context &ctx, bool doCreateAssetsFile)
     //Elimino tutti i runtimeName che iniziano con __ dato che li ho creati io artificialmente durante il build
     db::exec (ctx.db, "DELETE FROM " GOS_ASSET__TABLE_RUNTIME_NAME " WHERE name LIKE '!_!_%' escape '!'");
 
+
+    if (deletedAssetList.getNElem() || newlyCreatedAssetList.getNElem())
+    {
+        logger->log ("Final report\n");
+        logger->log ("-----------------------------------\n");
+        logger->incIndent();
+
+        auto tempList = deletedAssetList._queryList();
+        const u32 n = tempList->getNElem();
+        for (u32 i=0; i<n; i++)
+        {
+            asset::UID uidDeleted;
+            uidDeleted = tempList->queryElem(i).key;
+
+            //vediamo se e' stata rebuildata in un assett con lo stesso UID
+            u32 iFound = u32MAX;
+            newlyCreatedAssetList.forEach( [uidDeleted, &iFound](u32 index, const asset::UID &uid){
+                if (uidDeleted == uid)
+                {
+                    iFound = index;
+                    return false;
+                }
+                return true;
+            });
+
+            if (u32MAX == iFound)
+            {
+                logger->log ("%016" PRIX64 " deleted\n", uidDeleted);
+            }
+            else
+            {
+                logger->log ("%016" PRIX64 " rebuilded\n", newlyCreatedAssetList(iFound));
+                newlyCreatedAssetList.removeAndSwapWithLast (iFound);
+            }
+        }
+
+        for (u32 i=0; i<newlyCreatedAssetList.getNElem(); i++)
+        {
+            logger->log ("%016" PRIX64 " newly builded\n", newlyCreatedAssetList(i));
+        }
+
+        logger->decIndent();
+    }
     return 0;
 }
 
@@ -962,11 +1001,11 @@ void Builder::priv_collectResourcesFromDisk (ResList &out_list)
 {
     u32 iter;
     asset::eResType resType;
-    asset::res_enumerate_begin (&iter);
-    while (asset::res_enumerate_fetch(iter, &resType))
+    asset::resType_enumerate_begin (&iter);
+    while (asset::resType_enumerate_fetch(iter, &resType))
     {
         char folderName[512];
-        asset::res_get_folder_nameByType (ctx, resType, folderName, sizeof(folderName));
+        asset::res_get_folderNameByType (ctx, resType, folderName, sizeof(folderName));
         priv_collectResourcesFromDisk_ric (folderName, NULL, resType, out_list);
     }
 }
@@ -1104,7 +1143,7 @@ u32 Builder::priv_shaderRes_add_dependencies (const ResList &list, u32 me)
     u32 num_errors = 0;
     
     char s[1024];
-    asset::res_get_folder_nameByType (ctx, eResType::shader_txt, s, sizeof(s));
+    asset::res_get_folderNameByType (ctx, eResType::shader_txt, s, sizeof(s));
     strcat_s (s, sizeof(s), "/");
     strcat_s (s, sizeof(s), list(me).name);
 
@@ -1276,7 +1315,7 @@ bool Builder::priv_explodeScript_ric (gos::IniFileSection *dst, gos::IniFileSect
  * Prende il input il file Ini che contiene tutte gli asset in formato "esploso"
  * e comincia a buildarli, uno per uno
  */
-u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreateAssetsFile)
+u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreateAssetsFile, FastUIDList &newlyCreatedAssetList)
 {
     const u32 numSection = ini.getNSubsection();
     if (0 == numSection)
@@ -1342,7 +1381,7 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreat
 
                 asset::UID uid_of_iniFile;
                 uid_of_iniFile._uid = sec->getOrDefaultAsU64("__decl_uid", 0);
-                num_errors += priv_build_iniSection (doCreateAssetsFile, sec, uid_of_iniFile, fromSRC, builder, runtimeName);
+                num_errors += priv_build_iniSection (doCreateAssetsFile, sec, uid_of_iniFile, fromSRC, builder, runtimeName, newlyCreatedAssetList);
                 logger->decIndent();
             }
         }
@@ -1352,7 +1391,7 @@ u32 Builder::priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreat
 }
 
 //***********************************
-u32 Builder::priv_build_iniSection (bool doCreateAssetsFile, const IniFileSection *sec, const asset::UID &uid_of_iniFile, const char *sourceFileInfo, BuilderInterface *builder, const char *runtimeName)
+u32 Builder::priv_build_iniSection (bool doCreateAssetsFile, const IniFileSection *sec, const asset::UID &uid_of_iniFile, const char *sourceFileInfo, BuilderInterface *builder, const char *runtimeName, FastUIDList &newlyCreatedAssetList)
 {
     asset::sBuildResult result;
     if (!builder->build (ctx, buildTimeUTC, sourceFileInfo, uid_of_iniFile, sec, doCreateAssetsFile, &result))
@@ -1370,6 +1409,8 @@ u32 Builder::priv_build_iniSection (bool doCreateAssetsFile, const IniFileSectio
     //Per "dipendenze runtime" intendo una lista di altri asset (e non risorse) dai quali questo asset dipende
     if (eBuildResult::just_built == result.result)
     {
+        newlyCreatedAssetList.append (result.uid);
+
         if (result.uid.getAssetDepth() > 1)
         {
             HashedUIDList   hashList1 (localAllocator, 256);
@@ -1404,7 +1445,14 @@ u32 Builder::priv_build_iniSection (bool doCreateAssetsFile, const IniFileSectio
             return 1;
 
         if (runtimeName[0] != '_' && runtimeName[1] != '_')
+        {
             color = eTextColor::green;
+
+            //dato che l'asset ha un nuovo runtime name, devo aggiungere la dipendenza dal file gosaaset_d dove il runtime name
+            //e' stato dichiarato
+            if (!asset::depend_exists(ctx, result.uid, uid_of_iniFile))
+                asset::depend_add (ctx, result.uid, uid_of_iniFile);
+        }
         logger->log (color, "%016" PRIX64 " is now known as '%s'\n", result.uid._uid, runtimeName);
         return 0;
     }

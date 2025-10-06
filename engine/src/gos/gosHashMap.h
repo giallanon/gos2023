@@ -200,8 +200,9 @@ namespace gos
          * @brief   ritorna l'array lineare nel quale sono memorizzati i dati
          *
          */
-        const gos::FastArray<sElem>*    _queryList() const { return &list; }
+        const gos::FastArray<sElem>*    _queryList() const      { return &list; }
 
+        u32 getNElem() const                                    { return list.getNElem(); }
 
         /**
          * @brief   scansiona l'array lineare nel quale sono memorizzati i dati

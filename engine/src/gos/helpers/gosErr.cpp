@@ -1,5 +1,5 @@
 #include "gosErr.h"
-#include "gos.h"
+#include "../gos.h"
 
 using namespace gos;
 

@@ -123,9 +123,10 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGPU)
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
-#add_subdirectory(${PROJECT_SOURCE_DIR}/src/simpleWorld)
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/glslParser)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/assetBuilder)
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosEngine)
 
 

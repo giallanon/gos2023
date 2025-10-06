@@ -153,7 +153,7 @@ bool Builder_shader::build (Context &ctx, u64 buildTimeUTC, const char *sourceFi
             sprintf_s (shaderStage, sizeof(shaderStage), "frag");
 
         char filenameSRC[1024];
-        asset::res_get_folder_nameByType (ctx, eResType::shader_txt, filenameSRC, sizeof(filenameSRC));
+        asset::res_get_folderNameByType (ctx, eResType::shader_txt, filenameSRC, sizeof(filenameSRC));
         strcat_s (filenameSRC, sizeof(filenameSRC), "/");
         strcat_s (filenameSRC, sizeof(filenameSRC), params.src);
 

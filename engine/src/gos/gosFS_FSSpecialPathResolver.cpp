@@ -98,7 +98,10 @@ bool fs::SpecialPathResolver::priv_resolve (const char *path, char *out, u32 siz
         const sAlias *s = priv_findAlias(out);
         if (NULL != s)
         {
-            string::utf8::spf (out, sizeof_out, "%s/%s", s->realPathNoSlash, src.getPointerToCurrentPosition());
+            if (src.getCurChar().isEOF())
+                sprintf_s (out, sizeof_out, "%s", s->realPathNoSlash);
+            else
+                sprintf_s (out, sizeof_out, "%s/%s", s->realPathNoSlash, src.getPointerToCurrentPosition());
             return true;
         }
     }

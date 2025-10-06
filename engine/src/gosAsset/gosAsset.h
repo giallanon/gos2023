@@ -26,11 +26,12 @@ namespace gos
 
         
         
-        //================ resuorces
-        void        res_enumerate_begin (u32 *out_iter);
-        bool        res_enumerate_fetch (u32 &iter, eResType *out);
-        bool        res_get_folder_nameByType (const char *baseFolder, eResType resType, char *out, u32 sizeof_out);
-        bool        res_get_folder_nameByType (const Context &ctx, eResType resType, char *out, u32 sizeof_out);
+        //================ resources
+        void        resType_enumerate_begin (u32 *out_iter);
+        bool        resType_enumerate_fetch (u32 &iter, eResType *out);
+        bool        res_get_folderNameByType (const char *baseFolder, eResType resType, char *out, u32 sizeof_out);
+        bool        res_get_folderNameByType (const Context &ctx, eResType resType, char *out, u32 sizeof_out);
+
         bool        res_createUID (eResType resType, const char *filename, asset::UID *out);
         bool        res_insert (Context &ctx, const asset::UID uid, u64 lastTimeMod, eResType resType, const char *resName);
         bool        res_update (Context &ctx, const asset::UID uid, u64 lastTimeMod);
@@ -86,6 +87,7 @@ namespace gos
         bool        rtname_insert (Context &ctx, const char *runtimeName, const asset::UID &uid);
 
         //================ dependencies
+        bool        depend_exists  (Context &ctx, const asset::UID &padre, const asset::UID &figlio);
         bool        depend_add (Context &ctx, const asset::UID &padre, const asset::UID &figlio);
         bool        dependRT_add (Context &ctx, const asset::UID &padre, const asset::UID &figlio, u8 depth_figlio);
 

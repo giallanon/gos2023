@@ -298,7 +298,7 @@ bool Builder_tex2D::priv_do_create_assetFile (Context &ctx, const Params &params
     u16 srcImg_dimx = 0;
     u16 srcImg_dimy = 0;
     {
-        asset::res_get_folder_nameByType (ctx, eResType::image, s, sizeof(s));
+        asset::res_get_folderNameByType (ctx, eResType::image, s, sizeof(s));
         strcat_s (s, sizeof(s), "/");
         strcat_s (s, sizeof(s), params.src);
 

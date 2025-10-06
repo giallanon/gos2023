@@ -1,7 +1,7 @@
 #ifndef _gosErr_h_
 #define _gosErr_h_
-#include "gosEnumAndDefine.h"
-#include "gosBufferLinear.h"
+#include "../gosEnumAndDefine.h"
+#include "../gosBufferLinear.h"
 
 namespace gos
 {

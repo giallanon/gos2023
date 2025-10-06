@@ -103,8 +103,8 @@ namespace gos
             void    priv_explodeIniFile_adjustSubsectionName (const char *in, char *out, u32 sizeof_out);
             bool    priv_explodeScript_ric (gos::IniFileSection *dst, IniFileSection *sec, const char *nameOfSRC, const asset::UID &uid_of_iniFile);
 
-            u32     priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreateAssetsFile);
-            u32     priv_build_iniSection (bool doCreateAssetsFile, const IniFileSection *sec, const asset::UID &uid_of_iniFile, const char *sourceFileInfo, BuilderInterface *builder, const char *runtimeName);
+            u32     priv_build_explodedIniFileInFolder (gos::IniFile &ini, bool doCreateAssetsFile, FastUIDList &out_newlyCreatedAssetList);
+            u32     priv_build_iniSection (bool doCreateAssetsFile, const IniFileSection *sec, const asset::UID &uid_of_iniFile, const char *sourceFileInfo, BuilderInterface *builder, const char *runtimeName, FastUIDList &newlyCreatedAssetList);
 
 
             bool    debug_sanityCheck_run (const char *baseFolder);

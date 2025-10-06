@@ -50,7 +50,7 @@ namespace gos
         /******************
          * @brief   UID
          *          E' logicamente composto da 2 u32
-         *          La parte bassa e' un CRC32 che dipende dai parametri di buil
+         *          La parte bassa e' un CRC32 che dipende dai parametri di build
          *          La parte alta:
          *              0x00            => limitazione dovuta a sqllite che tratta tutto come signed integer
          *              eAssetType      => se identifica un asset, allora questo byte != 0

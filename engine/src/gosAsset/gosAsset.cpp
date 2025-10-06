@@ -112,10 +112,10 @@ static bool asset_create_folder_structure (const char *baseFolder)
     
     u32 iter;
     asset::eResType resType;
-    asset::res_enumerate_begin (&iter);
-    while (asset::res_enumerate_fetch(iter, &resType))
+    asset::resType_enumerate_begin (&iter);
+    while (asset::resType_enumerate_fetch(iter, &resType))
     {
-        if (asset::res_get_folder_nameByType (baseFolder, resType, s, sizeof(s)))
+        if (asset::res_get_folderNameByType (baseFolder, resType, s, sizeof(s)))
         {
             if (!fs::folderCreate (s))
                 return false;
@@ -331,14 +331,14 @@ bool asset::context_cloneDB  (Context &ctx, const char *file_extension_to_append
 
 
 //********************************************************** 
-void asset::res_enumerate_begin (u32 *out_iter) 
+void asset::resType_enumerate_begin (u32 *out_iter) 
 {
     assert (NULL != out_iter);
     *out_iter = 2;
 }
 
 //********************************************************** 
-bool asset::res_enumerate_fetch (u32 &iter, eResType *out)
+bool asset::resType_enumerate_fetch (u32 &iter, eResType *out)
 {
     if (iter >= static_cast<u32>(asset::eResType::__FINISHED))
         return false;
@@ -348,7 +348,7 @@ bool asset::res_enumerate_fetch (u32 &iter, eResType *out)
 }    
 
 //********************************************************** 
-bool asset::res_get_folder_nameByType (const Context &ctx, eResType resType, char *out, u32 sizeof_out)
+bool asset::res_get_folderNameByType (const Context &ctx, eResType resType, char *out, u32 sizeof_out)
 {
     if (!ctx.isValid())
     {
@@ -356,9 +356,9 @@ bool asset::res_get_folder_nameByType (const Context &ctx, eResType resType, cha
         out[0] = 0x00;
         return false;
     }
-    return asset::res_get_folder_nameByType (ctx.baseFolder, resType, out, sizeof_out);
+    return asset::res_get_folderNameByType (ctx.baseFolder, resType, out, sizeof_out);
 }
-bool asset::res_get_folder_nameByType (const char *baseFolder, eResType resType, char *out, u32 sizeof_out)
+bool asset::res_get_folderNameByType (const char *baseFolder, eResType resType, char *out, u32 sizeof_out)
 {
     assert (NULL != out);
 
@@ -1130,6 +1130,26 @@ bool asset::rtname_insert (Context &ctx, const char *runtimeName, const asset::U
     return false;
 }
 
+//*******************************************************
+bool asset::depend_exists  (Context &ctx, const asset::UID &uid_padre, const asset::UID &uid_figlio)
+{
+    if (!ctx.isValid())
+    {
+        logger::err ("depend_exists(%016" PRIX64 ",%016" PRIX64 ") => invalid ctx\n", uid_padre._uid, uid_figlio._uid);
+        return false;
+    }
+
+    char s[128];
+    sprintf_s (s, sizeof(s), "SELECT UID FROM " GOS_ASSET__TABLE_DEPENDS " WHERE UID=%" PRIu64 " AND childUID=%" PRIu64 "", uid_padre._uid, uid_figlio._uid);
+    db::RST rst;
+    if (db::query(ctx.db, s, &rst))
+    {
+        if (rst.fetchRow())
+            return true;
+    }
+    return false;
+
+}
 
 //*******************************************************
 bool asset::depend_add (Context &ctx, const asset::UID &uid_padre, const asset::UID &uid_figlio)

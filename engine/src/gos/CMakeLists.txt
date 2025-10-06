@@ -42,6 +42,8 @@ dataTypes/gosTimer.h
 helpers/base64.cpp
 helpers/debugbreak.h
 helpers/gosEnumBitmask.h
+helpers/gosErr.cpp
+helpers/gosErr.h
 helpers/mtrand.cpp
 helpers/mtrand.h
 helpers/sha1.cpp
@@ -141,11 +143,11 @@ gosDataFormat.cpp
 gosDataFormat.h
 gosDataTypes.h
 gosEnumAndDefine.h
-gosErr.cpp
-gosErr.h
 gosFastArray.h
 gosFIFO.h
 gosFIFOFixedSize.h
+gosFreespaceTracker.cpp
+gosFreespaceTracker.h
 gosFS_FSSpecialPathResolver.cpp
 gosFS_FSSpecialPathResolver.h
 gosFS.cpp

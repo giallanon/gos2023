@@ -8,6 +8,17 @@
 }
 
 
+@vtx_shader: __assname_000001
+{
+	__decl : aaa.gosasset_d@7
+	__decl_uid : 1099653301794
+	__depth : 1
+	__assType : 1
+	src : es1.vert
+	def : d20200965
+}
+
+
 @vtx_shader: phong.vert.spv
 {
 	__decl : phong.gosasset_d@1
@@ -66,7 +77,7 @@
 }
 
 
-@vtx_shader: __assname_000001
+@vtx_shader: __assname_000002
 {
 	__decl : es1.gosasset_d@4
 	__decl_uid : 1103642656033
@@ -87,7 +98,7 @@
 }
 
 
-@vtx_shader: __assname_000002
+@vtx_shader: __assname_000003
 {
 	__decl : es1.gosasset_d@23
 	__decl_uid : 1103642656033
@@ -117,7 +128,7 @@
 }
 
 
-@vtx_shader: __assname_000003
+@vtx_shader: __assname_000004
 {
 	__decl : es1.gosasset_d@52
 	__decl_uid : 1103642656033
@@ -150,7 +161,7 @@
 }
 
 
-@vtx_shader: __assname_000004
+@vtx_shader: __assname_000005
 {
 	__decl : es3.gosasset_d@4
 	__decl_uid : 1103703292717
@@ -166,7 +177,7 @@
 	__decl_uid : 1103703292717
 	__depth : 3
 	__assType : 31
-	@vtx_shader: __assname_000004
+	@vtx_shader: __assname_000005
 	{
 		__decl : es3.gosasset_d@4
 		__depth : 1
@@ -181,7 +192,7 @@
 }
 
 
-@vtx_shader: __assname_000006
+@vtx_shader: __assname_000007
 {
 	__decl : es2.gosasset_d@9
 	__decl_uid : 1103775225899
@@ -191,7 +202,7 @@
 }
 
 
-@pxl_shader: __assname_000007
+@pxl_shader: __assname_000008
 {
 	__decl : es2.gosasset_d@15
 	__decl_uid : 1103775225899
@@ -201,20 +212,20 @@
 }
 
 
-@pipe: __assname_000005
+@pipe: __assname_000006
 {
 	__decl : es2.gosasset_d@3
 	__decl_uid : 1103775225899
 	__depth : 2
 	__assType : 3
 	rt0 : U8_RGBA
-	@vtx_shader: __assname_000006
+	@vtx_shader: __assname_000007
 	{
 		__decl : es2.gosasset_d@9
 		__depth : 1
 		__assType : 1
 	}
-	@pxl_shader: __assname_000007
+	@pxl_shader: __assname_000008
 	{
 		__decl : es2.gosasset_d@15
 		__depth : 1
@@ -223,7 +234,7 @@
 }
 
 
-@vtx_shader: __assname_000009
+@vtx_shader: __assname_000010
 {
 	__decl : es2.gosasset_d@30
 	__decl_uid : 1103775225899
@@ -233,7 +244,7 @@
 }
 
 
-@pxl_shader: __assname_000010
+@pxl_shader: __assname_000011
 {
 	__decl : es2.gosasset_d@36
 	__decl_uid : 1103775225899
@@ -243,20 +254,20 @@
 }
 
 
-@pipe: __assname_000008
+@pipe: __assname_000009
 {
 	__decl : es2.gosasset_d@24
 	__decl_uid : 1103775225899
 	__depth : 2
 	__assType : 3
 	rt0 : U8_RGBA
-	@vtx_shader: __assname_000009
+	@vtx_shader: __assname_000010
 	{
 		__decl : es2.gosasset_d@30
 		__depth : 1
 		__assType : 1
 	}
-	@pxl_shader: __assname_000010
+	@pxl_shader: __assname_000011
 	{
 		__decl : es2.gosasset_d@36
 		__depth : 1
@@ -265,7 +276,7 @@
 }
 
 
-@vtx_shader: __assname_000011
+@vtx_shader: __assname_000012
 {
 	__decl : es2.gosasset_d@51
 	__decl_uid : 1103775225899
@@ -293,7 +304,7 @@
 	__depth : 2
 	__assType : 3
 	rt0 : U8_RGBA
-	@vtx_shader: __assname_000011
+	@vtx_shader: __assname_000012
 	{
 		__decl : es2.gosasset_d@51
 		__depth : 1
@@ -330,7 +341,7 @@
 }
 
 
-@vtx_shader: __assname_000012
+@vtx_shader: __assname_000013
 {
 	__decl : es2.gosasset_d@85
 	__decl_uid : 1103775225899
@@ -359,7 +370,7 @@
 	__depth : 2
 	__assType : 3
 	rt0 : U8_RGBA
-	@vtx_shader: __assname_000012
+	@vtx_shader: __assname_000013
 	{
 		__decl : es2.gosasset_d@85
 		__depth : 1

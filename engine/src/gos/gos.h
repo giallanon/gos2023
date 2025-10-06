@@ -9,7 +9,7 @@
 #include "dataTypes/gosDateTime.h"
 #include "gosRandom.h"
 #include "gosHandle.h"
-#include "gosErr.h"
+#include "helpers/gosErr.h"
 
 
 //A per "num max di handle", B per "num di chunk", C per "counter"
@@ -111,8 +111,8 @@ namespace gos
 	 * fs
 	 *
 	 * Tutte le fn che accettano un path sono in grado di gestire alcuni casi speciali:
-	 * 	- se il path inizia con @, allora al posto di @ viene automaticamente inserito il path alla "writable folder"
-	 * 		es: @/pippo.txt, diventa [pathWritable]/pippo.txt
+	 * 	- se il path inizia con @w, allora al posto di @w viene automaticamente inserito il path alla "writable folder"
+	 * 		es: @w/pippo.txt, diventa [pathWritable]/pippo.txt
 	 *  - se il path e' relativo (ovvero NON inizia con /), allora gli viene automaticamente prefisso il "path dell'app" piu' lo slash
 	 * 		es: pippo/pluto.txt, diventa [pathApp]/pippo/pluto
 	 */
