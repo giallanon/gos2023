@@ -256,6 +256,8 @@ void Hub::priv_scheduleLoad (void *pt)
 //***************************************
 void Hub::priv_unload (void *pt)
 {
+    if (NULL == pt)
+        return;
     sHeader *header = static_cast<sHeader*>(pt);
  
     if (eStatusPublic::ready != header->external_status && eStatusPublic::loading != header->external_status)

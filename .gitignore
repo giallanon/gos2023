@@ -63,3 +63,6 @@ engine/bin/testVulkan/shader/example7/pippo.tga
 engine/bin/testVulkan/shader/example7/out_1162_718.tga
 
 engine/bin/testVulkan/shader/example7/out_581_359.tga
+engine/bin/assetBuilder/test_assets_2/assets.sqlite3
+engine/bin/testVulkan/shader/example6/assets.sqlite3
+engine/bin/testVulkan/shader/example7/assets.sqlite3

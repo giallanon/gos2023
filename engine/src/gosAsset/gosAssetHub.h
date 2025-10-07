@@ -19,6 +19,10 @@ namespace gos
         */
         struct Handle
         {
+		public:
+			Handle()				{ _pt = NULL; }
+
+		public:
             void *_pt;
         };
 		

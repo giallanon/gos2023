@@ -991,7 +991,7 @@ namespace test11_enum_bitmask
 
     GOS_DECL_ENUM_BITMASK_CLASS(eProva);
     
-    int fn1 (eProvaBitmask bm)
+    bool fn1 (eProvaBitmask bm)
     {
         return bm.isset(eProva::bit0);
     }
