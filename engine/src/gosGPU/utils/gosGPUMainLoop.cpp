@@ -112,6 +112,57 @@ bool GFXJob::hasFinished()
 }
 
 
+/************************************************************************************
+ *
+ *  TransferJob
+ * 
+ *************************************************************************************/
+void TransferJob::setup (gos::GPU *gpuIN)         { gpu=gpuIN; gpu->fence_create (false, &fence); }
+void TransferJob::unsetup()                       { if (NULL == gpu) return; gpu->fence_destroy (fence); gpu = NULL; }
+void TransferJob::submit (const GPUCmdBufferHandle &cmdBufferHandle)
+{
+    assert (eStato::idle == stato);
+    stato = eStato::jobInProgress;
+
+    VkCommandBuffer vkCommandBuffer;
+    gpu->toVulkan (cmdBufferHandle, &vkCommandBuffer);
+
+
+    VkPipelineStageFlags waitStages[] = { 0 }; //{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+    //dico a GPU di eseguire <cmdBufferHandle>
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.waitSemaphoreCount = 0;
+    submitInfo.pWaitSemaphores = NULL;
+    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &vkCommandBuffer;
+
+    //submitto il batch a GPU e indico che deve segnalare <fence> quando ha finito 
+    VkResult result = vkQueueSubmit (gpu->REMOVE_getTransferQHandle(), 1, &submitInfo, fence);
+    if (VK_SUCCESS != result)
+    {
+        stato = eStato::idle;
+        gos::logger::err ("TransferJob::submit() => vkQueueSubmit() => %s\n", string_VkResult(result));
+    }
+}
+
+//*****************************************************
+bool TransferJob::hasFinished()
+{
+    if (eStato::jobInProgress == stato)
+    {
+        if (!gpu->fence_isSignaled(fence))
+            return false;
+        gpu->fence_reset(fence);
+        stato = eStato::idle;
+    }
+
+    return true;
+}
+
+
 
 /************************************************************************************
  *

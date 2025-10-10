@@ -209,9 +209,13 @@ namespace gos
 
 
         //================ staging buffer
-        bool    stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle);
-        void    deleteResource (GPUStgBufferHandle &handle);
+        bool                stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle);
+        void                deleteResource (GPUStgBufferHandle &handle);
+        const gpu::Buffer*  getInfo (const GPUStgBufferHandle handle) const;
         
+                //memcopia <dataSRC> in <&handleDST[offsetDST]>
+        bool    stagingBuffer_memcpy (GPUStgBufferHandle &handleDST, u32 offsetDST, const void *dataSRC, u32 sizeof_dataSRC);
+
                 /**
                  * @brief stagingBuffer_uploadToGPUBuffer()
                  * copia [dataSRC] in [handleDST] usando [handleSRC] come buffer di appoggio.
@@ -219,6 +223,7 @@ namespace gos
                  */
         bool    stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
         bool    stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
+        
 
         //================ buffer unmapping / manualSync
         void    buffer_unmap (gpu::sMappedBuffer &m);

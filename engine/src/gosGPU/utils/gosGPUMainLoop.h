@@ -53,12 +53,15 @@ namespace gos
 
         /********************************
          * @brief   GFXJob
-         *          Submitta una job grafico alla GPU e si preoccupa di presentarlo appena possibile.
-         *          submit() pretende che <swapChainImageIndex> sia un valido indice ad una immagine di swapchain
+         *          Si interfaccia con la coda grafica di GPU.
+         *          submitAndPresent()  => submitta una job grafico alla GPU e si preoccupa di presentarlo appena possibile
+         *          submit()            => submitta una job grafico alla GPU senza presentarlo
+         * 
+         *          submitAndPresent() pretende che <swapChainImageIndex> sia un valido indice ad una immagine di swapchain
          *          precedentemente acquisita (per esempio da AquireSwapChainImage).
          * 
          *          hasFinished() ritona true se la classe non ha alcun lavoro in canna (ovvero ritorna true dopo che il
-         *          job e' stato presentato, oppure se non ha alcun job da gestire).
+         *          job e' stato completato da GPU, oppure se non ha alcun job da gestire).
          */        
         class GFXJob
         {
@@ -85,11 +88,44 @@ namespace gos
 
         private:
             void        priv_submit (const GPUCmdBufferHandle &cmdBufferHandle, u32 swapChainImageIndex);
+
         private:
             GPU         *gpu;
             VkFence     fence;
             u32         swapChainImageIndex;
             u32         swapChainAutoID;
+            eStato      stato;
+        };
+
+
+        /********************************
+         * @brief   TransferJob
+         *          Si interfaccia con la coda di "transfer" di GPU (se GPU non ne supporta, allora usa una coda gfx).
+         *          submit()            => submitta un job alla GPU         * 
+         *          hasFinished()       => ritorna true quando il job submitteed e' stato completato da GPU
+         */        
+        class TransferJob
+        {
+        public:
+                    TransferJob()                         { gpu = NULL; stato = eStato::idle; }
+                    ~TransferJob()                        { unsetup(); }
+
+            void    setup (gos::GPU *gpuIN);
+            void    unsetup();
+
+            void    submit (const GPUCmdBufferHandle &cmdBufferHandle);
+            bool    hasFinished();
+
+        private:
+            enum class eStato : u8
+            {
+                idle,
+                jobInProgress
+            };
+
+        private:
+            GPU         *gpu;
+            VkFence     fence;
             eStato      stato;
         };
 

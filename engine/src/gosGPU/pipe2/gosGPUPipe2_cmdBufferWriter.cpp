@@ -194,6 +194,33 @@ CmdBufferWriter2& CmdBufferWriter2::copyImageToImage (const VkImage &source, con
 }
 
 //***********************************************
+CmdBufferWriter2& CmdBufferWriter2::copyBuffer (const VkBuffer srcBuffer, const VkBuffer dstBuffer, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
+{
+    VkBufferCopy copyRegion{};
+    copyRegion.srcOffset = offsetSRC;
+    copyRegion.dstOffset = offsetDST;
+    copyRegion.size = howManyByteToCopy;
+    vkCmdCopyBuffer (vkCommandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+    return *this;
+}
+
+//***********************************************
+CmdBufferWriter2& CmdBufferWriter2::copyBuffer (GPUStgBufferHandle srcStageBufferHandle, GPUVtxBufferHandle dstVtxBufferHandle, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
+{
+    const gpu::Buffer *src = gpu->getInfo (srcStageBufferHandle);
+    const gpu::Buffer *dst = gpu->getInfo (dstVtxBufferHandle);
+    return copyBuffer (src->vkHandle, dst->vkHandle, offsetSRC, offsetDST, howManyByteToCopy);
+}
+
+//***********************************************
+CmdBufferWriter2& CmdBufferWriter2::copyBuffer (GPUStgBufferHandle srcStageBufferHandle, GPUIdxBufferHandle dstIdxBufferHandle, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
+{
+    const gpu::Buffer *src = gpu->getInfo (srcStageBufferHandle);
+    const gpu::Buffer *dst = gpu->getInfo (dstIdxBufferHandle);
+    return copyBuffer (src->vkHandle, dst->vkHandle, offsetSRC, offsetDST, howManyByteToCopy);
+}
+
+//***********************************************
 CmdBufferWriter2& CmdBufferWriter2::copyImageToImage (const GPURenderTargetHandle &rtHandle, const VkImage &destination, const VkExtent2D &srcSize, const VkExtent2D &dstSize)
 {
     const gpu::RenderTarget *rt_info = gpu->getInfo (rtHandle);

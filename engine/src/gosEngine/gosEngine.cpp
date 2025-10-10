@@ -1,10 +1,15 @@
 #include "gosEngine.h"
+#include "../gos/memory/gosAllocatorHeap.h"
 
 using namespace gos;
+
+typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Safe>		GOSENGINEMemAllocatorTS;
+
 
 //******************************** 
 Engine::Engine()
 {
+    allocator = NULL;
     gpu = NULL;
     inputCtx = NULL;
     assetHub = NULL;
@@ -12,11 +17,23 @@ Engine::Engine()
 }
 
 //******************************** 
-Engine::~Engine()
+void Engine::unsetup()
 {
-    if (NULL == gpu)
+    bQuitEngine = true;
+    if (NULL == gpu || NULL == allocator)
         return;
 
+    //resource manager
+    vtxBufferMan.unsetup();
+    idxBufferMan.unsetup();
+    
+    //handle lists
+    vtxBufferHandleList.unsetup();
+    idxBufferHandleList.unsetup();
+    shapeHandleList.unsetup();
+
+
+    //win & gpu
     GOSWinHandle mainWin = gpu->getWindow();
     
     GOSDELETE(gos::getSysHeapAllocator(), assetHub);
@@ -31,6 +48,11 @@ Engine::~Engine()
 
     gos::input::window_destroy (mainWin);
     gos::input::deinit();
+
+
+    //engine allocator
+    GOSDELETE(gos::getSysHeapAllocator(), allocator);
+    allocator = NULL;
 }
 
 //******************************** 
@@ -101,6 +123,20 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
         inputCtx->action_bindToAxleREL ("rotateY",  input::eOrigin::mouse, input::eAxle::x, input::eAxleDirection::both);    
     }
 
+
+    //Creo un allocatore dedicato per la GPU
+    GOSENGINEMemAllocatorTS *engAllocator = GOSNEW(gos::getSysHeapAllocator(), GOSENGINEMemAllocatorTS)("ENG");
+    engAllocator->setup (1024 * 1024 * 128); //128MB
+    this->allocator = engAllocator;
+
+    //handle list
+    vtxBufferHandleList.setup (allocator);
+    idxBufferHandleList.setup (allocator);
+    shapeHandleList.setup (allocator);
+
+    //resource manager
+    vtxBufferMan.setup (allocator, gpu);
+    idxBufferMan.setup (allocator, gpu);
     return true;
 }
 
@@ -162,13 +198,135 @@ void Engine::priv_handleInput()
     }
 }
 
-
 //******************************** 
-bool Engine::run()
+bool Engine::update()
 {
     if (bQuitEngine)
         return false;
 
     priv_handleInput();
     return true;
+}
+
+
+//******************************** 
+bool Engine::vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer *out_handle)
+{
+    GPUVtxBufferHandle gpuResourceHandle;
+    if (!gpu->vertexBuffer_create (sizeInByte, mode, &gpuResourceHandle))
+    {
+        return false;
+    }
+
+    assert (NULL != out_handle);
+    engine::VtxBuffer *s = vtxBufferHandleList.reserveTS(out_handle);
+    if (NULL == s)
+    {
+        logger::err ("Engine::vtxBuffer_create() => can't create handle\n");
+        return false;
+    }
+
+    s->vbHandle = gpuResourceHandle;
+    return true;
+}
+
+void Engine::vtxBuffer_release (ENGVtxBuffer &handle)
+{
+    engine::VtxBuffer info;
+    if (vtxBufferHandleList.releaseTS (handle, &info))
+        priv_vtxBuffer_delete (&info);
+    handle.setInvalid();
+}
+
+void Engine::priv_vtxBuffer_delete (engine::VtxBuffer *info)
+{
+    gpu->deleteResource (info->vbHandle);
+}
+
+//******************************** 
+bool Engine::idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGIdxBuffer *out_handle)
+{
+    GPUIdxBufferHandle gpuResourceHandle;
+    if (!gpu->indexBuffer_create (sizeInByte, mode, &gpuResourceHandle))
+    {
+        return false;
+    }
+
+    assert (NULL != out_handle);
+    engine::IdxBuffer *s = idxBufferHandleList.reserveTS(out_handle);
+    if (NULL == s)
+    {
+        logger::err ("Engine::idxBuffer_create() => can't create handle\n");
+        return false;
+    }
+
+    s->ibHandle = gpuResourceHandle;
+    return true;
+}
+
+void Engine::idxBuffer_release (ENGIdxBuffer &handle)
+{
+    engine::IdxBuffer info;
+    if (idxBufferHandleList.releaseTS (handle, &info))
+        priv_idxBuffer_delete (&info);
+    handle.setInvalid();
+}
+
+void Engine::priv_idxBuffer_delete (engine::IdxBuffer *info)
+{
+    gpu->deleteResource (info->ibHandle);
+}
+
+
+//******************************** 
+bool Engine::shape_create (const gos::Shape *shape, ENGShape *out_handle)
+{
+    assert (NULL != out_handle);
+    engine::Shape *s = shapeHandleList.reserveTS(out_handle);
+    if (NULL == s)
+    {
+        logger::err ("Engine::shape_create() => can't create handle\n");
+        return false;
+    }
+
+    
+    u32 byteNeeded;
+
+    //vtxbuffer
+    if (shape->numVtx)
+    {
+        const u32 sizeOfAVertex = gos::shape::calcSizeOfAVertex(shape->vtxLayout);
+        byteNeeded = sizeOfAVertex * shape->numVtx;
+        vtxBufferMan.reserve (byteNeeded, &s->alloc_vtxbuf_offset, &s->alloc_vtxbuf_size, &s->vbHandle);
+        s->vtxStart = s->alloc_vtxbuf_size / sizeOfAVertex;
+        s->numVertex = shape->numVtx;
+    }
+
+    //idxBuffer    
+    if (shape->numIdx)
+    {
+        const u32 sizeOfAnIndex = sizeof(u16);
+        byteNeeded = sizeOfAnIndex * shape->numIdx;
+        idxBufferMan.reserve (byteNeeded, &s->alloc_idxbuf_offset, &s->alloc_idxbuf_size, &s->ibHandle);
+        s->indexStart = s->alloc_idxbuf_offset / sizeOfAnIndex;
+        s->numIndices = shape->numIdx;
+    }
+    return true;
+}
+
+void Engine::shape_release (ENGShape &handle)
+{
+    engine::Shape info;
+    if (shapeHandleList.releaseTS (handle, &info))
+        priv_shape_delete (&info);
+    handle.setInvalid();
+}
+
+void Engine::priv_shape_delete (engine::Shape *info)
+{
+    if (info->numVertex)
+        vtxBufferMan.release (info->vbHandle, info->alloc_vtxbuf_offset, info->alloc_vtxbuf_size);
+
+    if (info->numIndices)
+        idxBufferMan.release (info->ibHandle, info->alloc_idxbuf_offset, info->alloc_idxbuf_size);
 }

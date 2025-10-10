@@ -1111,8 +1111,8 @@ bool GPU::map (const GPURenderTargetHandle handle, gpu::sMappedImage *out) const
     }
 
     out->size = subResourceLayout.size;
-    out->offset = subResourceLayout.offset;
-    out->row_stride = subResourceLayout.rowPitch;
+    out->offset = static_cast<u32>(subResourceLayout.offset);
+    out->row_stride = static_cast<u32>(subResourceLayout.rowPitch);
     out->_vkMemHandle = s->vkMemHandle;
     return true;
 }
@@ -1532,6 +1532,36 @@ bool GPU::stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle)
 void GPU::deleteResource (GPUStgBufferHandle &handle)
 {
     priv_bufferDestroy (staginBufferList, handle);
+}
+
+//************************************
+const gpu::Buffer* GPU::getInfo (const GPUStgBufferHandle handle) const
+{
+    gpu::Buffer *s;
+    if (priv_fromHandleToPointer(staginBufferList, handle, &s))
+        return s;
+
+    gos::logger::err ("GPU::stageBuffer_getInfo() => invalid handle\n");
+    return NULL;
+}
+
+//************************************
+bool GPU::stagingBuffer_memcpy (GPUStgBufferHandle &handleDST, u32 offsetDST, const void *dataSRC, u32 sizeof_dataSRC)
+{
+    gpu::Buffer *dst;
+    if (!priv_fromHandleToPointer(staginBufferList, handleDST, &dst))
+    {
+        gos::logger::err ("GPU::stagingBuffer_memcpy() => invalid handleDST\n");
+        return false;
+    }
+
+    if (offsetDST + sizeof_dataSRC > dst->mapped_size)
+    {
+        DBGBREAK;
+        return false;
+    }
+    memcpy (&dst->mapped_host_pt[offsetDST], dataSRC, sizeof_dataSRC);
+    return true;
 }
 
 //************************************

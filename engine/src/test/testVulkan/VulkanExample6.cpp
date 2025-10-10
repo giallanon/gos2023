@@ -1,4 +1,4 @@
-#include "VulkanExample6.h"
+    #include "VulkanExample6.h"
 #include "../gosShape/gosShapeImport.h"
 #include "../gos/gosFIFOFixedSize.h"
 #include "gosAssetLoader.h"
