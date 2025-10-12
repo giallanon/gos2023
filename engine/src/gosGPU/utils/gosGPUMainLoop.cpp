@@ -64,8 +64,7 @@ void GFXJob::priv_submit (const GPUCmdBufferHandle &cmdBufferHandle, u32 swapCha
     swapChainAutoID = gpu->swapChain_getCurrentAutoID();
 
 
-    VkCommandBuffer vkCommandBuffer_GFX;
-    gpu->toVulkan (cmdBufferHandle, &vkCommandBuffer_GFX);
+    const gpu::CommandBuffer *cmdBuffer = gpu->getInfo(cmdBufferHandle);
 
 
     VkPipelineStageFlags waitStages[] = { 0 }; //{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -77,14 +76,14 @@ void GFXJob::priv_submit (const GPUCmdBufferHandle &cmdBufferHandle, u32 swapCha
     submitInfo.pWaitSemaphores = NULL; //semaphoresToBeWaitedBeforeStarting;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &vkCommandBuffer_GFX;
+    submitInfo.pCommandBuffers = &cmdBuffer->vkHandle;
 
     //semaforo che GPU segnalera' al termine dell'esecuzione di questo batch di lavoro
     //submitInfo.signalSemaphoreCount = 0; //1;
     //submitInfo.pSignalSemaphores = &semaphore;
 
     //submitto il batch a GPU e indico che deve segnalare <fence> quando ha finito 
-    VkResult result = vkQueueSubmit (gpu->REMOVE_getGfxQHandle(), 1, &submitInfo, fence);
+    VkResult result = vkQueueSubmit (gpu->getSubmitQ(cmdBuffer->whichQ), 1, &submitInfo, fence);
     if (VK_SUCCESS != result)
     {
         stato = eStato::idle;
@@ -124,9 +123,7 @@ void TransferJob::submit (const GPUCmdBufferHandle &cmdBufferHandle)
     assert (eStato::idle == stato);
     stato = eStato::jobInProgress;
 
-    VkCommandBuffer vkCommandBuffer;
-    gpu->toVulkan (cmdBufferHandle, &vkCommandBuffer);
-
+    const gpu::CommandBuffer *cmdBuffer = gpu->getInfo(cmdBufferHandle);
 
     VkPipelineStageFlags waitStages[] = { 0 }; //{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
@@ -137,10 +134,10 @@ void TransferJob::submit (const GPUCmdBufferHandle &cmdBufferHandle)
     submitInfo.pWaitSemaphores = NULL;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &vkCommandBuffer;
+    submitInfo.pCommandBuffers = &cmdBuffer->vkHandle;
 
     //submitto il batch a GPU e indico che deve segnalare <fence> quando ha finito 
-    VkResult result = vkQueueSubmit (gpu->REMOVE_getTransferQHandle(), 1, &submitInfo, fence);
+    VkResult result = vkQueueSubmit (gpu->getSubmitQ(cmdBuffer->whichQ), 1, &submitInfo, fence);
     if (VK_SUCCESS != result)
     {
         stato = eStato::idle;

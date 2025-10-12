@@ -149,6 +149,9 @@ namespace gos
         u8                  swapChain_getImageCount() const                 { return static_cast<u8>(vulkan.swapChainInfo.imageCount); }
         VkExtent2D          swapChain_getImageExten2D() const               { return vulkan.swapChainInfo.imageExtent; }
 
+        //================ submit Q
+        VkQueue            getSubmitQ (eGPUQueueType whichOne) const        { return vulkan.getQueueInfo(whichOne)->vkQueueHandle; }
+
 
         //================ viewport
         //E' possibile creare tante viewport
@@ -203,9 +206,9 @@ namespace gos
 
         
         //================ command buffer
-        bool    cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle);
-        void    deleteResource (GPUCmdBufferHandle &handle);
-        bool    toVulkan (const GPUCmdBufferHandle handle, VkCommandBuffer *out) const;
+        bool                        cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle);
+        void                        deleteResource (GPUCmdBufferHandle &handle);
+        const gpu::CommandBuffer*   getInfo (const GPUCmdBufferHandle handle) const;
 
 
         //================ staging buffer
@@ -287,10 +290,7 @@ namespace gos
         //                      in cui si richiedano N sampler con le stesse caratteristiche
 
         //================ da rimuovere
-        VkDevice           REMOVE_getVkDevice() const               { return vulkan.dev; }
-        VkQueue            REMOVE_getGfxQHandle()                   { return vulkan.getQueueInfo(eGPUQueueType::gfx)->vkQueueHandle; }
-        VkQueue            REMOVE_getComputeQHandle()               { return vulkan.getQueueInfo(eGPUQueueType::compute)->vkQueueHandle; }
-        VkQueue            REMOVE_getTransferQHandle()              { return vulkan.getQueueInfo(eGPUQueueType::transfer)->vkQueueHandle; }
+        VkDevice           REMOVE_getVkDevice() const                   { return vulkan.dev; }
 
 
     public:

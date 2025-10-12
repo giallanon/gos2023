@@ -1,3 +1,15 @@
+### renderder
+  prende una lista di <shape, matrix, material> e genera un cmdbuffer-
+
+  una matrix sono 64B.
+  In 4MB ci metto 65K matrici -> piu' che suff per storare tutte le static entity?
+  Una entity pero' può avere + di 1 matrice (skeleton)
+  Mi serve un modo per storare N matrici nel buffer e associarle alle entity
+
+  getNatrixIndices(const entity) -> return fastarray<u32>
+
+
+
 ### VB/IB manager
 - crea VB/IB ad hoc e ha dei metodi per riservare spazio in VB/IB
 

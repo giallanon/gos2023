@@ -20,6 +20,7 @@ namespace gos
         bool                        setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title);
         void                        unsetup();
 
+            /* update:  ritorna false se la mainwin e' stata chiusa */
         bool                        update();
         void                        toggleFullscreen()                          { gpu->toggleFullscreen(); }
         void                        toggleVSync();
@@ -56,7 +57,7 @@ namespace gos
             void unsetup()                                  { thread::mutexDestroy(mutex); list.unsetup(); }
 
             void lock()                                     { thread::mutexLock(mutex); }
-            void unlock()                                   { thread::mutexLock(mutex); }
+            void unlock()                                   { thread::mutexUnlock(mutex); }
 
             HANDLE_STRUCT*  reserveTS (HANDLE_TYPE *out)
             { 

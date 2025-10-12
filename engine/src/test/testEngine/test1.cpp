@@ -50,7 +50,7 @@ void Test1::run (gos::Engine *engine)
 		shape::shapeFree (allocator, &shape);
 
 
-		//creo un job per pushare lo stage buffer in VB(IB
+		//creo un job per pushare lo stage buffer in VB/IB
 		GPUCmdBufferHandle cmdBufferHandle;
 		if (!engine->gpu->cmdBuffer_create (eGPUQueueType::transfer, &cmdBufferHandle))
 			return;
@@ -79,7 +79,6 @@ void Test1::run (gos::Engine *engine)
 
 
 	//loop
-	bool bQuit = false;
     gpu::MainLoop2 mainLoop;
     mainLoop.setup (engine->gpu);
 
@@ -89,11 +88,16 @@ void Test1::run (gos::Engine *engine)
     engine->gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
 
 
+	bool bQuit = false;
 	while (false == bQuit)
 	{
-		bQuit = engine->update();
+		if (!engine->update())
+			bQuit = true;
+
+//		gos::gpu::pipe2::CmdBufferWriter2 cw;
+		
 	}
 
-
+	engine->gpu->deleteResource (cmdBufferHandle);
 	engine->shape_release(shapeHandle);
 }

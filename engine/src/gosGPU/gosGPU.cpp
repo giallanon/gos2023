@@ -1328,19 +1328,13 @@ void GPU::deleteResource (GPUCmdBufferHandle &handle)
 }
 
 //************************************
-bool GPU::toVulkan (const GPUCmdBufferHandle handle, VkCommandBuffer *out) const
+const gpu::CommandBuffer* GPU::getInfo (const GPUCmdBufferHandle handle) const
 {
-    assert (NULL != out);
     gpu::CommandBuffer *s;
     if (cmdBufferList.fromHandleToPointer(handle, &s))
-    {
-        *out = s->vkHandle;
-        return true;
-    }
-
-    *out = VK_NULL_HANDLE;
-    gos::logger::err ("GPU::cmdBuffer_toVulkan() => invalid handle\n");
-    return false;    
+        return s;
+    gos::logger::err ("GPU::cmdBuffer_getInfo() => invalid handle\n");
+    return NULL;
 }
 
 

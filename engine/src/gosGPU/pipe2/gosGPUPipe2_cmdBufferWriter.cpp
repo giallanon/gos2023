@@ -23,11 +23,13 @@ CmdBufferWriter2& CmdBufferWriter2::begin (GPU *gpuIN, const GPUCmdBufferHandle 
     flag.zero();
 
 
-    if (!gpu->toVulkan (handle, &vkCommandBuffer))
+    const gpu::CommandBuffer *cmdBuffer = gpu->getInfo(handle);
+    if (NULL == cmdBuffer)
     {
         gos::logger::err ("gpu::pipe2::CmdBufferWriter2::begin => invalid cmdBufferHandle\n");
         priv_setError();
-    }    
+    }
+    vkCommandBuffer = cmdBuffer->vkHandle;
 
 
     VkCommandBufferBeginInfo beginInfo{};

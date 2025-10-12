@@ -27,6 +27,8 @@ gosEngine_idxBufferMan.h
 gosEngine_vtxBufferMan.cpp
 gosEngine_vtxBufferMan.h
 gosEngineEnumAndDefine.h
+gosSkeleton.cpp
+gosSkeleton.h
 )
 
 #====================================================

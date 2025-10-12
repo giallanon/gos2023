@@ -38,8 +38,6 @@ utils/gosFreeMovement.cpp
 utils/gosFreeMovement.h
 utils/gosGPUMainLoop.cpp
 utils/gosGPUMainLoop.h
-utils/gosGPUVBIBManager.cpp
-utils/gosGPUVBIBManager.h
 
 
 gosGPU_DescriptorPoolBuilder.cpp
