@@ -1,6 +1,7 @@
 #ifndef _gosFastArray_h_
 #define _gosFastArray_h_
 #include "gosBufferLinear.h"
+#include "gosBufferSparse.h"
 #include "gosUtils.h"
 
 namespace gos
@@ -211,6 +212,15 @@ namespace gos
                             remove (index);
                             return true;
                         }
+
+        bool			findAndRemoveSwappingWithLast (const T &toFind)
+                        {
+                            u32 index = simpleSearch(toFind);
+                            if (index == u32MAX)
+                                return false;
+                            removeAndSwapWithLast (index);
+                            return true;
+                        }                        
 
                         // muove tutti gli elementi dell'array a partire a "aPartireDa" (compreso) di "diQuanto" posizioni in avanti
         void			shiftaAvanti (u32 aPartireDa, u32 diQuanto)

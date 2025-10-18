@@ -20,21 +20,28 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC 
+entity/gosEntityComponentList.h
 entity/gosEntityEnumAndDefine.h
-entity/gosEntityList.cpp
-entity/gosEntityList.h
+entity/gosEntityRegistry.cpp
+entity/gosEntityRegistry.h
 
+model/gosModel.cpp
+model/gosModel.h
+model/gosSkeleton.cpp
+model/gosSkeleton.h
 
-gosEngine.cpp
-gosEngine.h
+gosEngine_fixedSizeBufferTracker.cpp
+gosEngine_fixedSizeBufferTracker.h
 gosEngine_idxBufferMan.cpp
 gosEngine_idxBufferMan.h
+gosEngine_renderer.cpp
+gosEngine_renderer.h
 gosEngine_vtxBufferMan.cpp
 gosEngine_vtxBufferMan.h
+gosEngine.cpp
+gosEngine.h
 gosEngineEnumAndDefine.h
-gosSkeleton.cpp
-gosSkeleton.h
- "entity/gosEntityList.h" "entity/gosEntityList.cpp")
+)
 
 #====================================================
 # info a video

@@ -71,6 +71,16 @@ u32 StringList::serialize_fromMemory (gos::Allocator *allocatorIN, const u8 *mem
     return ct;
 }
 
+//***************************************
+void StringList::clone_from (gos::Allocator *allocatorIN, const StringList &src)
+{
+    unsetup();
+
+    setup (allocatorIN, src.getUsedMemSize());
+    cursor = src.cursor;
+    count = src.count;
+    buffer.copyFrom (src.buffer, 0, src.getUsedMemSize(), 0);
+}
 
 //***************************************
 u32 StringList::add (const char *m)

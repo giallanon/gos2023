@@ -165,14 +165,14 @@ namespace gos
 
 
         /**
-         * @brief   cerca key e, se la trova, valorizza out_value
-         *          Se ritorna false, allora e' possibile usare out_position come parametro per insertInPosition()
+         * @brief   cerca key e valorizza <out_position>
+         *          Se ritorna true, allora <out_position> punta all'elemento nell'array lineare.
+         *          Se ritorna false, allora e' possibile usare <out_position> come parametro per insertInPosition()
          *          garantendo che la posizione di inserimento sia coerente
          * 
          * @return  true se (key) esiste, false altrimenti.
-         *          Se (key) esiste, ritorna in *out_value il valore associato a key
          */
-        bool    findWithPos (const TKEY &key, TVALUE *out_value, Position *out_position) const
+        bool    findPosition (const TKEY &key, Position *out_position) const
                 {
                     if (list.getNElem() == 0)
                     {
@@ -185,15 +185,35 @@ namespace gos
                     s.start = 0;
                     s.end_incluso = list.getNElem() - 1;
 
-                    if (!priv_binarySearch (s, key, &out_position->_index))
-                    {
-                        out_position->_key = key;
-                        return false;
-                    }
+                    if (priv_binarySearch (s, key, &out_position->_index))
+                        return true;
 
-                    *out_value = list(out_position->_index).value;
-                    return true;
+                    out_position->_key = key;
+                    return false;
                 }
+
+        /**
+         * @brief   cerca key e, se la trova, valorizza out_value
+         *          Se ritorna false, allora e' possibile usare out_position come parametro per insertInPosition()
+         *          garantendo che la posizione di inserimento sia coerente
+         * 
+         * @return  true se (key) esiste, false altrimenti.
+         *          Se (key) esiste, ritorna in *out_value il valore associato a key
+         */
+        bool    findWithPos (const TKEY &key, TVALUE *out_value, Position *out_position) const
+                {
+                    if (findPosition(key, out_position))
+                    {
+                        *out_value = list(out_position->_index).value;
+                        return true;
+                    }
+                    return false;
+                }
+
+
+
+
+        TVALUE* getValueAtPos (const Position &pos) const                               { return &list.getElem(pos._index).value; }
 
 
         /**

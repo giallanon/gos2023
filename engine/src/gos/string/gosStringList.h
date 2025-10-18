@@ -23,6 +23,8 @@ namespace gos
         u32         serialize_calcSizeNeeded() const;
         u32         serialize_toMemory (u8 *mem, u32 sizeof_mem) const;
         u32         serialize_fromMemory (gos::Allocator *allocatorIN, const u8 *mem, u32 sizeof_mem);
+        
+        void        clone_from (gos::Allocator *allocatorIN, const StringList &src);
 
         void        reset()                                                 { cursor=0; count=0; buffer.zero(); }
         u32         add (const char *m);

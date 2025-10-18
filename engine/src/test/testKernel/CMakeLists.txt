@@ -27,6 +27,7 @@ testGos.cpp
 testIniFile.cpp
 testMath.cpp
 testThread.cpp
+testSparseSet.cpp
 TTest.h
 )
 

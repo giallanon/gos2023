@@ -1,5 +1,6 @@
 #include "gosBufferSparse.h"
 #include "memory/gosMemory.h"
+#include "gosString.h"
 
 using namespace gos;
 
@@ -73,6 +74,17 @@ void BufferSparse::setup (Allocator *backingallocator, u32 preallocNumBytes, u32
 	
 	if (preallocNumBytes)
 		growIncremental (preallocNumBytes);
+}
+
+//******************************************
+void BufferSparse::zero()
+{
+	sBuffer *p = bufferList;
+	while (p)
+	{
+		memset (p->getMemPointer(0), 0x00, p->sizeInByte);
+		p = p->next;
+	}
 }
 
 //******************************************
@@ -231,3 +243,24 @@ bool BufferSparse::write  (const void *srcIN, u32 offset, u32 nBytesTowrite, boo
 	}
 	return false;
 }
+
+//******************************************
+bool BufferSparse::append (const void *src, u32 *in_out_offset, u32 nBytesTowrite, bool bCangrow)
+{
+	if (!write (src, *in_out_offset, nBytesTowrite, bCangrow))
+		return false;
+	 *in_out_offset += nBytesTowrite;
+	 return true;
+}
+
+//******************************************
+bool BufferSparse::appendStr (const char *s, u32 *in_out_offset, bool bCangrow)
+{
+	const u32 n = gos::string::utf8::lengthInByte (s);
+	if (0 == n)
+		return true;
+	const bool ret = append (s, in_out_offset, n+1 , bCangrow);
+	(*in_out_offset)--;
+	return ret;
+}
+

@@ -1,10 +1,65 @@
 #ifndef _gosEnumAndDefine_h_
 #define _gosEnumAndDefine_h_
+#include <type_traits>
+#include <limits>
 #include "gosDataFormat.h"
 #include "gosMagicUID.h"
 
 //================================================================
-#define GOS_IS_POWER_OF_TWO(n)                          (n && !(n & (n - 1)))
+//#define GOS_IS_POWER_OF_TWO(n)                          (n && !(n & (n - 1)))
+
+
+/**
+ * @brief   GOS_IS_POWER_OF_TWO(value)
+ *          Ritorna true se <value> e' una potenza del 2.
+ *          Utilizzabile anche a "compile time" dato che e' una constexpr.
+ *          <UINT_TYPE> deve essere un tipo intero senza segno (u8, u16, u32, u64)
+ */
+template<typename UINT_TYPE>
+[[nodiscard]] constexpr std::enable_if_t<std::is_unsigned_v<UINT_TYPE>, bool> GOS_IS_POWER_OF_TWO (UINT_TYPE value) noexcept 
+{
+    return value && ((value & (value - 1)) == 0);
+}
+
+
+
+/**
+ * @brief   GOS_NEXT_POWER_OF_TWO(value)
+ *          Ritorna la piu' vicina potenza del 2 che sia maggiore o uguale a <value>
+ *          <UINT_TYPE> deve essere un tipo intero senza segno (u8, u16, u32, u64)
+ */
+template<typename UINT_TYPE>
+[[nodiscard]] constexpr std::enable_if_t<std::is_unsigned_v<UINT_TYPE>, UINT_TYPE> GOS_NEXT_POWER_OF_TWO(const UINT_TYPE value) noexcept 
+{
+    assert (value < (UINT_TYPE{1u} << (std::numeric_limits<UINT_TYPE>::digits - 1))); // "Numeric limits exceeded")
+    UINT_TYPE curr = value - (value != 0u);
+
+    for(int next = 1; next < std::numeric_limits<UINT_TYPE>::digits; next = next * 2)
+    {
+        curr |= (curr >> next);
+    }
+
+    return ++curr;
+}
+
+
+/**
+ * @brief   GOS_FAST_MOD(value, mod)
+ *          Ritorna  (value % mod)
+ *          Dato che accetta solo <mod> che siano pontenze del 2, sfrutta una ottimizzazione per ritornare il risultato.
+ *          <UINT_TYPE> deve essere un tipo intero senza segno (u8, u16, u32, u64)
+ *          <mod> deve essere una potenza del 2
+ */
+template<typename UINT_TYPE>
+[[nodiscard]] constexpr std::enable_if_t<std::is_unsigned_v<UINT_TYPE>, UINT_TYPE> GOS_FAST_MOD(const UINT_TYPE value, const std::size_t mod) noexcept 
+{
+    assert (GOS_IS_POWER_OF_TWO(mod));
+    return static_cast<UINT_TYPE>(value & (mod - 1u));
+}
+
+
+
+
 
 /* allinea [num] alla potenza del 2 piu' vicina a [align].
     [align] deve a sua volta essere una potenza del 2.

@@ -3,6 +3,7 @@
 #include "gosEngineEnumAndDefine.h"
 #include "gosEngine_vtxBufferMan.h"
 #include "gosEngine_idxBufferMan.h"
+#include "gosEngine_fixedSizeBufferTracker.h"
 
 namespace gos
 {
@@ -38,15 +39,24 @@ namespace gos
         void                        priv_idxBuffer_delete (engine::IdxBuffer *info);
 
         //=============================
+                                    //crea una shape e le riserva spazio in VB/IB che sono gestiti dall'engine.
+                                    //La engine::shape ritornata ha gia' gli handler VB/IB settati correttamente anche se i vtx/idx
+                                    //NON sono ancora stati copiati nei buffer (lo devi fare te)
         bool                        shape_create (const gos::Shape *shape, ENGShape *out_handle);
         void                        shape_release (ENGShape &handle);
-        const engine::Shape*        shape_getInfo (const ENGShape handle) const                               { return shapeHandleList.getInfo(handle); }
+        const engine::Shape*        shape_getInfo (const ENGShape handle) const                                 { return shapeHandleList.getInfo(handle); }
         void                        priv_shape_delete (engine::Shape *info);
+
+        //=============================
+        
 
     public:
         gos::GPU                *gpu;
         gos::input::Context     *inputCtx;
         gos::asset::Hub         *assetHub;
+
+    private:
+        static constexpr u32    NUM_MAX_WMATRIX = 0xFFFF;
 
     private:
         template<class HANDLE_TYPE, class HANDLE_STRUCT>
@@ -114,8 +124,9 @@ namespace gos
         HList<ENGShape, engine::Shape>          shapeHandleList;
 
 
-        engine::VtxBufferMan    vtxBufferMan;
-        engine::IdxBufferMan    idxBufferMan;
+        engine::VtxBufferMan            vtxBufferMan;
+        engine::IdxBufferMan            idxBufferMan;
+        engine::FixedSizeBufferTracker  worldMatrixBufferMan;
 
     }; //class Engine
 } //namespace gos

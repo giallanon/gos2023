@@ -44,7 +44,9 @@
         "initializer_list": "cpp",
         "valarray": "cpp",
         "map": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "bit": "cpp",
+        "limits": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.compilerPath": "/usr/bin/g++-13"

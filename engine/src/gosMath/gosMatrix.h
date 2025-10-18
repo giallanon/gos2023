@@ -263,7 +263,7 @@ namespace gos
 
 			T&				operator() (i32 r, i32 c)									{ assert(r>=0 && r<4 && c>=0 && c<4); return values[ADDR(r,c)]; }
 			const T&		operator() (i32 r, i32 c) const								{ assert(r>=0 && r<4 && c>=0 && c<4); return values[ADDR(r,c)]; }
-			my_type&		operator= (const my_type &b)								{ memcpy(values,b.values,sizeof(values)); return *this; }
+			//my_type&		operator= (const my_type &b)								{ memcpy(values,b.values,sizeof(values)); return *this; }
 
 			void			identity()
 							{ 

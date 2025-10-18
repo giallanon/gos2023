@@ -1,14 +1,71 @@
 #include "test1.h"
 #include "gosShapePrefabs.h"
 
+
 using namespace gos;
 
 
 //***************************************
+Test1::Test1()
+{
+	allocator = gos::getSysHeapAllocator();
+
+	entRegistry.setup();
+	entRegistry.addComponentHandler<ent::CompPos>();
+	entRegistry.addComponentHandler<ent::CompModelInstance>();
+
+	entList.setup (gos::getSysHeapAllocator(), 32);
+
+	skeleton = NULL;
+	model = NULL;
+	modelInstance = NULL;
+}
+
+
+//***************************************
+Test1::~Test1()
+{
+	entList.unsetup();
+	entRegistry.unsetup();
+
+	GOSDELETE(allocator, modelInstance);
+	GOSDELETE(allocator, model);
+	GOSDELETE(allocator, skeleton);
+}
+
+//***************************************
+void Test1::priv_model_setup(gos::ENGShape shapeHandle)
+{
+	skeleton = GOSNEW(allocator, gos::Skeleton)();
+	{
+		gos::SkeletonBuilder builder;
+
+		gos::Bone *bone;
+		const u32 iRoot = builder.begin ("root");
+		builder.addChildTo (iRoot, "left-arm", &bone);
+			bone->matrix.buildTranslation(vec3f(-4,0,0));
+		builder.addChildTo (iRoot, "right-arm", &bone);
+			bone->matrix.buildTranslation(vec3f( 4,0,0));
+		builder.end (gos::getSysHeapAllocator(), skeleton);
+	}
+
+	model = GOSNEW(allocator, model::Model)();
+	{
+		model->setSkeleton(skeleton);
+		model->addShape (shapeHandle);
+		model->linkShapeToBone (shapeHandle, "root");
+		model->linkShapeToBone (shapeHandle, "left-arm");
+		model->linkShapeToBone (shapeHandle, "right-arm");
+	}
+
+
+	modelInstance = GOSNEW(allocator, model::ModelInstance)(model);
+	
+ }
+
+//***************************************
 void Test1::run (gos::Engine *engine)
 {
-	gos::Allocator *allocator = gos::getSysHeapAllocator();
-
 	//creo una shape
 	gos::Shape shape;
 	shape.reset();
@@ -74,6 +131,26 @@ void Test1::run (gos::Engine *engine)
 		engine->gpu->deleteResource(cmdBufferHandle);
 		engine->gpu->deleteResource(stgBufferHandle);
 
+	}
+
+
+
+	//model 	
+	priv_model_setup(shapeHandle);
+
+	for (u32 i=0; i<3; i++)
+	{
+		Entity ent = entRegistry.newEntity();
+		{
+			auto pos = entRegistry.addComponent<ent::CompPos>(ent);
+			pos->matrix.buildTranslation ( vec3f(0, 0, (f32)(10 * i)) );
+
+			auto mi = entRegistry.addComponent<ent::CompModelInstance>(ent);
+			mi->modelInstance = this->modelInstance;
+			mi->modelInstance->applyTransform (pos->matrix);
+		}
+
+		entList.append(ent);
 	}
 
 

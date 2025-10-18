@@ -8,6 +8,29 @@
 namespace test_gos
 {
 
+namespace test_assertion_helpers
+{
+    int run()
+    {
+        static_assert (GOS_IS_POWER_OF_TWO<u32>(1));
+        static_assert (GOS_IS_POWER_OF_TWO<u32>(2));
+        static_assert (false == GOS_IS_POWER_OF_TWO<u32>(3));
+        static_assert (GOS_IS_POWER_OF_TWO<u32>(4));
+
+
+        static_assert (GOS_NEXT_POWER_OF_TWO<u32>(120) == 128);
+        static_assert (GOS_NEXT_POWER_OF_TWO<u32>(3) == 4);
+        static_assert (GOS_NEXT_POWER_OF_TWO<u32>(1000) == 1024);
+
+
+        static_assert (GOS_FAST_MOD<u32>(1000, 256) == 232);
+
+
+        return 0;
+    }    
+};
+
+
 //********************************************
 namespace test1
 {
@@ -1035,6 +1058,7 @@ namespace test11_enum_bitmask
 void testGos (Tester &tester)
 {
     tester.run("test1 gos::system info", test_gos::test1::test_printSystemInfo);
+    tester.run("test_assertion_helpers", test_gos::test_assertion_helpers::run);
     tester.run("test2 gos::handle", test_gos::test2::run);
     tester.run("test3 gos::handle array", test_gos::test3::testHandleArray);
     tester.run("test4 gos::testFS", test_gos::test4::testFS);

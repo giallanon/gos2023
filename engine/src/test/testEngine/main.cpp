@@ -1,48 +1,73 @@
 #include "test1.h"
 
+
 //******************************** 
-#include "entity/gosEntityList.h"
-void testEntityList()
+#include "gosEngine_fixedSizeBufferTracker.h"
+void test_fixedSizeBufferTracker()
 {
-    gos::ent::List list;
+    gos::engine::FixedSizeBufferTracker tracker;
 
-    list.setup (gos::getSysHeapAllocator());
+    static constexpr u32 NUM_MAX_OBJECT = 1024;
+    tracker.setup (gos::getSysHeapAllocator(), NUM_MAX_OBJECT);
 
-    static constexpr u32 NUM_ENTITIES = 40000;
-    gos::FastArray<gos::Entity> entityList;
-    entityList.setup (gos::getSysHeapAllocator(), NUM_ENTITIES);
+    gos::FastArray<gos::engine::ResHandle> handleList;
+    gos::FastArray<gos::engine::ResHandle> handleList2;
+    handleList.setup (gos::getSysHeapAllocator(), NUM_MAX_OBJECT);
+    handleList2.setup (gos::getSysHeapAllocator(), NUM_MAX_OBJECT);
 
-    for (u32 i = 0; i < NUM_ENTITIES; i++)
+    for (u32 i=0; i<NUM_MAX_OBJECT; i++)
     {
-        const u32 pageIndex = gos::randomU32(100) * gos::ent::List::PAGE_SIZE;
-        entityList[i].id = pageIndex + i;
+        gos::engine::ResHandle handle;
+        assert (tracker.bind (&handle));
+        handleList.append (handle);
+        handleList2.append (handle);
     }
 
-
-    list.reset();
-    for (u32 i = 0; i < entityList.getNElem(); i++)
+    for (u32 i=0; i<NUM_MAX_OBJECT; i++)
     {
-        assert (list.addIfNotExists (entityList(i)));
-    }
-    for (u32 i = 0; i < entityList.getNElem(); i++)
-    {
-        assert (!list.addIfNotExists (entityList(i)));
+        gos::engine::ResHandle handle;
+        assert (false == tracker.bind (&handle));
     }
 
-
-    auto ll = list.getList();
-    for (u32 i = 0; i < entityList.getNElem(); i++)
+    for (u32 i=0; i<NUM_MAX_OBJECT; i++)
     {
-        const gos::Entity ent = entityList(i);
-        assert (ll->simpleSearch(ent) != u32MAX);
+        assert (tracker.isBound (handleList(i)));
+    } 
+
+    for (u32 i=0; i<NUM_MAX_OBJECT; i++)
+    {
+        auto handle = handleList(0);
+        handleList.removeAndSwapWithLast(0);
+
+        assert (tracker.isBound (handle));
+        tracker.unbind (handle);
+        assert (false == tracker.isBound (handle));
+
+        //printf ("%d..", i);
+        for (u32 i2=0; i2<handleList.getNElem(); i2++)
+        {
+            assert (tracker.isBound(handleList(i2)));
+        }
+    } 
+    //printf ("\n");
+
+
+    //secondo giro
+    handleList.reset();
+    for (u32 i=0; i<NUM_MAX_OBJECT; i++)
+    {
+        gos::engine::ResHandle handle;
+        assert (tracker.bind (&handle));
+        handleList.append (handle);
     }
 
+    for (u32 i=0; i<NUM_MAX_OBJECT; i++)
+    {
+        assert (tracker.isBound (handleList(i)));
+        assert (!tracker.isBound (handleList2(i)));
+    }    
 
-
-    assert (list.getCount() == entityList.getNElem());
-    assert (list.getList()->getNElem() == entityList.getNElem());
 }
-
 
 //******************************** 
 int main()
@@ -54,8 +79,8 @@ int main()
     if (!gos::init (init, "gosEngine"))
         return -1;
 
-    testEntityList(); return 0;
-
+    //testEntityList(); return 0;
+    //test_fixedSizeBufferTracker(); return 0;
 
     {
         gos::Engine engine;

@@ -26,6 +26,7 @@ void Engine::unsetup()
     //resource manager
     vtxBufferMan.unsetup();
     idxBufferMan.unsetup();
+    worldMatrixBufferMan.unsetup();
     
     //handle lists
     vtxBufferHandleList.unsetup();
@@ -137,6 +138,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     //resource manager
     vtxBufferMan.setup (allocator, gpu);
     idxBufferMan.setup (allocator, gpu);
+    worldMatrixBufferMan.setup (allocator, NUM_MAX_WMATRIX);
     return true;
 }
 
