@@ -1,6 +1,8 @@
 #include "gosEngine.h"
+#include "gosEngine_renderer.h"
 #include "entity/gosEntityRegistry.h"
 #include "model/gosModel.h"
+
 
 class Test1
 {
@@ -23,5 +25,6 @@ private:
 	
 	gos::Skeleton					*skeleton;
 	gos::model::Model				*model;
-	gos::model::ModelInstance		*modelInstance;
+
+	gos::engine::Renderer			*renderer;
 };

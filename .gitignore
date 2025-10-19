@@ -67,3 +67,9 @@ engine/bin/assetBuilder/test_assets_2/assets.sqlite3
 engine/bin/testVulkan/shader/example6/assets.sqlite3
 engine/bin/testVulkan/shader/example7/assets.sqlite3
 engine/bin/testEngine/writable/data/assets.sqlite3
+
+engine/bin/assetBuilder/test_assets_1/assets/src/__build.gosasset_d
+
+engine/bin/assetBuilder/test_assets_1/assets/src/__dependencies.txt
+
+engine/bin/testEngine/writable/data/assets/src/__build.gosasset_d

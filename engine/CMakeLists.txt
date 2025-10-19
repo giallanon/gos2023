@@ -68,6 +68,7 @@ if(BUILD_IS_DEBUG)
     if (MSVC)
     else()
         #add_compile_options(-Og)    #-Og should be the optimization level of choice for the standard edit-compile-debug cycle
+        add_compile_options(-fno-exceptions)
     endif()
 elseif(BUILD_IS_RELEASE)
     add_compile_definitions(_NDEBUG)
@@ -83,6 +84,7 @@ elseif(BUILD_IS_RELEASE)
         add_compile_options(-Ofast)         #-Ofast enables all -O3 optimizations. It also enables optimizations that are not valid for all standard-compliant programs. It turns on -ffast-math..
         add_compile_options(-flto)          #This option runs the standard link-time optimizer
         add_compile_options(-march=native)
+        add_compile_options(-fno-exceptions)
 
         add_compile_options(-Wno-maybe-uninitialized)
     endif()

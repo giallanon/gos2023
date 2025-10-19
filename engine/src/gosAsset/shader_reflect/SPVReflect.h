@@ -33,10 +33,6 @@ namespace gos
 
         bool    endParseFromMemory();
 
-        bool    save (const char *fname) const;
-        bool    save (gos::File &f) const;
-        u8*     serialize (gos::Allocator *allocator, u32 *out_sizeAllocated) const;
-
         void    printInfo (gos::UTF8String &out) const;
 
         //================= query
@@ -58,17 +54,21 @@ namespace gos
 
         static constexpr u8     TYPEDESCR__IS_STRUCT = 0;
         static constexpr u8     TYPEDESCR__IS_ARRAY = 1;
-        static constexpr u8     TYPEDESCR__IS_DYNAMIC_ARRAY = 2;
+        
+        static constexpr u8     TYPEDESCR_SPEC__IS_DYNAMIC = 0;
+        static constexpr u8     TYPEDESCR_SPEC__IS_BINDLESS_ARRAY = 1;
 
         static constexpr u8     DESCRIPTOR_TYPE__BLOBDEF = 0;
-        static constexpr u8     DESCRIPTOR_TYPE__ARRAY = 1;
-        static constexpr u8     DESCRIPTOR_TYPE__DYNARRAY = 2;
-        static constexpr u8     DESCRIPTOR_TYPE__OTHER = 3;
+        static constexpr u8     DESCRIPTOR_TYPE__OTHER = 1;
+        static constexpr u8     DESCRIPTOR_TYPE__SIMPLE_ARRAY = 2;
+        static constexpr u8     DESCRIPTOR_TYPE__DYNAMIC_ARRAY = 3;
+        static constexpr u8     DESCRIPTOR_TYPE__BINDLESS_ARRAY = 4;
+        static constexpr u8     DESCRIPTOR_TYPE__BINDLESS_DYNAMIC_ARRAY = 5;
         static constexpr u8     DESCRIPTOR_TYPE__UNKNOWN = 0xff;
 
 
     protected:
-        static const char* enumToString_Usage (const gos::Flag8 usage);
+        //static const char* enumToString_Usage (const gos::Flag8 usage);
 
 
 
@@ -160,9 +160,9 @@ namespace gos
             }
 
         public:
-            Node() { reset(); }
-            void        reset() { memset(name, 0, sizeof(name)); usage.zero(); typeDescr.zero(); absoluteOffset = offset = size = paddedSize = 0; fmt = eDataFormat::_unknown; memset(&other, 0, sizeof(other)); figlio = fratello = NULL; numChildren = 0; }
-            void        mergeUsageWith (const Node *node) { if (node->isUsedByVtxShader())  usage.set(USAGE__USED_IN_VTX_SHADER); if (node->isUsedByFragShader())  usage.set(USAGE__USED_IN_FRAG_SHADER); }
+                        Node()                                  { reset(); }
+            void        reset()                                 { memset(name, 0, sizeof(name)); usage.zero(); typeDescr.zero(); typeDescrSpecialization.zero(); absoluteOffset = offset = size = paddedSize = 0; fmt = eDataFormat::_unknown; memset(&other, 0, sizeof(other)); figlio = fratello = NULL; numChildren = 0; }
+            void        mergeUsageWith (const Node *node)       { if (node->isUsedByVtxShader())  usage.set(USAGE__USED_IN_VTX_SHADER); if (node->isUsedByFragShader())  usage.set(USAGE__USED_IN_FRAG_SHADER); }
 
             void        appendChild (Node *child)
             {
@@ -184,12 +184,15 @@ namespace gos
 
             }
 
-            bool        isUsedByVtxShader() const { return usage.isBitSet(USAGE__USED_IN_VTX_SHADER); }
-            bool        isUsedByFragShader() const { return usage.isBitSet(USAGE__USED_IN_FRAG_SHADER); }
+            bool        isUsedByVtxShader() const               { return usage.isBitSet(USAGE__USED_IN_VTX_SHADER); }
+            bool        isUsedByFragShader() const              { return usage.isBitSet(USAGE__USED_IN_FRAG_SHADER); }
 
-            bool        isArray() const { return typeDescr.isBitSet(TYPEDESCR__IS_ARRAY); }
-            bool        isDynamicArray() const { return typeDescr.isBitSet(TYPEDESCR__IS_DYNAMIC_ARRAY); }
-            bool        isStruct() const { return typeDescr.isBitSet(TYPEDESCR__IS_STRUCT); }
+            bool        isType_struct() const                   { return typeDescr.isBitSet(TYPEDESCR__IS_STRUCT); }
+            bool        isType_array() const                    { return typeDescr.isBitSet(TYPEDESCR__IS_ARRAY); }
+
+            bool        isType_dynamic() const                  { return typeDescrSpecialization.isBitSet(TYPEDESCR_SPEC__IS_DYNAMIC); }
+            bool        isType_bindlessArray() const            { return typeDescrSpecialization.isBitSet(TYPEDESCR_SPEC__IS_BINDLESS_ARRAY); }
+            
 
         public:
             struct sAsStruct
@@ -213,6 +216,7 @@ namespace gos
             char        name[64];
             gos::Flag8  usage;
             gos::Flag8  typeDescr;
+            gos::Flag8  typeDescrSpecialization;
             u32         offset;
             u32         size;
             u32         absoluteOffset;
@@ -350,6 +354,8 @@ namespace gos
 
         Node*               priv_pushConst_parseModule (SpvReflectShaderModule *module);
 
+        void                priv_descrset_getElemInfo  (u32 descrSetIndex, u8 *out_binding, eGPUDescriptrorType *out_type, u32 *out_arraySize, eGPUDescriptrorUsageBitmask *out_usage) const;
+        
         u8*                 priv_nodeTree_createGosDataBlobDef (gos::Allocator *allocator, Node *node);
         void                priv_nodeTree_createGosDataBlobDef_ric (gos::datablob::DefBuilder &builder, Node *node);
         void                priv_nodeTree_merge (Node *&dst, Node *&src);

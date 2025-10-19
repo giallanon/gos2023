@@ -6,7 +6,7 @@
 
 /* Sintassi:
 
-@@tex2D: runtimeName                                => il runtimeName e' opzionale come sempre
+@tex2D: runtimeName                                => il runtimeName e' opzionale come sempre
 {
 	(mandatory) src: godus_02.png
     (optional)  srcColorSpace: RGB|sRGB             => default "sRGB" => indica il color space dell'immagine sorgente

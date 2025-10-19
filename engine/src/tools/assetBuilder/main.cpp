@@ -2,6 +2,27 @@
 
 using namespace gos;
 
+//******************************** 
+void test_assetBuilder1()
+{
+    gos::GPU gpu;
+    if (!gpu.init (GOSWinHandle::INVALID(), false))
+        return;
+    
+    {
+        const char BASE_FOLDER[] = { "test_assets_1" };
+
+        asset::Builder builder(&gpu);
+
+        if (!builder.rebuildAll(BASE_FOLDER, true))
+            return;
+        
+        builder.save_dependencies_report(BASE_FOLDER);
+        
+        builder.debug_sanityCheck (BASE_FOLDER);
+    }
+    gpu.deinit();
+}
 
 //******************************** 
 void test_assetBuilder2()
@@ -77,7 +98,8 @@ int main()
         return -1;
 
     //creaTXTPerGliShaderDiBuilderTex2D();
-    test_assetBuilder2();
+    test_assetBuilder1();
+    //test_assetBuilder2();
     
 
 #ifdef GOS_PLATFORM__WINDOWS

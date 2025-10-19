@@ -70,15 +70,15 @@ bool SPVReflect::priv_SpvReflectFormat_to_eDataFormat (SpvReflectFormat fmtIN, e
 }
 
 //***************************************************
-const char* SPVReflect::enumToString_Usage (const gos::Flag8 usage)
-{
-    if (usage.isBitSet(TYPEDESCR__IS_STRUCT))          return "struct";
-    if (usage.isBitSet(TYPEDESCR__IS_ARRAY))           return "array";
-    if (usage.isBitSet(TYPEDESCR__IS_DYNAMIC_ARRAY))   return "dynamicArray";
+// const char* SPVReflect::enumToString_Usage (const gos::Flag8 usage)
+// {
+//     if (usage.isBitSet(TYPEDESCR__IS_STRUCT))          return "struct";
+//     if (usage.isBitSet(TYPEDESCR__IS_ARRAY))           return "array";
+//     if (usage.isBitSet(TYPEDESCR__IS_DYNAMIC_ARRAY))   return "dynamicArray";
 
-    DBGBREAK;
-    return "!!UNKNOWN TYPE!!";
-}
+//     DBGBREAK;
+//     return "!!UNKNOWN TYPE!!";
+// }
 
 //***************************************************
 eDataFormat SPVReflect::priv_fromSPVReflectTypeDescrToDataFormat (const SpvReflectTypeDescription *strTypeDescr) const
@@ -354,9 +354,8 @@ SPVReflect::Node* SPVReflect::priv_parse_BlockVariable (const SpvReflectShaderMo
 
     node->offset = var->offset;
     node->absoluteOffset = var->absolute_offset;
-    //node->size = var->
     node->paddedSize = var->padded_size;
-    
+
     switch (var->type_description->op)
     {
     case SpvOpTypeStruct:
@@ -366,10 +365,12 @@ SPVReflect::Node* SPVReflect::priv_parse_BlockVariable (const SpvReflectShaderMo
 
     case SpvOpTypeArray:
     case SpvOpTypeRuntimeArray:
-        if (SpvOpTypeArray == var->type_description->op)
-            node->typeDescr.set (TYPEDESCR__IS_ARRAY);
-        else
-            node->typeDescr.set (TYPEDESCR__IS_DYNAMIC_ARRAY);
+        //e' certamente un array
+        node->typeDescr.set (TYPEDESCR__IS_ARRAY);
+
+        //e' anche bindless?  (lo e' se e' stato dichiarato come pippo[])
+        if (SpvOpTypeRuntimeArray == var->type_description->op)
+            node->typeDescrSpecialization.set (TYPEDESCR_SPEC__IS_BINDLESS_ARRAY);
 
         node->other.asArray.numDimension = static_cast<u8>(var->array.dims_count);
         node->other.asArray.sizeOfOneElem = static_cast<u16>(var->array.stride);
@@ -402,6 +403,13 @@ SPVReflect::Node* SPVReflect::priv_parse_BlockVariable (const SpvReflectShaderMo
             node->usage.set (USAGE__USED_IN_FRAG_SHADER);
     }
     
+    //e' dinamico? (lo e' se il nome inizia con dyn_)
+    if (strlen(var->name) > 4)
+    {
+        if (memcmp(var->name, "dyn_", 4) == 0)
+            node->typeDescrSpecialization.set (TYPEDESCR_SPEC__IS_DYNAMIC);
+    }  
+
     return node;
 }
 
@@ -539,12 +547,12 @@ void SPVReflect::priv_nodeTree_adjustPaddedSize  (Node *node, u16 arrayStride)
     Node *last = NULL;
     while (node)
     {
-        if (node->isArray())
+        if (node->isType_array())
         {
             if (0 != node->numChildren)
                 priv_nodeTree_adjustPaddedSize (node->figlio, node->other.asArray.sizeOfOneElem);
         }
-        else if (node->isStruct())
+        else if (node->isType_struct())
         {
             if (NULL != node->figlio)
             {
@@ -584,12 +592,12 @@ void SPVReflect::priv_nodeTree_adjustArrayOffset (Node *node ,u16 arrayStartAbsO
                 node->absoluteOffset = arrayStartAbsOffset + node->offset;
         }
 
-        if (node->isArray() || node->isDynamicArray())
+        if (node->isType_array())
         {
             if (0 != node->numChildren)
                 priv_nodeTree_adjustArrayOffset (node->figlio, node->absoluteOffset);
         }
-        else if (node->isStruct())
+        else if (node->isType_struct())
         {
             priv_nodeTree_adjustArrayOffset (node->figlio);
         }
@@ -607,13 +615,13 @@ void SPVReflect::priv_nodeTree_createGosDataBlobDef_ric (gos::datablob::DefBuild
         if (node->isUsedByVtxShader())  vtx_frag |= 0x01;
         if (node->isUsedByFragShader())  vtx_frag |= 0x02;
 
-        if (node->isStruct())
+        if (node->isType_struct())
         {
             builder.struct_beginAtOffset (node->absoluteOffset, node->name, vtx_frag);
             priv_nodeTree_createGosDataBlobDef_ric (builder, node->figlio);
             builder.struct_end();
         }
-        else if (node->isArray() || node->isDynamicArray())
+        else if (node->isType_array())
         {
             switch (node->other.asArray.numDimension)
             {
@@ -686,7 +694,7 @@ void SPVReflect::priv_printNode (gos::UTF8String &out, const Node *node, u32 ind
     if (indent)
         memset(sIndent, ' ', indent*4);
 
-    if (node->isStruct())
+    if (node->isType_struct())
     {
         out << "\n" << sIndent << "struct";
         out.fillRowUntilColumn (PRINT_COL3);
@@ -703,11 +711,11 @@ void SPVReflect::priv_printNode (gos::UTF8String &out, const Node *node, u32 ind
             << ", pad-size=" << STRFMT("% 5d", node->offset)
             << "\n";
     }
-    else if (node->isArray() || node->isDynamicArray())
+    else if (node->isType_array())
     {
         char arrName[64];
         sprintf_s (arrName, sizeof(arrName), "%s", node->name);
-        if (node->isDynamicArray())
+        if (node->isType_bindlessArray())
             strcat_s (arrName, sizeof(arrName), "[]");
         else
         {
@@ -795,20 +803,26 @@ void SPVReflect::priv_descriptor_parseVar (const SpvReflectShaderModule *module,
         gos::logger::err ("SPVReflect::priv_descriptor_parseVar() => error <descriptor_type> invalid, %d\n", (int)var->descriptor_type);
         return;
 
-    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: e.vulkanDescrType = eGPUDescriptrorType::SAMPLER; break;
-    case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: e.vulkanDescrType = eGPUDescriptrorType::COMBINED_IMAGE_SAMPLER; break;
-    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE: e.vulkanDescrType = eGPUDescriptrorType::TEXTURE2D; break;
-    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE: e.vulkanDescrType = eGPUDescriptrorType::STORAGE_IMAGE; break;
-    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER: e.vulkanDescrType = eGPUDescriptrorType::UNIFORM_TEXEL_BUFFER; break;
-    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER: e.vulkanDescrType = eGPUDescriptrorType::STORAGE_TEXEL_BUFFER; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER:                   e.vulkanDescrType = eGPUDescriptrorType::SAMPLER; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:    e.vulkanDescrType = eGPUDescriptrorType::COMBINED_IMAGE_SAMPLER; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:             e.vulkanDescrType = eGPUDescriptrorType::TEXTURE2D; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:             e.vulkanDescrType = eGPUDescriptrorType::STORAGE_IMAGE; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:      e.vulkanDescrType = eGPUDescriptrorType::UNIFORM_TEXEL_BUFFER; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:      e.vulkanDescrType = eGPUDescriptrorType::STORAGE_TEXEL_BUFFER; break;
     
-    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER: e.vulkanDescrType = eGPUDescriptrorType::UNIFORM_BUFFER; break;
-    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER: e.vulkanDescrType = eGPUDescriptrorType::STORAGE_BUFFER; break;
-    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC: e.vulkanDescrType = eGPUDescriptrorType::DYNAMIC_UNIFORM_BUFFER; break;
-    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: e.vulkanDescrType = eGPUDescriptrorType::DYNAMIC_STORAGE_BUFFER; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:            e.vulkanDescrType = eGPUDescriptrorType::UNIFORM_BUFFER; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:            e.vulkanDescrType = eGPUDescriptrorType::STORAGE_BUFFER; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+        e.vulkanDescrType = eGPUDescriptrorType::DYNAMIC_UNIFORM_BUFFER;
+        break;
     
-    case SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT: e.vulkanDescrType = eGPUDescriptrorType::INPUT_ATTACHMENT; break;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+        e.vulkanDescrType = eGPUDescriptrorType::DYNAMIC_STORAGE_BUFFER; 
+        break;
+    
+    case SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:          e.vulkanDescrType = eGPUDescriptrorType::INPUT_ATTACHMENT; break;
     }
+
 
     switch (var->type_description->op)
     {
@@ -831,15 +845,22 @@ void SPVReflect::priv_descriptor_parseVar (const SpvReflectShaderModule *module,
             sprintf_s (e.root->name, sizeof(e.root->name), "%s", var->name);
             e.root->usage = e.usage;
             
-            if (SpvOpTypeArray == var->type_description->op)
-                e.root->typeDescr.set(TYPEDESCR__IS_ARRAY);
-            else
-                e.root->typeDescr.set(TYPEDESCR__IS_DYNAMIC_ARRAY);
+            //e' certamente un array
+            e.root->typeDescr.set(TYPEDESCR__IS_ARRAY);
+
+            //e' anche bindless?  (lo e' se e' stato dichiarato come pippo[])
+            if (SpvOpTypeRuntimeArray == var->type_description->op)
+                e.root->typeDescrSpecialization.set (TYPEDESCR_SPEC__IS_BINDLESS_ARRAY);
 
             e.root->other.asArray.numDimension = var->array.dims_count;
             for (u8 t = 0; t < e.root->other.asArray.numDimension; t++)
             {
                 e.root->other.asArray.numElem[t] = var->array.dims[t];
+            }
+
+            if (NULL != var->type_description->struct_type_description)
+            {
+                //e' un array di struct
             }
         }
         break;
@@ -861,6 +882,29 @@ void SPVReflect::priv_descriptor_parseVar (const SpvReflectShaderModule *module,
         break;
 
     }
+
+    //e' dinamico? (lo e' se il nome inizia con dyn_)
+    if (strlen(var->name) > 4)
+    {
+        if (memcmp(var->name, "dyn_", 4) == 0)
+        {
+            switch (e.vulkanDescrType)
+            {
+            default:
+                break;
+
+            case eGPUDescriptrorType::UNIFORM_BUFFER:
+                e.vulkanDescrType = eGPUDescriptrorType::DYNAMIC_UNIFORM_BUFFER;
+                e.root->typeDescrSpecialization.set (TYPEDESCR_SPEC__IS_DYNAMIC);
+                break;
+
+            case eGPUDescriptrorType::STORAGE_BUFFER:
+                e.vulkanDescrType = eGPUDescriptrorType::DYNAMIC_STORAGE_BUFFER;
+                e.root->typeDescrSpecialization.set (TYPEDESCR_SPEC__IS_DYNAMIC);
+                break;
+            }
+        }
+    }    
 
 
     u32 index = descrSetList.addIfNotExists(e);
@@ -909,189 +953,6 @@ bool SPVReflect::priv_parse_descriptors (SpvReflectShaderModule *module)
 }
 
 //***************************************************
-bool SPVReflect::save (const char *fname) const
-{
-    gos::File f;
-    if (!fs::fileOpenForW (&f, fname, false))
-    {
-        gos::logger::err ("SPVReflect::save() => can't create file %s\n", fname);
-        return false;
-    }
-    bool ret = save (f);
-    fs::fileClose (f);
-    
-    return ret;
-}
-
-//***************************************************
-bool SPVReflect::save (gos::File &f) const
-{
-    u32 size = 0;
-    u8 *buffer = serialize (localAllocator, &size);
-    if (NULL != buffer)
-    {
-        fs::fileWrite (f, buffer, size);
-        GOSFREE(localAllocator, buffer);
-        return true;
-    }
-
-    return false;
-}
-
-//***************************************************
-u8* SPVReflect::serialize (gos::Allocator *allocator, u32 *out_sizeAllocated) const
-{
-    u8 stackBuffer[2048];
-
-    gos::BufferW_linear buffer;
-    buffer.setupWithBase (stackBuffer, sizeof(stackBuffer), gos::getScrapAllocator(), eEndianess::big);
-
-    //magic
-    buffer.writeU32 (0);
-
-    //total size of this block
-    buffer.writeU32 (0);
-
-    //TOC
-    const u32 address_TOC = buffer.tell();
-    buffer.writeU32 (0);    //rel pos of VtxDcl block u32MAX se non esiste
-    buffer.writeU32 (0);    //rel pos of PushContant block oppure u32MAX se non esiste
-    buffer.writeU32 (0);    //rel pos of Descriptor oppure u32MAX se non esiste
-
-    //VtxDcl block
-    if (0 == vtxDeclList.getNElem())
-    {
-        buffer.writeU32At (address_TOC, u32MAX);
-    }
-    else
-    {
-        buffer.writeU32At (address_TOC, buffer.tell());
-
-        //num elementi
-        buffer.writeU16 (static_cast<u16>(vtxDeclList.getNElem()));
-
-        //offset, bindingLoc, dataFmt per ogni elemento
-        for (u32 i=0; i<vtxDeclList.getNElem(); i++)
-        {
-            buffer.writeU16 (static_cast<u16>(vtxDeclList(i).offsetInBuffer));
-            buffer.writeU8 (static_cast<u8>(vtxDeclList(i).bindingLocation));
-            buffer.writeU8 (static_cast<u8>(vtxDeclList(i).fmt));
-        }
-
-        //a seguire ci metto i nomi nel formato <len> <nome comprensivo di 0x00>
-        for (u32 i=0; i<vtxDeclList.getNElem(); i++)
-        {
-            const u8 nameLen = static_cast<u8>(1 + strlen(vtxDeclList(i).name));
-            buffer.writeU8(nameLen);
-            buffer.write (vtxDeclList(i).name, nameLen);
-        }
-    }
-    //pad fino ad un multiplo di 4
-    buffer.writePadUntilMultiplo4();
-
-
-    //Push constant block
-    if (NULL == pushConstant_dataBlobDef)
-    {
-        buffer.writeU32At (address_TOC + 4, u32MAX);
-    }
-    else
-    {
-        buffer.writeU32At (address_TOC + 4, buffer.tell());
-
-        const u32 size = datablob::blobDef_getSize(pushConstant_dataBlobDef);
-        buffer.writeU32 (size);
-        buffer.write (pushConstant_dataBlobDef, size);
-    }
-    //pad fino ad un multiplo di 4
-    buffer.writePadUntilMultiplo4();
-
-
-    //Descriptor block
-    if (0 == descrSetList.getNElem())
-    {
-        buffer.writeU32At (address_TOC + 8, u32MAX);
-    }
-    else
-    {
-        buffer.writeU32At (address_TOC + 8, buffer.tell());
-
-        //Num elem
-        buffer.writeU16 (static_cast<u16>(descrSetList.getNElem()));
-        for (u32 i=0; i<descrSetList.getNElem(); i++)
-        {
-            const u32 offset_now = buffer.tell();
-            
-            //dimensione di questo elemento
-            buffer.writeU32 (0);    
-
-            //usa, set, binding, vktype
-            buffer.writeU8 (descrSetList(i).usage.getBitmask());
-            buffer.writeU8 (descrSetList(i).set);
-            buffer.writeU8 (descrSetList(i).binding);
-            buffer.writeU8 (static_cast<u8>(descrSetList(i).vulkanDescrType));
-
-            u8 descriptorType = DESCRIPTOR_TYPE__OTHER;
-            if (NULL != descrSetList(i).blobDef)
-                descriptorType = DESCRIPTOR_TYPE__BLOBDEF;
-            else
-            {
-                if (descrSetList(i).root->isArray())
-                    descriptorType = DESCRIPTOR_TYPE__ARRAY;
-                else if (descrSetList(i).root->isDynamicArray())
-                    descriptorType = DESCRIPTOR_TYPE__DYNARRAY;
-            }
-            buffer.writeU8 (descriptorType);
-
-            switch (descriptorType)
-            {
-            default:
-                DBGBREAK;
-                break;
-
-            case DESCRIPTOR_TYPE__BLOBDEF:
-                {
-                    const u32 size = datablob::blobDef_getSize(descrSetList(i).blobDef);
-                    buffer.writeU32 (size);
-                    buffer.write (descrSetList(i).blobDef, size);
-                }
-                break;
-
-            case DESCRIPTOR_TYPE__ARRAY:
-                buffer.writeU8 (descrSetList(i).root->other.asArray.numDimension);
-                for (u8 i2=0; i2<descrSetList(i).root->other.asArray.numDimension; i2++)
-                    buffer.writeU16 (descrSetList(i).root->other.asArray.numElem[i2]);
-                break;
-
-            case DESCRIPTOR_TYPE__DYNARRAY:
-                break;
-
-            case DESCRIPTOR_TYPE__OTHER:
-                break;
-            }
-
-            //padding per questo elemento
-            buffer.writePadUntilMultiplo4();
-            
-            //scrivo la dimensione di questo elemento
-            buffer.writeU32At (offset_now, buffer.tell() - offset_now);
-        }
-    }
-    //pad fino ad un multiplo di 4
-    buffer.writePadUntilMultiplo4();
-
-
-    //total size di questo blocco
-    buffer.writeU32At (4, buffer.tell());
-
-
-    *out_sizeAllocated = buffer.tell();
-    u8 *ret = GOSALLOCT(u8*, allocator, buffer.tell());
-    memcpy (ret, buffer.getPointer(0), buffer.tell());
-    return ret;
-}
-
-//***************************************************
 u32 SPVReflect::descrset_getNumSet() const
 {
     if (0 == descrSetList.getNElem())
@@ -1132,28 +993,34 @@ void SPVReflect::descrset_getElemByIndex  (u32 set, u8 index, u8 *out_binding, e
 
             assert (i < descrSetList.getNElem());
             assert (descrSetList(i).set == set);
-            *out_binding = descrSetList(i).binding;
-            *out_type = descrSetList(i).vulkanDescrType;
 
-            *out_arraySize = 1;
-            if (descrSetList(i).root->isArray())
-            {
-                *out_arraySize = descrSetList(i).root->other.asArray.numElem[0];
-            }
-            else if (descrSetList(i).root->isDynamicArray())
-                *out_arraySize = u32MAX;
-
-            out_usage->zero();
-            if (descrSetList(i).usage.isBitSet(USAGE__USED_IN_VTX_SHADER))
-                *out_usage |= eGPUDescriptrorUsage::vtx_shader;
-            if (descrSetList(i).usage.isBitSet(USAGE__USED_IN_FRAG_SHADER))
-                *out_usage |= eGPUDescriptrorUsage::pxl_shader;
-
+            priv_descrset_getElemInfo (i, out_binding, out_type, out_arraySize, out_usage);
             return;
         }
     }
-
     DBGBREAK;
+}
+
+//***************************************************
+void SPVReflect::priv_descrset_getElemInfo  (u32 i, u8 *out_binding, eGPUDescriptrorType *out_type, u32 *out_arraySize, eGPUDescriptrorUsageBitmask *out_usage) const
+{
+    *out_binding = descrSetList(i).binding;
+    *out_type = descrSetList(i).vulkanDescrType;
+
+    *out_arraySize = 1;
+    if (descrSetList(i).root->isType_array())
+    {
+        if (descrSetList(i).root->isType_bindlessArray())
+            *out_arraySize = u32MAX;
+        else
+            *out_arraySize = descrSetList(i).root->other.asArray.numElem[0];
+    }
+
+    out_usage->zero();
+    if (descrSetList(i).usage.isBitSet(USAGE__USED_IN_VTX_SHADER))
+        *out_usage |= eGPUDescriptrorUsage::vtx_shader;
+    if (descrSetList(i).usage.isBitSet(USAGE__USED_IN_FRAG_SHADER))
+        *out_usage |= eGPUDescriptrorUsage::pxl_shader;
 }
 
 
@@ -1221,12 +1088,26 @@ void SPVReflect::printInfo (gos::UTF8String &out) const
     if (0 == descrSetList.getNElem())
         out << "no info!\n";
     else
-
     {
         for (u32 i=0; i<descrSetList.getNElem(); i++)
         {
+            u8 binding;
+            eGPUDescriptrorType vktype;
+            u32 arraySize;
+            eGPUDescriptrorUsageBitmask usage;
+            priv_descrset_getElemInfo  (i, &binding, &vktype, &arraySize, &usage);
+
+
             out << "\n----------------------------------------------------------------\n";
-            out << "set=" << descrSetList(i).set << ", binding=" << descrSetList(i).binding << ", vktype=" << utils::enumToString(descrSetList(i).vulkanDescrType) << "\n";
+            out << "set=" << descrSetList(i).set << ", binding=" << binding << ", vktype= " << utils::enumToString(vktype)
+                << ", array-size=" << arraySize <<", usage=" << STRFMT("%08X", usage);
+
+            if (descrSetList(i).root->isType_dynamic())
+                out << " [dynamic]";
+            if (descrSetList(i).root->isType_bindlessArray())
+                out << " [bindless]";
+
+            out << "\n";
                 
             
             //priv_printNode (out, descrSetList(i).root, 0);
@@ -1235,14 +1116,19 @@ void SPVReflect::printInfo (gos::UTF8String &out) const
             {
                 out << descrSetList(i).root->name;
                 
-                if (descrSetList(i).root->isArray())
+                if (descrSetList(i).root->isType_array())
                 {
-                    for (u8 i2=0; i2<descrSetList(i).root->other.asArray.numDimension; i2++)
-                        out << "[" << descrSetList(i).root->other.asArray.numElem[i2] << "]";
-                    out << ";\n";
+                    if (descrSetList(i).root->isType_bindlessArray())
+                    {
+                        out << "[];\n";
+                    }
+                    else
+                    {
+                        for (u8 i2=0; i2<descrSetList(i).root->other.asArray.numDimension; i2++)
+                            out << "[" << descrSetList(i).root->other.asArray.numElem[i2] << "]";
+                        out << ";\n";
+                    }
                 }
-                if (descrSetList(i).root->isDynamicArray())
-                    out << "[];\n";
             }
             else
             {

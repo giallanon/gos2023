@@ -1,0 +1,19 @@
+@pipe : GOSENG_pipe_phong
+{
+    rt0: U8_RGBA
+    zb: _DEPTH_BEST, 1, LESS
+
+	cullMode: CCW
+	drawPrimitive: trisList
+    wireframe: 0
+
+    @vtx_shader
+    {
+      src: gosengine/phong.vert.shader
+    }
+
+    @pxl_shader
+    {
+      src: gosengine/phong.frag.shader
+    }
+}

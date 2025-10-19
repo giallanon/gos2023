@@ -1,4 +1,5 @@
 #include "test1.h"
+#include "../gosAsset/gosAssetBuilder.h"
 
 
 //******************************** 
@@ -69,6 +70,16 @@ void test_fixedSizeBufferTracker()
 
 }
 
+
+//******************************** 
+bool buildAssets(gos::GPU *gpu)
+{
+    gos::asset::Builder builder (gpu);
+    return builder.rebuildAll ("@w/data", true);
+}
+
+
+
 //******************************** 
 int main()
 {
@@ -87,8 +98,11 @@ int main()
         if (!engine.setup (1024, 768, "test engine"))
             return -2;
 
-        Test1   test;
-        test.run (&engine);
+        if (buildAssets(engine.gpu))
+        {
+            Test1   test;
+            test.run (&engine);
+        }
     }
     
 

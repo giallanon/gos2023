@@ -18,19 +18,31 @@ Test1::Test1()
 
 	skeleton = NULL;
 	model = NULL;
-	modelInstance = NULL;
 }
 
 
 //***************************************
 Test1::~Test1()
 {
+	//free delle modelInstance di ogni entity
+	entList.forEach ( [lambdaAllocator = this->allocator, lambdaEntReg = &entRegistry](u32 index, gos::Entity ent) 
+	{
+		ent::CompModelInstance *comp = lambdaEntReg->get<ent::CompModelInstance>(ent);
+		if (NULL != comp)
+		{
+			GOSDELETE(lambdaAllocator, comp->modelInstance);
+		}
+		return true;
+	});
+
+
+
 	entList.unsetup();
 	entRegistry.unsetup();
 
-	GOSDELETE(allocator, modelInstance);
 	GOSDELETE(allocator, model);
 	GOSDELETE(allocator, skeleton);
+	GOSDELETE(allocator, renderer);
 }
 
 //***************************************
@@ -57,10 +69,6 @@ void Test1::priv_model_setup(gos::ENGShape shapeHandle)
 		model->linkShapeToBone (shapeHandle, "left-arm");
 		model->linkShapeToBone (shapeHandle, "right-arm");
 	}
-
-
-	modelInstance = GOSNEW(allocator, model::ModelInstance)(model);
-	
  }
 
 //***************************************
@@ -138,6 +146,7 @@ void Test1::run (gos::Engine *engine)
 	//model 	
 	priv_model_setup(shapeHandle);
 
+	//3 ent, con posizione e modelInstance
 	for (u32 i=0; i<3; i++)
 	{
 		Entity ent = entRegistry.newEntity();
@@ -146,13 +155,17 @@ void Test1::run (gos::Engine *engine)
 			pos->matrix.buildTranslation ( vec3f(0, 0, (f32)(10 * i)) );
 
 			auto mi = entRegistry.addComponent<ent::CompModelInstance>(ent);
-			mi->modelInstance = this->modelInstance;
+			mi->modelInstance = GOSNEW(allocator, model::ModelInstance)(model);
 			mi->modelInstance->applyTransform (pos->matrix);
 		}
 
 		entList.append(ent);
 	}
 
+
+	//creo il renderer
+	renderer = GOSNEW(allocator, gos::engine::Renderer)();
+	renderer->setup (engine);
 
 
 	//loop

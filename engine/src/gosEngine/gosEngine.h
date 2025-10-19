@@ -10,10 +10,15 @@ namespace gos
     /****************
      * @brief   Engine
      * 
-     * 
+     *          <assetHub>   viene creato durante setup() e punta alla directory "data"v
      */
     class Engine
     {
+    public:
+        gos::GPU                *gpu;
+        gos::input::Context     *inputCtx;
+        gos::asset::Hub         *assetHub;
+
     public:
                                     Engine();
                                     ~Engine()                                   { unsetup(); }
@@ -49,11 +54,7 @@ namespace gos
 
         //=============================
         
-
-    public:
-        gos::GPU                *gpu;
-        gos::input::Context     *inputCtx;
-        gos::asset::Hub         *assetHub;
+        gos::Allocator*             getAllocator() const                                                        { return allocator; }
 
     private:
         static constexpr u32    NUM_MAX_WMATRIX = 0xFFFF;

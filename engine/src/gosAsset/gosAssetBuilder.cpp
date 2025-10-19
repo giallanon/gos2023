@@ -1160,7 +1160,8 @@ u32 Builder::priv_shaderRes_add_dependencies (const ResList &list, u32 me)
 
             //il nome della risorsa da includere dipende dal path della risorsa base + l'include
             fs::extractFilePathWithOutSlash (list(me).name, s, sizeof(s));
-            strcat_s (s, sizeof(s), "/");
+            if (0x00 != s[0])
+                strcat_s (s, sizeof(s), "/");
             strcat_s (s, sizeof(s), includeName);
             fs::pathSanitizeInPlace (s);
 
