@@ -219,9 +219,9 @@ u8 BufferRGBA::priv_circonferenza_quadrante (i16 px, i16 py, i16 r, u8 spessore)
 	const float d = sqrtf((f32)(px * px + py * py));
 	u8 alfa;
 
-	const float aMax = r + 1;
-	const float aMid = r - spessore + 1;
-	const float aMin = r - spessore - 0.5f;
+	const float aMax = (f32)(r + 1);
+	const float aMid = (f32)(r - spessore + 1);
+	const float aMin = (f32)(r - spessore) - 0.5f;
 	if (d > aMax || d < aMin)
 		alfa = 0;
 	else
