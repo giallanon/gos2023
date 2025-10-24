@@ -1,10 +1,12 @@
 #ifndef _gosEngineEnumAndDefine_h_
 #define _gosEngineEnumAndDefine_h_
+#include "../gos/gosFastArray.h"
 #include "../gosGPU/gosGPU.h"
 #include "../gosInput/gosInput.h"
 #include "../gosAsset/gosAssetHub.h"
 #include "../gosShape/gosShape.h"
-#include "../gos/gosFastArray.h"
+#include "../gosGeom/gosGeomCamera3.h"
+
 
 namespace gos
 {

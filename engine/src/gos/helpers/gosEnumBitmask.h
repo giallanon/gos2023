@@ -62,6 +62,9 @@ public:
         return false;   
     }   
 
+    u32         asU32() const                               { return static_cast<u32>(bitmask); }
+    void        setFromU32 (u32 u)                          { bitmask = u; }
+
 public:   
     MASK_TYPE   bitmask;   
 };   

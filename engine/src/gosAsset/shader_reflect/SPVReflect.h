@@ -42,7 +42,9 @@ namespace gos
         const u8*   pushconst_getDataBlobDef() const { return pushConstant_dataBlobDef; }
 
         u32         descrset_getNumSet() const;
-        u32         descrset_getNumElemPerSet (u32 set);
+
+        eGPUDescriptrorSetOptionBitmask descrset_getOptionsPerSet(u32 set) const;
+        u32         descrset_getNumElemPerSet (u32 set) const;
 
                     // out_usage e' una bitmask di eGPUDescriptrorUsageFlag
         void        descrset_getElemByIndex  (u32 set, u8 index, u8 *out_binding, eGPUDescriptrorType *out_type, u32 *out_arraySize, eGPUDescriptrorUsageBitmask *out_usage) const;
@@ -234,11 +236,11 @@ namespace gos
         struct DescrSetElem
         {
         public:
-            DescrSetElem() { reset(); }
-            void        reset() { root = NULL; blobDef = NULL; usage.zero(); set = binding = 0; vulkanDescrType = eGPUDescriptrorType::UNKNOWN; }
+                        DescrSetElem()                                      { reset(); }
+            void        reset()                                             { root = NULL; blobDef = NULL; usage.zero(); set = binding = 0; vulkanDescrType = eGPUDescriptrorType::UNKNOWN; }
 
-            bool        isUsedByVtxShader() const { return usage.isBitSet(USAGE__USED_IN_VTX_SHADER); }
-            bool        isUsedByFragShader() const { return usage.isBitSet(USAGE__USED_IN_FRAG_SHADER); }
+            bool        isUsedByVtxShader() const                           { return usage.isBitSet(USAGE__USED_IN_VTX_SHADER); }
+            bool        isUsedByFragShader() const                          { return usage.isBitSet(USAGE__USED_IN_FRAG_SHADER); }
 
         public:
             gos::Flag8              usage;
@@ -252,8 +254,8 @@ namespace gos
         class DescrSetList
         {
         public:
-                    DescrSetList() { list.setup(gos::getSysHeapAllocator(), 16); }
-                    ~DescrSetList() { reset(); list.unsetup(); }
+                    DescrSetList()              { list.setup(gos::getSysHeapAllocator(), 16); dsOptionList.setup(gos::getSysHeapAllocator(), 16); }
+                    ~DescrSetList()             { reset(); list.unsetup(); }
 
             void    reset()
             {
@@ -271,6 +273,7 @@ namespace gos
                     }
                 }
                 list.reset();
+                dsOptionList.reset();
             }
 
             u32     addIfNotExists (DescrSetElem &elem)
@@ -286,6 +289,11 @@ namespace gos
                 }
 
                 list.append(elem);
+
+                const u32 n = list.getNElem() -1;
+                dsOptionList[n] = eGPUDescriptrorSetOption::none;
+                if (elem.root->typeDescrSpecialization.isBitSet (SPVReflect::TYPEDESCR_SPEC__IS_BINDLESS_ARRAY))
+                    dsOptionList[n] = eGPUDescriptrorSetOption::bindless;
                 return u32MAX;
             }
 
@@ -319,17 +327,23 @@ namespace gos
                             DescrSetElem swap = list[i];
                             list[i] = list[i + 1];
                             list[i + 1] = swap;
+
+                            auto swap2 = dsOptionList[i];
+                            dsOptionList[i] = dsOptionList[i+1];
+                            dsOptionList[i+1] = swap2;
                         }
                     }
                 }
             }
 
-            u32		                getNElem()	const { return list.getNElem(); }
-            const DescrSetElem&		operator() (u32 i)	const { return list(i); }
-            DescrSetElem&		    operator[] (u32 i) { return list[i]; }
+            u32		                            getNElem()	const                   { return list.getNElem(); }
+            const DescrSetElem&		            operator() (u32 i)	const           { return list(i); }
+            DescrSetElem&		                operator[] (u32 i)                  { return list[i]; }
+            eGPUDescriptrorSetOptionBitmask     getOptions (u32 i) const            { return dsOptionList(i); }
 
         private:
-            gos::FastArray<DescrSetElem>    list;
+            gos::FastArray<eGPUDescriptrorSetOptionBitmask> dsOptionList;
+            gos::FastArray<DescrSetElem>                    list;
         };
 
     private:
@@ -348,7 +362,7 @@ namespace gos
         bool                priv_parse_descriptors (SpvReflectShaderModule *module);
 
         Node*               priv_parse_BlockVariable (const SpvReflectShaderModule *module, const SpvReflectBlockVariable *var);
-        Node*               priv_parse_TypeDescription (const SpvReflectShaderModule *module, const SpvReflectTypeDescription *var);
+        void                priv_parse_TypeDescriptionForArray (const SpvReflectShaderModule *module, const SpvReflectTypeDescription *var, Node *node);
 
         void                priv_descriptor_parseVar (const SpvReflectShaderModule *module, const SpvReflectDescriptorBinding *var);
 

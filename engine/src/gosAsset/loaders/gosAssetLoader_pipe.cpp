@@ -124,23 +124,33 @@ bool Loader_pipe::load (Loader *assetLoader, const asset::Context &ctx, const as
         const u32 numSet = reader.readU32 ();
         for (u32 i = 0; i < numSet; i++)
         {
-            VkDescriptorSetLayoutCreateFlags createFlags = 0;
-            auto &builder = def.descriptorset_add (createFlags);
+            auto &builder = def.descriptorset_add();
+
+            eGPUDescriptrorSetOptionBitmask options;
+            options.setFromU32 (reader.readU32 ());
+
 
             const u32 numElem = reader.readU32 ();
             for (u32 i2 = 0; i2 < numElem; i2++)
             {
                 const u8 binding = reader.readU8();
                 const eGPUDescriptrorType type = static_cast<eGPUDescriptrorType>(reader.readU8());
-                const u32 count = reader.readU32();
+                u32 numElem = reader.readU32();
                 eGPUDescriptrorUsageBitmask usage;
                 usage.bitmask = reader.readU32();
 
                 //TODO
-                //u32MAX == count => uso questa cosa per indicare i buffer dinamici, ci devo ancora lavorare per bene
-                assert (u32MAX != count);
+                //u32MAX == numElem => il buffer e' di tipo bindless... in attesa di capirci megli qualcosa
+                //                      semplicemente lo alloco "grosso"
+                if (u32MAX == numElem)
+                {
+                    numElem = 1;
+                    builder.addCreationFlag (VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
+                }
+                if (options.isset(eGPUDescriptrorSetOption::bindless))
+                    builder.addCreationFlag (VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
 
-                builder.add (binding, type, count, usage);
+                builder.add (binding, type, numElem, usage);
             }
         }        
 

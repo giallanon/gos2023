@@ -15,6 +15,15 @@ namespace gos
     class Engine
     {
     public:
+        struct InputEvent
+        {
+            u32 actionID;
+            i16 value;
+            const gos::input::MouseStatus *mouseStatus;
+            const gos::input::sButtonModifier *btnModifier;
+        };
+
+    public:
         gos::GPU                *gpu;
         gos::input::Context     *inputCtx;
         gos::asset::Hub         *assetHub;
@@ -28,6 +37,11 @@ namespace gos
 
             /* update:  ritorna false se la mainwin e' stata chiusa */
         bool                        update();
+        bool                        inputEvent_getNext (InputEvent *out);
+        
+        
+        
+        //=============================
         void                        toggleFullscreen()                          { gpu->toggleFullscreen(); }
         void                        toggleVSync();
 
@@ -114,12 +128,9 @@ namespace gos
 
 
     private:
-        void    priv_handleInput();
-
-    private:
         gos::Allocator          *allocator;
         bool                    bQuitEngine;
-        
+        input::ResolvedEvtList  evtList;
         HList<ENGVtxBuffer, engine::VtxBuffer>  vtxBufferHandleList;
         HList<ENGIdxBuffer, engine::IdxBuffer>  idxBufferHandleList;
         HList<ENGShape, engine::Shape>          shapeHandleList;

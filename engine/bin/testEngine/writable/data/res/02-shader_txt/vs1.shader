@@ -1,5 +1,5 @@
 #version 450
-#include "phong.include.shader"
+#include "common1.shader"
 
 //Input
 layout(location = 0) in vec3 in_position;
@@ -10,15 +10,14 @@ layout(location = 2) in vec2 in_texCoord;
 layout(location = 0) out vec3 out_normal;
 layout(location = 1) out vec2 out_texCoord;
 
-
 void main() 
 {
-	const uint ii = objInstance.matrixIndex;
+	mat4 matW = objInstance.matW;
     
-	gl_Position = (vec4(in_position, 1.0) * matrixList[ii].matW) * scene.camVP;
+	gl_Position = (vec4(in_position, 1.0) * matW) * scene.camVP;
 
     //normale in world coordinate
-    out_normal = in_normal * mat3(matrixList[ii].matW);
+    out_normal = in_normal * mat3(matW);
     
     out_texCoord = in_texCoord;
 }

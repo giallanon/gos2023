@@ -377,9 +377,17 @@ enum class eGPUDescriptrorUsage : u32
     pxl_shader      = 0x00000010,       //aka VK_SHADER_STAGE_FRAGMENT_BIT = 0x00000010,
     compute_shader  = 0x00000020        //aka VK_SHADER_STAGE_COMPUTE_BIT = 0x00000020,
 };
-
 //dichiara il tipo <eGPUDescriptrorUsageBitmask>
 GOS_DECL_ENUM_BITMASK_CLASS(eGPUDescriptrorUsage);
+
+
+enum class eGPUDescriptrorSetOption : u32
+{
+    none            = 0,
+    bindless        = 0x00000001
+};
+//dichiara il tipo <eGPUDescriptrorSetOptionBitmask>
+GOS_DECL_ENUM_BITMASK_CLASS(eGPUDescriptrorSetOption);
 
 
 enum class eDataBlobElemType : u8

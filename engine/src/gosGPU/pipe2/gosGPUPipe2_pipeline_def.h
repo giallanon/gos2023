@@ -110,6 +110,8 @@ namespace gos
                 struct DescriptorSet
                 {
                 public:
+                    void            addCreationFlag (VkDescriptorSetLayoutCreateFlags flagIN)                   { this->flag |= flagIN; }
+
                                     //per <usageFlags> vedi eGPUDescriptrorUsageFlag
                     DescriptorSet&  add (u32 binding, eGPUDescriptrorType type, u32 count, eGPUDescriptrorUsageBitmask usageBitmaskIN)
                     { 

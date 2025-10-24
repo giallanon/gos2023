@@ -75,7 +75,8 @@ void test_fixedSizeBufferTracker()
 bool buildAssets(gos::GPU *gpu)
 {
     gos::asset::Builder builder (gpu);
-    return builder.rebuildAll ("@w/data", true);
+    //return builder.rebuildAll ("@w/data", true);
+    return builder.buildAll ("@w/data", true);
 }
 
 

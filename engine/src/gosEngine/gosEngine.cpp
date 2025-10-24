@@ -157,24 +157,32 @@ void Engine::toggleVSync()
     }
 }
 
-//************************************
-void Engine::priv_handleInput()
+
+//******************************** 
+bool Engine::update()
 {
+    if (bQuitEngine)
+        return false;
+
+    //input
     gos::input::pollEvents();
-
-    input::ResolvedEvtList evtList;
     input::resolveEvents (gpu->getWindow(), inputCtx, &evtList);
+    return true;
+}
 
-    i16 value;
+//******************************** 
+bool Engine::inputEvent_getNext (InputEvent *out)
+{
     while (1)
     {
-        const u32 actionID = evtList.nextActionID(&value);
-        if (0 == actionID)
-            break;
-        switch (actionID)
+        out->actionID = evtList.nextActionID(&out->value);
+        if (0 == out->actionID)
+            return false;
+
+        switch (out->actionID)
         {
         default:
-            //virtual_onInputEvent (actionID, value, evtList.getMouseStatus(), evtList.getBtnModifier());
+            return true;
             break;
 
         case COMPILE_TIME_STR_CRC32("show_all_actions"):
@@ -198,16 +206,6 @@ void Engine::priv_handleInput()
             break;
         }
     }
-}
-
-//******************************** 
-bool Engine::update()
-{
-    if (bQuitEngine)
-        return false;
-
-    priv_handleInput();
-    return true;
 }
 
 
@@ -300,7 +298,7 @@ bool Engine::shape_create (const gos::Shape *shape, ENGShape *out_handle)
         const u32 sizeOfAVertex = gos::shape::calcSizeOfAVertex(shape->vtxLayout);
         byteNeeded = sizeOfAVertex * shape->numVtx;
         vtxBufferMan.reserve (byteNeeded, &s->alloc_vtxbuf_offset, &s->alloc_vtxbuf_size, &s->vbHandle);
-        s->vtxStart = s->alloc_vtxbuf_size / sizeOfAVertex;
+        s->vtxStart = s->alloc_vtxbuf_offset / sizeOfAVertex;
         s->numVertex = shape->numVtx;
     }
 

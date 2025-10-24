@@ -101,7 +101,14 @@ bool platform::FS_fileDelete (const char *utf8_filename)
 	wchar_t temp[512];
 	if (!win32::utf8_towchar(utf8_filename, u32MAX, temp, sizeof(temp)))
 		return false;
-	return (::DeleteFile (temp) != 0);
+	if (::DeleteFile (temp))
+		return true;
+
+	const DWORD err = GetLastError();
+	if (ERROR_FILE_NOT_FOUND == err)
+		return true;
+
+	return false;
 }
 
 //*****************************************************

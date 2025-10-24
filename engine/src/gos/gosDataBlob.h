@@ -14,7 +14,7 @@ namespace gos
      * 
      * <blob> e' un generico blocco di memoria che puo' essere visto come una struttura dati ben formattata.
      * 
-     * La classe Builder e' utilizzata per creare una DataBlobDef, ovvero un buffer che contiene tutte le informazioni circa
+     * La classe DefBuilder e' utilizzata per creare una DataBlobDef, ovvero un buffer che contiene tutte le informazioni circa
      * la struttura di un DataBlob. 
      * 
      * Un DataBlobDef e' buffer strutturato come segue e contiene una serie di descrittori di 'elementi'.

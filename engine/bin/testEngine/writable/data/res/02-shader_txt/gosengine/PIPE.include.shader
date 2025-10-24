@@ -8,6 +8,10 @@
 #define PIPE_SAMPLER2D_POINT     1
 layout(set = 0, binding = 0) uniform sampler samplerList[];
 layout(set = 0, binding = 1) uniform texture2D textureList[];
+layout(set = 0, binding = 2) readonly buffer SSBO_0_2
+{
+	mat4	matW;
+} matrixList[];
 
 //scene
 layout(set = 1, binding = 0) uniform LAYOUT_SCENE_DATA
@@ -16,6 +20,14 @@ layout(set = 1, binding = 0) uniform LAYOUT_SCENE_DATA
     vec4 lightDir;
     vec2 screenWH;
 } scene;
+
+
+//psuh constant
+layout(push_constant) uniform PushConstantData
+{
+	uint materialIndex;
+    uint matrixIndex;
+} objInstance;
 
 
 

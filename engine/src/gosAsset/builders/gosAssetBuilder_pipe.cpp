@@ -364,6 +364,9 @@ bool Builder_pipe::priv_do_create_assetFile (Context &ctx, const Params &params,
         buffer.writeU32 (numSet);
         for (u32 i = 0; i < numSet; i++)
         {
+            const u32 setOptions = reflect.descrset_getOptionsPerSet(i).asU32();
+            buffer.writeU32 (setOptions);
+
             const u32 numElem = reflect.descrset_getNumElemPerSet (i);
             buffer.writeU32 (numElem);
             for (u32 i2 = 0; i2 < numElem; i2++)

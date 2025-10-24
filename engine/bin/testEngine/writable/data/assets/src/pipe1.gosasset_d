@@ -1,0 +1,19 @@
+@pipe : pipe1
+{
+    rt0: U8_RGBA
+    zb: _DEPTH_BEST, 1, LESS
+
+	cullMode: CCW
+	drawPrimitive: trisList
+    wireframe: 0
+
+    @vtx_shader
+    {
+      src: vs1.shader
+    }
+
+    @pxl_shader
+    {
+      src: ps1.shader
+    }
+}

@@ -18,6 +18,7 @@ Test1::Test1()
 
 	skeleton = NULL;
 	model = NULL;
+	renderer = NULL;
 }
 
 
@@ -43,6 +44,80 @@ Test1::~Test1()
 	GOSDELETE(allocator, model);
 	GOSDELETE(allocator, skeleton);
 	GOSDELETE(allocator, renderer);
+}
+
+//***************************************
+bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out)
+{
+	//creo una shape
+	gos::Shape shape;
+	shape.reset();
+	{
+		gos::VtxLayout vtxLayout;
+		{
+			shape::VtxLayoutWriter vtxLayoutW;
+
+			vtxLayoutW.setup (&vtxLayout);
+			vtxLayoutW.begin()
+				.addPos3(0)
+				.addNorm3(12)
+				.addTexCoord(24)
+				.end();
+		}
+
+		if (!shape::buildCube24 (vec3f(0, 0, 0), vec3f(1, 1, 1), vtxLayout, allocator, &shape))
+			return false;
+	}
+
+	//creo una engine::shape
+	gos::ENGShape shapeHandle;
+	if (!engine->shape_create (&shape, &shapeHandle))
+		return false;
+
+	//ora devo copiare vtx/idx nel VB/IB
+	{
+		//copio idx/vtx nello stage buffer
+		GPUStgBufferHandle stgBufferHandle;
+		engine->gpu->stagingBuffer_create (1024, &stgBufferHandle);
+		
+		const u32 SIZE_OF_IDX = shape.numIdx * sizeof(u16);
+		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shape.idxBuffer, SIZE_OF_IDX);
+
+		const u32 SIZE_OF_VTX = shape::calcSizeOfAVertex(shape.vtxLayout) * shape.numVtx;
+		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shape.vtxBuffer, SIZE_OF_VTX);
+
+		//free della shape
+		shape::shapeFree (allocator, &shape);
+
+
+		//creo un job per pushare lo stage buffer in VB/IB
+		GPUCmdBufferHandle cmdBufferHandle;
+		if (!engine->gpu->cmdBuffer_create (eGPUQueueType::transfer, &cmdBufferHandle))
+			return false;
+		const engine::Shape *shapeInfo = engine->shape_getInfo (shapeHandle);
+
+		gos::gpu::pipe2::CmdBufferWriter2 cw;
+		cw.begin (engine->gpu, cmdBufferHandle)
+			.copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, 0, SIZE_OF_IDX)
+			.copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, 0, SIZE_OF_VTX)
+			.end();
+
+
+		gpu::TransferJob job;
+		job.setup (engine->gpu);
+		job.submit(cmdBufferHandle);
+
+		while (!job.hasFinished())
+		{
+		}
+
+		engine->gpu->deleteResource(cmdBufferHandle);
+		engine->gpu->deleteResource(stgBufferHandle);
+
+	}
+
+	*out = shapeHandle;
+	return true;
 }
 
 //***************************************
@@ -72,75 +147,61 @@ void Test1::priv_model_setup(gos::ENGShape shapeHandle)
  }
 
 //***************************************
-void Test1::run (gos::Engine *engine)
+void Test1::run (gos::Engine *engineIN)
 {
-	//creo una shape
-	gos::Shape shape;
-	shape.reset();
+	engine = engineIN;
+	gpu = engine->gpu;
+
+	//setup camera
+    cam.setPerspectiveFovLH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
+    cam.pos.identity();
+    cam.pos.warp (0, 0, -10);
+    cam.pos.lookAt (vec3f(0,0,0));
+    cam.markUpdated();
+
+	//e movement
+    movement.bind (&cam.pos);
+
+	//priv_run1();
+	//priv_run2();
+	priv_run3();
+}
+
+//**********************************
+void Test1::doCPUStuff ()
+{
+	Engine::InputEvent ev;
+	while (engine->inputEvent_getNext(&ev))
 	{
-		gos::VtxLayout vtxLayout;
+		switch (ev.actionID)
 		{
-			shape::VtxLayoutWriter vtxLayoutW;
-
-			vtxLayoutW.setup (&vtxLayout);
-			vtxLayoutW.begin()
-				.addPos3(0)
-				.addNorm3(12)
-				.addTexCoord(24)
-				.end();
+		case COMPILE_TIME_STR_CRC32("move_forward"):           movement.moveForward ((ev.value == 1)); break;
+		case COMPILE_TIME_STR_CRC32("move_backward"):          movement.moveBackward ((ev.value == 1));    break;
+		case COMPILE_TIME_STR_CRC32("strafe_left"):            movement.strafeLeft ((ev.value == 1));    break;
+		case COMPILE_TIME_STR_CRC32("strafe_right"):           movement.strafeRight ((ev.value == 1));    break;
+		case COMPILE_TIME_STR_CRC32("strafe_up"):              movement.strafeUp ((ev.value == 1));    break;
+		case COMPILE_TIME_STR_CRC32("strafe_down"):            movement.strafeDown ((ev.value == 1));    break;
+		case COMPILE_TIME_STR_CRC32("rotateY"):                movement.rotateY ((ev.value < 0)); break;
+		case COMPILE_TIME_STR_CRC32("rotateX"):                movement.rotateX ((ev.value < 0)); break;
 		}
-
-		if (!shape::buildCube24 (vec3f(0, 0, 0), vec3f(1, 1, 1), vtxLayout, allocator, &shape))
-			return;
 	}
 
-	//creo una engine::shape
+    //gestione del movimento
+    const u64 timeNow_msec = gos::getTimeSinceStart_msec();
+    movement.update(timeNow_msec);
+    cam.markUpdated();
+}
+
+//***************************************
+void Test1::priv_run1 ()
+{
+	
 	gos::ENGShape shapeHandle;
-	if (!engine->shape_create (&shape, &shapeHandle))
-		return;
-
-	//ora devo copiare vtx/idx nel VB/IB
+	if (!priv_shape_create (engine, &shapeHandle))
 	{
-		//copio idx/vtx nello stage buffer
-		GPUStgBufferHandle stgBufferHandle;
-		engine->gpu->stagingBuffer_create (1024, &stgBufferHandle);
-		
-		const u32 SIZE_OF_IDX = shape.numIdx * sizeof(u16);
-		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shape.idxBuffer, SIZE_OF_IDX);
-
-		const u32 SIZE_OF_VTX = shape::calcSizeOfAVertex(shape.vtxLayout) * shape.numVtx;
-		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shape.vtxBuffer, SIZE_OF_VTX);
-
-		//free della shape
-		shape::shapeFree (allocator, &shape);
-
-
-		//creo un job per pushare lo stage buffer in VB/IB
-		GPUCmdBufferHandle cmdBufferHandle;
-		if (!engine->gpu->cmdBuffer_create (eGPUQueueType::transfer, &cmdBufferHandle))
-			return;
-		const engine::Shape *shapeInfo = engine->shape_getInfo (shapeHandle);
-
-		gos::gpu::pipe2::CmdBufferWriter2 cw;
-		cw.begin (engine->gpu, cmdBufferHandle)
-			.copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, 0, SIZE_OF_IDX)
-			.copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, 0, SIZE_OF_VTX)
-			.end();
-
-
-		gpu::TransferJob job;
-		job.setup (engine->gpu);
-		job.submit(cmdBufferHandle);
-
-		while (!job.hasFinished())
-		{
-		}
-
-		engine->gpu->deleteResource(cmdBufferHandle);
-		engine->gpu->deleteResource(stgBufferHandle);
-
+		DBGBREAK;
+		return;
 	}
-
 
 
 	//model 	
@@ -190,4 +251,367 @@ void Test1::run (gos::Engine *engine)
 
 	engine->gpu->deleteResource (cmdBufferHandle);
 	engine->shape_release(shapeHandle);
+}
+
+//***************************************
+bool Test1::priv_run2 ()
+{
+	gos::ENGShape shapeHandle;
+	if (!priv_shape_create (engine, &shapeHandle))
+	{
+		DBGBREAK;
+		return false;
+	}
+	const engine::Shape *info_shape = engine->shape_getInfo(shapeHandle);
+
+
+	mat4x4f	matrixList[4];
+	matrixList[0].identity();
+	matrixList[1].buildTranslation (0, 0, 10);
+	matrixList[2].buildTranslation (0, 3, 0);
+	matrixList[3].buildTranslation (0, -3, 0);
+
+
+
+    //load degli assets
+	asset::Handle assHandle_pipe;
+    if (!engine->assetHub->getHandle ("pipe1", &assHandle_pipe, true))
+        return false;
+
+
+    //risorse di rendering
+    GPUZBufferHandle            handle_zbuffer;
+    GPURenderTargetHandle       handle_rt0;
+    GPUDescrPoolHandle          handle_descrPool;
+    {
+        //rt0
+        if (!gpu->renderTarget_create ("0-", "0-", eImageFormat::U8_RGBA, &handle_rt0))
+            return false;
+
+        //zbuffer
+        if (!gpu->zbuffer_create ("0-", "0-", eImageFormat::_DEPTH_BEST, &handle_zbuffer))
+        {
+            gos::logger::err ("Renderer::setup() => GPU::zbuffer_create\n");
+            return false;
+        }
+
+        //creo un descriptor pool
+        gpu->descrPool_createNew (&handle_descrPool)
+            .setMaxNumDescriptorSet(4)
+            .addPool_uniformBuffer(1)
+            .addPool_storageBuffer(1)
+            .addPool_sampler(2)
+            .addPool_texture(1)
+            .end();
+        if (handle_descrPool.isInvalid())
+        {
+            gos::logger::err ("Renderer::setup() => can't create descriptor pool\n");
+            return false;
+        }
+    }
+
+    //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
+	GPUDescrSetInstanceHandle   handle_descrSet0;
+	GPUUniformBufferHandle      handle_ubo_scene;
+	struct sLAYOUT_SCENE_DATA
+	{
+		mat4x4f	matVP;
+		vec4f	lightDir;
+	} scene;
+
+    const asset::Asset_pipe *pipe;
+    engine->assetHub->getAssetWithTimeout (assHandle_pipe, 5000, &pipe);
+	{
+        //alloco una istanza dei descriptor-set
+        gos::gpu::DescrSetInstanceWriter dsw;
+
+        //descriptor set 0
+        if (!gpu->descrSetInstance_create (handle_descrPool, pipe->handle_pipe, 0, &handle_descrSet0))
+        {
+            gos::logger::err ("Renderer::setup() => can't create an instance of descriptorSet_0\n");
+            return false;
+        }
+        gpu->uniformBuffer_create (sizeof(sLAYOUT_SCENE_DATA) * 16, eMemAccessMode::shared_cpuW_autoSync, &handle_ubo_scene);
+        dsw.begin (gpu, handle_descrSet0)
+            .bindUniformBuffer (0, handle_ubo_scene, 0)
+            .end();
+	}
+
+
+	struct sPushConstantData
+	{
+		mat4x4f matW;
+	} pushConstData;
+
+	//renderizzo
+    gpu::MainLoop2 mainLoop;
+    mainLoop.setup (gpu);
+
+    GPUCmdBufferHandle  cmdBufferHandle;
+    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+	
+	bool bQuit = false;
+	while (false == bQuit)
+	{
+		if (!engine->update())
+		{
+			bQuit = true;
+			continue;
+		}
+
+        mainLoop.stat_onCPUFrameBegin();
+        engine->assetHub->update (gos::getTimeSinceStart_msec());
+		doCPUStuff();
+		mainLoop.stat_onCPUFrameEnd();
+
+        mainLoop.run();
+
+        if (gpu->swapChain_wasRecreated())
+            cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
+
+
+        //se il job precedente e' stato presentato, posso schedularne uno nuovo
+        gpu::SwapchainImg swapchainImg;
+        if (mainLoop.gfxJob_canSubmit(&swapchainImg))
+        {
+			const asset::Asset_pipe *pipe;
+			if (engine->assetHub->getAsset(assHandle_pipe, &pipe))
+			{
+				//aggiorno UBO
+				scene.matVP = cam.getMatVP();
+				scene.lightDir = vec4f (cam.pos.getAsseZ(), 0);
+				scene.lightDir.normalize();
+				gpu->writeAndSync (handle_ubo_scene, 0, &scene, sizeof(scene));
+
+				gos::gpu::pipe2::CmdBufferWriter2 cw;
+				cw
+					.begin (gpu, cmdBufferHandle)
+					.setViewport (gpu->viewport_getDefault())
+					.imageTransition (handle_rt0, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
+					.imageTransition (handle_zbuffer, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
+
+				auto &r = cw.beginRender();
+					   r.withRenderArea (handle_rt0)
+						.withRT (handle_rt0, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.0f, 0.1f))
+						.withZB (handle_zbuffer, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)
+						.bindPipeline (pipe->handle_pipe)
+						.bindDescriptorSet (handle_descrSet0, 0)
+						.bindVtxBuffer(info_shape->vbHandle)
+						.bindIdxBufferU16(info_shape->ibHandle);
+						for (u32 i = 0; i < 4; i++)
+						{
+							r.pushConstant(0, &matrixList[i], sizeof(sPushConstantData));
+							r.drawIndexed (info_shape->numIndices, 1, info_shape->indexStart, info_shape->vtxStart, 0);
+						}
+					r.endRender();
+
+					cw.imageTransition (handle_rt0, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
+					.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)
+					.copyImageToImage (handle_rt0, swapchainImg.image, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
+					.imageTransition (swapchainImg.image, eImageLayout::transfer_dst, eImageLayout::presentation)
+					.end();
+
+				mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
+			}
+        }		
+	}
+	
+	gpu->waitIdle();
+	mainLoop.unsetup();
+	
+	engine->shape_release(shapeHandle);
+	gpu->deleteResource (cmdBufferHandle);
+	return true;
+}
+
+//***************************************
+bool Test1::priv_run3 ()
+{
+	gos::ENGShape shapeHandle;
+	if (!priv_shape_create (engine, &shapeHandle))
+	{
+		DBGBREAK;
+		return false;
+	}
+	const engine::Shape *info_shape = engine->shape_getInfo(shapeHandle);
+
+    //load degli assets
+	asset::Handle assHandle_pipe;
+    if (!engine->assetHub->getHandle ("pipe2", &assHandle_pipe, true))
+        return false;
+
+
+    //risorse di rendering
+    GPUZBufferHandle            handle_zbuffer;
+    GPURenderTargetHandle       handle_rt0;
+    GPUDescrPoolHandle          handle_descrPool;
+    {
+        //rt0
+        if (!gpu->renderTarget_create ("0-", "0-", eImageFormat::U8_RGBA, &handle_rt0))
+            return false;
+
+        //zbuffer
+        if (!gpu->zbuffer_create ("0-", "0-", eImageFormat::_DEPTH_BEST, &handle_zbuffer))
+        {
+            gos::logger::err ("Renderer::setup() => GPU::zbuffer_create\n");
+            return false;
+        }
+
+        //creo un descriptor pool
+        gpu->descrPool_createNew (&handle_descrPool)
+            .setMaxNumDescriptorSet(4)
+            .addPool_uniformBuffer(1)
+            .addPool_storageBuffer(1)
+            .addPool_sampler(2)
+            .addPool_texture(1)
+            .end();
+        if (handle_descrPool.isInvalid())
+        {
+            gos::logger::err ("Renderer::setup() => can't create descriptor pool\n");
+            return false;
+        }
+    }
+
+    //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
+	GPUDescrSetInstanceHandle   handle_descrSet0;
+	GPUDescrSetInstanceHandle   handle_descrSet1;
+	GPUUniformBufferHandle      handle_ubo_scene;
+	GPUStorageBufferHandle      handle_sbo_matrixList;
+	struct sLAYOUT_SCENE_DATA
+	{
+		mat4x4f	matVP;
+		vec4f	lightDir;
+	} scene;
+
+    const asset::Asset_pipe *pipe;
+    engine->assetHub->getAssetWithTimeout (assHandle_pipe, 5000, &pipe);
+	{
+        //alloco una istanza dei descriptor-set
+        gos::gpu::DescrSetInstanceWriter dsw;
+
+        //descriptor set 0
+        if (!gpu->descrSetInstance_create (handle_descrPool, pipe->handle_pipe, 0, &handle_descrSet0))
+        {
+            gos::logger::err ("Renderer::setup() => can't create an instance of descriptorSet_0\n");
+            return false;
+        }
+        gpu->uniformBuffer_create (sizeof(sLAYOUT_SCENE_DATA) * 16, eMemAccessMode::shared_cpuW_autoSync, &handle_ubo_scene);
+        dsw.begin (gpu, handle_descrSet0)
+            .bindUniformBuffer (0, handle_ubo_scene, 0)
+		    .end();
+
+        //descriptor set 1
+        if (!gpu->descrSetInstance_create (handle_descrPool, pipe->handle_pipe, 1, &handle_descrSet1))
+        {
+            gos::logger::err ("Renderer::setup() => can't create an instance of descriptorSet_1\n");
+            return false;
+        }
+        gpu->storageBuffer_create (sizeof(mat4x4f) * 16, eMemAccessMode::shared_cpuW_autoSync, &handle_sbo_matrixList);
+        dsw.begin (gpu, handle_descrSet1)
+            .bindStorageBuffer (0, handle_sbo_matrixList, 0)
+            .end();
+
+		//fillo SBO con 4 matrixi
+		{
+			mat4x4f	matrixList[4];
+			matrixList[0].identity();
+			matrixList[1].buildTranslation (0, 0, 10);
+			matrixList[2].buildTranslation (0, 3, 0);
+			matrixList[3].buildTranslation (0, -3, 0);
+			gpu->writeAndSync (handle_sbo_matrixList, 0, matrixList, sizeof(matrixList));
+		}
+	}
+
+	struct sPushConstantData
+	{
+		u32 matrixIndex;
+	} pushConstData;
+
+
+
+
+
+	//renderizzo
+    gpu::MainLoop2 mainLoop;
+    mainLoop.setup (gpu);
+
+    GPUCmdBufferHandle  cmdBufferHandle;
+    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+	
+	bool bQuit = false;
+	while (false == bQuit)
+	{
+		if (!engine->update())
+		{
+			bQuit = true;
+			continue;
+		}
+
+        mainLoop.stat_onCPUFrameBegin();
+        engine->assetHub->update (gos::getTimeSinceStart_msec());
+		doCPUStuff();
+		mainLoop.stat_onCPUFrameEnd();
+
+        mainLoop.run();
+
+        if (gpu->swapChain_wasRecreated())
+            cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
+
+
+        //se il job precedente e' stato presentato, posso schedularne uno nuovo
+        gpu::SwapchainImg swapchainImg;
+        if (mainLoop.gfxJob_canSubmit(&swapchainImg))
+        {
+			const asset::Asset_pipe *pipe;
+			if (engine->assetHub->getAsset(assHandle_pipe, &pipe))
+			{
+				//aggiorno UBO scene
+				scene.matVP = cam.getMatVP();
+				scene.lightDir = vec4f (cam.pos.getAsseZ(), 0);
+				scene.lightDir.normalize();
+				gpu->writeAndSync (handle_ubo_scene, 0, &scene, sizeof(scene));
+
+
+
+
+				gos::gpu::pipe2::CmdBufferWriter2 cw;
+				cw
+					.begin (gpu, cmdBufferHandle)
+					.setViewport (gpu->viewport_getDefault())
+					.imageTransition (handle_rt0, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
+					.imageTransition (handle_zbuffer, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
+
+				auto &r = cw.beginRender();
+					   r.withRenderArea (handle_rt0)
+						.withRT (handle_rt0, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.0f, 0.1f))
+						.withZB (handle_zbuffer, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)
+						.bindPipeline (pipe->handle_pipe)
+						.bindDescriptorSet (handle_descrSet0, 0);
+					r.bindDescriptorSet (handle_descrSet1, 1)
+						.bindVtxBuffer(info_shape->vbHandle)
+						.bindIdxBufferU16(info_shape->ibHandle);
+						for (u32 i = 0; i < 4; i++)
+						{
+							r.pushConstant(0, &i, sizeof(sPushConstantData));
+							r.drawIndexed (info_shape->numIndices, 1, info_shape->indexStart, info_shape->vtxStart, 0);
+						}
+					r.endRender();
+
+					cw.imageTransition (handle_rt0, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
+					.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)
+					.copyImageToImage (handle_rt0, swapchainImg.image, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
+					.imageTransition (swapchainImg.image, eImageLayout::transfer_dst, eImageLayout::presentation)
+					.end();
+
+				mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
+			}
+        }		
+	}
+	
+	gpu->waitIdle();
+	mainLoop.unsetup();
+	
+	engine->shape_release(shapeHandle);
+	gpu->deleteResource (cmdBufferHandle);
+	return true;
 }

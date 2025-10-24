@@ -414,6 +414,45 @@ SPVReflect::Node* SPVReflect::priv_parse_BlockVariable (const SpvReflectShaderMo
 }
 
 //***************************************************
+void SPVReflect::priv_parse_TypeDescriptionForArray (const SpvReflectShaderModule *module, const SpvReflectTypeDescription *var, Node *padre)
+{
+    assert (NULL != padre);
+    u32 offset = 0;
+    for (u32 i=0; i<var->member_count; i++)
+    {
+        const SpvReflectTypeDescription *info = &var->members[i];
+
+        Node *node = Node::createNew();
+        sprintf_s (node->name, sizeof(node->name), "%s", info->struct_member_name);
+        node->fmt = priv_fromSPVReflectTypeDescrToDataFormat (info);
+        const u8 sizeof_fmt = gos::dataformat::getSize (node->fmt);
+
+        node->offset = offset;
+        node->absoluteOffset = offset;
+        node->paddedSize = sizeof_fmt;
+        offset += sizeof_fmt;
+
+
+        if ( (info->type_flags & SPV_REFLECT_VARIABLE_FLAGS_UNUSED) == 0)
+        {
+            if (SPV_REFLECT_SHADER_STAGE_VERTEX_BIT == module->shader_stage)
+                node->usage.set (USAGE__USED_IN_VTX_SHADER);
+            if (SPV_REFLECT_SHADER_STAGE_FRAGMENT_BIT == module->shader_stage)
+                node->usage.set (USAGE__USED_IN_FRAG_SHADER);
+        }
+
+
+        padre->appendChild (node);
+
+        /*if (figlio->isUsedByVtxShader())
+            node->usage.set (USAGE__USED_IN_VTX_SHADER);
+        if (figlio->isUsedByFragShader())
+            node->usage.set (USAGE__USED_IN_FRAG_SHADER);
+            */
+    }
+}
+
+//***************************************************
 SPVReflect::Node* SPVReflect::priv_pushConst_parseModule (SpvReflectShaderModule *module)
 {
     Node *root = NULL;
@@ -627,6 +666,12 @@ void SPVReflect::priv_nodeTree_createGosDataBlobDef_ric (gos::datablob::DefBuild
             {
             default:
                 DBGBREAK;
+                break;
+
+            case 0: //caso di array senza dimensioni (pippo[])
+                node->other.asArray.numDimension = 1;
+                node->other.asArray.numElem[0] = 1;
+                builder.array_begin1DAtOffset (node->absoluteOffset, node->name, node->other.asArray.numElem[0], vtx_frag);
                 break;
 
             case 1:
@@ -861,6 +906,12 @@ void SPVReflect::priv_descriptor_parseVar (const SpvReflectShaderModule *module,
             if (NULL != var->type_description->struct_type_description)
             {
                 //e' un array di struct
+                priv_parse_TypeDescriptionForArray (module, var->type_description->struct_type_description, e.root);
+            }
+            else
+            {
+                //Solitamente indica un array di un tipo non convenzionale, tipo "texture"
+                //DBGBREAK;
             }
         }
         break;
@@ -877,6 +928,9 @@ void SPVReflect::priv_descriptor_parseVar (const SpvReflectShaderModule *module,
             {
                 Node *node = priv_parse_BlockVariable (module, &var->block.members[t]);
                 e.root->appendChild (node);
+
+                if (node->typeDescrSpecialization.isBitSet(TYPEDESCR_SPEC__IS_BINDLESS_ARRAY))
+                    e.root->typeDescrSpecialization.set (TYPEDESCR_SPEC__IS_BINDLESS_ARRAY);
             }
         }
         break;
@@ -968,7 +1022,7 @@ u32 SPVReflect::descrset_getNumSet() const
 }
 
 //***************************************************
-u32 SPVReflect::descrset_getNumElemPerSet (u32 set)
+u32 SPVReflect::descrset_getNumElemPerSet (u32 set) const
 {
     u32 ret = 0;
     for (u32 i = 0; i < descrSetList.getNElem(); i++)
@@ -977,6 +1031,18 @@ u32 SPVReflect::descrset_getNumElemPerSet (u32 set)
             ret++;
     }
     return ret;
+}
+
+//***************************************************
+eGPUDescriptrorSetOptionBitmask SPVReflect::descrset_getOptionsPerSet(u32 set) const
+{
+    u32 ret = 0;
+    for (u32 i = 0; i < descrSetList.getNElem(); i++)
+    {
+        if (descrSetList(i).set == set)
+            return descrSetList.getOptions(i);
+    }
+    return eGPUDescriptrorSetOption::none;
 }
 
 //***************************************************
@@ -1099,19 +1165,16 @@ void SPVReflect::printInfo (gos::UTF8String &out) const
 
 
             out << "\n----------------------------------------------------------------\n";
-            out << "set=" << descrSetList(i).set << ", binding=" << binding << ", vktype= " << utils::enumToString(vktype)
-                << ", array-size=" << arraySize <<", usage=" << STRFMT("%08X", usage);
+            out << "set=" << descrSetList(i).set << ", binding=" << binding << ", vktype=" << utils::enumToString(vktype)
+                << ", numElem=" << arraySize <<", usage=" << STRFMT("%08X", usage);
 
-            if (descrSetList(i).root->isType_dynamic())
-                out << " [dynamic]";
-            if (descrSetList(i).root->isType_bindlessArray())
-                out << " [bindless]";
+            out << ", bindless=";
+            descrSetList(i).root->isType_bindlessArray() ? out << "Y" : out << "N";
 
             out << "\n";
                 
             
             //priv_printNode (out, descrSetList(i).root, 0);
-
             if (NULL == descrSetList(i).blobDef)
             {
                 out << descrSetList(i).root->name;
