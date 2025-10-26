@@ -1,8 +1,0 @@
-@tex2D: GOSENG_tex_checker
-{
-	src: gosengine/checker_color_1k.jpg
-    srcColorSpace: sRGB
-
-	dstNumMipMap: max
-	dstFmt: U8_RGBA
-}

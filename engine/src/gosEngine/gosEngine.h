@@ -46,6 +46,10 @@ namespace gos
         void                        toggleVSync();
 
         //=============================
+        bool                        assetHub_rebuildAll();
+        bool                        assetHub_buildAll();
+
+        //=============================
         bool                        vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer *out_handle);
         void                        vtxBuffer_release (ENGVtxBuffer &handle);
         const engine::VtxBuffer*    vtxBuffer_getInfo (const ENGVtxBuffer handle) const                           { return vtxBufferHandleList.getInfo(handle); }
@@ -126,6 +130,10 @@ namespace gos
             HandleList<HANDLE_TYPE, HANDLE_STRUCT> list;
         };
 
+
+    private:
+        void    priv_assetHub_create();
+        void    priv_assetHub_delete();
 
     private:
         gos::Allocator          *allocator;

@@ -349,7 +349,11 @@ bool Builder::rebuildAll (const char *baseFolder, bool bVerbose, bool doCreateAs
         //elimina il DB
         char s[512];
         sprintf_s (s, sizeof(s), "%s/%s", baseFolder, DB_NAME);
-        fs::fileDelete(s);
+        if (!fs::fileDelete(s))
+        {
+            logger->err ("can't delete %s/%s\n", baseFolder, DB_NAME);
+            return false;
+        }
 
         //elimina tutti gli asset mai creati
         if (doCreateAssetsFile)

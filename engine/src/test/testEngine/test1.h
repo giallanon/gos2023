@@ -43,4 +43,5 @@ private:
 	gos::model::Model				*model;
 
 	gos::engine::Renderer			*renderer;
+	f32								obj0_roty;
 };

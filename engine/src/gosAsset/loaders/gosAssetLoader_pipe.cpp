@@ -135,22 +135,22 @@ bool Loader_pipe::load (Loader *assetLoader, const asset::Context &ctx, const as
             {
                 const u8 binding = reader.readU8();
                 const eGPUDescriptrorType type = static_cast<eGPUDescriptrorType>(reader.readU8());
-                u32 numElem = reader.readU32();
+                u32 count = reader.readU32();
                 eGPUDescriptrorUsageBitmask usage;
                 usage.bitmask = reader.readU32();
 
                 //TODO
-                //u32MAX == numElem => il buffer e' di tipo bindless... in attesa di capirci megli qualcosa
+                //u32MAX == count => il buffer e' di tipo bindless... in attesa di capirci megli qualcosa
                 //                      semplicemente lo alloco "grosso"
-                if (u32MAX == numElem)
+                if (u32MAX == count)
                 {
-                    numElem = 1;
+                    count = 1;
                     builder.addCreationFlag (VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
                 }
                 if (options.isset(eGPUDescriptrorSetOption::bindless))
                     builder.addCreationFlag (VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
 
-                builder.add (binding, type, numElem, usage);
+                builder.add (binding, type, count, usage);
             }
         }        
 

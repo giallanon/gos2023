@@ -1036,7 +1036,6 @@ u32 SPVReflect::descrset_getNumElemPerSet (u32 set) const
 //***************************************************
 eGPUDescriptrorSetOptionBitmask SPVReflect::descrset_getOptionsPerSet(u32 set) const
 {
-    u32 ret = 0;
     for (u32 i = 0; i < descrSetList.getNElem(); i++)
     {
         if (descrSetList(i).set == set)
@@ -1077,7 +1076,18 @@ void SPVReflect::priv_descrset_getElemInfo  (u32 i, u8 *out_binding, eGPUDescrip
     if (descrSetList(i).root->isType_array())
     {
         if (descrSetList(i).root->isType_bindlessArray())
-            *out_arraySize = u32MAX;
+        {
+            switch (descrSetList(i).vulkanDescrType)
+            {
+            default:
+                *out_arraySize = u32MAX;
+                break;
+
+            case eGPUDescriptrorType::TEXTURE2D:
+                *out_arraySize = 1024;
+                break;
+            }
+        }
         else
             *out_arraySize = descrSetList(i).root->other.asArray.numElem[0];
     }

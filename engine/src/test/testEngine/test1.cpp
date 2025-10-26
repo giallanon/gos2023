@@ -19,6 +19,8 @@ Test1::Test1()
 	skeleton = NULL;
 	model = NULL;
 	renderer = NULL;
+
+	obj0_roty = 0;
 }
 
 
@@ -437,7 +439,13 @@ bool Test1::priv_run3 ()
 
     //load degli assets
 	asset::Handle assHandle_pipe;
+	asset::Handle assHandle_texBianca;
+	asset::Handle assHandle_texChecker;
     if (!engine->assetHub->getHandle ("pipe2", &assHandle_pipe, true))
+        return false;
+    if (!engine->assetHub->getHandle ("tex_bianca", &assHandle_texBianca, true))
+        return false;
+    if (!engine->assetHub->getHandle ("tex_checker", &assHandle_texChecker, true))
         return false;
 
 
@@ -461,9 +469,9 @@ bool Test1::priv_run3 ()
         gpu->descrPool_createNew (&handle_descrPool)
             .setMaxNumDescriptorSet(4)
             .addPool_uniformBuffer(1)
-            .addPool_storageBuffer(1)
+            .addPool_storageBuffer(2)
             .addPool_sampler(2)
-            .addPool_texture(1)
+            .addPool_texture(1024)
             .end();
         if (handle_descrPool.isInvalid())
         {
@@ -475,17 +483,34 @@ bool Test1::priv_run3 ()
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
 	GPUDescrSetInstanceHandle   handle_descrSet0;
 	GPUDescrSetInstanceHandle   handle_descrSet1;
+	GPUDescrSetInstanceHandle   handle_descrSet2;
+	GPUSamplerHandle			handle_samplers[2];
 	GPUUniformBufferHandle      handle_ubo_scene;
 	GPUStorageBufferHandle      handle_sbo_matrixList;
+	GPUStorageBufferHandle      handle_sbo_materiaList;
+	
 	struct sLAYOUT_SCENE_DATA
 	{
 		mat4x4f	matVP;
 		vec4f	lightDir;
 	} scene;
 
+	struct sMaterial
+	{
+		vec3f	diffuse_col;
+		u32		texture_index;
+	};	
+
     const asset::Asset_pipe *pipe;
     engine->assetHub->getAssetWithTimeout (assHandle_pipe, 5000, &pipe);
 	{
+		const asset::Asset_tex2D *texBianca;
+		const asset::Asset_tex2D *texChecker;
+		engine->assetHub->getAssetWithTimeout (assHandle_texBianca, 5000, &texBianca);
+		engine->assetHub->getAssetWithTimeout (assHandle_texChecker, 5000, &texChecker);
+
+
+
         //alloco una istanza dei descriptor-set
         gos::gpu::DescrSetInstanceWriter dsw;
 
@@ -495,10 +520,34 @@ bool Test1::priv_run3 ()
             gos::logger::err ("Renderer::setup() => can't create an instance of descriptorSet_0\n");
             return false;
         }
-        gpu->uniformBuffer_create (sizeof(sLAYOUT_SCENE_DATA) * 16, eMemAccessMode::shared_cpuW_autoSync, &handle_ubo_scene);
-        dsw.begin (gpu, handle_descrSet0)
-            .bindUniformBuffer (0, handle_ubo_scene, 0)
-		    .end();
+		else
+		{
+			//2 samplers
+			gpu::SamplerDesc desc;
+
+			//sampler2d: bilinear filtering
+			desc.reset();
+			gpu->sampler_create (desc, &handle_samplers[0]);
+
+			//sampler2d: point filtering
+			desc.reset();
+			desc.minFilter = desc.magFilter = eSamplerFilter::point;
+			desc.mipFilter = eSamplerMipFilter::nearest;
+			desc.bAnisotropic = false;
+			gpu->sampler_create (desc, &handle_samplers[1]);		
+
+
+
+			dsw.begin (gpu, handle_descrSet0)
+				.bindSamplerInArray (0, handle_samplers[0], 0)
+				.bindSamplerInArray (0, handle_samplers[1], 1)
+				.bindTextureInArray (1, texBianca->handle_texture, 0)
+				.bindTextureInArray (1, texChecker->handle_texture, 1)
+				.bindTextureInArray (1, texBianca->handle_texture, 2)
+				.bindTextureInArray (1, texChecker->handle_texture, 3)
+				.end();
+		}
+
 
         //descriptor set 1
         if (!gpu->descrSetInstance_create (handle_descrPool, pipe->handle_pipe, 1, &handle_descrSet1))
@@ -506,26 +555,58 @@ bool Test1::priv_run3 ()
             gos::logger::err ("Renderer::setup() => can't create an instance of descriptorSet_1\n");
             return false;
         }
-        gpu->storageBuffer_create (sizeof(mat4x4f) * 16, eMemAccessMode::shared_cpuW_autoSync, &handle_sbo_matrixList);
-        dsw.begin (gpu, handle_descrSet1)
-            .bindStorageBuffer (0, handle_sbo_matrixList, 0)
-            .end();
-
-		//fillo SBO con 4 matrixi
+		else
 		{
+			//UBO scene
+			gpu->uniformBuffer_create (sizeof(sLAYOUT_SCENE_DATA), eMemAccessMode::shared_cpuW_autoSync, &handle_ubo_scene);
+       
+			dsw.begin (gpu, handle_descrSet1)
+				.bindUniformBuffer (0, handle_ubo_scene, 0)
+				.end();
+		}
+
+        //descriptor set 2
+        if (!gpu->descrSetInstance_create (handle_descrPool, pipe->handle_pipe, 2, &handle_descrSet2))
+        {
+            gos::logger::err ("Renderer::setup() => can't create an instance of descriptorSet_2\n");
+            return false;
+        }
+		else
+		{
+			//SBO matrici
+        	gpu->storageBuffer_create (sizeof(mat4x4f) * 16, eMemAccessMode::shared_cpuW_autoSync, &handle_sbo_matrixList);
+
+			//SBO materialList
+        	gpu->storageBuffer_create (sizeof(sMaterial) * 16, eMemAccessMode::shared_cpuW_autoSync, &handle_sbo_materiaList);
+
+			dsw.begin (gpu, handle_descrSet2)
+				.bindStorageBuffer (0, handle_sbo_matrixList, 0)
+				.bindStorageBuffer (1, handle_sbo_materiaList, 0)
+				.end();
+
+			//fillo SBO con 4 matrixi
 			mat4x4f	matrixList[4];
 			matrixList[0].identity();
 			matrixList[1].buildTranslation (0, 0, 10);
 			matrixList[2].buildTranslation (0, 3, 0);
 			matrixList[3].buildTranslation (0, -3, 0);
 			gpu->writeAndSync (handle_sbo_matrixList, 0, matrixList, sizeof(matrixList));
-		}
+
+			//fillo SBO con 4 materiali
+			sMaterial materialList[4];
+			materialList[0].diffuse_col.set (1,0,0);	materialList[0].texture_index = 0;
+			materialList[1].diffuse_col.set (0,1,0);	materialList[1].texture_index = 1;
+			materialList[2].diffuse_col.set (0,0,1);	materialList[2].texture_index = 0;
+			materialList[3].diffuse_col.set (1,1,1);	materialList[3].texture_index = 1;
+			gpu->writeAndSync (handle_sbo_materiaList, 0, materialList, sizeof(materialList));
+		}		
 	}
 
-	struct sPushConstantData
+	/*struct sPushConstantData
 	{
 		u32 matrixIndex;
-	} pushConstData;
+		u32 materialIndex;
+	} pushConstData;*/
 
 
 
@@ -538,6 +619,8 @@ bool Test1::priv_run3 ()
     GPUCmdBufferHandle  cmdBufferHandle;
     gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
 	
+	u64 nextTimeUpdate_msec = 0;
+
 	bool bQuit = false;
 	while (false == bQuit)
 	{
@@ -550,6 +633,26 @@ bool Test1::priv_run3 ()
         mainLoop.stat_onCPUFrameBegin();
         engine->assetHub->update (gos::getTimeSinceStart_msec());
 		doCPUStuff();
+		{
+			if (gos::getTimeSinceStart_msec() > nextTimeUpdate_msec)
+			{
+				nextTimeUpdate_msec = gos::getTimeSinceStart_msec() + 30;
+				obj0_roty += 1.0f;
+				if (obj0_roty > 360)
+					obj0_roty -= 360;
+
+				mat4x4f mat1;
+				mat4x4f mat2;
+				mat1.buildRotationAboutY (gos::math::gradToRad(obj0_roty));
+				gpu->writeAndSync (handle_sbo_matrixList, 0, &mat1, sizeof(mat4x4f));
+
+
+				mat1.buildTranslation (0, 3, 0);
+				mat2.buildRotationAboutZ (gos::math::gradToRad(obj0_roty));
+				mat2 = mat1 * mat2;
+				gpu->writeAndSync (handle_sbo_matrixList, sizeof(mat4x4f)*2, &mat2, sizeof(mat4x4f));
+			}			
+		}
 		mainLoop.stat_onCPUFrameEnd();
 
         mainLoop.run();
@@ -586,13 +689,15 @@ bool Test1::priv_run3 ()
 						.withRT (handle_rt0, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.0f, 0.1f))
 						.withZB (handle_zbuffer, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)
 						.bindPipeline (pipe->handle_pipe)
-						.bindDescriptorSet (handle_descrSet0, 0);
-					r.bindDescriptorSet (handle_descrSet1, 1)
+						.bindDescriptorSet (handle_descrSet0, 0)
+						.bindDescriptorSet (handle_descrSet1, 1)
+						.bindDescriptorSet (handle_descrSet2, 2)
 						.bindVtxBuffer(info_shape->vbHandle)
 						.bindIdxBufferU16(info_shape->ibHandle);
 						for (u32 i = 0; i < 4; i++)
 						{
-							r.pushConstant(0, &i, sizeof(sPushConstantData));
+							r.pushConstant(0, &i, sizeof(u32));	//matrix index
+							r.pushConstant(1, &i, sizeof(u32));	//material index
 							r.drawIndexed (info_shape->numIndices, 1, info_shape->indexStart, info_shape->vtxStart, 0);
 						}
 					r.endRender();
@@ -607,11 +712,29 @@ bool Test1::priv_run3 ()
 			}
         }		
 	}
-	
+
+
+	//free
 	gpu->waitIdle();
 	mainLoop.unsetup();
 	
+	engine->assetHub->unload (assHandle_pipe);
+	engine->assetHub->unload (assHandle_texBianca);
+	engine->assetHub->unload (assHandle_texChecker);
 	engine->shape_release(shapeHandle);
+
+
+    gpu->deleteResource (handle_zbuffer);
+    gpu->deleteResource (handle_rt0);
+    gpu->deleteResource (handle_descrPool);
+
+    gpu->deleteResource (handle_descrSet0);
+	gpu->deleteResource (handle_descrSet1);
+	gpu->deleteResource (handle_descrSet2);
+	gpu->deleteResource (handle_ubo_scene);
+	gpu->deleteResource (handle_sbo_matrixList);
+	gpu->deleteResource (handle_sbo_materiaList);
+
 	gpu->deleteResource (cmdBufferHandle);
 	return true;
 }

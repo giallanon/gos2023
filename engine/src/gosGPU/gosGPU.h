@@ -126,6 +126,11 @@ namespace gos
         //=================== supporto ai vari formati di immagine
         bool                isImage2DFmtSupported (eImageFormat fmt, eImageTiling tiling) const;
         
+        //=================== limits
+        u32                 limits_get_maxDescriptorSetSampledImages() const;
+        u32                 limits_get_minUniformBufferOffsetAlignment() const;
+        u32                 limits_get_minStorageBufferOffsetAlignment() const;
+
         
         //================ window stuff
         GOSWinHandle        getWindow()                                     { return mainWindow.winHandle; }

@@ -13,5 +13,8 @@ layout(location = 0) out vec4 out_colorRGBA;
 void main() 
 {
     const float sunLight = PIPE_calcLight_01 (in_normal);
-    out_colorRGBA = vec4(sunLight, sunLight, sunLight, 1);
+    const sMaterial material = materialList.material[objInstance.materialIndex];
+
+    const vec3 texCol = PIPE_sample2D_bilinear (material.texture_index, in_texCoord).rgb;
+    out_colorRGBA = vec4(material.diffuse_col * texCol * sunLight, 1);
 }

@@ -12,15 +12,9 @@ layout(location = 1) out vec2 out_texCoord;
 
 void main() 
 {
-	//const mat4 matW = objInstance.matW;
-	//const mat4 matW = matrixList[objInstance.matrixIndex].matW;
 	const mat4 matW = matrixList.matW[objInstance.matrixIndex];
-	
-	//const uint ii = nonuniformEXT(objInstance.matrixIndex);
-	//const mat4 matW = matrixList[ii+2].matW;
-	
-    
 	gl_Position = (vec4(in_position, 1.0) * matW) * scene.camVP;
+
 
     //normale in world coordinate
     out_normal = in_normal * mat3(matW);

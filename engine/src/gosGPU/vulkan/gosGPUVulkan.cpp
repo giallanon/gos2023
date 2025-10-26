@@ -412,6 +412,8 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
         vkGetPhysicalDeviceProperties (out->vkDev, &out->deviceProperties);
         gos::logger::log ("maxImageArrayLayers: %d\n", out->deviceProperties.limits.maxImageArrayLayers);
         gos::logger::log ("maxTexelBufferElements: %d\n", out->deviceProperties.limits.maxTexelBufferElements);
+        gos::logger::log ("maxDescriptorSetSampledImages: %d\n", out->deviceProperties.limits.maxDescriptorSetSampledImages);
+        
         gos::logger::log ("maxUniformBufferRange: %d\n", out->deviceProperties.limits.maxUniformBufferRange);
         gos::logger::log ("maxStorageBufferRange: %d\n", out->deviceProperties.limits.maxStorageBufferRange);
         gos::logger::log ("maxPushConstantsSize: %d\n", out->deviceProperties.limits.maxPushConstantsSize);

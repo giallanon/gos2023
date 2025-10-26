@@ -1,9 +1,12 @@
 #include "gosEngine.h"
 #include "../gos/memory/gosAllocatorHeap.h"
+#include "../gosAsset/gosAssetBuilder.h"
 
 using namespace gos;
 
 typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Safe>		GOSENGINEMemAllocatorTS;
+
+#define GOS_ENGINE__ASSET_HUB_PATH "@w/data"
 
 
 //******************************** 
@@ -37,8 +40,7 @@ void Engine::unsetup()
     //win & gpu
     GOSWinHandle mainWin = gpu->getWindow();
     
-    GOSDELETE(gos::getSysHeapAllocator(), assetHub);
-    assetHub = NULL;
+    priv_assetHub_delete();
 
     gpu->deinit();
     GOSDELETE(gos::getSysHeapAllocator(), gpu);
@@ -83,8 +85,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     }
 
     //assetHub
-    assetHub = GOSNEW(gos::getSysHeapAllocator(), asset::Hub)();
-    assetHub->setup ("@w/data", gpu);
+    priv_assetHub_create();
 
     //creo l'input context di default
     inputCtx = GOSNEW(gos::getSysHeapAllocator(), input::Context)("global");
@@ -157,6 +158,42 @@ void Engine::toggleVSync()
     }
 }
 
+//******************************** 
+void Engine::priv_assetHub_create()
+{
+    assetHub = GOSNEW(gos::getSysHeapAllocator(), asset::Hub)();
+    assetHub->setup (GOS_ENGINE__ASSET_HUB_PATH, gpu);
+}
+//******************************** 
+void Engine::priv_assetHub_delete()
+{
+    GOSDELETE(gos::getSysHeapAllocator(), assetHub);
+    assetHub = NULL;
+}
+
+//******************************** 
+bool Engine::assetHub_rebuildAll()
+{
+    priv_assetHub_delete();
+
+    gos::asset::Builder builder (gpu);
+    if (!builder.rebuildAll (GOS_ENGINE__ASSET_HUB_PATH, true))
+        return false;
+    priv_assetHub_create();
+    return true;
+}
+
+//******************************** 
+bool Engine::assetHub_buildAll()
+{
+    priv_assetHub_delete();
+
+    gos::asset::Builder builder (gpu);
+    if (!builder.buildAll (GOS_ENGINE__ASSET_HUB_PATH, true))
+        return false;
+    priv_assetHub_create();
+    return true;
+}
 
 //******************************** 
 bool Engine::update()

@@ -290,10 +290,9 @@ namespace gos
 
                 list.append(elem);
 
-                const u32 n = list.getNElem() -1;
-                dsOptionList[n] = eGPUDescriptrorSetOption::none;
+                dsOptionList[elem.set] = eGPUDescriptrorSetOption::none;
                 if (elem.root->typeDescrSpecialization.isBitSet (SPVReflect::TYPEDESCR_SPEC__IS_BINDLESS_ARRAY))
-                    dsOptionList[n] = eGPUDescriptrorSetOption::bindless;
+                    dsOptionList[elem.set] = eGPUDescriptrorSetOption::bindless;
                 return u32MAX;
             }
 

@@ -541,6 +541,25 @@ bool GPU::isImage2DFmtSupported (eImageFormat fmtIN, eImageTiling tilingIN) cons
     return false;
 }
 
+//************************************
+u32 GPU::limits_get_maxDescriptorSetSampledImages() const
+{
+    return vkPhysicalDevInfo.deviceProperties.limits.maxDescriptorSetSampledImages;
+}
+
+//************************************
+u32 GPU::limits_get_minUniformBufferOffsetAlignment() const
+{
+    return vkPhysicalDevInfo.deviceProperties.limits.minUniformBufferOffsetAlignment;
+}
+
+
+//************************************
+u32 GPU::limits_get_minStorageBufferOffsetAlignment() const
+{
+    return vkPhysicalDevInfo.deviceProperties.limits.minStorageBufferOffsetAlignment;
+}
+
 
 //************************************
 eImageFormat GPU::swapChain_getImageFormat() const
@@ -2537,8 +2556,13 @@ bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pip
                     default:
                         gos::logger::err ("GPU::pipeline_createNew() => invalid shaderType for pushContant\n");
                         return false;
-                    case eShaderType::vtxShader: stageFlags = VK_SHADER_STAGE_VERTEX_BIT; break;
-                    case eShaderType::pxlShader: stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; break;
+                    // case eShaderType::vtxShader: stageFlags = VK_SHADER_STAGE_VERTEX_BIT; break;
+                    // case eShaderType::pxlShader: stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; break;
+                    case eShaderType::vtxShader: 
+                    case eShaderType::pxlShader:
+                        stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+                        break;
+
                     case eShaderType::compute:   stageFlags = VK_SHADER_STAGE_COMPUTE_BIT; break;
                     }                    
                 }
