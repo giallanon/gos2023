@@ -266,7 +266,8 @@ namespace gos
                                 switch (HashMap_compareFn<TKEY>(key, list(i).key))
                                 {
                                 default:
-                                    break;
+                                    *out_index = i;
+                                    return false;
 
                                 case 0: //sono uguali
                                     *out_index = i;

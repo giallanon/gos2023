@@ -111,6 +111,12 @@ namespace gos
                                     //data e' maggiore di list(i)
                                     *out_index = i+1;
                                 }
+                                else
+                                {
+                                    *out_index = i;
+                                    return false;
+                                }
+
                             }
 
                             return false;
