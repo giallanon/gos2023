@@ -257,7 +257,7 @@ namespace gos
                     {
                         const u32 numElem = 1 + (search.end_incluso - search.start);
 
-                        if (numElem <= 4)
+                        if (numElem <= 8)
                         {
                             *out_index = search.start;
                             for (u32 i=search.start; i<(search.start+numElem); i++)

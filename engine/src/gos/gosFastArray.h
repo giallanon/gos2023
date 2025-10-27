@@ -243,7 +243,9 @@ namespace gos
                             nElem -= diQuanto;
                         }
 
-        void			bubbleSort (BubblesortFn cmpFn)
+                        //la fn LAMBA(const T &t1, const T &t2) ritorna true se i 2 elementi sono da swappare
+                        template<typename LAMBDA>
+        void			bubbleSort (LAMBDA&& cmpFn)
                         {
                             u32 n = getNElem();
                             if (n < 2)
@@ -255,11 +257,11 @@ namespace gos
                                 --n;
                                 bEsci = true;
                                 u32 ct = 0;
-                                T *t1 = reinterpret_cast<T*>(memBlock._getPointer(ct));
+                                const T *t1 = reinterpret_cast<const T*>(memBlock._getPointer(ct));
                                 for (u32 i=0; i<n; i++)
                                 {
                                     ct+=sizeof(T);
-                                    T *t2 = reinterpret_cast<T*>(memBlock._getPointer(ct));
+                                    const T *t2 = reinterpret_cast<const T*>(memBlock._getPointer(ct));
                                     if (cmpFn(*t1, *t2))
                                     {
                                         bEsci = false;

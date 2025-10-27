@@ -544,20 +544,20 @@ bool GPU::isImage2DFmtSupported (eImageFormat fmtIN, eImageTiling tilingIN) cons
 //************************************
 u32 GPU::limits_get_maxDescriptorSetSampledImages() const
 {
-    return vkPhysicalDevInfo.deviceProperties.limits.maxDescriptorSetSampledImages;
+    return static_cast<u32>(vkPhysicalDevInfo.deviceProperties.limits.maxDescriptorSetSampledImages);
 }
 
 //************************************
 u32 GPU::limits_get_minUniformBufferOffsetAlignment() const
 {
-    return vkPhysicalDevInfo.deviceProperties.limits.minUniformBufferOffsetAlignment;
+    return static_cast<u32>(vkPhysicalDevInfo.deviceProperties.limits.minUniformBufferOffsetAlignment);
 }
 
 
 //************************************
 u32 GPU::limits_get_minStorageBufferOffsetAlignment() const
 {
-    return vkPhysicalDevInfo.deviceProperties.limits.minStorageBufferOffsetAlignment;
+    return static_cast<u32>(vkPhysicalDevInfo.deviceProperties.limits.minStorageBufferOffsetAlignment);
 }
 
 

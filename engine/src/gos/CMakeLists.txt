@@ -161,6 +161,7 @@ gosMagicUID.h
 gosRandom.h
 gosServerTCP.cpp
 gosServerTCP.h
+gosSortedList.h
 gosSparseSet.h
 gosString.h
 gosThreadMsgQ.h
@@ -169,7 +170,7 @@ gosUtils.cpp
 gosUtils.h
 gosWaitableGrpInterface.h
 gosWaitableGrp.h
-)
+ )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	set_source_files_properties(memory/Doug_Lea_malloc.c PROPERTIES COMPILE_OPTIONS "-Wno-expansion-to-defined;-Wno-maybe-uninitialized")

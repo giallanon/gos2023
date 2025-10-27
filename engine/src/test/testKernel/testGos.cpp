@@ -4,6 +4,8 @@
 #include "gosUtils.h"
 #include "gosBit.h"
 #include "gosImage.h"
+#include "gosHashMap.h"
+#include "gosSortedList.h"
 
 namespace test_gos
 {
@@ -1051,6 +1053,99 @@ namespace test11_enum_bitmask
 }
 
 
+//********************************************
+namespace test12_hash_map
+{
+    bool isMapSorted (const gos::HashMap<u32, u32> &map)
+    {
+        auto *list = map._queryList();
+        for (u32 i = 1; i < list->getNElem(); i++)
+        {
+            if (list->queryElem(i-1).key >= list->queryElem(i).key)
+                return false;
+        }
+        return true;
+    }
+
+         template<class T>
+    bool isSorted (const gos::FastArray<T> &list)
+    {
+        const u32 n = list.getNElem();
+        
+        for (u32 i = 1; i < n; i++)
+        {
+            if (list(i-1) > list(i))
+                return false;
+        }
+        return true;
+    }
+
+    int run()
+    {
+        gos::Allocator *allocator = gos::getSysHeapAllocator();
+
+        gos::HashMap<u32, u32>  map;
+        map.setup (allocator, 16);
+
+        gos::SortedList<u32> sortedList;
+        sortedList.setup (allocator, 16);
+
+        gos::FastArray<u32> numeri;
+        numeri.setup (allocator, 10000);
+        for (u32 i = 0; i < 10000; i++)
+        {
+            const u32 r = gos::randomU32(1000);;
+            numeri[i] = r;
+        }
+
+        u64 timer_started_usec = gos::getTimeSinceStart_usec();
+        for (u32 i = 0; i < numeri.getNElem(); i++)
+        {
+            const u32 r = numeri(i);
+            map.insertIfNotExists(r, r);
+        }
+        printf ("time elapsed (map): %" PRIu64 "us\n", gos::getTimeSinceStart_usec() - timer_started_usec);
+
+        timer_started_usec = gos::getTimeSinceStart_usec();
+        for (u32 i = 0; i < numeri.getNElem(); i++)
+        {
+            const u32 r = numeri(i);
+            sortedList.insertIfNotExists(r);
+        }
+        printf ("time elapsed (list): %" PRIu64 "us\n", gos::getTimeSinceStart_usec() - timer_started_usec);
+
+        TEST_ASSERT (true == isMapSorted(map));
+        TEST_ASSERT (true == isSorted<u32>(*sortedList._queryList()));
+        TEST_ASSERT (map.getNElem() == sortedList.getNElem());
+
+
+        for (u32 i = 0; i < numeri.getNElem(); i++)
+        {
+            const u32 r = numeri(i);
+            map.remove(r);
+            sortedList.remove(r);
+
+            TEST_ASSERT (true == isMapSorted(map));
+            TEST_ASSERT (true == isSorted<u32>(*sortedList._queryList()));
+            TEST_ASSERT (map.getNElem() == sortedList.getNElem());
+        }
+        TEST_ASSERT(map.getNElem() == 0);
+        TEST_ASSERT(sortedList.getNElem() == 0);
+
+
+        map.reset();
+        map.insertIfNotExists (1, 1);
+        map.insertIfNotExists (2, 1);
+        map.insertIfNotExists (4, 1);
+        map.insertIfNotExists (5, 1);
+        map.insertIfNotExists (8, 1);
+        map.insertIfNotExists (6, 1);
+        TEST_ASSERT (true == isMapSorted(map));
+
+        return 0;
+    }
+}
+
 
 } //namespace test_gos
 
@@ -1070,4 +1165,5 @@ void testGos (Tester &tester)
     tester.run("test9 eDataFormat", test_gos::test9_eDataFormat::run);
     tester.run("test10 eImageFormat", test_gos::test10_eImageFormat::run);
     tester.run("test11 enum-bitmask", test_gos::test11_enum_bitmask::run);
+    tester.run("test12_hash_map", test_gos::test12_hash_map::run);
 }
