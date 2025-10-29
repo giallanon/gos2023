@@ -15,7 +15,7 @@ namespace gos
 	GOS_DECL_HANDLE(10,7,14, ENGIdxBuffer);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
 	GOS_DECL_HANDLE(16,10,6, ENGTexture);			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^10=1024
 	GOS_DECL_HANDLE(16,12,4, ENGShape);				//2^16=65536 => num totale di oggetti, divisi in chunk da 2^12=4096
-	GOS_DECL_HANDLE(16,13,3, ENGMatrixW);			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^13=8192
+	
 
 	namespace engine
 	{

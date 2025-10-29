@@ -37,8 +37,8 @@ namespace gos
                                 bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ,
                                 VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle, u64 *out_realMemAllocated);
 
-    bool    vulkanCreateCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer *out_handle);
-    bool    vulkanDeleteCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer &vkHandle);
+    bool    vulkanCreateCommandBuffer (sVkDevice &vulkan, eGPUQueueType whichQ, u32 threadID, VkCommandPool *out_pool, VkCommandBuffer *out_handle);
+    bool    vulkanDeleteCommandBuffer (sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandPool vkPool, VkCommandBuffer &vkHandle);
 
     bool    vulkanCreateImage2D (sVkDevice &vulkan, u32 dimx, u32 dimy, u8 numMipMap, VkFormat fmt, eMemAccessMode memAccessMode, 
                                 VkImageUsageFlags usage, VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte);

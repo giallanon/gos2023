@@ -83,11 +83,12 @@ void GFXJob::priv_submit (const GPUCmdBufferHandle &cmdBufferHandle, u32 swapCha
     //submitInfo.pSignalSemaphores = &semaphore;
 
     //submitto il batch a GPU e indico che deve segnalare <fence> quando ha finito 
-    VkResult result = vkQueueSubmit (gpu->getSubmitQ(cmdBuffer->whichQ), 1, &submitInfo, fence);
+    //VkResult result = vkQueueSubmit (gpu->getSubmitQ(cmdBuffer->whichQ), 1, &submitInfo, fence);
+    VkResult result = gpu->queue_submit (cmdBuffer->whichQ, 1, &submitInfo, fence);
     if (VK_SUCCESS != result)
     {
         stato = eStato::idle;
-        gos::logger::err ("GFXJob::submit() => vkQueueSubmit() => %s\n", string_VkResult(result));
+        gos::logger::err ("GFXJob::submit() => gpu->queue_submit() => %s\n", string_VkResult(result));
     }
 }
 
@@ -137,11 +138,11 @@ void TransferJob::submit (const GPUCmdBufferHandle &cmdBufferHandle)
     submitInfo.pCommandBuffers = &cmdBuffer->vkHandle;
 
     //submitto il batch a GPU e indico che deve segnalare <fence> quando ha finito 
-    VkResult result = vkQueueSubmit (gpu->getSubmitQ(cmdBuffer->whichQ), 1, &submitInfo, fence);
+    VkResult result = gpu->queue_submit (cmdBuffer->whichQ, 1, &submitInfo, fence);
     if (VK_SUCCESS != result)
     {
         stato = eStato::idle;
-        gos::logger::err ("TransferJob::submit() => vkQueueSubmit() => %s\n", string_VkResult(result));
+        gos::logger::err ("TransferJob::submit() => gpu->queue_submit() => %s\n", string_VkResult(result));
     }
 }
 

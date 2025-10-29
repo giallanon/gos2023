@@ -106,7 +106,7 @@ namespace gos
 
         //================ oggetti di sincronizzazione 
         void                waitIdle();
-        void                waitIdle(eGPUQueueType q);
+        
         bool                semaphore_create  (VkSemaphore *out);
         void                semaphore_destroy  (VkSemaphore &in);
         
@@ -155,8 +155,9 @@ namespace gos
         VkExtent2D          swapChain_getImageExten2D() const               { return vulkan.swapChainInfo.imageExtent; }
 
         //================ submit Q
-        VkQueue            getSubmitQ (eGPUQueueType whichOne) const        { return vulkan.getQueueInfo(whichOne)->vkQueueHandle; }
-
+        VkQueue             getSubmitQ (eGPUQueueType whichOne) const        { return vulkan.getQueueInfo(whichOne)->vkQueueHandle; }
+        void                queue_waitIdle (eGPUQueueType whichOne);
+        VkResult            queue_submit (eGPUQueueType whichOne, u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence);
 
         //================ viewport
         //E' possibile creare tante viewport
@@ -211,7 +212,7 @@ namespace gos
 
         
         //================ command buffer
-        bool                        cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle);
+        bool                        cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle, u32 threadID=gos::thread::getCurrentThreadID());
         void                        deleteResource (GPUCmdBufferHandle &handle);
         const gpu::CommandBuffer*   getInfo (const GPUCmdBufferHandle handle) const;
 
@@ -369,22 +370,20 @@ namespace gos
         class ImmediateTransferCmd
         {
         public:
-                    ImmediateTransferCmd();
+                                            ImmediateTransferCmd();
+            void                            setup (GPU *gpuIN, gos::eGPUQueueType queueTypeIN);
+            void                            unsetup ();
+            gpu::pipe2::CmdBufferWriter2*   begin();
+            void                            end();
 
-            void    setup (sVkDevice *vkDevice, gos::eGPUQueueType queueType);
-            void    unsetup ();
-            void    begin();
-            void    copyBuffer (const VkBuffer srcBuffer, const VkBuffer dstBuffer, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
-            void    transitionImageLayout (VkImage image, u8 numMipMap, VkImageLayout oldLayout, VkImageLayout newLayout);
-            void    end();
-
-
-        public:
-            VkCommandBuffer vkCmdBuffer;
+            VkCommandBuffer                 getVulkanCmdBufferHandle() const;
 
         private:
-            gos::eGPUQueueType  queueType;
-            sVkDevice           *vkDevice;
+            gos::GPU                        *gpu;
+            gos::eGPUQueueType              queueType;
+            GPUCmdBufferHandle              handle_cmdBuffer;
+            gpu::pipe2::CmdBufferWriter2    cw;
+            
         };
 
     private:
@@ -538,7 +537,7 @@ namespace gos
         VkDebugUtilsMessengerEXT    vkDebugMessenger;
         sVkDevice                   vulkan;
         VkSurfaceCapabilitiesKHR    vkSurfCapabilities;
-        sPhyDeviceInfo              vkPhysicalDevInfo;
+        sPhyDeviceInfo              physicalDevInfo;
         u32                         currentSwapChainImageIndex;
         u64                         timeToRecreateSwapchain_msec;
         bool                        vSync;

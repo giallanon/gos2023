@@ -20,12 +20,14 @@ namespace gos
             void            reset ()
                             {
                                 vkHandle = VK_NULL_HANDLE;
+                                vkPool = VK_NULL_HANDLE;
                                 whichQ = eGPUQueueType::unknown;
                             }
 
 
         public:
             VkCommandBuffer vkHandle;
+            VkCommandPool   vkPool;
             eGPUQueueType   whichQ;
         };
 

@@ -25,6 +25,7 @@ private:
 	void	priv_run1 ();
 	bool	priv_run2 ();
 	bool	priv_run3 ();
+	bool	priv_run4 ();
 	
 
 
@@ -42,6 +43,6 @@ private:
 	gos::Skeleton					*skeleton;
 	gos::model::Model				*model;
 
-	gos::engine::Renderer			*renderer;
+	gos::engine::Renderer1			*renderer;
 	f32								obj0_roty;
 };

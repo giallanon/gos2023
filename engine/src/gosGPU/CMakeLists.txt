@@ -47,6 +47,7 @@ gosGPU.h
 gosGPUDescrSetInstanceWriter.cpp
 gosGPUDescrSetInstanceWriter.h
 gosGPUEnumAndDefine.h
+gosGPUMemMappedDynBuffer.h
 gosGPUResBuffer.h
 gosGPUResCommandBuffer.h
 gosGPUResDepthStencil.h
@@ -61,7 +62,7 @@ gosGPUResViewport.h
 
 gosGPUUtils.cpp
 gosGPUUtils.h
-)
+ )
 
 #====================================================
 # info a video

@@ -2,6 +2,7 @@
 #define _gosEngine_renderer_h_
 #include "gosEngineEnumAndDefine.h"
 #include "../gosGeom/gosGeomCamera3.h"
+#include "../gosGPU/gosGPUMemMappedDynBuffer.h"
 
 
 namespace gos
@@ -10,44 +11,46 @@ namespace gos
 
     namespace engine
     {
-        class Renderer
+        class Renderer1
         {
         public:
-                    Renderer();
-                    ~Renderer()                                                                                     { priv_free(); }
+                    Renderer1();
+                    ~Renderer1()                                                                                     { unsetup(); }
 
-            bool    setup (gos::Engine *engine);
+            bool    setup (gos::Allocator *allocator, Engine *engine);
+            void    unsetup();
 
             void    begin (gos::geom::Camera3 *cam);
-            void    add (const ENGShape shape, const ENGMatrixW worldPos);
-            void    end();
+            void    add (const ENGShape shape, u32 matrixIndex, u32 materialIndex);
+            void    end (gos::gpu::pipe2::CmdBufferWriter2 &cw);
+
+
+            GPURenderTargetHandle   getHandle_rt0() const                                           { return handle_rt0; }
+
 
         private:
+            static constexpr u32    NUM_MAX_TEXTURE                         = 1024;
             static constexpr u32    NUM_MAX_MATERIAL                        = 1024;
-            static constexpr u32    SIZEOF_ONE_ELEMENT_IN_MATERIAL_SSBO     = 64;
+            static constexpr u32    NUM_MAX_MATRIX                          = 1024;
                         
         private:
             struct SceneData
             {
-                gos::mat4x4f    camVP;
+                gos::mat4x4f    matVP;
                 gos::vec4f      lightDir;
-                gos::vec2f      screenWH;
             };
 
-            struct Material
-            {
-                gos::vec4f  color;
-                u32         textureIndex;
-            };
-            
-        private:
-            void    priv_free();
+	        struct sMaterial
+	        {
+		        vec3f	diffuse_col;
+		        u32		texture_index;
+	        };	
+
 
         private:
-            gos::Engine             *engine;
-            gos::GPU                *gpu;
-            asset::Handle           assHandle_pipe;
-            asset::Handle           assHandle_tex_checker;
+            gos::Engine                 *engine;
+            gos::GPU                    *gpu;
+            asset::Handle               assHandle_pipe;
 
             GPUZBufferHandle            handle_zbuffer;
             GPURenderTargetHandle       handle_rt0;
@@ -57,7 +60,13 @@ namespace gos
             GPUDescrSetInstanceHandle   handle_descrSet2;
             GPUSamplerHandle            handle_samplers[2];
             GPUUniformBufferHandle      handle_ubo_scene;
-            GPUStorageBufferHandle      handle_sbo_materialList;
+            GPUStorageBufferHandle      handle_sbo_matrixList;
+            GPUStorageBufferHandle      handle_sbo_materiaList;
+
+            gpu::MemMappedDynBuffer<mat4x4f>    matrixBuffer;
+            gpu::MemMappedDynBuffer<sMaterial>  materialBuffer;
+
+            SceneData   scene;
         };
     } //namespace engine
 } //namespace gos

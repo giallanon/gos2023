@@ -166,7 +166,8 @@ void Test1::run (gos::Engine *engineIN)
 
 	//priv_run1();
 	//priv_run2();
-	priv_run3();
+	//priv_run3();
+	priv_run4();
 }
 
 //**********************************
@@ -227,8 +228,8 @@ void Test1::priv_run1 ()
 
 
 	//creo il renderer
-	renderer = GOSNEW(allocator, gos::engine::Renderer)();
-	renderer->setup (engine);
+	renderer = GOSNEW(allocator, gos::engine::Renderer1)();
+	renderer->setup (allocator, engine);
 
 
 	//loop
@@ -738,3 +739,119 @@ bool Test1::priv_run3 ()
 	gpu->deleteResource (cmdBufferHandle);
 	return true;
 }
+
+//***************************************
+bool Test1::priv_run4 ()
+{
+	gos::ENGShape shapeHandle;
+	if (!priv_shape_create (engine, &shapeHandle))
+	{
+		DBGBREAK;
+		return false;
+	}
+	const engine::Shape *info_shape = engine->shape_getInfo(shapeHandle);
+
+
+	//creo il renderer
+	renderer = GOSNEW(allocator, gos::engine::Renderer1)();
+	renderer->setup (allocator, engine);
+
+
+
+    //load degli assets
+	asset::Handle assHandle_texBianca;
+	asset::Handle assHandle_texChecker;
+    if (!engine->assetHub->getHandle ("tex_bianca", &assHandle_texBianca, true))
+        return false;
+    if (!engine->assetHub->getHandle ("tex_checker", &assHandle_texChecker, true))
+        return false;
+
+
+    
+	//renderizzo
+    gpu::MainLoop2 mainLoop;
+    mainLoop.setup (gpu);
+
+    GPUCmdBufferHandle  cmdBufferHandle;
+    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+	
+	u64 nextTimeUpdate_msec = 0;
+
+	bool bQuit = false;
+	while (false == bQuit)
+	{
+		if (!engine->update())
+		{
+			bQuit = true;
+			continue;
+		}
+
+        mainLoop.stat_onCPUFrameBegin();
+        engine->assetHub->update (gos::getTimeSinceStart_msec());
+		doCPUStuff();
+		{
+			/*if (gos::getTimeSinceStart_msec() > nextTimeUpdate_msec)
+			{
+				nextTimeUpdate_msec = gos::getTimeSinceStart_msec() + 30;
+				obj0_roty += 1.0f;
+				if (obj0_roty > 360)
+					obj0_roty -= 360;
+
+				mat4x4f mat1;
+				mat4x4f mat2;
+				mat1.buildRotationAboutY (gos::math::gradToRad(obj0_roty));
+				gpu->writeAndSync (handle_sbo_matrixList, 0, &mat1, sizeof(mat4x4f));
+
+
+				mat1.buildTranslation (0, 3, 0);
+				mat2.buildRotationAboutZ (gos::math::gradToRad(obj0_roty));
+				mat2 = mat1 * mat2;
+				gpu->writeAndSync (handle_sbo_matrixList, sizeof(mat4x4f)*2, &mat2, sizeof(mat4x4f));
+			}*/			
+		}
+		mainLoop.stat_onCPUFrameEnd();
+
+        mainLoop.run();
+
+        if (gpu->swapChain_wasRecreated())
+            cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
+
+
+        //se il job precedente e' stato presentato, posso schedularne uno nuovo
+        gpu::SwapchainImg swapchainImg;
+        if (mainLoop.gfxJob_canSubmit(&swapchainImg))
+        {
+			gos::gpu::pipe2::CmdBufferWriter2 cw;
+			cw	.begin (gpu, cmdBufferHandle)
+				.setViewport (gpu->viewport_getDefault());
+
+				renderer->begin(&cam);
+					//renderer->add()
+				renderer->end (cw);
+
+			cw	.imageTransition (renderer->getHandle_rt0(), eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
+				.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)
+				.copyImageToImage (renderer->getHandle_rt0(), swapchainImg.image, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
+				.imageTransition (swapchainImg.image, eImageLayout::transfer_dst, eImageLayout::presentation)
+				.end();
+
+			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
+        }		
+	}
+
+
+	//free
+	gpu->waitIdle();
+	mainLoop.unsetup();
+	
+	engine->assetHub->unload (assHandle_texBianca);
+	engine->assetHub->unload (assHandle_texChecker);
+	engine->shape_release(shapeHandle);
+	GOSDELETE(allocator, renderer);
+	renderer = NULL;
+
+
+	gpu->deleteResource (cmdBufferHandle);
+	return true;
+}
+

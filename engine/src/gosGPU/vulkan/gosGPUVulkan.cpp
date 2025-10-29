@@ -619,7 +619,7 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
         }
     }
     
-    //creo un command pool per ogni Q
+    /*creo un command pool per ogni Q
     if (ret)
     {
         const eGPUQueueType queueType[] = { eGPUQueueType::gfx, eGPUQueueType::compute, eGPUQueueType::transfer };
@@ -652,11 +652,10 @@ bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringLis
                 //questa Q e' un alias per un'altra Q, quindi condivide lo stesso command pool      
                 gos::logger::log ("CommandPool for queue %d [%s] is an alias of [%s]\n", i, gpu::enumToString(queueType[i]), gpu::enumToString(queueInfo->isAnAliasFor));          
                 queueInfo->vkPoolHandle = out_vulkan->getQueueInfo(queueInfo->isAnAliasFor)->vkPoolHandle;
-            }
-
-            
+            }            
         }
     }
+    */
 
     if (ret)
         gos::logger::log (eTextColor::green, "OK\n");
@@ -975,11 +974,12 @@ bool gos::vulkanCreateBuffer (sVkDevice &vulkan, u32 sizeInByte, VkBufferUsageFl
 
 
 //*********************************************
-bool gos::vulkanCreateCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer *out_handle)
+bool gos::vulkanCreateCommandBuffer (sVkDevice &vulkan, eGPUQueueType whichQ, u32 threadID, VkCommandPool *out_pool, VkCommandBuffer *out_handle)
 {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = vulkan.getQueueInfo(whichQ)->vkPoolHandle;
+    //allocInfo.commandPool = vulkan.getQueueInfo(whichQ)->vkPoolHandle;
+    allocInfo.commandPool = *out_pool = vulkan.getOrCreateCommandPool(whichQ, threadID);
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = 1;
 
@@ -992,11 +992,9 @@ bool gos::vulkanCreateCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whic
 }
 
 //*********************************************
-bool gos::vulkanDeleteCommandBuffer (const sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandBuffer &vkHandle)
+bool gos::vulkanDeleteCommandBuffer (sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandPool vkPool, VkCommandBuffer &vkHandle)
 {
-    VkCommandBuffer vkCmdBufferList[] = { vkHandle };
-
-    vkFreeCommandBuffers (vulkan.dev, vulkan.getQueueInfo(whichQ)->vkPoolHandle, 1, vkCmdBufferList);
+    vulkan.deleteCommandBuffer (whichQ, vkPool, vkHandle);
     return true;
 }
 

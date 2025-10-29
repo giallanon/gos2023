@@ -263,8 +263,7 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
         //vkDevice_requiredExtensionList.add (VK_KHR_MAINTENANCE1_EXTENSION_NAME);
         //vkDevice_requiredExtensionList.add (VK_KHR_MAINTENANCE3_EXTENSION_NAME);
 
-        sPhyDeviceInfo vkPhysicalDevInfo;
-        if (!vulkanScanAndSelectAPhysicalDevices(vkInstance, vkSurfaceKHR, vkDevice_requiredExtensionList, vulkanVersion, &vkPhysicalDevInfo))
+        if (!vulkanScanAndSelectAPhysicalDevices(vkInstance, vkSurfaceKHR, vkDevice_requiredExtensionList, vulkanVersion, &physicalDevInfo))
         {
             gos::logger::err ("\ncan't find a good enough vulkan device\n");
             return false;
@@ -272,16 +271,16 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
         else
         {
             gos::logger::log (eTextColor::green, "\nselected device is at index %d\n   gfxQ familyIndex=%d, count=%d\n   computeQ familyIndex=%d, count=%d\n   transferQ familyIndex=%d, count=%d\n",
-                vkPhysicalDevInfo.devIndex,
-                vkPhysicalDevInfo.queue_gfx.familyIndex, vkPhysicalDevInfo.queue_gfx.count,
-                vkPhysicalDevInfo.queue_compute.familyIndex, vkPhysicalDevInfo.queue_compute.count,
-                vkPhysicalDevInfo.queue_transfer.familyIndex, vkPhysicalDevInfo.queue_compute.count);
+                physicalDevInfo.devIndex,
+                physicalDevInfo.queue_gfx.familyIndex,      physicalDevInfo.queue_gfx.count,
+                physicalDevInfo.queue_compute.familyIndex,  physicalDevInfo.queue_compute.count,
+                physicalDevInfo.queue_transfer.familyIndex, physicalDevInfo.queue_compute.count);
         }
         gos::logger::log("\n");
 
 
         //creazione del device logico di vulkan
-        if (!vulkanCreateDevice (vkPhysicalDevInfo, vkDevice_requiredExtensionList, vulkanVersion, &vulkan))
+        if (!vulkanCreateDevice (physicalDevInfo, vkDevice_requiredExtensionList, vulkanVersion, &vulkan))
         {
             gos::logger::err ("can't create a logical device\n");
             return false;
@@ -314,7 +313,7 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
     gos::logger::log("\n");
 
 
-    helperImmediateTransferCmd.setup (&vulkan, eGPUQueueType::transfer);
+    helperImmediateTransferCmd.setup (this, eGPUQueueType::transfer);
     return true;
 }
 
@@ -544,20 +543,20 @@ bool GPU::isImage2DFmtSupported (eImageFormat fmtIN, eImageTiling tilingIN) cons
 //************************************
 u32 GPU::limits_get_maxDescriptorSetSampledImages() const
 {
-    return static_cast<u32>(vkPhysicalDevInfo.deviceProperties.limits.maxDescriptorSetSampledImages);
+    return static_cast<u32>(physicalDevInfo.deviceProperties.limits.maxDescriptorSetSampledImages);
 }
 
 //************************************
 u32 GPU::limits_get_minUniformBufferOffsetAlignment() const
 {
-    return static_cast<u32>(vkPhysicalDevInfo.deviceProperties.limits.minUniformBufferOffsetAlignment);
+    return static_cast<u32>(physicalDevInfo.deviceProperties.limits.minUniformBufferOffsetAlignment);
 }
 
 
 //************************************
 u32 GPU::limits_get_minStorageBufferOffsetAlignment() const
 {
-    return static_cast<u32>(vkPhysicalDevInfo.deviceProperties.limits.minStorageBufferOffsetAlignment);
+    return static_cast<u32>(physicalDevInfo.deviceProperties.limits.minStorageBufferOffsetAlignment);
 }
 
 
@@ -749,10 +748,19 @@ void  GPU::waitIdle()
 }
 
 //**********************************************************
-void  GPU::waitIdle (eGPUQueueType q)
+void  GPU::queue_waitIdle (eGPUQueueType q)
 {
     vkQueueWaitIdle (vulkan.getQueueInfo(q)->vkQueueHandle);
 }
+
+//**********************************************************
+VkResult GPU::queue_submit (eGPUQueueType whichOne, u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence)
+{
+
+    VkQueue q = vulkan.getQueueInfo(whichOne)->vkQueueHandle;
+    return vkQueueSubmit (q, submitCount, submitInfo, fence);
+}
+
 
 //************************************
 void  GPU::_internal__onWindowResized (int w, int h)
@@ -1307,13 +1315,14 @@ const gpu::DepthStencil* GPU::getInfo (const GPUZBufferHandle handle) const
  * 
  * 
  *************************************************************************************************************/
-bool GPU::cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle)
+bool GPU::cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle, u32 threadID)
 {
     assert (NULL != out_handle);
     out_handle->setInvalid();
 
+    VkCommandPool   vkPool;
     VkCommandBuffer vkCmdBufferHandle;
-    if (!vulkanCreateCommandBuffer (vulkan, whichQ, &vkCmdBufferHandle))
+    if (!vulkanCreateCommandBuffer (vulkan, whichQ, threadID, &vkPool, &vkCmdBufferHandle))
     {
         gos::logger::log ("GPU::cmdBuffer_create() => failed\n");
         return false;
@@ -1328,6 +1337,7 @@ bool GPU::cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle
     }
     s->reset();
     s->vkHandle = vkCmdBufferHandle;
+    s->vkPool = vkPool;
     s->whichQ = whichQ;
     return true;    
 }
@@ -1338,7 +1348,7 @@ void GPU::deleteResource (GPUCmdBufferHandle &handle)
     gpu::CommandBuffer *s;
     if (cmdBufferList.fromHandleToPointer (handle, &s))
     {
-        vulkanDeleteCommandBuffer (vulkan, s->whichQ, s->vkHandle);
+        vulkanDeleteCommandBuffer (vulkan, s->whichQ, s->vkPool, s->vkHandle);
         s->reset();
         cmdBufferList.release (handle);
     }
@@ -1599,8 +1609,8 @@ bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, c
     memcpy (s->mapped_host_pt, dataSRC, howManyByteToCopy);
 
     //copio lo staging buffer nel buffer in GPU
-    helperImmediateTransferCmd.begin();
-    helperImmediateTransferCmd.copyBuffer (s->vkHandle, dstBuffer->vkHandle, 0, offsetDST, howManyByteToCopy);
+    gpu::pipe2::CmdBufferWriter2 *cw = helperImmediateTransferCmd.begin();
+    cw->copyBuffer (handleSRC, handleDST, 0, offsetDST, howManyByteToCopy);
     helperImmediateTransferCmd.end();
     return true;
 }
@@ -1627,8 +1637,8 @@ bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, c
     memcpy (s->mapped_host_pt, dataSRC, howManyByteToCopy);
 
     //copia di stgBuffer nel buffer in GPU
-    helperImmediateTransferCmd.begin();
-    helperImmediateTransferCmd.copyBuffer (s->vkHandle, dstBuffer->vkHandle, 0, offsetDST, howManyByteToCopy);
+    gpu::pipe2::CmdBufferWriter2 *cw = helperImmediateTransferCmd.begin();
+    cw->copyBuffer (handleSRC, handleDST, 0, offsetDST, howManyByteToCopy);
     helperImmediateTransferCmd.end();
     return true;
 }
@@ -2079,12 +2089,12 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
 
         //L'immagine appena creata ha il layout VK_IMAGE_LAYOUT_UNDEFINED
         //Per poterci copiare dentro srcDATA, devo trasformarla in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-        helperImmediateTransferCmd.begin();
-        helperImmediateTransferCmd.transitionImageLayout (vkImageHandle, nMipMap, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        gpu::pipe2::CmdBufferWriter2 *cw = helperImmediateTransferCmd.begin();
+        cw->imageTransition (vkImageHandle, eImageLayout::undefined, eImageLayout::transfer_dst);
         helperImmediateTransferCmd.end();
 
         //una volta che immagine è in stato VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, ci posso copiare dentro il contenuto dello stgBuffer
-        helperImmediateTransferCmd.begin();
+        cw = helperImmediateTransferCmd.begin();
         {
             assert (nMipMap < 32);
             VkBufferImageCopy regionList[32];
@@ -2111,7 +2121,7 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
             }
 
             vkCmdCopyBufferToImage(
-                helperImmediateTransferCmd.vkCmdBuffer,
+                helperImmediateTransferCmd.getVulkanCmdBufferHandle(),
                 stg->vkHandle,
                 vkImageHandle,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -2123,8 +2133,8 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
 
 
         //infine, devo transizionare l'immagine da VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL a VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        helperImmediateTransferCmd.begin();
-        helperImmediateTransferCmd.transitionImageLayout (vkImageHandle, nMipMap, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        cw = helperImmediateTransferCmd.begin();
+        cw->imageTransition (vkImageHandle, eImageLayout::transfer_dst, eImageLayout::shader_readonly);
         helperImmediateTransferCmd.end();
     }
 
