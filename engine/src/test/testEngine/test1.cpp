@@ -94,7 +94,7 @@ bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out)
 
 		//creo un job per pushare lo stage buffer in VB/IB
 		GPUCmdBufferHandle cmdBufferHandle;
-		if (!engine->gpu->cmdBuffer_create (eGPUQueueType::transfer, &cmdBufferHandle))
+		if (!engine->gpu->cmdBuffer_create (eGPUQueueFamily::transfer, &cmdBufferHandle))
 			return false;
 		const engine::Shape *shapeInfo = engine->shape_getInfo (shapeHandle);
 
@@ -239,7 +239,7 @@ void Test1::priv_run1 ()
 
     //command buffer 
     GPUCmdBufferHandle  cmdBufferHandle;
-    engine->gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+    engine->gpu->cmdBuffer_create (eGPUQueueFamily::gfx, &cmdBufferHandle);
 
 
 	bool bQuit = false;
@@ -351,7 +351,7 @@ bool Test1::priv_run2 ()
     mainLoop.setup (gpu);
 
     GPUCmdBufferHandle  cmdBufferHandle;
-    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+    gpu->cmdBuffer_create (eGPUQueueFamily::gfx, &cmdBufferHandle);
 	
 	bool bQuit = false;
 	while (false == bQuit)
@@ -618,7 +618,7 @@ bool Test1::priv_run3 ()
     mainLoop.setup (gpu);
 
     GPUCmdBufferHandle  cmdBufferHandle;
-    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+    gpu->cmdBuffer_create (eGPUQueueFamily::gfx, &cmdBufferHandle);
 	
 	u64 nextTimeUpdate_msec = 0;
 
@@ -773,7 +773,7 @@ bool Test1::priv_run4 ()
     mainLoop.setup (gpu);
 
     GPUCmdBufferHandle  cmdBufferHandle;
-    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+    gpu->cmdBuffer_create (eGPUQueueFamily::gfx, &cmdBufferHandle);
 	
 	u64 nextTimeUpdate_msec = 0;
 

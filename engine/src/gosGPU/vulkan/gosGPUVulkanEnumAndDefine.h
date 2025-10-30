@@ -3,8 +3,8 @@
 #include "GLFW/gosGLFWInclude.h"
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
-#include "../gosGPUEnumAndDefine.h"
-
+#include "../../gos/gos.h"
+#include "../../gos/string/gosStringList.h"
 
 static constexpr u8 SWAPCHAIN_NUM_MAX_IMAGES = 8;
 
@@ -18,11 +18,15 @@ namespace gos
         v1_3 = 13,
     };
 
-    enum class eGPUQueueType : u8
+    enum class eGPUQueueFamily : u8
     {
         gfx = 0,
         compute = 1,
         transfer = 2,
+        video_encode = 3,
+        video_decode = 4,
+        
+        _NUM = 5,       //tenere aggiornato questo
 
         unknown = 0xff
     };
@@ -91,189 +95,91 @@ namespace gos
         VkPhysicalDeviceProperties deviceProperties;
     };
 
-    struct sVkDevice
+    /*************************************
+    * @brief    VulkanQFamily
+    * 
+    */
+    class VulkanQFamily
     {
     public:
-        static constexpr u8 NUM_QUEUE       = 3;
+                            VulkanQFamily();
+                            ~VulkanQFamily()                                                  { unsetup(); }
 
-    public:
-        struct sQueueInfo
+        void                setup (VkDevice vkDev, eGPUQueueFamily familyType, u32 familyIndex);
+        void                unsetup();
+
+        void                waitIdle ();
+        VkResult            submit(u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence);
+
+        VkCommandPool       getOrCreateCommandPool (u32 threadID);
+        void                deleteCommandBuffer (VkCommandPool vkPool, VkCommandBuffer vkHandle);
+
+        u8                  getFamilyIndex() const                                              { return familyIndex; }
+        eGPUQueueFamily     getNativeFamilyType() const                                         { return familyType; }
+
+    private:
+        static constexpr u8 NUM_MAX_THREAD  = 16;
+
+    private:
+        struct sPool
         {
-        public:
-            static constexpr u8 NUM_MAX_THREAD  = 16;
-
-        public:
-            void            reset()                                     
-            { 
-                vkQueueHandle = VK_NULL_HANDLE; 
-                isAnAliasFor=eGPUQueueType::unknown; 
-                familyIndex=u32MAX; 
-                for (u32 i = 0; i < NUM_MAX_THREAD; i++)
-                {
-                    _poolList[i].threadID = u32MAX;
-                    _poolList[i].vkPoolHandle = VK_NULL_HANDLE;
-                }
-            }
-
-        public:
-            struct sPool
-            {
-                u32     threadID;
-                VkCommandPool   vkPoolHandle;
-            };
-
-        public:
-            VkQueue         vkQueueHandle;
-            u32             familyIndex;
-            eGPUQueueType   isAnAliasFor;                   // se == unknown, allora e' una Q vera e propria, altrimenti e' un alias per un'altra Q
-            sPool           _poolList[NUM_MAX_THREAD];      //un cmdPool per ogni possibile thread
+            u32             threadID;
+            VkCommandPool   vkPoolHandle;
         };
 
+    private:
+        VkQueue             vkQueueHandle;
+        VkDevice            vkDev;
+        sPool               poolList[NUM_MAX_THREAD];      //un cmdPool per ogni possibile thread
+        u8                  familyIndex;
+        eGPUQueueFamily     familyType;
+    };
+
+
+    /*************************************
+    * @brief    VulkanDevice
+    * 
+    */
+    class VulkanDevice
+    {
+
     public:
-                            sVkDevice()
-                            { 
-                                reset(); 
-                            }
+                                VulkanDevice()                                          { priv_reset(); }
+                                ~VulkanDevice()                                         { unsetup(); }
 
-        void                reset()             
-                            {
-                                phyDevInfo.reset(); 
-                                dev=VK_NULL_HANDLE;
-                                swapChainInfo.reset();
-                                memory_maxAllocated = memory_curAllocated = 0;
-                                for (u8 i=0; i<NUM_QUEUE; i++)
-                                    _queueList[i].reset();
-                            }
+        bool                    setup (const sPhyDeviceInfo &phyInfo, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion);
+        void                    unsetup();
 
-        void                destroy()
-                            {
-                                if (VK_NULL_HANDLE == dev)
-                                    return;
+        void                    queue_waitIdle (eGPUQueueFamily whichOne)                                                                       { getQFamily(whichOne)->waitIdle(); }
+        VkResult                queue_submit (eGPUQueueFamily whichOne, u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence)         { return getQFamily(whichOne)->submit(submitCount, submitInfo, fence); }
 
-                                for (u8 i=0; i<NUM_QUEUE; i++)
-                                {
-                                    if (eGPUQueueType::unknown == _queueList[i].isAnAliasFor)
-                                    {
-                                        for (u32 i2 = 0; i2 < sQueueInfo::NUM_MAX_THREAD; i2++)
-                                        {
-                                            if (VK_NULL_HANDLE != _queueList[i]._poolList[i2].vkPoolHandle)
-                                            {
-                                                vkDestroyCommandPool (dev, _queueList[i]._poolList[i2].vkPoolHandle, nullptr);
-                                                _queueList[i]._poolList[i2].vkPoolHandle = VK_NULL_HANDLE;
-                                                _queueList[i]._poolList[i2].threadID = u32MAX;
-                                            }
-                                        }
-                                    }
-                                }
+        bool                    getMemoryType (uint32_t typeBits, VkMemoryPropertyFlags properties, u32 *out_index);
+        bool                    allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory);
+        void                    freeMemory (VkDeviceMemory memory, const VkAllocationCallbacks *pAllocator, u64 memSize);
 
-                                swapChainInfo.destroy(dev);
-
-                                vkDestroyDevice(dev, nullptr);
-                                reset();
-                            }
-
-        VkCommandPool       getOrCreateCommandPool (eGPUQueueType qtype, u32 threadID)
-        {
-            sQueueInfo *q = getQueueInfo(qtype);
-            if (eGPUQueueType::unknown != q->isAnAliasFor)
-            {
-                q = getQueueInfo(q->isAnAliasFor);
-            }
-            assert (eGPUQueueType::unknown == q->isAnAliasFor); //mi assicuro che la Q non sia un alias di un'altra q
-
-            for (u32 i = 0; i <sQueueInfo::NUM_MAX_THREAD; i++)
-            {
-                if (q->_poolList[i].threadID == threadID)
-                    return q->_poolList[i].vkPoolHandle;
-                
-                if (u32MAX == q->_poolList[i].threadID)
-                {
-                    VkCommandPoolCreateInfo poolInfo{};
-                    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-                    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-                    poolInfo.queueFamilyIndex = q->familyIndex;
-                
-                    const VkResult result = vkCreateCommandPool (this->dev, &poolInfo, nullptr, &q->_poolList[i].vkPoolHandle);
-                    if (VK_SUCCESS == result)
-                    {
-                        q->_poolList[i].threadID = threadID;
-                        return q->_poolList[i].vkPoolHandle;
-                    }
-                }
-            }
-            DBGBREAK;
-            return VK_NULL_HANDLE;
-        }
-
-        void                deleteCommandBuffer (eGPUQueueType qtype, VkCommandPool vkPool, VkCommandBuffer &vkHandle)
-        {
-            sQueueInfo *q = getQueueInfo(qtype);
-            if (eGPUQueueType::unknown != q->isAnAliasFor)
-            {
-                q = getQueueInfo(q->isAnAliasFor);
-            }
-            assert (eGPUQueueType::unknown == q->isAnAliasFor); //mi assicuro che la Q non sia un alias di un'altra q
-
-            for (u32 i = 0; i < sQueueInfo::NUM_MAX_THREAD; i++)
-            {
-                if (q->_poolList[i].vkPoolHandle == vkPool)
-                {
-                    VkCommandBuffer vkCmdBufferList[] = { vkHandle };
-                    vkFreeCommandBuffers (this->dev, q->_poolList[i].vkPoolHandle, 1, vkCmdBufferList);
-
-                    const u32 lastIndex = sQueueInfo::NUM_MAX_THREAD - 1;
-                    const u32 nToCopy = lastIndex - i;
-                    if (nToCopy)
-                        memcpy (&q->_poolList[i], &q->_poolList[i + 1], sizeof(sQueueInfo::sPool) * nToCopy);
-
-                    q->_poolList[lastIndex].vkPoolHandle = VK_NULL_HANDLE;
-                    q->_poolList[lastIndex].threadID = u32MAX;
-                    return;
-                }
-            }
-
-            DBGBREAK;
-        }
-
-        sQueueInfo*         getQueueInfo (eGPUQueueType type)
-        {
-            switch (type)
-            {
-            default:
-                DBGBREAK;
-                return &_queueList[0];
-            case eGPUQueueType::gfx:         return &_queueList[0];
-            case eGPUQueueType::compute:     return &_queueList[1];
-            case eGPUQueueType::transfer:    return &_queueList[2];
-            }
-        }
-
-        const sQueueInfo*   getQueueInfo (eGPUQueueType type) const
-        {
-            switch (type)
-            {
-            default:
-                DBGBREAK;
-                return &_queueList[0];
-            case eGPUQueueType::gfx:         return &_queueList[0];
-            case eGPUQueueType::compute:     return &_queueList[1];
-            case eGPUQueueType::transfer:    return &_queueList[2];
-            }
-        }
-        
-        const sQueueInfo*   getQueueInfoByIndex (u32 i) const
-        {
-            assert (i < NUM_QUEUE);
-            return &_queueList[i];
-        }
+        VulkanQFamily*          getQFamily (eGPUQueueFamily type)                       { return &qfamilyList[priv_from_family_to_index(type)]; }
+        const VulkanQFamily*    getQFamily (eGPUQueueFamily type) const                 { return &qfamilyList[priv_from_family_to_index(type)]; }
         
     public:
         sPhyDeviceInfo      phyDevInfo;
         sSwapChainInfo      swapChainInfo;
-        VkDevice            dev;
-        sQueueInfo          _queueList[NUM_QUEUE];
+        VkDevice            vkDev;
         u64                 memory_maxAllocated;
         u64                 memory_curAllocated;
+
+    private:
+        static constexpr u8 NUM_MAX_QFAMILY = static_cast<u8>(eGPUQueueFamily::_NUM);
+
+    private:
+        void                priv_reset();
+        u8                  priv_from_family_to_index (eGPUQueueFamily type) const          { return map_qfamily_to_q[static_cast<u8>(type)]; }
+        void                priv_addNativeQFamily (eGPUQueueFamily familyType, u32 familyIndex);
+
+    private:
+        VulkanQFamily       qfamilyList[NUM_MAX_QFAMILY];
+        u8                  map_qfamily_to_q[NUM_MAX_QFAMILY];
+        u8                  numQFamily;
+
     };
 
 

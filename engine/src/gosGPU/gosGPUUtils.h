@@ -9,7 +9,7 @@ namespace gos
     namespace gpu
     {
         const char*     enumToString (eMemAccessMode s);
-        const char*     enumToString (eGPUQueueType s);
+        const char*     enumToString (eGPUQueueFamily s);
 
         VkFormat                toVulkan (eDataFormat f);
         VkPrimitiveTopology     toVulkan (eDrawPrimitive f);

@@ -280,7 +280,7 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
 
 
         //creazione del device logico di vulkan
-        if (!vulkanCreateDevice (physicalDevInfo, vkDevice_requiredExtensionList, vulkanVersion, &vulkan))
+        if (!vulkan.setup (physicalDevInfo, vkDevice_requiredExtensionList, vulkanVersion))
         {
             gos::logger::err ("can't create a logical device\n");
             return false;
@@ -288,7 +288,7 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
         gos::logger::log("\n");
     }
 
-    vkCmdPushDescriptorSetKHR = (PFN_vkCmdPushDescriptorSetKHR)vkGetDeviceProcAddr(vulkan.dev, "vkCmdPushDescriptorSetKHR");
+    vkCmdPushDescriptorSetKHR = (PFN_vkCmdPushDescriptorSetKHR)vkGetDeviceProcAddr(vulkan.vkDev, "vkCmdPushDescriptorSetKHR");
     if (!vkCmdPushDescriptorSetKHR) 
     {
         gos::logger::err ("Could not get a valid function pointer for vkCmdPushDescriptorSetKHR\n");
@@ -313,7 +313,7 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
     gos::logger::log("\n");
 
 
-    helperImmediateTransferCmd.setup (this, eGPUQueueType::transfer);
+    helperImmediateTransferCmd.setup (this, eGPUQueueFamily::transfer);
     return true;
 }
 
@@ -323,7 +323,7 @@ void  GPU::priv_deinitVulkan()
     gos::logger::log ("GPU::priv_deinitVulkan()\n");
     if (VK_NULL_HANDLE != vkInstance)
     {
-        if (VK_NULL_HANDLE != vulkan.dev)
+        if (VK_NULL_HANDLE != vulkan.vkDev)
             vulkan.destroy();
 
         if (VK_NULL_HANDLE != vkDebugMessenger)
@@ -424,7 +424,7 @@ bool GPU::semaphore_create  (VkSemaphore *out)
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;    
 
-    const VkResult result = vkCreateSemaphore (vulkan.dev, &semaphoreInfo, nullptr, out);
+    const VkResult result = vkCreateSemaphore (vulkan.vkDev, &semaphoreInfo, nullptr, out);
     if (VK_SUCCESS == result)
         return true;
     gos::logger::err ("vulkanCreateSemaphore() => %s\n", string_VkResult(result));
@@ -434,9 +434,9 @@ bool GPU::semaphore_create  (VkSemaphore *out)
 //************************************
 void GPU::semaphore_destroy  (VkSemaphore &in)
 {
-    if (VK_NULL_HANDLE != vulkan.dev && VK_NULL_HANDLE != in)
+    if (VK_NULL_HANDLE != vulkan.vkDev && VK_NULL_HANDLE != in)
     {
-        vkDestroySemaphore (vulkan.dev, in, nullptr);
+        vkDestroySemaphore (vulkan.vkDev, in, nullptr);
         in = VK_NULL_HANDLE;
     }
 }
@@ -449,7 +449,7 @@ bool GPU::fence_create  (bool bStartAsSignaled, VkFence *out)
     if (bStartAsSignaled)
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    const VkResult result = vkCreateFence (vulkan.dev, &fenceInfo, nullptr, out);
+    const VkResult result = vkCreateFence (vulkan.vkDev, &fenceInfo, nullptr, out);
     if (VK_SUCCESS == result)
         return true;
     gos::logger::err ("vkCreateFence() => %s\n", string_VkResult(result));
@@ -459,9 +459,9 @@ bool GPU::fence_create  (bool bStartAsSignaled, VkFence *out)
 //************************************
 void GPU::fence_destroy  (VkFence &in)
 {
-    if (VK_NULL_HANDLE != vulkan.dev && VK_NULL_HANDLE != in)
+    if (VK_NULL_HANDLE != vulkan.vkDev && VK_NULL_HANDLE != in)
     {
-        vkDestroyFence (vulkan.dev, in, nullptr);
+        vkDestroyFence (vulkan.vkDev, in, nullptr);
         in = VK_NULL_HANDLE;
     }
 }
@@ -469,7 +469,7 @@ void GPU::fence_destroy  (VkFence &in)
 //************************************
 bool GPU::fence_wait (const VkFence &fenceHandle, u64 timeout_ns)
 {
-    const VkResult result = vkWaitForFences (vulkan.dev, 1, &fenceHandle, VK_TRUE, timeout_ns);
+    const VkResult result = vkWaitForFences (vulkan.vkDev, 1, &fenceHandle, VK_TRUE, timeout_ns);
     if (VK_SUCCESS == result)
         return true;
     return false;
@@ -481,7 +481,7 @@ bool GPU::fence_waitMany (const VkFence *fenceHandleList, bool bWaitForAll, u32 
     VkBool32 vkb = VK_FALSE;
     if (bWaitForAll)
         vkb = VK_TRUE;
-    const VkResult result = vkWaitForFences (vulkan.dev, fenceCount, fenceHandleList, vkb, timeout_ns);
+    const VkResult result = vkWaitForFences (vulkan.vkDev, fenceCount, fenceHandleList, vkb, timeout_ns);
     if (VK_SUCCESS == result)
         return true;
     return false;
@@ -490,7 +490,7 @@ bool GPU::fence_waitMany (const VkFence *fenceHandleList, bool bWaitForAll, u32 
 //************************************
 bool GPU::fence_isSignaled  (const VkFence &fenceHandle)
 {
-    const VkResult result = vkGetFenceStatus (vulkan.dev, fenceHandle);
+    const VkResult result = vkGetFenceStatus (vulkan.vkDev, fenceHandle);
     if (VK_SUCCESS == result)
         return true;
     return false;
@@ -499,13 +499,13 @@ bool GPU::fence_isSignaled  (const VkFence &fenceHandle)
 //************************************
 void GPU::fence_reset (const VkFence &fenceHandle)
 {
-    vkResetFences (vulkan.dev, 1, &fenceHandle);
+    vkResetFences (vulkan.vkDev, 1, &fenceHandle);
 }
 
 //************************************
 void GPU::fence_resetMany (const VkFence *fenceHandleList, u32 fenceCount)
 {
-    vkResetFences (vulkan.dev, fenceCount, fenceHandleList);
+    vkResetFences (vulkan.vkDev, fenceCount, fenceHandleList);
 }
 
 //************************************
@@ -590,7 +590,7 @@ bool GPU::swapChain_acquireImage (gos::gpu::SwapchainImg *out, u64 timeout_ns, V
     }
 
     u32 imageIndex;
-    const VkResult result = vkAcquireNextImageKHR (vulkan.dev, vulkan.swapChainInfo.vkSwapChain, timeout_ns, semaphore, fence, &imageIndex);
+    const VkResult result = vkAcquireNextImageKHR (vulkan.vkDev, vulkan.swapChainInfo.vkSwapChain, timeout_ns, semaphore, fence, &imageIndex);
 
     switch (result)
     {
@@ -645,7 +645,7 @@ VkResult GPU::swapChain_present (const VkSemaphore *semaphoreHandleList, u32 sem
     presentInfo.pSwapchains = &vulkan.swapChainInfo.vkSwapChain;
     presentInfo.pImageIndices = &imageIndex;
     
-    return vkQueuePresentKHR (vulkan.getQueueInfo(eGPUQueueType::gfx)->vkQueueHandle, &presentInfo);
+    return vkQueuePresentKHR (vulkan.getQueueInfo(eGPUQueueFamily::gfx)->vkQueueHandle, &presentInfo);
 }
 
 //**********************************************************
@@ -679,10 +679,10 @@ bool GPU::priv_swapChain_recreate ()
     //attendo che Vulkan sia in idle
     gos::logger::log ("target windows size is (w=%d, h=%d), waiting vulkan idle...\n", width, height);
     bool ret = true;
-    vkDeviceWaitIdle (vulkan.dev);
+    vkDeviceWaitIdle (vulkan.vkDev);
 
     //distruggo la swapchain
-    vulkan.swapChainInfo.destroy(vulkan.dev);
+    vulkan.swapChainInfo.destroy(vulkan.vkDev);
 
     //ricreazione swap chain
     if (!vulkanCreateSwapChain (vulkan, vkSurfaceKHR, vSync, &vulkan.swapChainInfo))
@@ -744,21 +744,19 @@ bool GPU::priv_swapChain_recreate ()
 //**********************************************************
 void  GPU::waitIdle()
 {
-    vkDeviceWaitIdle(vulkan.dev);
+    vkDeviceWaitIdle(vulkan.vkDev);
 }
 
 //**********************************************************
-void  GPU::queue_waitIdle (eGPUQueueType q)
+void  GPU::queue_waitIdle (eGPUQueueFamily q)
 {
-    vkQueueWaitIdle (vulkan.getQueueInfo(q)->vkQueueHandle);
+    vulkan.queue_waitIdle(q);
 }
 
 //**********************************************************
-VkResult GPU::queue_submit (eGPUQueueType whichOne, u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence)
+VkResult GPU::queue_submit (eGPUQueueFamily whichOne, u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence)
 {
-
-    VkQueue q = vulkan.getQueueInfo(whichOne)->vkQueueHandle;
-    return vkQueueSubmit (q, submitCount, submitInfo, fence);
+    return vulkan.queue_submit (whichOne, submitCount, submitInfo, fence);
 }
 
 
@@ -862,7 +860,7 @@ bool GPU::priv_shader_createFromMemory (const void *bufferIN, u32 bufferSize, eS
     createInfo.pCode = reinterpret_cast<const uint32_t*>(bufferIN);
     
     VkShaderModule vkHandle;
-    const VkResult result = vkCreateShaderModule(vulkan.dev, &createInfo, nullptr, &vkHandle);
+    const VkResult result = vkCreateShaderModule(vulkan.vkDev, &createInfo, nullptr, &vkHandle);
     if (VK_SUCCESS != result)
     {
         out_shaderHandle->setInvalid();
@@ -873,7 +871,7 @@ bool GPU::priv_shader_createFromMemory (const void *bufferIN, u32 bufferSize, eS
     gpu::Shader *shader = shaderList.reserve(out_shaderHandle);
     if (NULL == shader)
     {
-        vkDestroyShaderModule (vulkan.dev, vkHandle, nullptr);
+        vkDestroyShaderModule (vulkan.vkDev, vkHandle, nullptr);
         out_shaderHandle->setInvalid();
         gos::logger::err ("GPU::priv_shader_createFromMemory() => unable to reserve a new shader handle\n");
         return false;
@@ -893,7 +891,7 @@ void GPU::deleteResource (GPUShaderHandle &shaderHandle)
     if (priv_fromHandleToPointer(shaderList, shaderHandle, &shader))
     {
         if (VK_NULL_HANDLE != shader->vkHandle)
-            vkDestroyShaderModule (vulkan.dev, shader->vkHandle, nullptr);
+            vkDestroyShaderModule (vulkan.vkDev, shader->vkHandle, nullptr);
         
         shader->reset();
         shaderList.release(shaderHandle);
@@ -1063,7 +1061,7 @@ bool GPU::priv_renderTarget_createFromStruct (gos::gpu::RenderTarget &rt)
 	imageViewCI.subresourceRange.baseArrayLayer = 0;
     imageViewCI.subresourceRange.layerCount = 1;
 
-	const VkResult result = vkCreateImageView (vulkan.dev, &imageViewCI, nullptr, &rt.view);
+	const VkResult result = vkCreateImageView (vulkan.vkDev, &imageViewCI, nullptr, &rt.view);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => vkCreateImageView() => %s\n", string_VkResult(result));
@@ -1078,13 +1076,13 @@ void GPU::priv_renderTarget_deleteFromStruct (gos::gpu::RenderTarget &rt)
 {
     if (VK_NULL_HANDLE != rt.view)
     {
-	    vkDestroyImageView (vulkan.dev, rt.view, nullptr);
+	    vkDestroyImageView (vulkan.vkDev, rt.view, nullptr);
         rt.view = VK_NULL_HANDLE;
     }
     
     if (VK_NULL_HANDLE != rt.image)
     {
-	    vkDestroyImage(vulkan.dev, rt.image, nullptr);
+	    vkDestroyImage(vulkan.vkDev, rt.image, nullptr);
         rt.image = VK_NULL_HANDLE;
     }
 
@@ -1126,10 +1124,10 @@ bool GPU::map (const GPURenderTargetHandle handle, gpu::sMappedImage *out) const
     // Get layout of the image (including row pitch)
     VkImageSubresource subResource { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0 };
     VkSubresourceLayout subResourceLayout;
-    vkGetImageSubresourceLayout(vulkan.dev, s->image, &subResource, &subResourceLayout);
+    vkGetImageSubresourceLayout(vulkan.vkDev, s->image, &subResource, &subResourceLayout);
 
     // Map image memory so we can start copying from it
-    VkResult result = vkMapMemory(vulkan.dev, s->vkMemHandle, subResourceLayout.offset, subResourceLayout.size, 0, &out->host_image_pt);
+    VkResult result = vkMapMemory(vulkan.vkDev, s->vkMemHandle, subResourceLayout.offset, subResourceLayout.size, 0, &out->host_image_pt);
     if (VK_SUCCESS != result)
     {
         out->host_image_pt = NULL;
@@ -1224,7 +1222,7 @@ bool GPU::priv_depthStencil_createFromStruct (gos::gpu::DepthStencil &depthStenc
 	imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
 	imageCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
-	VkResult result = vkCreateImage (vulkan.dev, &imageCI, nullptr, &depthStencil.image);    
+	VkResult result = vkCreateImage (vulkan.vkDev, &imageCI, nullptr, &depthStencil.image);    
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => vkCreateImage() => %s\n", string_VkResult(result));
@@ -1232,7 +1230,7 @@ bool GPU::priv_depthStencil_createFromStruct (gos::gpu::DepthStencil &depthStenc
     }
 
     VkMemoryRequirements memReqs{};
-	vkGetImageMemoryRequirements (vulkan.dev, depthStencil.image, &memReqs);
+	vkGetImageMemoryRequirements (vulkan.vkDev, depthStencil.image, &memReqs);
     depthStencil.memoryAllocated = memReqs.size;
 
     VkMemoryAllocateInfo memAllloc{};
@@ -1246,7 +1244,7 @@ bool GPU::priv_depthStencil_createFromStruct (gos::gpu::DepthStencil &depthStenc
         return false;
     }
 
-	result = vkBindImageMemory (vulkan.dev, depthStencil.image, depthStencil.vkMemHandle, 0);
+	result = vkBindImageMemory (vulkan.vkDev, depthStencil.image, depthStencil.vkMemHandle, 0);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => vkBindImageMemory() => %s\n", string_VkResult(result));
@@ -1266,7 +1264,7 @@ bool GPU::priv_depthStencil_createFromStruct (gos::gpu::DepthStencil &depthStenc
 	if (depthStencil.bHasStencil)
 		imageViewCI.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
-	result = vkCreateImageView (vulkan.dev, &imageViewCI, nullptr, &depthStencil.view);
+	result = vkCreateImageView (vulkan.vkDev, &imageViewCI, nullptr, &depthStencil.view);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => vkCreateImageView() => %s\n", string_VkResult(result));
@@ -1281,13 +1279,13 @@ void GPU::priv_depthStencil_deleteFromStruct (gos::gpu::DepthStencil &depthStenc
 {
     if (VK_NULL_HANDLE != depthStencil.view)
     {
-	    vkDestroyImageView (vulkan.dev, depthStencil.view, nullptr);
+	    vkDestroyImageView (vulkan.vkDev, depthStencil.view, nullptr);
         depthStencil.view = VK_NULL_HANDLE;
     }
     
     if (VK_NULL_HANDLE != depthStencil.image)
     {
-	    vkDestroyImage(vulkan.dev, depthStencil.image, nullptr);
+	    vkDestroyImage(vulkan.vkDev, depthStencil.image, nullptr);
         depthStencil.image = VK_NULL_HANDLE;
     }
 
@@ -1315,7 +1313,7 @@ const gpu::DepthStencil* GPU::getInfo (const GPUZBufferHandle handle) const
  * 
  * 
  *************************************************************************************************************/
-bool GPU::cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle, u32 threadID)
+bool GPU::cmdBuffer_create (eGPUQueueFamily whichQ, GPUCmdBufferHandle *out_handle, u32 threadID)
 {
     assert (NULL != out_handle);
     out_handle->setInvalid();
@@ -1431,11 +1429,11 @@ bool GPU::priv_bufferCreate (VkBufferUsageFlags vkUsage, u32 sizeInByte, bool bC
         //mappo la memoria del buffer direttamente qui, visto che questo buffer e' sempre HOST_MAPPABLE e COHERENT
         {
             void *mappedPt;
-            VkResult result = vkMapMemory (vulkan.dev, out->_vkMemHandle, 0, sizeInByte, 0, &mappedPt);
+            VkResult result = vkMapMemory (vulkan.vkDev, out->_vkMemHandle, 0, sizeInByte, 0, &mappedPt);
             if (VK_SUCCESS != result)
             {
                 gos::logger::err ("GPU::priv_bufferCreate() => failed vkMapMemory() => %s\n", string_VkResult(result));
-                vkDestroyBuffer (vulkan.dev, out->vkHandle, nullptr);
+                vkDestroyBuffer (vulkan.vkDev, out->vkHandle, nullptr);
                 return false;
             }    
             out->mapped_offset = 0;
@@ -1453,7 +1451,7 @@ void GPU::image_unmap (gpu::sMappedImage &m)
 {
     if (NULL != m.host_image_pt)
     {
-        vkUnmapMemory(vulkan.dev, m._vkMemHandle);
+        vkUnmapMemory(vulkan.vkDev, m._vkMemHandle);
         memset (&m ,0, sizeof(gpu::sMappedImage));
     }
 }
@@ -1473,7 +1471,7 @@ void GPU::image_manualSync_cpuRead (const gpu::sMappedImage *list, u32 numElemIn
         flush_range[i].size = list[i].size;
     }
 
-    vkInvalidateMappedMemoryRanges (vulkan.dev, numElemInList, flush_range );
+    vkInvalidateMappedMemoryRanges (vulkan.vkDev, numElemInList, flush_range );
 }
 
 //************************************************************************************************************
@@ -1481,7 +1479,7 @@ void GPU::buffer_unmap (gpu::sMappedBuffer &m)
 {
     if (NULL != m.host_pt)
     {
-        vkUnmapMemory(vulkan.dev, m._vkMemHandle);
+        vkUnmapMemory(vulkan.vkDev, m._vkMemHandle);
         memset (&m ,0, sizeof(gpu::sMappedBuffer));
     }
 }
@@ -1501,7 +1499,7 @@ void GPU::buffer_manualSync_cpuWrite (const gpu::sMappedBuffer *list, u32 numEle
         flush_range[i].size = list[i].size;
     }
 
-    vkFlushMappedMemoryRanges (vulkan.dev, numElemInList, flush_range );
+    vkFlushMappedMemoryRanges (vulkan.vkDev, numElemInList, flush_range );
 }
 
 //************************************************************************************************************
@@ -1519,7 +1517,7 @@ void GPU::buffer_manualSync_cpuRead (const gpu::sMappedBuffer *list, u32 numElem
         flush_range[i].size = list[i].size;
     }
 
-    vkInvalidateMappedMemoryRanges (vulkan.dev, numElemInList, flush_range );
+    vkInvalidateMappedMemoryRanges (vulkan.vkDev, numElemInList, flush_range );
 }
 
 /************************************************************************************************************
@@ -1839,7 +1837,7 @@ void GPU::deleteResource (GPUDescrSetLayoutHandle &handle)
     gpu::DescrSetLayout *s;
     if (descrSetLayoutList.fromHandleToPointer (handle, &s))
     {
-        vkDestroyDescriptorSetLayout (vulkan.dev, s->vkHandle, nullptr);
+        vkDestroyDescriptorSetLayout (vulkan.vkDev, s->vkHandle, nullptr);
         s->reset();
         descrSetLayoutList.release (handle);
     }
@@ -1896,7 +1894,7 @@ bool GPU::priv_descrPool_onBuilderEnds (DescriptorPoolBuilder *builder)
     creatInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
 
     VkDescriptorPool vkHandle;
-    VkResult result = vkCreateDescriptorPool (vulkan.dev, &creatInfo, nullptr, &vkHandle);
+    VkResult result = vkCreateDescriptorPool (vulkan.vkDev, &creatInfo, nullptr, &vkHandle);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("GPU::priv_descrPool_onBuilderEnds () => vkCreateDescriptorPool failed => %s\n", string_VkResult(result));
@@ -1921,7 +1919,7 @@ void GPU::deleteResource (GPUDescrPoolHandle &handle)
     gpu::DescrPool *s;
     if (descrPoolList.fromHandleToPointer (handle, &s))
     {
-        vkDestroyDescriptorPool (vulkan.dev, s->vkHandle, nullptr);
+        vkDestroyDescriptorPool (vulkan.vkDev, s->vkHandle, nullptr);
         s->reset();
         descrPoolList.release (handle);
     }
@@ -1994,7 +1992,7 @@ bool GPU::descrSetInstance_create (const GPUDescrPoolHandle &poolHandle, const G
     allocInfo.descriptorSetCount = 1;
     allocInfo.pSetLayouts = &vkDescSetLayoutHandle;
 
-    const VkResult result = vkAllocateDescriptorSets (vulkan.dev, &allocInfo, &s->vkHandle);
+    const VkResult result = vkAllocateDescriptorSets (vulkan.vkDev, &allocInfo, &s->vkHandle);
     if (VK_SUCCESS == result)
         return true;
 
@@ -2012,7 +2010,7 @@ void GPU::deleteResource (GPUDescrSetInstanceHandle &handle)
     if (descrSetInstanceList.fromHandleToPointer (handle, &s))
     {
         if (s->bCanBeFreed)
-            vkFreeDescriptorSets (vulkan.dev, s->vkPoolHandle, 1, &s->vkHandle);
+            vkFreeDescriptorSets (vulkan.vkDev, s->vkPoolHandle, 1, &s->vkHandle);
         s->reset();
         descrSetInstanceList.release (handle);
     }
@@ -2169,7 +2167,7 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
     viewInfo.subresourceRange.layerCount = 1;    
 
 
-    VkResult result = vkCreateImageView(vulkan.dev, &viewInfo, nullptr, &s->view);
+    VkResult result = vkCreateImageView(vulkan.vkDev, &viewInfo, nullptr, &s->view);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("GPU::texture_create2D () => vkCreateImageView failed => %s\n", string_VkResult(result));
@@ -2206,10 +2204,10 @@ void GPU::deleteResource (GPUTextureHandle &handle)
     if (textureList.fromHandleToPointer (handle, &s))
     {
         if (VK_NULL_HANDLE != s->view)
-            vkDestroyImageView (vulkan.dev, s->view, nullptr);
+            vkDestroyImageView (vulkan.vkDev, s->view, nullptr);
 
         if (VK_NULL_HANDLE != s->vkHandle)
-            vkDestroyImage (vulkan.dev, s->vkHandle, nullptr);
+            vkDestroyImage (vulkan.vkDev, s->vkHandle, nullptr);
 
         if (VK_NULL_HANDLE != s->vkMemHandle)
             vulkanFreeMemory (vulkan, s->vkMemHandle, nullptr, s->memoryAllocated);
@@ -2314,7 +2312,7 @@ bool GPU::sampler_create (const gpu::SamplerDesc &desc, GPUSamplerHandle *out_ha
     samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 
     VkSampler vkHandle;
-    VkResult result = vkCreateSampler(vulkan.dev, &samplerInfo, nullptr, &vkHandle);
+    VkResult result = vkCreateSampler(vulkan.vkDev, &samplerInfo, nullptr, &vkHandle);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("GPU::sampler_create () => vkCreateSampler failed => %s\n", string_VkResult(result));
@@ -2345,7 +2343,7 @@ void GPU::priv_samplerDelete (GPUSamplerHandle &handle)
     if (samplerList.fromHandleToPointer (handle, &s))
     {
         if (VK_NULL_HANDLE != s->vkHandle)
-            vkDestroySampler (vulkan.dev, s->vkHandle, nullptr);
+            vkDestroySampler (vulkan.vkDev, s->vkHandle, nullptr);
 
         s->reset();
         samplerList.release (handle);
@@ -2429,7 +2427,7 @@ bool GPU::priv_descrSetLayout_build_v2 (const gpu::pipe2::Pipeline_def::Descript
     }
 
     //chiamo vulkan
-    VkResult result = vkCreateDescriptorSetLayout (vulkan.dev, &creatInfo, nullptr, out_vkHandle);
+    VkResult result = vkCreateDescriptorSetLayout (vulkan.vkDev, &creatInfo, nullptr, out_vkHandle);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("GPU::priv_descrSetLayout_build_v2 () => vkCreateDescriptorSetLayout failed => %s\n", string_VkResult(result));
@@ -2458,8 +2456,8 @@ void GPU::deleteResource (GPUPipelineHandle &handle)
     gpu::Pipeline2 *s;
     if (pipelineList.fromHandleToPointer (handle, &s))
     {
-        vkDestroyPipelineLayout (vulkan.dev, s->vkPipelineLayoutHandle, nullptr);
-        vkDestroyPipeline (vulkan.dev, s->vkPipelineHandle, nullptr);
+        vkDestroyPipelineLayout (vulkan.vkDev, s->vkPipelineLayoutHandle, nullptr);
+        vkDestroyPipeline (vulkan.vkDev, s->vkPipelineHandle, nullptr);
         for (u32 i=0; i<s->descrset_num; i++)
             deleteResource (s->descrset_handle_defList[i]);
         s->reset();
@@ -2653,7 +2651,7 @@ bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pip
             }
         }
 
-        result = vkCreatePipelineLayout (vulkan.dev, &pipelineLayoutInfo, nullptr, &pipelineCreateInfo.layout);
+        result = vkCreatePipelineLayout (vulkan.vkDev, &pipelineLayoutInfo, nullptr, &pipelineCreateInfo.layout);
         if (VK_SUCCESS != result)
         {
             gos::logger::err ("GPU::pipeline_createNew() => vkCreatePipelineLayout() => %s\n", string_VkResult(result));
@@ -2941,7 +2939,7 @@ bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pip
 
 
     VkPipeline vkPipelineHandle;
-    result = vkCreateGraphicsPipelines (vulkan.dev, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &vkPipelineHandle);
+    result = vkCreateGraphicsPipelines (vulkan.vkDev, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &vkPipelineHandle);
     if (VK_SUCCESS != result)
     {
         gos::logger::err ("GPU::pipeline_createNew => vkCreateGraphicsPipelines() error: %s\n", string_VkResult(result)); 

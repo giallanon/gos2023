@@ -21,14 +21,14 @@ const char* gpu::enumToString (eMemAccessMode s)
 }
 
 //*************************************************************************
-const char* gpu::enumToString (eGPUQueueType s)
+const char* gpu::enumToString (eGPUQueueFamily s)
 {
     switch (s)
     {
     default:                        return "??INVALID-VALUE??";
-    case eGPUQueueType::gfx:        return "gfx";
-    case eGPUQueueType::compute:    return "compute";
-    case eGPUQueueType::transfer:   return "transfer";
+    case eGPUQueueFamily::gfx:        return "gfx";
+    case eGPUQueueFamily::compute:    return "compute";
+    case eGPUQueueFamily::transfer:   return "transfer";
     }
 }
 

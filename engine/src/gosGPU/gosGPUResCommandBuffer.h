@@ -21,14 +21,14 @@ namespace gos
                             {
                                 vkHandle = VK_NULL_HANDLE;
                                 vkPool = VK_NULL_HANDLE;
-                                whichQ = eGPUQueueType::unknown;
+                                whichQ = eGPUQueueFamily::unknown;
                             }
 
 
         public:
             VkCommandBuffer vkHandle;
             VkCommandPool   vkPool;
-            eGPUQueueType   whichQ;
+            eGPUQueueFamily   whichQ;
         };
 
     } //namespace gpu

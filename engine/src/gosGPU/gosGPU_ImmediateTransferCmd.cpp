@@ -14,7 +14,7 @@ GPU::ImmediateTransferCmd::ImmediateTransferCmd()
 }
 
 //*************************************************************************
-void GPU::ImmediateTransferCmd::setup (GPU *gpuIN, gos::eGPUQueueType queueTypeIN)
+void GPU::ImmediateTransferCmd::setup (GPU *gpuIN, gos::eGPUQueueFamily queueTypeIN)
 {
     gpu = gpuIN;
     queueType = queueTypeIN;

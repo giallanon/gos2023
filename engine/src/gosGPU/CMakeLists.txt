@@ -29,8 +29,10 @@ vulkan/gosGPUVukanHelpers.cpp
 vulkan/gosGPUVukanHelpers.h
 vulkan/gosGPUVulkan.cpp
 vulkan/gosGPUVulkan.h
+vulkan/gosGPUVulkanDevice.cpp
 vulkan/gosGPUVulkanEnumAndDefine.h
 vulkan/gosGPUVulkanFeatures.cpp
+vulkan/gosGPUVulkanQFamily.cpp
 
 utils/gosFPSMovement.cpp
 utils/gosFPSMovement.h
@@ -62,7 +64,7 @@ gosGPUResViewport.h
 
 gosGPUUtils.cpp
 gosGPUUtils.h
- )
+)
 
 #====================================================
 # info a video

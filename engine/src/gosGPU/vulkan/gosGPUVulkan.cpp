@@ -21,51 +21,6 @@ static u32 toVulkanVersion (eVulkanVersion v)
     }
 }
 
-
-/*********************************************
-* funzione di comodo per tenere traccia dei MB di memoria allocati in GPU
-*/
-bool gos::vulkanAllocMemory (sVkDevice &vulkan, const VkMemoryAllocateInfo *pAllocateInfo, const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory)
-{
-    const VkResult result = vkAllocateMemory (vulkan.dev, pAllocateInfo, pAllocator, pMemory);
-    if (VK_SUCCESS == result)
-    {
-        vulkan.memory_curAllocated += pAllocateInfo->allocationSize;
-        if (vulkan.memory_curAllocated > vulkan.memory_maxAllocated)
-            vulkan.memory_maxAllocated = vulkan.memory_curAllocated;
-
-#ifdef _DEBUG
-        char debug_m1[32];
-        char debug_m2[32];
-        gos::string::format::memoryToKB_MB_GB(pAllocateInfo->allocationSize, debug_m1, sizeof(debug_m1));
-        gos::string::format::memoryToKB_MB_GB(vulkan.memory_curAllocated, debug_m2, sizeof(debug_m2));
-        gos::logger::log (eTextColor::cyan, "vulkanAllocMemory(%s), cur allocated:%s\n", debug_m1, debug_m2);
-#endif
-        return true;
-    }
-
-    gos::logger::err ("gos::vulkanAllocMemory() => %s\n", string_VkResult(result));
-    return false;
-}
-
-//*********************************************
-void gos::vulkanFreeMemory (sVkDevice &vulkan, VkDeviceMemory memory, const VkAllocationCallbacks *pAllocator, u64 memSize)
-{
-    if (vulkan.memory_curAllocated >= memSize)
-        vulkan.memory_curAllocated -= memSize;
-    else
-        vulkan.memory_curAllocated = 0;
-    vkFreeMemory(vulkan.dev, memory, pAllocator);
-
-#ifdef _DEBUG
-        char debug_m1[32];
-        char debug_m2[32];
-        gos::string::format::memoryToKB_MB_GB(memSize, debug_m1, sizeof(debug_m1));
-        gos::string::format::memoryToKB_MB_GB(vulkan.memory_curAllocated, debug_m2, sizeof(debug_m2));
-        gos::logger::log (eTextColor::cyan, "vulkanFreeMemory(%s), cur allocated:%s\n", debug_m1, debug_m2);
-#endif
-}
-
 //*********************************************
 bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &requiredValidationLayerList, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion)
 {
@@ -494,178 +449,8 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
     return true;
 }
 
-/*********************************************
- * Dato il [vkPhyDevice] e una lista di estensioni richieste [requiredExtensionList], crea il device logico
- * create le queue e filla out_vulkan con queste informazioni
- */
-bool gos::vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion, sVkDevice *out_vulkan)
-{
-    assert (NULL != out_vulkan);
-
-    gos::Allocator *allocator = gos::getScrapAllocator();
-
-    bool ret = true;
-    gos::logger::log ("vulkanCreateDevice()\n");
-    gos::logger::incIndent();
-    gos::logger::log ("creating with phyDev at index:%d\n   gfxQ familyIndex:%d, count=%d\n   computeQ familyIndex:%d, count=%d\n   transferQ familyIndex:%d, count=%d\n", 
-                        vkPhyDevInfo.devIndex,
-                        vkPhyDevInfo.queue_gfx.familyIndex, vkPhyDevInfo.queue_gfx.count,
-                        vkPhyDevInfo.queue_compute.familyIndex, vkPhyDevInfo.queue_compute.count,
-                        vkPhyDevInfo.queue_transfer.familyIndex, vkPhyDevInfo.queue_transfer.count);
-
-    //quali e quante queue mi servono?
-    float queuePriority = 1.0f;
-    VkDeviceQueueCreateInfo queueCreateInfo[16];
-    u8 numOfQueue = 0;
-    memset (queueCreateInfo, 0, sizeof(queueCreateInfo));
-    queueCreateInfo[numOfQueue].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo[numOfQueue].queueFamilyIndex = vkPhyDevInfo.queue_gfx.familyIndex;
-    queueCreateInfo[numOfQueue].queueCount = 1; //vkPhyDevInfo.queue_gfx.count;     TODO indagare se avere + di 1 Q ha senso
-    queueCreateInfo[numOfQueue].pQueuePriorities = &queuePriority;
-    numOfQueue++;
-
-    if (vkPhyDevInfo.queue_compute.familyIndex != vkPhyDevInfo.queue_gfx.familyIndex)
-    {
-        queueCreateInfo[numOfQueue].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo[numOfQueue].queueFamilyIndex = vkPhyDevInfo.queue_compute.familyIndex;
-        queueCreateInfo[numOfQueue].queueCount = 1;
-        queueCreateInfo[numOfQueue].pQueuePriorities = &queuePriority;
-        numOfQueue++;
-    }
-
-    if (vkPhyDevInfo.queue_transfer.familyIndex != vkPhyDevInfo.queue_gfx.familyIndex && 
-        vkPhyDevInfo.queue_transfer.familyIndex != vkPhyDevInfo.queue_compute.familyIndex)
-    {
-        queueCreateInfo[numOfQueue].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo[numOfQueue].queueFamilyIndex = vkPhyDevInfo.queue_transfer.familyIndex;
-        queueCreateInfo[numOfQueue].queueCount = 1;
-        queueCreateInfo[numOfQueue].pQueuePriorities = &queuePriority;
-        numOfQueue++;
-    }
-
-    //Creo l'elenco delle features che voglio attivare
-    VkPhyDeviceFeatures devFeatures;
-    devFeatures.checkPhysicalDeviceFeatures (vkPhyDevInfo.vkDev, vulkanVersion);
-
-
-
-    //creo il device
-    const char *foundExtensions[128];
-    VkDeviceCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.queueCreateInfoCount = numOfQueue;
-    createInfo.pQueueCreateInfos = queueCreateInfo;
-    createInfo.enabledExtensionCount = 0;
-    createInfo.ppEnabledExtensionNames = foundExtensions;
-    createInfo.pNext = &devFeatures.features;
-
-
-    //aggiungo le etensioni richieste
-    VkPhyDeviceExtensionList extList;
-    extList.build (allocator, vkPhyDevInfo.vkDev);
-    {
-        u32 iter;
-        const char *identifier;
-        requiredExtensionList.toStart(&iter);
-        while (NULL != (identifier = requiredExtensionList.next(&iter)))
-        {
-            const u32 index = extList.find(identifier);
-            if (u32MAX == index)
-            {
-                gos::logger::err ("extension %s not available!\n", identifier);
-                ret = false;
-            }
-            else
-            {
-                foundExtensions[createInfo.enabledExtensionCount++] = extList(index)->extensionName;
-                gos::logger::log ("using extension %s\n", identifier);
-            }
-        }
-    }
-
-
-    if (ret)
-    {
-
-        VkResult result = vkCreateDevice (vkPhyDevInfo.vkDev, &createInfo, nullptr, &out_vulkan->dev);
-        if (VK_SUCCESS != result) 
-        {
-            gos::logger::err ("vkCreateDevice() returned %s\n", string_VkResult(result));
-            ret = false;
-        }
-        else
-        {
-            out_vulkan->phyDevInfo = vkPhyDevInfo;
-
-            //recupero l'handle della gfxQ
-            sVkDevice::sQueueInfo *queueInfo = out_vulkan->getQueueInfo (eGPUQueueType::gfx);
-            queueInfo->familyIndex = vkPhyDevInfo.queue_gfx.familyIndex;
-            vkGetDeviceQueue (out_vulkan->dev, queueInfo->familyIndex, 0, &queueInfo->vkQueueHandle);
-            
-
-            queueInfo = out_vulkan->getQueueInfo (eGPUQueueType::compute);
-            queueInfo->familyIndex = vkPhyDevInfo.queue_compute.familyIndex;
-            vkGetDeviceQueue (out_vulkan->dev, queueInfo->familyIndex, 0, &queueInfo->vkQueueHandle);
-            if (queueInfo->familyIndex == vkPhyDevInfo.queue_gfx.familyIndex)
-                queueInfo->isAnAliasFor = eGPUQueueType::gfx;
-
-            queueInfo = out_vulkan->getQueueInfo (eGPUQueueType::transfer);
-            queueInfo->familyIndex = vkPhyDevInfo.queue_transfer.familyIndex;
-            vkGetDeviceQueue (out_vulkan->dev, queueInfo->familyIndex, 0, &queueInfo->vkQueueHandle);
-            if (queueInfo->familyIndex == vkPhyDevInfo.queue_gfx.familyIndex)
-                queueInfo->isAnAliasFor = eGPUQueueType::gfx;
-            else if (queueInfo->familyIndex == vkPhyDevInfo.queue_compute.familyIndex)
-                queueInfo->isAnAliasFor = eGPUQueueType::compute;
-        }
-    }
-    
-    /*creo un command pool per ogni Q
-    if (ret)
-    {
-        const eGPUQueueType queueType[] = { eGPUQueueType::gfx, eGPUQueueType::compute, eGPUQueueType::transfer };
-        const u32 NUM_Q =  sizeof(queueType) / sizeof(eGPUQueueType);
-        for (u32 i=0; i<NUM_Q; i++)
-        {
-            sVkDevice::sQueueInfo *queueInfo = out_vulkan->getQueueInfo (queueType[i]);
-            if (eGPUQueueType::unknown == queueInfo->isAnAliasFor)
-            {
-                VkCommandPoolCreateInfo poolInfo{};
-                poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-                poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-                poolInfo.queueFamilyIndex = queueInfo->familyIndex;
-                
-                gos::logger::log ("creating CommandPool for queue %d [%s]\n", i, gpu::enumToString(queueType[i]));
-                const VkResult result = vkCreateCommandPool (out_vulkan->dev, &poolInfo, nullptr, &queueInfo->vkPoolHandle);
-                if (VK_SUCCESS != result)
-                {
-                    ret = false;
-                    gos::logger::err ("vkCreateCommandPool() error: %s\n", string_VkResult(result)); 
-                }
-            }
-        }
-
-        for (u32 i=0; i<NUM_Q; i++)
-        {
-            sVkDevice::sQueueInfo *queueInfo = out_vulkan->getQueueInfo (queueType[i]);
-            if (eGPUQueueType::unknown != queueInfo->isAnAliasFor)
-            {
-                //questa Q e' un alias per un'altra Q, quindi condivide lo stesso command pool      
-                gos::logger::log ("CommandPool for queue %d [%s] is an alias of [%s]\n", i, gpu::enumToString(queueType[i]), gpu::enumToString(queueInfo->isAnAliasFor));          
-                queueInfo->vkPoolHandle = out_vulkan->getQueueInfo(queueInfo->isAnAliasFor)->vkPoolHandle;
-            }            
-        }
-    }
-    */
-
-    if (ret)
-        gos::logger::log (eTextColor::green, "OK\n");
-        
-    gos::logger::decIndent();
-    return ret;
-}
-
 //*********************************************
-bool gos::vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfaceKHR, bool bVSync, sSwapChainInfo *out)
+bool gos::vulkanCreateSwapChain (VulkanDevice &vulkan, const VkSurfaceKHR &vkSurfaceKHR, bool bVSync, sSwapChainInfo *out)
 {
     assert (VK_NULL_HANDLE != vkSurfaceKHR);
 
@@ -856,30 +641,10 @@ bool gos::vulkanFindBestDepthStencilFormat (const sPhyDeviceInfo &vkPhyDevInfo, 
     return false;
 }
 
-//*********************************************
-bool gos::vulkanGetMemoryType (const sPhyDeviceInfo &vkPhyDevInfo, uint32_t typeBits, VkMemoryPropertyFlags properties, u32 *out_index)
-{
-    assert (NULL != out_index);
-    for (u32 i = 0; i < vkPhyDevInfo.vkMemoryProperties.memoryTypeCount; i++)
-    {
-        if ((typeBits & 1) == 1) //questo vuol dire che la risorsa che voglio allocare puo' essere allocata nel "memory type i-esimo"
-        {
-            //posto che il memory-type i-esimo sia un memory type valido per questa risorsa, allora voglio che abbia anche
-            //tutti le "properties" che ho richiesto
-            if ((vkPhyDevInfo.vkMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
-            {
-                *out_index = i;
-                return true;
-            }
-        }
-        typeBits >>= 1;
-    }
 
-    return false;
-}
 
 //*********************************************
-bool gos::vulkanCreateBuffer (sVkDevice &vulkan, u32 sizeInByte, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties,
+bool gos::vulkanCreateBuffer (VulkanDevice &vulkan, u32 sizeInByte, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties,
                                 bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ,
                                 VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle, u64 *out_realMemAllocated)
 {
@@ -896,9 +661,9 @@ bool gos::vulkanCreateBuffer (sVkDevice &vulkan, u32 sizeInByte, VkBufferUsageFl
     if (bCanBeUsedBy_gfxQ || bCanBeUsedBy_computeQ || bCanBeUsedBy_transferQ)
     {
         const u32 familyIndex[] = {
-            vulkan.getQueueInfo(eGPUQueueType::gfx)->familyIndex,
-            vulkan.getQueueInfo(eGPUQueueType::compute)->familyIndex,
-            vulkan.getQueueInfo(eGPUQueueType::transfer)->familyIndex
+            vulkan.getQueueInfo(eGPUQueueFamily::gfx)->familyIndex,
+            vulkan.getQueueInfo(eGPUQueueFamily::compute)->familyIndex,
+            vulkan.getQueueInfo(eGPUQueueFamily::transfer)->familyIndex
         };
 
         const u32 MASK[] = {
@@ -974,7 +739,7 @@ bool gos::vulkanCreateBuffer (sVkDevice &vulkan, u32 sizeInByte, VkBufferUsageFl
 
 
 //*********************************************
-bool gos::vulkanCreateCommandBuffer (sVkDevice &vulkan, eGPUQueueType whichQ, u32 threadID, VkCommandPool *out_pool, VkCommandBuffer *out_handle)
+bool gos::vulkanCreateCommandBuffer (VulkanDevice &vulkan, eGPUQueueFamily whichQ, u32 threadID, VkCommandPool *out_pool, VkCommandBuffer *out_handle)
 {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -992,14 +757,14 @@ bool gos::vulkanCreateCommandBuffer (sVkDevice &vulkan, eGPUQueueType whichQ, u3
 }
 
 //*********************************************
-bool gos::vulkanDeleteCommandBuffer (sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandPool vkPool, VkCommandBuffer &vkHandle)
+bool gos::vulkanDeleteCommandBuffer (VulkanDevice &vulkan, eGPUQueueFamily whichQ, VkCommandPool vkPool, VkCommandBuffer &vkHandle)
 {
     vulkan.deleteCommandBuffer (whichQ, vkPool, vkHandle);
     return true;
 }
 
 //*********************************************
-bool gos::vulkanCreateImage2D (sVkDevice &vulkan, u32 dimx, u32 dimy, u8 nMipMap, VkFormat fmt, eMemAccessMode memAccessMode, 
+bool gos::vulkanCreateImage2D (VulkanDevice &vulkan, u32 dimx, u32 dimy, u8 nMipMap, VkFormat fmt, eMemAccessMode memAccessMode, 
                                 VkImageUsageFlags usage, VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte)
 {
     assert (NULL != out_imagehandle);

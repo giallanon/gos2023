@@ -387,7 +387,7 @@ bool Builder_tex2D::priv_do_create_assetFile (Context &ctx, const Params &params
 
         //crea le mipmap
         GPUCmdBufferHandle  cmdBufferHandle;
-        gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+        gpu->cmdBuffer_create (eGPUQueueFamily::gfx, &cmdBufferHandle);
 
         gpu::GFXJob job;
         job.setup (gpu);

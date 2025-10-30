@@ -155,9 +155,8 @@ namespace gos
         VkExtent2D          swapChain_getImageExten2D() const               { return vulkan.swapChainInfo.imageExtent; }
 
         //================ submit Q
-        VkQueue             getSubmitQ (eGPUQueueType whichOne) const        { return vulkan.getQueueInfo(whichOne)->vkQueueHandle; }
-        void                queue_waitIdle (eGPUQueueType whichOne);
-        VkResult            queue_submit (eGPUQueueType whichOne, u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence);
+        void                queue_waitIdle (eGPUQueueFamily whichOne);
+        VkResult            queue_submit (eGPUQueueFamily whichOne, u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence);
 
         //================ viewport
         //E' possibile creare tante viewport
@@ -212,7 +211,7 @@ namespace gos
 
         
         //================ command buffer
-        bool                        cmdBuffer_create (eGPUQueueType whichQ, GPUCmdBufferHandle *out_handle, u32 threadID=gos::thread::getCurrentThreadID());
+        bool                        cmdBuffer_create (eGPUQueueFamily whichQ, GPUCmdBufferHandle *out_handle, u32 threadID=gos::thread::getCurrentThreadID());
         void                        deleteResource (GPUCmdBufferHandle &handle);
         const gpu::CommandBuffer*   getInfo (const GPUCmdBufferHandle handle) const;
 
@@ -296,7 +295,7 @@ namespace gos
         //                      in cui si richiedano N sampler con le stesse caratteristiche
 
         //================ da rimuovere
-        VkDevice           REMOVE_getVkDevice() const                   { return vulkan.dev; }
+        VkDevice           REMOVE_getVkDevice() const                   { return vulkan.vkDev; }
 
 
     public:
@@ -371,7 +370,7 @@ namespace gos
         {
         public:
                                             ImmediateTransferCmd();
-            void                            setup (GPU *gpuIN, gos::eGPUQueueType queueTypeIN);
+            void                            setup (GPU *gpuIN, gos::eGPUQueueFamily queueTypeIN);
             void                            unsetup ();
             gpu::pipe2::CmdBufferWriter2*   begin();
             void                            end();
@@ -380,7 +379,7 @@ namespace gos
 
         private:
             gos::GPU                        *gpu;
-            gos::eGPUQueueType              queueType;
+            gos::eGPUQueueFamily              queueType;
             GPUCmdBufferHandle              handle_cmdBuffer;
             gpu::pipe2::CmdBufferWriter2    cw;
             
@@ -431,8 +430,8 @@ namespace gos
                                 gpu::Buffer *s;
                                 if (list.fromHandleToPointer (handle, &s))
                                 {
-                                    vkDestroyBuffer (vulkan.dev, s->vkHandle, nullptr);
-                                    gos::vulkanFreeMemory (vulkan, s->_vkMemHandle, nullptr, s->memoryAllocated);
+                                    vkDestroyBuffer (vulkan.vkDev, s->vkHandle, nullptr);
+                                    vulkan.freeMemory (s->_vkMemHandle, nullptr, s->memoryAllocated);
                                     s->reset();
                                     list.release (handle);
                                 }
@@ -511,7 +510,7 @@ namespace gos
                                 const u32 aa = sizeInByte % minSize;
                                 sizeInByte += minSize - aa;                                
 
-                                VkResult result = vkMapMemory (vulkan.dev, s->_vkMemHandle, offsetDST, sizeInByte, 0, &out->host_pt);
+                                VkResult result = vkMapMemory (vulkan.vkDev, s->_vkMemHandle, offsetDST, sizeInByte, 0, &out->host_pt);
                                 if (VK_SUCCESS != result)
                                 {
                                     out->host_pt = NULL;
@@ -535,7 +534,7 @@ namespace gos
         VkInstance                  vkInstance;
         VkSurfaceKHR                vkSurfaceKHR;
         VkDebugUtilsMessengerEXT    vkDebugMessenger;
-        sVkDevice                   vulkan;
+        VulkanDevice                vulkan;
         VkSurfaceCapabilitiesKHR    vkSurfCapabilities;
         sPhyDeviceInfo              physicalDevInfo;
         u32                         currentSwapChainImageIndex;

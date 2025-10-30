@@ -280,7 +280,7 @@ void VulkanExample7::save (const gpu::sMappedImage &src, u32 srcW, u32 srcH)
 void VulkanExample7::virtual_onRun()
 {
     GPUCmdBufferHandle  cmdBufferHandle;
-    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+    gpu->cmdBuffer_create (eGPUQueueFamily::gfx, &cmdBufferHandle);
 
     u32 mipmap_w = tex_width;
     u32 mipmap_h = tex_height;

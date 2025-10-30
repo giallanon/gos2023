@@ -88,7 +88,7 @@ void VulkanExample1::virtual_onRun()
 
     //command buffer 
     GPUCmdBufferHandle  cmdBufferHandle;
-    gpu->cmdBuffer_create (eGPUQueueType::gfx, &cmdBufferHandle);
+    gpu->cmdBuffer_create (eGPUQueueFamily::gfx, &cmdBufferHandle);
 
 
     //main loop

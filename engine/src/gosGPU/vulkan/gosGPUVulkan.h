@@ -18,29 +18,22 @@ namespace gos
      * Dato il [vkPhyDevice] e una lista di estensioni richieste [requiredExtensionList], crea il device logico
      * create le queue e filla out_vulkan con queste informazioni
      */
-    bool    vulkanCreateDevice (sPhyDeviceInfo &vkPhyDevInfo, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion, sVkDevice *out_vulkan);
-
-    bool    vulkanCreateSwapChain (sVkDevice &vulkan, const VkSurfaceKHR &vkSurfaceKHR, bool bVSync, sSwapChainInfo *out);
+    bool    vulkanCreateSwapChain (VulkanDevice &vulkan, const VkSurfaceKHR &vkSurfaceKHR, bool bVSync, sSwapChainInfo *out);
 
     bool    vulkanFindBestDepthOnlyFormat (const sPhyDeviceInfo &vkPhyDevInfo, VkFormat *out_depthFormat);
 
     bool    vulkanFindBestDepthStencilFormat (const sPhyDeviceInfo &vkPhyDevInfo, VkFormat* out_depthStencilFormat);
 
-    bool    vulkanGetMemoryType (const sPhyDeviceInfo &vkPhyDevInfo, uint32_t typeBits, VkMemoryPropertyFlags properties, u32 *out_index);
-
-    bool    vulkanAllocMemory (sVkDevice &vulkan, const VkMemoryAllocateInfo *pAllocateInfo, const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory);
-    void    vulkanFreeMemory (sVkDevice &vulkan, VkDeviceMemory memory, const VkAllocationCallbacks *pAllocator, u64 memSize);
-
-    bool    vulkanCreateBuffer (sVkDevice &vulkan, u32 sizeInByte, 
+    bool    vulkanCreateBuffer (VulkanDevice &vulkan, u32 sizeInByte, 
                                 VkBufferUsageFlags usage, 
                                 VkMemoryPropertyFlags memProperties,
                                 bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ,
                                 VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle, u64 *out_realMemAllocated);
 
-    bool    vulkanCreateCommandBuffer (sVkDevice &vulkan, eGPUQueueType whichQ, u32 threadID, VkCommandPool *out_pool, VkCommandBuffer *out_handle);
-    bool    vulkanDeleteCommandBuffer (sVkDevice &vulkan, eGPUQueueType whichQ, VkCommandPool vkPool, VkCommandBuffer &vkHandle);
+    bool    vulkanCreateCommandBuffer (VulkanDevice &vulkan, eGPUQueueFamily whichQ, u32 threadID, VkCommandPool *out_pool, VkCommandBuffer *out_handle);
+    bool    vulkanDeleteCommandBuffer (VulkanDevice &vulkan, eGPUQueueFamily whichQ, VkCommandPool vkPool, VkCommandBuffer &vkHandle);
 
-    bool    vulkanCreateImage2D (sVkDevice &vulkan, u32 dimx, u32 dimy, u8 numMipMap, VkFormat fmt, eMemAccessMode memAccessMode, 
+    bool    vulkanCreateImage2D (VulkanDevice &vulkan, u32 dimx, u32 dimy, u8 numMipMap, VkFormat fmt, eMemAccessMode memAccessMode, 
                                 VkImageUsageFlags usage, VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte);
 
 
