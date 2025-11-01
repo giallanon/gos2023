@@ -41,7 +41,7 @@ namespace gos
             gos::Dim2D      height;
             u32             resolvedW;
             u32             resolvedH;
-            u64             memoryAllocated;
+            u32             memoryAllocated;
 
             bool            bHasStencil;
             VkFormat        depthFormat;

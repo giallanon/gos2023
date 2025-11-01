@@ -32,7 +32,7 @@ void VulkanExample6::virtual_onCleanup()
 
 
     const asset::Asset_pipe *pipe;
-    if (theHub.getAssetWithTimeout(assetPipe, 5000, &pipe))
+    if (theHub.getAssetWithTimeout(assetPipe, &pipe, 5000))
     {
         theHub.unload (assetPipe);
         theHub.unload (assetPipe2);
@@ -162,7 +162,7 @@ bool VulkanExample6::virtual_onInit ()
 
     //creazione pipeline
     const asset::Asset_pipe *pipe;
-    theHub.getAssetWithTimeout (assetPipe, 5000, &pipe);
+    theHub.getAssetWithTimeout (assetPipe, &pipe, 5000);
     
     //risorse di rendering
     const eImageFormat IMG_FORMAT = eImageFormat::U8_RGBA;

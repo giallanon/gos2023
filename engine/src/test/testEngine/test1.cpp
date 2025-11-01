@@ -323,7 +323,7 @@ bool Test1::priv_run2 ()
 	} scene;
 
     const asset::Asset_pipe *pipe;
-    engine->assetHub->getAssetWithTimeout (assHandle_pipe, 5000, &pipe);
+    engine->assetHub->getAssetWithTimeout (assHandle_pipe, &pipe, 5000);
 	{
         //alloco una istanza dei descriptor-set
         gos::gpu::DescrSetInstanceWriter dsw;
@@ -503,12 +503,12 @@ bool Test1::priv_run3 ()
 	};	
 
     const asset::Asset_pipe *pipe;
-    engine->assetHub->getAssetWithTimeout (assHandle_pipe, 5000, &pipe);
+    engine->assetHub->getAssetWithTimeout (assHandle_pipe, &pipe, 5000);
 	{
 		const asset::Asset_tex2D *texBianca;
 		const asset::Asset_tex2D *texChecker;
-		engine->assetHub->getAssetWithTimeout (assHandle_texBianca, 5000, &texBianca);
-		engine->assetHub->getAssetWithTimeout (assHandle_texChecker, 5000, &texChecker);
+		engine->assetHub->getAssetWithTimeout (assHandle_texBianca, &texBianca, 5000);
+		engine->assetHub->getAssetWithTimeout (assHandle_texChecker, &texChecker, 5000);
 
 
 
@@ -749,7 +749,7 @@ bool Test1::priv_run4 ()
 		DBGBREAK;
 		return false;
 	}
-	const engine::Shape *info_shape = engine->shape_getInfo(shapeHandle);
+	//const engine::Shape *info_shape = engine->shape_getInfo(shapeHandle);
 
 
 	//creo il renderer
@@ -762,10 +762,47 @@ bool Test1::priv_run4 ()
 	asset::Handle assHandle_texBianca;
 	asset::Handle assHandle_texChecker;
     if (!engine->assetHub->getHandle ("tex_bianca", &assHandle_texBianca, true))
+	{
         return false;
+	}
     if (!engine->assetHub->getHandle ("tex_checker", &assHandle_texChecker, true))
+	{
         return false;
+	}
+	
+	u32 material_indices[4];
+	u32 matrix_indices[4];
+	{
+		const asset::Asset_tex2D *tex;
+		u32	texture_index__texBianca = u32MAX;
+		u32	texture_index__texChecker = u32MAX;
 
+		engine->assetHub->getAssetWithTimeout(assHandle_texBianca, &tex, 5000);
+		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->handle_texture);
+
+		engine->assetHub->getAssetWithTimeout(assHandle_texChecker, &tex, 5000);
+		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->handle_texture);
+
+		material_indices[0] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
+		material_indices[1] = renderer->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
+		material_indices[2] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 0.2f, 0.2f));
+		material_indices[3] = renderer->material_create (texture_index__texChecker, vec3f(0.2f, 1.0f, 0.2f));
+
+
+		mat4x4f matrix;
+
+		matrix.identity();
+		matrix_indices[0] = renderer->matrix_create (matrix);
+
+		matrix.buildTranslation (0, 0, 10.f);
+		matrix_indices[1] = renderer->matrix_create (matrix);
+
+		matrix.buildTranslation (0, 4.0f, 5.f);
+		matrix_indices[2] = renderer->matrix_create (matrix);
+
+		matrix.buildTranslation (0, -4.0f, 5.f);
+		matrix_indices[3] = renderer->matrix_create (matrix);
+	}
 
     
 	//renderizzo
@@ -787,10 +824,10 @@ bool Test1::priv_run4 ()
 		}
 
         mainLoop.stat_onCPUFrameBegin();
-        engine->assetHub->update (gos::getTimeSinceStart_msec());
 		doCPUStuff();
 		{
-			/*if (gos::getTimeSinceStart_msec() > nextTimeUpdate_msec)
+			//animazione di un paio di oggetti
+			if (gos::getTimeSinceStart_msec() > nextTimeUpdate_msec)
 			{
 				nextTimeUpdate_msec = gos::getTimeSinceStart_msec() + 30;
 				obj0_roty += 1.0f;
@@ -798,16 +835,15 @@ bool Test1::priv_run4 ()
 					obj0_roty -= 360;
 
 				mat4x4f mat1;
-				mat4x4f mat2;
 				mat1.buildRotationAboutY (gos::math::gradToRad(obj0_roty));
-				gpu->writeAndSync (handle_sbo_matrixList, 0, &mat1, sizeof(mat4x4f));
+				renderer->matrix_update (material_indices[0], mat1);
 
-
-				mat1.buildTranslation (0, 3, 0);
+				mat4x4f mat2;
+				mat1.buildTranslation (0, 4.0f, 5.f);
 				mat2.buildRotationAboutZ (gos::math::gradToRad(obj0_roty));
 				mat2 = mat1 * mat2;
-				gpu->writeAndSync (handle_sbo_matrixList, sizeof(mat4x4f)*2, &mat2, sizeof(mat4x4f));
-			}*/			
+				renderer->matrix_update (material_indices[2], mat2);
+			}
 		}
 		mainLoop.stat_onCPUFrameEnd();
 
@@ -825,9 +861,14 @@ bool Test1::priv_run4 ()
 			cw	.begin (gpu, cmdBufferHandle)
 				.setViewport (gpu->viewport_getDefault());
 
-				renderer->begin(&cam);
-					//renderer->add()
-				renderer->end (cw);
+			renderer->begin(&cam);
+			{
+				renderer->add(shapeHandle, matrix_indices[0], material_indices[0]);
+				renderer->add(shapeHandle, matrix_indices[1], material_indices[1]);
+				renderer->add(shapeHandle, matrix_indices[2], material_indices[2]);
+				renderer->add(shapeHandle, matrix_indices[3], material_indices[3]);
+			}
+			renderer->end (cw);
 
 			cw	.imageTransition (renderer->getHandle_rt0(), eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
 				.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)

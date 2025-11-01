@@ -81,8 +81,9 @@ namespace gos
 	public:
 					HandleT()								{ setInvalid(); }
 
-		bool		operator== (const ThisHandle &b) const  { return (id == b.id); }
-		bool		operator!= (const ThisHandle &b) const  { return (id != b.id); }
+		bool		operator== (const ThisHandle b) const  	{ return (id == b.id); }
+		bool		operator!= (const ThisHandle b) const  	{ return (id != b.id); }
+		int			compare (const ThisHandle b) const 		{ if (id==b.id) return 0; if (id>b.id) return 1; return -1; }
 					
 		void		setInvalid()							{ id = u32MAX; }
 		bool		isInvalid() const						{ return (id == u32MAX); }
@@ -193,8 +194,9 @@ namespace gos
 		bool		isInvalid() const										{ return _handle.isInvalid(); }\
 		bool		isValid() const											{ return _handle.isValid(); }\
 	\
-		bool		operator== (const HANDLE_TYPENAME &b) const  			{ return (_handle == b._handle); }\
-		bool		operator!= (const HANDLE_TYPENAME &b) const  			{ return (_handle != b._handle); }\
+		bool		operator== (const HANDLE_TYPENAME b) const  			{ return (_handle == b._handle); }\
+		bool		operator!= (const HANDLE_TYPENAME b) const  			{ return (_handle != b._handle); }\
+		int			compare (const HANDLE_TYPENAME b) const					{ return (_handle.compare(b._handle)); }\
 	\
 		void		setFromU32 (u32 u)										{ _handle.setFromU32(u); }\
 		u32			viewAsU32() const										{ return _handle.viewAsU32(); }\

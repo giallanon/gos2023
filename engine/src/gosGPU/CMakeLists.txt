@@ -30,9 +30,11 @@ vulkan/gosGPUVukanHelpers.h
 vulkan/gosGPUVulkan.cpp
 vulkan/gosGPUVulkan.h
 vulkan/gosGPUVulkanDevice.cpp
+vulkan/gosGPUVulkanDevice.h
 vulkan/gosGPUVulkanEnumAndDefine.h
 vulkan/gosGPUVulkanFeatures.cpp
 vulkan/gosGPUVulkanQFamily.cpp
+vulkan/gosGPUVulkanQFamily.h
 
 utils/gosFPSMovement.cpp
 utils/gosFPSMovement.h

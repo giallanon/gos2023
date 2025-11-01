@@ -281,7 +281,7 @@ bool gpu::DescrSetInstanceWriter::end()
         return false;
 
 
-    vkUpdateDescriptorSets (gpu->REMOVE_getVkDevice(), numWriteDescr, writeDescrList, 0, nullptr);
+    gpu->_getVulkanDevice()->descriptorSet_update (numWriteDescr, writeDescrList, 0, nullptr);
     return true;
 }
 

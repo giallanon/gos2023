@@ -201,6 +201,11 @@ bool Engine::update()
     if (bQuitEngine)
         return false;
 
+    const u64 timenow_msec = gos::getTimeSinceStart_msec();
+    
+    //asset hub
+    assetHub->update(timenow_msec);
+
     //input
     gos::input::pollEvents();
     input::resolveEvents (gpu->getWindow(), inputCtx, &evtList);

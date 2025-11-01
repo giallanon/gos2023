@@ -42,11 +42,11 @@ void testWithWindow()
             gos::GPU gpu;
             if (gpu.init (mainWin, false))
             {
-                // runExample<VulkanExample1>(&gpu, "VulkanExample1");
-                // runExample<VulkanExample2>(&gpu, "VulkanExample2");
-                // runExample<VulkanExample3>(&gpu, "VulkanExample3");
-                // runExample<VulkanExample4>(&gpu, "VulkanExample4");
-                // runExample<VulkanExample5>(&gpu, "VulkanExample5");
+                //runExample<VulkanExample1>(&gpu, "VulkanExample1");
+                //runExample<VulkanExample2>(&gpu, "VulkanExample2");
+                //runExample<VulkanExample3>(&gpu, "VulkanExample3");
+                //runExample<VulkanExample4>(&gpu, "VulkanExample4");
+                //runExample<VulkanExample5>(&gpu, "VulkanExample5");
                 runExample<VulkanExample6>(&gpu, "VulkanExample6");
                 gpu.deinit();
             }

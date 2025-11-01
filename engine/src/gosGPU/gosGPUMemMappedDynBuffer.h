@@ -1,11 +1,20 @@
 #ifndef _gosGPUMemMappedDynBuffer_h_
-#define gosGPUMemMappedDynBuffer
+#define _gosGPUMemMappedDynBuffer_h_
 #include "gosGPUEnumAndDefine.h"
 
 namespace gos
 {
 	namespace gpu
 	{
+		/********************************************************
+		 * @brief 	MemMappedDynBuffer<>
+		 * 			Gli UBO/SBO, se considerati come array, devono avere gli elementi di una ben precisa dimensione,
+		 * 			dipendente dalla GPU.
+		 * 			Questa classe crea un array di <num_elemIN> elementi di tipo DATA assicurandosi che ogni singolo
+		 * 			elemento dell'array sia grosso quanto un multiplo della dimensione minima richiesta dalla GPU
+		 * 
+		 * 
+		 */
 		template<class DATA>
 		class MemMappedDynBuffer
 		{
@@ -43,13 +52,16 @@ namespace gos
 				}
 			}
 
-			DATA*	getElem(u32 i)																		{ assert (i < num_max_elem); return static_cast<DATA*>(&buffer[sizeof_oneElem * i]); }
+			DATA*			getElem(u32 i)																{ assert (i < num_max_elem); return reinterpret_cast<DATA*>(&buffer[sizeof_oneElem * i]); }
+			const DATA*		queryElem(u32 i) const														{ assert (i < num_max_elem); return reinterpret_cast<DATA*>(&buffer[sizeof_oneElem * i]); }
 
-
+			const void*	getBuffer() const 																{ return buffer; }
 			u32		getNumMaxElem() const																{ return num_max_elem; }
 			u32		getRealSizeAllocated() const														{ return num_max_elem * sizeof_oneElem; }
 			u32		getRealSizeOfOneElem() const														{ return sizeof_oneElem; }
 
+
+			Allocator*	getAllocator() const 															{ return allocator; }
 
 		private:
 			gos::Allocator *allocator;
@@ -63,5 +75,5 @@ namespace gos
 
 } //namespace gos
 
-#endif //gosGPUMemMappedDynBuffer
+#endif //_gosGPUMemMappedDynBuffer_h_
 

@@ -213,8 +213,9 @@ namespace gos
 
 
 
-        TVALUE* getValueAtPos (const Position &pos) const                               { return &list.getElem(pos._index).value; }
-
+        TVALUE*     getValueAtPos (const Position &pos) const                               { return &list.getElem(pos._index).value; }
+        Allocator*  getAllocator() const                                                    { return list.getAllocator(); }
+        u32         getNElem() const                                                        { return list.getNElem(); }
 
         /**
          * @brief   ritorna l'array lineare nel quale sono memorizzati i dati
@@ -222,7 +223,6 @@ namespace gos
          */
         const gos::FastArray<sElem>*    _queryList() const      { return &list; }
 
-        u32 getNElem() const                                    { return list.getNElem(); }
 
         /**
          * @brief   scansiona l'array lineare nel quale sono memorizzati i dati

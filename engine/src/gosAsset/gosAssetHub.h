@@ -66,7 +66,7 @@ namespace gos
 			//funziona come getAsset<> ma questa looppa per un tot di tempo in attesa che l'asset
 			//diventi ready
 			template<class TASSET>
-			bool 	getAssetWithTimeout (const Handle &h, u64 timeout_msec, const TASSET **out)
+			bool 	getAssetWithTimeout (const Handle &h, const TASSET **out, u64 timeout_msec)
 			{
 				timeout_msec += gos::getTimeSinceStart_msec();
 				while (1)

@@ -39,7 +39,7 @@ namespace gos
             VkBuffer        vkHandle;
             VkDeviceMemory  _vkMemHandle;
             eMemAccessMode   mode;
-            u64             memoryAllocated;
+            u32             memoryAllocated;
 
             u32             bufferSize;
             u32             mapped_offset;

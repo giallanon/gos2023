@@ -1,4 +1,4 @@
-#include "gosGPUVulkanEnumAndDefine.h"
+#include "gosGPUVulkanQFamily.h"
 
 using namespace gos;
 
@@ -76,14 +76,13 @@ VkCommandPool VulkanQFamily::getOrCreateCommandPool (u32 threadID)
 }
 
 //*******************************************
-void VulkanQFamily::deleteCommandBuffer (VkCommandPool vkPool, VkCommandBuffer vkHandle)
+void VulkanQFamily::deleteCommandPool (VkCommandPool vkPool)
 {
     for (u32 i = 0; i < NUM_MAX_THREAD; i++)
     {
         if (poolList[i].vkPoolHandle == vkPool)
         {
-            VkCommandBuffer vkCmdBufferList[] = { vkHandle };
-            vkFreeCommandBuffers (vkDev, poolList[i].vkPoolHandle, 1, vkCmdBufferList);
+            vkDestroyCommandPool (vkDev, vkPool, NULL);
 
             const u32 lastIndex = NUM_MAX_THREAD - 1;
             const u32 nToCopy = lastIndex - i;
@@ -95,6 +94,37 @@ void VulkanQFamily::deleteCommandBuffer (VkCommandPool vkPool, VkCommandBuffer v
             return;
         }
     }
+}
+
+
+//*******************************************
+bool VulkanQFamily::commandBuffer_create (u32 threadID, VkCommandPool *out_pool, VkCommandBuffer *out_handle)
+{
+    *out_pool = getOrCreateCommandPool(threadID);
+    if (NULL == *out_pool)
+    {
+        gos::logger::log ("VulkanQFamily::commandBuffer_create() => can't create a command pool\n");
+        return false;
+    }
+
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = *out_pool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
+
+    const VkResult result = vkAllocateCommandBuffers (vkDev, &allocInfo, out_handle);
+    if (result == VK_SUCCESS)
+        return true;
+
+    gos::logger::log ("VulkanQFamily::commandBuffer_create() => vkAllocateCommandBuffers() => %s\n", string_VkResult(result));
+    return false;
+}
+
+//*******************************************
+void VulkanQFamily::commandBuffer_delete (VkCommandPool vkPool, VkCommandBuffer vkHandle)
+{
+    vkFreeCommandBuffers (vkDev, vkPool, 1, &vkHandle);
 }
 
 //**********************************************************

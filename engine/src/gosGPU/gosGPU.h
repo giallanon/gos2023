@@ -1,7 +1,7 @@
 #ifndef _gosGPU_h_
 #define _gosGPU_h_
 #include "gosGPUEnumAndDefine.h"
-#include "vulkan/gosGPUVulkanEnumAndDefine.h"
+#include "vulkan/gosGPUVulkanDevice.h"
 #include "vulkan/gosGPUVulkan.h"
 #include "../gos/gos.h"
 #include "../gos/gosFastArray.h"
@@ -105,31 +105,31 @@ namespace gos
         void                deinit();
 
         //================ oggetti di sincronizzazione 
-        void                waitIdle();
+        void                waitIdle()                                                                                                          { vulkan.waitIdle(); }
         
-        bool                semaphore_create  (VkSemaphore *out);
-        void                semaphore_destroy  (VkSemaphore &in);
+        bool                semaphore_create  (VkSemaphore *out)                                                                                { return vulkan.semaphore_create(out); }
+        void                semaphore_destroy  (VkSemaphore &in)                                                                                { vulkan.semaphore_destroy(in); }
         
-        bool                fence_create  (bool bStartAsSignaled, VkFence *out);
-        void                fence_destroy  (VkFence &in);
+        bool                fence_create  (bool bStartAsSignaled, VkFence *out)                                                                 { return vulkan.fence_create(bStartAsSignaled, out); }
+        void                fence_destroy  (VkFence &in)                                                                                        { vulkan.fence_destroy(in); }
 
         //ritorna true se il [fence] e' segnalato, false se timeout
-        bool                fence_wait (const VkFence &fenceHandle, u64 timeout_ns = UINT64_MAX);
-        bool                fence_waitMany (const VkFence *fenceHandleList, bool bWaitForAll, u32 fenceCount, u64 timeout_ns = UINT64_MAX);
+        bool                fence_wait (const VkFence &fenceHandle, u64 timeout_ns = UINT64_MAX)                                                { return vulkan.fence_wait (fenceHandle, timeout_ns); }
+        bool                fence_waitMany (const VkFence *fenceHandleList, bool bWaitForAll, u32 fenceCount, u64 timeout_ns = UINT64_MAX)      { return vulkan.fence_waitMany (fenceHandleList, bWaitForAll, fenceCount, timeout_ns); }
 
         //riporta [fence] in stato non segnalato
-        void                fence_reset (const VkFence &fenceHandle);
-        void                fence_resetMany (const VkFence *fenceHandleList, u32 fenceCount);
+        void                fence_reset (const VkFence &fenceHandle)                                                                            { vulkan.fence_reset(fenceHandle); }
+        void                fence_resetMany (const VkFence *fenceHandleList, u32 fenceCount)                                                    { vulkan.fence_resetMany(fenceHandleList, fenceCount); }
 
-        bool                fence_isSignaled  (const VkFence &fenceHandle);
+        bool                fence_isSignaled  (const VkFence &fenceHandle)                                                                      { return vulkan.fence_isSignaled(fenceHandle); }
 
         //=================== supporto ai vari formati di immagine
-        bool                isImage2DFmtSupported (eImageFormat fmt, eImageTiling tiling) const;
+        bool                isImage2DFmtSupported (eImageFormat fmt, eImageTiling tiling) const                                                 { return vulkan.isImage2DFmtSupported(fmt, tiling); }
         
         //=================== limits
-        u32                 limits_get_maxDescriptorSetSampledImages() const;
-        u32                 limits_get_minUniformBufferOffsetAlignment() const;
-        u32                 limits_get_minStorageBufferOffsetAlignment() const;
+        u32                 limits_get_maxDescriptorSetSampledImages() const            { return vulkan.limits_get_maxDescriptorSetSampledImages(); }
+        u32                 limits_get_minUniformBufferOffsetAlignment() const          { return vulkan.limits_get_minUniformBufferOffsetAlignment(); }
+        u32                 limits_get_minStorageBufferOffsetAlignment() const          { return vulkan.limits_get_minStorageBufferOffsetAlignment(); }
 
         
         //================ window stuff
@@ -141,22 +141,22 @@ namespace gos
         //================ swap chain info
         //Ammesso che una valida <mainWin> sia fornita, allora la swap chain viene creata automaticamente da GPU::init()
         bool                swapChain_acquireImage (gos::gpu::SwapchainImg *out, u64 timeout_ns=UINT64_MAX, VkSemaphore semaphore=VK_NULL_HANDLE, VkFence fence=VK_NULL_HANDLE);
-        VkResult            swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount, u32 imageIndex);
+        VkResult            swapChain_present (const VkSemaphore *semaphoreHandleList, u32 semaphoreCount, u32 imageIndex)              { return vulkan.swapChain_present (swapchain, semaphoreHandleList, semaphoreCount, imageIndex); }
 
         bool                swapChain_wasRecreated() const                  { return bSwapChainRecreatedDuringThisFrame; }
                             //ogni volta che la swapchain viene ricreata, questo id viene incrementato.
         u32                 swapChain_getCurrentAutoID() const              { return swapchainAutoID; }
 
-        u32                 swapChain_getWidth() const                      { return vulkan.swapChainInfo.imageExtent.width; }
-        u32                 swapChain_getHeight() const                     { return vulkan.swapChainInfo.imageExtent.height; }
-        f32                 swapChain_calcAspectRatio() const               { return (f32)swapChain_getWidth() / (f32)swapChain_getHeight(); }
-        eImageFormat        swapChain_getImageFormat() const;
-        u8                  swapChain_getImageCount() const                 { return static_cast<u8>(vulkan.swapChainInfo.imageCount); }
-        VkExtent2D          swapChain_getImageExten2D() const               { return vulkan.swapChainInfo.imageExtent; }
+        u32                 swapChain_getWidth() const                      { return swapchain.getWidth(); }
+        u32                 swapChain_getHeight() const                     { return swapchain.getHeight(); }
+        f32                 swapChain_calcAspectRatio() const               { return swapchain.calcAspectRatio(); }
+        eImageFormat        swapChain_getImageFormat() const                { return gpu::fromVulkan(swapchain.getImageFormat()); }
+        u8                  swapChain_getImageCount() const                 { return swapchain.getImageCount(); }
+        VkExtent2D          swapChain_getImageExten2D() const               { return swapchain.getImageExten2D(); }
 
         //================ submit Q
-        void                queue_waitIdle (eGPUQueueFamily whichOne);
-        VkResult            queue_submit (eGPUQueueFamily whichOne, u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence);
+        void                queue_waitIdle (eGPUQueueFamily whichOne)                                                                   { vulkan.queue_waitIdle(whichOne); }
+        VkResult            queue_submit (eGPUQueueFamily whichOne, u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence)     { return vulkan.queue_submit (whichOne, submitCount, submitInfo, fence); }
 
         //================ viewport
         //E' possibile creare tante viewport
@@ -222,25 +222,25 @@ namespace gos
         const gpu::Buffer*  getInfo (const GPUStgBufferHandle handle) const;
         
                 //memcopia <dataSRC> in <&handleDST[offsetDST]>
-        bool    stagingBuffer_memcpy (GPUStgBufferHandle &handleDST, u32 offsetDST, const void *dataSRC, u32 sizeof_dataSRC);
+        bool                stagingBuffer_memcpy (GPUStgBufferHandle &handleDST, u32 offsetDST, const void *dataSRC, u32 sizeof_dataSRC);
 
                 /**
                  * @brief stagingBuffer_uploadToGPUBuffer()
                  * copia [dataSRC] in [handleDST] usando [handleSRC] come buffer di appoggio.
                  * I passaggi sono:  [datSRC] viene memcpy in [handleSRC] e poi [handleSRC] viene pushato in [handleDST]
                  */
-        bool    stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
-        bool    stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
+        bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
+        bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
         
 
         //================ buffer unmapping / manualSync
-        void    buffer_unmap (gpu::sMappedBuffer &m);
-        void    buffer_manualSync_cpuWrite (const gpu::sMappedBuffer *list, u32 numElemInList);
-        void    buffer_manualSync_cpuRead (const gpu::sMappedBuffer *list, u32 numElemInList);
+        void                buffer_unmap (gpu::sMappedBuffer &m);
+        void                buffer_manualSync_cpuWrite (const gpu::sMappedBuffer *list, u32 numElemInList);
+        void                buffer_manualSync_cpuRead (const gpu::sMappedBuffer *list, u32 numElemInList);
 
         //================ image unmapping / manualSync
-        void    image_unmap (gpu::sMappedImage &m);
-        void    image_manualSync_cpuRead (const gpu::sMappedImage *list, u32 numElemInList);
+        void                image_unmap (gpu::sMappedImage &m);
+        void                image_manualSync_cpuRead (const gpu::sMappedImage *list, u32 numElemInList);
 
         //================ vertex buffer
         bool                vertexBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUVtxBufferHandle *out_handle);
@@ -294,8 +294,9 @@ namespace gos
         //                      delete resource NON esiste perche' i Sampler sono mantenuti per sempre da GPU e sharati nel caso
         //                      in cui si richiedano N sampler con le stesse caratteristiche
 
-        //================ da rimuovere
-        VkDevice           REMOVE_getVkDevice() const                   { return vulkan.vkDev; }
+
+    public:
+        VulkanDevice*       _getVulkanDevice()                                  { return &vulkan; }
 
 
     public:
@@ -430,8 +431,7 @@ namespace gos
                                 gpu::Buffer *s;
                                 if (list.fromHandleToPointer (handle, &s))
                                 {
-                                    vkDestroyBuffer (vulkan.vkDev, s->vkHandle, nullptr);
-                                    vulkan.freeMemory (s->_vkMemHandle, nullptr, s->memoryAllocated);
+                                    vulkan.buffer_delete (s->vkHandle, s->_vkMemHandle, s->memoryAllocated);
                                     s->reset();
                                     list.release (handle);
                                 }
@@ -505,12 +505,7 @@ namespace gos
                                     return false;
                                 }
 
-                                //size deve essere un multipo di out->deviceProperties.limits.nonCoherentAtomSize
-                                const u32 minSize = static_cast<u32>(vulkan.phyDevInfo.deviceProperties.limits.nonCoherentAtomSize);
-                                const u32 aa = sizeInByte % minSize;
-                                sizeInByte += minSize - aa;                                
-
-                                VkResult result = vkMapMemory (vulkan.vkDev, s->_vkMemHandle, offsetDST, sizeInByte, 0, &out->host_pt);
+                                const VkResult result = vulkan.memory_map (s->_vkMemHandle, offsetDST, sizeInByte, 0, &out->host_pt);
                                 if (VK_SUCCESS != result)
                                 {
                                     out->host_pt = NULL;
@@ -537,11 +532,14 @@ namespace gos
         VulkanDevice                vulkan;
         VkSurfaceCapabilitiesKHR    vkSurfCapabilities;
         sPhyDeviceInfo              physicalDevInfo;
+
+        sSwapChainInfo              swapchain;
         u32                         currentSwapChainImageIndex;
         u64                         timeToRecreateSwapchain_msec;
         bool                        vSync;
         bool                        bSwapChainRecreatedDuringThisFrame;
         u32                         swapchainAutoID;
+        
         ToBeDeletedBuilder          toBeDeletedBuilder;
 
         GPUViewportHandle           defaultViewportHandle;

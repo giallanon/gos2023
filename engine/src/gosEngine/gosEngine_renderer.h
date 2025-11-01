@@ -1,6 +1,7 @@
 #ifndef _gosEngine_renderer_h_
 #define _gosEngine_renderer_h_
 #include "gosEngineEnumAndDefine.h"
+#include "gosEngine_dynTextureArray.h"
 #include "../gosGeom/gosGeomCamera3.h"
 #include "../gosGPU/gosGPUMemMappedDynBuffer.h"
 
@@ -14,6 +15,13 @@ namespace gos
         class Renderer1
         {
         public:
+	        struct Material
+	        {
+		        vec3f	diffuse_col;
+		        u32		texture_index;
+	        };	
+
+        public:
                     Renderer1();
                     ~Renderer1()                                                                                     { unsetup(); }
 
@@ -24,9 +32,24 @@ namespace gos
             void    add (const ENGShape shape, u32 matrixIndex, u32 materialIndex);
             void    end (gos::gpu::pipe2::CmdBufferWriter2 &cw);
 
-
             GPURenderTargetHandle   getHandle_rt0() const                                           { return handle_rt0; }
 
+            //==================== gestione delle risorse
+            u32             texture_addIfNotExitst (GPUTextureHandle texHandle);
+            void            texture_remove (GPUTextureHandle texHandle)                                     { texture_array.remove(texHandle); }
+            bool            texture_find (GPUTextureHandle texHandle, u32 *out_index) const                 { return texture_array.find(texHandle, out_index); }
+
+            u32             material_create (u32 texture_index, const vec3f diffuse_col);
+            void            material_delete (u32 material_index);
+            Material*       material_getForUpdate (u32 material_index);
+            const Material* material_query (u32 material_index) const;
+
+            u32             matrix_create ();
+            u32             matrix_create (const mat4x4f &m);
+            void            matrix_delete (u32 matrix_index);
+            mat4x4f*        matrix_getForUpdate (u32 matrix_index);
+            void            matrix_update (u32 matrix_index, const mat4x4f &m);
+            const mat4x4f*  matrix_query (u32 matrix_index) const;
 
         private:
             static constexpr u32    NUM_MAX_TEXTURE                         = 1024;
@@ -40,12 +63,12 @@ namespace gos
                 gos::vec4f      lightDir;
             };
 
-	        struct sMaterial
-	        {
-		        vec3f	diffuse_col;
-		        u32		texture_index;
-	        };	
-
+            struct Renderable
+            {
+                    ENGShape shape;
+                    u32 matrixIndex;
+                    u32 materialIndex;
+            };
 
         private:
             gos::Engine                 *engine;
@@ -63,10 +86,20 @@ namespace gos
             GPUStorageBufferHandle      handle_sbo_matrixList;
             GPUStorageBufferHandle      handle_sbo_materiaList;
 
-            gpu::MemMappedDynBuffer<mat4x4f>    matrixBuffer;
-            gpu::MemMappedDynBuffer<sMaterial>  materialBuffer;
+            DynamicTextureArray                 texture_array;
 
-            SceneData   scene;
+            mat4x4f                             matrix_default;
+            gpu::MemMappedDynBuffer<mat4x4f>    matrix_buffer;
+            gos::Bitfield                       matrix_bitmask;
+            u32                                 matrix_wasUpdated;
+            
+            Material                            material_default;
+            gpu::MemMappedDynBuffer<Material>   material_buffer;
+            gos::Bitfield                       material_bitmask;
+            u32                                 material_wasUpdated;
+
+            SceneData                   scene;
+            FastArray<Renderable>       renderableList;
         };
     } //namespace engine
 } //namespace gos

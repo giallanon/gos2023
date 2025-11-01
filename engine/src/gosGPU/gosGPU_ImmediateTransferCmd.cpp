@@ -46,7 +46,7 @@ gpu::pipe2::CmdBufferWriter2* GPU::ImmediateTransferCmd::begin()
     {
         if (!gpu->cmdBuffer_create (queueType, &handle_cmdBuffer))
         {
-            gos::logger::err ("GPU::ImmediateTransferCmd::begin() => createCommandBuffer failed\n");
+            gos::logger::err ("GPU::ImmediateTransferCmd::begin() => commandBuffer_create failed\n");
             return NULL;
         }
     }

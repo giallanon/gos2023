@@ -51,7 +51,7 @@ bool VulkanExample7::virtual_onInit ()
     if (bUsePipe1)
     {
         theHub.getHandle("pipe_1", &assetPipe1);
-        theHub.getAssetWithTimeout (assetPipe1, 5000, &thePipe);
+        theHub.getAssetWithTimeout (assetPipe1, &thePipe, 5000);
 
         //vtx buffer
         const gpu::Pipeline2 *pipeInfo = gpu->getInfo (thePipe->handle_pipe);
@@ -71,7 +71,7 @@ bool VulkanExample7::virtual_onInit ()
     else
     {
         theHub.getHandle("pipe_2", &assetPipe2);
-        theHub.getAssetWithTimeout (assetPipe2, 5000, &thePipe);
+        theHub.getAssetWithTimeout (assetPipe2, &thePipe, 5000);
 
         while (!theHub.getAsset (assetPipe2, &thePipe))
         {

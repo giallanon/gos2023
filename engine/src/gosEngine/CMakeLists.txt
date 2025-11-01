@@ -30,6 +30,8 @@ model/gosModel.h
 model/gosSkeleton.cpp
 model/gosSkeleton.h
 
+gosEngine_dynTextureArray.cpp
+gosEngine_dynTextureArray.h
 gosEngine_fixedSizeBufferTracker.cpp
 gosEngine_fixedSizeBufferTracker.h
 gosEngine_idxBufferMan.cpp

@@ -33,6 +33,7 @@ namespace gos
 
     struct sSwapChainInfo
     {
+    public:
                 sSwapChainInfo()            { reset(); }
         
         void    reset()
@@ -43,22 +44,17 @@ namespace gos
                     { 
                         vkImageList[i]=VK_NULL_HANDLE; 
                         vkImageListView[i]=VK_NULL_HANDLE;
-                        //frameBuffers[i]=VK_NULL_HANDLE;
                     } 
                 }
 
-        void    destroy(VkDevice &vkDevice)
-                {
-                    for (u8 i=0;i<imageCount;i++)
-                    {
-                        if (VK_NULL_HANDLE != vkImageListView[i])
-                            vkDestroyImageView(vkDevice, vkImageListView[i], nullptr);
-                    }
-                    if (VK_NULL_HANDLE != vkSwapChain)
-                        vkDestroySwapchainKHR(vkDevice, vkSwapChain, nullptr);
-                    reset();
-                }
-        
+        u32                 getWidth() const                        { return imageExtent.width; }
+        u32                 getHeight() const                       { return imageExtent.height; }
+        f32                 calcAspectRatio() const                 { return (f32)getWidth() / (f32)getHeight(); }
+        VkFormat            getImageFormat() const                  { return imageFormat; }
+        u8                  getImageCount() const                   { return static_cast<u8>(imageCount); }
+        VkExtent2D          getImageExten2D() const                 { return imageExtent; }
+
+    public:
         VkSwapchainKHR      vkSwapChain;
         VkFormat            imageFormat;
         VkExtent2D          imageExtent;
@@ -95,92 +91,7 @@ namespace gos
         VkPhysicalDeviceProperties deviceProperties;
     };
 
-    /*************************************
-    * @brief    VulkanQFamily
-    * 
-    */
-    class VulkanQFamily
-    {
-    public:
-                            VulkanQFamily();
-                            ~VulkanQFamily()                                                  { unsetup(); }
-
-        void                setup (VkDevice vkDev, eGPUQueueFamily familyType, u32 familyIndex);
-        void                unsetup();
-
-        void                waitIdle ();
-        VkResult            submit(u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence);
-
-        VkCommandPool       getOrCreateCommandPool (u32 threadID);
-        void                deleteCommandBuffer (VkCommandPool vkPool, VkCommandBuffer vkHandle);
-
-        u8                  getFamilyIndex() const                                              { return familyIndex; }
-        eGPUQueueFamily     getNativeFamilyType() const                                         { return familyType; }
-
-    private:
-        static constexpr u8 NUM_MAX_THREAD  = 16;
-
-    private:
-        struct sPool
-        {
-            u32             threadID;
-            VkCommandPool   vkPoolHandle;
-        };
-
-    private:
-        VkQueue             vkQueueHandle;
-        VkDevice            vkDev;
-        sPool               poolList[NUM_MAX_THREAD];      //un cmdPool per ogni possibile thread
-        u8                  familyIndex;
-        eGPUQueueFamily     familyType;
-    };
-
-
-    /*************************************
-    * @brief    VulkanDevice
-    * 
-    */
-    class VulkanDevice
-    {
-
-    public:
-                                VulkanDevice()                                          { priv_reset(); }
-                                ~VulkanDevice()                                         { unsetup(); }
-
-        bool                    setup (const sPhyDeviceInfo &phyInfo, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion);
-        void                    unsetup();
-
-        void                    queue_waitIdle (eGPUQueueFamily whichOne)                                                                       { getQFamily(whichOne)->waitIdle(); }
-        VkResult                queue_submit (eGPUQueueFamily whichOne, u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence)         { return getQFamily(whichOne)->submit(submitCount, submitInfo, fence); }
-
-        bool                    getMemoryType (uint32_t typeBits, VkMemoryPropertyFlags properties, u32 *out_index);
-        bool                    allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory);
-        void                    freeMemory (VkDeviceMemory memory, const VkAllocationCallbacks *pAllocator, u64 memSize);
-
-        VulkanQFamily*          getQFamily (eGPUQueueFamily type)                       { return &qfamilyList[priv_from_family_to_index(type)]; }
-        const VulkanQFamily*    getQFamily (eGPUQueueFamily type) const                 { return &qfamilyList[priv_from_family_to_index(type)]; }
-        
-    public:
-        sPhyDeviceInfo      phyDevInfo;
-        sSwapChainInfo      swapChainInfo;
-        VkDevice            vkDev;
-        u64                 memory_maxAllocated;
-        u64                 memory_curAllocated;
-
-    private:
-        static constexpr u8 NUM_MAX_QFAMILY = static_cast<u8>(eGPUQueueFamily::_NUM);
-
-    private:
-        void                priv_reset();
-        u8                  priv_from_family_to_index (eGPUQueueFamily type) const          { return map_qfamily_to_q[static_cast<u8>(type)]; }
-        void                priv_addNativeQFamily (eGPUQueueFamily familyType, u32 familyIndex);
-
-    private:
-        VulkanQFamily       qfamilyList[NUM_MAX_QFAMILY];
-        u8                  map_qfamily_to_q[NUM_MAX_QFAMILY];
-        u8                  numQFamily;
-
-    };
+    
 
 
 	namespace gpu
