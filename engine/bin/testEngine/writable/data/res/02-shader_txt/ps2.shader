@@ -12,7 +12,8 @@ layout(location = 0) out vec4 out_colorRGBA;
 
 void main() 
 {
-    const float sunLight = PIPE_calcLight_01 (in_normal);
+    vec3 normal = normalize(in_normal);
+    const float sunLight = PIPE_calcLight_01 (normal);
     const sMaterial material = materialList.material[objInstance.materialIndex];
 
     const vec3 texCol = PIPE_sample2D_bilinear (material.texture_index, in_texCoord).rgb;

@@ -7,15 +7,23 @@ using namespace gos::ent;
 
 typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Safe>		Ent_Registry_AllocatorTS;
 
+
+//**********************************
+Registry::Registry()
+{ 
+    allocator = NULL; 
+    nextEntID = 0;
+    memset (sparseSetList, 0, sizeof(sparseSetList));
+    memset (updatedListArray, 0, sizeof(updatedListArray));
+}
+
 //**********************************
 void Registry::setup()
 {
+    assert (NULL == allocator);
     Ent_Registry_AllocatorTS *aa = GOSNEW(gos::getSysHeapAllocator(), Ent_Registry_AllocatorTS)("Entity");;
     aa->setup (1024 * 1024 * 32);
     this->allocator = aa;
-
-    nextEntID = 0;
-    memset (sparseSetList, 0, sizeof(sparseSetList));
 }
 
 //**********************************
@@ -30,6 +38,11 @@ void Registry::priv_free()
         {
             IComponentList *list = reinterpret_cast<IComponentList*>(sparseSetList[i]);
             GOSDELETE(allocator, list);
+        }
+
+        if (NULL != updatedListArray[i])
+        {
+            GOSDELETE(allocator, updatedListArray[i]);
         }
     }
 

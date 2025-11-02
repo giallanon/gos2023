@@ -3,6 +3,7 @@
 #include "gosEngineEnumAndDefine.h"
 #include "gosEngine_vtxBufferMan.h"
 #include "gosEngine_idxBufferMan.h"
+#include "gosEngine_scene.h"
 #include "gosEngine_fixedSizeBufferTracker.h"
 
 namespace gos

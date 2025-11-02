@@ -1,6 +1,6 @@
 #include "gosEngine.h"
 #include "gosEngine_renderer.h"
-#include "entity/gosEntityRegistry.h"
+#include "entity/gosEntity.h"
 #include "model/gosModel.h"
 #include "../gosGPU/utils/gosFreeMovement.h"
 #include "../gosGPU/utils/gosFPSMovement.h"
@@ -22,9 +22,6 @@ private:
 	void	priv_model_setup(gos::ENGShape shapeHandle);
 
 	void	doCPUStuff ();
-	void	priv_run1 ();
-	bool	priv_run2 ();
-	bool	priv_run3 ();
 	bool	priv_run4 ();
 	
 
@@ -32,7 +29,6 @@ private:
 private:
 	gos::Allocator					*allocator;
 	gos::ent::Registry				entRegistry;
-	gos::FastArray<gos::Entity>		entList;
 	
 	gos::Engine						*engine;
 	gos::GPU						*gpu;
@@ -44,5 +40,6 @@ private:
 	gos::model::Model				*model;
 
 	gos::engine::Renderer1			*renderer;
-	f32								obj0_roty;
+	u64 nextTimeUpdate_msec;
+
 };

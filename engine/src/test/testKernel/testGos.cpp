@@ -5,7 +5,7 @@
 #include "gosBit.h"
 #include "gosImage.h"
 #include "gosHashMap.h"
-#include "gosSortedList.h"
+#include "gosUniqueSortedList.h"
 
 namespace test_gos
 {
@@ -1087,7 +1087,7 @@ namespace test12_hash_map
         gos::HashMap<u32, u32>  map;
         map.setup (allocator, 16);
 
-        gos::SortedList<u32> sortedList;
+        gos::UniqueSortedList<u32> sortedList;
         sortedList.setup (allocator, 16);
 
         gos::FastArray<u32> numeri;

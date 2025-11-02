@@ -321,7 +321,7 @@ namespace gos
 							    values[ADDR(3,0)] = 0;  values[ADDR(3,1)] = 0;	values[ADDR(3,2)] = 0;	values[ADDR(3,3)] = 1;
 							}
 
-			void			buildScale (const vec3f &s)						{ buildScale (s.x, s.y, s.z); }
+			void			buildScale (const vec3f &s)									{ buildScale (s.x, s.y, s.z); }
 			
 			void			buildScale (const T sx, T sy, T sz)
 							{
@@ -350,6 +350,13 @@ namespace gos
 								values[ADDR(3,3)]=1;
 							}
 
+			void			buildFromEulerAngles_YXZ (f32 rad_y, f32 rad_x, f32 rad_z)
+							{
+								helper_Matrix3x3_buildFromEulerAngles_YXZ(rad_y, rad_x, rad_z); 
+								values[ADDR(0,3)] = values[ADDR(1,3)] = values[ADDR(2,3)] = values[ADDR(3,0)] = values[ADDR(3,1)] = values[ADDR(3,2)] = 0;
+								values[ADDR(3,3)]=1;								
+							}			
+			
 			void			buildRotationAboutX (f32 rad)
 							{
 								helper_Matrix3x3_buildRotationAboutX(rad);

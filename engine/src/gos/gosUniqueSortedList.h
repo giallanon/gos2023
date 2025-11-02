@@ -1,16 +1,39 @@
-#ifndef _gosSortedList_h_
-#define _gosSortedList_h_
+#ifndef _gosUniqueSortedList_h_
+#define _gosUniqueSortedList_h_
 #include "gosFastArray.h"
 
 namespace gos
 {
+    template<class TKEY>
+    inline int UniqueSortedList_compareFn (const TKEY &t1, const TKEY &t2)   { return t1.compare(t2); }
+
+    template<>  inline int UniqueSortedList_compareFn (const u64 &t1, const u64 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+    template<>  inline int UniqueSortedList_compareFn (const i64 &t1, const i64 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+
+    template<>  inline int UniqueSortedList_compareFn (const u32 &t1, const u32 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+    template<>  inline int UniqueSortedList_compareFn (const i32 &t1, const i32 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+    
+    template<>  inline int UniqueSortedList_compareFn (const u16 &t1, const u16 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+    template<>  inline int UniqueSortedList_compareFn (const i16 &t1, const i16 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+
+    template<>  inline int UniqueSortedList_compareFn (const u8 &t1, const u8 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+    template<>  inline int UniqueSortedList_compareFn (const i8 &t1, const i8 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+    
+    /****************************************************
+     * @brief   UniqueSortedList
+     *          Mantiene una lista di oggetti di tipo T univoci e ordinati
+     *
+     *          T deve essere una classe con un metodo "int compare (const T &b) const" che ritorna 0 se a==b, 1 se a>b, -1 se a<<b
+     *          Per i tipi piu' comuni (come u64 e u32), ho definito una specializzazione del template HashMap_compareFn<>
+     *          in modo da non dover implementare una classe "u32" con dentro un meotodo compare
+     */
 	template<class T>
-	class SortedList
+	class UniqueSortedList
 	{
 	public:
-                SortedList ()                                                           { }
-                SortedList (Allocator *backingallocator, u32 preallocNumElem=0)         { setup (backingallocator, preallocNumElem); }
-                ~SortedList ()                                                          { list.unsetup (); }
+                UniqueSortedList ()                                                     { }
+                UniqueSortedList (Allocator *backingallocator, u32 preallocNumElem=0)   { setup (backingallocator, preallocNumElem); }
+                ~UniqueSortedList ()                                                    { list.unsetup (); }
 
                 //======================================= memory
         void	setup (Allocator *backingallocator, u32 preallocNumElem=0)              { list.setup (backingallocator, preallocNumElem); }
@@ -101,22 +124,24 @@ namespace gos
                             *out_index = search.start;
                             for (u32 i=search.start; i<(search.start+numElem); i++)
                             {
-                                if (data == list(i))
+                                switch (UniqueSortedList_compareFn<T>(data, list(i)))
                                 {
+                                default:
+                                    DBGBREAK;
+                                    return false;                                
+
+                                case  0: //sono uguali
                                     *out_index = i;
                                     return true;
-                                }
-                                else if (data > list(i))
-                                {
-                                    //data e' maggiore di list(i)
+
+                                case 1: //data e' maggiore di list(i)
                                     *out_index = i+1;
-                                }
-                                else
-                                {
+                                    break;
+
+                                case -1: //data e' minore di list(i)
                                     *out_index = i;
                                     return false;
                                 }
-
                             }
 
                             return false;
@@ -124,21 +149,24 @@ namespace gos
 
 
                         const u32 middle = search.start + numElem / 2;
-                        if (data == list(middle))
+                        switch (UniqueSortedList_compareFn<T>(data, list(middle)))
                         {
+                        default:
+                            DBGBREAK;
+                            return false;
+
+                        case  0: //sono uguali
                             *out_index = middle;
                             return true;
-                        }
-                        if (data > list(middle))
-                        {
-                            //elem e' maggiore di list(i)
-                            search.start = middle + 1;
-                        }
-                        else
-                        {
-                            //elem e' minore di list(i)
+
+                        case 1: //data e' maggiore di list(i)
+                            search.start = middle+1;
+                            break;
+
+                        case -1: //data e' minore di list(i)
                             search.end_incluso = middle-1;
-                        }
+                            break;
+                        }                        
                     }   
                 }    
 
@@ -148,5 +176,5 @@ namespace gos
     
 } //namespace gos
 
-#endif //_gosSortedList_h_
+#endif //_gosUniqueSortedList_h_
 

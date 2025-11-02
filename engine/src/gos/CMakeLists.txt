@@ -161,11 +161,11 @@ gosMagicUID.h
 gosRandom.h
 gosServerTCP.cpp
 gosServerTCP.h
-gosSortedList.h
 gosSparseSet.h
 gosString.h
 gosThreadMsgQ.h
 gosThreadMsgQ.cpp
+gosUniqueSortedList.h
 gosUtils.cpp
 gosUtils.h
 gosWaitableGrpInterface.h

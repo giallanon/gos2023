@@ -23,7 +23,7 @@ namespace gos
 
         public:
                     Renderer1();
-                    ~Renderer1()                                                                                     { unsetup(); }
+                    ~Renderer1()                                                                            { unsetup(); }
 
             bool    setup (gos::Allocator *allocator, Engine *engine);
             void    unsetup();
@@ -32,7 +32,7 @@ namespace gos
             void    add (const ENGShape shape, u32 matrixIndex, u32 materialIndex);
             void    end (gos::gpu::pipe2::CmdBufferWriter2 &cw);
 
-            GPURenderTargetHandle   getHandle_rt0() const                                           { return handle_rt0; }
+            GPURenderTargetHandle   getHandle_rt0() const                                                   { return handle_rt0; }
 
             //==================== gestione delle risorse
             u32             texture_addIfNotExitst (GPUTextureHandle texHandle);
@@ -52,9 +52,9 @@ namespace gos
             const mat4x4f*  matrix_query (u32 matrix_index) const;
 
         private:
-            static constexpr u32    NUM_MAX_TEXTURE                         = 1024;
-            static constexpr u32    NUM_MAX_MATERIAL                        = 1024;
-            static constexpr u32    NUM_MAX_MATRIX                          = 1024;
+            static constexpr u32    NUM_MAX_TEXTURE     = 1024;
+            static constexpr u32    NUM_MAX_MATERIAL    = 1024;
+            static constexpr u32    NUM_MAX_MATRIX      = 1024;
                         
         private:
             struct SceneData

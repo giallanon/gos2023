@@ -20,10 +20,13 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC 
+entity/gosEntity_compPos.cpp
+entity/gosEntity.h
 entity/gosEntityComponentList.h
 entity/gosEntityEnumAndDefine.h
 entity/gosEntityRegistry.cpp
 entity/gosEntityRegistry.h
+entity/gosEntityUniqueList.h
 
 model/gosModel.cpp
 model/gosModel.h
@@ -38,6 +41,8 @@ gosEngine_idxBufferMan.cpp
 gosEngine_idxBufferMan.h
 gosEngine_renderer.cpp
 gosEngine_renderer.h
+gosEngine_scene.cpp
+gosEngine_scene.h
 gosEngine_vtxBufferMan.cpp
 gosEngine_vtxBufferMan.h
 gosEngine.cpp
