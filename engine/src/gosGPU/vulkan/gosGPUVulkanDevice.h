@@ -51,14 +51,14 @@ namespace gos
         void                    fence_destroy  (VkFence &in);
 
         //ritorna true se il [fence] e' segnalato, false se timeout
-        bool                    fence_wait (const VkFence &fenceHandle, u64 timeout_ns = UINT64_MAX);
+        bool                    fence_wait (const VkFence fenceHandle, u64 timeout_ns = UINT64_MAX);
         bool                    fence_waitMany (const VkFence *fenceHandleList, bool bWaitForAll, u32 fenceCount, u64 timeout_ns = UINT64_MAX);
 
         //riporta [fence] in stato non segnalato
-        void                    fence_reset (const VkFence &fenceHandle);
-        void                    fence_resetMany (const VkFence *fenceHandleList, u32 fenceCount);
+        void                    fence_reset (const VkFence fenceHandle);
+        void                    fence_resetMany (const VkFence *enceHandleList, u32 fenceCount);
 
-        bool                    fence_isSignaled  (const VkFence &fenceHandle);
+        bool                    fence_isSignaled  (const VkFence fenceHandle);
 
         //========================== swapchain
         bool                    swapchain_create (const VkSurfaceKHR &vkSurfaceKHR, bool bVSync, sSwapChainInfo *out);

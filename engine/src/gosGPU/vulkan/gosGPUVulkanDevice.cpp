@@ -261,7 +261,7 @@ void VulkanDevice::fence_destroy  (VkFence &in)
 }
 
 //************************************
-bool VulkanDevice::fence_wait (const VkFence &fenceHandle, u64 timeout_ns)
+bool VulkanDevice::fence_wait (const VkFence fenceHandle, u64 timeout_ns)
 {
     const VkResult result = vkWaitForFences (vkDev, 1, &fenceHandle, VK_TRUE, timeout_ns);
     if (VK_SUCCESS == result)
@@ -282,7 +282,7 @@ bool VulkanDevice::fence_waitMany (const VkFence *fenceHandleList, bool bWaitFor
 }
 
 //************************************
-bool VulkanDevice::fence_isSignaled  (const VkFence &fenceHandle)
+bool VulkanDevice::fence_isSignaled  (const VkFence fenceHandle)
 {
     const VkResult result = vkGetFenceStatus (vkDev, fenceHandle);
     if (VK_SUCCESS == result)
@@ -291,7 +291,7 @@ bool VulkanDevice::fence_isSignaled  (const VkFence &fenceHandle)
 }
 
 //************************************
-void VulkanDevice::fence_reset (const VkFence &fenceHandle)
+void VulkanDevice::fence_reset (const VkFence fenceHandle)
 {
     vkResetFences (vkDev, 1, &fenceHandle);
 }

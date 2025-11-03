@@ -3,7 +3,6 @@
 #include "gosEngineEnumAndDefine.h"
 #include "gosEngine_dynTextureArray.h"
 #include "../gosGeom/gosGeomCamera3.h"
-#include "../gosGPU/gosGPUMemMappedDynBuffer.h"
 
 
 namespace gos
@@ -89,12 +88,14 @@ namespace gos
             DynamicTextureArray                 texture_array;
 
             mat4x4f                             matrix_default;
-            gpu::MemMappedDynBuffer<mat4x4f>    matrix_buffer;
+            mat4x4f                             *matrix_buffer;
+            u32                                 matrix_sizeof_buffer;
             gos::Bitfield                       matrix_bitmask;
             u32                                 matrix_wasUpdated;
             
             Material                            material_default;
-            gpu::MemMappedDynBuffer<Material>   material_buffer;
+            Material                            *material_buffer;
+            u32                                 material_sizeof_buffer;
             gos::Bitfield                       material_bitmask;
             u32                                 material_wasUpdated;
 

@@ -43,6 +43,7 @@ namespace gos
     private:
         VkQueue             vkQueueHandle;
         VkDevice            vkDev;
+        gos::Mutex          mutex;
         sPool               poolList[NUM_MAX_THREAD];      //un cmdPool per ogni possibile thread
         u8                  familyIndex;
         eGPUQueueFamily     familyType;

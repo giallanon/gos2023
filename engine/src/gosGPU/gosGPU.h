@@ -114,22 +114,26 @@ namespace gos
         void                fence_destroy  (VkFence &in)                                                                                        { vulkan.fence_destroy(in); }
 
         //ritorna true se il [fence] e' segnalato, false se timeout
-        bool                fence_wait (const VkFence &fenceHandle, u64 timeout_ns = UINT64_MAX)                                                { return vulkan.fence_wait (fenceHandle, timeout_ns); }
+        bool                fence_wait (const VkFence fenceHandle, u64 timeout_ns = UINT64_MAX)                                                { return vulkan.fence_wait (fenceHandle, timeout_ns); }
         bool                fence_waitMany (const VkFence *fenceHandleList, bool bWaitForAll, u32 fenceCount, u64 timeout_ns = UINT64_MAX)      { return vulkan.fence_waitMany (fenceHandleList, bWaitForAll, fenceCount, timeout_ns); }
 
         //riporta [fence] in stato non segnalato
-        void                fence_reset (const VkFence &fenceHandle)                                                                            { vulkan.fence_reset(fenceHandle); }
+        void                fence_reset (const VkFence fenceHandle)                                                                             { vulkan.fence_reset(fenceHandle); }
         void                fence_resetMany (const VkFence *fenceHandleList, u32 fenceCount)                                                    { vulkan.fence_resetMany(fenceHandleList, fenceCount); }
 
-        bool                fence_isSignaled  (const VkFence &fenceHandle)                                                                      { return vulkan.fence_isSignaled(fenceHandle); }
+        bool                fence_isSignaled  (const VkFence fenceHandle)                                                                      { return vulkan.fence_isSignaled(fenceHandle); }
 
         //=================== supporto ai vari formati di immagine
         bool                isImage2DFmtSupported (eImageFormat fmt, eImageTiling tiling) const                                                 { return vulkan.isImage2DFmtSupported(fmt, tiling); }
         
         //=================== limits
         u32                 limits_get_maxDescriptorSetSampledImages() const            { return vulkan.limits_get_maxDescriptorSetSampledImages(); }
+
         u32                 limits_get_minUniformBufferOffsetAlignment() const          { return vulkan.limits_get_minUniformBufferOffsetAlignment(); }
+        u32                 limits_get_maxUniformBufferRange() const                    { return vulkan.limits_get_maxUniformBufferRange(); }
+
         u32                 limits_get_minStorageBufferOffsetAlignment() const          { return vulkan.limits_get_minStorageBufferOffsetAlignment(); }
+        u32                 limits_get_maxStorageBufferRange() const                    { return vulkan.limits_get_maxStorageBufferRange(); }
 
         
         //================ window stuff

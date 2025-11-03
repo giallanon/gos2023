@@ -9,17 +9,19 @@ using namespace gos::engine;
 Renderer1::Renderer1()
 {
     engine = NULL;
+    matrix_buffer = NULL;
+    material_buffer = NULL;
 }
 
 //**********************************
 void Renderer1::unsetup()
 {
-    gos::Allocator *allocator = material_buffer.getAllocator();
+    gos::Allocator *allocator = renderableList.getAllocator();
     renderableList.unsetup();
     texture_array.unsetup();
-    matrix_buffer.unsetup();
+    GOSFREE(allocator, matrix_buffer);
     matrix_bitmask.unsetup (allocator);
-    material_buffer.unsetup();
+    GOSFREE(allocator, material_buffer);
     material_bitmask.unsetup (allocator);
     
 
@@ -105,21 +107,23 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
         gpu->uniformBuffer_create (sizeof(SceneData), eMemAccessMode::shared_cpuW_autoSync, &handle_ubo_scene);
 
         //SBO matrici
-        matrix_buffer.setup (allocator, NUM_MAX_MATRIX, gpu->limits_get_minStorageBufferOffsetAlignment());
+        matrix_sizeof_buffer = NUM_MAX_MATRIX * sizeof(mat4x4f);
+        matrix_buffer = (mat4x4f*) GOSALIGNEDALLOC(allocator, matrix_sizeof_buffer, gpu->limits_get_minStorageBufferOffsetAlignment());
         matrix_bitmask.setup (allocator, NUM_MAX_MATRIX);
         matrix_bitmask.zero();
         matrix_wasUpdated = 1;
         matrix_default.identity();
-        gpu->storageBuffer_create (matrix_buffer.getRealSizeAllocated(), eMemAccessMode::shared_cpuW_autoSync, &handle_sbo_matrixList);
+        gpu->storageBuffer_create (matrix_sizeof_buffer, eMemAccessMode::shared_cpuW_autoSync, &handle_sbo_matrixList);
 
         //SBO materialList
-        material_buffer.setup (allocator, NUM_MAX_MATERIAL, gpu->limits_get_minStorageBufferOffsetAlignment());
+        material_sizeof_buffer = NUM_MAX_MATERIAL * sizeof(Material);
+        material_buffer = (Material*) GOSALIGNEDALLOC(allocator, material_sizeof_buffer, gpu->limits_get_minStorageBufferOffsetAlignment());
         material_bitmask.setup (allocator, NUM_MAX_MATERIAL);
         material_bitmask.zero();
         material_wasUpdated = 1;
         material_default.texture_index = 0;
         material_default.diffuse_col.set (1.0f, 1.0f, 1.0f);
-        gpu->storageBuffer_create (material_buffer.getRealSizeAllocated(), eMemAccessMode::shared_cpuW_autoSync, &handle_sbo_materiaList);
+        gpu->storageBuffer_create (material_sizeof_buffer, eMemAccessMode::shared_cpuW_autoSync, &handle_sbo_materiaList);
     }
 
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
@@ -204,9 +208,8 @@ u32 Renderer1::material_create (u32 texture_index, const vec3f diffuse_col)
     }
     
     //creo il nuovo materiale
-    Material *m = material_buffer.getElem(material_index);
-    m->texture_index = texture_index;
-    m->diffuse_col = diffuse_col;
+    material_buffer[material_index].texture_index = texture_index;
+    material_buffer[material_index].diffuse_col = diffuse_col;
     
     //mi segno che l'array dei materiali e' da aggiornare su GPU
     material_wasUpdated = 1;
@@ -227,7 +230,7 @@ Renderer1::Material* Renderer1::material_getForUpdate (u32 material_index)
     {
         //mi segno che l'array dei materiali e' da aggiornare su GPU
         material_wasUpdated = 1;        
-        return material_buffer.getElem(material_index);
+        return &material_buffer[material_index];
     }
     DBGBREAK;
     return &material_default;
@@ -237,7 +240,7 @@ Renderer1::Material* Renderer1::material_getForUpdate (u32 material_index)
 const Renderer1::Material* Renderer1::material_query (u32 material_index) const
 {
     if (material_bitmask.isBitSet(material_index))
-        return material_buffer.queryElem(material_index);
+        return &material_buffer[material_index];
 
     DBGBREAK;
     return &material_default;
@@ -257,8 +260,7 @@ u32 Renderer1::matrix_create (const mat4x4f &mIN)
     }
     
     //creo il nuovo materiale
-    mat4x4f *m = matrix_buffer.getElem(matrix_index);
-    *m = mIN;
+    matrix_buffer[matrix_index] = mIN;
     
     //mi segno che l'array delle matrici e' da aggiornare su GPU
     matrix_wasUpdated = 1;
@@ -279,7 +281,7 @@ mat4x4f* Renderer1::matrix_getForUpdate (u32 matrix_index)
     {
         //mi segno che l'array dei materiali e' da aggiornare su GPU
         matrix_wasUpdated = 1;        
-        return matrix_buffer.getElem(matrix_index);
+        return &matrix_buffer[matrix_index];
     }
     DBGBREAK;
     return &matrix_default;
@@ -296,7 +298,7 @@ void Renderer1::matrix_update (u32 matrix_index, const mat4x4f &mIN)
 const mat4x4f* Renderer1::matrix_query (u32 matrix_index) const
 {
     if (matrix_bitmask.isBitSet(matrix_index))
-        return matrix_buffer.queryElem(matrix_index);
+        return &matrix_buffer[matrix_index];
 
     DBGBREAK;
     return &matrix_default;
@@ -341,7 +343,7 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
 
         //TODO: non c'e' bisogno di uppare l'intero material_buffer tutte le volte, idealmente basta uppare solo
         //gli elementi che sono stati modificati
-        gpu->writeAndSync (handle_sbo_materiaList, 0, material_buffer.getBuffer(), material_buffer.getRealSizeAllocated());
+        gpu->writeAndSync (handle_sbo_materiaList, 0, material_buffer, material_sizeof_buffer);
     }
 
     //devo aggiornare SBO delle matrici
@@ -351,7 +353,7 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
 
         //TODO: non c'e' bisogno di uppare l'intero buffer tutte le volte, idealmente basta uppare solo
         //gli elementi che sono stati modificati
-        gpu->writeAndSync (handle_sbo_matrixList, 0, matrix_buffer.getBuffer(), matrix_buffer.getRealSizeAllocated());
+        gpu->writeAndSync (handle_sbo_matrixList, 0, matrix_buffer, matrix_sizeof_buffer);
     }    
 
 

@@ -937,7 +937,7 @@ bool GPU::map (const GPURenderTargetHandle handle, gpu::sMappedImage *out) const
     vulkan.image_getSubresourceLayout (s->image, &subResource, &subResourceLayout);
 
     // Map image memory so we can start copying from it
-    VkResult result = vulkan.memory_map (s->vkMemHandle, subResourceLayout.offset, subResourceLayout.size, 0, &out->host_image_pt);
+    VkResult result = vulkan.memory_map (s->vkMemHandle, (u32)subResourceLayout.offset, (u32)subResourceLayout.size, 0, &out->host_image_pt);
     if (VK_SUCCESS != result)
     {
         out->host_image_pt = NULL;
@@ -2025,7 +2025,7 @@ bool GPU::sampler_create (const gpu::SamplerDesc &desc, GPUSamplerHandle *out_ha
     if (desc.bAnisotropic)
     {
         samplerInfo.anisotropyEnable = VK_TRUE;
-        samplerInfo.maxAnisotropy = vulkan.limits_get_maxSamplerAnisotropy();
+        samplerInfo.maxAnisotropy = (f32)vulkan.limits_get_maxSamplerAnisotropy();
     }
     else
     {

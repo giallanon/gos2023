@@ -33,7 +33,7 @@ namespace gos
             VkImage         vkHandle;
             VkDeviceMemory  vkMemHandle;
             VkImageView     view;
-            u64             memoryAllocated;
+            u32             memoryAllocated;
             u16             dimx;
             u16             dimy;
             u8              nMipMap;

@@ -26,11 +26,17 @@ void VulkanQFamily::setup (VkDevice vkDevIN, eGPUQueueFamily familyTypeIN, u32 f
     familyIndex = familyIndexIN;
 
     vkGetDeviceQueue (vkDev, familyIndex, 0, &vkQueueHandle);
+
+    thread::mutexCreate (&mutex);
 }
 
 //*******************************************
 void VulkanQFamily::unsetup()
 {
+    if (VK_NULL_HANDLE == vkDev)
+        return;
+
+    thread::mutexDestroy (mutex);
     for (u32 i = 0; i < NUM_MAX_THREAD; i++)
     {
         poolList[i].threadID = u32MAX;
@@ -136,7 +142,10 @@ void VulkanQFamily::waitIdle ()
 //**********************************************************
 VkResult VulkanQFamily::submit(u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence)
 {
-    return vkQueueSubmit (vkQueueHandle, submitCount, submitInfo, fence);
+    thread::mutexLock (mutex);
+    const VkResult ret = vkQueueSubmit (vkQueueHandle, submitCount, submitInfo, fence);
+    thread::mutexUnlock (mutex);
+    return ret;
 }
 
 

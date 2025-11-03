@@ -365,17 +365,16 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
         gos::logger::log ("vkGetPhysicalDeviceProperties\n");
         gos::logger::incIndent();
         vkGetPhysicalDeviceProperties (out->vkDev, &out->deviceProperties);
+        gos::logger::log ("maxMemoryAllocationCount: %d\n", out->deviceProperties.limits.maxMemoryAllocationCount);
+        gos::logger::log ("maxPushConstantsSize: %d\n", out->deviceProperties.limits.maxPushConstantsSize);
+        gos::logger::log ("maxSamplerAllocationCount: %d\n", out->deviceProperties.limits.maxSamplerAllocationCount);
         gos::logger::log ("maxImageArrayLayers: %d\n", out->deviceProperties.limits.maxImageArrayLayers);
         gos::logger::log ("maxTexelBufferElements: %d\n", out->deviceProperties.limits.maxTexelBufferElements);
         gos::logger::log ("maxDescriptorSetSampledImages: %d\n", out->deviceProperties.limits.maxDescriptorSetSampledImages);
-        
-        gos::logger::log ("maxUniformBufferRange: %d\n", out->deviceProperties.limits.maxUniformBufferRange);
-        gos::logger::log ("maxStorageBufferRange: %d\n", out->deviceProperties.limits.maxStorageBufferRange);
-        gos::logger::log ("maxPushConstantsSize: %d\n", out->deviceProperties.limits.maxPushConstantsSize);
-        gos::logger::log ("maxMemoryAllocationCount: %d\n", out->deviceProperties.limits.maxMemoryAllocationCount);
-        gos::logger::log ("maxSamplerAllocationCount: %d\n", out->deviceProperties.limits.maxSamplerAllocationCount);
         gos::logger::log ("minUniformBufferOffsetAlignment: %d\n", out->deviceProperties.limits.minUniformBufferOffsetAlignment);
+        gos::logger::log ("maxUniformBufferRange: %d\n", out->deviceProperties.limits.maxUniformBufferRange);
         gos::logger::log ("minStorageBufferOffsetAlignment: %d\n", out->deviceProperties.limits.minStorageBufferOffsetAlignment);
+        gos::logger::log ("maxStorageBufferRange: %d\n", out->deviceProperties.limits.maxStorageBufferRange);
         gos::logger::log ("nonCoherentAtomSize: %d\n", out->deviceProperties.limits.nonCoherentAtomSize);
         gos::logger::decIndent();
 
