@@ -46,7 +46,13 @@
         "map": "cpp",
         "ostream": "cpp",
         "bit": "cpp",
-        "limits": "cpp"
+        "limits": "cpp",
+        "atomic": "cpp",
+        "compare": "cpp",
+        "numeric": "cpp",
+        "sstream": "cpp",
+        "cmath": "cpp",
+        "*.inc": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.compilerPath": "/usr/bin/g++-13"

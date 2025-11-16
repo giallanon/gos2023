@@ -19,6 +19,14 @@ void CmdBufferWriter2::BeginRend::priv_setup (GPU *gpuIN, CmdBufferWriter2 *cmdB
     haveZB = 0;
     renderAreaW = renderAreaH = 0;
     curPipeline = NULL;
+
+    cache_vxtBuffer_handle[0].setInvalid();
+    cache_vxtBuffer_handle[1].setInvalid();
+    cache_vxtBuffer_offset[0] = 0;
+    cache_vxtBuffer_offset[1] = 0;
+
+    cache_idxBuffer_handle.setInvalid();
+    cache_idxBuffer_offset = 0;
 }
 
 //*********************************
@@ -222,12 +230,50 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindDescriptorSet (const GPUD
     return *this;
 }
 
+CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindVtxIdxBuffer (const GPUVtxBufferHandle vtxbuffer_handle, u32 vtxbuffer_offset, const GPUIdxBufferHandle idxbuffer_handle, u32 idxbuffer_offset)
+{
+    assert (flag.isBitSet(FLAG__vkBeginRender_HAS_BEEN_ISSUED));
+
+    if (vtxbuffer_handle != cache_vxtBuffer_handle[0] || vtxbuffer_offset != cache_vxtBuffer_offset[0])    
+    {
+        cache_vxtBuffer_handle[0] = vtxbuffer_handle;
+        cache_vxtBuffer_offset[0] = vtxbuffer_offset;
+    
+        const gpu::Buffer *vtxBuffer = gpu->getInfo(vtxbuffer_handle);
+        assert (NULL != vtxBuffer);
+
+        static const u8 VTXBUFFER__FIRST_VTX_STREAM_INDEX = 0;
+        static const u8 VTXBUFFER__NUM_STREAM = 1;
+        VkBuffer        vtxBufferList[VTXBUFFER__NUM_STREAM] = { vtxBuffer->vkHandle };
+        VkDeviceSize    vtxBufferOffsetsList[VTXBUFFER__NUM_STREAM] = { vtxbuffer_offset };    
+        vkCmdBindVertexBuffers (vkCommandBuffer, VTXBUFFER__FIRST_VTX_STREAM_INDEX, VTXBUFFER__NUM_STREAM, vtxBufferList, vtxBufferOffsetsList);        
+    }
+
+    if (idxbuffer_handle != cache_idxBuffer_handle || idxbuffer_offset != cache_idxBuffer_offset)
+    {
+        cache_idxBuffer_handle = idxbuffer_handle;
+        cache_idxBuffer_offset = idxbuffer_offset;
+
+        const gpu::Buffer *idxBuffer = gpu->getInfo (idxbuffer_handle);
+        assert (NULL != idxBuffer);
+        vkCmdBindIndexBuffer (vkCommandBuffer, idxBuffer->vkHandle, idxbuffer_offset, VK_INDEX_TYPE_UINT16);
+    }
+
+    return *this;    
+}
+
 //*********************************
 CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindVtxBuffer (const GPUVtxBufferHandle handle, u32 offsetIN)
 {
-    priv_recordBeginRenderingIfNeeded();
-    if (anyError())
+    if (handle == cache_vxtBuffer_handle[0] && offsetIN == cache_vxtBuffer_offset[0])
         return *this;
+    cache_vxtBuffer_handle[0] = handle;
+    cache_vxtBuffer_offset[0] = offsetIN;
+
+    assert (flag.isBitSet(FLAG__vkBeginRender_HAS_BEEN_ISSUED));
+    //priv_recordBeginRenderingIfNeeded();
+    //if (anyError())
+    //    return *this;
 
     const gpu::Buffer *vtxBuffer = gpu->getInfo(handle);
     if (NULL == vtxBuffer)
@@ -251,9 +297,15 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindVtxBuffer (const GPUVtxBu
 //*********************************
 CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindVtxBuffers (const GPUVtxBufferHandle handleStream0, const GPUVtxBufferHandle handleStream1)
 {
-    priv_recordBeginRenderingIfNeeded();
-    if (anyError())
+    if (handleStream0 == cache_vxtBuffer_handle[0] && handleStream1 == cache_vxtBuffer_handle[1])
         return *this;
+    cache_vxtBuffer_handle[0] = handleStream0;
+    cache_vxtBuffer_handle[1] = handleStream1;
+
+    assert (flag.isBitSet(FLAG__vkBeginRender_HAS_BEEN_ISSUED));
+    //priv_recordBeginRenderingIfNeeded();
+    //if (anyError())
+    //    return *this;
 
     const gpu::Buffer *vtxBuffer0 = gpu->getInfo (handleStream0);
     if (NULL == vtxBuffer0)
@@ -285,9 +337,17 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindVtxBuffers (const GPUVtxB
 //*********************************
 CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindIdxBufferU16 (const GPUIdxBufferHandle handle, u32 offsetIN)
 {
-    priv_recordBeginRenderingIfNeeded();
-    if (anyError())
+    if (handle == cache_idxBuffer_handle && offsetIN == cache_idxBuffer_offset)
         return *this;
+    cache_idxBuffer_handle = handle;
+    cache_idxBuffer_offset = offsetIN;
+
+
+    assert (flag.isBitSet(FLAG__vkBeginRender_HAS_BEEN_ISSUED));
+    //priv_recordBeginRenderingIfNeeded();
+    //if (anyError())
+    //    return *this;
+        
 
     const gpu::Buffer *idxBuffer = gpu->getInfo (handle);
     if (NULL == idxBuffer)
@@ -304,30 +364,34 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindIdxBufferU16 (const GPUId
 //*********************************
 CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::pushConstant (u8 whichOne, const void *data, u32 sizeof_data)
 {
-    priv_recordBeginRenderingIfNeeded();
-    if (anyError())
-        return *this;
+    assert (flag.isBitSet(FLAG__vkBeginRender_HAS_BEEN_ISSUED));
+    //priv_recordBeginRenderingIfNeeded();
+    //if (anyError())
+    //    return *this;
 
-    if (NULL == curPipeline)
-    {
-        gos::logger::err ("gpu::pipe2::CmdBufferWriter::pushConstant(%d) => no pipeline bound\n", whichOne);
-        priv_setError();
-        return *this;
-    }
+    assert (NULL != curPipeline);
+    // if (NULL == curPipeline)
+    // {
+    //     gos::logger::err ("gpu::pipe2::CmdBufferWriter::pushConstant(%d) => no pipeline bound\n", whichOne);
+    //     priv_setError();
+    //     return *this;
+    // }
 
-    if (whichOne >= GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE)
-    {
-        gos::logger::err ("gpu::pipe2::CmdBufferWriter::pushConstant(%d) => invalid index\n", whichOne);
-        priv_setError();
-        return *this;
-    }
+    assert (whichOne < GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE);
+    // if (whichOne >= GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE)
+    // {
+    //     gos::logger::err ("gpu::pipe2::CmdBufferWriter::pushConstant(%d) => invalid index\n", whichOne);
+    //     priv_setError();
+    //     return *this;
+    // }
 
-    if (curPipeline->pcList[whichOne].size != sizeof_data)
-    {
-        gos::logger::err ("gpu::pipe2::CmdBufferWriter::pushConstant(%d) => size does not match\n", whichOne);
-        priv_setError();
-        return *this;
-    }
+    assert (curPipeline->pcList[whichOne].size == sizeof_data);
+    // if (curPipeline->pcList[whichOne].size != sizeof_data)
+    // {
+    //     gos::logger::err ("gpu::pipe2::CmdBufferWriter::pushConstant(%d) => size does not match\n", whichOne);
+    //     priv_setError();
+    //     return *this;
+    // }
 
     //copio il valore della push const nel buffer interno della pipe
     //e pusho l'intero rnge alla GPU solo prima di una draw...
@@ -354,16 +418,18 @@ void CmdBufferWriter2::BeginRend::priv_flushPushConst()
 //*********************************
 CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::drawIndexed (u32 indexCount, u32 instanceCount, u32 firstIndex, u32 vertexOffset, u32 firstInstance)
 {
-    priv_recordBeginRenderingIfNeeded();
-    if (anyError())
-        return *this;
+    assert (flag.isBitSet(FLAG__vkBeginRender_HAS_BEEN_ISSUED));
+    //priv_recordBeginRenderingIfNeeded();
+    //if (anyError())
+    //    return *this;
 
-    if (NULL == curPipeline)
-    {
-        gos::logger::err ("gpu::pipe2::CmdBufferWriter::drawIndexed => no pipeline bound\n");
-        priv_setError();
-        return *this;
-    }
+    assert (NULL != curPipeline);
+    // if (NULL == curPipeline)
+    // {
+    //     gos::logger::err ("gpu::pipe2::CmdBufferWriter::drawIndexed => no pipeline bound\n");
+    //     priv_setError();
+    //     return *this;
+    // }
        
     priv_flushPushConst();
     vkCmdDrawIndexed(vkCommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
@@ -373,16 +439,18 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::drawIndexed (u32 indexCount, 
 //*********************************
 CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::draw (u32 vtxCount, u32 instanceCount, u32 firstVtx, u32 firstInstance)
 {
-    priv_recordBeginRenderingIfNeeded();
-    if (anyError())
-        return *this;
+    assert (flag.isBitSet(FLAG__vkBeginRender_HAS_BEEN_ISSUED));
+    //priv_recordBeginRenderingIfNeeded();
+    //if (anyError())
+    //    return *this;
 
-    if (NULL == curPipeline)
-    {
-        gos::logger::err ("gpu::pipe2::CmdBufferWriter::drawIndexed => no pipeline bound\n");
-        priv_setError();
-        return *this;
-    }
+    assert (NULL != curPipeline);
+    // if (NULL == curPipeline)
+    // {
+    //     gos::logger::err ("gpu::pipe2::CmdBufferWriter::drawIndexed => no pipeline bound\n");
+    //     priv_setError();
+    //     return *this;
+    // }
 
     priv_flushPushConst();
     vkCmdDraw (vkCommandBuffer, vtxCount, instanceCount, firstVtx, firstInstance);        

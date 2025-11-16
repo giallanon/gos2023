@@ -9,7 +9,6 @@ using namespace gos::engine;
 Renderer1::Renderer1()
 {
     engine = NULL;
-    matrix_buffer = NULL;
     material_buffer = NULL;
 }
 
@@ -19,8 +18,7 @@ void Renderer1::unsetup()
     gos::Allocator *allocator = renderableList.getAllocator();
     renderableList.unsetup();
     texture_array.unsetup();
-    GOSFREE(allocator, matrix_buffer);
-    matrix_bitmask.unsetup (allocator);
+    gpu->buffer_unmap (matrix_buffer);
     GOSFREE(allocator, material_buffer);
     material_bitmask.unsetup (allocator);
     
@@ -108,12 +106,9 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
 
         //SBO matrici
         matrix_sizeof_buffer = NUM_MAX_MATRIX * sizeof(mat4x4f);
-        matrix_buffer = (mat4x4f*) GOSALIGNEDALLOC(allocator, matrix_sizeof_buffer, gpu->limits_get_minStorageBufferOffsetAlignment());
-        matrix_bitmask.setup (allocator, NUM_MAX_MATRIX);
-        matrix_bitmask.zero();
-        matrix_wasUpdated = 1;
         matrix_default.identity();
-        gpu->storageBuffer_create (matrix_sizeof_buffer, eMemAccessMode::shared_cpuW_autoSync, &handle_sbo_matrixList);
+        gpu->storageBuffer_create (matrix_sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &handle_sbo_matrixList);
+        gpu->map (handle_sbo_matrixList, 0, u32MAX, &matrix_buffer);
 
         //SBO materialList
         material_sizeof_buffer = NUM_MAX_MATERIAL * sizeof(Material);
@@ -249,67 +244,10 @@ const Renderer1::Material* Renderer1::material_query (u32 material_index) const
 
 
 //**********************************
-u32 Renderer1::matrix_create ()                                         { mat4x4f m; m.identity(); return matrix_create(m); }
-u32 Renderer1::matrix_create (const mat4x4f &mIN)
-{
-    u32 matrix_index;
-    if (!matrix_bitmask.findAndSetFirstFreeBit(&matrix_index))
-    {
-        DBGBREAK;
-        return u32MAX;
-    }
-    
-    //creo il nuovo materiale
-    matrix_buffer[matrix_index] = mIN;
-    
-    //mi segno che l'array delle matrici e' da aggiornare su GPU
-    matrix_wasUpdated = 1;
-    
-    return matrix_index;
-}
-
-//**********************************
-void Renderer1::matrix_delete (u32 matrix_index)
-{
-    matrix_bitmask.clear (matrix_index);
-}
-
-//**********************************
-mat4x4f* Renderer1::matrix_getForUpdate (u32 matrix_index)
-{
-    if (matrix_bitmask.isBitSet(matrix_index))
-    {
-        //mi segno che l'array dei materiali e' da aggiornare su GPU
-        matrix_wasUpdated = 1;        
-        return &matrix_buffer[matrix_index];
-    }
-    DBGBREAK;
-    return &matrix_default;
-}
-
-//**********************************
-void Renderer1::matrix_update (u32 matrix_index, const mat4x4f &mIN)
-{
-    mat4x4f *m = matrix_getForUpdate (matrix_index);
-    *m = mIN;
-}
-
-//**********************************
-const mat4x4f* Renderer1::matrix_query (u32 matrix_index) const
-{
-    if (matrix_bitmask.isBitSet(matrix_index))
-        return &matrix_buffer[matrix_index];
-
-    DBGBREAK;
-    return &matrix_default;
-}
-
-
-
-//**********************************
 void Renderer1::begin (gos::geom::Camera3 *cam)
 {
     renderableList.reset();
+    matrix_nextIndex = 0;
 
     //aggiorno UBO descrittore scena
 	scene.matVP = cam->getMatVP();
@@ -319,8 +257,14 @@ void Renderer1::begin (gos::geom::Camera3 *cam)
 }
 
 //**********************************
-void Renderer1::add (const ENGShape shape, u32 matrixIndex, u32 materialIndex)
+void Renderer1::add (const ENGShape shape, const mat4x4f &m, u32 materialIndex)
 {
+    assert (matrix_nextIndex < NUM_MAX_MATRIX);
+    const u32 matrixIndex = matrix_nextIndex++;
+
+    u8 *p = reinterpret_cast<u8*>(matrix_buffer.host_pt);
+    memcpy (&p[sizeof(mat4x4f) * matrixIndex], m._getValuesPtConst(), sizeof(mat4x4f));
+
     renderableList.append (Renderable{ 
         .shape = shape,
         .matrixIndex = matrixIndex,
@@ -347,13 +291,10 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
     }
 
     //devo aggiornare SBO delle matrici
-    if (matrix_wasUpdated)
+    if (matrix_nextIndex)
     {
-        matrix_wasUpdated = 0;
-
-        //TODO: non c'e' bisogno di uppare l'intero buffer tutte le volte, idealmente basta uppare solo
-        //gli elementi che sono stati modificati
-        gpu->writeAndSync (handle_sbo_matrixList, 0, matrix_buffer, matrix_sizeof_buffer);
+        gpu->buffer_manualSync_cpuWrite (matrix_buffer, 0, sizeof(mat4x4f) * matrix_nextIndex);
+        
     }    
 
 
@@ -377,11 +318,14 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
         const Renderable &r = renderableList.queryElem(i);
         const engine::Shape *info_shape = engine->shape_getInfo (r.shape);
         
-        renderer.bindVtxBuffer(info_shape->vbHandle)
-                .bindIdxBufferU16(info_shape->ibHandle)
-                .pushConstant(0, &r.matrixIndex, sizeof(u32))	//matrix index
-                .pushConstant(1, &r.materialIndex, sizeof(u32))	//material index
-                .drawIndexed (info_shape->numIndices, 1, info_shape->indexStart, info_shape->vtxStart, 0);
+        renderer
+            //.bindVtxBuffer(info_shape->vbHandle)
+            //.bindIdxBufferU16(info_shape->ibHandle)
+            .bindVtxIdxBuffer (info_shape->vbHandle, 0, info_shape->ibHandle, 0)
+            .pushConstant(0, &r.matrixIndex, sizeof(u32))	//matrix index
+            .pushConstant(1, &r.materialIndex, sizeof(u32))	//material index
+            .drawIndexed (info_shape->numIndices, 1, info_shape->indexStart, info_shape->vtxStart, 0)
+            ;
 
     }
 

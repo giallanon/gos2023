@@ -239,8 +239,8 @@ namespace gos
 
         //================ buffer unmapping / manualSync
         void                buffer_unmap (gpu::sMappedBuffer &m);
-        void                buffer_manualSync_cpuWrite (const gpu::sMappedBuffer *list, u32 numElemInList);
-        void                buffer_manualSync_cpuRead (const gpu::sMappedBuffer *list, u32 numElemInList);
+        void                buffer_manualSync_cpuWrite (const gpu::sMappedBuffer &mapped_buffer, u32 offset, u32 size);
+        void                buffer_manualSync_cpuRead (const gpu::sMappedBuffer &mapped_buffer, u32 offset, u32 size);
 
         //================ image unmapping / manualSync
         void                image_unmap (gpu::sMappedImage &m);

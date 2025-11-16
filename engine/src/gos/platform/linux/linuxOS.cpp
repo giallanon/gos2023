@@ -81,7 +81,8 @@ u32 platform::systeminfo_getNumOfCPUCore()                                      
 u64 platform::getTimeNow_usec()
 {
     struct timespec now;
-    clock_gettime (CLOCK_MONOTONIC_RAW, &now);
+    //clock_gettime (CLOCK_MONOTONIC_RAW, &now);
+    clock_gettime (CLOCK_PROCESS_CPUTIME_ID, &now);
     return (now.tv_sec * 1000000 + now.tv_nsec / 1000);
 }
 

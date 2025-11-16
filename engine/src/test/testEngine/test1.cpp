@@ -228,53 +228,61 @@ bool Test1::priv_run4 ()
 	scene.setup (allocator);
 	scene.begin();
 	{
-		//creo 4 ent
-		for (u32 i=0; i<4; i++)
+		const f32 SCALE = 0.1f;
+
+#ifdef _DEBUG
+		const u32 NUM_ENTITIES_X = 10;
+		const u32 NUM_ENTITIES_Z = 10;
+#else
+		const u32 NUM_ENTITIES_X = 1000;
+		const u32 NUM_ENTITIES_Z = 100;
+#endif		
+		const f32 ENTITY_GRID_X = 1.5f * SCALE;
+		const f32 ENTITY_GRID_Z = 1.5f * SCALE;
+
+		const f32 x_min = - ((f32)NUM_ENTITIES_X / 2.0f) * ENTITY_GRID_X;
+		const f32 z_min = - ((f32)NUM_ENTITIES_Z / 2.0f) * ENTITY_GRID_Z;
+
+		f32 zz = z_min;
+		for (u32 z=0; z<NUM_ENTITIES_Z; z++)
 		{
-			Entity ent = entRegistry.newEntity();
-			auto cpos = entRegistry.addComponent<ent::CompPos>(ent);
-			cpos->identity();
-			switch (i)
+			f32 xx = x_min;
+			for (u32 x=0; x<NUM_ENTITIES_X; x++)
 			{
-			default: break;
-			
-			case 0:  
+				Entity ent = entRegistry.newEntity();
+				
+				//posizione
+				auto cpos = entRegistry.addComponent<ent::CompPos>(ent);
+				cpos->identity();
+				cpos->pos.set (xx, 0, zz);
+				cpos->scale.set (SCALE, SCALE, SCALE);
+
+				xx += ENTITY_GRID_X;
+
+				//aggiungo uno script alla entity
+				auto scriptable = entRegistry.addComponent<ent::CompScriptable>(ent);
+
+				const u32 random_0_3 = gos::randomU32(3);
+				switch (random_0_3 )
 				{
-					auto scriptable = entRegistry.addComponent<ent::CompScriptable>(ent);
-					scriptable->callback = Test1__entity_script_callback_0;
+				default:
+				case 0:	scriptable->callback = Test1__entity_script_callback_0; break;
+				case 1:	scriptable->callback = Test1__entity_script_callback_1; break;
+				case 2:	scriptable->callback = Test1__entity_script_callback_2; break;
+				case 3:	scriptable->callback = Test1__entity_script_callback_3; break;
 				}
-				break;
 
-			case 1:
-				{
-					cpos->pos.set (0, 0, 10.f);
-					cpos->scale.set (2.0f, 1.0f, 1.0f);
+				//shape
+				auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent);
+				cModelInstance->material_index = random_0_3;
+				cModelInstance->shape_handle = shapeHandle;
 
-					auto scriptable = entRegistry.addComponent<ent::CompScriptable>(ent);
-					scriptable->callback = Test1__entity_script_callback_1;
-				}
-				break;
+				
 
-			case 2:
-				{
-					cpos->pos.set (0, 4.0f, 5.f);
-
-					auto scriptable = entRegistry.addComponent<ent::CompScriptable>(ent);
-					scriptable->callback = Test1__entity_script_callback_2;
-				}
-				break;
-
-			case 3:
-				{
-					cpos->pos.set (0, -4.0f, 5.f);
-
-					auto scriptable = entRegistry.addComponent<ent::CompScriptable>(ent);
-					scriptable->callback = Test1__entity_script_callback_3;
-				}
-				break;
+				scene.add(ent);
 			}
 
-			scene.add(ent);
+			zz += ENTITY_GRID_Z;
 		}
 	}
 	scene.end();
@@ -303,9 +311,8 @@ bool Test1::priv_run4 ()
 	
 
 
-	//binding di materiali e matrix al renderer
+	//binding di materiali al renderer
 	u32 material_indices[4];
-	u32 matrix_indices[4];
 	{
 		const asset::Asset_tex2D *tex;
 		u32	texture_index__texBianca = u32MAX;
@@ -321,13 +328,6 @@ bool Test1::priv_run4 ()
 		material_indices[1] = renderer->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
 		material_indices[2] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 0.2f, 0.2f));
 		material_indices[3] = renderer->material_create (texture_index__texChecker, vec3f(0.2f, 1.0f, 0.2f));
-
-		for (u32 i=0; i<4; i++)
-		{
-			mat4x4f matrix;
-			matrix.identity();
-			matrix_indices[i] = renderer->matrix_create (matrix);
-		}
 	}
 
 
@@ -339,6 +339,8 @@ bool Test1::priv_run4 ()
     GPUCmdBufferHandle  cmdBufferHandle;
     gpu->cmdBuffer_create (eGPUQueueFamily::gfx, &cmdBufferHandle);
 	
+	ent::UniqueList	ent_uniqueList;
+	ent_uniqueList.setup (allocator, 1024);
 
 	bool bQuit = false;
 	while (false == bQuit)
@@ -349,8 +351,10 @@ bool Test1::priv_run4 ()
 			continue;
 		}
 
+		mainLoop.run();
+
 		//CPU jobs
-        mainLoop.stat_onCPUFrameBegin();
+		mainLoop.stat_onCPUFrameBegin();
 		{
 			doCPUStuff();
 
@@ -370,6 +374,9 @@ bool Test1::priv_run4 ()
 					cScript->callback(ent, &entRegistry);
 				}
 			}
+			mainLoop.run(); //questo lo chiamo per aggiornare il timer gfxJob in modo che il tempo di "GPU" sia printato con + accuratezza
+			
+				
 
 			//aggiornamento posizione delle entities
 			//itero tutte le ent che hanno modificato il proprio componente <position>
@@ -380,44 +387,54 @@ bool Test1::priv_run4 ()
 					Entity ent = list->get(i);
 					auto cpos = entRegistry.get<ent::CompPos>(ent, false);
 					cpos->updateMatrix();
-
-					renderer->matrix_update (matrix_indices[i], cpos->_matrix);
 				}
 				list->reset();
-			}			
+			}
+        	mainLoop.run(); //questo lo chiamo per aggiornare il timer gfxJob in modo che il tempo di "GPU" sia printato con + accuratezza
 		}
-		mainLoop.stat_onCPUFrameEnd();
+		mainLoop.stat_onCPUFrameEnd();		
+
+
 
 
 		//rendering
-        mainLoop.run();
-
         if (gpu->swapChain_wasRecreated())
             cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
-
 
         //se il job precedente e' stato presentato, posso schedularne uno nuovo
         gpu::SwapchainImg swapchainImg;
         if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
-			gos::gpu::pipe2::CmdBufferWriter2 cw;
-			cw	.begin (gpu, cmdBufferHandle)
-				.setViewport (gpu->viewport_getDefault());
-
-			renderer->begin(&cam);
+			mainLoop.stat_onCommandBufferBegin();
 			{
-				renderer->add(shapeHandle, matrix_indices[0], material_indices[0]);
-				renderer->add(shapeHandle, matrix_indices[1], material_indices[1]);
-				renderer->add(shapeHandle, matrix_indices[2], material_indices[2]);
-				renderer->add(shapeHandle, matrix_indices[3], material_indices[3]);
-			}
-			renderer->end (cw);
+				gos::gpu::pipe2::CmdBufferWriter2 cw;
+				cw	.begin (gpu, cmdBufferHandle)
+					.setViewport (gpu->viewport_getDefault());
 
-			cw	.imageTransition (renderer->getHandle_rt0(), eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
-				.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)
-				.copyImageToImage (renderer->getHandle_rt0(), swapchainImg.image, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
-				.imageTransition (swapchainImg.image, eImageLayout::transfer_dst, eImageLayout::presentation)
-				.end();
+				renderer->begin(&cam);
+				{
+					scene.query (cam, &ent_uniqueList, true);
+					for (u32 i=0; i<ent_uniqueList.getNElem(); i++)
+					{
+						gos::Entity ent = ent_uniqueList._queryList()->queryElem(i);
+						auto cpos = entRegistry.query<ent::CompPos>(ent);
+						auto cModelInstance = entRegistry.query<ent::CompModelInstance>(ent);
+
+						//renderer->add(shapeHandle, cpos->_matrix, material_indices[i%4]);
+						renderer->add(cModelInstance->shape_handle, cpos->_matrix, cModelInstance->material_index);
+					}
+				}
+				renderer->end (cw);
+
+
+				cw	.imageTransition (renderer->getHandle_rt0(), eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
+					.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)
+					.copyImageToImage (renderer->getHandle_rt0(), swapchainImg.image, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
+					.imageTransition (swapchainImg.image, eImageLayout::transfer_dst, eImageLayout::presentation)
+					.end();
+			}
+			mainLoop.stat_onCommandBufferEnd();
+
 
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }		

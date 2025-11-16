@@ -30,25 +30,25 @@ u64 Timer::elapsed_usec() const
  *************************************************************************************************************************/
 void TimerFPS::reset()
 {
-    timeBegin_usec = gos::getTimeSinceStart_usec();
+    nextTimeCalc_usec = gos::getTimeSinceStart_usec() + 1000000;
     numFrameCounted = 0;
-    accumulatedTime_usec = 0;
+    frametime_accumulated_usec = 0;
 }
 
 //******************************
 bool TimerFPS::onFrameEnd()
 {
     const u64 timeNow_usec = gos::getTimeSinceStart_usec();
-    if (0 != timeFrameStarted_usec)
+    if (0 != frametime_started_usec)
     {
-        accumulatedTime_usec += (timeNow_usec - timeFrameStarted_usec);
+        frametime_accumulated_usec += (timeNow_usec - frametime_started_usec);
         numFrameCounted++;
-        timeFrameStarted_usec = 0;
+        frametime_started_usec = 0;
     }
 
-    if (timeNow_usec - timeBegin_usec >= 1000000)
+    if (timeNow_usec >= nextTimeCalc_usec)
     {
-        avgFrameTime_usec = accumulatedTime_usec / (float)numFrameCounted;
+        frametime_avg_usec = frametime_accumulated_usec / (float)numFrameCounted;
         reset();
         return true;
     }

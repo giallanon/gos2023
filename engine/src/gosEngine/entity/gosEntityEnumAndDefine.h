@@ -27,9 +27,31 @@ namespace gos
 	{
 		class Registry; //Fwd decl
 
+		struct internal__component_unique_index final
+		{
+			[[nodiscard]] static u32 next() noexcept {
+				static u32 value{};
+				return value++;
+			}
+		};
+
+		template<typename COMP>
+		struct Component final
+		{
+			[[nodiscard]] static u32 getTypeIndex() noexcept
+			{
+				static const u32 value = internal__component_unique_index::next();
+				return value;
+			}
+		};
+
+		/*************************
+		 * @brief	CompPos
+		 * 
+		 */
 		struct CompPos
 		{
-			static constexpr u32 getTypeIndex() 			{ return 0; }
+			//static constexpr u32 getTypeIndex() 			{ return 0; }
 			
 			gos::vec3f		pos;
 			gos::vec3f		rot_grad;
@@ -40,20 +62,28 @@ namespace gos
 			void 	updateMatrix();
 		};
 
-		struct CompModelInstance
-		{
-			static constexpr u32 	getTypeIndex() 			{ return 1; }
-			
-			model::ModelInstance	*modelInstance;
-		};
-
+		/*************************
+		 * @brief	CompScriptable
+		 * 
+		 */		
 		typedef void (*entity_script_function) (Entity ent, Registry *registry);
 		struct CompScriptable
 		{
-			static constexpr u32 	getTypeIndex() 			{ return 3; }
+			//static constexpr u32 	getTypeIndex() 			{ return 1; }
 			
 			entity_script_function	callback;
 		};	
+
+		/*************************
+		 * @brief	CompModelInstance
+		 * 
+		 */		
+		struct CompModelInstance
+		{
+			gos::ENGShape	shape_handle;
+			u32 			material_index;
+		};
+
 	
 	
 	} //namespace ent

@@ -187,9 +187,10 @@ void MainLoop2::run ()
     {
         nextTimePrintInfo_msec = timenow_msec + printInfoFreq_msec;
 
-        printf ("cpu: avg %.2fms [fps: %.01f]    gpu: avg %.2fms [fps: %.01f]    acquire: avg %.2fms [fps: %.01f]\n",
+        printf ("cpu: avg %.2fms [fps: %.01f]    cmd: avg %.2fms [fps: %.01f]    gpu: avg %.2fms [fps: %.01f]    acquire: avg %.2fms [fps: %.01f]\n",
             cpuTimerFPS.getAvgFrameTime_ms(), cpuTimerFPS.getAvgFPS(),
-            gfxJob.timerFPS.getAvgFrameTime_ms(), gfxJob.timerFPS.getAvgFPS(),
+            cmdBufferTimerFPS.getAvgFrameTime_ms(), cmdBufferTimerFPS.getAvgFPS(),
+            gfxJob.getTimerFPS()->getAvgFrameTime_ms(), gfxJob.getTimerFPS()->getAvgFPS(),
             acquire.timerFPS.getAvgFrameTime_ms(), acquire.timerFPS.getAvgFPS());
     }
 }

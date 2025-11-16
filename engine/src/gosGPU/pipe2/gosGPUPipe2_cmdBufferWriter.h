@@ -35,9 +35,12 @@ namespace gos
 
                     BeginRend&  bindPipeline (const GPUPipelineHandle handle);
                     BeginRend&  bindDescriptorSet (const GPUDescrSetInstanceHandle handle, u8 set, u32 dynamicOffset = u32MAX);
+                    
+                    BeginRend&  bindVtxIdxBuffer (const GPUVtxBufferHandle vtxbuffer_handle, u32 vtxbuffer_offset, const GPUIdxBufferHandle idxbuffer_handle, u32 idxbuffer_offset);
                     BeginRend&  bindVtxBuffer (const GPUVtxBufferHandle handle, u32 offset = 0);
                     BeginRend&  bindVtxBuffers (const GPUVtxBufferHandle handleStream0, const GPUVtxBufferHandle handleStream1);
                     BeginRend&  bindIdxBufferU16 (const GPUIdxBufferHandle handle, u32 offset = 0);
+                    
                     BeginRend&  pushConstant (u8 whichOne, const void *data, u32 sizeof_data);
                     BeginRend&  drawIndexed (u32 indexCount, u32 instanceCount, u32 firstIndex, u32 vertexOffset, u32 firstInstance);
                     BeginRend&  draw (u32 vtxCount, u32 instanceCount, u32 firstVtx, u32 firstInstance);
@@ -72,6 +75,12 @@ namespace gos
                     u32                         renderAreaH;
                     const gpu::Pipeline2        *curPipeline;
                     u8                          pushConstBuffer[128];
+
+
+                    GPUVtxBufferHandle          cache_vxtBuffer_handle[2];
+                    u32                         cache_vxtBuffer_offset[2];
+                    GPUIdxBufferHandle          cache_idxBuffer_handle;
+                    u32                         cache_idxBuffer_offset;
 
                 friend CmdBufferWriter2;
                 };

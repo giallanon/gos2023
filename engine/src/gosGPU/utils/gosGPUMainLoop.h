@@ -76,8 +76,8 @@ namespace gos
             void    submit (const GPUCmdBufferHandle &cmdBufferHandle)                                                          { priv_submit (cmdBufferHandle, u32MAX); }
             bool    hasFinished();
 
-        public:
-            gos::TimerFPS   timerFPS;
+            const gos::TimerFPS*    getTimerFPS() const                                                                         { return &timerFPS; }
+
             
         private:
             enum class eStato : u8
@@ -90,6 +90,7 @@ namespace gos
             void        priv_submit (const GPUCmdBufferHandle &cmdBufferHandle, u32 swapChainImageIndex);
 
         private:
+            gos::TimerFPS   timerFPS;
             GPU         *gpu;
             VkFence     fence;
             u32         swapChainImageIndex;
@@ -151,15 +152,20 @@ namespace gos
 
             void    stat_onCPUFrameBegin()                                      { cpuTimerFPS.onFrameBegin(); }
             void    stat_onCPUFrameEnd()                                        { cpuTimerFPS.onFrameEnd(); }
+
+            void    stat_onCommandBufferBegin()                                 { cmdBufferTimerFPS.onFrameBegin(); }
+            void    stat_onCommandBufferEnd()                                   { cmdBufferTimerFPS.onFrameEnd(); }
+
             void    stat_setPrintReportEvery (u32 msec)                         { printInfoFreq_msec = msec; }
 
         private:
             AquireSwapChainImage    acquire;
-            GFXJob           gfxJob;
+            GFXJob                  gfxJob;
             u64                     nextTimePrintInfo_msec;
             u64                     printInfoFreq_msec;
             gos::FIFOFixedSize<SwapchainImg,4>  acquiredList;
             gos::TimerFPS           cpuTimerFPS;
+            gos::TimerFPS           cmdBufferTimerFPS;
             bool                    gfxJobFinished;
         };
 

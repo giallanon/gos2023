@@ -7,6 +7,12 @@ namespace gos
 {
 	namespace ent
 	{
+
+        #define ENT_GET_COMPONENT_INDEX(CompClass)\
+            const u32 index = Component<CompClass>::getTypeIndex();\
+            assert (index < NUM_MAX_COMPONENT_PER_ENTITY);\
+
+
 		/*******************************************
 		 * @brief	Registry
 		 * 
@@ -34,9 +40,10 @@ namespace gos
                             template<class TCOMPONENT>
             bool            addComponentHandler(bool bTrackUpdate = false)
             {
-                constexpr u32 index = TCOMPONENT::getTypeIndex();
-                static_assert (index < NUM_MAX_COMPONENT_PER_ENTITY);
-
+                //constexpr u32 index = TCOMPONENT::getTypeIndex();
+                //static_assert (index < NUM_MAX_COMPONENT_PER_ENTITY);
+                ENT_GET_COMPONENT_INDEX(TCOMPONENT)
+          
                 if (NULL != sparseSetList[index])
                 {
                     //sto registrando 2 volte lo stesso componente, oppure il componente
@@ -63,8 +70,9 @@ namespace gos
                             template<class TCOMPONENT>
             TCOMPONENT*     addComponent(Entity ent)
             {
-                constexpr u32 index = TCOMPONENT::getTypeIndex();
-                static_assert (index < NUM_MAX_COMPONENT_PER_ENTITY);
+                //constexpr u32 index = TCOMPONENT::getTypeIndex();
+                //static_assert (index < NUM_MAX_COMPONENT_PER_ENTITY);
+                ENT_GET_COMPONENT_INDEX(TCOMPONENT)
                 assert (NULL != sparseSetList[index]);
 
                 //se il componente e' associato ad una lista che ne traccia l'update...
@@ -98,8 +106,9 @@ namespace gos
                             template<class TCOMPONENT>
             TCOMPONENT*     get(Entity ent, bool triggerUpdatedEntityList = true)
             {
-                constexpr u32 index = TCOMPONENT::getTypeIndex();
-                static_assert (index < NUM_MAX_COMPONENT_PER_ENTITY);
+                //constexpr u32 index = TCOMPONENT::getTypeIndex();
+                //static_assert (index < NUM_MAX_COMPONENT_PER_ENTITY);
+                ENT_GET_COMPONENT_INDEX(TCOMPONENT)
                 assert (NULL != sparseSetList[index]);
 
                 //se il componente e' associato ad una lista che ne traccia l'update...
@@ -120,8 +129,9 @@ namespace gos
                               template<class TCOMPONENT>
             const TCOMPONENT* query(Entity ent) const
             {
-                constexpr u32 index = TCOMPONENT::getTypeIndex();
-                static_assert (index < NUM_MAX_COMPONENT_PER_ENTITY);
+                //constexpr u32 index = TCOMPONENT::getTypeIndex();
+                //static_assert (index < NUM_MAX_COMPONENT_PER_ENTITY);
+                ENT_GET_COMPONENT_INDEX(TCOMPONENT)
                 assert (NULL != sparseSetList[index]);
 
                 using CompSparseSet = ComponentList<TCOMPONENT>;
@@ -138,8 +148,9 @@ namespace gos
                             template<class TCOMPONENT>
             UniqueList*     getUpdatedEntityList()
             {
-                constexpr u32 index = TCOMPONENT::getTypeIndex();
-                static_assert (index < NUM_MAX_COMPONENT_PER_ENTITY);
+                //constexpr u32 index = TCOMPONENT::getTypeIndex();
+                //static_assert (index < NUM_MAX_COMPONENT_PER_ENTITY);
+                ENT_GET_COMPONENT_INDEX(TCOMPONENT)
                 assert (NULL != updatedListArray[index]);
                 return updatedListArray[index];
             }
@@ -148,8 +159,9 @@ namespace gos
                             template<class TCOMPONENT>
             ComponentList<TCOMPONENT>*  getAllEntitiesWith()
             {
-                constexpr u32 index = TCOMPONENT::getTypeIndex();
-                static_assert (index < NUM_MAX_COMPONENT_PER_ENTITY);
+                //constexpr u32 index = TCOMPONENT::getTypeIndex();
+                //static_assert (index < NUM_MAX_COMPONENT_PER_ENTITY);
+                ENT_GET_COMPONENT_INDEX(TCOMPONENT)
                 assert (NULL != sparseSetList[index]);
 
                 using CompSparseSet = ComponentList<TCOMPONENT>;

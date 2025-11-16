@@ -28,7 +28,7 @@ namespace gos
             void    unsetup();
 
             void    begin (gos::geom::Camera3 *cam);
-            void    add (const ENGShape shape, u32 matrixIndex, u32 materialIndex);
+            void    add (const ENGShape shape, const mat4x4f &m, u32 materialIndex);
             void    end (gos::gpu::pipe2::CmdBufferWriter2 &cw);
 
             GPURenderTargetHandle   getHandle_rt0() const                                                   { return handle_rt0; }
@@ -43,17 +43,11 @@ namespace gos
             Material*       material_getForUpdate (u32 material_index);
             const Material* material_query (u32 material_index) const;
 
-            u32             matrix_create ();
-            u32             matrix_create (const mat4x4f &m);
-            void            matrix_delete (u32 matrix_index);
-            mat4x4f*        matrix_getForUpdate (u32 matrix_index);
-            void            matrix_update (u32 matrix_index, const mat4x4f &m);
-            const mat4x4f*  matrix_query (u32 matrix_index) const;
 
         private:
             static constexpr u32    NUM_MAX_TEXTURE     = 1024;
             static constexpr u32    NUM_MAX_MATERIAL    = 1024;
-            static constexpr u32    NUM_MAX_MATRIX      = 1024;
+            static constexpr u32    NUM_MAX_MATRIX      = 150000;
                         
         private:
             struct SceneData
@@ -88,10 +82,9 @@ namespace gos
             DynamicTextureArray                 texture_array;
 
             mat4x4f                             matrix_default;
-            mat4x4f                             *matrix_buffer;
+            gpu::sMappedBuffer                  matrix_buffer;
             u32                                 matrix_sizeof_buffer;
-            gos::Bitfield                       matrix_bitmask;
-            u32                                 matrix_wasUpdated;
+            u32                                 matrix_nextIndex;
             
             Material                            material_default;
             Material                            *material_buffer;

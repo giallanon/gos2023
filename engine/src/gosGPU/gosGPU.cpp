@@ -1257,39 +1257,29 @@ void GPU::buffer_unmap (gpu::sMappedBuffer &m)
 }
 
 //************************************************************************************************************
-void GPU::buffer_manualSync_cpuWrite (const gpu::sMappedBuffer *list, u32 numElemInList)
+void GPU::buffer_manualSync_cpuWrite (const gpu::sMappedBuffer &mapped_buffer, u32 offset, u32 size)
 {
-    assert (numElemInList <= 64);
+    VkMappedMemoryRange flush_range;
+    flush_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    flush_range.pNext = NULL;
+    flush_range.memory = mapped_buffer._vkMemHandle;
+    flush_range.offset = offset;
+    flush_range.size = size;
 
-    VkMappedMemoryRange flush_range[64];
-    for (u32 i=0; i<numElemInList; i++)
-    {
-        flush_range[i].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        flush_range[i].pNext = NULL;
-        flush_range[i].memory = list[i]._vkMemHandle;
-        flush_range[i].offset = list[i].offset;
-        flush_range[i].size = list[i].size;
-    }
-
-    vulkan.memory_flushRanges (numElemInList, flush_range );
+    vulkan.memory_flushRanges (1, &flush_range);
 }
 
 //************************************************************************************************************
-void GPU::buffer_manualSync_cpuRead (const gpu::sMappedBuffer *list, u32 numElemInList)
+void GPU::buffer_manualSync_cpuRead (const gpu::sMappedBuffer &mapped_buffer, u32 offset, u32 size)
 {
-    assert (numElemInList <= 64);
+    VkMappedMemoryRange flush_range;
+    flush_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    flush_range.pNext = NULL;
+    flush_range.memory = mapped_buffer._vkMemHandle;
+    flush_range.offset = offset;
+    flush_range.size = size;
 
-    VkMappedMemoryRange flush_range[64];
-    for (u32 i=0; i<numElemInList; i++)
-    {
-        flush_range[i].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        flush_range[i].pNext = NULL;
-        flush_range[i].memory = list[i]._vkMemHandle;
-        flush_range[i].offset = list[i].offset;
-        flush_range[i].size = list[i].size;
-    }
-
-    vulkan.memory_invalidateRanges (numElemInList, flush_range);
+    vulkan.memory_invalidateRanges (1, &flush_range);
 }
 
 /************************************************************************************************************

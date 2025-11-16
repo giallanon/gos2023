@@ -27,24 +27,24 @@ namespace gos
     class TimerFPS
     {
     public:
-                        TimerFPS()                                                                  { reset(); avgFrameTime_usec = 0; }
+                        TimerFPS()                                                                  { reset(); frametime_avg_usec = 0; }
         
         void            reset();
-        void            onFrameBegin()                                                              { timeFrameStarted_usec = gos::getTimeSinceStart_usec(); }
+        void            onFrameBegin()                                                              { frametime_started_usec = gos::getTimeSinceStart_usec(); }
         bool            onFrameEnd();
                             //ritorna true dopo circa 1 secondo accumulato. Quando ritorna true,
                             //la fn getAvgFrameTime_usec() ritorna il valor medio del frame time accumulato 
 
-        f32             getAvgFrameTime_usec() const                                                { return avgFrameTime_usec; }
-        f32             getAvgFrameTime_ms() const                                                  { return avgFrameTime_usec / 1000.0f; }
-        f32             getAvgFPS() const                                                           { return 1000000.0f / avgFrameTime_usec; }
+        f32             getAvgFrameTime_usec() const                                                { return frametime_avg_usec; }
+        f32             getAvgFrameTime_ms() const                                                  { return frametime_avg_usec / 1000.0f; }
+        f32             getAvgFPS() const                                                           { return 1000000.0f / frametime_avg_usec; }
         
     private:
-        u64             timeBegin_usec;
-        u64				timeFrameStarted_usec;
-        u64             accumulatedTime_usec;
+        u64             nextTimeCalc_usec;
+        u64				frametime_started_usec;
+        u64             frametime_accumulated_usec;
         u32             numFrameCounted;
-        f32             avgFrameTime_usec = 0;
+        f32             frametime_avg_usec;
     };
 
 
