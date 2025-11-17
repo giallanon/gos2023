@@ -27,14 +27,17 @@ namespace gos
  * Macro per la gestione delle allocazioni dinamiche
  *
  */
-#ifdef _DEBUG
-		#define GOSNEW(allocator, T)								new ( (allocator)->alloc (sizeof(T), ALIGNOF(T), __FILE__, __LINE__, true)) T
 
-		#define GOSALLOCSTRUCT(allocator,T)							(T*)(allocator)->alloc (sizeof(T), ALIGNOF(T), __FILE__, __LINE__, false)
+#define GOS_DEFAULT_ALIGNMENT	64
+
+#ifdef _DEBUG
+		#define GOSNEW(allocator, T)								new ( (allocator)->alloc (sizeof(T), GOS_DEFAULT_ALIGNMENT, __FILE__, __LINE__, true)) T
+
+		#define GOSALLOCSTRUCT(allocator,T)							(T*)(allocator)->alloc (sizeof(T), GOS_DEFAULT_ALIGNMENT, __FILE__, __LINE__, false)
 
 		#define GOSALIGNEDALLOC(allocator,sizeInByte,align)			(allocator)->alloc (sizeInByte, align, __FILE__, __LINE__, false)
 		#define GOSALLOC(allocator,sizeInByte)						(allocator)->alloc (sizeInByte, ALIGNOF(void*), __FILE__, __LINE__, false)
-		#define GOSALLOCT(retType, allocator,sizeInByte)			static_cast<retType>((allocator)->alloc (sizeInByte, ALIGNOF(retType), __FILE__, __LINE__, false))
+		#define GOSALLOCT(retType, allocator,sizeInByte)			static_cast<retType>((allocator)->alloc (sizeInByte, GOS_DEFAULT_ALIGNMENT, __FILE__, __LINE__, false))
 
 		template <class T>
 void	GOSDELETE(gos::Allocator *allocator, T* &p)			        { if ((p)) { (p)->~T(); allocator->dealloc((p), true); (p)=NULL; } }
@@ -42,24 +45,24 @@ void	GOSDELETE(gos::Allocator *allocator, T* &p)			        { if ((p)) { (p)->~T(
 		#define GOSFREE(allocator, p)								{ if((p)) { (allocator)->dealloc ((p), false); } }
 
 
-		#define GOSALLOC_SCRAPT(retType, sizeInByte)				static_cast<retType>(gos::mem::getScrapAllocator()->alloc (sizeInByte, ALIGNOF(retType), __FILE__, __LINE__, false))
+		#define GOSALLOC_SCRAPT(retType, sizeInByte)				static_cast<retType>(gos::mem::getScrapAllocator()->alloc (sizeInByte, GOS_DEFAULT_ALIGNMENT, __FILE__, __LINE__, false))
 		#define GOSFREE_SCRAP(p)									{ if((p)) { gos::mem::getScrapAllocator()->dealloc ((p), false); } }
 
 #else
-		#define GOSNEW(allocator, T)								new ( (allocator)->alloc (sizeof(T), ALIGNOF(T))) T
+		#define GOSNEW(allocator, T)								new ( (allocator)->alloc (sizeof(T), GOS_DEFAULT_ALIGNMENT)) T
 
-		#define GOSALLOCSTRUCT(allocator,T)							(T*)(allocator)->alloc (sizeof(T), ALIGNOF(T))
+		#define GOSALLOCSTRUCT(allocator,T)							(T*)(allocator)->alloc (sizeof(T), GOS_DEFAULT_ALIGNMENT)
 
 		#define GOSALIGNEDALLOC(allocator,sizeInByte,align)			(allocator)->alloc (sizeInByte, align)
-		#define GOSALLOC(allocator,sizeInByte)						(allocator)->alloc (sizeInByte, ALIGNOF(void*))
-		#define GOSALLOCT(retType, allocator,sizeInByte)			static_cast<retType>((allocator)->alloc (sizeInByte, ALIGNOF(retType)))
+		#define GOSALLOC(allocator,sizeInByte)						(allocator)->alloc (sizeInByte, GOS_DEFAULT_ALIGNMENT)
+		#define GOSALLOCT(retType, allocator,sizeInByte)			static_cast<retType>((allocator)->alloc (sizeInByte, GOS_DEFAULT_ALIGNMENT))
 
 		template <class T>
 void	GOSDELETE(gos::Allocator *allocator, T* &p)			        { if ((p)) { (p)->~T(); allocator->dealloc((p)); (p)=NULL; } }
 
 		#define GOSFREE(allocator, p)								{ if((p)) { (allocator)->dealloc ((p)); } }
 
-		#define GOSALLOC_SCRAPT(retType, sizeInByte)				static_cast<retType>(gos::mem::getScrapAllocator()->alloc (sizeInByte, ALIGNOF(retType)))
+		#define GOSALLOC_SCRAPT(retType, sizeInByte)				static_cast<retType>(gos::mem::getScrapAllocator()->alloc (sizeInByte, GOS_DEFAULT_ALIGNMENT))
 		#define GOSFREE_SCRAP(p)									{ if((p)) { gos::mem::getScrapAllocator()->dealloc ((p)); } }
 #endif
 

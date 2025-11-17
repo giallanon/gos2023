@@ -382,12 +382,11 @@ bool Test1::priv_run4 ()
 			//itero tutte le ent che hanno modificato il proprio componente <position>
 			{
 				auto list = entRegistry.getUpdatedEntityList<ent::CompPos>();
-				for (u32 i=0; i<list->getNElem(); i++)
-				{
-					Entity ent = list->get(i);
+				list->forEach ( [&entRegistry = entRegistry](u32 index, Entity &ent) {
 					auto cpos = entRegistry.get<ent::CompPos>(ent, false);
 					cpos->updateMatrix();
-				}
+					return true;
+				});
 				list->reset();
 			}
         	mainLoop.run(); //questo lo chiamo per aggiornare il timer gfxJob in modo che il tempo di "GPU" sia printato con + accuratezza
@@ -414,15 +413,13 @@ bool Test1::priv_run4 ()
 				renderer->begin(&cam);
 				{
 					scene.query (cam, &ent_uniqueList, true);
-					for (u32 i=0; i<ent_uniqueList.getNElem(); i++)
-					{
-						gos::Entity ent = ent_uniqueList._queryList()->queryElem(i);
+					//for (u32 i=0; i<ent_uniqueList.getNElem(); i++)
+					ent_uniqueList.forEach ( [&entRegistry = entRegistry, &renderer = renderer](u32 index, gos::Entity ent) {
 						auto cpos = entRegistry.query<ent::CompPos>(ent);
 						auto cModelInstance = entRegistry.query<ent::CompModelInstance>(ent);
-
-						//renderer->add(shapeHandle, cpos->_matrix, material_indices[i%4]);
 						renderer->add(cModelInstance->shape_handle, cpos->_matrix, cModelInstance->material_index);
-					}
+						return true;
+					});
 				}
 				renderer->end (cw);
 

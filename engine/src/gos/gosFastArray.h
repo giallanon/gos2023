@@ -278,6 +278,7 @@ namespace gos
         Allocator*      getAllocator() const									{ return memBlock.getAllocator(); }
         const void*		_queryPointer () const									{ return memBlock._getPointer(0); }
         const T*        _queryTypedPointer () const								{ return reinterpret_cast<const T*>(memBlock._getPointer(0)); }
+        T*              _getTypedPointer () 								    { return reinterpret_cast<T*>(memBlock._getPointer(0)); }
 
     private:
         void			_grow (u32 nuovoNumMaxDiElementi)

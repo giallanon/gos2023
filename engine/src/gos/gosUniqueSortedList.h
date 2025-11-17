@@ -102,6 +102,26 @@ namespace gos
         const gos::FastArray<T>*    _queryList() const                                  { return &list; }
         u32                         getNElem() const                                    { return list.getNElem(); }
 
+                        template<typename LAMBDA>
+        void            forEach (LAMBDA&& evalParamFn)
+                        {
+                            for (u32 index=0; index<list.getNElem(); index++)
+                            {
+                                if (false == evalParamFn (index, list.getElem(index)))
+                                    break;
+                            }
+                        }
+
+                        template<typename LAMBDA>                        
+        void            forEach (LAMBDA&& evalParamFn) const
+                        {
+                            for (u32 index=0; index<list.getNElem(); index++)
+                            {
+                                if (false == evalParamFn(index, list.queryElem(index) ) )
+                                    break;
+                            }
+                        }
+
 
     private:
         struct sSearchRange
