@@ -66,7 +66,10 @@ bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out)
 		}
 
 		if (!shape::buildCube24 (vec3f(0, 0, 0), vec3f(1, 1, 1), vtxLayout, allocator, &shape))
+		//if (!shape::buildCylinder (vec3f(0, 0, 0), 0.7f, 3.0f, 32, 4, true, true, vtxLayout, allocator, &shape))
 			return false;
+
+		
 	}
 
 	//creo una engine::shape
@@ -78,7 +81,7 @@ bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out)
 	{
 		//copio idx/vtx nello stage buffer
 		GPUStgBufferHandle stgBufferHandle;
-		engine->gpu->stagingBuffer_create (1024, &stgBufferHandle);
+		engine->gpu->stagingBuffer_create (8192, &stgBufferHandle);
 		
 		const u32 SIZE_OF_IDX = shape.numIdx * sizeof(u16);
 		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shape.idxBuffer, SIZE_OF_IDX);
