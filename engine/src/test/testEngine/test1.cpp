@@ -231,8 +231,8 @@ bool Test1::priv_run4 ()
 		const f32 SCALE = 0.1f;
 
 #ifdef _DEBUG
-		const u32 NUM_ENTITIES_X = 10;
-		const u32 NUM_ENTITIES_Z = 10;
+		const u32 NUM_ENTITIES_X = 100;
+		const u32 NUM_ENTITIES_Z = 100;
 #else
 		const u32 NUM_ENTITIES_X = 1000;
 		const u32 NUM_ENTITIES_Z = 100;

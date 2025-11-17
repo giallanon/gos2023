@@ -160,7 +160,7 @@ int perftest1()
         ((f32)totalTime[2] / 1000.0f) / 10.0f,
         ((f32)totalTime[3] / 1000.0f) / 10.0f
     );
-    _getch();
+    //_getch();
     return 0;
 }
 

@@ -63,6 +63,12 @@ namespace gos
                     u32 materialIndex;
             };
 
+            struct InstanceData
+            {
+                u32 matrix_index;
+                u32 material_index;
+            };
+
         private:
             gos::Engine                 *engine;
             gos::GPU                    *gpu;
@@ -78,6 +84,7 @@ namespace gos
             GPUUniformBufferHandle      handle_ubo_scene;
             GPUStorageBufferHandle      handle_sbo_matrixList;
             GPUStorageBufferHandle      handle_sbo_materiaList;
+            GPUStorageBufferHandle      handle_sbo_instanceData;
 
             DynamicTextureArray                 texture_array;
 
@@ -91,6 +98,9 @@ namespace gos
             u32                                 material_sizeof_buffer;
             gos::Bitfield                       material_bitmask;
             u32                                 material_wasUpdated;
+
+            gpu::sMappedBuffer                  instance_buffer;
+            u32                                 instance_sizeof_buffer;
 
             SceneData                   scene;
             FastArray<Renderable>       renderableList;

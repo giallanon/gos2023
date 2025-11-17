@@ -1264,7 +1264,11 @@ void GPU::buffer_manualSync_cpuWrite (const gpu::sMappedBuffer &mapped_buffer, u
     flush_range.pNext = NULL;
     flush_range.memory = mapped_buffer._vkMemHandle;
     flush_range.offset = offset;
-    flush_range.size = size;
+
+    if (u32MAX == size)
+        flush_range.size = VK_WHOLE_SIZE;
+    else
+        flush_range.size = size;
 
     vulkan.memory_flushRanges (1, &flush_range);
 }
