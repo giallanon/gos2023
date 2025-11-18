@@ -6,24 +6,24 @@ using namespace gos;
 using namespace gos::engine;
 
 
-#define USE_QSORT
 
 //**********************************
 Renderer1::Renderer1()
 {
     engine = NULL;
     material_buffer = NULL;
+    pRenderableList = NULL;
+    nRenderable = 0;
 }
 
 //**********************************
 void Renderer1::unsetup()
 {
-    gos::Allocator *allocator = renderableList.getAllocator();
-    renderableList.unsetup();
     texture_array.unsetup();
     gpu->buffer_unmap (matrix_buffer);
-    GOSFREE(allocator, material_buffer);
-    material_bitmask.unsetup (allocator);
+    GOSFREE(localAllocator, material_buffer);
+    GOSFREE(localAllocator, pRenderableList);
+    material_bitmask.unsetup (localAllocator);
     
 
     if (NULL != gpu)
@@ -38,11 +38,7 @@ void Renderer1::unsetup()
         gpu->deleteResource(handle_ubo_scene);
         gpu->deleteResource(handle_sbo_matrixList);
         gpu->deleteResource(handle_sbo_materiaList);
-
-#ifdef USE_QSORT
         gpu->deleteResource(handle_sbo_instanceData);
-#endif
-
         gpu->deleteResource(handle_descrSet0);
         gpu->deleteResource(handle_descrSet1);
         gpu->deleteResource(handle_descrSet2);
@@ -56,20 +52,14 @@ void Renderer1::unsetup()
 //**********************************
 bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
 {
+    localAllocator = allocator;
     engine = engineIN;
     gpu = engine->gpu;
 
     //load degli assets
-#ifdef USE_QSORT
     if (!engine->assetHub->getHandle ("pipe3", &assHandle_pipe, true))
         return false;    
-#else    
-    if (!engine->assetHub->getHandle ("pipe2", &assHandle_pipe, true))
-        return false;    
-#endif
 
-
-    renderableList.setup (allocator, NUM_MAX_MATRIX);
 
     //risorse di rendering
     {
@@ -100,7 +90,7 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
     }
 
     //creo gli oggetti che poi dovro' bindare ai descrittori
-    texture_array.setup(allocator, NUM_MAX_TEXTURE);
+    texture_array.setup(localAllocator, NUM_MAX_TEXTURE);
     {
         gpu::SamplerDesc desc;
 
@@ -126,21 +116,20 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
 
         //SBO materialList
         material_sizeof_buffer = NUM_MAX_MATERIAL * sizeof(Material);
-        material_buffer = (Material*) GOSALIGNEDALLOC(allocator, material_sizeof_buffer, gpu->limits_get_minStorageBufferOffsetAlignment());
-        material_bitmask.setup (allocator, NUM_MAX_MATERIAL);
+        material_buffer = (Material*) GOSALIGNEDALLOC(localAllocator, material_sizeof_buffer, gpu->limits_get_minStorageBufferOffsetAlignment());
+        material_bitmask.setup (localAllocator, NUM_MAX_MATERIAL);
         material_bitmask.zero();
         material_wasUpdated = 1;
         material_default.texture_index = 0;
         material_default.diffuse_col.set (1.0f, 1.0f, 1.0f);
         gpu->storageBuffer_create (material_sizeof_buffer, eMemAccessMode::shared_cpuW_autoSync, &handle_sbo_materiaList);
 
-#ifdef USE_QSORT
         ///SBO instance data
         //instance_sizeof_buffer = NUM_MAX_MATRIX * sizeof(InstanceData);
-        instance_sizeof_buffer = NUM_MAX_MATRIX * sizeof(Renderable);
+        instance_sizeof_buffer = NUM_MAX_MATRIX * sizeof(u64);
         gpu->storageBuffer_create (instance_sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &handle_sbo_instanceData);
-        gpu->map (handle_sbo_instanceData, 0, u32MAX, &instance_buffer);        
-#endif        
+        gpu->map (handle_sbo_instanceData, 0, u32MAX, &instance_buffer);
+        pRenderableList = GOSALLOCT(u64*, localAllocator, sizeof(u64) * NUM_MAX_MATRIX);
     }
 
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
@@ -190,10 +179,7 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
 			dsw.begin (gpu, handle_descrSet2)
 				.bindStorageBuffer (0, handle_sbo_matrixList, 0)
 				.bindStorageBuffer (1, handle_sbo_materiaList, 0)
-                
-#ifdef USE_QSORT
                 .bindStorageBuffer (2, handle_sbo_instanceData)
-#endif                
 				.end();
         }
     }
@@ -269,10 +255,33 @@ const Renderer1::Material* Renderer1::material_query (u32 material_index) const
 
 
 //**********************************
+u64 Renderer1::priv_pack_renderable (ENGShape shape, u32 material_index, u32 matrix_index) const
+{
+    u64 ret = shape.viewAsU32();
+    ret <<= 32;
+
+    //14bit per material_index (16.384)
+    ret |= (u64)(material_index & 0x3FFF) << 18;
+
+    //18bit per matrix_index (262.144)
+    ret |= (u64)(matrix_index & 0x3FFFF);
+
+    return ret;
+}
+
+//**********************************
+void Renderer1::priv_unpack_renderable (u64 packed, ENGShape *out_shape, u32 *out_material_index, u32 *out_matrix_index) const
+{
+    out_shape->setFromU32 ( (u32)(packed >> 32) );
+    *out_material_index = (u32) ((packed >> 18) & 0x3FFF);
+    *out_matrix_index = (u32)(packed & 0x3FFFF);
+}
+
+//**********************************
 void Renderer1::begin (gos::geom::Camera3 *cam)
 {
-    renderableList.reset();
     matrix_nextIndex = 0;
+    nRenderable = 0;
 
     //aggiorno UBO descrittore scena
 	scene.matVP = cam->getMatVP();
@@ -282,24 +291,22 @@ void Renderer1::begin (gos::geom::Camera3 *cam)
 }
 
 //**********************************
-void Renderer1::add (const ENGShape shape, const mat4x4f &m, u32 materialIndex)
+void Renderer1::add (const ENGShape shape, const mat4x4f &m, u32 material_index)
 {
-    assert (matrix_nextIndex < NUM_MAX_MATRIX);
-    const u32 matrixIndex = matrix_nextIndex++;
+    if (matrix_nextIndex >= NUM_MAX_MATRIX)
+        return;
+    const u32 matrix_index = matrix_nextIndex++;
 
     u8 *p = reinterpret_cast<u8*>(matrix_buffer.host_pt);
-    memcpy (&p[sizeof(mat4x4f) * matrixIndex], m._getValuesPtConst(), sizeof(mat4x4f));
+    memcpy (&p[sizeof(mat4x4f) * matrix_index], m._getValuesPtConst(), sizeof(mat4x4f));
 
-    renderableList.append (Renderable{ 
-        .shape = shape,
-        .matrixIndex = matrixIndex,
-        .materialIndex = materialIndex });
+    //u64 *pRenderableList = static_cast<u64*>(instance_buffer.host_pt);
+    pRenderableList[nRenderable++] = priv_pack_renderable (shape, material_index, matrix_index);
 }
 
 //**********************************
 void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
 {
-    const u32 nRenderable = renderableList.getNElem();
     if (0 == nRenderable)
         return;
 
@@ -327,21 +334,17 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
 
     
 
-
-#ifdef USE_QSORT
     //sort
-    Renderable *pRenderableList = renderableList._getTypedPointer();
-    std::sort (pRenderableList, pRenderableList + nRenderable, [](const Renderable &r1, const Renderable &r2){
-        return (r1.materialIndex < r2.materialIndex);
-    });
+    std::sort (pRenderableList, &pRenderableList[nRenderable]);
 
-    //memcpio nel SSBO  (TODO: non serve avere <renderableList>, posso usare direttamente SSBO per storare i renderabili
-    //                         cosi' evito di fare questo mmcpy
-    memcpy (instance_buffer.host_pt, pRenderableList, sizeof(Renderable) *nRenderable);
+    //memcpio nel SSBO
+    memcpy (instance_buffer.host_pt, pRenderableList, sizeof(u64) *nRenderable);
     gpu->buffer_manualSync_cpuWrite (instance_buffer, 0, u32MAX);
-#endif
 
 
+
+
+    //command
 	cw  .imageTransition (handle_rt0, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
 		.imageTransition (handle_zbuffer, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
 
@@ -355,18 +358,23 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
 			.bindDescriptorSet (handle_descrSet2, 2);
 
     //render delle shape
-#ifdef USE_QSORT
     u32 cur_index = 0;
     u32 first_instance_index = 0;
     while (cur_index < nRenderable)
     {
-        ENGShape cur_shape = pRenderableList[cur_index++].shape;
+        ENGShape cur_shape;
+        u32 material_index;
+        u32 matrix_index;
+        priv_unpack_renderable (pRenderableList[cur_index], &cur_shape, &material_index, &matrix_index);
+        cur_index++;
 
         //conto quante shape identiche a cur_shape ci sono
         u32 numInstances = 1;
         while (cur_index < nRenderable)
         {
-            if (pRenderableList[cur_index].shape == cur_shape)
+            ENGShape shape;
+            priv_unpack_renderable (pRenderableList[cur_index], &shape, &material_index, &matrix_index);
+            if (cur_shape == shape)
             {
                 cur_index++;
                 numInstances++;
@@ -384,23 +392,6 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
 
         first_instance_index += numInstances;
     }
-#else    
-    for (u32 i=0; i<nRenderable; i++)
-    {
-        const Renderable &r = renderableList.queryElem(i);
-        const engine::Shape *info_shape = engine->shape_getInfo (r.shape);
-        
-        renderer
-            //.bindVtxBuffer(info_shape->vbHandle)
-            //.bindIdxBufferU16(info_shape->ibHandle)
-            .bindVtxIdxBuffer (info_shape->vbHandle, 0, info_shape->ibHandle, 0)
-            .pushConstant(0, &r.matrixIndex, sizeof(u32))	//matrix index
-            .pushConstant(1, &r.materialIndex, sizeof(u32))	//material index
-            .drawIndexed (info_shape->numIndices, 1, info_shape->indexStart, info_shape->vtxStart, 0)
-            ;
-    }
-#endif
-
 
     renderer.endRender();
 }

@@ -32,15 +32,16 @@ layout(set = 2, binding = 1) readonly buffer SBO_2_1
     sMaterial	material[];
 } materialList;
 
-struct sInstanceData
+struct sPackedInstanceData
 {
+    //nel renderer le info sono packet in un u64 con shape_uid | material_index | packed_material_and_matrix_index
+    //Qui nello shader pero', l'u64 lo uso come 2 u32 ma gli MSB dell'u64 finiscono nel u32 basso.. si vede che la GPU e' little endian
+    uint packed_material_and_matrix_index;
     uint shape_uid; //unused
-    uint matrix_index;
-    uint material_index;
-};
+ };
 layout(set = 2, binding = 2) readonly buffer SBO_2_2
 {
-    sInstanceData	data[];
+    sPackedInstanceData	data[];
 } instanceData;
 
 

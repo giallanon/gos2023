@@ -79,7 +79,12 @@ typedef void (*GOS_ConsoleTrap_CTRL_C)(void *userParam);
 //thread thread main-fn prototype
 typedef i16 (*GOS_ThreadMainFunction)(void *userParam);
 
-#include "helpers/debugbreak.h"
+#ifdef _NDEBUG
+    #define DBGBREAK
+#else
+    #include "helpers/debugbreak.h"
+#endif
+
 #include "helpers/gosEnumBitmask.h"
 
 //================================================================

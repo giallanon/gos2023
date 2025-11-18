@@ -47,6 +47,41 @@ Test1::~Test1()
 }
 
 //***************************************
+gos::ENGShape Test1::priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC)
+{
+	gos::ENGShape handle_shape;
+	handle_shape.setInvalid();
+
+	if (engine->shape_create (shapeSRC, &handle_shape))
+	{
+		const u32 SIZE_OF_IDX = shapeSRC->numIdx * sizeof(u16);
+		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shapeSRC->idxBuffer, SIZE_OF_IDX);
+
+		const u32 SIZE_OF_VTX = shape::calcSizeOfAVertex(shapeSRC->vtxLayout) * shapeSRC->numVtx;
+		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shapeSRC->vtxBuffer, SIZE_OF_VTX);
+
+		//creo un job per pushare lo stage buffer in VB/IB
+		const engine::Shape *shapeInfo = engine->shape_getInfo (handle_shape);
+
+		gos::gpu::pipe2::CmdBufferWriter2 cw;
+		cw.begin (engine->gpu, cmdBufferHandle)
+			.copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, shapeInfo->alloc_idxbuf_offset, SIZE_OF_IDX)
+			.copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, shapeInfo->alloc_vtxbuf_offset, SIZE_OF_VTX)
+			.end();
+
+		gpu::TransferJob job;
+		job.setup (engine->gpu);
+		job.submit(cmdBufferHandle);
+
+		while (!job.hasFinished())
+		{
+		}
+	}
+
+	return handle_shape;
+}
+
+//***************************************
 bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out_cube, gos::ENGShape *out_cylinder)
 {
 	//creo una shape
@@ -74,92 +109,28 @@ bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out_cube, gos
 			return false;
 	}
 
+	//staging buffer per la copia di VB/IB in GPU
+	GPUStgBufferHandle stgBufferHandle;
+	engine->gpu->stagingBuffer_create (8192, &stgBufferHandle);
+
+	GPUCmdBufferHandle cmdBufferHandle;
+	if (!engine->gpu->cmdBuffer_create (eGPUQueueFamily::transfer, &cmdBufferHandle))
+		return false;
+
+
 	//creo una engine::shape
-	gos::ENGShape handle_shapeCube;
-	if (!engine->shape_create (&shape_cube, &handle_shapeCube))
-		return false;
-
-	gos::ENGShape handle_shapeCylinder;
-	if (!engine->shape_create (&shape_cylinder, &handle_shapeCylinder))
-		return false;
-
-
-
-	//ora devo copiare vtx/idx nel VB/IB
-	{
-		//copio idx/vtx nello stage buffer
-		GPUStgBufferHandle stgBufferHandle;
-		engine->gpu->stagingBuffer_create (8192, &stgBufferHandle);
-
-		GPUCmdBufferHandle cmdBufferHandle;
-		if (!engine->gpu->cmdBuffer_create (eGPUQueueFamily::transfer, &cmdBufferHandle))
-			return false;
-
-		//cube
-		{
-			const u32 SIZE_OF_IDX = shape_cube.numIdx * sizeof(u16);
-			engine->gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shape_cube.idxBuffer, SIZE_OF_IDX);
-
-			const u32 SIZE_OF_VTX = shape::calcSizeOfAVertex(shape_cube.vtxLayout) * shape_cube.numVtx;
-			engine->gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shape_cube.vtxBuffer, SIZE_OF_VTX);
-
-			//free della shape
-			shape::shapeFree (allocator, &shape_cube);
-
-			//creo un job per pushare lo stage buffer in VB/IB
-			const engine::Shape *shapeInfo = engine->shape_getInfo (handle_shapeCube);
-
-			gos::gpu::pipe2::CmdBufferWriter2 cw;
-			cw.begin (engine->gpu, cmdBufferHandle)
-				.copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, shapeInfo->alloc_idxbuf_offset, SIZE_OF_IDX)
-				.copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, shapeInfo->alloc_vtxbuf_offset, SIZE_OF_VTX)
-				.end();
-
-			gpu::TransferJob job;
-			job.setup (engine->gpu);
-			job.submit(cmdBufferHandle);
-
-			while (!job.hasFinished())
-			{
-			}
-		}
-
-		//cylinder
-		{
-			const u32 SIZE_OF_IDX = shape_cylinder.numIdx * sizeof(u16);
-			engine->gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shape_cylinder.idxBuffer, SIZE_OF_IDX);
-
-			const u32 SIZE_OF_VTX = shape::calcSizeOfAVertex(shape_cylinder.vtxLayout) * shape_cylinder.numVtx;
-			engine->gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shape_cylinder.vtxBuffer, SIZE_OF_VTX);
-
-			//free della shape
-			shape::shapeFree (allocator, &shape_cylinder);
-
-			//creo un job per pushare lo stage buffer in VB/IB
-			const engine::Shape *shapeInfo = engine->shape_getInfo (handle_shapeCylinder);
-
-			gos::gpu::pipe2::CmdBufferWriter2 cw;
-			cw.begin (engine->gpu, cmdBufferHandle)
-				.copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, shapeInfo->alloc_idxbuf_offset, SIZE_OF_IDX)
-				.copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, shapeInfo->alloc_vtxbuf_offset, SIZE_OF_VTX)
-				.end();
-
-			gpu::TransferJob job;
-			job.setup (engine->gpu);
-			job.submit(cmdBufferHandle);
-
-			while (!job.hasFinished())
-			{
-			}
-		}
-
-		engine->gpu->deleteResource(cmdBufferHandle);
-		engine->gpu->deleteResource(stgBufferHandle);
-
-	}
-
+	gos::ENGShape handle_shapeCube = priv_create_engineShape(stgBufferHandle, cmdBufferHandle, &shape_cube);
+	shape::shapeFree (allocator, &shape_cube);
 	*out_cube = handle_shapeCube;
+
+
+	gos::ENGShape handle_shapeCylinder = priv_create_engineShape (stgBufferHandle, cmdBufferHandle, &shape_cylinder);
+	shape::shapeFree (allocator, &shape_cylinder);
 	*out_cylinder = handle_shapeCylinder;
+
+
+	engine->gpu->deleteResource(cmdBufferHandle);
+	engine->gpu->deleteResource(stgBufferHandle);
 	return true;
 }
 
@@ -259,13 +230,51 @@ void Test1__entity_script_callback_3 (Entity ent, ent::Registry *registry)
 //***************************************
 bool Test1::priv_run4 ()
 {
-	gos::ENGShape handle_shape_cube;
-	gos::ENGShape handle_shape_cylinder;
-	if (!priv_shape_create (engine, &handle_shape_cube, &handle_shape_cylinder))
+	gos::ENGShape handle_shape_list[4];
+	if (!priv_shape_create (engine, &handle_shape_list[0], &handle_shape_list[1]))
 	{
 		DBGBREAK;
 		return false;
 	}
+	priv_shape_create (engine, &handle_shape_list[2], &handle_shape_list[3]);
+
+
+	//creo il renderer
+	renderer = GOSNEW(allocator, gos::engine::Renderer1)();
+	renderer->setup (allocator, engine);
+
+
+    //load degli assets
+	asset::Handle assHandle_texBianca;
+	asset::Handle assHandle_texChecker;
+    if (!engine->assetHub->getHandle ("tex_bianca", &assHandle_texBianca, true))
+	{
+        return false;
+	}
+    if (!engine->assetHub->getHandle ("tex_checker", &assHandle_texChecker, true))
+	{
+        return false;
+	}	
+
+	//binding di materiali al renderer
+	u32 material_indices[4];
+	{
+		const asset::Asset_tex2D *tex;
+		u32	texture_index__texBianca = u32MAX;
+		u32	texture_index__texChecker = u32MAX;
+
+		engine->assetHub->getAssetWithTimeout(assHandle_texBianca, &tex, 5000);
+		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->handle_texture);
+
+		engine->assetHub->getAssetWithTimeout(assHandle_texChecker, &tex, 5000);
+		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->handle_texture);
+
+		material_indices[0] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
+		material_indices[1] = renderer->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
+		material_indices[2] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 0.2f, 0.2f));
+		material_indices[3] = renderer->material_create (texture_index__texChecker, vec3f(0.2f, 1.0f, 0.2f));
+	}
+
 
 	//creo una scena
 	engine::Scene scene;
@@ -318,11 +327,8 @@ bool Test1::priv_run4 ()
 
 				//shape
 				auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent);
-				cModelInstance->material_index = random_0_3;
-				if (x % 2 == 0)
-					cModelInstance->shape_handle = handle_shape_cube;
-				else
-					cModelInstance->shape_handle = handle_shape_cylinder;				
+				cModelInstance->material_index = material_indices[random_0_3];
+				cModelInstance->shape_handle = handle_shape_list[x%4];
 
 				scene.add(ent);
 			}
@@ -336,44 +342,10 @@ bool Test1::priv_run4 ()
 
 
 
-	//creo il renderer
-	renderer = GOSNEW(allocator, gos::engine::Renderer1)();
-	renderer->setup (allocator, engine);
-
-
-
-    //load degli assets
-	asset::Handle assHandle_texBianca;
-	asset::Handle assHandle_texChecker;
-    if (!engine->assetHub->getHandle ("tex_bianca", &assHandle_texBianca, true))
-	{
-        return false;
-	}
-    if (!engine->assetHub->getHandle ("tex_checker", &assHandle_texChecker, true))
-	{
-        return false;
-	}
 	
 
 
-	//binding di materiali al renderer
-	u32 material_indices[4];
-	{
-		const asset::Asset_tex2D *tex;
-		u32	texture_index__texBianca = u32MAX;
-		u32	texture_index__texChecker = u32MAX;
 
-		engine->assetHub->getAssetWithTimeout(assHandle_texBianca, &tex, 5000);
-		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->handle_texture);
-
-		engine->assetHub->getAssetWithTimeout(assHandle_texChecker, &tex, 5000);
-		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->handle_texture);
-
-		material_indices[0] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
-		material_indices[1] = renderer->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
-		material_indices[2] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 0.2f, 0.2f));
-		material_indices[3] = renderer->material_create (texture_index__texChecker, vec3f(0.2f, 1.0f, 0.2f));
-	}
 
 
     
@@ -490,8 +462,10 @@ bool Test1::priv_run4 ()
 	scene.unsetup();
 	engine->assetHub->unload (assHandle_texBianca);
 	engine->assetHub->unload (assHandle_texChecker);
-	engine->shape_release(handle_shape_cube);
-	engine->shape_release(handle_shape_cylinder);
+	
+	for (u8 i=0; i<4; i++)
+		engine->shape_release(handle_shape_list[i]);
+	
 	GOSDELETE(allocator, renderer);
 	renderer = NULL;
 

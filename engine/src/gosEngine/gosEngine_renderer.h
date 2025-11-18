@@ -28,7 +28,7 @@ namespace gos
             void    unsetup();
 
             void    begin (gos::geom::Camera3 *cam);
-            void    add (const ENGShape shape, const mat4x4f &m, u32 materialIndex);
+            void    add (const ENGShape shape, const mat4x4f &m, u32 material_index);
             void    end (gos::gpu::pipe2::CmdBufferWriter2 &cw);
 
             GPURenderTargetHandle   getHandle_rt0() const                                                   { return handle_rt0; }
@@ -56,20 +56,12 @@ namespace gos
                 gos::vec4f      lightDir;
             };
 
-            struct Renderable
-            {
-                    ENGShape shape;
-                    u32 matrixIndex;
-                    u32 materialIndex;
-            };
-
-            struct InstanceData
-            {
-                u32 matrix_index;
-                u32 material_index;
-            };
+        private:
+            u64     priv_pack_renderable (ENGShape shape, u32 material_index, u32 matrix_index) const;
+            void    priv_unpack_renderable (u64 packed, ENGShape *out_shape, u32 *out_material_index, u32 *out_matrix_index) const;
 
         private:
+            gos::Allocator              *localAllocator;
             gos::Engine                 *engine;
             gos::GPU                    *gpu;
             asset::Handle               assHandle_pipe;
@@ -102,8 +94,10 @@ namespace gos
             gpu::sMappedBuffer                  instance_buffer;
             u32                                 instance_sizeof_buffer;
 
-            SceneData                   scene;
-            FastArray<Renderable>       renderableList;
+            u64                                 *pRenderableList;
+            u32                                 nRenderable;
+
+            SceneData                           scene;
         };
     } //namespace engine
 } //namespace gos
