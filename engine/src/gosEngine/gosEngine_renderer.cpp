@@ -1,5 +1,6 @@
 #include "gosEngine_renderer.h"
 #include "gosEngine.h"
+#include <algorithm>
 
 using namespace gos;
 using namespace gos::engine;
@@ -327,13 +328,13 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
     //sort
     {
         Renderable *p = renderableList._getTypedPointer();
-        std::qsort (p, nRenderable, sizeof(Renderable), [](const void *r1, const void *r2){
-            if (((const Renderable*)r1)->materialIndex < ((const Renderable*)r2)->materialIndex)
-                return -1;
-            if (((const Renderable*)r1)->materialIndex > ((const Renderable*)r2)->materialIndex)
-                return 1;
-            return 0;
-        });
+        //std::qsort (p, nRenderable, sizeof(Renderable), [](const void *r1, const void *r2){
+        //    if (((const Renderable*)r1)->materialIndex < ((const Renderable*)r2)->materialIndex)
+        //        return -1;
+        //    if (((const Renderable*)r1)->materialIndex > ((const Renderable*)r2)->materialIndex)
+        //        return 1;
+        //    return 0;
+        //});
 
         // InstanceData *instanceData = (InstanceData*)instance_buffer.host_pt;
         // for (u32 i=0; i<nRenderable; i++)
@@ -342,7 +343,11 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
         //     instanceData[i].material_index = p[i].materialIndex;
         // }
         //gpu->buffer_manualSync_cpuWrite (instance_buffer, 0, u32MAX);
-        
+
+        std::sort (p, p + nRenderable, [](const Renderable &r1, const Renderable &r2){
+            return (r1.materialIndex < r2.materialIndex);
+        });
+
         memcpy (instance_buffer.host_pt, p, sizeof(Renderable) *nRenderable);
         gpu->buffer_manualSync_cpuWrite (instance_buffer, 0, u32MAX);
     }
