@@ -18,7 +18,7 @@ private:
 
 
 private:
-	bool	priv_shape_create(gos::Engine *engine, gos::ENGShape *out);
+	bool	priv_shape_create(gos::Engine *engine, gos::ENGShape *out_cube, gos::ENGShape *out_cylinder);
 	void	priv_model_setup(gos::ENGShape shapeHandle);
 
 	void	doCPUStuff ();

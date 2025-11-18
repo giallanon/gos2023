@@ -299,6 +299,10 @@ void Renderer1::add (const ENGShape shape, const mat4x4f &m, u32 materialIndex)
 //**********************************
 void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
 {
+    const u32 nRenderable = renderableList.getNElem();
+    if (0 == nRenderable)
+        return;
+
     const asset::Asset_pipe *pipe;
     if (!engine->assetHub->getAsset (assHandle_pipe, &pipe))
     {
@@ -321,36 +325,20 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
         gpu->buffer_manualSync_cpuWrite (matrix_buffer, 0, sizeof(mat4x4f) * matrix_nextIndex);
     }    
 
-    const u32 nRenderable = renderableList.getNElem();
+    
 
 
 #ifdef USE_QSORT
     //sort
-    {
-        Renderable *p = renderableList._getTypedPointer();
-        //std::qsort (p, nRenderable, sizeof(Renderable), [](const void *r1, const void *r2){
-        //    if (((const Renderable*)r1)->materialIndex < ((const Renderable*)r2)->materialIndex)
-        //        return -1;
-        //    if (((const Renderable*)r1)->materialIndex > ((const Renderable*)r2)->materialIndex)
-        //        return 1;
-        //    return 0;
-        //});
+    Renderable *pRenderableList = renderableList._getTypedPointer();
+    std::sort (pRenderableList, pRenderableList + nRenderable, [](const Renderable &r1, const Renderable &r2){
+        return (r1.materialIndex < r2.materialIndex);
+    });
 
-        // InstanceData *instanceData = (InstanceData*)instance_buffer.host_pt;
-        // for (u32 i=0; i<nRenderable; i++)
-        // {        
-        //     instanceData[i].matrix_index = p[i].matrixIndex;
-        //     instanceData[i].material_index = p[i].materialIndex;
-        // }
-        //gpu->buffer_manualSync_cpuWrite (instance_buffer, 0, u32MAX);
-
-        std::sort (p, p + nRenderable, [](const Renderable &r1, const Renderable &r2){
-            return (r1.materialIndex < r2.materialIndex);
-        });
-
-        memcpy (instance_buffer.host_pt, p, sizeof(Renderable) *nRenderable);
-        gpu->buffer_manualSync_cpuWrite (instance_buffer, 0, u32MAX);
-    }
+    //memcpio nel SSBO  (TODO: non serve avere <renderableList>, posso usare direttamente SSBO per storare i renderabili
+    //                         cosi' evito di fare questo mmcpy
+    memcpy (instance_buffer.host_pt, pRenderableList, sizeof(Renderable) *nRenderable);
+    gpu->buffer_manualSync_cpuWrite (instance_buffer, 0, u32MAX);
 #endif
 
 
@@ -368,13 +356,34 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
 
     //render delle shape
 #ifdef USE_QSORT
-    const Renderable &r = renderableList.queryElem(0);
-    const engine::Shape *info_shape = engine->shape_getInfo (r.shape);
-    
-    renderer
-        .bindVtxIdxBuffer (info_shape->vbHandle, 0, info_shape->ibHandle, 0)
-        .drawIndexed (info_shape->numIndices, nRenderable, info_shape->indexStart, info_shape->vtxStart, 0)
-        ;
+    u32 cur_index = 0;
+    u32 first_instance_index = 0;
+    while (cur_index < nRenderable)
+    {
+        ENGShape cur_shape = pRenderableList[cur_index++].shape;
+
+        //conto quante shape identiche a cur_shape ci sono
+        u32 numInstances = 1;
+        while (cur_index < nRenderable)
+        {
+            if (pRenderableList[cur_index].shape == cur_shape)
+            {
+                cur_index++;
+                numInstances++;
+            }
+            else
+                break;
+        }
+
+
+        const engine::Shape *cur_shape_info = engine->shape_getInfo (cur_shape);
+        renderer
+            .bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
+            .drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index)
+            ;
+
+        first_instance_index += numInstances;
+    }
 #else    
     for (u32 i=0; i<nRenderable; i++)
     {

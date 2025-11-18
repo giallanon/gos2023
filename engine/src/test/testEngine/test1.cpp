@@ -47,11 +47,14 @@ Test1::~Test1()
 }
 
 //***************************************
-bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out)
+bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out_cube, gos::ENGShape *out_cylinder)
 {
 	//creo una shape
-	gos::Shape shape;
-	shape.reset();
+	gos::Shape shape_cube;
+	gos::Shape shape_cylinder;
+	
+	shape_cube.reset();
+	shape_cylinder.reset();
 	{
 		gos::VtxLayout vtxLayout;
 		{
@@ -65,53 +68,89 @@ bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out)
 				.end();
 		}
 
-		if (!shape::buildCube24 (vec3f(0, 0, 0), vec3f(1, 1, 1), vtxLayout, allocator, &shape))
-		//if (!shape::buildCylinder (vec3f(0, 0, 0), 0.7f, 3.0f, 32, 4, true, true, vtxLayout, allocator, &shape))
+		if (!shape::buildCube24 (vec3f(0, 0, 0), vec3f(1, 1, 1), vtxLayout, allocator, &shape_cube))
 			return false;
-
-		
+		if (!shape::buildCylinder (vec3f(0, 0, 0), 0.7f, 3.0f, 32, 4, true, true, vtxLayout, allocator, &shape_cylinder))
+			return false;
 	}
 
 	//creo una engine::shape
-	gos::ENGShape shapeHandle;
-	if (!engine->shape_create (&shape, &shapeHandle))
+	gos::ENGShape handle_shapeCube;
+	if (!engine->shape_create (&shape_cube, &handle_shapeCube))
 		return false;
+
+	gos::ENGShape handle_shapeCylinder;
+	if (!engine->shape_create (&shape_cylinder, &handle_shapeCylinder))
+		return false;
+
+
 
 	//ora devo copiare vtx/idx nel VB/IB
 	{
 		//copio idx/vtx nello stage buffer
 		GPUStgBufferHandle stgBufferHandle;
 		engine->gpu->stagingBuffer_create (8192, &stgBufferHandle);
-		
-		const u32 SIZE_OF_IDX = shape.numIdx * sizeof(u16);
-		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shape.idxBuffer, SIZE_OF_IDX);
 
-		const u32 SIZE_OF_VTX = shape::calcSizeOfAVertex(shape.vtxLayout) * shape.numVtx;
-		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shape.vtxBuffer, SIZE_OF_VTX);
-
-		//free della shape
-		shape::shapeFree (allocator, &shape);
-
-
-		//creo un job per pushare lo stage buffer in VB/IB
 		GPUCmdBufferHandle cmdBufferHandle;
 		if (!engine->gpu->cmdBuffer_create (eGPUQueueFamily::transfer, &cmdBufferHandle))
 			return false;
-		const engine::Shape *shapeInfo = engine->shape_getInfo (shapeHandle);
 
-		gos::gpu::pipe2::CmdBufferWriter2 cw;
-		cw.begin (engine->gpu, cmdBufferHandle)
-			.copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, 0, SIZE_OF_IDX)
-			.copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, 0, SIZE_OF_VTX)
-			.end();
-
-
-		gpu::TransferJob job;
-		job.setup (engine->gpu);
-		job.submit(cmdBufferHandle);
-
-		while (!job.hasFinished())
+		//cube
 		{
+			const u32 SIZE_OF_IDX = shape_cube.numIdx * sizeof(u16);
+			engine->gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shape_cube.idxBuffer, SIZE_OF_IDX);
+
+			const u32 SIZE_OF_VTX = shape::calcSizeOfAVertex(shape_cube.vtxLayout) * shape_cube.numVtx;
+			engine->gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shape_cube.vtxBuffer, SIZE_OF_VTX);
+
+			//free della shape
+			shape::shapeFree (allocator, &shape_cube);
+
+			//creo un job per pushare lo stage buffer in VB/IB
+			const engine::Shape *shapeInfo = engine->shape_getInfo (handle_shapeCube);
+
+			gos::gpu::pipe2::CmdBufferWriter2 cw;
+			cw.begin (engine->gpu, cmdBufferHandle)
+				.copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, shapeInfo->alloc_idxbuf_offset, SIZE_OF_IDX)
+				.copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, shapeInfo->alloc_vtxbuf_offset, SIZE_OF_VTX)
+				.end();
+
+			gpu::TransferJob job;
+			job.setup (engine->gpu);
+			job.submit(cmdBufferHandle);
+
+			while (!job.hasFinished())
+			{
+			}
+		}
+
+		//cylinder
+		{
+			const u32 SIZE_OF_IDX = shape_cylinder.numIdx * sizeof(u16);
+			engine->gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shape_cylinder.idxBuffer, SIZE_OF_IDX);
+
+			const u32 SIZE_OF_VTX = shape::calcSizeOfAVertex(shape_cylinder.vtxLayout) * shape_cylinder.numVtx;
+			engine->gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shape_cylinder.vtxBuffer, SIZE_OF_VTX);
+
+			//free della shape
+			shape::shapeFree (allocator, &shape_cylinder);
+
+			//creo un job per pushare lo stage buffer in VB/IB
+			const engine::Shape *shapeInfo = engine->shape_getInfo (handle_shapeCylinder);
+
+			gos::gpu::pipe2::CmdBufferWriter2 cw;
+			cw.begin (engine->gpu, cmdBufferHandle)
+				.copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, shapeInfo->alloc_idxbuf_offset, SIZE_OF_IDX)
+				.copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, shapeInfo->alloc_vtxbuf_offset, SIZE_OF_VTX)
+				.end();
+
+			gpu::TransferJob job;
+			job.setup (engine->gpu);
+			job.submit(cmdBufferHandle);
+
+			while (!job.hasFinished())
+			{
+			}
 		}
 
 		engine->gpu->deleteResource(cmdBufferHandle);
@@ -119,7 +158,8 @@ bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out)
 
 	}
 
-	*out = shapeHandle;
+	*out_cube = handle_shapeCube;
+	*out_cylinder = handle_shapeCylinder;
 	return true;
 }
 
@@ -219,8 +259,9 @@ void Test1__entity_script_callback_3 (Entity ent, ent::Registry *registry)
 //***************************************
 bool Test1::priv_run4 ()
 {
-	gos::ENGShape shapeHandle;
-	if (!priv_shape_create (engine, &shapeHandle))
+	gos::ENGShape handle_shape_cube;
+	gos::ENGShape handle_shape_cylinder;
+	if (!priv_shape_create (engine, &handle_shape_cube, &handle_shape_cylinder))
 	{
 		DBGBREAK;
 		return false;
@@ -278,9 +319,10 @@ bool Test1::priv_run4 ()
 				//shape
 				auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent);
 				cModelInstance->material_index = random_0_3;
-				cModelInstance->shape_handle = shapeHandle;
-
-				
+				if (x % 2 == 0)
+					cModelInstance->shape_handle = handle_shape_cube;
+				else
+					cModelInstance->shape_handle = handle_shape_cylinder;				
 
 				scene.add(ent);
 			}
@@ -448,7 +490,8 @@ bool Test1::priv_run4 ()
 	scene.unsetup();
 	engine->assetHub->unload (assHandle_texBianca);
 	engine->assetHub->unload (assHandle_texChecker);
-	engine->shape_release(shapeHandle);
+	engine->shape_release(handle_shape_cube);
+	engine->shape_release(handle_shape_cylinder);
 	GOSDELETE(allocator, renderer);
 	renderer = NULL;
 
