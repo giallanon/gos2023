@@ -307,7 +307,7 @@ void Renderer1::add (const ENGShape shape, const mat4x4f &m, u32 material_index)
 //**********************************
 void Renderer1::add (const ent::CompModelInstance *mi)
 {
-    const gos::SkeletonInstance *sk = mi->model_instance.skeleton_get();
+    const gos::SkeletonInstance *sk = mi->model_instance.skeleton_query();
 
     const u32 n = mi->model_instance.meshList_getNumElem();
     for (u32 i=0; i<n; i++)
@@ -322,6 +322,9 @@ void Renderer1::add (const ent::CompModelInstance *mi)
 //**********************************
 void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
 {
+	cw  .imageTransition (handle_rt0, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
+		.imageTransition (handle_zbuffer, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
+
     if (0 == nRenderable)
         return;
 
@@ -360,9 +363,6 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
 
 
     //command
-	cw  .imageTransition (handle_rt0, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
-		.imageTransition (handle_zbuffer, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
-
 	auto &renderer = cw.beginRender();
     renderer.withRenderArea (handle_rt0)
             .withRT (handle_rt0, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.0f, 0.1f))

@@ -104,7 +104,7 @@ namespace gos
                 SkeletonBuilder();
                 ~SkeletonBuilder();
 
-        u32     begin (const char *rootName);
+        u32     begin (const char *rootName, Bone **out_canBeNULL = NULL);
 
                 //crea una nuova Bone con nome <dstBoneName> e la adda come figlio di <srcBoneIndex>.
                 //Ritorna l'index della nuova bone creata

@@ -20,6 +20,8 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
+game1.cpp
+game1.h
 main.cpp
 test1.cpp
 test1.h

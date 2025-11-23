@@ -58,9 +58,10 @@ namespace gos
             void                        unsetup()                                                   { priv_free(); }
             void                        applyTransform (const mat4x4f &matW)                        { sk->applyTransform(matW); }
 
-            const SkeletonInstance*     skeleton_get () const                                       { return sk; }
+            SkeletonInstance*           skeleton_get ()                                             { return sk; }
+            const SkeletonInstance*     skeleton_query () const                                     { return sk; }
             u32                         skeleton_getNumBones() const                                { return sk->getNumBones(); }
-            const Bone*                 skeleton_getBoneByIndex (u32 index) const                   { return sk->getBoneByIndex(index); }
+            Bone*                       skeleton_getBoneByIndex (u32 index)                         { return sk->getBoneByIndex(index); }
 
             u32                         meshList_getNumElem() const                                 { return model->meshList.getNElem(); }
             const Mesh*                 meshList_getByIndex(u32 i) const                            { return &model->meshList.queryElem(i); }

@@ -3,6 +3,7 @@
 #include "../gos/gosFastArray.h"
 #include "../gosGPU/gosGPU.h"
 #include "../gosInput/gosInput.h"
+#include "../gosAsset/gosAssetEnumAndDefine.h"
 #include "../gosAsset/gosAssetHub.h"
 #include "../gosShape/gosShape.h"
 #include "../gosGeom/gosGeomCamera3.h"

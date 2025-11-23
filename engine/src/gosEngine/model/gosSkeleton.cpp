@@ -33,12 +33,17 @@ u32 SkeletonBuilder::priv_newBone (const char *name)
     return numBones++;
 }
 
-u32 SkeletonBuilder::begin (const char *rootName)
+u32 SkeletonBuilder::begin (const char *rootName, Bone **out_canBeNULL)
 {
     numBones = 0;
     nameList.reset();
     boneList.reset();
-    return priv_newBone (rootName);
+    const u32 newBoneIndex = priv_newBone (rootName);
+
+    if (NULL != out_canBeNULL)
+        *out_canBeNULL = &boneList[newBoneIndex];
+
+    return newBoneIndex;
 }
 
 u32 SkeletonBuilder::addChildTo (u32 srcBoneIndex, const char *dstBoneName, Bone **out_canBeNULL)

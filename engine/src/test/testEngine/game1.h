@@ -1,0 +1,55 @@
+#ifndef _game1_h_
+#define _game1_h_
+
+#include "gosEngine.h"
+#include "gosEngine_renderer.h"
+#include "entity/gosEntity.h"
+#include "model/gosModel.h"
+#include "../gosGPU/utils/gosFreeMovement.h"
+#include "../gosGPU/utils/gosFPSMovement.h"
+
+
+class Game1
+{
+public:
+			Game1();
+			~Game1();
+	void	run (gos::Engine *engine);
+
+
+private:
+
+
+private:
+	void	doCPUStuff ();
+    bool    priv_loadAssets();
+    void    priv_loop();
+	bool 	priv_createShapes();
+	void 	priv_createModel_mainPlayer();
+	void 	priv_createModel_pavimento();
+	gos::ENGShape	priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC);
+
+private:
+	gos::Allocator					*allocator;
+	gos::Engine						*engine;
+	gos::GPU						*gpu;
+	gos::ent::Registry				entRegistry;
+    gos::geom::Camera3				cam;
+    gos::FPSMovement				movement;
+	gos::engine::Renderer1			*renderer;
+
+	gos::ENGShape				engShape_cube;
+	gos::ENGShape				engShape_cyl;
+	gos::asset::Handle          assHandle_texBianca;
+	gos::asset::Handle          assHandle_texChecker;
+    u32                         material_indices[4];
+
+	gos::Skeleton				*skeleton1;
+	gos::Skeleton				*skeleton2;
+	gos::model::Model			*model_player;
+	gos::model::Model			*model_pavimento;
+
+
+};
+
+#endif //_game1_h_
