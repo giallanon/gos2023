@@ -9,10 +9,11 @@ namespace gos
     {
         class ModelInstance; //fwd
 
-        struct ShapeAndBoneLink
+        struct Mesh
         {
-            u16     shapeIndex;
-            u16     boneIndex;
+            gos::ENGShape   shape_handle;
+            u16             bone_index;
+            u16             material_index;
         };        
 
         /******************************************
@@ -27,9 +28,7 @@ namespace gos
                         ~Model()                                                    { priv_free(); }
 
             void        setSkeleton (Skeleton *sk)                                  { this->skeleton = sk; }
-            void        addShape (gos::ENGShape handle);
-
-            void        linkShapeToBone (gos::ENGShape shape, const char *boneName);
+            void        addMesh (gos::ENGShape shape, u32 material_index, const char *boneName);
 
         private:
             void        priv_free();
@@ -37,8 +36,7 @@ namespace gos
         private:
             gos::Allocator              *allocator;
             Skeleton                    *skeleton;
-            FastArray<gos::ENGShape>    shapeList;
-            FastArray<ShapeAndBoneLink> shapeAndBoneLinkList;
+            FastArray<Mesh>             meshList;
 
         friend ModelInstance;
         }; 
@@ -53,20 +51,22 @@ namespace gos
         class ModelInstance
         {
         public:
-                                        ModelInstance (const Model *modelIN);
+                                        ModelInstance ()                                            { model=NULL; sk=NULL; }
                                         ~ModelInstance()                                            { priv_free(); }
 
+            void                        setup (const Model *modelIN)                                { model = modelIN; sk = model->skeleton->newInstance(); }
+            void                        unsetup()                                                   { priv_free(); }
             void                        applyTransform (const mat4x4f &matW)                        { sk->applyTransform(matW); }
 
-            const SkeletonInstance*     getSkeleton () const                                        { return sk; }
-            u32                         getNumBones() const                                         { return sk->getNumBones(); }
-            const Bone*                 getBoneByIndex (u32 index) const                            { return sk->getBoneByIndex(index); }
+            const SkeletonInstance*     skeleton_get () const                                       { return sk; }
+            u32                         skeleton_getNumBones() const                                { return sk->getNumBones(); }
+            const Bone*                 skeleton_getBoneByIndex (u32 index) const                   { return sk->getBoneByIndex(index); }
 
-            const ShapeAndBoneLink*     getShapeAndBoneList() const                                 { return model->shapeAndBoneLinkList._queryTypedPointer(); }
-            gos::ENGShape               getShapeByIndex (u32 index) const                           { return model->shapeList(index); }
+            u32                         meshList_getNumElem() const                                 { return model->meshList.getNElem(); }
+            const Mesh*                 meshList_getByIndex(u32 i) const                            { return &model->meshList.queryElem(i); }
 
         private:
-            void    priv_free();
+            void                        priv_free()                                                 { SkeletonInstance::free (sk); }
 
         private:
             const Model         *model;

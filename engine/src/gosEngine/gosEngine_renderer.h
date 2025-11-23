@@ -3,6 +3,7 @@
 #include "gosEngineEnumAndDefine.h"
 #include "gosEngine_dynTextureArray.h"
 #include "../gosGeom/gosGeomCamera3.h"
+#include "entity/gosEntityEnumAndDefine.h"
 
 
 namespace gos
@@ -29,6 +30,7 @@ namespace gos
 
             void    begin (gos::geom::Camera3 *cam);
             void    add (const ENGShape shape, const mat4x4f &m, u32 material_index);
+            void    add (const ent::CompModelInstance *mi);
             void    end (gos::gpu::pipe2::CmdBufferWriter2 &cw);
 
             GPURenderTargetHandle   getHandle_rt0() const                                                   { return handle_rt0; }

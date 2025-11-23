@@ -8,8 +8,7 @@ Model::Model()
 {
     allocator = gos::getSysHeapAllocator();
     skeleton = NULL;
-    shapeList.setup (allocator, 8);
-    shapeAndBoneLinkList.setup (allocator, 8);
+    meshList.setup (allocator, 8);
 }
 
 //************************** 
@@ -18,45 +17,20 @@ void Model::priv_free()
     if (NULL == allocator)
         return;
 
-    shapeList.unsetup();
-    shapeAndBoneLinkList.unsetup ();
+    meshList.unsetup ();
     allocator = NULL;
 }
 
-//************************** 
-void Model::addShape (gos::ENGShape handle)
-{
-    shapeList.append (handle);
-}
 
 //************************** 
-void Model::linkShapeToBone (gos::ENGShape shape, const char *boneName)
+void Model::addMesh (gos::ENGShape shape, u32 material_indexIN, const char *boneName)
 {
     const u32 boneIndex = skeleton->getBoneIndexByName(boneName);
     assert (boneIndex != u32MAX);
 
-    const u32 shapeIndex = shapeList.simpleSearch (shape);
-    assert (shapeIndex != u32MAX);
-
-    shapeAndBoneLinkList.append ({ 
-        .shapeIndex = static_cast<u16>(shapeIndex),
-        .boneIndex = static_cast<u16>(boneIndex)
+    meshList.append ({ 
+        .shape_handle = shape,
+        .bone_index = static_cast<u16>(boneIndex),
+        .material_index = static_cast<u16>(material_indexIN)
     });
-}
-
-
-/**********************************************************************
- * 
- * ModelInstance
- * 
- ***********************************************************************/
-ModelInstance::ModelInstance (const Model *modelIN)
-{
-    model = modelIN; 
-    sk = model->skeleton->newInstance();
-}
-
-void ModelInstance::priv_free()
-{
-    SkeletonInstance::free (sk);
 }

@@ -305,6 +305,21 @@ void Renderer1::add (const ENGShape shape, const mat4x4f &m, u32 material_index)
 }
 
 //**********************************
+void Renderer1::add (const ent::CompModelInstance *mi)
+{
+    const gos::SkeletonInstance *sk = mi->model_instance.skeleton_get();
+
+    const u32 n = mi->model_instance.meshList_getNumElem();
+    for (u32 i=0; i<n; i++)
+    {
+        const model::Mesh *mesh = mi->model_instance.meshList_getByIndex(i);
+        add(	mesh->shape_handle,
+                sk->getBoneByIndex(mesh->bone_index)->matrix,
+                mesh->material_index);
+    }
+}
+
+//**********************************
 void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
 {
     if (0 == nRenderable)

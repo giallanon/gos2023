@@ -49,10 +49,12 @@ static void shape_buildTrisUP (u32 vtxStart, u32 vtxAlto, u32 numPointPerCirconf
 }
 
 //*************************************************************
-bool shape::buildCylinder (const vec3f &center, f32 radius, f32 heightIN, u32 numPointPerCirconferenza, u32 numStack, bool bCloseTop, bool bCloseBottom, const VtxLayout &vtxLayout, gos::Allocator *shapeAllocator, Shape *out_shape)
+bool shape::buildCylinder (const vec3f &centerIN, f32 radius, f32 heightIN, u32 numPointPerCirconferenza, u32 numStack, bool bCloseTop, bool bCloseBottom, const VtxLayout &vtxLayout, gos::Allocator *shapeAllocator, Shape *out_shape)
 {
 	assert (NULL != out_shape);
 	assert (NULL != shapeAllocator);
+
+	vec3f center = centerIN;
 	
 	if (numStack < 2)
 		numStack = 2;
@@ -88,6 +90,7 @@ bool shape::buildCylinder (const vec3f &center, f32 radius, f32 heightIN, u32 nu
 	u32 nv = 0;
 	f32 height = 0;
 	const f32 heightINC = heightIN / (numStack-1);
+	center.y -= (heightIN * 0.5f);
 
 	//circonfenze
 	for (u32 nStack = 0; nStack < numStack; nStack++)

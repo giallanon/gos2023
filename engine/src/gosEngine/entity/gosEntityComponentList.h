@@ -36,6 +36,19 @@ namespace gos
 
 
 			bool	next (SparseSetIter &iter, DATA **out, gos::Entity *out_ent) const			{ return TSparseSet::next (iter, out, &out_ent->id); }
+
+					template<typename LAMBDA>                        
+        	void	forEach (LAMBDA&& lambdaFn) const
+			{
+				gos::SparseSetIter iter;
+				gos::Entity ent;
+				DATA *component;
+				this->toStart(&iter);
+				while (this->next(iter, &component, &ent))
+				{
+					lambdaFn(component, ent);
+				}				
+			}
 		};
 		
 		

@@ -105,7 +105,7 @@ bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out_cube, gos
 
 		if (!shape::buildCube24 (vec3f(0, 0, 0), vec3f(1, 1, 1), vtxLayout, allocator, &shape_cube))
 			return false;
-		if (!shape::buildCylinder (vec3f(0, 0, 0), 0.7f, 3.0f, 32, 4, true, true, vtxLayout, allocator, &shape_cylinder))
+		if (!shape::buildCylinder (vec3f(0, 0, 0), 0.7f, 1.0f, 32, 4, true, true, vtxLayout, allocator, &shape_cylinder))
 			return false;
 	}
 
@@ -135,7 +135,7 @@ bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out_cube, gos
 }
 
 //***************************************
-void Test1::priv_model_setup(gos::ENGShape shapeHandle)
+void Test1::priv_model_setup(gos::ENGShape shape_cube, gos::ENGShape shape_cylinder)
 {
 	skeleton = GOSNEW(allocator, gos::Skeleton)();
 	{
@@ -143,20 +143,19 @@ void Test1::priv_model_setup(gos::ENGShape shapeHandle)
 
 		gos::Bone *bone;
 		const u32 iRoot = builder.begin ("root");
-		builder.addChildTo (iRoot, "left-arm", &bone);
-			bone->matrix.buildTranslation(vec3f(-4,0,0));
-		builder.addChildTo (iRoot, "right-arm", &bone);
-			bone->matrix.buildTranslation(vec3f( 4,0,0));
+		builder.addChildTo (iRoot, "up-arm", &bone);
+			bone->matrix.buildTranslation(vec3f(0,  1.3f, 0));
+		builder.addChildTo (iRoot, "down-arm", &bone);
+			bone->matrix.buildTranslation(vec3f(0, -1.3f, 0));
 		builder.end (gos::getSysHeapAllocator(), skeleton);
 	}
 
 	model = GOSNEW(allocator, model::Model)();
 	{
 		model->setSkeleton(skeleton);
-		model->addShape (shapeHandle);
-		model->linkShapeToBone (shapeHandle, "root");
-		model->linkShapeToBone (shapeHandle, "left-arm");
-		model->linkShapeToBone (shapeHandle, "right-arm");
+		model->addMesh (shape_cylinder, 0, "root");
+		model->addMesh (shape_cube, 1, "up-arm");
+		model->addMesh (shape_cube, 2, "down-arm");
 	}
  }
 
@@ -230,6 +229,7 @@ void Test1__entity_script_callback_3 (Entity ent, ent::Registry *registry)
 //***************************************
 bool Test1::priv_run4 ()
 {
+	//shape
 	gos::ENGShape handle_shape_list[4];
 	if (!priv_shape_create (engine, &handle_shape_list[0], &handle_shape_list[1]))
 	{
@@ -237,6 +237,11 @@ bool Test1::priv_run4 ()
 		return false;
 	}
 	priv_shape_create (engine, &handle_shape_list[2], &handle_shape_list[3]);
+
+
+	//model
+	priv_model_setup (handle_shape_list[0], handle_shape_list[1]);
+
 
 
 	//creo il renderer
@@ -327,8 +332,7 @@ bool Test1::priv_run4 ()
 
 				//shape
 				auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent);
-				cModelInstance->material_index = material_indices[random_0_3];
-				cModelInstance->shape_handle = handle_shape_list[x%4];
+				cModelInstance->model_instance.setup (model);
 
 				scene.add(ent);
 			}
@@ -380,16 +384,9 @@ bool Test1::priv_run4 ()
 			{
 				nextTimeUpdate_msec = gos::getTimeSinceStart_msec() + 30;
 
-
-				auto list = entRegistry.getAllEntitiesWith<ent::CompScriptable>();
-				gos::SparseSetIter iter;
-				gos::Entity ent;
-				ent::CompScriptable *cScript;
-				list->toStart(&iter);
-				while (list->next(iter, &cScript, &ent))
-				{
-					cScript->callback(ent, &entRegistry);
-				}
+				entRegistry.getAllEntitiesWith<ent::CompScriptable>()->forEach ([&entRegistry = entRegistry](ent::CompScriptable *cScript, gos::Entity ent){
+					cScript->callback (ent, &entRegistry);
+				});
 			}
 			mainLoop.run(); //questo lo chiamo per aggiornare il timer gfxJob in modo che il tempo di "GPU" sia printato con + accuratezza
 			
@@ -399,12 +396,22 @@ bool Test1::priv_run4 ()
 			//itero tutte le ent che hanno modificato il proprio componente <position>
 			{
 				auto list = entRegistry.getUpdatedEntityList<ent::CompPos>();
-				list->forEach ( [&entRegistry = entRegistry](u32 index, Entity &ent) {
+				list->forEach ( [&entRegistry = entRegistry](u32 index, Entity ent) {
 					auto cpos = entRegistry.get<ent::CompPos>(ent, false);
 					cpos->updateMatrix();
+
+					//se queste hanno il componente modelInstance, aggiorno pure quello
+					auto cModelInstance = entRegistry.get<ent::CompModelInstance>(ent, false);
+					if (NULL != cModelInstance)
+					{
+						cModelInstance->model_instance.applyTransform (cpos->_matrix);
+					}
+
+
 					return true;
 				});
 				list->reset();
+			
 			}
         	mainLoop.run(); //questo lo chiamo per aggiornare il timer gfxJob in modo che il tempo di "GPU" sia printato con + accuratezza
 		}
@@ -430,11 +437,10 @@ bool Test1::priv_run4 ()
 				renderer->begin(&cam);
 				{
 					scene.query (cam, &ent_uniqueList, true);
-					//for (u32 i=0; i<ent_uniqueList.getNElem(); i++)
+
 					ent_uniqueList.forEach ( [&entRegistry = entRegistry, &renderer = renderer](u32 index, gos::Entity ent) {
-						auto cpos = entRegistry.query<ent::CompPos>(ent);
 						auto cModelInstance = entRegistry.query<ent::CompModelInstance>(ent);
-						renderer->add(cModelInstance->shape_handle, cpos->_matrix, cModelInstance->material_index);
+						renderer->add (cModelInstance);
 						return true;
 					});
 				}
@@ -458,6 +464,13 @@ bool Test1::priv_run4 ()
 	//free
 	gpu->waitIdle();
 	mainLoop.unsetup();
+
+	//free delle modelInstance
+	entRegistry.getAllEntitiesWith<ent::CompModelInstance>()->forEach ([](ent::CompModelInstance *comp, gos::Entity ent){
+		comp->model_instance.unsetup();
+	});
+
+
 
 	scene.unsetup();
 	engine->assetHub->unload (assHandle_texBianca);

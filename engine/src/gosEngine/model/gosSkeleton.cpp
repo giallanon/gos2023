@@ -171,7 +171,7 @@ void SkeletonInstance::applyTransform (const mat4x4f &matW)
 void SkeletonInstance::priv_applyTransform_ric (u32 boneIndex, const mat4x4f &parent_matW)
 {
     Bone *bone = &boneList[boneIndex];
-    bone->matrix = model->boneList[boneIndex].matrix * parent_matW;
+    bone->matrix = parent_matW * model->boneList[boneIndex].matrix;
     
     u32 childrenIndex = bone->firstChildIndex;
     while (0xFF != childrenIndex)

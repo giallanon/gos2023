@@ -51,8 +51,6 @@ namespace gos
 		 */
 		struct CompPos
 		{
-			//static constexpr u32 getTypeIndex() 			{ return 0; }
-			
 			gos::vec3f		pos;
 			gos::vec3f		rot_grad;
 			gos::vec3f		scale;
@@ -69,8 +67,6 @@ namespace gos
 		typedef void (*entity_script_function) (Entity ent, Registry *registry);
 		struct CompScriptable
 		{
-			//static constexpr u32 	getTypeIndex() 			{ return 1; }
-			
 			entity_script_function	callback;
 		};	
 
@@ -80,8 +76,7 @@ namespace gos
 		 */		
 		struct CompModelInstance
 		{
-			gos::ENGShape	shape_handle;
-			u32 			material_index;
+			gos::model::ModelInstance	model_instance;
 		};
 
 	
