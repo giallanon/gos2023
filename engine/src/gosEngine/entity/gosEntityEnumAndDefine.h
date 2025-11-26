@@ -52,11 +52,11 @@ namespace gos
 		struct CompPos
 		{
 			gos::vec3f		pos;
-			gos::vec3f		rot_grad;
+			gos::vec3f		eular_rot;
 			gos::vec3f		scale;
 			gos::mat4x4f	_matrix;
 
-			void 	identity()								{ pos.set(0,0,0); rot_grad.set(0,0,0); scale.set(1.0f, 1.0f, 1.0f); }
+			void 	identity()								{ pos.set(0,0,0); eular_rot.set(0,0,0); scale.set(1.0f, 1.0f, 1.0f); }
 			void 	updateMatrix();
 		};
 

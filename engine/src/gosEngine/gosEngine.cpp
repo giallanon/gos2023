@@ -213,6 +213,12 @@ bool Engine::update()
 }
 
 //******************************** 
+input::eMouseMode Engine::getMouseMode() const
+{
+    return input::window_getMouseMode(gpu->getWindow());
+}
+
+//******************************** 
 bool Engine::inputEvent_getNext (InputEvent *out)
 {
     while (1)

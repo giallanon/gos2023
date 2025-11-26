@@ -207,23 +207,23 @@ void Test1::doCPUStuff ()
 void Test1__entity_script_callback_0 (Entity ent, ent::Registry *registry)
 {
 	auto cpos = registry->get<ent::CompPos>(ent);
-	cpos->rot_grad.x += 1.0f;
+	cpos->eular_rot.x += math::gradToRad(1);
 }
 void Test1__entity_script_callback_1 (Entity ent, ent::Registry *registry)
 {
 	auto cpos = registry->get<ent::CompPos>(ent);
-	cpos->rot_grad.y += 1.0f;
+	cpos->eular_rot.y += math::gradToRad(1);
 }
 void Test1__entity_script_callback_2 (Entity ent, ent::Registry *registry)
 {
 	auto cpos = registry->get<ent::CompPos>(ent);
-	cpos->rot_grad.z += 1.0f;
+	cpos->eular_rot.z += math::gradToRad(1);
 }
 void Test1__entity_script_callback_3 (Entity ent, ent::Registry *registry)
 {
 	auto cpos = registry->get<ent::CompPos>(ent);
-	cpos->rot_grad.y += 1.0f;
-	cpos->rot_grad.z += 1.0f;	
+	cpos->eular_rot.y += math::gradToRad(1);
+	cpos->eular_rot.z += math::gradToRad(1);
 }
 
 //***************************************

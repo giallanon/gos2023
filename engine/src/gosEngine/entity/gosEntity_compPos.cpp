@@ -1,4 +1,5 @@
 #include "gosEntityEnumAndDefine.h"
+#include "../gosGeom/gosGeomEular.h"
 
 using namespace gos;
 using namespace ent;
@@ -7,19 +8,14 @@ using namespace ent;
 //**************************************
 void CompPos::updateMatrix()
 {
-    gos::mat4x4f matS, matR;
-
+    gos::mat4x4f matS;
     matS.buildScale(scale);
-
-    if (rot_grad.x > 360.0f)   rot_grad.x -= 360.0f;
-    if (rot_grad.x < 0.0f)     rot_grad.x += 360.0f;
-    if (rot_grad.y > 360.0f)   rot_grad.y -= 360.0f;
-    if (rot_grad.y < 0.0f)     rot_grad.y += 360.0f;
-    if (rot_grad.z > 360.0f)   rot_grad.z -= 360.0f;
-    if (rot_grad.z < 0.0f)     rot_grad.z += 360.0f;
-    matR.buildFromEulerAngles_YXZ (math::gradToRad(rot_grad.y), math::gradToRad(rot_grad.x), math::gradToRad(rot_grad.z) );
+   
+    gos::mat4x4f matR;
+    geom::eular_clamp_0_DUEPI (&eular_rot);
+    geom::eular_compute4x4Matrix (eular_rot, &matR);
+    
     matR = matR * matS;
-
 
     _matrix.buildTranslation (pos);
     _matrix = _matrix * matR;

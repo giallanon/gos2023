@@ -20,11 +20,9 @@ int main()
         if (!engine.assetHub_buildAll())  return -3;
 
         {
-            // Test1   test;
-            // test.run (&engine);
+            //Test1 test;         test.run (&engine);
 
-            Game1   game;
-            game.run (&engine);
+            Game1 game;       game.run (&engine);
 
         }
     }

@@ -26,6 +26,8 @@ gosGeomAABB3.h
 gosGeomCamera3.cpp
 gosGeomCamera3.h
 gosGeomEnumAndDefine.h
+gosGeomEular.cpp
+gosGeomEular.h
 gosGeomFrustum3.cpp
 gosGeomFrustum3.h
 gosGeomKDop.h

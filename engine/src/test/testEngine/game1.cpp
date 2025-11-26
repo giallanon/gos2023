@@ -36,25 +36,79 @@ Game1::~Game1()
 //**********************************
 void Game1::doCPUStuff ()
 {
+    const u64 timeNow_msec = gos::getTimeSinceStart_msec();
+
+
+	const u8 isCameraFree = engine->getMouseMode() == input::eMouseMode::absolute;
+
 	Engine::InputEvent ev;
 	while (engine->inputEvent_getNext(&ev))
 	{
 		switch (ev.actionID)
 		{
-		case COMPILE_TIME_STR_CRC32("move_forward"):           movement.moveForward ((ev.value == 1)); break;
-		case COMPILE_TIME_STR_CRC32("move_backward"):          movement.moveBackward ((ev.value == 1));    break;
-		case COMPILE_TIME_STR_CRC32("strafe_left"):            movement.strafeLeft ((ev.value == 1));    break;
-		case COMPILE_TIME_STR_CRC32("strafe_right"):           movement.strafeRight ((ev.value == 1));    break;
-		case COMPILE_TIME_STR_CRC32("strafe_up"):              movement.strafeUp ((ev.value == 1));    break;
-		case COMPILE_TIME_STR_CRC32("strafe_down"):            movement.strafeDown ((ev.value == 1));    break;
-		case COMPILE_TIME_STR_CRC32("rotateY"):                movement.rotateY ((ev.value < 0)); break;
-		case COMPILE_TIME_STR_CRC32("rotateX"):                movement.rotateX ((ev.value < 0)); break;
+		case COMPILE_TIME_STR_CRC32("move_forward"):
+			if (isCameraFree)
+				movement.moveForward ((ev.value == 1));
+			else
+				charCtrl.moveForward ((ev.value == 1));
+			break;
+
+		case COMPILE_TIME_STR_CRC32("move_backward"):
+			if (isCameraFree)
+				movement.moveBackward ((ev.value == 1));
+			else
+				charCtrl.moveBackward ((ev.value == 1));
+			break;
+
+		case COMPILE_TIME_STR_CRC32("strafe_left"):
+			if (isCameraFree)
+				movement.strafeLeft ((ev.value == 1));  
+			else
+				charCtrl.strafeLeft ((ev.value == 1));  
+			break;
+
+		case COMPILE_TIME_STR_CRC32("strafe_right"):
+			if (isCameraFree)
+				movement.strafeRight ((ev.value == 1));
+			else
+				charCtrl.strafeRight ((ev.value == 1));
+			break;
+
+		case COMPILE_TIME_STR_CRC32("rotateY"):
+			if (isCameraFree)
+				movement.rotateY ((ev.value < 0));
+			else
+				charCtrl.rotateY ((ev.value < 0));
+			break;
+
+		case COMPILE_TIME_STR_CRC32("rotateX"):
+			if (isCameraFree)
+				movement.rotateX ((ev.value < 0));
+			else
+				charCtrl.rotateX ((ev.value < 0));
+			break;
+
+		case COMPILE_TIME_STR_CRC32("strafe_up"):
+			if (isCameraFree)
+				movement.strafeUp ((ev.value == 1));
+			break;
+
+		case COMPILE_TIME_STR_CRC32("strafe_down"):
+			if (isCameraFree)
+				movement.strafeDown ((ev.value == 1));
+			break;
 		}
 	}
 
+	//charCtrl
+
     //gestione del movimento
-    const u64 timeNow_msec = gos::getTimeSinceStart_msec();
-    movement.update(timeNow_msec);
+	if (isCameraFree)
+		movement.update(timeNow_msec);
+	else
+		charCtrl.update(entRegistry, timeNow_msec);
+
+
     cam.markUpdated();
 }
 
@@ -71,7 +125,8 @@ void Game1::run (gos::Engine *engineIN)
     cam.setPerspectiveFovLH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 250.0f);
     cam.pos.identity();
     cam.pos.warp (0, 15.0f, -10);
-    cam.markUpdated();
+	cam.pos.lookAt (vec3f(0,0,0));
+	cam.markUpdated();
 
 	//e movement
     movement.bind (&cam.pos);
@@ -295,6 +350,9 @@ void Game1::priv_loop ()
         cModelInstance->model_instance.setup (model_pavimento);
     }
 
+
+	//char controller
+	charCtrl.bind (ent_mainPlayer, &cam);
 
     //loop
     u64 nextTimeUpdate_msec = 0;

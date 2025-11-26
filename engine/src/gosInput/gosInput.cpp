@@ -289,6 +289,15 @@ void input::window_toggleMouseMode (const GOSWinHandle &handle)
 }
 
 //*****************************************
+input::eMouseMode input::window_getMouseMode (const GOSWinHandle &handle)
+{
+    input::Window *win = gos_input_getWindowFromHandle (handle);
+    if (NULL != win)
+        return win->getMouseMode();
+    return eMouseMode::absolute;
+}
+
+//*****************************************
 void input::window_toggleFullscreen(const GOSWinHandle &handle)
 {
     input::Window *win = gos_input_getWindowFromHandle (handle);

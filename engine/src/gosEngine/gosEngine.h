@@ -39,7 +39,7 @@ namespace gos
             /* update:  ritorna false se la mainwin e' stata chiusa */
         bool                        update();
         bool                        inputEvent_getNext (InputEvent *out);
-        
+        input::eMouseMode           getMouseMode() const;
         
         
         //=============================
