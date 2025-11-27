@@ -11,6 +11,7 @@ Game1::Game1()
 	allocator = gos::getSysHeapAllocator();
 
 	entRegistry.setup();
+	entRegistry.addComponentHandler<ent::CompTransform3>();
 	entRegistry.addComponentHandler<ent::CompPos>(true);
 	entRegistry.addComponentHandler<ent::CompModelInstance>();
 	entRegistry.addComponentHandler<ent::CompScriptable>();
@@ -46,6 +47,10 @@ void Game1::doCPUStuff ()
 	{
 		switch (ev.actionID)
 		{
+		case COMPILE_TIME_STR_CRC32("mouse-wheel"):
+			charCtrl.camera_adjust_distance ( (ev.value<0)? true: false);
+			break;
+
 		case COMPILE_TIME_STR_CRC32("move_forward"):
 			if (isCameraFree)
 				movement.moveForward ((ev.value == 1));
@@ -78,14 +83,14 @@ void Game1::doCPUStuff ()
 			if (isCameraFree)
 				movement.rotateY ((ev.value < 0));
 			else
-				charCtrl.rotateY ((ev.value < 0));
+				charCtrl.camera_rotate_aboutY ((ev.value > 0));
 			break;
 
 		case COMPILE_TIME_STR_CRC32("rotateX"):
 			if (isCameraFree)
 				movement.rotateX ((ev.value < 0));
 			else
-				charCtrl.rotateX ((ev.value < 0));
+				charCtrl.camera_rotate_aboutX ((ev.value < 0));
 			break;
 
 		case COMPILE_TIME_STR_CRC32("strafe_up"):
@@ -327,8 +332,9 @@ void Game1::priv_loop ()
 {
     Entity ent_mainPlayer = entRegistry.newEntity();
     {
+		entRegistry.addComponent<ent::CompTransform3>(ent_mainPlayer);
         auto cpos = entRegistry.addComponent<ent::CompPos>(ent_mainPlayer);
-        cpos->identity();
+        cpos->reset();
 
         //shape
         auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent_mainPlayer);
@@ -340,14 +346,16 @@ void Game1::priv_loop ()
 
     Entity ent_pavimento = entRegistry.newEntity();
     {
-        auto cpos = entRegistry.addComponent<ent::CompPos>(ent_pavimento);
-        cpos->identity();
-        cpos->pos.set (0, -0.1f, 0);
-        cpos->scale.set (100.0f, 0.1f, 100.0f);
+		gos::mat4x4f mTR;
+		mTR.buildTranslation (vec3f(0, -0.1f, 0));
+		gos::mat4x4f mSC;
+		mSC.buildScale(100.0f, 0.1f, 100.0f);
+		gos::mat4x4f mFinal =  mTR * mSC;
 
         //shape
         auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent_pavimento);
         cModelInstance->model_instance.setup (model_pavimento);
+		cModelInstance->model_instance.applyTransform (mFinal);
     }
 
 
@@ -401,13 +409,14 @@ void Game1::priv_loop ()
                 auto list = entRegistry.getUpdatedEntityList<ent::CompPos>();
                 list->forEach ( [&entRegistry = entRegistry](u32 index, Entity ent) {
                     auto cpos = entRegistry.get<ent::CompPos>(ent, false);
-                    cpos->updateMatrix();
+					auto ctransf = entRegistry.get<ent::CompTransform3>(ent, false);
+                    cpos->buildMatrix(&ctransf->matrix);
 
                     //se queste hanno il componente modelInstance, aggiorno pure quello
                     auto cModelInstance = entRegistry.get<ent::CompModelInstance>(ent, false);
                     if (NULL != cModelInstance)
                     {
-                        cModelInstance->model_instance.applyTransform (cpos->_matrix);
+                        cModelInstance->model_instance.applyTransform (ctransf->matrix);
                     }
 
 

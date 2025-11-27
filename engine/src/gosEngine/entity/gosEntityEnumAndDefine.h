@@ -45,41 +45,6 @@ namespace gos
 			}
 		};
 
-		/*************************
-		 * @brief	CompPos
-		 * 
-		 */
-		struct CompPos
-		{
-			gos::vec3f		pos;
-			gos::vec3f		eular_rot;
-			gos::vec3f		scale;
-			gos::mat4x4f	_matrix;
-
-			void 	identity()								{ pos.set(0,0,0); eular_rot.set(0,0,0); scale.set(1.0f, 1.0f, 1.0f); }
-			void 	updateMatrix();
-		};
-
-		/*************************
-		 * @brief	CompScriptable
-		 * 
-		 */		
-		typedef void (*entity_script_function) (Entity ent, Registry *registry);
-		struct CompScriptable
-		{
-			entity_script_function	callback;
-		};	
-
-		/*************************
-		 * @brief	CompModelInstance
-		 * 
-		 */		
-		struct CompModelInstance
-		{
-			gos::model::ModelInstance	model_instance;
-		};
-
-	
 	
 	} //namespace ent
 

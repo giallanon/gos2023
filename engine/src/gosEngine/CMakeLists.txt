@@ -23,6 +23,7 @@ add_library(${BINARY_OUTPUT_FILENAME} STATIC
 entity/gosEntity_compPos.cpp
 entity/gosEntity.h
 entity/gosEntityComponentList.h
+entity/gosEntityDefaultComponents.h
 entity/gosEntityEnumAndDefine.h
 entity/gosEntityRegistry.cpp
 entity/gosEntityRegistry.h
@@ -48,7 +49,7 @@ gosEngine_vtxBufferMan.h
 gosEngine.cpp
 gosEngine.h
 gosEngineEnumAndDefine.h
-)
+ "entity/gosEntityDefaultComponents.h")
 
 #====================================================
 # info a video

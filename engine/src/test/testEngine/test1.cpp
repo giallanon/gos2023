@@ -11,6 +11,7 @@ Test1::Test1()
 	allocator = gos::getSysHeapAllocator();
 
 	entRegistry.setup();
+	entRegistry.addComponentHandler<ent::CompTransform3>();
 	entRegistry.addComponentHandler<ent::CompPos>(true);
 	entRegistry.addComponentHandler<ent::CompModelInstance>();
 	entRegistry.addComponentHandler<ent::CompScriptable>();
@@ -26,19 +27,6 @@ Test1::Test1()
 //***************************************
 Test1::~Test1()
 {
-	/*free delle modelInstance di ogni entity
-	entList.forEach ( [lambdaAllocator = this->allocator, lambdaEntReg = &entRegistry](u32 index, gos::Entity ent) 
-	{
-		ent::CompModelInstance *comp = lambdaEntReg->get<ent::CompModelInstance>(ent);
-		if (NULL != comp)
-		{
-			GOSDELETE(lambdaAllocator, comp->modelInstance);
-		}
-		return true;
-	});
-*/
-
-
 	entRegistry.unsetup();
 
 	GOSDELETE(allocator, model);
@@ -207,23 +195,28 @@ void Test1::doCPUStuff ()
 void Test1__entity_script_callback_0 (Entity ent, ent::Registry *registry)
 {
 	auto cpos = registry->get<ent::CompPos>(ent);
-	cpos->eular_rot.x += math::gradToRad(1);
+	cpos->quat.rotateMeAbout (vec3f(1,0,0), math::gradToRad(1));
 }
 void Test1__entity_script_callback_1 (Entity ent, ent::Registry *registry)
 {
 	auto cpos = registry->get<ent::CompPos>(ent);
-	cpos->eular_rot.y += math::gradToRad(1);
+	cpos->quat.rotateMeAbout (vec3f(0,1,0), math::gradToRad(1));
 }
 void Test1__entity_script_callback_2 (Entity ent, ent::Registry *registry)
 {
 	auto cpos = registry->get<ent::CompPos>(ent);
-	cpos->eular_rot.z += math::gradToRad(1);
+	cpos->quat.rotateMeAbout (vec3f(0,0,1), math::gradToRad(1));
 }
 void Test1__entity_script_callback_3 (Entity ent, ent::Registry *registry)
 {
 	auto cpos = registry->get<ent::CompPos>(ent);
-	cpos->eular_rot.y += math::gradToRad(1);
-	cpos->eular_rot.z += math::gradToRad(1);
+
+	cpos->quat.rotateMeAbout (vec3f(1,0,0), math::gradToRad(1));
+	vec3f ax, ay, az;
+	cpos->quat.toAxis (&ax, &ay, &az);
+	//cpos->quat.rotateMeAbout (ax, math::gradToRad(1));
+	cpos->quat.rotateMeAbout (ay, math::gradToRad(4));
+	
 }
 
 //***************************************
@@ -295,8 +288,8 @@ bool Test1::priv_run4 ()
 		const u32 NUM_ENTITIES_X = 1000;
 		const u32 NUM_ENTITIES_Z = 100;
 #endif		
-		const f32 ENTITY_GRID_X = 1.5f * SCALE;
-		const f32 ENTITY_GRID_Z = 1.5f * SCALE;
+		const f32 ENTITY_GRID_X = 2.5f * SCALE;
+		const f32 ENTITY_GRID_Z = 2.5f * SCALE;
 
 		const f32 x_min = - ((f32)NUM_ENTITIES_X / 2.0f) * ENTITY_GRID_X;
 		const f32 z_min = - ((f32)NUM_ENTITIES_Z / 2.0f) * ENTITY_GRID_Z;
@@ -309,9 +302,12 @@ bool Test1::priv_run4 ()
 			{
 				Entity ent = entRegistry.newEntity();
 				
+				//transform
+				entRegistry.addComponent<ent::CompTransform3>(ent);
+
 				//posizione
 				auto cpos = entRegistry.addComponent<ent::CompPos>(ent);
-				cpos->identity();
+				cpos->reset();
 				cpos->pos.set (xx, 0, zz);
 				cpos->scale.set (SCALE, SCALE, SCALE);
 
@@ -398,13 +394,14 @@ bool Test1::priv_run4 ()
 				auto list = entRegistry.getUpdatedEntityList<ent::CompPos>();
 				list->forEach ( [&entRegistry = entRegistry](u32 index, Entity ent) {
 					auto cpos = entRegistry.get<ent::CompPos>(ent, false);
-					cpos->updateMatrix();
+					auto ctransf = entRegistry.get<ent::CompTransform3>(ent, false);
+					cpos->buildMatrix(&ctransf->matrix);
 
 					//se queste hanno il componente modelInstance, aggiorno pure quello
 					auto cModelInstance = entRegistry.get<ent::CompModelInstance>(ent, false);
 					if (NULL != cModelInstance)
 					{
-						cModelInstance->model_instance.applyTransform (cpos->_matrix);
+						cModelInstance->model_instance.applyTransform (ctransf->matrix);
 					}
 
 

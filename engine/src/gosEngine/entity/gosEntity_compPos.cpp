@@ -1,4 +1,4 @@
-#include "gosEntityEnumAndDefine.h"
+#include "gosEntityDefaultComponents.h"
 #include "../gosGeom/gosGeomEular.h"
 
 using namespace gos;
@@ -6,17 +6,16 @@ using namespace ent;
 
 
 //**************************************
-void CompPos::updateMatrix()
+void CompPos::buildMatrix (gos::mat4x4f *out)
 {
+    assert (NULL != out);
     gos::mat4x4f matS;
     matS.buildScale(scale);
    
     gos::mat4x4f matR;
-    geom::eular_clamp_0_DUEPI (&eular_rot);
-    geom::eular_compute4x4Matrix (eular_rot, &matR);
-    
+    quat.toMatrix4x4  (&matR);
     matR = matR * matS;
 
-    _matrix.buildTranslation (pos);
-    _matrix = _matrix * matR;
+    out->buildTranslation (pos);
+    (*out) = (*out) * matR;
 }

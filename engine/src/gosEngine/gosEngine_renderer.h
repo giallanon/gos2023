@@ -3,7 +3,7 @@
 #include "gosEngineEnumAndDefine.h"
 #include "gosEngine_dynTextureArray.h"
 #include "../gosGeom/gosGeomCamera3.h"
-#include "entity/gosEntityEnumAndDefine.h"
+#include "entity/gosEntityDefaultComponents.h"
 
 
 namespace gos

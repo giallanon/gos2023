@@ -22,8 +22,10 @@ public:
     void    strafeRight (bool b)                    { priv_setStatus (STATUS_MOVING_RIGHT, b); }
     void    rotateY (bool bClockwise);
     void    rotateX (bool bClockwise);
-    void    mouseRotateY (i32 num_pixel_mouse_was_moved);
-    void    mouseRotateX (i32 num_pixel_mouse_was_moved);
+
+    void    camera_adjust_distance (bool bIncreaseDistance);
+    void    camera_rotate_aboutX (bool bClockwise);
+    void    camera_rotate_aboutY (bool bClockwise);
 
     void    update (gos::ent::Registry &entRegistry, u64 timenow_msec);
 
@@ -46,7 +48,8 @@ private:
     f32                 rotationalSpeed_rad;
     u64                 lastTimeUpdated_msec;
     gos::Flag16         status;
-    f32                 rel_rotX_rad;
+    f32                 camera_distance_m;
+    f32                 cam_rotX_rad;
     f32                 rel_rotY_rad;
 };
 

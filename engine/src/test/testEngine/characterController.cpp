@@ -14,7 +14,7 @@ CharacterController::CharacterController ()
     setLinearSpeed (4);
     setRotationalSpeed (0.5f);
     lastTimeUpdated_msec = 0;
-    rel_rotX_rad = rel_rotY_rad = 0;
+    cam_rotX_rad = rel_rotY_rad = 0;
 }
 
 //**************************************
@@ -26,7 +26,8 @@ void CharacterController::bind (gos::Entity ent, gos::geom::Camera3 *cam)
 { 
     target_ent = ent;
     target_cam = cam;
-    rel_rotX_rad = rel_rotY_rad = 0;
+    cam_rotX_rad = rel_rotY_rad = 0;
+    camera_distance_m = 20.0f;
 }
 
 //**************************************
@@ -39,35 +40,9 @@ void CharacterController::priv_setStatus (u16 MASK, bool b)
 }
 
 //**************************************
-void CharacterController::rotateX (bool bClockwise)
+void CharacterController::camera_rotate_aboutY (bool bClockwise)
 {
     if (bClockwise)
-    {
-        rel_rotX_rad += rotationalSpeed_rad;
-        if (rel_rotX_rad > gos::math::gradToRad(80))
-            rel_rotX_rad = gos::math::gradToRad(80);
-    }
-    else
-    {
-        rel_rotX_rad -= rotationalSpeed_rad;
-        if (rel_rotX_rad < -gos::math::gradToRad(60))
-            rel_rotX_rad = -gos::math::gradToRad(60);
-    }
-}
-
-//**************************************
-void CharacterController::rotateY (bool bClockwise)
-{
-    if (bClockwise)
-        rel_rotY_rad += rotationalSpeed_rad;
-    else
-        rel_rotY_rad -= rotationalSpeed_rad;
-}
-
-//**************************************
-void CharacterController::mouseRotateY (i32 num_pixel_mouse_was_moved)
-{
-    if (num_pixel_mouse_was_moved < 0)
         //clockwise
         rel_rotY_rad -= (f32) rotationalSpeed_rad;
     else
@@ -75,24 +50,33 @@ void CharacterController::mouseRotateY (i32 num_pixel_mouse_was_moved)
 }
 
 //**************************************
-void CharacterController::mouseRotateX (i32 num_pixel_mouse_was_moved)
+void CharacterController::camera_rotate_aboutX (bool bClockwise)
 {
     //printf ("%d\n", num_pixel_mouse_was_moved);
-    if (num_pixel_mouse_was_moved < 0)
+    if (bClockwise)
     {
         //clockwise
-        rel_rotX_rad -= (f32)rotationalSpeed_rad;
-        if (rel_rotX_rad > gos::math::gradToRad(80))
-            rel_rotX_rad = gos::math::gradToRad(80);
+        cam_rotX_rad -= (f32)rotationalSpeed_rad;
     }
     else
     {
-        rel_rotX_rad += (f32)rotationalSpeed_rad;
-        if (rel_rotX_rad < -gos::math::gradToRad(60))
-            rel_rotX_rad = -gos::math::gradToRad(60);
+        cam_rotX_rad += (f32)rotationalSpeed_rad;
     }        
 }
 
+//**************************************
+void CharacterController::camera_adjust_distance (bool bIncreaseDistance)
+{
+    if (bIncreaseDistance)
+        camera_distance_m += 0.5f;
+    else
+        camera_distance_m -= 0.5f;
+
+    if (camera_distance_m < 10.0f)
+        camera_distance_m = 10.0f;
+    if (camera_distance_m > 80.0f)
+        camera_distance_m = 80.0f;
+}
 
 //**************************************
 void CharacterController::update (gos::ent::Registry &entRegistry,u64 timenow_msec)
@@ -111,15 +95,13 @@ void CharacterController::update (gos::ent::Registry &entRegistry,u64 timenow_ms
     lastTimeUpdated_msec = timenow_msec;
 
     //rotazione attuale
-    gos::mat3x3f matR;
-    ent_pos->eular_rot.y += rel_rotY_rad;
-    geom::eular_clamp_0_DUEPI (&ent_pos->eular_rot);
-    geom::eular_compute3x3Matrix (ent_pos->eular_rot, &matR);
-    rel_rotX_rad = rel_rotY_rad = 0;
+    gos::Quat quat;
+    ent_pos->quat.rotateMeAbout (vec3f(0,1,0), rel_rotY_rad);
+    rel_rotY_rad = 0;
 
-	const vec3f asseX = vec3f(matR(0,0), matR(1,0), matR(2,0));
-    const vec3f asseY = vec3f(matR(0,1), matR(1,1), matR(2,1));
-    const vec3f asseZ = vec3f(matR(0,2), matR(1,2), matR(2,2));
+
+	vec3f asseX, asseY, asseZ;
+    ent_pos->quat.toAxis (&asseX, &asseY, &asseZ);
 
 
     //movimento
@@ -139,9 +121,16 @@ void CharacterController::update (gos::ent::Registry &entRegistry,u64 timenow_ms
     //    pos.moveRelAlongY (-linearSpeed);
 
 
-    target_cam->pos.o =  (ent_pos->pos - asseZ * 20.0f + asseY * 20.0f);
-    target_cam->pos.lookAt (ent_pos->pos);
-    target_cam->markUpdated();
+  
+    if (cam_rotX_rad < math::gradToRad(15))
+        cam_rotX_rad = math::gradToRad(15);
+    if (cam_rotX_rad > math::gradToRad(80))
+        cam_rotX_rad = math::gradToRad(80);
 
+    target_cam->pos.o = ent_pos->pos;
+    target_cam->pos.setFromQuat (ent_pos->quat);
+    target_cam->pos.rotateMeAboutMyX (-cam_rotX_rad);
+    target_cam->pos.moveRelAlongZ (-camera_distance_m);
+    target_cam->markUpdated();
 }
 
