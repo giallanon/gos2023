@@ -104,8 +104,8 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
             .action_add ("strafe_up")
             .action_add ("strafe_down")
             .action_add ("rotateX")
-            .action_add ("rotateY")
-            .action_add ("mouse-wheel");
+            .action_add ("rotateY");
+            
 
 
         inputCtx->action_bindToBtn ("app_terminate", input::eOrigin::keyboard, GLFW_KEY_Q, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LCTRL));
@@ -124,7 +124,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 
         inputCtx->action_bindToAxleREL ("rotateX",  input::eOrigin::mouse, input::eAxle::y, input::eAxleDirection::both);
         inputCtx->action_bindToAxleREL ("rotateY",  input::eOrigin::mouse, input::eAxle::x, input::eAxleDirection::both);    
-        inputCtx->action_bindToAxleREL ("mouse-wheel", input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::both);
+
     }
 
 

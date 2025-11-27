@@ -17,6 +17,9 @@ public:
 	void	run (gos::Engine *engine);
 
 private:
+	static constexpr u8 NUM_MAX_MISSILE = 12;
+
+private:
 	void	doCPUStuff ();
     bool    priv_loadAssets();
     void    priv_loop();
@@ -24,6 +27,8 @@ private:
 	void 	priv_createModel_mainPlayer();
 	void 	priv_createModel_pavimento();
 	gos::ENGShape	priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC);
+	void	priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir);
+
 
 private:
 	gos::Allocator					*allocator;
@@ -45,6 +50,9 @@ private:
 	gos::model::Model			*model_pavimento;
     gos::FPSMovement				movement;
 	CharacterController				charCtrl;
+	gos::Entity						ent_mainPlayer;
+	gos::Entity						ent_missile[NUM_MAX_MISSILE];
+	u8								num_missile_alive;
 
 
 };

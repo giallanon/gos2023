@@ -5,6 +5,12 @@
 using namespace gos;
 
 
+struct CompMissile
+{
+	u64			timeToDie_msec;
+	gos::Entity	*me;
+};
+
 //***************************************
 Game1::Game1()
 {
@@ -15,12 +21,17 @@ Game1::Game1()
 	entRegistry.addComponentHandler<ent::CompPos>(true);
 	entRegistry.addComponentHandler<ent::CompModelInstance>();
 	entRegistry.addComponentHandler<ent::CompScriptable>();
+	entRegistry.addComponentHandler<CompMissile>();
 
 	renderer = NULL;
     skeleton1 = NULL;
     skeleton2 = NULL;
     model_player = NULL;
     model_pavimento = NULL;
+
+	num_missile_alive = 0;
+	for (u8 i=0; i<NUM_MAX_MISSILE; i++)
+		ent_missile[i].setInvalid();
 }
 
 //***************************************
@@ -50,6 +61,16 @@ void Game1::doCPUStuff ()
 		case COMPILE_TIME_STR_CRC32("mouse-wheel"):
 			charCtrl.camera_adjust_distance ( (ev.value<0)? true: false);
 			break;
+
+		case COMPILE_TIME_STR_CRC32("mouse-LB"):
+		{
+			const ent::CompPos *cpos = entRegistry.query<ent::CompPos>(ent_mainPlayer);
+			
+			vec3f ax,ay,az;
+			cpos->quat.toAxis (&ax, &ay, &az);
+			priv_spawnMissile (cpos->pos, az);
+		}
+		break;
 
 		case COMPILE_TIME_STR_CRC32("move_forward"):
 			if (isCameraFree)
@@ -123,6 +144,15 @@ void Game1::run (gos::Engine *engineIN)
 	engine = engineIN;
 	gpu = engine->gpu;
 
+	//input
+	engine->inputCtx->
+		action_add ("mouse-wheel")
+		.action_add ("mouse-LB");
+
+	engine->inputCtx->action_bindToAxleREL ("mouse-wheel", input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::both);
+	engine->inputCtx->action_bindToBtn ("mouse-LB", input::eOrigin::mouse, 0, input::eButtonStatus::pressed);
+
+	//renderer
 	renderer = GOSNEW(allocator, gos::engine::Renderer1)();
 	renderer->setup (allocator, engine);
 
@@ -328,9 +358,72 @@ void Game1__entity_script_mainPlayer (Entity ent, ent::Registry *registry)
 }
 
 //***************************************
+void Game1__entity_script_missile (Entity ent, ent::Registry *registry)
+{
+	auto cmiss = registry->get<CompMissile>(ent);
+	if (gos::getTimeSinceStart_msec() >= cmiss->timeToDie_msec)
+	{
+		registry->removeComponent<ent::CompScriptable>(ent);
+		cmiss->me->setInvalid();
+		return;
+	}
+
+
+	auto cpos = registry->get<ent::CompPos>(ent, true);
+
+	vec3f ax, ay, az;
+	cpos->quat.toAxis (&ax, &ay, &az);
+
+	cpos->pos += az * 2.0f;
+}
+
+
+//***************************************
+void Game1::priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir)
+{
+	u32 index = u32MAX;
+	for (u8 i = 0; i < NUM_MAX_MISSILE; i++)
+	{
+		if (ent_missile[i].isInvalid())
+		{
+			index = i;
+			break;
+		}
+	}
+	if (u32MAX == index)
+		return;
+
+	gos::Entity ent = ent_missile[index] = entRegistry.newEntity();
+
+	auto cmiss = entRegistry.addComponent<CompMissile>(ent);
+		cmiss->timeToDie_msec = gos::getTimeSinceStart_msec() + 2000;
+		cmiss->me = &ent_missile[index];
+
+
+	//pos
+	entRegistry.addComponent<ent::CompTransform3>(ent);
+	auto cpos = entRegistry.addComponent<ent::CompPos>(ent);
+	cpos->reset();
+
+	geom::Pos3 p3;
+	p3.identity();
+	p3.lookAt (dir);
+	cpos->quat.buildFromMatrix3x3 (p3.rot);
+	cpos->pos = o;
+
+	//shape
+	auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent);
+	cModelInstance->model_instance.setup (model_pavimento);
+
+	//script
+    auto cScript = entRegistry.addComponent<ent::CompScriptable>(ent);
+    cScript->callback = Game1__entity_script_missile;
+}
+
+//***************************************
 void Game1::priv_loop ()
 {
-    Entity ent_mainPlayer = entRegistry.newEntity();
+    ent_mainPlayer = entRegistry.newEntity();
     {
 		entRegistry.addComponent<ent::CompTransform3>(ent_mainPlayer);
         auto cpos = entRegistry.addComponent<ent::CompPos>(ent_mainPlayer);
@@ -446,6 +539,13 @@ void Game1::priv_loop ()
 				{
                     renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_mainPlayer) );
                     renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_pavimento) );
+
+					for (u8 i = 0; i < NUM_MAX_MISSILE; i++)
+					{
+						if (ent_missile[i].isValid())
+							renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_missile[i]) );
+					}
+		
 				}
 				renderer->end (cw);
 

@@ -87,8 +87,7 @@ namespace gos
                             template<class TCOMPONENT>
             void            removeComponent(Entity ent)
             {
-                constexpr u32 index = TCOMPONENT::getTypeIndex();
-                static_assert (index < NUM_MAX_COMPONENT_PER_ENTITY);
+                ENT_GET_COMPONENT_INDEX(TCOMPONENT)
                 assert (NULL != sparseSetList[index]);
 
                 using CompSparseSet = ComponentList<TCOMPONENT>;
