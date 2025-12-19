@@ -43,6 +43,7 @@ namespace gos
 void	GOSDELETE(gos::Allocator *allocator, T* &p)			        { if ((p)) { (p)->~T(); allocator->dealloc((p), true); (p)=NULL; } }
 
 		#define GOSFREE(allocator, p)								{ if((p)) { (allocator)->dealloc ((p), false); } }
+		#define GOSFREE_AND_NULL(allocator, p)						{ if((p)) { (allocator)->dealloc ((p), false); (p)=NULL; } }
 
 
 		#define GOSALLOC_SCRAPT(retType, sizeInByte)				static_cast<retType>(gos::mem::getScrapAllocator()->alloc (sizeInByte, GOS_DEFAULT_ALIGNMENT, __FILE__, __LINE__, false))
@@ -61,6 +62,7 @@ void	GOSDELETE(gos::Allocator *allocator, T* &p)			        { if ((p)) { (p)->~T(
 void	GOSDELETE(gos::Allocator *allocator, T* &p)			        { if ((p)) { (p)->~T(); allocator->dealloc((p)); (p)=NULL; } }
 
 		#define GOSFREE(allocator, p)								{ if((p)) { (allocator)->dealloc ((p)); } }
+		#define GOSFREE_AND_NULL(allocator, p)						{ if((p)) { (allocator)->dealloc ((p)); (p)=NULL; } }
 
 		#define GOSALLOC_SCRAPT(retType, sizeInByte)				static_cast<retType>(gos::mem::getScrapAllocator()->alloc (sizeInByte, GOS_DEFAULT_ALIGNMENT))
 		#define GOSFREE_SCRAP(p)									{ if((p)) { gos::mem::getScrapAllocator()->dealloc ((p)); } }

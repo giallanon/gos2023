@@ -73,3 +73,22 @@ La shape di per se mi serve solo caricarla per infilarla in un VB/IB, poi la pos
 - utilizza gli stti <material> di <ModelPadre> a meno che non ne venga fatto un override nel qual caso
   il materiale sostituisce quello originale
 
+
+
+  ### Importazione di un modello
+  Dato un modello in formato glb, importare un modello nell'engine significa:
+  - estrarre lo/gli skeleton
+  - estrarre le mesh (aka shape)
+  - estrarre le immagini raw
+  - estrarre le animazioni
+
+  A partire da queste risorse di base poi, bisogna:
+  - buildare le texture a partire dalle immagini raw estratte (defininendo parametri come mipmap, compression, formato del colore)
+  
+  Il risultato finale sono una serie di gosAsset:
+  - 0+ skeleon
+  - 1+ shape
+  - 1+ material
+  - 1+ texture (usate dai material)
+  - 0+ animazioni
+  

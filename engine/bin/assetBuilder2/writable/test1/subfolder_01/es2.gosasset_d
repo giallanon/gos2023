@@ -1,0 +1,6 @@
+
+//PS-1
+@pxl_shader : PS-1
+{
+  src: es1.frag
+}

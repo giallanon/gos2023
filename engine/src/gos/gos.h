@@ -168,6 +168,7 @@ namespace gos
 
 		void     		fileGetCreationTime_UTC (const char *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
 		void     		fileGetLastTimeModified_UTC (const char *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
+		u64     		fileGetLastTimeModified_UTC_niceu64 (const char *utf8_filePathAndNameRESOLVABLE);
     	void     		fileGetCreationTime_LocalTime (const char *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
     	void     		fileGetLastTimeModified_LocalTime (const char *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt);
 

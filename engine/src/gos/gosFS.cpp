@@ -837,6 +837,14 @@ void fs::fileGetLastTimeModified_UTC(const char *utf8_filePathAndNameRESOLVABLE,
 }
 
 //**************************************************************************
+u64 fs::fileGetLastTimeModified_UTC_niceu64 (const char *utf8_filePathAndNameRESOLVABLE)
+{ 
+	gos::DateTime dt;
+	fileGetLastTimeModified_UTC (utf8_filePathAndNameRESOLVABLE, &dt);
+	return dt.getAsNiceU64();
+}
+
+//**************************************************************************
 void fs::fileGetCreationTime_LocalTime (const char *utf8_filePathAndNameRESOLVABLE, gos::DateTime *out_dt)
 { 
 	char utf8_filePathAndName[1024];

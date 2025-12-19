@@ -1,0 +1,13 @@
+
+//VS-2
+@vtx_shader : VS-2
+{
+  src: es2.vert
+}
+
+//VS-3
+@vtx_shader : VS-2
+{
+  src: es3.vert
+}
+
