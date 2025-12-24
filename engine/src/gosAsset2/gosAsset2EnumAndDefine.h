@@ -19,13 +19,6 @@ namespace gos
 
     namespace asset2
     {
-        enum class eFilter : u8
-        {
-            only_assets     = 0,
-            only_resources  = 1,
-            both            = 2
-        };
-
         enum class eResType : u8
         {
             __DO__NOT__USE  = 0,

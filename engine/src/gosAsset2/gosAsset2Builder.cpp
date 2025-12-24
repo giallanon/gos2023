@@ -678,12 +678,13 @@ bool Builder::priv_gosassetd_build (DBContext &ctx, const char *absFilename, Uni
 			return false;
 	}
 
+	UniqueStringList listof_knownRTname(localAllocator, 2048);
 	u32 nextAnonymAssetName = 0;
-	return priv_gosassetd_buildSection (ctx, nextAnonymAssetName, absFilename, uid_of_iniFile, ini.getRoot(), out_listOfBuiltAssets);
+	return priv_gosassetd_buildSection (ctx, nextAnonymAssetName, listof_knownRTname, absFilename, uid_of_iniFile, ini.getRoot(), out_listOfBuiltAssets);
 }
 
 //****************************** 
-bool Builder::priv_gosassetd_buildSection (DBContext &ctx, u32 &in_out_nextAnonymAssetName, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets)
+bool Builder::priv_gosassetd_buildSection (DBContext &ctx, u32 &in_out_nextAnonymAssetName, UniqueStringList &in_out_listof_knownRTname, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets)
 {
 	for (u32 iSec=0; iSec<section->getNSubsection(); iSec++)
 	{
@@ -727,10 +728,19 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, u32 &in_out_nextAnony
 			//se e' il nome di una sezione con un runtime-name ma nessun parametro, vuol dire che e' una direttiva
 			//gia' risolta che punta ad un runtime-name ben specifico.
 			//In sostanza, e' una sottodirettiva di una direttiva di livello superiore (es: @vtx_shader all'interno di @pipe)
+			//Il rt-name deve essermi gia' noto
 			if (1 == sub->getNIdentifier() && assetRuntimeName[0]!='_' && assetRuntimeName[1]!='_')
 			{
-				ret = true;
-				logger->log ("skip\n");
+				if (!in_out_listof_knownRTname.exists(assetRuntimeName))
+				{
+					ret = false;
+					logger->log (eTextColor::red, "rt-name %s is unknown\n", assetRuntimeName);
+				}
+				else
+				{
+					ret = true;
+					logger->log ("skip because is an inline-directive\n");
+				}
 				break;
 			}
 
@@ -738,7 +748,7 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, u32 &in_out_nextAnony
 			//di poter buildare l'asset
 			if (sub->getNSubsection())
 			{
-				if (!priv_gosassetd_buildSection (ctx, in_out_nextAnonymAssetName, absFilename, uid_of_iniFile, sub, out_listOfBuiltAssets))
+				if (!priv_gosassetd_buildSection (ctx, in_out_nextAnonymAssetName, in_out_listof_knownRTname, absFilename, uid_of_iniFile, sub, out_listOfBuiltAssets))
 					break;
 			}
 
@@ -746,7 +756,10 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, u32 &in_out_nextAnony
 			builder->setLogger(logger);
 			if (!builder->build (ctx, buildTime_UTC, absFilename, uid_of_iniFile, sub, true, &result))
 				break;
-			
+
+			//aggiungo rt-name alla lista dei nomi noti da questo file
+			in_out_listof_knownRTname.add (assetRuntimeName);
+				
 			//report a video del risultato della build
 			eTextColor color = eTextColor::green;
 			if (eBuildResult::was_already_built == result.result)

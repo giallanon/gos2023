@@ -131,7 +131,7 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testEngine)
 
 #add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/glslParser)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/assetBuilder)
+#add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/assetBuilder)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/assetBuilder2)
 
 

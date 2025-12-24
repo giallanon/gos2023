@@ -10,7 +10,7 @@ void test1()
     bool ret;
     char baseFolder[1024];
     sprintf_s (baseFolder, sizeof(baseFolder), "%s/test1", gos::getPhysicalPathToWritableFolder());
-    ret = b.rebuildAll(baseFolder); b.save_dependencies_report (baseFolder); return;
+    //ret = b.rebuildAll(baseFolder); b.save_dependencies_report (baseFolder); return;
     
     ret = b.build(baseFolder); 
     if (ret)

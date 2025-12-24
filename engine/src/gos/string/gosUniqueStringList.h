@@ -31,7 +31,7 @@ namespace gos
                      */
         u32         add (const char *m)
                     {
-                        const u32 key = utils::crc32 (m);
+                        const u32 key = priv_hashString (m);
 
                         FastHashMap<u32,u32>::Position pos;
                         u32 offset;
@@ -44,11 +44,28 @@ namespace gos
                         return offset;
                     }
 
+        bool        exists (const char *m, u32 *out_offset = NULL) const
+                    {
+                        const u32 key = priv_hashString (m);
+
+                        FastHashMap<u32,u32>::Position pos;
+                        u32 offset;
+                        if (!hashMap.findWithPos (key, &offset, &pos))
+                            return false;
+                        if (NULL != out_offset)
+                            *out_offset = offset;
+                        return true;
+                    }
+
         const char* getStringAtOffset (u32 offset) const                    { return list.getStringAtOffset(offset); }
 
         u32         getNumString() const                                    { return list.getNumString(); }
         void        toStart (u32 *iter) const                               { list.toStart (iter); }
         const char* next (u32 *iter) const                                  { return list.next(iter); }
+
+
+    private:
+        u32         priv_hashString (const char *m) const                   { return utils::crc32 (m); }
 
     private:
         StringList              list;

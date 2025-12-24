@@ -2,6 +2,7 @@
 #define _gosAsset2Builder_h_
 #include "builders/gosAsset2BuilderInterface.h"
 #include "string/gosStringList.h"
+#include "string/gosUniqueStringList.h"
 
 namespace gos
 {
@@ -15,13 +16,13 @@ namespace gos
 		{
         public:
                                 //appende a <in_out> un report ben formattato con la lista delle dipendenze
-            static void         get_dependencies_report (gos::UTF8String &in_out, const char *baseFolder, const char *dbName = NULL, asset2::eFilter filter = eFilter::both);
+            static void         get_dependencies_report (gos::UTF8String &in_out, const char *baseFolder, const char *dbName = NULL);
             
                                 //chiama <get_dependencies_report> e poi printf
-            static void         print_dependencies_report (const char *baseFolder, const char *dbName = NULL, asset2::eFilter filter = eFilter::both);
+            static void         print_dependencies_report (const char *baseFolder, const char *dbName = NULL);
             
                                 //chiama <get_dependencies_report> e poi salva un file di testo in /assets/src/__dependencies.txt
-            static void         save_dependencies_report (const char *baseFolder, const char *dbName = NULL, asset2::eFilter filter = eFilter::both);
+            static void         save_dependencies_report (const char *baseFolder, const char *dbName = NULL);
 
 		public:
 						Builder (gos::GPU *gpuIN);
@@ -85,7 +86,7 @@ namespace gos
 			bool		priv_gosassetd_scan_folder (DBContext &ctx, const char *folder_path, HashedStringList *out_listof_gosassetd_toRebuild) const;
             bool        priv_gosassetd_scan_folder_parse (DBContext &ctx, const char *filename, HashedStringList *out_listof_gosassetd_toRebuild) const;
             bool        priv_gosassetd_build (DBContext &ctx, const char *absFilename, UniqueUIDList *out_listOfBuiltAssets);
-            bool        priv_gosassetd_buildSection (DBContext &ctx, u32 &in_out_nextAnonymAssetName, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets);
+            bool        priv_gosassetd_buildSection (DBContext &ctx, u32 &in_out_nextAnonymAssetName, UniqueStringList &in_out_listof_knownRTname, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets);
 
             BuilderInterface*   priv_findBuilderByClassName (const char *assetClassName) const;
 

@@ -8,34 +8,25 @@
       src: shader/vs1.shader
     }
 
-    @pxl_shader
+    @pxl_shader : ps-per-pipe1
     {
       src: shader/ps1.shader
     }
 }
 
-//VS noname
-@vtx_shader
+//VS vs-per-pipe1
+@vtx_shader : vs-per-pipe1
 {
   src: shader/vs2.shader
 }
 
-// //VS-1
-// @vtx_shader : VS-1
-// {
-//   src: shader/vs1.shader
-// }
-//
-// //VS-2
-// @vtx_shader : VS-2
-// {
-//   src: shader/vs2.shader
-// }
-//
-//PIPE-2
-// @pipe: pipe-1
-// {
-//     rt0: U8_RGBA
-//     @vtx_shader: VS-1
-//     @pxl_shader: PS-1
-// }
+
+//PIPE-1
+@pipe: pipe-1
+{
+    rt0: U8_RGBA
+    @vtx_shader: vs-per-pipe1
+    @pxl_shader: ps-per-pipe1
+}
+
+

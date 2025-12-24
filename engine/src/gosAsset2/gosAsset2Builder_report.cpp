@@ -310,7 +310,7 @@ WHERE T1.UID=%" PRIu64 "", uid._uid);
 
 
 //***********************************
-void Builder::get_dependencies_report (gos::UTF8String &out, const char *dbName, const char *baseFolder, eFilter filter)
+void Builder::get_dependencies_report (gos::UTF8String &out, const char *dbName, const char *baseFolder)
 {
     DBContext ctx;
     bool ret;
@@ -325,7 +325,9 @@ void Builder::get_dependencies_report (gos::UTF8String &out, const char *dbName,
     }
 
     db::RST rstAssetList;
-    if (eFilter::only_resources == filter || eFilter::both == filter)
+    db::RST rst2;
+
+    //resource list
     {
         out << "\n\n"
             << "========================== RESOURCES LIST ==========================\n\n"
@@ -335,8 +337,7 @@ void Builder::get_dependencies_report (gos::UTF8String &out, const char *dbName,
         Builder__do_print (ctx, out, rstAssetList);
     }
 
-
-    if (eFilter::only_assets == filter || eFilter::both == filter)
+    //virtual asset list
     {
         out << "\n\n"
             << "========================== VIRTUAL ASSETS LIST ==========================\n\n"
@@ -346,25 +347,65 @@ void Builder::get_dependencies_report (gos::UTF8String &out, const char *dbName,
         Builder__do_print (ctx, out, rstAssetList);
     }
 
+    //asset list
+    {
+        out << "\n\n"
+            << "========================== ASSETS LIST ==========================\n\n"
+            << "Asset UID        | Type         | runtimeName-list\n"
+            << "-----------------+--------------+--------------------------------------------------------------\n";
+
+        db::query (ctx.db, "SELECT UID FROM " GOS_ASSET2__TABLE_ASSET_LIST " ORDER BY UID", &rstAssetList);
+        while (rstAssetList.fetchRow())
+        {
+            UID uid;  uid._uid = rstAssetList.getValAsU64(0);
+
+            out << STRFMT("%016" PRIX64 "", uid._uid) << " | " 
+                << STRFMT("%-12s", asset2::enumToString (uid.getAssetType())) << " | ";
+
+            char s[512];
+            sprintf_s (s, sizeof(s), "SELECT rtname FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE UID_asset=%" PRIu64 " ORDER BY rtname", uid._uid);
+            db::query (ctx.db, s, &rst2);
+            while (rst2.fetchRow())
+            {
+                const char *name = rst2.getVal(0);
+                if (name[0] != '_' && name[1] != '_')
+                    out << "\"" << name << "\" ";
+            }
+            out << "\n";
+            
+            sprintf_s (s, sizeof(s), "SELECT childUID FROM " GOS_ASSET2__TABLE_DEPENDS_RUNTIME " WHERE UID=%" PRIu64 " ORDER BY childUID", uid._uid);
+            db::query (ctx.db, s, &rst2);
+            if (rst2.fetchRow())
+            {
+                out << "\truntime-dep: " << STRFMT("%016" PRIX64 "", rst2.getValAsU64(0));
+                while (rst2.fetchRow())
+                {
+                    out << " | " << STRFMT("%016" PRIX64 "", rst2.getValAsU64(0));
+                }
+                out << "\n";
+            }
+        }
+    }
+
     dbcontext_close(ctx);
 }
 
 //***********************************
-void Builder::print_dependencies_report (const char *baseFolder, const char *dbName, eFilter filter)
+void Builder::print_dependencies_report (const char *baseFolder, const char *dbName)
 {
     gos::UTF8String out;
     out.prealloc (4096);
 
-    get_dependencies_report (out, dbName, baseFolder, filter);
+    get_dependencies_report (out, dbName, baseFolder);
     printf ("%s\n\n", out.getBuffer());
 }
 
 //***********************************
-void Builder::save_dependencies_report (const char *baseFolder, const char *dbName, eFilter filter)
+void Builder::save_dependencies_report (const char *baseFolder, const char *dbName)
 {
     gos::UTF8String out;
     out.prealloc (4096);
-    get_dependencies_report (out, dbName, baseFolder, filter);
+    get_dependencies_report (out, dbName, baseFolder);
 
     
     char s[512];
