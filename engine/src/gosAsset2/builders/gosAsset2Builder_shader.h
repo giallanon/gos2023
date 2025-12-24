@@ -30,13 +30,6 @@ namespace gos
         class Builder_shader : public BuilderInterface
         {
         public:
-            /**
-             * @brief   calc_depth e' mandatorio, va implementato in tutti i Builder.
-                        Per una descrizione piu' accurata del significato, vedi gosAssetBuilder_pipedef
-            */
-            //static u32  calc_depth()                                                                     { return 1; }
-
-        public:
                         Builder_shader (eAssetType assTypeIN) : BuilderInterface (assTypeIN)            { }
                         ~Builder_shader()                                                               { }
 
@@ -66,9 +59,6 @@ namespace gos
         class Builder_vtxShader : public Builder_shader
         {
         public:
-            static u32  calc_depth()                                                    { return Builder_shader::calc_depth(); }
-
-        public:
                         Builder_vtxShader () : Builder_shader (eAssetType::vtx_shader)  { }
                         ~Builder_vtxShader()                                            { }
         }; //class Builder_vtxShader
@@ -80,9 +70,6 @@ namespace gos
          */
         class Builder_pxlShader : public Builder_shader
         {
-        public:
-            static u32  calc_depth()                                                    { return Builder_shader::calc_depth(); }
-
         public:
                     Builder_pxlShader () : Builder_shader (eAssetType::pxl_shader)      { }
                     ~Builder_pxlShader()                                                { }

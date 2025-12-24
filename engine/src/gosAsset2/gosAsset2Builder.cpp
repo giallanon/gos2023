@@ -11,6 +11,8 @@ using namespace gos::asset2;
 
 
 
+
+
 //****************************** 
 Builder::Builder(gos::GPU *gpuIN)
 {
@@ -38,7 +40,7 @@ Builder::~Builder()
 }
 
 //***********************************
-bool Builder::priv_addBuilder (BuilderInterface *builder, u32 asset_depth)
+bool Builder::priv_addBuilder (BuilderInterface *builder)
 {
     assert (NULL != builder);
     
@@ -48,7 +50,6 @@ bool Builder::priv_addBuilder (BuilderInterface *builder, u32 asset_depth)
     if (NULL == builderList[index])
     {
         builderList[index] = builder;
-        depthByAssetTypeList[index] = asset_depth;
         builder->initOnce(gpu);
         return true;
     }
@@ -120,7 +121,7 @@ void Builder::priv_printResList (const ResList &list) const
 }
 
 //***********************************
-void Builder::debug_sanityCheck (const char *baseFolder)
+bool Builder::debug_sanityCheck (const char *baseFolder)
 {
 	static const char DB_NAME[] = {"sanitycheck.sqlite3"};
 
@@ -137,10 +138,11 @@ void Builder::debug_sanityCheck (const char *baseFolder)
 	if (!asset2::dbcontext_open_ex (baseFolder, DB_NAME, &ctxSanity))
 	{
 		logger->err ("Can't create DB\n");
-		return;
+		return false;
 	}
-	const bool ret = priv_build (ctxSanity, false);
-
+	
+	
+	bool ret = priv_build (ctxSanity, false);
     if (!ret)
 	{
         logger->log (eTextColor::red, "sanity build FAILED\n");
@@ -148,15 +150,22 @@ void Builder::debug_sanityCheck (const char *baseFolder)
 	else
 	{
 		if (debug_sanityCheck__compareDB (ctxSanity, baseFolder))
+		{
 			logger->log (eTextColor::green, "success\n");
+			
+			//delete db sanity
+			sprintf_s (s, sizeof(s), "%s/%s", baseFolder, DB_NAME);
+			fs::fileDelete(s);
+		}
 		else
+		{
+			save_dependencies_report (baseFolder, DB_NAME);
 			logger->log (eTextColor::red, "FAILED\n");
+		}
 	}
 	asset2::dbcontext_close (ctxSanity);
 
-	//delelte db sanity
-	sprintf_s (s, sizeof(s), "%s/%s", baseFolder, DB_NAME);
-	fs::fileDelete(s);
+	return ret;
 }
 
 //***********************************
@@ -173,7 +182,7 @@ bool Builder::debug_sanityCheck__compareDB (DBContext &ctxSanity, const char *ba
 	}
     
 	char s[1024];
-	sprintf_s (s, sizeof(s), "SELECT UID,type,src FROM " GOS_ASSET2__TABLE_ASSET_LIST " ORDER BY UID");
+	sprintf_s (s, sizeof(s), "SELECT UID FROM " GOS_ASSET2__TABLE_ASSET_LIST " ORDER BY UID");
 	if (!debug_sanityCheck__cmp_table (ctxSanity, ctx, s, GOS_ASSET2__TABLE_ASSET_LIST))
 		ret = false;
 
@@ -185,15 +194,15 @@ bool Builder::debug_sanityCheck__compareDB (DBContext &ctxSanity, const char *ba
 	if (!debug_sanityCheck__cmp_table (ctxSanity, ctx, s, GOS_ASSET2__TABLE_RES))
 		ret = false;
 
-	sprintf_s (s, sizeof(s), "SELECT name,assetUID FROM " GOS_ASSET2__TABLE_RUNTIME_NAME " ORDER BY name");
-	if (!debug_sanityCheck__cmp_table (ctxSanity, ctx, s, GOS_ASSET2__TABLE_RUNTIME_NAME))
-		ret = false;
-
-	sprintf_s (s, sizeof(s), "SELECT UID,childUID,childDepth FROM " GOS_ASSET2__TABLE_DEPENDS_RUNTIME " ORDER BY UID");
+	sprintf_s (s, sizeof(s), "SELECT UID,childUID FROM " GOS_ASSET2__TABLE_DEPENDS_RUNTIME " ORDER BY UID");
 	if (!debug_sanityCheck__cmp_table (ctxSanity, ctx, s, GOS_ASSET2__TABLE_DEPENDS_RUNTIME))
 		ret = false;
 
-    asset2::dbcontext_close (ctx);
+	sprintf_s (s, sizeof(s), "SELECT UID,UID_ini,line,UID_asset FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " ORDER BY UID,UID_ini,line,UID_asset");
+	if (!debug_sanityCheck__cmp_table (ctxSanity, ctx, s, GOS_ASSET2__TABLE_VIRTUAL_ASSET))
+		ret = false;
+
+	asset2::dbcontext_close (ctx);
 	return ret;
 }
 
@@ -267,7 +276,7 @@ bool Builder::rebuildAll (const char *baseFolder)
 	char s[1024];
 
 	//del del database
-	sprintf_s (s, sizeof(s), "%s/assets2.sqlite3", baseFolder);
+	sprintf_s (s, sizeof(s), "%s/" GOS_ASSET2__DEFAULT_DB_NAME "", baseFolder);
 	fs::fileDelete(s);
 
 	DBContext ctx;
@@ -302,12 +311,12 @@ bool Builder::priv_build (DBContext &ctx,  bool bDoCreateAssetFile)
 {
 	gos::DateTime dt;
 	dt.setNow_UTC();
-	nextAnonymAssetName = 0;
 	buildTime_UTC = dt.getAsNiceU64();
 
 
 	HashedStringList listof_gosAssetd_toBeRebuilt(localAllocator, 256);
-	HashedStringList listof_deleted_assets(localAllocator, 256);
+	UniqueUIDList listof_possibile_assets_to_be_deleted(localAllocator, 256);
+	UniqueUIDList listof_deleted_gosassetd(localAllocator, 256);
 	bool ret = true;
 
 	//verifico lo stato di tutte le risorse presenti nel DB per vedere se qualcuna di queste
@@ -320,7 +329,7 @@ bool Builder::priv_build (DBContext &ctx,  bool bDoCreateAssetFile)
 		ret = priv_gosassetd_scan_folder (ctx, ctx.folder_assets_src, &listof_gosAssetd_toBeRebuilt);
 
 		//scanno tutte le risorse gia' presenti nel DB
-		priv_resource_scan_DB (ctx, &listof_gosAssetd_toBeRebuilt, &listof_deleted_assets);
+		priv_resource_scan_DB (ctx, &listof_gosAssetd_toBeRebuilt, &listof_deleted_gosassetd, &listof_possibile_assets_to_be_deleted);
 
 		logger->log ("finished\n");
 	}
@@ -328,9 +337,20 @@ bool Builder::priv_build (DBContext &ctx,  bool bDoCreateAssetFile)
 	if (!ret)
 		return false;
 
+	//dalla lista dei possibili concrete-asset da deletare, verifico quali sono effettivamente da cancellare
+	UniqueUIDList listof_deleted_assets(localAllocator, 256);
+	listof_possibile_assets_to_be_deleted.forEach( [&ctx, &listof_deleted_assets](u32 index, const UID uid) {
+		if (!asset_is_still_in_use(ctx, uid))
+		{
+			listof_deleted_assets.insertIfNotExists(uid);
+			asset_delete(ctx, uid);
+		}
+		return true;
+	});
+
 
 	//ora ho una lista di gosasset_d che devo rebuildare, la processo
-	HashedStringList listof_builtAssets(localAllocator, 256);
+	UniqueUIDList listof_builtAssets(localAllocator, 256);
 	logger->log ("\nList of .gosasset_d to be rebuilt:\n");
 	{
 		logger->incIndent();
@@ -338,47 +358,44 @@ bool Builder::priv_build (DBContext &ctx,  bool bDoCreateAssetFile)
 		{
 			logger->log ("Nothing to do\n");
 			logger->decIndent();
-			return true;
 		}
-
-		auto list = listof_gosAssetd_toBeRebuilt._queryList();
-		for (u32 i=0; i< list->getNElem(); i++)
+		else
 		{
-			UID uid = list->queryElem(i).key;
-			const char *absFilename = list->queryElem(i).value.getBuffer();
+			auto list = listof_gosAssetd_toBeRebuilt._queryList();
+			for (u32 i=0; i< list->getNElem(); i++)
+			{
+				UID uid = list->queryElem(i).key;
+				const char *absFilename = list->queryElem(i).value.getBuffer();
 
-			logger->log ("[%-12s] %016" PRIX64 " %s\n", asset2::enumToString (uid.getResourceType()), uid._uid, absFilename);
-		}
-		logger->decIndent();
-
-		//build
-		for (u32 i=0; i< list->getNElem(); i++)
-		{
-			UID uid = list->queryElem(i).key;
-			const char *absFilename = list->queryElem(i).value.getBuffer();
-			logger->log ("\nbuilding %016" PRIX64 " %s\n", uid._uid, absFilename);
-			logger->incIndent();
-			ret = priv_gosassetd_build(ctx, absFilename, &listof_builtAssets);
+				logger->log ("[%-12s] %016" PRIX64 " %s\n", asset2::enumToString (uid.getResourceType()), uid._uid, absFilename);
+			}
 			logger->decIndent();
 
-			if (!ret)
-				break;
-		}
-		
+			//build
+			for (u32 i=0; i< list->getNElem(); i++)
+			{
+				UID uid = list->queryElem(i).key;
+				const char *absFilename = list->queryElem(i).value.getBuffer();
+				logger->log ("\nbuilding %016" PRIX64 " %s\n", uid._uid, absFilename);
+				logger->incIndent();
+				ret = priv_gosassetd_build(ctx, absFilename, &listof_builtAssets);
+				logger->decIndent();
+
+				if (!ret)
+					break;
+			}
+		}		
 	}
 	
 	if (ret)
 	{
 		//clean up del DB
-		//Elimino tutti i runtimeName che iniziano con __ dato che li ho creati io artificialmente durante il build
-		db::exec (ctx.db, "DELETE FROM " GOS_ASSET2__TABLE_RUNTIME_NAME " WHERE name LIKE '!_!_%' escape '!'");
-
 		if (listof_deleted_assets.getNElem())
 		{
 			logger->log ("\nlist of deleted assets:\n");
 			logger->incIndent();
-			listof_deleted_assets.forEach( [logger=this->logger](const UID uid, const UTF8String &src) {
-				logger->log ("[%-12s] %016" PRIX64 " %s\n", asset2::enumToString (uid.getAssetType()), uid._uid, src.getBuffer());
+			listof_deleted_assets.forEach( [logger=this->logger](u32 index, const UID uid) {
+				logger->log ("[%-12s] %016" PRIX64 "\n", asset2::enumToString (uid.getAssetType()), uid._uid);
 				return true;
 			});
 			logger->decIndent();
@@ -388,8 +405,8 @@ bool Builder::priv_build (DBContext &ctx,  bool bDoCreateAssetFile)
 		{
 			logger->log ("\nlist of built assets:\n");
 			logger->incIndent();
-			listof_builtAssets.forEach( [logger=this->logger](const UID uid, const UTF8String &src) {
-				logger->log ("[%-12s] %016" PRIX64 " %s\n", asset2::enumToString (uid.getAssetType()), uid._uid, src.getBuffer());
+			listof_builtAssets.forEach( [logger=this->logger](u32 index, const UID uid) {
+				logger->log ("[%-12s] %016" PRIX64 "\n", asset2::enumToString (uid.getAssetType()), uid._uid);
 				return true;
 			});
 			logger->decIndent();
@@ -403,7 +420,7 @@ bool Builder::priv_build (DBContext &ctx,  bool bDoCreateAssetFile)
 /****************************** 
  * Recupero tutte le risorse storate nel DB e per ciascuna di queste verifico se sono state modificate o eliminate.
  */
-void Builder::priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listof_gosassetd_toRebuild, HashedStringList *out_listOfDeleteAssets) const
+void Builder::priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listof_gosassetd_toRebuild,  UniqueUIDList *out_listof_deleted_gosassetd, UniqueUIDList *out_listOfPossibileAssetsToBeDeleted) const
 {
 	char s[1024];
     sprintf_s (s, sizeof(s), "SELECT UID,lastTimeMod,abspath FROM " GOS_ASSET2__TABLE_RES " ORDER BY abspath");
@@ -427,6 +444,8 @@ void Builder::priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listo
 		{
 			//la risorsa e' stata eliminata
 			elem.status = eBuildStatus::DELETED;
+			if (elem.uid.isAResourceOfType(eResType::gosasset_d))
+				out_listof_deleted_gosassetd->insertIfNotExists(elem.uid);
 		}
 		else
 		{
@@ -455,39 +474,44 @@ void Builder::priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listo
 			UniqueUIDList uidList(localAllocator, 1024);
 			dependency_get_requireBy_list (ctx, elem.uid, true, &uidList);
 
-			uidList.forEach ( [&ctx, out_listof_gosassetd_toRebuild, out_listOfDeleteAssets](u32 index, const UID uid) {
+			uidList.forEach ( [&ctx, out_listof_gosassetd_toRebuild, out_listof_deleted_gosassetd, out_listOfPossibileAssetsToBeDeleted](u32 index, const UID uid) {
 				if (uid.isAResource())
 				{
 					if (eResType::gosasset_d == uid.getResourceType())
 					{
-						char absFilename[1024];
-						if (res_get_info (ctx, uid, absFilename, sizeof(absFilename), NULL, NULL))
-							out_listof_gosassetd_toRebuild->insertIfNotExists (uid, absFilename);
+						char s[1024];
+						if (res_get_info (ctx, uid, s, sizeof(s), NULL, NULL))
+						{
+							if (out_listof_deleted_gosassetd->insertIfNotExists(uid))
+								out_listof_gosassetd_toRebuild->insertIfNotExists (uid, s);
+						}
 					}
 					
 					res_delete (ctx, uid);
 				}
+				else if (uid.isVirtualAsset())
+				{
+					UID uid_ini;
+					UID uid_concrete_asset;
+					if (virtasset_get_info (ctx, uid, &uid_ini, &uid_concrete_asset))
+					{
+						char s[1024];
+						if (res_get_info (ctx, uid_ini, s, sizeof(s), NULL, NULL))
+						{
+							if (out_listof_deleted_gosassetd->insertIfNotExists(uid_ini))
+								out_listof_gosassetd_toRebuild->insertIfNotExists (uid_ini, s);
+							out_listOfPossibileAssetsToBeDeleted->insertIfNotExists (uid_concrete_asset);
+						}
+					}
+
+					virtasset_delete (ctx, uid);					
+				}
 				else
 				{
-					char src[1024];
-					asset_get_info (ctx, uid, src, sizeof(src), NULL, NULL);
-					out_listOfDeleteAssets->insertIfNotExists(uid, src);
-					asset_delete (ctx, uid);
-
-					//src contiene il nome del file gosasset_d dove questo asset e' definito
-					//Devo aggiungere questo gosasset_d alla lista di quelli da rebuildare visto che sto
-					//eliminado un suo asset
-					u32 i=0;
-					while (src[i] != 0)
-					{
-						if (src[i] == '@')
-							src[i] = 0x00;
-						else
-							i++;
-					}
-					UID uid_of_gosasset_d;
-					res_createUID (eResType::gosasset_d, src, &uid_of_gosasset_d);
-					out_listof_gosassetd_toRebuild->insertIfNotExists (uid_of_gosasset_d, src);
+					//in questa lista non ci possono essere dei concrete-asset perche' i
+					//concrete sono "required" solo dai virtual-asset
+					assert (uid.isAnAsset());
+					DBGBREAK;
 				}
 				return true;
 			});
@@ -637,7 +661,7 @@ void Builder::priv_fromDirectiveNameToAssetClassName (const char *directiveName,
 }
 
 //****************************** 
-bool Builder::priv_gosassetd_build (DBContext &ctx, const char *absFilename, HashedStringList *out_listOfBuiltAssets)
+bool Builder::priv_gosassetd_build (DBContext &ctx, const char *absFilename, UniqueUIDList *out_listOfBuiltAssets)
 {
 	gos::IniFile ini;
 	if (!ini.loadAndParse (absFilename))
@@ -654,17 +678,13 @@ bool Builder::priv_gosassetd_build (DBContext &ctx, const char *absFilename, Has
 			return false;
 	}
 
-	return priv_gosassetd_buildSection (ctx, absFilename, uid_of_iniFile, ini.getRoot(), out_listOfBuiltAssets);
+	u32 nextAnonymAssetName = 0;
+	return priv_gosassetd_buildSection (ctx, nextAnonymAssetName, absFilename, uid_of_iniFile, ini.getRoot(), out_listOfBuiltAssets);
 }
 
 //****************************** 
-bool Builder::priv_gosassetd_buildSection (DBContext &ctx, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, HashedStringList *out_listOfBuiltAssets)
+bool Builder::priv_gosassetd_buildSection (DBContext &ctx, u32 &in_out_nextAnonymAssetName, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets)
 {
-	//All'interno di una <section> ci possono essere diverse dichiarazioni di asset.
-	//Le voglio processare in ordine di asset_depth, dalla piu' semplice alla piu' complessa
-	u32 maxDepthFound = 0;
-
-	//faccio un primo giro per trovare la max depth
 	for (u32 iSec=0; iSec<section->getNSubsection(); iSec++)
 	{
 		//deve essere di tipo direttiva, altrimenti e' un errore
@@ -687,132 +707,80 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, const char *absFilena
 			logger->err ("line %d => can't find a builder for asset of type '%s'\n", sub->getLineStarted(), assetClass);
 			return false;
 		}
-		const u32 depth = priv_getDepthByAssetType (builder->getAssetType());
-		if (depth > maxDepthFound)
-			maxDepthFound = depth;
 
 		//se non ha un runtimeName per l'asset che descrive, gliene assegno uno d'ufficio
+		char assetRuntimeName[128];
 		if (!sub->exists ("__value"))
 		{
-			char assetRuntimeName[128];
-			sprintf_s (assetRuntimeName, sizeof(assetRuntimeName), "__assname_%06d", nextAnonymAssetName++);
+			sprintf_s (assetRuntimeName, sizeof(assetRuntimeName), "__%" PRIu64 "_%06d", uid_of_iniFile._uid, in_out_nextAnonymAssetName++);
 			sub->set ("__value", assetRuntimeName);
 		}			
-	}
-
-	//buildo in ordine di depth
-	for (u32 depth=1; depth<=maxDepthFound; depth++)
-	{
-		for (u32 iSec=0; iSec<section->getNSubsection(); iSec++)
-		{
-			gos::IniFileSection *sub = section->getSubsectionByIndex(iSec);
-			const char *subName = sub->name.getBuffer();
-
-			//verifico che tipo di asset sta descrivendo.
-			char assetClass[64];
-			priv_fromDirectiveNameToAssetClassName (subName, assetClass, sizeof(assetClass));
-
-			//recuper il builder adeguato e processo solo se la sua depth==depth-corrente
-			BuilderInterface* builder = priv_findBuilderByClassName(assetClass);
-			const u32 myDepth = priv_getDepthByAssetType (builder->getAssetType());
-			if (myDepth != depth)
-				continue;
-
-
-			//recupero asset runtime name
-			char assetRuntimeName[128];
+		else
 			sub->get ("__value", assetRuntimeName, sizeof(assetRuntimeName));
 
-			//buildo
-			logger->log ("line %d, %s : %s\n", sub->getLineStarted(), assetClass, assetRuntimeName);
-			logger->incIndent();
-			bool ret = false;
-			while (1)
+		//buildo
+		logger->log ("line %d, %s : %s\n", sub->getLineStarted(), assetClass, assetRuntimeName);
+		logger->incIndent();
+		bool ret = false;
+		while (1)
+		{
+			//se e' il nome di una sezione con un runtime-name ma nessun parametro, vuol dire che e' una direttiva
+			//gia' risolta che punta ad un runtime-name ben specifico.
+			//In sostanza, e' una sottodirettiva di una direttiva di livello superiore (es: @vtx_shader all'interno di @pipe)
+			if (1 == sub->getNIdentifier() && assetRuntimeName[0]!='_' && assetRuntimeName[1]!='_')
 			{
-				//se e' il nome di una sezione con un runtime-name ma nessun parametro, vuol dire che e' una direttiva
-				//gia' risolta che punta ad un runtime-name ben specifico.
-				//In sostanza, e' una sottodirettiva di una direttiva di livello superiore (es: @vtx_shader all'interno di @pipe)
-				if (1 == sub->getNIdentifier() && assetRuntimeName[0]!='_' && assetRuntimeName[1]!='_')
-				{
-					ret = true;
-					logger->log ("skip\n");
-					break;
-				}
-
-				//asset con depth > 1 possono avere delle subsection inline, che devo risolvere prima
-				//di poter buildare l'asset
-				if (sub->getNSubsection())
-				{
-					if (!priv_gosassetd_buildSection (ctx, absFilename, uid_of_iniFile, sub, out_listOfBuiltAssets))
-						break;
-				}
-
-				sBuildResult result;
-				builder->setLogger(logger);
-				if (!builder->build (ctx, buildTime_UTC, absFilename, uid_of_iniFile, sub, true, &result))
-					break;
-				
-				//report a video del risultato della build
-				eTextColor color = eTextColor::green;
-				if (eBuildResult::was_already_built == result.result)
-					color = eTextColor::darkBlue;
-				logger->log (color, "%016" PRIX64 " [%-17s] \n", result.uid._uid, asset2::enumToString(result.result));			
-
-				/*  ok, l'asset e' stato buildato con successo ed e' stato inserito nel DB
-					Se e' associato ad un runtimeName, devo registrare il link
-				*/
-				UID uidRT = result.uid;
-				color = eTextColor::darkBlue;
-				if (!rtname_exists (ctx, assetRuntimeName, &uidRT))
-				{
-					if (!rtname_insert (ctx, assetRuntimeName, result.uid))
-						break;
-					uidRT = result.uid;
-					color = eTextColor::green;
-				}
-
-				//il runtimeName esiste gia' nel DB.
-				//Se punta allo stesso UID, tutto bene, altrimenti c'e' un problema
-				if (uidRT != result.uid)
-				{
-					logger->log (eTextColor::red, "runtimename '%s' already exists and is linked to asset %016" PRIX64 "\n", assetRuntimeName, uidRT._uid);
-					return false;
-				}
-				logger->log (color, "%016" PRIX64 " is now known as '%s'\n", result.uid._uid, assetRuntimeName);
-
-
-				//calcolo e scrivo le dipendenze runtime di questo asset
-				//Per "dipendenze runtime" intendo una lista di altri asset (e non risorse) dai quali questo asset dipende
-				if (eBuildResult::just_built == result.result)
-				{
-					out_listOfBuiltAssets->insertIfNotExists (result.uid, result.src);
-
-					if (result.uid.getAssetDepth() > 1)
-					{
-						UniqueUIDList   hashList1 (localAllocator, 256);
-						dependency_get_dependecies_list (ctx, result.uid, true, &hashList1);
-
-						auto list = hashList1._queryList();
-						for (u32 i=0; i<list->getNElem(); i++)
-						{
-							const UID childUID = list->queryElem(i);
-							if (childUID.isAnAsset())
-								dependencyRT_add (ctx, result.uid, childUID, priv_getDepthByAssetType (childUID.getAssetType()));
-						}
-					}    
-				}
-
-				
-				//fine while (1)
 				ret = true;
+				logger->log ("skip\n");
 				break;
 			}
-			logger->decIndent();
 
-			if (!ret)
-				return false;
+			//asset con depth > 1 possono avere delle subsection inline, che devo risolvere prima
+			//di poter buildare l'asset
+			if (sub->getNSubsection())
+			{
+				if (!priv_gosassetd_buildSection (ctx, in_out_nextAnonymAssetName, absFilename, uid_of_iniFile, sub, out_listOfBuiltAssets))
+					break;
+			}
+
+			sBuildResult result;
+			builder->setLogger(logger);
+			if (!builder->build (ctx, buildTime_UTC, absFilename, uid_of_iniFile, sub, true, &result))
+				break;
+			
+			//report a video del risultato della build
+			eTextColor color = eTextColor::green;
+			if (eBuildResult::was_already_built == result.result)
+				color = eTextColor::darkBlue;
+			logger->log (color, "[%-17s] %016" PRIX64 " [%016" PRIX64 "]\n", asset2::enumToString(result.result), result.uid_virtual_asset._uid, result.uid_concrete_asset._uid);
+
+			//calcolo e scrivo le dipendenze runtime di questo asset
+			//Per "dipendenze runtime" intendo una lista di altri asset (e non risorse) dai quali questo asset dipende
+			if (eBuildResult::just_built == result.result)
+			{
+				out_listOfBuiltAssets->insertIfNotExists (result.uid_concrete_asset);
+
+				UniqueUIDList   hashList1 (localAllocator, 256);
+				dependency_get_dependecies_list (ctx, result.uid_concrete_asset, true, &hashList1);
+
+				auto list = hashList1._queryList();
+				for (u32 i=0; i<list->getNElem(); i++)
+				{
+					const UID childUID = list->queryElem(i);
+					if (childUID.isAnAsset())
+						dependencyRT_add (ctx, result.uid_concrete_asset, childUID);
+				}
+			}
+
+				
+			//fine while (1)
+			ret = true;
+			break;
 		}
-	} //for (u32 depth=1; depth<=maxDepthFound; depth++)
+		logger->decIndent();
+
+		if (!ret)
+			return false;
+	}
 
 	return true;
 }

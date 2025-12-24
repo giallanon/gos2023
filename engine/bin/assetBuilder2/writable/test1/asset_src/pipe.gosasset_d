@@ -14,12 +14,12 @@
     }
 }
 
-// //VS noname
-// @vtx_shader
-// {
-//   src: shader/vs2.shader
-// }
-//
+//VS noname
+@vtx_shader
+{
+  src: shader/vs2.shader
+}
+
 // //VS-1
 // @vtx_shader : VS-1
 // {

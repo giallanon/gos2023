@@ -45,15 +45,6 @@ namespace gos
         class Builder_pipe : public BuilderInterface
         {
         public:
-            /**
-             * @brief   calc_dept e' mandatorio, va implementato in tutti i Builder.
-                        Il <dept> indica quando profonda e' la descrizione testuale di questo asset.
-                        Se l'asset non dipende da nessun altro asset, la sua dept e' 1  (vedi vtx_shader per esempio).
-                        Se l'asset dipende da almeno un'altro asset, allora la sua dept e' 1 piu' la dept
-                        piu' alta tra tutti gli asset da cui dipende*/
-            //static u32  calc_depth();
-
-        public:
                     Builder_pipe () : BuilderInterface (eAssetType::pipe)                       { }
                     ~Builder_pipe()                                                             { }
 
@@ -76,13 +67,13 @@ namespace gos
                 u32             numRT;
                 eImageFormat    renderTargetFormat[GOSGPU__NUM_MAX_ATTACHMENT];
 
-                UID             uid_vtxshader;
-                UID             uid_pxlshader;
+                UID             uid__virtual_vtxshader;
+                UID             uid__virtual_pxlshader;
             };
 
         private:
             bool    priv_extractParams (const IniFileSection *sec, Params *out_params);
-            bool    priv_do_create_assetFile (DBContext &ctx, const Params &params, const char *filenameDST) const;
+            bool    priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const Params &params, const char *filenameDST) const;
             u32     priv_writePushConstant_rec (gos::BufferW_linear &buffer, gos::datablob::DefElem &elem) const;
             
         }; //class Builder_pipe

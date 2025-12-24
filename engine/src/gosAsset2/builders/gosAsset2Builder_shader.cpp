@@ -104,7 +104,7 @@ bool Builder_shader::build (DBContext &ctx, u64 buildTime_UTC, const char *absFi
         return false;
     }
 
-    //il file gosasset_d dipende dalla risorsa params.uid__resource_shader_txt)
+    //questo file gosasset_d dipende dalla risorsa params.uid__resource_shader_txt) che e' il src dello shader
     if (!asset2::dependency_exists(ctx, uid_of_iniFile, params.uid__resource_shader_txt))
     {
         if (!asset2::dependency_add (ctx, uid_of_iniFile, params.uid__resource_shader_txt)) 
@@ -112,46 +112,50 @@ bool Builder_shader::build (DBContext &ctx, u64 buildTime_UTC, const char *absFi
     }
 
     //calcolo assetUID
-    if (!asset2::asset_createUID (getAssetType(), calc_depth(), &params, sizeof(Params), &out_result->uid))
+    if (!asset2::asset_createUID (getAssetType(), &params, sizeof(Params), &out_result->uid_concrete_asset))
     {
-        logger->log (eTextColor::red, "error generating assetUID\n");
+        logger->log (eTextColor::red, "error generating concrete assetUID\n");
         return false;
     }
 
-    /*  Idealmente asset::UID non dovrebbe esistere in tabella visto che lo sto buildando.
-        Potenzialmente pero', lo stesso UID puo' essere generato da diversi asset perche' lo specificano
-        inline o perche' vi fanno riferimento direttamente usando un runtimeName.
-        In linea di massima quindi, se l'asset esiste gia', non sto a ricompilarlo dato che il 
-        risultato sarebbe il medesimo
-    */
-    const u64 lastTimeBuilt = asset2::asset_query_lastTimeBuilt (ctx, out_result->uid);
-    if (0 != lastTimeBuilt)
+
+    //inserisco il virtual asset nel DB
+    char rtname[128];
+    memset (rtname, 0, sizeof(rtname));
+    sec->get("__value", rtname, sizeof(rtname));
+    if (!virtasset_insert (ctx, getAssetType(), rtname, uid_of_iniFile, sec->getLineStarted(), out_result->uid_concrete_asset, &out_result->uid_virtual_asset))
     {
-        //asset::UID esiste gia' nel DB ma e' stato buildato a questo giro di build, quindi va bene,
-        //semplicemente non sto a buildarlo una seconda volta
+        logger->log (eTextColor::red, "error inserting virtual assetUID\n");
+        return false;
+    }
+
+
+    //vediamo se il concrete-asset esiste gia' nel DB
+    if (asset2::asset_exists (ctx, out_result->uid_concrete_asset))
+    {
         out_result->result = eBuildResult::was_already_built;
-        return true;
     }
-
-
-    //asset::UID non esisteva nel DB, ottimo, lo aggiungo e termino con successo
-    sprintf_s (out_result->src, sizeof(out_result->src), "%s@%d", absFilename, sec->getLineStarted());
-    if (!asset2::asset_insert (ctx, out_result->uid, getAssetType(), buildTime_UTC, out_result->src))
+    else
     {
-        logger->log (eTextColor::red, "error inserting asset in DB\n");
-        return false;
+        //non esisteva nel DB, ottimo, lo aggiungo e poi lo buildo
+        out_result->result = eBuildResult::just_built;
+        if (!asset_insert (ctx, out_result->uid_concrete_asset))
+        {
+            logger->log (eTextColor::red, "error inserting asset in DB\n");
+            return false;
+        }        
     }
 
     //aggiungo le sue dipendenze
-    if (!asset2::dependency_add (ctx, out_result->uid, uid_of_iniFile)) return false;        
-    if (!asset2::dependency_add (ctx, out_result->uid, params.uid__resource_shader_txt)) return false;
+    if (!dependency_add (ctx, out_result->uid_virtual_asset, uid_of_iniFile)) return false;        
+    if (!dependency_add (ctx, out_result->uid_virtual_asset, out_result->uid_concrete_asset)) return false;
+    if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__resource_shader_txt)) return false;
+    
 
-    //segno che e' stato buildato di fresco
-    out_result->result = eBuildResult::just_built;
 
 
     //a questo punto devo compilare lo shader per davvero
-    if (doCreateAnAssetFile)
+    if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
     {
         char shaderStage[8];
         if (eAssetType::vtx_shader == getAssetType())
@@ -160,7 +164,7 @@ bool Builder_shader::build (DBContext &ctx, u64 buildTime_UTC, const char *absFi
             sprintf_s (shaderStage, sizeof(shaderStage), "frag");
 
         char filenameDST[1024];
-        asset2::asset_manufacture_fullFilename (ctx, out_result->uid, filenameDST, sizeof(filenameDST));
+        asset2::asset_manufacture_fullFilename (ctx, out_result->uid_concrete_asset, filenameDST, sizeof(filenameDST));
 
         //creo la versione ottimizzata e la versione con le debug-info. Quest'ultima
         //serve per esempio alle pipeline_def per recuprare i nomi e il formato dei descrittori

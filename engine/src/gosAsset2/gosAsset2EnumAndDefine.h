@@ -49,10 +49,10 @@ namespace gos
          *          E' logicamente composto da 2 u32
          *          La parte bassa e' un CRC32 che dipende dai parametri di build, oppure un hash del name nel caso di risorse pure
          *          La parte alta:
-         *              0x00            => limitazione dovuta a sqllite che tratta tutto come signed integer
+         *              0x00            => posso usare solo 7 bit per via della limitazione dovuta a sqllite che tratta tutto come signed integer
+         *                  bit 0x01    => 0 normalmente, 1 se si tratta di virtual asset
          *              eAssetType      => se identifica un asset, allora questo byte != 0
          *              eResouceType    => se identifica una risorsa, allora questo byte != 0 ed e' di tipo eResType
-         *              asset_depth     => se identifica un asset, allora questo byte indica la "depth" come ritornata dal builder specifico della risorsa
          */
         struct UID
         {
@@ -66,10 +66,13 @@ namespace gos
             eResType    getResourceType() const                                 { return static_cast<eResType>(priv_extractResourceType()); }
             bool        isAResourceOfType(eResType s) const                     { return (getResourceType() == s); }
 
-            bool        isAnAsset() const                                       { return ( priv_extractAssetType() != 0); }
-            eAssetType  getAssetType() const                                    { return static_cast<eAssetType>(priv_extractAssetType()); }
-            bool        isAnAssetOfType(eAssetType s) const                     { return (getAssetType() == s); }
-            u8          getAssetDepth() const                                   { assert(isAnAsset()); return static_cast<u8>((_uid >> 32) & 0xFF); }
+            bool        isAnAsset() const                                       { return ( !isVirtualAsset() && priv_extractAssetType() != 0); }
+            eAssetType  getAssetType() const                                    { assert(!isVirtualAsset()); return static_cast<eAssetType>(priv_extractAssetType()); }
+            bool        isAnAssetOfType(eAssetType s) const                     { assert(!isVirtualAsset()); return (getAssetType() == s); }
+
+            bool        isVirtualAsset() const                                  { return ((_uid & 0x0100000000000000) != 0); }
+            eAssetType  getVirtualAssetType() const                             { assert(isVirtualAsset()); return static_cast<eAssetType>(priv_extractAssetType()); }
+            bool        isAVirtualAssetOfType(eAssetType s) const               { assert(isVirtualAsset()); return (getAssetType() == s); }
 
             int         compare (const UID &b) const                            { if (_uid == b._uid) return 0; if (_uid > b._uid) return 1; return -1; }
             bool        operator== (const asset2::UID &b) const                 { return _uid == b._uid; }
@@ -120,12 +123,12 @@ namespace gos
         struct sBuildResult
         {
         public:
-            void            reset()     { uid.setInvalid(); result=eBuildResult::error; memset(src,0,sizeof(src)); }
+            void            reset()     { uid_concrete_asset.setInvalid(); uid_virtual_asset.setInvalid(); result=eBuildResult::error; }
         
         public:
-            UID             uid;
+            UID             uid_concrete_asset;
+            UID             uid_virtual_asset;
             eBuildResult    result;
-            char            src[1024];
         };         
 
     } //namespace asset2

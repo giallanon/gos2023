@@ -15,13 +15,13 @@ namespace gos
 		{
         public:
                                 //appende a <in_out> un report ben formattato con la lista delle dipendenze
-            static void         get_dependencies_report (gos::UTF8String &in_out, const char *baseFolder, asset2::eFilter filter = eFilter::both);
+            static void         get_dependencies_report (gos::UTF8String &in_out, const char *baseFolder, const char *dbName = NULL, asset2::eFilter filter = eFilter::both);
             
                                 //chiama <get_dependencies_report> e poi printf
-            static void         print_dependencies_report (const char *baseFolder, asset2::eFilter filter = eFilter::both);
+            static void         print_dependencies_report (const char *baseFolder, const char *dbName = NULL, asset2::eFilter filter = eFilter::both);
             
                                 //chiama <get_dependencies_report> e poi salva un file di testo in /assets/src/__dependencies.txt
-            static void         save_dependencies_report (const char *baseFolder, asset2::eFilter filter = eFilter::both);
+            static void         save_dependencies_report (const char *baseFolder, const char *dbName = NULL, asset2::eFilter filter = eFilter::both);
 
 		public:
 						Builder (gos::GPU *gpuIN);
@@ -31,8 +31,7 @@ namespace gos
             bool        addBuilder ()
                         {
                             TBUILDER *builder = GOSNEW(localAllocator, TBUILDER)();
-                            const u32 depth = TBUILDER::calc_depth();
-                            if (priv_addBuilder(builder, depth))
+                            if (priv_addBuilder(builder))
                                 return true;
                             GOSDELETE(localAllocator, builder);
                             return false;
@@ -41,7 +40,7 @@ namespace gos
 			bool		rebuildAll (const char *baseFolder);
 			bool		build (const char *baseFolder);
 
-            void        debug_sanityCheck (const char *baseFolder);
+            bool        debug_sanityCheck (const char *baseFolder);
 
         private:
             enum class eBuildStatus : u8
@@ -73,21 +72,20 @@ namespace gos
 
         private:
             const char*     enumToString (eBuildStatus s) const;
-            bool            priv_addBuilder (BuilderInterface *builder, u32 asset_depth);
+            bool            priv_addBuilder (BuilderInterface *builder);
             void            priv_printResList (const ResList &list) const;
             void            priv_printResListElem (const sResListElem &elem) const;
             bool            priv_extractAllInludePaths (const char *absFilename, gos::StringList *out) const;
-            u32             priv_getDepthByAssetType (eAssetType assType) const                                         { assert (static_cast<u8>(assType) < NUM_MAX_BUILDERS); return depthByAssetTypeList[static_cast<u8>(assType)]; }
             void            priv_fromDirectiveNameToAssetClassName (const char *directiveName, char *out_asseetClassName, u32 sizeof_out) const;
 
 		private:
             bool		priv_build (DBContext &ctx, bool bDoCreateAssetFile);
-            void		priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listof_gosassetd_toRebuild, HashedStringList *out_listOfDeleteAssets) const;
+            void		priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listof_gosassetd_toRebuild, UniqueUIDList *out_listof_deleted_gosassetd, UniqueUIDList *out_listOfPossibileAssetsToBeDeleted) const;
             
 			bool		priv_gosassetd_scan_folder (DBContext &ctx, const char *folder_path, HashedStringList *out_listof_gosassetd_toRebuild) const;
             bool        priv_gosassetd_scan_folder_parse (DBContext &ctx, const char *filename, HashedStringList *out_listof_gosassetd_toRebuild) const;
-            bool        priv_gosassetd_build (DBContext &ctx, const char *absFilename, HashedStringList *out_listOfBuiltAssets);
-            bool        priv_gosassetd_buildSection (DBContext &ctx, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, HashedStringList *out_listOfBuiltAssets);
+            bool        priv_gosassetd_build (DBContext &ctx, const char *absFilename, UniqueUIDList *out_listOfBuiltAssets);
+            bool        priv_gosassetd_buildSection (DBContext &ctx, u32 &in_out_nextAnonymAssetName, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets);
 
             BuilderInterface*   priv_findBuilderByClassName (const char *assetClassName) const;
 
@@ -102,10 +100,8 @@ namespace gos
             gos::Logger         *logger;
             gos::LoggerNull     loggerNull;
             BuilderInterface    *builderList[NUM_MAX_BUILDERS];
-            u32                 depthByAssetTypeList[NUM_MAX_BUILDERS];
 
             u64                 buildTime_UTC;
-            u32                 nextAnonymAssetName;
 
 		};
 

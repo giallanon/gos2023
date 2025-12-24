@@ -2,12 +2,12 @@
 #define _gosAsset2_h_
 #include "gosAsset2EnumAndDefine.h"
 
-
+#define GOS_ASSET2__DEFAULT_DB_NAME         "assets2.sqlite3"
 #define GOS_ASSET2__TABLE_RES               "res"
 #define GOS_ASSET2__TABLE_DEPENDS           "dependencies"
-#define GOS_ASSET2__TABLE_RUNTIME_NAME      "rtname"
 #define GOS_ASSET2__TABLE_ASSET_LIST        "assetList"
 #define GOS_ASSET2__TABLE_DEPENDS_RUNTIME   "dependsRT"
+#define GOS_ASSET2__TABLE_VIRTUAL_ASSET     "virtasset"
 
 namespace gos
 {
@@ -19,8 +19,8 @@ namespace gos
         const char* enumToString (eBuildResult s);
 
         //================ context
-        bool        dbcontext_open (const char *baseFolder, DBContext *out);
         bool        dbcontext_open_ex (const char *baseFolder, const char *dbName, DBContext *out);
+        inline bool dbcontext_open (const char *baseFolder, DBContext *out)                             { return dbcontext_open_ex (baseFolder, GOS_ASSET2__DEFAULT_DB_NAME, out); }
         void        dbcontext_close (DBContext &ctx);
 
 
@@ -35,18 +35,19 @@ namespace gos
         bool        res_delete (DBContext &ctx, const UID &uid);
 
 
-        //================ runtime Name
-        bool        rtname_exists (DBContext &ctx, const char *runtimeName, UID *out_assetUID);
-        bool        rtname_insert (DBContext &ctx, const char *runtimeName, UID assetUID);
+        //================ virtual asset
+        bool        virtasset_insert (DBContext &ctx, eAssetType assType, const char *rtname, UID uid_of_inifile, u32 declared_on_line, UID uid_of_concrete_asset, UID *out_uid);
+        bool        virtasset_get_info (DBContext &ctx, UID uid, UID *out_CAN_BE_NULL_uid_ini, UID *out_CAN_BE_NULL_uid_concrete_asset);
+        bool        virtasset_delete (DBContext &ctx, const UID &uid);
+        bool        virtasset_rtname_exists (DBContext &ctx, const char *rtname, UID *out_uid);
+
 
         //================ asset
         void        asset_manufacture_fullFilename (const DBContext &ctx, UID uid, char *out, u32 sizeof_out);
-        bool        asset_createUID (eAssetType assTypeIN, u8 asset_depth, const void *buffer, u32 sizeof_buffer, UID *out);
-        bool        asset_insert (DBContext &ctx, UID uid, eAssetType assType, u64 lastTimeBuilt, const char *srcAbsFilename);
-        bool        asset_get_info (DBContext &ctx, UID uid, char *out_CAN_BE_NULL_src, u32 sizeof_outsrc, eAssetType *out_CAN_BE_NULL_assetType, u64 *out_CAN_BE_NULL_lastTimeBuilt);
-        
-                    //ritona 0 se uid non esiste nel DB
-        u64         asset_query_lastTimeBuilt (DBContext &ctx, UID uid);
+        bool        asset_createUID (eAssetType assTypeIN, const void *buffer, u32 sizeof_buffer, UID *out);
+        bool        asset_exists (DBContext &ctx, UID uid);
+        bool        asset_insert (DBContext &ctx, UID uid);
+        bool        asset_is_still_in_use(DBContext &ctx, UID uid);
 
         bool        asset_get_runtime_dependecies_list (DBContext &ctx, UID uid, bool bClearListOnStart, FastUIDList *out);
 
@@ -57,7 +58,7 @@ namespace gos
         //================ dependencies
         bool        dependency_exists (DBContext &ctx, UID father, UID child);
         bool        dependency_add (DBContext &ctx, UID father, UID child);
-        bool        dependencyRT_add (DBContext &ctx, UID asset_padre, UID asset_figlio, u8 depth_figlio);
+        bool        dependencyRT_add (DBContext &ctx, UID asset_padre, UID asset_figlio);
         
                     //ritorna in <out> un elenco di risorse/asset da cui <uid> dipende (ricorsivamente)
         bool        dependency_get_dependecies_list (DBContext &ctx, UID uid, bool bClearListOnStart, UniqueUIDList *out);

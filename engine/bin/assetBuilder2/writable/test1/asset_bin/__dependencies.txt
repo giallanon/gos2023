@@ -4,29 +4,51 @@
 
 Resource UID     | Type         | Abspath
 -----------------+--------------+--------------------------------
+00000100123372A1 | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d" 
+
+  depends on (4): 000002000A7CD026  0000020012F04FFD  0000020042F6850A  0000020080CB5575  
+	000002000A7CD026 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader"
+		0000020080CB5575 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+			0000020012F04FFD | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+	0000020042F6850A | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader"
+		0000020080CB5575 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+			0000020012F04FFD | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+
+  required by (2): 010100003C9382FB  01020000C6DB8FBE  
+	010100003C9382FB | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 000100004EA56DF0
+	01020000C6DB8FBE | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 000200007E3D87A4
+
+-----------------+--------------+--------------------------------
 000001007E80F292 | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d" 
 
   depends on (2): 00000200027E621B  00000200EE9C0745  
 	00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
 	00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
 
-  required by (4): 00010001046DF9E9  000100019D8D6CF3  00010001AB79EE57  000300029FF58394  
-	00010001AB79EE57 | asset    | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "VS-1" 
-		000300029FF58394 | asset    | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "" 
-	000100019D8D6CF3 | asset    | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@14 | "VS-2" 
-	00010001046DF9E9 | asset    | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@27 | "VS-1-d1-d2-d3" "alias-VS-1-d1-d2-d3" 
+  required by (7): 0101000059198F9E  010100006244F1AE  0101000079139A8F  010100009804389E  01010000B34FF3FF  01010000CD2480D3  01010000E2AE5605  
+	01010000E2AE5605 | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "__1101634007698_000000" | 00010000AB79EE57
+	01010000CD2480D3 | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@8 | "VS-1" | 00010000AB79EE57
+	010100006244F1AE | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@15 | "VS-2" | 000100009D8D6CF3
+	010100009804389E | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@22 | "__1101634007698_000001" | 00010000046DF9E9
+	01010000B34FF3FF | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@29 | "__1101634007698_000002" | 00010000046DF9E9
+	0101000059198F9E | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@36 | "VS-1-d1-d2-d3" | 00010000046DF9E9
+	0101000079139A8F | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@43 | "alias-VS-1-d1-d2-d3" | 00010000046DF9E9
 
 -----------------+--------------+--------------------------------
 00000100AE48C657 | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d" 
 
-  depends on (2): 00000200027E621B  000002000C5E8590  
+  depends on (3): 00000200027E621B  000002000C5E8590  00000200EE9C0745  
 	00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
 	000002000C5E8590 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+	00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
 
-  required by (2): 000200013CF585FF  000300029FF58394  
-	000200013CF585FF | asset    | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@11 | "PS-1" 
-		000300029FF58394 | asset    | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "" 
-	000300029FF58394 | asset    | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "" 
+  required by (4): 010100006BA7480C  01010000C9841FA8  0102000042BD1568  010300002FF2BB16  
+	010100006BA7480C | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__1102435632727_000001" | 00010000AB79EE57
+		010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
+	0102000042BD1568 | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@11 | "__1102435632727_000002" | 000200003CF585FF
+		010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
+	010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
+	01010000C9841FA8 | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@18 | "__1102435632727_000003" | 000100009D8D6CF3
 
 -----------------+--------------+--------------------------------
 00000100E38C40E9 | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d" 
@@ -35,157 +57,370 @@ Resource UID     | Type         | Abspath
 	000002000C5E8590 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
 	00000200E0BCE0CE | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
 
-  required by (1): 000200010A01075B  
-	000200010A01075B | asset    | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@10 | "PS-2" 
+  required by (2): 010200001BA03B4A  010200005332F6E4  
+	010200005332F6E4 | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@4 | "PS-1" | 000200003CF585FF
+	010200001BA03B4A | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@10 | "PS-2" | 000200000A01075B
 
 -----------------+--------------+--------------------------------
 00000200027E621B | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader" 
 
   depends on (0): 
 
-  required by (7): 000001007E80F292  00000100AE48C657  00010001046DF9E9  000100019D8D6CF3  00010001AB79EE57  000200013CF585FF  000300029FF58394  
+  required by (13): 000001007E80F292  00000100AE48C657  0101000059198F9E  010100006244F1AE  010100006BA7480C  0101000079139A8F  010100009804389E  01010000B34FF3FF  01010000C9841FA8  01010000CD2480D3  01010000E2AE5605  0102000042BD1568  010300002FF2BB16  
 	000001007E80F292 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
-		00010001AB79EE57 | asset    | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "VS-1" 
-			000300029FF58394 | asset    | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "" 
-		000100019D8D6CF3 | asset    | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@14 | "VS-2" 
-		00010001046DF9E9 | asset    | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@27 | "VS-1-d1-d2-d3" "alias-VS-1-d1-d2-d3" 
-	00010001AB79EE57 | asset    | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "VS-1" 
-		000300029FF58394 | asset    | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "" 
-	00010001046DF9E9 | asset    | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@27 | "VS-1-d1-d2-d3" "alias-VS-1-d1-d2-d3" 
+		01010000E2AE5605 | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "__1101634007698_000000" | 00010000AB79EE57
+		01010000CD2480D3 | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@8 | "VS-1" | 00010000AB79EE57
+		010100006244F1AE | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@15 | "VS-2" | 000100009D8D6CF3
+		010100009804389E | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@22 | "__1101634007698_000001" | 00010000046DF9E9
+		01010000B34FF3FF | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@29 | "__1101634007698_000002" | 00010000046DF9E9
+		0101000059198F9E | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@36 | "VS-1-d1-d2-d3" | 00010000046DF9E9
+		0101000079139A8F | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@43 | "alias-VS-1-d1-d2-d3" | 00010000046DF9E9
+	01010000E2AE5605 | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "__1101634007698_000000" | 00010000AB79EE57
+	01010000CD2480D3 | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@8 | "VS-1" | 00010000AB79EE57
+	010100009804389E | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@22 | "__1101634007698_000001" | 00010000046DF9E9
+	01010000B34FF3FF | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@29 | "__1101634007698_000002" | 00010000046DF9E9
+	0101000059198F9E | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@36 | "VS-1-d1-d2-d3" | 00010000046DF9E9
+	0101000079139A8F | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@43 | "alias-VS-1-d1-d2-d3" | 00010000046DF9E9
 	00000100AE48C657 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
-		000200013CF585FF | asset    | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@11 | "PS-1" 
-			000300029FF58394 | asset    | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "" 
-		000300029FF58394 | asset    | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "" 
+		010100006BA7480C | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__1102435632727_000001" | 00010000AB79EE57
+			010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
+		0102000042BD1568 | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@11 | "__1102435632727_000002" | 000200003CF585FF
+			010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
+		010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
+		01010000C9841FA8 | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@18 | "__1102435632727_000003" | 000100009D8D6CF3
+	010100006BA7480C | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__1102435632727_000001" | 00010000AB79EE57
+		010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
+
+-----------------+--------------+--------------------------------
+000002000A7CD026 | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader" 
+
+  depends on (2): 0000020012F04FFD  0000020080CB5575  
+	0000020080CB5575 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+		0000020012F04FFD | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+
+  required by (3): 00000100123372A1  010100003C9382FB  01020000C6DB8FBE  
+	00000100123372A1 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+		010100003C9382FB | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 000100004EA56DF0
+		01020000C6DB8FBE | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 000200007E3D87A4
+	01020000C6DB8FBE | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 000200007E3D87A4
 
 -----------------+--------------+--------------------------------
 000002000C5E8590 | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader" 
 
   depends on (0): 
 
-  required by (5): 00000100AE48C657  00000100E38C40E9  000200010A01075B  000200013CF585FF  000300029FF58394  
+  required by (8): 00000100AE48C657  00000100E38C40E9  010100006BA7480C  01010000C9841FA8  010200001BA03B4A  0102000042BD1568  010200005332F6E4  010300002FF2BB16  
 	00000100AE48C657 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
-		000200013CF585FF | asset    | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@11 | "PS-1" 
-			000300029FF58394 | asset    | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "" 
-		000300029FF58394 | asset    | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "" 
-	000200013CF585FF | asset    | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@11 | "PS-1" 
-		000300029FF58394 | asset    | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "" 
+		010100006BA7480C | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__1102435632727_000001" | 00010000AB79EE57
+			010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
+		0102000042BD1568 | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@11 | "__1102435632727_000002" | 000200003CF585FF
+			010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
+		010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
+		01010000C9841FA8 | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@18 | "__1102435632727_000003" | 000100009D8D6CF3
+	0102000042BD1568 | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@11 | "__1102435632727_000002" | 000200003CF585FF
+		010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
 	00000100E38C40E9 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
-		000200010A01075B | asset    | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@10 | "PS-2" 
+		010200005332F6E4 | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@4 | "PS-1" | 000200003CF585FF
+		010200001BA03B4A | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@10 | "PS-2" | 000200000A01075B
+	010200005332F6E4 | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@4 | "PS-1" | 000200003CF585FF
+
+-----------------+--------------+--------------------------------
+0000020012F04FFD | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader" 
+
+  depends on (0): 
+
+  required by (6): 00000100123372A1  000002000A7CD026  0000020042F6850A  0000020080CB5575  010100003C9382FB  01020000C6DB8FBE  
+	0000020080CB5575 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+		0000020042F6850A | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader"
+			00000100123372A1 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+				010100003C9382FB | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 000100004EA56DF0
+				01020000C6DB8FBE | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 000200007E3D87A4
+			010100003C9382FB | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 000100004EA56DF0
+		000002000A7CD026 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader"
+			00000100123372A1 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+				010100003C9382FB | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 000100004EA56DF0
+				01020000C6DB8FBE | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 000200007E3D87A4
+			01020000C6DB8FBE | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 000200007E3D87A4
+
+-----------------+--------------+--------------------------------
+0000020042F6850A | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader" 
+
+  depends on (2): 0000020012F04FFD  0000020080CB5575  
+	0000020080CB5575 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+		0000020012F04FFD | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+
+  required by (3): 00000100123372A1  010100003C9382FB  01020000C6DB8FBE  
+	00000100123372A1 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+		010100003C9382FB | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 000100004EA56DF0
+		01020000C6DB8FBE | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 000200007E3D87A4
+	010100003C9382FB | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 000100004EA56DF0
+
+-----------------+--------------+--------------------------------
+0000020080CB5575 | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader" 
+
+  depends on (1): 0000020012F04FFD  
+	0000020012F04FFD | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+
+  required by (5): 00000100123372A1  000002000A7CD026  0000020042F6850A  010100003C9382FB  01020000C6DB8FBE  
+	0000020042F6850A | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader"
+		00000100123372A1 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+			010100003C9382FB | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 000100004EA56DF0
+			01020000C6DB8FBE | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 000200007E3D87A4
+		010100003C9382FB | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 000100004EA56DF0
+	000002000A7CD026 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader"
+		00000100123372A1 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+			010100003C9382FB | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 000100004EA56DF0
+			01020000C6DB8FBE | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 000200007E3D87A4
+		01020000C6DB8FBE | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 000200007E3D87A4
 
 -----------------+--------------+--------------------------------
 00000200E0BCE0CE | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader" 
 
   depends on (0): 
 
-  required by (2): 00000100E38C40E9  000200010A01075B  
+  required by (3): 00000100E38C40E9  010200001BA03B4A  010200005332F6E4  
 	00000100E38C40E9 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
-		000200010A01075B | asset    | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@10 | "PS-2" 
-	000200010A01075B | asset    | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@10 | "PS-2" 
+		010200005332F6E4 | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@4 | "PS-1" | 000200003CF585FF
+		010200001BA03B4A | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@10 | "PS-2" | 000200000A01075B
+	010200001BA03B4A | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@10 | "PS-2" | 000200000A01075B
 
 -----------------+--------------+--------------------------------
 00000200EE9C0745 | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader" 
 
   depends on (0): 
 
-  required by (5): 000001007E80F292  00010001046DF9E9  000100019D8D6CF3  00010001AB79EE57  000300029FF58394  
+  required by (13): 000001007E80F292  00000100AE48C657  0101000059198F9E  010100006244F1AE  010100006BA7480C  0101000079139A8F  010100009804389E  01010000B34FF3FF  01010000C9841FA8  01010000CD2480D3  01010000E2AE5605  0102000042BD1568  010300002FF2BB16  
 	000001007E80F292 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
-		00010001AB79EE57 | asset    | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "VS-1" 
-			000300029FF58394 | asset    | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "" 
-		000100019D8D6CF3 | asset    | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@14 | "VS-2" 
-		00010001046DF9E9 | asset    | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@27 | "VS-1-d1-d2-d3" "alias-VS-1-d1-d2-d3" 
-	000100019D8D6CF3 | asset    | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@14 | "VS-2" 
+		01010000E2AE5605 | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "__1101634007698_000000" | 00010000AB79EE57
+		01010000CD2480D3 | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@8 | "VS-1" | 00010000AB79EE57
+		010100006244F1AE | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@15 | "VS-2" | 000100009D8D6CF3
+		010100009804389E | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@22 | "__1101634007698_000001" | 00010000046DF9E9
+		01010000B34FF3FF | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@29 | "__1101634007698_000002" | 00010000046DF9E9
+		0101000059198F9E | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@36 | "VS-1-d1-d2-d3" | 00010000046DF9E9
+		0101000079139A8F | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@43 | "alias-VS-1-d1-d2-d3" | 00010000046DF9E9
+	010100006244F1AE | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@15 | "VS-2" | 000100009D8D6CF3
+	00000100AE48C657 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		010100006BA7480C | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__1102435632727_000001" | 00010000AB79EE57
+			010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
+		0102000042BD1568 | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@11 | "__1102435632727_000002" | 000200003CF585FF
+			010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
+		010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
+		01010000C9841FA8 | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@18 | "__1102435632727_000003" | 000100009D8D6CF3
+	01010000C9841FA8 | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@18 | "__1102435632727_000003" | 000100009D8D6CF3
 
 
 
-========================== ASSETS LIST ==========================
+========================== VIRTUAL ASSETS LIST ==========================
 
 Asset UID        | Type         | Declared in                | runtimeName-list
 -----------------+--------------+--------------------------------
-00010001046DF9E9 | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@27 | "VS-1-d1-d2-d3" "alias-VS-1-d1-d2-d3" 
+010100003C9382FB | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" 
 
-  depends on (3): 000001007E80F292  00000200027E621B  00000200EE9C0745  
+  depends on (6): 00000100123372A1  000002000A7CD026  0000020012F04FFD  0000020042F6850A  0000020080CB5575  000100004EA56DF0  
+	00000100123372A1 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+		000002000A7CD026 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader"
+			0000020080CB5575 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+				0000020012F04FFD | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+		0000020042F6850A | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader"
+			0000020080CB5575 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+				0000020012F04FFD | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+	0000020042F6850A | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader"
+		0000020080CB5575 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+			0000020012F04FFD | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+	000100004EA56DF0 | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+0101000059198F9E | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@36 | "VS-1-d1-d2-d3" 
+
+  depends on (4): 000001007E80F292  00000200027E621B  00000200EE9C0745  00010000046DF9E9  
 	000001007E80F292 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
 		00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
 		00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
 	00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	00010000046DF9E9 | asset    | 
 
   required by (0): 
 
-  runtime dep list: 
-
 -----------------+--------------+--------------------------------
-000100019D8D6CF3 | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@14 | "VS-2" 
+010100006244F1AE | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@15 | "VS-2" 
 
-  depends on (3): 000001007E80F292  00000200027E621B  00000200EE9C0745  
+  depends on (4): 000001007E80F292  00000200027E621B  00000200EE9C0745  000100009D8D6CF3  
 	000001007E80F292 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
 		00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
 		00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
 	00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	000100009D8D6CF3 | asset    | 
 
   required by (0): 
 
-  runtime dep list: 
+-----------------+--------------+--------------------------------
+010100006BA7480C | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__1102435632727_000001" 
+
+  depends on (5): 00000100AE48C657  00000200027E621B  000002000C5E8590  00000200EE9C0745  00010000AB79EE57  
+	00000100AE48C657 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		000002000C5E8590 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	00010000AB79EE57 | asset    | 
+
+  required by (1): 010300002FF2BB16  
+	010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
 
 -----------------+--------------+--------------------------------
-00010001AB79EE57 | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "VS-1" 
+0101000079139A8F | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@43 | "alias-VS-1-d1-d2-d3" 
 
-  depends on (3): 000001007E80F292  00000200027E621B  00000200EE9C0745  
+  depends on (4): 000001007E80F292  00000200027E621B  00000200EE9C0745  00010000046DF9E9  
 	000001007E80F292 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
 		00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
 		00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
 	00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	00010000046DF9E9 | asset    | 
 
-  required by (1): 000300029FF58394  
-	000300029FF58394 | asset    | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "" 
-
-  runtime dep list: 
+  required by (0): 
 
 -----------------+--------------+--------------------------------
-000200010A01075B | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@10 | "PS-2" 
+010100009804389E | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@22 | "__1101634007698_000001" 
 
-  depends on (3): 00000100E38C40E9  000002000C5E8590  00000200E0BCE0CE  
+  depends on (4): 000001007E80F292  00000200027E621B  00000200EE9C0745  00010000046DF9E9  
+	000001007E80F292 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	00010000046DF9E9 | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+01010000B34FF3FF | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@29 | "__1101634007698_000002" 
+
+  depends on (4): 000001007E80F292  00000200027E621B  00000200EE9C0745  00010000046DF9E9  
+	000001007E80F292 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	00010000046DF9E9 | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+01010000C9841FA8 | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@18 | "__1102435632727_000003" 
+
+  depends on (5): 00000100AE48C657  00000200027E621B  000002000C5E8590  00000200EE9C0745  000100009D8D6CF3  
+	00000100AE48C657 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		000002000C5E8590 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	000100009D8D6CF3 | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+01010000CD2480D3 | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@8 | "VS-1" 
+
+  depends on (4): 000001007E80F292  00000200027E621B  00000200EE9C0745  00010000AB79EE57  
+	000001007E80F292 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	00010000AB79EE57 | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+01010000E2AE5605 | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "__1101634007698_000000" 
+
+  depends on (4): 000001007E80F292  00000200027E621B  00000200EE9C0745  00010000AB79EE57  
+	000001007E80F292 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	00010000AB79EE57 | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+010200001BA03B4A | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@10 | "PS-2" 
+
+  depends on (4): 00000100E38C40E9  000002000C5E8590  00000200E0BCE0CE  000200000A01075B  
 	00000100E38C40E9 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
 		000002000C5E8590 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
 		00000200E0BCE0CE | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
 	00000200E0BCE0CE | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+	000200000A01075B | asset    | 
 
   required by (0): 
 
-  runtime dep list: 
-
 -----------------+--------------+--------------------------------
-000200013CF585FF | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@11 | "PS-1" 
+0102000042BD1568 | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@11 | "__1102435632727_000002" 
 
-  depends on (3): 00000100AE48C657  00000200027E621B  000002000C5E8590  
+  depends on (5): 00000100AE48C657  00000200027E621B  000002000C5E8590  00000200EE9C0745  000200003CF585FF  
 	00000100AE48C657 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
 		00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
 		000002000C5E8590 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
 	000002000C5E8590 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+	000200003CF585FF | asset    | 
 
-  required by (1): 000300029FF58394  
-	000300029FF58394 | asset    | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "" 
-
-  runtime dep list: 
+  required by (1): 010300002FF2BB16  
+	010300002FF2BB16 | v-asset  | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" | 000300001ACF5EE4
 
 -----------------+--------------+--------------------------------
-000300029FF58394 | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | 
+010200005332F6E4 | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@4 | "PS-1" 
 
-  depends on (7): 000001007E80F292  00000100AE48C657  00000200027E621B  000002000C5E8590  00000200EE9C0745  00010001AB79EE57  000200013CF585FF  
+  depends on (4): 00000100E38C40E9  000002000C5E8590  00000200E0BCE0CE  000200003CF585FF  
+	00000100E38C40E9 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+		000002000C5E8590 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00000200E0BCE0CE | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+	000002000C5E8590 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+	000200003CF585FF | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+01020000C6DB8FBE | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" 
+
+  depends on (6): 00000100123372A1  000002000A7CD026  0000020012F04FFD  0000020042F6850A  0000020080CB5575  000200007E3D87A4  
+	00000100123372A1 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+		000002000A7CD026 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader"
+			0000020080CB5575 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+				0000020012F04FFD | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+		0000020042F6850A | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader"
+			0000020080CB5575 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+				0000020012F04FFD | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+	000002000A7CD026 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader"
+		0000020080CB5575 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+			0000020012F04FFD | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+	000200007E3D87A4 | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+010300002FF2BB16 | pipe         | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@2 | "__1102435632727_000000" 
+
+  depends on (9): 00000100AE48C657  00000200027E621B  000002000C5E8590  00000200EE9C0745  00010000AB79EE57  000200003CF585FF  000300001ACF5EE4  010100006BA7480C  0102000042BD1568  
 	00000100AE48C657 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
 		00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
 		000002000C5E8590 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
-	00010001AB79EE57 | asset    | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "VS-1" 
-		000001007E80F292 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
-			00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
-			00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
-		00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
-	000200013CF585FF | asset    | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@11 | "PS-1" 
+		00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	000300001ACF5EE4 | asset    | 
+	010100006BA7480C | v-asset  | vtx_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__1102435632727_000001" | 00010000AB79EE57
 		00000100AE48C657 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
 			00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
 			000002000C5E8590 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+			00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+		00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		00010000AB79EE57 | asset    | 
+	0102000042BD1568 | v-asset  | pxl_shader   | /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@11 | "__1102435632727_000002" | 000200003CF585FF
+		00000100AE48C657 | resource | gosasset_d   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+			00000200027E621B | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+			000002000C5E8590 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+			00000200EE9C0745 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
 		000002000C5E8590 | resource | shader_txt   | "/home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		000200003CF585FF | asset    | 
 
   required by (0): 
-
-  runtime dep list: 00010001AB79EE57  000200013CF585FF  
 

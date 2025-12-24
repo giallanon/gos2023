@@ -89,22 +89,11 @@ PRIMARY KEY('UID','childUID'))");
                 break;
 
 
-            //table: GOS_ASSET__TABLE_RUNTIME_NAME
-            sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET2__TABLE_RUNTIME_NAME " (\
-name VARCHAR(64) NOT NULL PRIMARY KEY,\
-assetUID UNSIGNED INT8 NOT NULL\
-)");
-            if (!db::exec (db, s))
-                break;
-
-
             //table: TABLE__ASSET_LIST
             sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET2__TABLE_ASSET_LIST " (\
 UID UNSIGNED INT8 NOT NULL PRIMARY KEY,\
-lastTimeBuilt UNSIGNED INT8 NOT NULL,\
-type UNSIGNED INT1 NOT NULL,\
-src VARCHAR(512) NOT NULL)\
-");
+lastTimeBuilt UNSIGNED INT8 NOT NULL\
+)");
             if (!db::exec (db, s))
                 break;
 
@@ -112,11 +101,22 @@ src VARCHAR(512) NOT NULL)\
             sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET2__TABLE_DEPENDS_RUNTIME " (\
 UID UNSIGNED INT8 NOT NULL,\
 childUID UNSIGNED INT8 NOT NULL,\
-childDepth UNSIGNED INT1 NOT NULL,\
-PRIMARY KEY('UID','childUID'))");
+PRIMARY KEY('UID','childUID')\
+)");
         if (!db::exec (db, s))
                 break;                
 
+            //table: GOS_ASSET2__TABLE_VIRTUAL_ASSET                
+            sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET2__TABLE_VIRTUAL_ASSET " (\
+UID UNSIGNED INT8 NOT NULL,\
+UID_ini UNSIGNED INT8 NOT NULL,\
+line UNSIGNED INT4 NOT NULL,\
+UID_asset UNSIGNED INT8 NOT NULL,\
+rtname VARCHAR(64) NOT NULL,\
+PRIMARY KEY('UID','UID_ini','line'))");
+
+            if (!db::exec (db, s))
+                break;
         //fine di while(1)
         return true;
     }
@@ -166,11 +166,6 @@ static bool asset2_open_or_create_DB (DBHandle &db, const char *baseFolder, cons
     return true;
 }
 
-//*********************************************** 
-bool asset2::dbcontext_open (const char *baseFolder, DBContext *out)
-{
-    return dbcontext_open_ex (baseFolder, "assets2.sqlite3", out);
-}
 
 //*******************************************************
 bool asset2::dbcontext_open_ex (const char *baseFolderIN, const char *dbName, DBContext *out)
@@ -371,26 +366,85 @@ bool asset2::res_delete (DBContext &ctx, const UID &uid)
 
 
 
+
 //*******************************************************
-bool asset2::rtname_exists (DBContext &ctx, const char *runtimeName, UID *out_assetUID)
+bool asset2::virtasset_insert (DBContext &ctx, eAssetType assType, const char *rtname, UID uid_of_inifile, u32 declared_on_line, UID uid_of_concrete_asset, UID *out_uid)
 {
-    assert (NULL != out_assetUID);
-    out_assetUID->setInvalid();
+    assert (uid_of_inifile.isAResourceOfType(eResType::gosasset_d));
+    assert (uid_of_concrete_asset.isAnAsset());
+    assert (NULL != out_uid);
+    assert (NULL != rtname);
 
     if (!ctx.isValid())
     {
-        logger::err ("rtname_exists(\"%s\") => invalid ctx\n", runtimeName);
+        logger::err ("virtasset_insert () => invalid ctx\n");
+        return false;
+    }
+
+    //rtname deve essere univoco
+    char s[256];
+    db::RST rst;
+    
+    sprintf_s (s, sizeof(s), "SELECT UID_ini,line FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE rtname='%s'", rtname);
+    if (!db::query (ctx.db, s, &rst)) return false;
+    if (rst.fetchRow())
+    {
+        UID uid_ini;
+        uid_ini._uid = rst.getValAsU64(0);
+        const u32 line = rst.getValAsU32(1);
+
+        res_get_info (ctx, uid_ini, s, sizeof(s), NULL, NULL);
+        logger::err ("virtasset_insert () => rtname=%s already exists in DB. Prev declaration at %s@%d\n", rtname, s, line);
+        return false;
+    }
+
+    //calcolo UID del virtual-asset
+    const eAssetType assetType = uid_of_concrete_asset.getAssetType();
+    sprintf_s (s, sizeof(s), "%02d%" PRIu64 "%" PRIu64 "%04d", (u8)assetType, uid_of_inifile._uid, uid_of_concrete_asset._uid, declared_on_line);
+    out_uid->_uid = utils::crc32(s);
+    out_uid->_uid |= 0x0100000000000000; //lo marco come virtual asset
+    out_uid->_uid |=  (((u64)assetType) << 48); //segno l'assettype
+
+
+    
+    sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET2__TABLE_VIRTUAL_ASSET " (UID,UID_ini,line,UID_asset,rtname) VALUES(\
+%" PRIu64 ",\
+%" PRIu64 ",\
+%d,\
+%" PRIu64 ",\
+'%s'\
+)", out_uid->_uid, uid_of_inifile._uid, declared_on_line, uid_of_concrete_asset._uid, rtname);
+
+if (!db::exec (ctx.db, s))
+    {
+        logger::err ("virtasset_insert() => error inserting into table\n");
+        return false;
+    }
+
+    return true;
+}
+
+//*******************************************************
+bool asset2::virtasset_get_info (DBContext &ctx, UID uid, UID *out_CAN_BE_NULL_uid_ini, UID *out_CAN_BE_NULL_uid_concrete_asset)
+{
+    assert (uid.isVirtualAsset());
+
+    if (!ctx.isValid())
+    {
+        logger::err ("virtasset_get_info(%" PRIu64 ") => invalid ctx\n",  uid._uid);
         return false;
     }
 
     db::RST rst;
-    char s[256];
+    char s[128];
     
-    sprintf_s (s, sizeof(s), "SELECT assetUID FROM " GOS_ASSET2__TABLE_RUNTIME_NAME " WHERE name='%s'", runtimeName);
+    sprintf_s (s, sizeof(s), "SELECT UID_ini,UID_asset FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE UID=%" PRIu64 "", uid._uid);
     if (!db::query (ctx.db, s, &rst)) return false;
     if (rst.fetchRow())
     {
-        out_assetUID->_uid = rst.getValAsU64(0);
+        if (NULL != out_CAN_BE_NULL_uid_ini)                out_CAN_BE_NULL_uid_ini->_uid = rst.getValAsU64(0);
+        if (NULL != out_CAN_BE_NULL_uid_concrete_asset)     out_CAN_BE_NULL_uid_concrete_asset->_uid = rst.getValAsU64(1);
+
         return true;
     }
 
@@ -398,25 +452,50 @@ bool asset2::rtname_exists (DBContext &ctx, const char *runtimeName, UID *out_as
 }
 
 //*******************************************************
-bool asset2::rtname_insert (DBContext &ctx, const char *runtimeName, UID assetUID)
+bool asset2::virtasset_delete (DBContext &ctx, const UID &uid)
 {
-    assert (assetUID.isAnAsset());
+    assert (uid.isVirtualAsset());
 
     if (!ctx.isValid())
     {
-        logger::err ("rtname_insert(\"%s\", %" PRIu64 ") => invalid ctx\n", runtimeName, assetUID._uid);
+        logger::err ("virtasset_delete (%" PRIu64 ") => invalid ctx\n",  uid._uid);
         return false;
     }
 
     char s[256];
-    //non esisteva, lo aggiungo
-    sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET2__TABLE_RUNTIME_NAME " (name,assetUID) VALUES('%s', %" PRIu64 ")", runtimeName, assetUID._uid);
-    if (db::exec (ctx.db, s))
-        return true;
+    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE UID=%" PRIu64 "", uid._uid);
+    db::exec (ctx.db, s);
 
-    logger::err ("rtname_insert(\"%s\", %" PRIu64 ") => error inserting into table\n", runtimeName, assetUID._uid);
-    return false;
+    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_DEPENDS " WHERE UID=%" PRIu64 " or childUID=%" PRIu64 " ", uid._uid, uid._uid);
+    db::exec (ctx.db, s);
+
+    return true;
 }
+
+//*******************************************************
+bool asset2::virtasset_rtname_exists (DBContext &ctx, const char *rtname, UID *out_uid)
+{
+    assert (NULL != out_uid);
+
+    if (!ctx.isValid())
+    {
+        logger::err ("virtasset_rtname_exists() => invalid ctx\n");
+        return false;
+    }
+
+    db::RST rst;
+    char s[128];
+    
+    sprintf_s (s, sizeof(s), "SELECT UID FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE rtname='%s'", rtname);
+    if (!db::query (ctx.db, s, &rst)) return false;
+    if (!rst.fetchRow()) return false;
+
+    out_uid->_uid = rst.getValAsU64(0);
+    return true;
+}
+
+
+
 
 
 //*******************************************************
@@ -426,7 +505,7 @@ void asset2::asset_manufacture_fullFilename (const DBContext &ctx, UID uid, char
 }
 
 //*******************************************************
-bool asset2::asset_createUID (eAssetType assTypeIN, u8 asset_depth, const void *buffer, u32 sizeof_buffer, UID *out)
+bool asset2::asset_createUID (eAssetType assTypeIN, const void *buffer, u32 sizeof_buffer, UID *out)
 {
     assert (out != NULL);
 
@@ -456,40 +535,31 @@ bool asset2::asset_createUID (eAssetType assTypeIN, u8 asset_depth, const void *
     uu <<= 48;
     out->_uid |= uu;
 
-    //ci metto anche l'asset depth
-    uu = static_cast<u64>(asset_depth);
-    uu <<= 32;
-    out->_uid |= uu;
-
     GOSFREE_SCRAP(blob);
     return true;
 }
 
 //*******************************************************
-bool asset2::asset_insert (DBContext &ctx, UID uid, eAssetType assType, u64 lastTimeBuilt, const char *srcAbsFilename)
+bool asset2::asset_insert (DBContext &ctx, UID uid)
 {
     assert (uid.isAnAsset());
-    assert (NULL != srcAbsFilename);
-
-    if (u64MAX == lastTimeBuilt)
-    {
-        gos::DateTime dt;
-        dt.setNow_UTC();
-        lastTimeBuilt = dt.getAsNiceU64();
-    }
 
     if (!ctx.isValid())
     {
-        logger::err ("asset_insert (%" PRIu64 ", %d, %" PRIu64 ", '%s') => invalid ctx\n",  uid._uid, assType, lastTimeBuilt, srcAbsFilename);
+        logger::err ("asset_insert (%" PRIu64 ") => invalid ctx\n",  uid._uid);
         return false;
     }
 
+    gos::DateTime dt;
+    dt.setNow_UTC();
+    const u64 lastTimeBuilt = dt.getAsNiceU64();
+
     db::RST rst;
     char s[256];
-    sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET2__TABLE_ASSET_LIST " (UID,lastTimeBuilt,type,src) VALUES(%" PRIu64 ",%" PRIu64 ",%d,'%s')", uid._uid, lastTimeBuilt, static_cast<u8>(assType), srcAbsFilename);
+    sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET2__TABLE_ASSET_LIST " (UID,lastTimeBuilt) VALUES(%" PRIu64 ",%" PRIu64 ")", uid._uid, lastTimeBuilt);
     if (!db::exec (ctx.db, s))
     {
-        logger::err ("asset_insert(%" PRIu64 ", %d, %" PRIu64 ", '%s') => error inserting into table\n", uid._uid, assType, lastTimeBuilt, srcAbsFilename);
+        logger::err ("asset_insert(%" PRIu64 ") => error inserting into table\n", uid._uid);
         return false;
     }
 
@@ -497,56 +567,26 @@ bool asset2::asset_insert (DBContext &ctx, UID uid, eAssetType assType, u64 last
 }
 
 //*******************************************************
-bool asset2::asset_get_info (DBContext &ctx, UID uid, char *out_CAN_BE_NULL_src, u32 sizeof_outsrc, eAssetType *out_CAN_BE_NULL_assetType, u64 *out_CAN_BE_NULL_lastTimeBuilt)
+bool asset2::asset_exists (DBContext &ctx, UID uid)
 {
     assert (uid.isAnAsset());
 
     if (!ctx.isValid())
     {
-        logger::err ("asset2::asset_get_info(%" PRIu64 ") => invalid ctx\n",  uid._uid);
-        return false;
+        logger::err ("asset_exists (%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        return 0;
     }
 
     db::RST rst;
     char s[128];
-    
-
-    sprintf_s (s, sizeof(s), "SELECT lastTimeBuilt,type,src FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", uid._uid);
-    if (!db::query (ctx.db, s, &rst)) return false;
-    if (rst.fetchRow())
-    {
-        if (NULL != out_CAN_BE_NULL_lastTimeBuilt)      *out_CAN_BE_NULL_lastTimeBuilt = rst.getValAsU64(0);
-        if (NULL != out_CAN_BE_NULL_assetType)          *out_CAN_BE_NULL_assetType = static_cast<eAssetType>(rst.getValAsU8(1));
-        if (NULL != out_CAN_BE_NULL_src)                sprintf_s (out_CAN_BE_NULL_src, sizeof_outsrc, "%s", rst.getVal(2));
-
-        return true;
-    }
-
-    return false;
-}
-//*******************************************************
-u64 asset2::asset_query_lastTimeBuilt (DBContext &ctx, UID uid)
-{
-    assert (uid.isAnAsset());
-
-    if (!ctx.isValid())
-    {
-        logger::err ("asset_query_lastTimeBuilt (%" PRIu64 ") => invalid ctx\n",  uid._uid);
-        return 0;
-    }
-
-    db::RST rst;
-    char s[256];
-    sprintf_s (s, sizeof(s), "SELECT lastTimeBuilt FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", uid._uid);
+    sprintf_s (s, sizeof(s), "SELECT UID FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", uid._uid);
     if (!db::query (ctx.db, s, &rst))
     {
-        logger::err ("asset_query_lastTimeBuilt (%" PRIu64 ") => error querying\n",  uid._uid);
-        return 0;
+        logger::err ("asset_exists (%" PRIu64 ") => error querying\n",  uid._uid);
+        return false;
     }
 
-    if (rst.fetchRow())
-        return rst.getValAsU64(0);
-    return 0;
+    return rst.fetchRow();
 }
 
 //*******************************************************
@@ -566,7 +606,7 @@ bool asset2::asset_get_runtime_dependecies_list (DBContext &ctx, UID uid, bool b
 
     db::RST rst;
     char s[256];
-    sprintf_s (s, sizeof(s), "SELECT childUID FROM " GOS_ASSET2__TABLE_DEPENDS_RUNTIME " WHERE UID=%" PRIu64 " ORDER BY childDepth ASC", uid._uid);
+    sprintf_s (s, sizeof(s), "SELECT childUID FROM " GOS_ASSET2__TABLE_DEPENDS_RUNTIME " WHERE UID=%" PRIu64 " ", uid._uid);
     if (!db::query (ctx.db, s, &rst))
     {
         logger::err ("asset_get_runtime_dependecies_list (%" PRIu64 ") => error querying\n",  uid._uid);
@@ -584,6 +624,29 @@ bool asset2::asset_get_runtime_dependecies_list (DBContext &ctx, UID uid, bool b
 }
 
 //********************************************************** 
+bool asset2::asset_is_still_in_use(DBContext &ctx, UID uid)
+{
+    assert (uid.isAnAsset());
+
+    if (!ctx.isValid())
+    {
+        logger::err ("asset_is_still_in_use (%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        return false;
+    }
+
+    db::RST rst;
+    char s[256];
+    sprintf_s (s, sizeof(s), "SELECT COUNT(UID) as n FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE UID_asset=%" PRIu64 " ", uid._uid);
+    if (!db::query (ctx.db, s, &rst))
+    {
+        logger::err ("asset_is_still_in_use (%" PRIu64 ") => error querying\n",  uid._uid);
+        return false;
+    }
+    rst.fetchRow();
+    return (rst.getValAsU64(0) > 0);
+}
+
+//********************************************************** 
 bool asset2::asset_delete (DBContext &ctx, const UID &uid)
 {
     assert (uid.isAnAsset());
@@ -598,21 +661,11 @@ bool asset2::asset_delete (DBContext &ctx, const UID &uid)
     sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", uid._uid);
     db::exec (ctx.db, s);
 
-    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_DEPENDS " WHERE UID=%" PRIu64 "", uid._uid);
+    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_DEPENDS " WHERE UID=%" PRIu64 " or childUID=%" PRIu64 "", uid._uid, uid._uid);
     db::exec (ctx.db, s);
 
-    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_DEPENDS " WHERE childUID=%" PRIu64 "", uid._uid);
+    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_DEPENDS_RUNTIME " WHERE UID=%" PRIu64 " or childUID=%" PRIu64 "", uid._uid, uid._uid);
     db::exec (ctx.db, s);
-
-    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_DEPENDS_RUNTIME " WHERE UID=%" PRIu64 "", uid._uid);
-    db::exec (ctx.db, s);
-
-    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_DEPENDS_RUNTIME " WHERE childUID=%" PRIu64 "", uid._uid);
-    db::exec (ctx.db, s);
-
-    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_RUNTIME_NAME " WHERE assetUID=%" PRIu64 "", uid._uid);
-    db::exec (ctx.db, s);
-    
 
     asset_manufacture_fullFilename (ctx, uid, s, sizeof(s));
     fs::fileDelete(s);
@@ -746,7 +799,7 @@ bool asset2::dependency_add (DBContext &ctx, UID father, UID child)
 }
 
 //*******************************************************
-bool asset2::dependencyRT_add (DBContext &ctx, UID uid_padre, UID uid_figlio, u8 depth_figlio)
+bool asset2::dependencyRT_add (DBContext &ctx, UID uid_padre, UID uid_figlio)
 {
     if (!ctx.isValid())
     {
@@ -755,7 +808,7 @@ bool asset2::dependencyRT_add (DBContext &ctx, UID uid_padre, UID uid_figlio, u8
     }
 
     char s[128];
-    sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET2__TABLE_DEPENDS_RUNTIME " (UID,childUID,childDepth) VALUES(%" PRIu64 ",%" PRIu64 ",%d)", uid_padre._uid, uid_figlio._uid, depth_figlio);
+    sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET2__TABLE_DEPENDS_RUNTIME " (UID,childUID) VALUES(%" PRIu64 ",%" PRIu64 ")", uid_padre._uid, uid_figlio._uid);
     if (db::exec (ctx.db, s))
         return true;
 

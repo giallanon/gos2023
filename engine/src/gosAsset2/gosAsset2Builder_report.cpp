@@ -36,8 +36,10 @@ static u32 Builder__print_dependencies (gos::UTF8String &out, DBContext &ctx, UI
         char childType[16];
         if (childUID.isAnAsset())
             sprintf_s (childType, sizeof(childType), "asset");
-        else
+        else if (childUID.isAResource())
             sprintf_s (childType, sizeof(childType), "resource");
+        else
+            sprintf_s (childType, sizeof(childType), "v-asset");
 
 
         out << indent << STRFMT("%016" PRIX64 "", childUID._uid) << " | "
@@ -62,30 +64,33 @@ static u32 Builder__print_dependencies (gos::UTF8String &out, DBContext &ctx, UI
                 out << "!!ERROR!!";
             }
         }
-        else
+        else if (childUID.isVirtualAsset())
         {
-            //asset dichiarto in:
-            sprintf_s (s, sizeof(s), "SELECT type, src FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", childUID._uid);
+            //virtual asset dichiarto in:
+            sprintf_s (s, sizeof(s), "SELECT line, UID_asset, rtname, abspath "\
+"FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " as t1 LEFT JOIN " GOS_ASSET2__TABLE_RES " as t2 ON t1.UID_ini=t2.UID "\
+"WHERE t1.UID=%" PRIu64 "", childUID._uid);
             db::query (ctx.db, s, &rst2);
             rst2.fetchRow();
             {
-                eAssetType childAssType = static_cast<eAssetType> (rst2.getValAsU8(0));
+                UID UID_concrete_asset;
+                
+                const eAssetType childAssType = childUID.getVirtualAssetType();
+                const u32 line = rst2.getValAsU32(0);
+                UID_concrete_asset._uid = rst2.getValAsU64(1);
+                const char *rtname = rst2.getVal(2);
+                const char *absIniPath = rst2.getVal(3);
+
                 out << STRFMT("%-12s", asset2::enumToString (childAssType)) << " | "
-                    << STRFMT("%-26s",rst2.getVal(1)) << " | ";
+                    << absIniPath << "@" << line << " | "
+                    << "\"" << rtname << "\" | "
+                    << STRFMT("%016" PRIX64 "", UID_concrete_asset._uid);
             }
-
-            //elenco dei runtimeName
-            sprintf_s (s, sizeof(s), "\
-SELECT name FROM " GOS_ASSET2__TABLE_ASSET_LIST " LEFT JOIN " GOS_ASSET2__TABLE_RUNTIME_NAME " ON " GOS_ASSET2__TABLE_ASSET_LIST ".UID = " GOS_ASSET2__TABLE_RUNTIME_NAME".assetUID \
-WHERE " GOS_ASSET2__TABLE_ASSET_LIST ".UID=%" PRIu64 " \
-ORDER BY type, name", childUID._uid);
-            db::query (ctx.db, s, &rst2);
-
-            while (rst2.fetchRow())
-            {
-                const char *childAssName = rst2.getVal(0);
-                out << "\"" << childAssName << "\" ";
-            }
+        }
+        else
+        {
+            //TODO
+            assert (childUID.isAnAsset());
         }
         out << "\n";
 
@@ -125,8 +130,11 @@ static u32 Builder__print_requiredBy  (gos::UTF8String &out, DBContext &ctx, UID
         char childType[16];
         if (childUID.isAnAsset())
             sprintf_s (childType, sizeof(childType), "asset");
-        else
+        else if (childUID.isAResource())
             sprintf_s (childType, sizeof(childType), "resource");
+        else
+            sprintf_s (childType, sizeof(childType), "v-asset");
+
 
 
         out << indent << STRFMT("%016" PRIX64 "", childUID._uid) << " | "
@@ -151,32 +159,33 @@ static u32 Builder__print_requiredBy  (gos::UTF8String &out, DBContext &ctx, UID
                 out << "!!ERROR!!";
             }
         }
-        else
+        else if (childUID.isVirtualAsset())
         {
-            //asset dichiarto in:
-            sprintf_s (s, sizeof(s), "SELECT type, src FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", childUID._uid);
+            //virtual asset dichiarto in:
+            sprintf_s (s, sizeof(s), "SELECT line, UID_asset, rtname, abspath "\
+"FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " as t1 LEFT JOIN " GOS_ASSET2__TABLE_RES " as t2 ON t1.UID_ini=t2.UID "\
+"WHERE t1.UID=%" PRIu64 "", childUID._uid);
             db::query (ctx.db, s, &rst2);
             rst2.fetchRow();
             {
-                eAssetType childAssType = static_cast<eAssetType> (rst2.getValAsU8(0));
+                UID UID_concrete_asset;
+                
+                const eAssetType childAssType = childUID.getVirtualAssetType();
+                const u32 line = rst2.getValAsU32(0);
+                UID_concrete_asset._uid = rst2.getValAsU64(1);
+                const char *rtname = rst2.getVal(2);
+                const char *absIniPath = rst2.getVal(3);
+
                 out << STRFMT("%-12s", asset2::enumToString (childAssType)) << " | "
-                    << STRFMT("%-26s",rst2.getVal(1)) << " | ";
+                    << absIniPath << "@" << line << " | "
+                    << "\"" << rtname << "\" | "
+                    << STRFMT("%016" PRIX64 "", UID_concrete_asset._uid);
             }
-
-            //elenco dei runtimeName
-            sprintf_s (s, sizeof(s), "\
-SELECT name FROM " GOS_ASSET2__TABLE_ASSET_LIST " LEFT JOIN " GOS_ASSET2__TABLE_RUNTIME_NAME " ON \
-" GOS_ASSET2__TABLE_ASSET_LIST ".UID = " GOS_ASSET2__TABLE_RUNTIME_NAME ".assetUID \
-WHERE \
-" GOS_ASSET2__TABLE_ASSET_LIST ".UID=%" PRIu64 " \
-ORDER BY type, name", childUID._uid);
-            db::query (ctx.db, s, &rst2);
-
-            while (rst2.fetchRow())
-            {
-                const char *childAssName = rst2.getVal(0);
-                out << "\"" << childAssName << "\" ";
-            }
+        }
+        else
+        {
+            //TODO
+            assert (childUID.isAnAsset());
         }
         out << "\n";
 
@@ -205,43 +214,48 @@ static void Builder__do_print (DBContext &ctx, gos::UTF8String &out, db::RST &rs
             << STRFMT("%016" PRIX64 "", uid._uid) << " | ";
 
         //asset/resource type
-        if (uid.isAnAsset())
+        if (uid.isVirtualAsset())
         {
-            eAssetType assType = static_cast<eAssetType> (rstAssetList.getValAsU8(1));
+            eAssetType assType = static_cast<eAssetType> (uid.getVirtualAssetType());
             out << STRFMT("%-12s", asset2::enumToString (assType)) << " | ";
+        }
+        else if (uid.isAResource())
+        {
+            eResType resType = static_cast<eResType> (uid.getResourceType());
+            out << STRFMT("%-12s", asset2::enumToString (resType)) << " | ";
         }
         else
         {
-            eResType resType = static_cast<eResType> (rstAssetList.getValAsU8(1));
-            out << STRFMT("%-12s", asset2::enumToString (resType)) << " | ";
+            //TODO
+            assert(uid.isAnAsset());
+            continue;
         }
 
         db::RST rst;
         char s[256];
 
-        if (uid.isAnAsset())
+        if (uid.isVirtualAsset())
         {
-            //file src dell'asset
-            sprintf_s (s, sizeof(s), "SELECT src FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", uid._uid);
+            //nome-del-file-src / runtimename
+            sprintf_s (s, sizeof(s), "SELECT abspath,line,rtname FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " as T1 LEFT JOIN " GOS_ASSET2__TABLE_RES " as T2 \
+ON T1.UID_ini = T2.UID \
+WHERE T1.UID=%" PRIu64 "", uid._uid);
             db::query (ctx.db, s, &rst);
             rst.fetchRow();
-            out << STRFMT("%-26s",rst.getVal(0)) << " | ";
-
-            //lista dei nomi runtime di questo asset
-            sprintf_s (s, sizeof(s), "SELECT name FROM " GOS_ASSET2__TABLE_RUNTIME_NAME " WHERE assetUID=%" PRIu64 " ORDER BY name", uid._uid);
-            db::query (ctx.db, s, &rst);
-            while (rst.fetchRow())
-            {
-                out << "\"" << rst.getVal(0) << "\" ";
-            }
+            out << rst.getVal(0) << "@" << rst.getValAsU32(1) << " | " << "\"" << rst.getVal(2) << "\" ";
         }
-        else
+        else if (uid.isAResource())
         {
             //nome-del-file-src/nome-della risorsa
             sprintf_s (s, sizeof(s), "SELECT abspath FROM " GOS_ASSET2__TABLE_RES " WHERE UID=%" PRIu64 " ORDER BY abspath", uid._uid);
             db::query (ctx.db, s, &rst);
             if (rst.fetchRow())
                 out << "\"" << rst.getVal(0) << "\" ";
+        }
+        else
+        {
+            //TODO
+            assert (uid.isAnAsset());
         }
         out << "\n";
         
@@ -296,10 +310,15 @@ static void Builder__do_print (DBContext &ctx, gos::UTF8String &out, db::RST &rs
 
 
 //***********************************
-void Builder::get_dependencies_report (gos::UTF8String &out, const char *baseFolder, eFilter filter)
+void Builder::get_dependencies_report (gos::UTF8String &out, const char *dbName, const char *baseFolder, eFilter filter)
 {
     DBContext ctx;
-    if (!dbcontext_open (baseFolder, &ctx))
+    bool ret;
+    if (NULL == dbName)
+        ret = dbcontext_open_ex (baseFolder, GOS_ASSET2__DEFAULT_DB_NAME, &ctx);
+    else
+        ret = dbcontext_open_ex (baseFolder, dbName, &ctx);
+    if (!ret)
     {
         logger::err ("Can't open context in %s\n", baseFolder);
         return;
@@ -312,7 +331,7 @@ void Builder::get_dependencies_report (gos::UTF8String &out, const char *baseFol
             << "========================== RESOURCES LIST ==========================\n\n"
             << "Resource UID     | Type         | Abspath\n";
 
-        db::query (ctx.db, "SELECT UID,type FROM " GOS_ASSET2__TABLE_RES " ORDER BY UID", &rstAssetList);
+        db::query (ctx.db, "SELECT UID FROM " GOS_ASSET2__TABLE_RES " ORDER BY UID", &rstAssetList);
         Builder__do_print (ctx, out, rstAssetList);
     }
 
@@ -320,10 +339,10 @@ void Builder::get_dependencies_report (gos::UTF8String &out, const char *baseFol
     if (eFilter::only_assets == filter || eFilter::both == filter)
     {
         out << "\n\n"
-            << "========================== ASSETS LIST ==========================\n\n"
+            << "========================== VIRTUAL ASSETS LIST ==========================\n\n"
             << "Asset UID        | Type         | Declared in                | runtimeName-list\n";
 
-        db::query (ctx.db, "SELECT UID,type FROM " GOS_ASSET2__TABLE_ASSET_LIST " ORDER BY UID", &rstAssetList);
+        db::query (ctx.db, "SELECT UID FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " ORDER BY UID", &rstAssetList);
         Builder__do_print (ctx, out, rstAssetList);
     }
 
@@ -331,24 +350,27 @@ void Builder::get_dependencies_report (gos::UTF8String &out, const char *baseFol
 }
 
 //***********************************
-void Builder::print_dependencies_report (const char *baseFolder, eFilter filter)
+void Builder::print_dependencies_report (const char *baseFolder, const char *dbName, eFilter filter)
 {
     gos::UTF8String out;
     out.prealloc (4096);
 
-    get_dependencies_report (out, baseFolder, filter);
+    get_dependencies_report (out, dbName, baseFolder, filter);
     printf ("%s\n\n", out.getBuffer());
 }
 
 //***********************************
-void Builder::save_dependencies_report (const char *baseFolder, eFilter filter)
+void Builder::save_dependencies_report (const char *baseFolder, const char *dbName, eFilter filter)
 {
     gos::UTF8String out;
     out.prealloc (4096);
-    get_dependencies_report (out, baseFolder, filter);
+    get_dependencies_report (out, dbName, baseFolder, filter);
 
     
     char s[512];
-    sprintf_s (s, sizeof(s), "%s/asset_bin/__dependencies.txt", baseFolder);
+    if (NULL == dbName)
+        sprintf_s (s, sizeof(s), "%s/asset_bin/__dependencies.txt", baseFolder);
+    else
+        sprintf_s (s, sizeof(s), "%s/asset_bin/__dependencies_%s.txt", baseFolder, dbName);
     fs::fileSaveBuffer (s, out.getBuffer(), out.lengthInByte());
 }

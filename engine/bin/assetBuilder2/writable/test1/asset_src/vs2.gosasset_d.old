@@ -1,0 +1,24 @@
+//vs anonimo, deve puntare allo stesso asset di VS-1
+@vtx_shader
+{
+  src: shader/vs1.shader
+}
+
+//VS-1
+@vtx_shader : VS2-1
+{
+  src: shader/vs1.shader
+}
+
+//VS-2
+@vtx_shader : VS2-2
+{
+  src: shader/vs2.shader
+}
+
+//VS-2
+@vtx_shader : VS2-3
+{
+  src: shader/vs2.shader
+  def: vs23
+}

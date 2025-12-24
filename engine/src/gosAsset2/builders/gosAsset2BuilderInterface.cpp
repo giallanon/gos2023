@@ -74,7 +74,7 @@ bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::I
             if (s[0] == '!')
                 return false;
 
-            if (!asset2::rtname_exists (ctx, s, out_uid))
+            if (!asset2::virtasset_rtname_exists (ctx, s, out_uid))
             {
                 logger->log (eTextColor::red, "invalid rtname: %s\n", s);
                 return false;

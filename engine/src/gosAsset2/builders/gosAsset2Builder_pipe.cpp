@@ -12,22 +12,6 @@ using namespace gos;
 using namespace gos::asset2;
 
 //************************************
-// u32 Builder_pipe::calc_depth()
-// {
-//     static constexpr u32 BASE_DEPTH = 1; //1 perche' io dipendo da almeno un altro asset
-//     u32 depth = 0;
-//     u32 d;
-
-//     //dipendo da vtx shader
-//     d = BASE_DEPTH + asset2::Builder_vtxShader::calc_depth();    if (d > depth) depth = d;
-
-//     //dipendo da pxl shader
-//     d = BASE_DEPTH + asset2::Builder_pxlShader::calc_depth();    if (d > depth) depth = d;
-
-//     return depth;
-// }
-
-//************************************
 bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_params)
 {
     assert (NULL != sec);
@@ -171,14 +155,14 @@ bool Builder_pipe::build (DBContext &ctx, u64 buildTime_UTC, const char *absFile
     }
 
     //devo avere una subsection di tipo @vtx_shader, gia' risolta
-    if (!prot_needResolvedSubsection (ctx, sec, eAssetType::vtx_shader, &params.uid_vtxshader))
+    if (!prot_needResolvedSubsection (ctx, sec, eAssetType::vtx_shader, &params.uid__virtual_vtxshader))
     {
         gos::logger::err ("section [vtx_shader] is error or missing\n");
         return false;
     }
 
     //devo avere una subsection di tipo @pxl_shader, gia' risolta
-    if (!prot_needResolvedSubsection (ctx, sec, eAssetType::pxl_shader, &params.uid_pxlshader))
+    if (!prot_needResolvedSubsection (ctx, sec, eAssetType::pxl_shader, &params.uid__virtual_pxlshader))
     {
         gos::logger::err ("section [pxl_shader] is error or missing\n");
         return false;
@@ -186,52 +170,53 @@ bool Builder_pipe::build (DBContext &ctx, u64 buildTime_UTC, const char *absFile
 
 
     //calcolo assetUID
-    if (!asset_createUID (getAssetType(), calc_depth(), &params, sizeof(Params), &out_result->uid))
+    if (!asset_createUID (getAssetType(), &params, sizeof(Params), &out_result->uid_concrete_asset))
     {
-        gos::logger::err ("error generating assetUID\n");
+        gos::logger::err ("error generating concrete assetUID\n");
         return false;
     }
 
 
-    /*  Idealmente UID non dovrebbe esistere in tabella visto che lo sto buildando.
-        Potenzialmente pero', lo stesso UID puo' essere generato da diversi asset perche' lo specificano
-        inline o perche' vi fanno riferimento direttamente usando un runtimeName.
-        In linea di massimo quindi, se l'asset esiste gia', non sto a ricompilarlo dato che il 
-        risultato sarebbe il medesimo
-    */
-    const u64 lastTimeBuilt = asset_query_lastTimeBuilt (ctx, out_result->uid);
-    if (0 != lastTimeBuilt)
+    //inserisco il virtual asset nel DB
+    char rtname[128];
+    memset (rtname, 0, sizeof(rtname));
+    sec->get("__value", rtname, sizeof(rtname));
+    if (!virtasset_insert (ctx, getAssetType(), rtname, uid_of_iniFile, sec->getLineStarted(), out_result->uid_concrete_asset, &out_result->uid_virtual_asset))
     {
-        //UID esiste gia' nel DB ma e' stato buildato a questo giro di build, quindi va bene,
-        //semplicemente non sto a buildarlo una seconda volta
+        logger->log (eTextColor::red, "error inserting virtual assetUID\n");
+        return false;
+    }    
+
+    //vediamo se il concrete-asset esiste gia' nel DB
+    if (asset2::asset_exists (ctx, out_result->uid_concrete_asset))
+    {
         out_result->result = eBuildResult::was_already_built;
-        return true;
-
     }
-
-    //UID non esisteva nel DB, ottimo, lo aggiungo e termino con successo
-    sprintf_s (out_result->src, sizeof(out_result->src), "%s@%d", absFilename, sec->getLineStarted());
-    if (!asset_insert (ctx, out_result->uid, getAssetType(), buildTime_UTC, out_result->src))
+    else
     {
-        gos::logger::err ("error inserting asset\n");
-        return false;
+        //non esisteva nel DB, ottimo, lo aggiungo e poi lo buildo
+        out_result->result = eBuildResult::just_built;
+        if (!asset_insert (ctx, out_result->uid_concrete_asset))
+        {
+            logger->log (eTextColor::red, "error inserting asset in DB\n");
+            return false;
+        }        
     }
 
     //aggiungo le sue dipendenze
-    if (!dependency_add (ctx, out_result->uid, uid_of_iniFile)) return false;
-    if (!dependency_add (ctx, out_result->uid, params.uid_vtxshader)) return false;
-    if (!dependency_add (ctx, out_result->uid, params.uid_pxlshader)) return false;
+    if (!dependency_add (ctx, out_result->uid_virtual_asset, uid_of_iniFile)) return false;
+    if (!dependency_add (ctx, out_result->uid_virtual_asset, out_result->uid_concrete_asset)) return false;
+    if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__virtual_vtxshader)) return false;
+    if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__virtual_pxlshader)) return false;
 
-    //segno che e' stato buildato di fresco
-    out_result->result = eBuildResult::just_built;
 
     
     //a questo punto devo davvero creare il file dell'asset
-    if (doCreateAnAssetFile)
+    if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
     {
         char filenameDST[1024];
-        asset_manufacture_fullFilename (ctx, out_result->uid, filenameDST, sizeof(filenameDST));
-        return priv_do_create_assetFile (ctx, params, filenameDST);
+        asset_manufacture_fullFilename (ctx, out_result->uid_concrete_asset, filenameDST, sizeof(filenameDST));
+        return priv_do_create_assetFile (ctx, out_result->uid_concrete_asset, params, filenameDST);
     }
 
     return true;
@@ -239,7 +224,7 @@ bool Builder_pipe::build (DBContext &ctx, u64 buildTime_UTC, const char *absFile
 
 
 //************************************
-bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, const Params &params, const char *filenameDST) const
+bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const Params &params, const char *filenameDST) const
 {
     SPVReflect reflect;
     reflect.beginParseFromMemory();
@@ -247,9 +232,14 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, const Params &param
     //il vtx/pxl shader esistono gia' e sono gia' stati compilati.
     //A me pero' serve la versione con le debug info
     char s[1024];
-    if (params.uid_vtxshader.isValid())
+    UID uid__concrete_vtxShader;
+    uid__concrete_vtxShader.setInvalid();
+    if (params.uid__virtual_vtxshader.isValid())
     {
-        asset_manufacture_fullFilename (ctx, params.uid_vtxshader, s, sizeof(s));
+        if (!virtasset_get_info (ctx, params.uid__virtual_vtxshader, NULL, &uid__concrete_vtxShader))
+            return false;
+
+        asset_manufacture_fullFilename (ctx, uid__concrete_vtxShader, s, sizeof(s));
         strcat_s (s, sizeof(s), "d");
 
         u32 fsize = 0;
@@ -265,11 +255,19 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, const Params &param
             return false;
         }
         GOSFREE_SCRAP(buffer);
+
+        //aggiungo la dipendenza runtime di questo asset verso il vtx shader
+        dependencyRT_add (ctx, uid_concrete_asset, uid__concrete_vtxShader);
     }
 
-    if (params.uid_pxlshader.isValid())
+    UID uid__concrete_pxlShader;
+    uid__concrete_pxlShader.setInvalid();
+    if (params.uid__virtual_pxlshader.isValid())
     {
-        asset_manufacture_fullFilename (ctx, params.uid_pxlshader, s, sizeof(s));
+        if (!virtasset_get_info (ctx, params.uid__virtual_pxlshader, NULL, &uid__concrete_pxlShader))
+            return false;
+
+        asset_manufacture_fullFilename (ctx, uid__concrete_pxlShader, s, sizeof(s));
         strcat_s (s, sizeof(s), "d");
 
         u32 fsize = 0;
@@ -285,6 +283,10 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, const Params &param
             return false;
         }
         GOSFREE_SCRAP(buffer);
+
+        //aggiungo la dipendenza runtime di questo asset verso il pxl shader
+        dependencyRT_add (ctx, uid_concrete_asset, uid__concrete_pxlShader);
+
     }
 
     if (!reflect.endParseFromMemory())
@@ -303,10 +305,10 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, const Params &param
         buffer.writeU32 (GOS_MAGIC__ASSET_PIPELINE_DEF);
 
         //uid vtx shader
-        buffer.writeU64 (params.uid_vtxshader._uid);
+        buffer.writeU64 (uid__concrete_vtxShader._uid);
 
         //uid pxl shader
-        buffer.writeU64 (params.uid_pxlshader._uid);
+        buffer.writeU64 (uid__concrete_pxlShader._uid);
 
         //cull/draw
         buffer.writeU8 (static_cast<u8>(params.cullMode));
