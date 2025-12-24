@@ -1056,7 +1056,7 @@ namespace test11_enum_bitmask
 //********************************************
 namespace test12_hash_map
 {
-    bool isMapSorted (const gos::HashMap<u32, u32> &map)
+    bool isMapSorted (const gos::FastHashMap<u32, u32> &map)
     {
         auto *list = map._queryList();
         for (u32 i = 1; i < list->getNElem(); i++)
@@ -1084,7 +1084,7 @@ namespace test12_hash_map
     {
         gos::Allocator *allocator = gos::getSysHeapAllocator();
 
-        gos::HashMap<u32, u32>  map;
+        gos::FastHashMap<u32, u32>  map;
         map.setup (allocator, 16);
 
         gos::UniqueSortedList<u32> sortedList;

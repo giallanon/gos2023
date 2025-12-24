@@ -203,7 +203,7 @@ namespace gos
             u32     numElements;
         };
 
-        typedef gos::HashMap<u32, sPage>	HashedPageList;		
+        typedef gos::FastHashMap<u32, sPage>	HashedPageList;		
 
      private:
         void	priv_calcPageIndexAndOffset (u32 index, u32 *out_pageIndex, u32 *out_offset) const              { (*out_pageIndex) = index / NUM_DATA_PER_PAGE; (*out_offset) = index % NUM_DATA_PER_PAGE; }

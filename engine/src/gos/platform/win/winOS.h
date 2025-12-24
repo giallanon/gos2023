@@ -102,7 +102,7 @@ namespace platform
     u64				FS_fileTell(OSFile &h);
     bool			FS_fileCopy (const char *src, const char *dst);
 
-    bool            FS_findFirst (OSFileFind *ff, const char *utf8_path, const char *utf8_jolly);
+    bool            FS_findFirst (OSFileFind *ff, const char *utf8_path, const char *utf8_jolly, eFileFindMode ffmode);
     bool            FS_findNext (OSFileFind &ff);
     void            FS_findClose(OSFileFind &ff);
     bool            FS_findIsDirectory(const OSFileFind &ff);

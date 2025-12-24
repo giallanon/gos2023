@@ -62,7 +62,7 @@ u32 ArraysImporter::priv_findOrCreateVtx (const sVertex &vIN)
 	return n;
 */
 
-	HashMap<sVertex, u32>::Position pos;
+	FastHashMap<sVertex, u32>::Position pos;
 	u32 vtxIndex;
 	if (sortedFinalVtxList.findWithPos (vIN, &vtxIndex, &pos))
 		return vtxIndex;

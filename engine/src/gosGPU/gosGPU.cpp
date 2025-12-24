@@ -61,7 +61,7 @@ bool GPU::shader_compile (const char *shaderSRCFile, const char *shaderStage, co
         sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s %s -g -O0 -o %s 2>&1",  shaderStage, defineList, shaderSRCFile, shaderDSTFile);
     else
         sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s %s -O -o %s 2>&1",  shaderStage, defineList, shaderSRCFile, shaderDSTFile);
-    gos::logger::log ("%s\n", cmd);
+    //gos::logger::log ("%s\n", cmd);
 
     char *result;
     u32 len;
@@ -2006,7 +2006,7 @@ const gpu::Texture* GPU::getInfo (const GPUTextureHandle handle) const
 bool GPU::sampler_create (const gpu::SamplerDesc &desc, GPUSamplerHandle *out_handle)
 {
     //prima di tutto cerco se esiste gia' un sampler con gli stessi parametri
-    HashMap<u32, GPUSamplerHandle>::Position insertPosition;
+    FastHashMap<u32, GPUSamplerHandle>::Position insertPosition;
     if (samplerDescrHashMap.findWithPos (desc.toU32(), out_handle, & insertPosition))
         return true;
 

@@ -1,0 +1,52 @@
+//vs anonimo, deve puntare allo stesso asset di VS-1
+@vtx_shader
+{
+  src: shader/vs1.shader
+}
+
+//VS-1
+@vtx_shader : VS-1
+{
+  src: shader/vs1.shader
+}
+
+//VS-2
+@vtx_shader : VS-2
+{
+  src: shader/vs2.shader
+}
+
+//identico a VS-2 appena dichiarato
+@vtx_shader: VS-2
+{
+  src: ../asset_src/shader/vs2.shader
+}
+
+
+//anonimo (ma deve puntare a VS-1-d1-d2-d3)
+@vtx_shader
+{
+  src: shader/vs1.shader
+  def: d3 d2 d1
+}
+
+//anonimo ma uguale a quello sopra (deve puntare a VS-1-d1-d2))
+@vtx_shader
+{
+  src: ../asset_src/shader/vs1.shader
+  def: d2 d3 d1
+}
+
+//VS-1-d1-d2-d3
+@vtx_shader: VS-1-d1-d2-d3
+{
+  src: /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader
+  def: d1 d2 d3
+}
+
+//uguale a VS-1-d1-d2-d3 ma con un runtime-name divero
+@vtx_shader: alias-VS-1-d1-d2-d3
+{
+  src: shader/vs1.shader
+  def: d2 d1 d3
+}

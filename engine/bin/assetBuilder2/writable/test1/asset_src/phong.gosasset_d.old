@@ -1,0 +1,9 @@
+@vtx_shader : VS-phong
+{
+  src: shader/phong/phong.vert.shader
+}
+
+@pxl_shader : PS-phong
+{
+  src: shader/phong/phong.frag.shader
+}

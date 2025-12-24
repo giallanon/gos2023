@@ -265,9 +265,20 @@ u32 platform::FS_fileWrite (OSFile &h, const void *buffer, u32 numBytesToWrite)
 }
 
 //*****************************************************
-bool platform::FS_findFirst (OSFileFind *ff, const char *utf8_path, const char *utf8_jolly)
+bool platform::FS_findFirst (OSFileFind *ff, const char *utf8_path, const char *utf8_jolly, eFileFindMode ffmode)
 {
     assert(ff->dirp == NULL);
+
+    switch (ffmode)
+    {
+    default: 
+        ff->findMode = 0;
+        DBGBREAK;
+        break;
+    case eFileFindMode::both_file_and_folder:   ff->findMode = OSFileFind::ALLOW_FILE | OSFileFind::ALLOW_FOLDER; break;
+    case eFileFindMode::only_folder:            ff->findMode = OSFileFind::ALLOW_FOLDER; break;
+    case eFileFindMode::only_file:              ff->findMode = OSFileFind::ALLOW_FILE; break;
+    }    
 
     char filename[1024];
     sprintf_s(filename, sizeof(filename), "%s/%s", utf8_path, utf8_jolly);
@@ -277,7 +288,10 @@ bool platform::FS_findFirst (OSFileFind *ff, const char *utf8_path, const char *
         return false;
 
     strcpy_s (ff->strJolly, sizeof(ff->strJolly), (const char*)utf8_jolly);
-    return FS_findNext(*ff);
+    if (FS_findNext(*ff))
+        return true;
+    FS_findClose(*ff);
+    return false;
 }
 
 //*****************************************************
@@ -291,12 +305,33 @@ bool platform::FS_findNext (OSFileFind &ff)
         if (NULL == ff.dp)
             return false;
 
-        //se � una dir...
         if (ff.dp->d_type == DT_DIR)
-            return true;
+        {
+            //e' una dir
+			bool bSkipThisFolder = false;
 
-        if (gos::fs::doesFileNameMatchJolly (ff.dp->d_name, ff.strJolly))
-            return true;
+            if (0 == (ff.findMode & OSFileFind::ALLOW_FOLDER))
+                bSkipThisFolder = true;
+            else
+            {
+                if (ff.dp->d_name[0] == '.')
+                {
+                    if (0x00 == ff.dp->d_name[1])
+                        bSkipThisFolder = true;
+                    else if ('.' == ff.dp->d_name[1] && 0x00 == ff.dp->d_name[2])
+                        bSkipThisFolder = true;
+                }
+            }
+
+            if (!bSkipThisFolder)
+                return true;
+        }
+        else if (gos::fs::doesFileNameMatchJolly (ff.dp->d_name, ff.strJolly))
+        {
+            //E' un file
+            if (0 != (ff.findMode & OSFileFind::ALLOW_FILE))
+                return true;
+        }
     }
 }
 

@@ -758,12 +758,11 @@ u64 fs::fileLength (const char *utf8_filePathAndNameRESOLVABLE)
 	return platform::FS_fileLength(utf8_filePathAndName);
 }
 //**************************************************************************
-bool fs::findFirst (gos::FileFind *ff, const char *utf8_pathRESOLVABLE, const char *jolly)
+bool fs::findFirst (gos::FileFind *ff, const char *utf8_pathRESOLVABLE, const char *jolly, eFileFindMode ffmode)
 { 
 	char utf8_path[1024];
 	pathResolver.resolve (utf8_pathRESOLVABLE, utf8_path, sizeof(utf8_path));
-
-	return platform::FS_findFirst (&ff->osFF, utf8_path, jolly); 
+	return platform::FS_findFirst (&ff->osFF, utf8_path, jolly, ffmode); 
 }
 
 //**************************************************************************

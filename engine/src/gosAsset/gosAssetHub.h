@@ -148,7 +148,7 @@ namespace gos
 			}
 
 		private:
-			typedef HashMap<asset::UID, void*> HashList;
+			typedef FastHashMap<asset::UID, void*> HashList;
 
 			typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Unsafe>		LocalAllocator;
 

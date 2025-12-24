@@ -72,11 +72,15 @@ namespace platform
     
     struct OSFileFind
     {
+        static const unsigned char  ALLOW_FOLDER = 0x01;
+        static const unsigned char  ALLOW_FILE   = 0x02;
+
                         OSFileFind(): dirp(NULL), dp(NULL) { }
 
         DIR	            *dirp;
         struct dirent   *dp;
         char            strJolly[64];
+        unsigned char   findMode;
     };
 
     struct OSSocket

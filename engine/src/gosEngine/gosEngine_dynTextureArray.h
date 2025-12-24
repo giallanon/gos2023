@@ -23,7 +23,7 @@ namespace gos
 
         private:
             gos::Bitfield                           bitmask;
-            gos::HashMap<GPUTextureHandle, u32>     hashMap;
+            gos::FastHashMap<GPUTextureHandle, u32> hashMap;
             u32                                     num_max_texture;
         };
 

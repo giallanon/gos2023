@@ -355,9 +355,20 @@ u64 platform::FS_fileTell(OSFile &h)
 
 
 //*****************************************************
-bool platform::FS_findFirst (OSFileFind *ff, const char *utf8_path, const char *utf8_jolly)
+bool platform::FS_findFirst (OSFileFind *ff, const char *utf8_path, const char *utf8_jolly, eFileFindMode ffmode)
 {
 	assert(ff->h == INVALID_HANDLE_VALUE);
+	
+    switch (ffmode)
+    {
+    default: 
+        ff->findMode = 0;
+        DBGBREAK;
+        break;
+    case eFileFindMode::both_file_and_folder:   ff->findMode = OSFileFind::ALLOW_FILE | OSFileFind::ALLOW_FOLDER; break;
+    case eFileFindMode::only_folder:            ff->findMode = OSFileFind::ALLOW_FOLDER; break;
+    case eFileFindMode::only_file:              ff->findMode = OSFileFind::ALLOW_FILE; break;
+    }  	
 
 	wchar_t wctemp[512];
 	win32::utf8_towchar (utf8_path, u32MAX, wctemp, sizeof(wctemp));
@@ -379,7 +390,9 @@ bool platform::FS_findFirst (OSFileFind *ff, const char *utf8_path, const char *
 			return true;
 	} while (FS_findNext(*ff));
 	
-	FS_findClose(*ff);
+    if (FS_findNext(*ff))
+        return true;
+    FS_findClose(*ff);
 	return false;	
 }
 
@@ -394,8 +407,33 @@ bool platform::FS_findNext(OSFileFind &ff)
 		if ((ff.findData.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) != 0) continue;
 
 		win32::wchar_to_utf8 (ff.findData.cFileName, u32MAX, ff.utf8_curFilename, sizeof(ff.utf8_curFilename));
-		if (FS_findIsDirectory(ff) || fs::doesFileNameMatchJolly(ff.utf8_curFilename, ff.utf8_jolly))
-			return true;
+		if (FS_findIsDirectory(ff))
+		{
+			//e' una dir
+			bool bSkipThisFolder = false;
+
+            if (0 == (ff.findMode & OSFileFind::ALLOW_FOLDER))
+                bSkipThisFolder = true;
+            else
+			{
+				if (ff.utf8_curFilename[0] == '.')
+				{
+					if (0x00 == ff.utf8_curFilename[1])
+						bSkipThisFolder = true;
+					else if ('.' == ff.utf8_curFilename[1] && 0x00 == ff.utf8_curFilename[2])
+						bSkipThisFolder = true;
+				}
+			}
+
+            if (!bSkipThisFolder)
+                return true;
+		}
+		else if (fs::doesFileNameMatchJolly(ff.utf8_curFilename, ff.utf8_jolly))
+		{
+            //E' un file
+            if (0 != (ff.findMode & OSFileFind::ALLOW_FILE))
+                return true;	
+		}
 	}
 	return false;
 }

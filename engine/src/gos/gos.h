@@ -210,7 +210,7 @@ namespace gos
 		bool 			fileSaveBuffer (const char* utf8_filePathAndNameRESOLVABLE, const void *buffer, u32 sizeof_buffer);
 		inline bool		fileCopy (const char *src, const char *dst)															{ return platform::FS_fileCopy (src, dst); }
 
-		bool			findFirst (gos::FileFind *ff, const char *utf8_pathRESOLVABLE, const char *utf8_jolly);
+		bool			findFirst (gos::FileFind *ff, const char *utf8_pathRESOLVABLE, const char *utf8_jolly, eFileFindMode ffmode = eFileFindMode::both_file_and_folder);
 		inline bool     findNext (gos::FileFind &ff)																		{ return platform::FS_findNext(ff.osFF); }
 		inline void     findClose(gos::FileFind &ff)																		{ platform::FS_findClose(ff.osFF); }
 		inline bool     findIsDirectory(const gos::FileFind &ff)															{ return platform::FS_findIsDirectory(ff.osFF); }

@@ -28,8 +28,10 @@ namespace gos
 						//======================================= get / set
 		T&				append (const T& t)																				{ T *ret = priv_insert(nElem);  (*ret)=t; return *ret; }
         T&				operator[] (u32 i)																				{ assert(i>=0); return *priv_insert(i); }
-        const T&		getElem (u32 i)	const																			{ assert(i<nElem && i>=0);	return * reinterpret_cast<T*>(memBlock._getPointer(i *sizeof(T))); }
+		T&				getElem (u32 i)																					{ assert(i<nElem && i>=0);	return * reinterpret_cast<T*>(memBlock._getPointer(i *sizeof(T))); }
         const T&		operator() (u32 i)	const																		{ assert(i<nElem && i>=0);	return * reinterpret_cast<T*>(memBlock._getPointer(i *sizeof(T))); }
+        const T&		queryElem (u32 i)	const																		{ assert(i<nElem && i>=0);	return * reinterpret_cast<T*>(memBlock._getPointer(i *sizeof(T))); }
+
 
 						//======================================= copy
 		void			copyFrom (const Array<T> &source)

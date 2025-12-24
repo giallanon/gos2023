@@ -31,7 +31,7 @@ void DynamicTextureArray::unsetup()
 //*************************************
 u32 DynamicTextureArray::addIfNotExitst (GPUTextureHandle texHandle, bool *out_canBeNULL_wasNew)
 {
-    HashMap<GPUTextureHandle, u32>::Position pos;
+    FastHashMap<GPUTextureHandle, u32>::Position pos;
     u32 index;
     if (hashMap.findWithPos (texHandle, &index, &pos))
     {

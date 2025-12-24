@@ -100,8 +100,8 @@ namespace gos
         };
 
 
-        typedef gos::HashMap<asset::UID, u64>   HashedUIDList;
-        typedef gos::FastArray<asset::UID>      FastUIDList;
+        typedef gos::FastHashMap<asset::UID, u64>   HashedUIDList;
+        typedef gos::FastArray<asset::UID>          FastUIDList;
 
 
         struct Context

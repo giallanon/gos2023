@@ -1,0 +1,41 @@
+//PIPE noname
+@pipe
+{
+    rt0: U8_RGBA
+
+    @vtx_shader
+    {
+      src: shader/vs1.shader
+    }
+
+    @pxl_shader
+    {
+      src: shader/ps1.shader
+    }
+}
+
+// //VS noname
+// @vtx_shader
+// {
+//   src: shader/vs2.shader
+// }
+//
+// //VS-1
+// @vtx_shader : VS-1
+// {
+//   src: shader/vs1.shader
+// }
+//
+// //VS-2
+// @vtx_shader : VS-2
+// {
+//   src: shader/vs2.shader
+// }
+//
+//PIPE-2
+// @pipe: pipe-1
+// {
+//     rt0: U8_RGBA
+//     @vtx_shader: VS-1
+//     @pxl_shader: PS-1
+// }

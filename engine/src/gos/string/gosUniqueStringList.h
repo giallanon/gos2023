@@ -33,7 +33,7 @@ namespace gos
                     {
                         const u32 key = utils::crc32 (m);
 
-                        HashMap<u32,u32>::Position pos;
+                        FastHashMap<u32,u32>::Position pos;
                         u32 offset;
                         if (!hashMap.findWithPos (key, &offset, &pos))
                         {
@@ -51,8 +51,8 @@ namespace gos
         const char* next (u32 *iter) const                                  { return list.next(iter); }
 
     private:
-        StringList          list;
-        HashMap<u32,u32>    hashMap;
+        StringList              list;
+        FastHashMap<u32,u32>    hashMap;
     };
 } //namespace gos
 

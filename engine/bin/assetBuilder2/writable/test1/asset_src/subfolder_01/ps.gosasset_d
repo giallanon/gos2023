@@ -1,0 +1,13 @@
+
+
+//PS-1
+@pxl_shader : PS-1
+{
+  src: ../shader/ps1.shader
+}
+
+//PS-2
+@pxl_shader : PS-2
+{
+  src: /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader
+}

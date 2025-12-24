@@ -72,10 +72,14 @@ namespace platform
 
 	typedef struct sOSFileFind
 	{
+        static const unsigned char  ALLOW_FOLDER = 0x01;
+        static const unsigned char  ALLOW_FILE   = 0x02;
+
 		HANDLE			h;
 		WIN32_FIND_DATA	findData;
 		char			utf8_jolly[64];
 		char			utf8_curFilename[512];
+		unsigned char   findMode;
 
 						sOSFileFind()					{h = INVALID_HANDLE_VALUE; }
 	} OSFileFind;

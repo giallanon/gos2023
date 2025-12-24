@@ -5,11 +5,18 @@ using namespace gos;
 //******************************** 
 void test1()
 {
-    gos::asset2::Builder b;
+    gos::asset2::Builder b(NULL);
 
-    char s[1024];
-    sprintf_s (s, sizeof(s), "%s/test1", gos::getPhysicalPathToWritableFolder());
-    b.rebuildAll(s);
+    bool ret;
+    char baseFolder[1024];
+    sprintf_s (baseFolder, sizeof(baseFolder), "%s/test1", gos::getPhysicalPathToWritableFolder());
+    //ret = b.rebuildAll(baseFolder);
+    ret = b.build(baseFolder); if (ret) b.debug_sanityCheck(baseFolder);
+
+    if (ret)
+    {
+        b.save_dependencies_report (baseFolder);
+    }
 }
 
 //******************************** 

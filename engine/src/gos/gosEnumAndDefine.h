@@ -108,6 +108,13 @@ enum class eFileMode : u8
     readWrite = 2
 };
 
+enum class eFileFindMode : u8
+{
+    both_file_and_folder = 0,
+    only_file = 1,
+    only_folder = 2
+};
+
 enum class eFolderDeleteMode : u8
 {
 	doNotDeleteAnyFolder = 0,

@@ -1,6 +1,7 @@
 #ifndef _gosHashMap_h_
 #define _gosHashMap_h_
 #include "gosFastArray.h"
+#include "gosArray.h"
 
 namespace gos
 {
@@ -25,10 +26,10 @@ namespace gos
      * 
      * TKEY deve essere una classe con un metodo "int compare (const TKEY &b) const" che ritorna 0 se a==b, 1 se a>b, -1 se a<<b
      * Per i tipi piu' comuni (come u64 e u32), ho definito una specializzazione del template HashMap_compareFn<>
-     * in modo da non dover implementare una classe "u32" con dentro un meotodo compare
+     * in modo da non dover implementare una classe "u32" con dentro un metodo compare
     */
-    template<class TKEY, class TVALUE>
-    class HashMap
+    template<class TKEY, class TVALUE, template<class> class STORAGE>
+    class BaseHashMap
     {
     public:
         struct Position
@@ -37,7 +38,7 @@ namespace gos
             TKEY    _key;
             u32     _index;
 
-        friend HashMap<TKEY, TVALUE>;
+        friend BaseHashMap<TKEY, TVALUE, STORAGE>;
         };
 
         struct sElem
@@ -46,10 +47,12 @@ namespace gos
             TVALUE  value;
         };
 
+        typedef STORAGE<sElem> MyStorage;
+
     public:
-                HashMap ()                                                              { }
-                HashMap (Allocator *backingallocator, u32 preallocNumElem=0)            { setup (backingallocator, preallocNumElem); }
-                ~HashMap ()                                                             { list.unsetup (); }
+                BaseHashMap ()                                                          { }
+                BaseHashMap (Allocator *backingallocator, u32 preallocNumElem=0)        { setup (backingallocator, preallocNumElem); }
+                ~BaseHashMap ()                                                         { list.unsetup (); }
 
                 //======================================= memory
         void	setup (Allocator *backingallocator, u32 preallocNumElem=0)              { list.setup (backingallocator, preallocNumElem); }
@@ -57,7 +60,7 @@ namespace gos
         void	prealloc (u32 n)														{ list.prealloc (n); }
 
         void    reset()                                                                 { list.reset(); }
-        void    copyFrom (const HashMap<TKEY, TVALUE> &src)                             { list.copyFrom (src.list); }
+        void    copyFrom (const BaseHashMap<TKEY, TVALUE, STORAGE> &src)                { list.copyFrom (src.list); }
 
         /**
          * @brief   inserisce la coppia (key, value) solo se (key) non e' gia' presente
@@ -224,7 +227,7 @@ namespace gos
          * @brief   ritorna l'array lineare nel quale sono memorizzati i dati
          *
          */
-        const gos::FastArray<sElem>*    _queryList() const      { return &list; }
+        const MyStorage*    _queryList() const      { return &list; }
 
 
         /**
@@ -305,8 +308,35 @@ namespace gos
                 }    
 
     private:
-        gos::FastArray<sElem>     list;
+        MyStorage     list;
     };
+
+
+
+    template<class TKEY, class TVALUE>
+    class FastHashMap : public BaseHashMap<TKEY, TVALUE, gos::FastArray>
+    {
+    public:
+        typedef BaseHashMap<TKEY, TVALUE, gos::FastArray> BaseClass;
+    public:
+            FastHashMap () : BaseClass()                                                                                      { }
+            FastHashMap (Allocator *backingallocator, u32 preallocNumElem=0) : BaseClass(backingallocator, preallocNumElem)   { }
+
+    };
+
+
+    template<class TKEY, class TVALUE>
+    class SlowHashMap : public BaseHashMap<TKEY, TVALUE, gos::Array>
+    {
+    public:
+        typedef BaseHashMap<TKEY, TVALUE, gos::Array> BaseClass;
+    public:
+            SlowHashMap () : BaseClass()                                                                                      { }
+            SlowHashMap (Allocator *backingallocator, u32 preallocNumElem=0) : BaseClass(backingallocator, preallocNumElem)   { }
+
+    };    
+
+
 } //namespace gos
 
 #endif // _gosHashMap_h_

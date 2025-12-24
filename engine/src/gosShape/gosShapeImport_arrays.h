@@ -299,7 +299,7 @@ namespace gos
 			eMode					mode;
 			VtxLayout 				shapeVtxLayout;
 			FastArray<sVertex>		finalVtxList;
-			HashMap<sVertex, u32>	sortedFinalVtxList;
+			FastHashMap<sVertex, u32>	sortedFinalVtxList;
 			FastArray<u16>			finalIdxList;
 			const u16 				*tupleList;
 			u32 					totNumOfIdxInTupleList;

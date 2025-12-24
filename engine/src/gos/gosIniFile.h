@@ -144,7 +144,7 @@ namespace gos
 		bool					get (const char *identifierIN, UTF8String &out) const								{ const char *pstr = priv_get (identifierIN); if (NULL == pstr) return false; out = pstr; return true; }
 
 		bool					checkString (const char *identifier, const char *valueToCmp, bool bCaseSensitive=false) const;
-									//ritorna true se identifier esiste ed � = a valueToCmp
+									//ritorna true se identifier esiste ed e' = a valueToCmp
 
 		void					getOrDefault (const char *identifier, const char *defaultValue, UTF8String &out) const;
 		void					getOrDefault (const char *identifier, const char *defaultValue, char *out, u32 sizeof_out) const;

@@ -573,7 +573,7 @@ namespace gos
         HandleList<GPUCmdBufferHandle, gpu::CommandBuffer>          cmdBufferList;
         HandleList<GPUTextureHandle,gpu::Texture>                   textureList;
         HandleList<GPUSamplerHandle, gpu::Sampler>                  samplerList;
-        gos::HashMap<u32, GPUSamplerHandle>                         samplerDescrHashMap;
+        gos::FastHashMap<u32, GPUSamplerHandle>                     samplerDescrHashMap;
     };
 } //namespace gos
 
