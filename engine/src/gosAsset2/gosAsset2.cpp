@@ -46,6 +46,8 @@ const char* asset2::enumToString (eBuildResult s)
 	}
 }
 
+
+
 //************************************
 static bool asset2_create_emptyDB (const char *dbFile, DBHandle &db)
 {
@@ -675,48 +677,6 @@ bool asset2::asset_delete (DBContext &ctx, const UID &uid)
     {
         strcat_s (s, sizeof(s), "d");
         fs::fileDelete(s);
-    }
-    return true;
-}
-
-
-//*******************************************************
-bool asset2::dependency_get_dependecies_list (DBContext &ctx, UID uid, bool bClearListOnStart, UniqueUIDList *out)
-{
-    assert (NULL != out);
-
-    if (bClearListOnStart)
-        out->reset();
-
-    if (!ctx.isValid())
-    {
-        logger::err ("dependency_get_dependecies_list (%" PRIu64 ") => invalid ctx\n",  uid._uid);
-        return false;
-    }
-
-    db::RST rst;
-    char s[256];
-    sprintf_s (s, sizeof(s), "SELECT childUID FROM " GOS_ASSET2__TABLE_DEPENDS " WHERE UID=%" PRIu64 "", uid._uid);
-    if (!db::query (ctx.db, s, &rst))
-    {
-        logger::err ("dependency_get_dependecies_list (%" PRIu64 ") => error querying\n",  uid._uid);
-        return false;
-    }
-
-    while (rst.fetchRow())
-    {
-        UID childUID;
-        childUID._uid = rst.getValAsU64(0);
-        out->insertIfNotExists (childUID);
-    }
-
-    rst.rewind();
-    while (rst.fetchRow())
-    {
-        UID childUID;
-        childUID._uid = rst.getValAsU64(0);
-        if (!dependency_get_dependecies_list (ctx, childUID, false, out))
-            return false;
     }
     return true;
 }

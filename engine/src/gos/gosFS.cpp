@@ -578,6 +578,28 @@ void fs::folderDeleteAllFileWithJolly  (const char *utf8_pathSenzaSlashRESOLVABL
 	}	
 }
 
+//******************************************
+void fs::makeABSPath (const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out)
+{
+    assert (fs::isPathAbsolute(origin_absFilename));
+
+    //<rel_or_abs_path> puo' essere assoluto o relativo
+    char s[1024];
+    if (fs::isPathAbsolute(rel_or_abs_path))
+        sprintf_s (s, sizeof(s), "%s", rel_or_abs_path);
+    else
+    {
+        fs::extractFilePathWithSlash (origin_absFilename, s, sizeof(s));
+        strcat_s (s, sizeof(s), rel_or_abs_path);
+    }    
+
+    fs::pathSanitizeInPlace(s);
+    const u32 len = string::ansi::lengthInBytes(s);
+
+    assert (len < sizeof_out);
+    memset (out, 0, sizeof_out);
+    memcpy (out, s, len);
+}
 
 //**************************************************************************
 void fs::resolvePath (const char *pathIN, char *out, u32 sizeof_out)

@@ -76,12 +76,11 @@ namespace gos
             bool            priv_addBuilder (BuilderInterface *builder);
             void            priv_printResList (const ResList &list) const;
             void            priv_printResListElem (const sResListElem &elem) const;
-            bool            priv_extractAllInludePaths (const char *absFilename, gos::StringList *out) const;
             void            priv_fromDirectiveNameToAssetClassName (const char *directiveName, char *out_asseetClassName, u32 sizeof_out) const;
 
 		private:
             bool		priv_build (DBContext &ctx, bool bDoCreateAssetFile);
-            void		priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listof_gosassetd_toRebuild, UniqueUIDList *out_listof_deleted_gosassetd, UniqueUIDList *out_listOfPossibileAssetsToBeDeleted) const;
+            bool		priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listof_gosassetd_toRebuild, UniqueUIDList *out_listof_deleted_gosassetd, UniqueUIDList *out_listOfPossibileAssetsToBeDeleted) const;
             
 			bool		priv_gosassetd_scan_folder (DBContext &ctx, const char *folder_path, HashedStringList *out_listof_gosassetd_toRebuild) const;
             bool        priv_gosassetd_scan_folder_parse (DBContext &ctx, const char *filename, HashedStringList *out_listof_gosassetd_toRebuild) const;

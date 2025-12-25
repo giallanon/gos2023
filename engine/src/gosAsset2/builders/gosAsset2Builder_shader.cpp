@@ -22,7 +22,7 @@ bool Builder_shader::priv_extractParams (const char *absFilename, const IniFileS
         logger->log(eTextColor::red, "line %d => can't find param <src>\n", sec->getLineStarted());
         return false;
     }
-    prot_makeABSPath (absFilename, s, out_params->src, sizeof(out_params->src));
+    fs::makeABSPath (absFilename, s, out_params->src, sizeof(out_params->src));
 
 
 

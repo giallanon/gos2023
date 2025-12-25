@@ -61,7 +61,51 @@ namespace gos
         bool        dependencyRT_add (DBContext &ctx, UID asset_padre, UID asset_figlio);
         
                     //ritorna in <out> un elenco di risorse/asset da cui <uid> dipende (ricorsivamente)
-        bool        dependency_get_dependecies_list (DBContext &ctx, UID uid, bool bClearListOnStart, UniqueUIDList *out);
+                    template<typename LAMBDA>
+        bool        dependency_get_dependecies_list (DBContext &ctx, UID uid, bool bClearListOnStart, UniqueUIDList *out, LAMBDA&& filterFn)
+                    {
+                        assert (NULL != out);
+
+                        if (bClearListOnStart)
+                            out->reset();
+
+                        if (!ctx.isValid())
+                        {
+                            logger::err ("dependency_get_dependecies_list (%" PRIu64 ") => invalid ctx\n",  uid._uid);
+                            return false;
+                        }
+
+                        db::RST rst;
+                        char s[256];
+                        sprintf_s (s, sizeof(s), "SELECT childUID FROM " GOS_ASSET2__TABLE_DEPENDS " WHERE UID=%" PRIu64 "", uid._uid);
+                        if (!db::query (ctx.db, s, &rst))
+                        {
+                            logger::err ("dependency_get_dependecies_list (%" PRIu64 ") => error querying\n",  uid._uid);
+                            return false;
+                        }
+
+                        while (rst.fetchRow())
+                        {
+                            UID childUID;
+                            childUID._uid = rst.getValAsU64(0);
+                            if (filterFn(childUID))
+                                out->insertIfNotExists (childUID);
+                        }
+
+                        rst.rewind();
+                        while (rst.fetchRow())
+                        {
+                            UID childUID;
+                            childUID._uid = rst.getValAsU64(0);
+                            if (filterFn(childUID))
+                            {
+                                if (!dependency_get_dependecies_list (ctx, childUID, false, out, filterFn))
+                                    return false;
+                            }
+                        }
+                        return true;
+                    }
+        inline bool dependency_get_dependecies_list (DBContext &ctx, UID uid, bool bClearListOnStart, UniqueUIDList *out)      { return dependency_get_dependecies_list(ctx, uid, bClearListOnStart, out, [](const UID childUID) { return true; }); }
         
                     //ritorna in <out> tutti le risorse/asset che dipendono da questa risorsa (ricorsivamente)
         bool        dependency_get_requireBy_list (DBContext &ctx, const UID &uid, bool bClearListOnStart, UniqueUIDList *out);

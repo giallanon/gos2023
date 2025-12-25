@@ -6,29 +6,6 @@ using namespace gos::asset2;
 
 
 //******************************************
-void BuilderInterface::prot_makeABSPath (const char *absFilename, const char *path, char *out, u32 sizeof_out) const
-{
-    assert (fs::isPathAbsolute(absFilename));
-
-    //i path degli include possono essere relativi
-    char s[1024];
-    if (fs::isPathAbsolute(path))
-        sprintf_s (s, sizeof(s), "%s", path);
-    else
-    {
-        fs::extractFilePathWithSlash (absFilename, s, sizeof(s));
-        strcat_s (s, sizeof(s), path);
-    }    
-
-    fs::pathSanitizeInPlace(s);
-    const u32 len = string::ansi::lengthInBytes(s);
-
-    assert (len < sizeof_out);
-    memset (out, 0, sizeof_out);
-    memcpy (out, s, len);
-}
-
-//******************************************
 bool BuilderInterface::prot_isOneOfThis (const char *paramName, ...) const
 {
     if (paramName[0] == '_' && paramName[1] == '_')
@@ -162,7 +139,7 @@ bool BuilderInterface::priv_extractAllInludePaths (const char *absFilenameIN, go
 
 		//i path degli include possono essere relativi
 		char absIncludeFilename[1024];
-        prot_makeABSPath (absFilenameIN, s, absIncludeFilename, sizeof(absIncludeFilename));
+        fs::makeABSPath (absFilenameIN, s, absIncludeFilename, sizeof(absIncludeFilename));
 		out->add(absIncludeFilename);
 	}
 

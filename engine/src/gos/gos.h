@@ -141,6 +141,12 @@ namespace gos
 						//vengono completamente espansi
 		void 			resolvePath (const char *pathIN, char *out, u32 sizeof_out);
 
+						//<origin_absFilename> deve essere un path assoluto mentre <rel_or_abs_path> puo' essere relativo (a origin)
+						//o assoluto.
+						//Ritorna in out il path assoluto di <rel_or_abs_path> relativamente a <origin_absFilename> gia'
+						//sanitizzato
+		void 			makeABSPath (const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out);
+
 		bool			isPathAbsolute (const char *path);
 		void 			pathSanitize (const char *utf8_path, char *out_utf8sanitizedPath, u32 sizeOfOutSanitzed);
 		void			pathSanitizeInPlace (char *utf8_path, u32 nBytesToCheck = u32MAX);
