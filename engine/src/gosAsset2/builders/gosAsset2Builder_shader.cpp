@@ -111,44 +111,15 @@ bool Builder_shader::build (DBContext &ctx, u64 buildTime_UTC, const char *absFi
             return false;  
     }
 
-    //calcolo assetUID
-    if (!asset2::asset_createUID (getAssetType(), &params, sizeof(Params), &out_result->uid_concrete_asset))
-    {
-        logger->log (eTextColor::red, "error generating concrete assetUID\n");
+    //setup di virtual-asset
+    //All'uscita da questa fn:
+    //  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
+    //  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
+    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
+    if (!prot_seuptVirtualAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
         return false;
-    }
 
-
-    //inserisco il virtual asset nel DB
-    char rtname[128];
-    memset (rtname, 0, sizeof(rtname));
-    sec->get("__value", rtname, sizeof(rtname));
-    if (!virtasset_insert (ctx, getAssetType(), rtname, uid_of_iniFile, sec->getLineStarted(), out_result->uid_concrete_asset, &out_result->uid_virtual_asset))
-    {
-        logger->log (eTextColor::red, "error inserting virtual assetUID\n");
-        return false;
-    }
-
-
-    //vediamo se il concrete-asset esiste gia' nel DB
-    if (asset2::asset_exists (ctx, out_result->uid_concrete_asset))
-    {
-        out_result->result = eBuildResult::was_already_built;
-    }
-    else
-    {
-        //non esisteva nel DB, ottimo, lo aggiungo e poi lo buildo
-        out_result->result = eBuildResult::just_built;
-        if (!asset_insert (ctx, out_result->uid_concrete_asset))
-        {
-            logger->log (eTextColor::red, "error inserting asset in DB\n");
-            return false;
-        }        
-    }
-
-    //aggiungo le sue dipendenze
-    if (!dependency_add (ctx, out_result->uid_virtual_asset, uid_of_iniFile)) return false;        
-    if (!dependency_add (ctx, out_result->uid_virtual_asset, out_result->uid_concrete_asset)) return false;
+    //aggiungo le dipendenze di virtual-asset dalla risorsa shader_txt
     if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__resource_shader_txt)) return false;
     
 

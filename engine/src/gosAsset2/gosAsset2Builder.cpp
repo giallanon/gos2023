@@ -4,6 +4,7 @@
 #include "string/gosStringIncludeDetector.h"
 #include "builders/gosAsset2Builder_shader.h"
 #include "builders/gosAsset2Builder_pipe.h"
+#include "builders/gosAsset2Builder_tex2D.h"
 
 using namespace gos;
 using namespace gos::asset2;
@@ -18,12 +19,13 @@ Builder::Builder(gos::GPU *gpuIN)
 {
 	gpu = gpuIN;
 	localAllocator = gos::getSysHeapAllocator();
-	logger = gos::logger::getSystemLogger();
+	logger = &loggerStdout;
 
 	memset (builderList, 0, sizeof(builderList));
 	addBuilder<Builder_vtxShader>();
 	addBuilder<Builder_pxlShader>();
 	addBuilder<Builder_pipe>();
+	addBuilder<Builder_tex2D>();
 }
 
 //****************************** 
@@ -123,26 +125,34 @@ void Builder::priv_printResList (const ResList &list) const
 //***********************************
 bool Builder::debug_sanityCheck (const char *baseFolder)
 {
-	static const char DB_NAME[] = {"sanitycheck.sqlite3"};
+	static const char SANITY_DB_NAME[] = {"sanitycheck.sqlite3"};
+	
+	logger = &loggerStdout;
 
-    logger = gos::logger::getSystemLogger();
+	char log_folder[512];
+	sprintf_s (log_folder, sizeof(log_folder), "%s/%s.log", baseFolder, SANITY_DB_NAME);
+	fs::folderDeleteAllFileRecursively (log_folder, eFolderDeleteMode::deleteAlsoTheSubfolderAndTheMainFolder);
+	loggerStdout.enableFileLogging (log_folder);
+	
     logger->log (eTextColor::yellow, "\n\n=== RUNNING SANITY CHECK....\n");
     logger->incIndent();
 
 	//faccio un rebuild all usando un nome db specifico
 	char s[1024];
-	sprintf_s (s, sizeof(s), "%s/%s", baseFolder, DB_NAME);
+	sprintf_s (s, sizeof(s), "%s/%s", baseFolder, SANITY_DB_NAME);
 	fs::fileDelete(s);
 
 	DBContext ctxSanity;
-	if (!asset2::dbcontext_open_ex (baseFolder, DB_NAME, &ctxSanity))
+	if (!asset2::dbcontext_open_ex (baseFolder, SANITY_DB_NAME, true, &ctxSanity))
 	{
 		logger->err ("Can't create DB\n");
 		return false;
 	}
 	
-	
+	loggerStdout.disableStdouLogging();
 	bool ret = priv_build (ctxSanity, false);
+	loggerStdout.enableStdouLogging();
+
     if (!ret)
 	{
         logger->log (eTextColor::red, "sanity build FAILED\n");
@@ -154,12 +164,16 @@ bool Builder::debug_sanityCheck (const char *baseFolder)
 			logger->log (eTextColor::green, "success\n");
 			
 			//delete db sanity
-			sprintf_s (s, sizeof(s), "%s/%s", baseFolder, DB_NAME);
+			sprintf_s (s, sizeof(s), "%s/%s", baseFolder, SANITY_DB_NAME);
 			fs::fileDelete(s);
+
+			//delete fs::folderDelete (log_folder);
+			fs::folderDeleteAllFileRecursively (log_folder, eFolderDeleteMode::deleteAlsoTheSubfolderAndTheMainFolder);
 		}
 		else
 		{
-			save_dependencies_report (baseFolder, DB_NAME);
+			save_dependencies_report (baseFolder, SANITY_DB_NAME);
+			save_asset_manifest (baseFolder, SANITY_DB_NAME);
 			logger->log (eTextColor::red, "FAILED\n");
 		}
 	}
@@ -175,7 +189,7 @@ bool Builder::debug_sanityCheck__compareDB (DBContext &ctxSanity, const char *ba
 
 	//ora faccio un po' di verifiche tra i 2 DB
 	DBContext ctx;
-	if (!asset2::dbcontext_open (baseFolder, &ctx))
+	if (!asset2::dbcontext_open (baseFolder, false, &ctx))
 	{
 		logger->err ("can't open regular DB\n");
 		return false;
@@ -271,8 +285,14 @@ bool Builder::debug_sanityCheck__cmp_table (DBContext &ctx_sanity, DBContext &ct
 
 
 //****************************** 
-bool Builder::rebuildAll (const char *baseFolder)
+bool Builder::rebuildAll (const char *baseFolder, bool bVerbose)
 {
+	if (bVerbose)
+		logger = &loggerStdout;
+	else
+		logger = &loggerNull;
+
+		
 	char s[1024];
 
 	//del del database
@@ -280,7 +300,7 @@ bool Builder::rebuildAll (const char *baseFolder)
 	fs::fileDelete(s);
 
 	DBContext ctx;
-	if (!asset2::dbcontext_open (baseFolder, &ctx))
+	if (!asset2::dbcontext_open (baseFolder, true, &ctx))
 		return false;
 
 	//del degli asset
@@ -294,8 +314,14 @@ bool Builder::rebuildAll (const char *baseFolder)
 }
 
 //****************************** 
-bool Builder::build (const char *baseFolder)
+bool Builder::build (const char *baseFolder, bool bVerbose)
 {
+	if (bVerbose)
+		logger = &loggerStdout;
+	else
+		logger = &loggerNull;
+
+
 	bool ret = false;
 
 	//faccio un backup del DB
@@ -308,7 +334,7 @@ bool Builder::build (const char *baseFolder)
 	}
 	
 	DBContext ctx;
-	if (asset2::dbcontext_open (baseFolder, &ctx))
+	if (asset2::dbcontext_open (baseFolder, true, &ctx))
 	{
 		logger->log ("building %s\n", baseFolder);
 		ret = priv_build (ctx, true);
@@ -388,23 +414,25 @@ bool Builder::priv_build (DBContext &ctx,  bool bDoCreateAssetFile)
 			auto list = listof_gosAssetd_toBeRebuilt._queryList();
 			for (u32 i=0; i< list->getNElem(); i++)
 			{
-				UID uid = list->queryElem(i).key;
+				const UID uid = list->queryElem(i).key;
 				const char *absFilename = list->queryElem(i).value.getBuffer();
-
-				logger->log ("[%-12s] %016" PRIX64 " %s\n", asset2::enumToString (uid.getResourceType()), uid._uid, absFilename);
+				if (fs::fileExists(absFilename))
+					logger->log ("[%-12s] %016" PRIX64 " %s\n", asset2::enumToString (uid.getResourceType()), uid._uid, absFilename);
 			}
 			logger->decIndent();
 
 			//build
 			for (u32 i=0; i< list->getNElem(); i++)
 			{
-				UID uid = list->queryElem(i).key;
+				const UID uid = list->queryElem(i).key;
 				const char *absFilename = list->queryElem(i).value.getBuffer();
-				logger->log ("\nbuilding %016" PRIX64 " %s\n", uid._uid, absFilename);
-				logger->incIndent();
-				ret = priv_gosassetd_build(ctx, absFilename, &listof_builtAssets);
-				logger->decIndent();
-
+				if (fs::fileExists(absFilename))
+				{				
+					logger->log ("\nbuilding %016" PRIX64 " %s\n", uid._uid, absFilename);
+					logger->incIndent();
+					ret = priv_gosassetd_build(ctx, bDoCreateAssetFile, absFilename, &listof_builtAssets);
+					logger->decIndent();
+				}
 				if (!ret)
 					break;
 			}
@@ -655,7 +683,7 @@ void Builder::priv_fromDirectiveNameToAssetClassName (const char *directiveName,
 }
 
 //****************************** 
-bool Builder::priv_gosassetd_build (DBContext &ctx, const char *absFilename, UniqueUIDList *out_listOfBuiltAssets)
+bool Builder::priv_gosassetd_build (DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UniqueUIDList *out_listOfBuiltAssets)
 {
 	//se esisto gia' nel DB, vuol dire che sono gia' stato rebuildato
 	UID uid_of_iniFile;
@@ -737,7 +765,7 @@ bool Builder::priv_gosassetd_build (DBContext &ctx, const char *absFilename, Uni
 			//non e' nel DB, vuol dire che devo prima buildarlo e poi posso proseguire con il build di me stesso
 			logger->log ("building included file %s\n", absIncludePath);
 			logger->incIndent();
-			const bool ret = priv_gosassetd_build (ctx, absIncludePath, out_listOfBuiltAssets);
+			const bool ret = priv_gosassetd_build (ctx, bDoCreateAssetFile, absIncludePath, out_listOfBuiltAssets);
 			logger->decIndent();
 			if (!ret)
 				return false;
@@ -789,11 +817,11 @@ bool Builder::priv_gosassetd_build (DBContext &ctx, const char *absFilename, Uni
 
 	//buildo tutte le sezioni
 	u32 nextAnonymAssetName = 0;
-	return priv_gosassetd_buildSection (ctx, nextAnonymAssetName, listof_knownRTname, absFilename, uid_of_iniFile, ini.getRoot(), out_listOfBuiltAssets);
+	return priv_gosassetd_buildSection (ctx, bDoCreateAssetFile, nextAnonymAssetName, listof_knownRTname, absFilename, uid_of_iniFile, ini.getRoot(), out_listOfBuiltAssets);
 }
 
 //****************************** 
-bool Builder::priv_gosassetd_buildSection (DBContext &ctx, u32 &in_out_nextAnonymAssetName, UniqueStringList &in_out_listof_knownRTname, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets)
+bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFile, u32 &in_out_nextAnonymAssetName, UniqueStringList &in_out_listof_knownRTname, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets)
 {
 	for (u32 iSec=0; iSec<section->getNSubsection(); iSec++)
 	{
@@ -861,13 +889,13 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, u32 &in_out_nextAnony
 			//di poter buildare l'asset
 			if (sub->getNSubsection())
 			{
-				if (!priv_gosassetd_buildSection (ctx, in_out_nextAnonymAssetName, in_out_listof_knownRTname, absFilename, uid_of_iniFile, sub, out_listOfBuiltAssets))
+				if (!priv_gosassetd_buildSection (ctx, bDoCreateAssetFile, in_out_nextAnonymAssetName, in_out_listof_knownRTname, absFilename, uid_of_iniFile, sub, out_listOfBuiltAssets))
 					break;
 			}
 
 			sBuildResult result;
 			builder->setLogger(logger);
-			if (!builder->build (ctx, buildTime_UTC, absFilename, uid_of_iniFile, sub, true, &result))
+			if (!builder->build (ctx, buildTime_UTC, absFilename, uid_of_iniFile, sub, bDoCreateAssetFile, &result))
 				break;
 
 			//aggiungo rt-name alla lista dei nomi noti da questo file

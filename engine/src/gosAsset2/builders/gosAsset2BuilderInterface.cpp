@@ -32,10 +32,10 @@ bool BuilderInterface::prot_isOneOfThis (const char *paramName, ...) const
 }
 
 //******************************************
-bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::IniFileSection *sec, eAssetType assType, UID *out_uid) const
+bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::IniFileSection *sec, eAssetType assType, UID *out__virtual_uid) const
 {
     assert (NULL != sec);
-    assert (NULL != out_uid);
+    assert (NULL != out__virtual_uid);
 
     char s[128];
     const char *assTypeName = asset2::enumToString (assType);
@@ -51,7 +51,7 @@ bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::I
             if (s[0] == '!')
                 return false;
 
-            if (!asset2::virtasset_rtname_exists (ctx, s, out_uid))
+            if (!asset2::virtasset_rtname_exists (ctx, s, out__virtual_uid))
             {
                 logger->log (eTextColor::red, "invalid rtname: %s\n", s);
                 return false;
@@ -145,4 +145,48 @@ bool BuilderInterface::priv_extractAllInludePaths (const char *absFilenameIN, go
 
 	GOSFREE_SCRAP (buffer);
 	return ret;
+}
+
+//****************************** 
+bool BuilderInterface::prot_seuptVirtualAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const
+{
+    //calcolo assetUID
+    if (!asset_createUID (getAssetType(), params, sizeof_params, &out_result->uid_concrete_asset))
+    {
+        gos::logger::err ("error generating UID of concrete asset\n");
+        return false;
+    }
+
+
+    //inserisco il virtual asset nel DB
+    char rtname[128];
+    memset (rtname, 0, sizeof(rtname));
+    sec->get("__value", rtname, sizeof(rtname));
+    if (!virtasset_insert (ctx, getAssetType(), rtname, uid_of_iniFile, sec->getLineStarted(), out_result->uid_concrete_asset, &out_result->uid_virtual_asset))
+    {
+        logger->log (eTextColor::red, "error inserting UID of virtual asset\n");
+        return false;
+    }    
+
+    //vediamo se il concrete-asset esiste gia' nel DB
+    if (asset2::asset_exists (ctx, out_result->uid_concrete_asset))
+    {
+        out_result->result = eBuildResult::was_already_built;
+    }
+    else
+    {
+        //non esisteva nel DB, ottimo, lo aggiungo e poi lo buildo
+        out_result->result = eBuildResult::just_built;
+        if (!asset_insert (ctx, out_result->uid_concrete_asset))
+        {
+            logger->log (eTextColor::red, "error inserting asset in DB\n");
+            return false;
+        }        
+    }
+
+    //aggiungo le dipendenze di virtual-asset ve l'inifile e il concrete asset
+    if (!dependency_add (ctx, out_result->uid_virtual_asset, uid_of_iniFile)) return false;
+    if (!dependency_add (ctx, out_result->uid_virtual_asset, out_result->uid_concrete_asset)) return false;
+
+    return true;
 }

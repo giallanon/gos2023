@@ -57,7 +57,7 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
     gpu = engine->gpu;
 
     //load degli assets
-    if (!engine->assetHub->getHandle ("pipe3", &assHandle_pipe, true))
+    if (!engine->assetHub->getHandle ("gosengine_pipe3", &assHandle_pipe, true))
         return false;    
 
 
@@ -133,7 +133,7 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
     }
 
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
-    const asset::Asset_pipe *pipe;
+    const asset2::Asset_pipe *pipe;
     engine->assetHub->getAssetWithTimeout (assHandle_pipe, &pipe, 5000);
     {
         //alloco una istanza dei descriptor-set
@@ -328,7 +328,7 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
     if (0 == nRenderable)
         return;
 
-    const asset::Asset_pipe *pipe;
+    const asset2::Asset_pipe *pipe;
     if (!engine->assetHub->getAsset (assHandle_pipe, &pipe))
     {
         return;

@@ -1,7 +1,7 @@
-    #include "VulkanExample6.h"
+#include "VulkanExample6.h"
 #include "../gosShape/gosShapeImport.h"
 #include "../gos/gosFIFOFixedSize.h"
-#include "gosAssetLoader.h"
+#include "gosAsset2Loader.h"
 
 using namespace gos;
 
@@ -30,12 +30,11 @@ void VulkanExample6::virtual_onCleanup()
     }
     shapeList.unsetup();
 
-
-    const asset::Asset_pipe *pipe;
-    if (theHub.getAssetWithTimeout(assetPipe, &pipe, 5000))
+    //unload degli asset
     {
         theHub.unload (assetPipe);
         theHub.unload (assetPipe2);
+        theHub.flush(gos::getTimeSinceStart_msec());
     }
 
 
@@ -120,12 +119,14 @@ bool VulkanExample6::virtual_onInit ()
 {
     //builder per ricompilare gli asset se necessario
     {
-        gos::asset::Builder builder(gpu);
-        builder.buildAll("shader/example6", true);
+        gos::asset2::Builder builder(gpu);
+        if (!builder.build("shader/example6/assets", true))
+            return false;
     }
 
     //theHub
-    theHub.setup ("shader/example6", gpu);
+    if (!theHub.setup ("shader/example6/assets", gpu))
+        return false;
     theHub.getHandle("pipe_1", &assetPipe);
     theHub.getHandle("pipe_2", &assetPipe2);
 
@@ -161,7 +162,7 @@ bool VulkanExample6::virtual_onInit ()
 
 
     //creazione pipeline
-    const asset::Asset_pipe *pipe;
+    const asset2::Asset_pipe *pipe;
     theHub.getAssetWithTimeout (assetPipe, &pipe, 5000);
     
     //risorse di rendering
@@ -228,7 +229,7 @@ bool VulkanExample6::createVertexIndexStageBuffer()
 //************************************
 bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, VkImage swapChainImage)
 {
-    const asset::Asset_pipe *pipe;
+    const asset2::Asset_pipe *pipe;
     if (!theHub.getAsset(assetPipe, &pipe))
         return false;
 
@@ -263,7 +264,7 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, V
 
 
 //************************************
-bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::pipe2::CmdBufferWriter2 &cw, VkImage swapChainImage, const asset::Asset_pipe *pipe)
+bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::pipe2::CmdBufferWriter2 &cw, VkImage swapChainImage, const asset2::Asset_pipe *pipe)
 {
     cw
         .imageTransition (rt1, eImageLayout::undefined, eImageLayout::color_attachment_optimal)

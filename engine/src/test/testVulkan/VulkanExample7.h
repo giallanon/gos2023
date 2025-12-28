@@ -1,7 +1,7 @@
 #ifndef _VulkanExample7_h_
 #define _VulkanExample7_h_
 #include "VulkanAppNoWin.h"
-#include "gosAssetHub.h"
+#include "gosAsset2Hub.h"
 #include "../gosImage/gosImageBufferRGBA.h"
 
 
@@ -26,9 +26,9 @@ private:
     void        save (const gos::gpu::sMappedImage &src, u32 srcW, u32 srcH);
 
 private:
-    gos::asset::Hub         theHub;
-    gos::asset::Handle      assetPipe1;
-    gos::asset::Handle      assetPipe2;
+    gos::asset2::Hub        theHub;
+    gos::asset2::Handle     assetPipe1;
+    gos::asset2::Handle     assetPipe2;
     GPUVtxBufferHandle      vtxBufferHandle;
     GPUIdxBufferHandle      idxBufferHandle;
     GPURenderTargetHandle   rt1;

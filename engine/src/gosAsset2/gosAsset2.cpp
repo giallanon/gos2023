@@ -129,7 +129,7 @@ PRIMARY KEY('UID','UID_ini','line'))");
 }
 
 //************************************
-static bool asset2_open_or_create_DB (DBHandle &db, const char *baseFolder, const char *dbName)
+static bool asset2_open_or_create_DB (DBHandle &db, const char *baseFolder, const char *dbName, bool bCreateANewDBIfNotExists)
 {
     assert (NULL != baseFolder);
     assert (NULL != dbName);
@@ -139,6 +139,8 @@ static bool asset2_open_or_create_DB (DBHandle &db, const char *baseFolder, cons
 
     if (!fs::fileExists(fullDBFilePathAndName))
     {
+        if (!bCreateANewDBIfNotExists)
+            return false;
         if (!asset2_create_emptyDB(fullDBFilePathAndName, db))
             return false;
     }
@@ -170,35 +172,47 @@ static bool asset2_open_or_create_DB (DBHandle &db, const char *baseFolder, cons
 
 
 //*******************************************************
-bool asset2::dbcontext_open_ex (const char *baseFolderIN, const char *dbName, DBContext *out)
+bool asset2::dbcontext_open_ex (const char *baseFolderIN, const char *dbName, bool bCreateANewDBIfNotExists, DBContext *out)
 {
     assert (NULL != baseFolderIN);
     assert (NULL != dbName);
     assert (NULL != out);
 
+    static const char FOLDER__ASSET_BIN[] = {"asset_bin"};
+    static const char FOLDER__ASSET_SRC[] = {"asset_src"};
     if (out->isValid())
         return false;
 
     char baseFolder[1024];
     fs::resolvePath (baseFolderIN, baseFolder, sizeof(baseFolder));
     
+    //se necessario, crea la struttura di directory
+    char s[1024];
+    if (bCreateANewDBIfNotExists)
+    {
+        sprintf_s (s, sizeof(s), "%s/%s", baseFolder, FOLDER__ASSET_BIN);
+        fs::folderCreate (s);
+
+        sprintf_s (s, sizeof(s), "%s/%s", baseFolder, FOLDER__ASSET_SRC);
+        fs::folderCreate (s);
+    }
 
     //apre il db o lo crea se non esiste gia'
-    if (!asset2_open_or_create_DB(out->db, baseFolder, dbName))
+    if (!asset2_open_or_create_DB(out->db, baseFolder, dbName, bCreateANewDBIfNotExists))
         return false;
+
+
 
     out->dbName = string::utf8::allocStr (gos::getSysHeapAllocator(), dbName);
     out->baseFolder = string::utf8::allocStr (gos::getSysHeapAllocator(), baseFolder);
   
-    char s[1024];
-    sprintf_s (s, sizeof(s), "%s/asset_bin", baseFolder);
-    out->folder_assets_bin = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
-    fs::folderCreate (s);
-
-    sprintf_s (s, sizeof(s), "%s/asset_src", baseFolder);
-    out->folder_assets_src = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
-    fs::folderCreate (s);
     
+    sprintf_s (s, sizeof(s), "%s/%s", baseFolder, FOLDER__ASSET_BIN);
+    out->folder_assets_bin = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
+    
+
+    sprintf_s (s, sizeof(s), "%s/%s", baseFolder, FOLDER__ASSET_SRC);
+    out->folder_assets_src = string::utf8::allocStr (gos::getSysHeapAllocator(), s);
     
     return true; 
 }
@@ -475,9 +489,9 @@ bool asset2::virtasset_delete (DBContext &ctx, const UID &uid)
 }
 
 //*******************************************************
-bool asset2::virtasset_rtname_exists (DBContext &ctx, const char *rtname, UID *out_uid)
+bool asset2::virtasset_rtname_exists (DBContext &ctx, const char *rtname, UID *out__virtual_uid)
 {
-    assert (NULL != out_uid);
+    assert (NULL != out__virtual_uid);
 
     if (!ctx.isValid())
     {
@@ -492,7 +506,7 @@ bool asset2::virtasset_rtname_exists (DBContext &ctx, const char *rtname, UID *o
     if (!db::query (ctx.db, s, &rst)) return false;
     if (!rst.fetchRow()) return false;
 
-    out_uid->_uid = rst.getValAsU64(0);
+    out__virtual_uid->_uid = rst.getValAsU64(0);
     return true;
 }
 
@@ -680,6 +694,36 @@ bool asset2::asset_delete (DBContext &ctx, const UID &uid)
     }
     return true;
 }
+
+//*******************************************************
+bool asset2::asset_getBy_rtname (DBContext &ctx, const char *rtname, UID *out__uid_concrete_asset)
+{
+    assert (NULL != out__uid_concrete_asset);
+
+    if (!ctx.isValid())
+    {
+        logger::err ("asset_getBy_rtname (%s) => invalid ctx\n", rtname);
+        return false;
+    }
+
+    db::RST rst;
+    char s[256];
+    sprintf_s (s, sizeof(s), "SELECT UID_asset FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE rtname='%s'", rtname);
+    if (!db::query (ctx.db, s, &rst))
+    {
+        logger::err ("asset_getBy_rtname (%s) => error querying\n", rtname);
+        return false;
+    }
+    if (rst.fetchRow())
+    {
+        out__uid_concrete_asset->_uid = rst.getValAsU64(0);
+        return true;
+    }
+
+    out__uid_concrete_asset->setInvalid();
+    return false;
+}
+
 
 //********************************************************** 
 bool asset2::dependency_get_requireBy_list (DBContext &ctx, const asset2::UID &uid, bool bClearListOnStart, asset2::UniqueUIDList *out)

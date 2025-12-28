@@ -40,8 +40,8 @@ private:
 
 	gos::ENGShape					engShape_cube;
 	gos::ENGShape					engShape_cyl;
-	gos::asset::Handle				assHandle_texBianca;
-	gos::asset::Handle				assHandle_texChecker;
+	gos::asset2::Handle				assHandle_texBianca;
+	gos::asset2::Handle				assHandle_texChecker;
     u32								material_indices[4];
 
 	gos::Skeleton				*skeleton1;

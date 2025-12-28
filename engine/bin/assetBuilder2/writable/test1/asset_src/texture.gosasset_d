@@ -1,0 +1,18 @@
+@tex2D: facciaTexture
+{
+	src: /home/giallanon/gixprogram/gos2023/engine/common_assets/images/faccia512x512.jpg
+	srcColorSpace:	sRGB
+
+	dstNumMipMap: max
+	dstFmt:U8_RGBA
+}
+
+@tex2D: faccia256Texture
+{
+	src: /home/giallanon/gixprogram/gos2023/engine/common_assets/images/Tiling_procedural_textures.png
+	srcColorSpace:	sRGB
+
+	dstNumMipMap: max
+	dstFmt:U8_RGBA
+}
+

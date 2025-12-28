@@ -243,8 +243,8 @@ bool Test1::priv_run4 ()
 
 
     //load degli assets
-	asset::Handle assHandle_texBianca;
-	asset::Handle assHandle_texChecker;
+	asset2::Handle assHandle_texBianca;
+	asset2::Handle assHandle_texChecker;
     if (!engine->assetHub->getHandle ("tex_bianca", &assHandle_texBianca, true))
 	{
         return false;
@@ -255,9 +255,9 @@ bool Test1::priv_run4 ()
 	}	
 
 	//binding di materiali al renderer
-	u32 material_indices[4];
 	{
-		const asset::Asset_tex2D *tex;
+		
+		const asset2::Asset_tex2D *tex;
 		u32	texture_index__texBianca = u32MAX;
 		u32	texture_index__texChecker = u32MAX;
 
@@ -267,6 +267,7 @@ bool Test1::priv_run4 ()
 		engine->assetHub->getAssetWithTimeout(assHandle_texChecker, &tex, 5000);
 		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->handle_texture);
 
+		u32 material_indices[4];
 		material_indices[0] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
 		material_indices[1] = renderer->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
 		material_indices[2] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 0.2f, 0.2f));

@@ -195,7 +195,7 @@ bool Game1::priv_loadAssets()
 
 	//binding di materiali al renderer
 	{
-		const asset::Asset_tex2D *tex;
+		const asset2::Asset_tex2D *tex;
 		u32	texture_index__texBianca = u32MAX;
 		u32	texture_index__texChecker = u32MAX;
 

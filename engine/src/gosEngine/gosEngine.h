@@ -25,9 +25,13 @@ namespace gos
         };
 
     public:
+        static void     createAssetFolderStructure();
+
+
+    public:
         gos::GPU                *gpu;
         gos::input::Context     *inputCtx;
-        gos::asset::Hub         *assetHub;
+        gos::asset2::Hub        *assetHub;
 
     public:
                                     Engine();

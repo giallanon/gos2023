@@ -315,9 +315,9 @@ void Builder::get_dependencies_report (gos::UTF8String &out, const char *dbName,
     DBContext ctx;
     bool ret;
     if (NULL == dbName)
-        ret = dbcontext_open_ex (baseFolder, GOS_ASSET2__DEFAULT_DB_NAME, &ctx);
+        ret = dbcontext_open_ex (baseFolder, GOS_ASSET2__DEFAULT_DB_NAME, false, &ctx);
     else
-        ret = dbcontext_open_ex (baseFolder, dbName, &ctx);
+        ret = dbcontext_open_ex (baseFolder, dbName, false, &ctx);
     if (!ret)
     {
         logger::err ("Can't open context in %s\n", baseFolder);
@@ -347,20 +347,81 @@ void Builder::get_dependencies_report (gos::UTF8String &out, const char *dbName,
         Builder__do_print (ctx, out, rstAssetList);
     }
 
+    dbcontext_close(ctx);
+}
+
+//***********************************
+void Builder::print_dependencies_report (const char *baseFolder, const char *dbName)
+{
+    gos::UTF8String out;
+    out.prealloc (4096);
+
+    get_dependencies_report (out, dbName, baseFolder);
+    printf ("%s\n\n", out.getBuffer());
+}
+
+//***********************************
+void Builder::save_dependencies_report (const char *baseFolder, const char *dbName)
+{
+    gos::UTF8String out;
+    out.prealloc (4096);
+    out.clear();
+    get_dependencies_report (out, dbName, baseFolder);
+
+    
+    char s[512];
+    if (NULL == dbName)
+        sprintf_s (s, sizeof(s), "%s/asset_bin/__dependencies.txt", baseFolder);
+    else
+        sprintf_s (s, sizeof(s), "%s/asset_bin/__dependencies_%s.txt", baseFolder, dbName);
+    fs::fileSaveBuffer (s, out.getBuffer(), out.lengthInByte());
+}
+
+
+//***********************************
+void Builder::save_asset_manifest (const char *baseFolder, const char *dbName)
+{
+    DBContext ctx;
+    bool ret;
+    if (NULL == dbName)
+        ret = dbcontext_open_ex (baseFolder, GOS_ASSET2__DEFAULT_DB_NAME, false, &ctx);
+    else
+        ret = dbcontext_open_ex (baseFolder, dbName, false, &ctx);
+    if (!ret)
+    {
+        logger::err ("Can't open context in %s\n", baseFolder);
+        return;
+    }
+
+
+    gos::UTF8String out;
+    out.prealloc (4096);
+    out.clear();
+
+
+    db::RST rstAssetList;
+    db::RST rst2;
+
+
     //asset list
     {
-        out << "\n\n"
-            << "========================== ASSETS LIST ==========================\n\n"
-            << "Asset UID        | Type         | runtimeName-list\n"
+        out << "Asset UID        | Type         | Lasttime built UTC  | runtimeName-list\n"
             << "-----------------+--------------+--------------------------------------------------------------\n";
 
-        db::query (ctx.db, "SELECT UID FROM " GOS_ASSET2__TABLE_ASSET_LIST " ORDER BY UID", &rstAssetList);
+        db::query (ctx.db, "SELECT UID,lastTimeBuilt FROM " GOS_ASSET2__TABLE_ASSET_LIST " ORDER BY UID", &rstAssetList);
         while (rstAssetList.fetchRow())
         {
             UID uid;  uid._uid = rstAssetList.getValAsU64(0);
 
+            gos::DateTime dt;
+            dt.setFromNiceU64 (rstAssetList.getValAsU64(1));
+
+            char lastTimeBuilt[64];
+            dt.formatAs_YYYYMMDDHHMMSS (lastTimeBuilt, sizeof(lastTimeBuilt), ' ', '-', ':');
+
             out << STRFMT("%016" PRIX64 "", uid._uid) << " | " 
-                << STRFMT("%-12s", asset2::enumToString (uid.getAssetType())) << " | ";
+                << STRFMT("%-12s", asset2::enumToString (uid.getAssetType())) << " | "
+                << lastTimeBuilt << " | ";
 
             char s[512];
             sprintf_s (s, sizeof(s), "SELECT rtname FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE UID_asset=%" PRIu64 " ORDER BY rtname", uid._uid);
@@ -387,31 +448,14 @@ void Builder::get_dependencies_report (gos::UTF8String &out, const char *dbName,
         }
     }
 
-    dbcontext_close(ctx);
-}
 
-//***********************************
-void Builder::print_dependencies_report (const char *baseFolder, const char *dbName)
-{
-    gos::UTF8String out;
-    out.prealloc (4096);
-
-    get_dependencies_report (out, dbName, baseFolder);
-    printf ("%s\n\n", out.getBuffer());
-}
-
-//***********************************
-void Builder::save_dependencies_report (const char *baseFolder, const char *dbName)
-{
-    gos::UTF8String out;
-    out.prealloc (4096);
-    get_dependencies_report (out, dbName, baseFolder);
-
-    
+    //save
     char s[512];
     if (NULL == dbName)
-        sprintf_s (s, sizeof(s), "%s/asset_bin/__dependencies.txt", baseFolder);
+        sprintf_s (s, sizeof(s), "%s/__asset_manifest.txt", ctx.folder_assets_bin);
     else
-        sprintf_s (s, sizeof(s), "%s/asset_bin/__dependencies_%s.txt", baseFolder, dbName);
-    fs::fileSaveBuffer (s, out.getBuffer(), out.lengthInByte());
+        sprintf_s (s, sizeof(s), "%s/__asset_manifest_%s.txt", ctx.folder_assets_bin, dbName);
+    fs::fileSaveBuffer (s, out.getBuffer(), out.lengthInByte());    
+
+    dbcontext_close(ctx);
 }

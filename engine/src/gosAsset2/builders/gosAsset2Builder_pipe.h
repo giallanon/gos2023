@@ -48,7 +48,7 @@ namespace gos
                     Builder_pipe () : BuilderInterface (eAssetType::pipe)                       { }
                     ~Builder_pipe()                                                             { }
 
-            bool    build (DBContext &ctx, u64 buildTime_UTC, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out);
+            bool    build (DBContext &ctx, u64 buildTime_UTC, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result);
 
 
         private:

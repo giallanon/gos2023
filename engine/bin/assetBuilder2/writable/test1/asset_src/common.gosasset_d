@@ -1,3 +1,2 @@
-
 //renderer phong
-@include: /home/giallanon/gixprogram/gos2023/engine/common_assets/renderer_phong/main.gosasset_d
+@include: /home/giallanon/gixprogram/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d

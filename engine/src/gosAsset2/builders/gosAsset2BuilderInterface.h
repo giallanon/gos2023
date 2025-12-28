@@ -27,12 +27,13 @@ namespace gos
 
             void            setLogger (gos::Logger *l)                          { logger= l; }
 
-            virtual bool    build (DBContext &ctx, u64 buildTime_UTC, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out) = 0;
+            virtual bool    build (DBContext &ctx, u64 buildTime_UTC, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result) = 0;
 
         protected:
             bool            prot_isOneOfThis (const char *paramName, ...) const;
             bool            prot_needResource (DBContext &ctx, eResType resType, const char *absFilenameIN, UID *out_uid) const;
-            bool            prot_needResolvedSubsection (DBContext &ctx, const gos::IniFileSection *sec, eAssetType assType, UID *out_uid) const;
+            bool            prot_needResolvedSubsection (DBContext &ctx, const gos::IniFileSection *sec, eAssetType assType, UID *out__virtual_uid) const;
+            bool            prot_seuptVirtualAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const;
 
         protected:
             gos::Logger     *logger;

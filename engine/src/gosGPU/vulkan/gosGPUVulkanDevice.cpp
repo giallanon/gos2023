@@ -624,10 +624,11 @@ VkResult VulkanDevice::memory_map(VkDeviceMemory vkMemHandle, u32 offset, u32 si
         return vkMapMemory (vkDev, vkMemHandle, 0, VK_WHOLE_SIZE, 0, out_p);    
     }
 
-    //size deve essere un multipo di out->deviceProperties.limits.nonCoherentAtomSize
+    //size deve essere un multiplo di out->deviceProperties.limits.nonCoherentAtomSize
     const u32 minSize = static_cast<u32>(phyDevInfo.deviceProperties.limits.nonCoherentAtomSize);
     const u32 aa = sizeInByte % minSize;
-    sizeInByte += minSize - aa;                                
+    if (aa > 0)
+        sizeInByte += minSize - aa;                                
 
     return vkMapMemory (vkDev, vkMemHandle, offset, sizeInByte, 0, out_p);
 }

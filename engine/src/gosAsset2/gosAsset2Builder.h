@@ -24,6 +24,8 @@ namespace gos
                                 //chiama <get_dependencies_report> e poi salva un file di testo in /assets/src/__dependencies.txt
             static void         save_dependencies_report (const char *baseFolder, const char *dbName = NULL);
 
+            static void         save_asset_manifest (const char *baseFolder, const char *dbName = NULL);
+
 		public:
 						Builder (gos::GPU *gpuIN);
 						~Builder();
@@ -38,8 +40,8 @@ namespace gos
                             return false;
                         }
 
-			bool		rebuildAll (const char *baseFolder);
-			bool		build (const char *baseFolder);
+			bool		rebuildAll (const char *baseFolder, bool bVerbose);
+			bool		build (const char *baseFolder, bool bVerbose);
 
             bool        debug_sanityCheck (const char *baseFolder);
 
@@ -84,8 +86,8 @@ namespace gos
             
 			bool		priv_gosassetd_scan_folder (DBContext &ctx, const char *folder_path, HashedStringList *out_listof_gosassetd_toRebuild) const;
             bool        priv_gosassetd_scan_folder_parse (DBContext &ctx, const char *filename, HashedStringList *out_listof_gosassetd_toRebuild) const;
-            bool        priv_gosassetd_build (DBContext &ctx, const char *absFilename, UniqueUIDList *out_listOfBuiltAssets);
-            bool        priv_gosassetd_buildSection (DBContext &ctx, u32 &in_out_nextAnonymAssetName, UniqueStringList &in_out_listof_knownRTname, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets);
+            bool        priv_gosassetd_build (DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UniqueUIDList *out_listOfBuiltAssets);
+            bool        priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFile, u32 &in_out_nextAnonymAssetName, UniqueStringList &in_out_listof_knownRTname, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets);
 
             BuilderInterface*   priv_findBuilderByClassName (const char *assetClassName) const;
 
@@ -99,6 +101,7 @@ namespace gos
             gos::GPU            *gpu;
             gos::Logger         *logger;
             gos::LoggerNull     loggerNull;
+            gos::LoggerStdout   loggerStdout;
             BuilderInterface    *builderList[NUM_MAX_BUILDERS];
 
             u64                 buildTime_UTC;

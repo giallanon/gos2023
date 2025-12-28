@@ -169,46 +169,34 @@ bool Builder_pipe::build (DBContext &ctx, u64 buildTime_UTC, const char *absFile
     }
 
 
-    //calcolo assetUID
-    if (!asset_createUID (getAssetType(), &params, sizeof(Params), &out_result->uid_concrete_asset))
-    {
-        gos::logger::err ("error generating concrete assetUID\n");
+    //setup di virtual-asset
+    //All'uscita da questa fn:
+    //  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
+    //  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
+    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
+    if (!prot_seuptVirtualAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
         return false;
-    }
 
 
-    //inserisco il virtual asset nel DB
-    char rtname[128];
-    memset (rtname, 0, sizeof(rtname));
-    sec->get("__value", rtname, sizeof(rtname));
-    if (!virtasset_insert (ctx, getAssetType(), rtname, uid_of_iniFile, sec->getLineStarted(), out_result->uid_concrete_asset, &out_result->uid_virtual_asset))
-    {
-        logger->log (eTextColor::red, "error inserting virtual assetUID\n");
-        return false;
-    }    
 
-    //vediamo se il concrete-asset esiste gia' nel DB
-    if (asset2::asset_exists (ctx, out_result->uid_concrete_asset))
-    {
-        out_result->result = eBuildResult::was_already_built;
-    }
-    else
-    {
-        //non esisteva nel DB, ottimo, lo aggiungo e poi lo buildo
-        out_result->result = eBuildResult::just_built;
-        if (!asset_insert (ctx, out_result->uid_concrete_asset))
-        {
-            logger->log (eTextColor::red, "error inserting asset in DB\n");
-            return false;
-        }        
-    }
-
-    //aggiungo le sue dipendenze
-    if (!dependency_add (ctx, out_result->uid_virtual_asset, uid_of_iniFile)) return false;
-    if (!dependency_add (ctx, out_result->uid_virtual_asset, out_result->uid_concrete_asset)) return false;
+    //aggiungo le dipendenze di virtual-asset dai virtual-asset degli shader
     if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__virtual_vtxshader)) return false;
     if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__virtual_pxlshader)) return false;
 
+
+    //l'asset concreto dipende dagli asseti concreti di vtx/pxl shader
+    if (params.uid__virtual_vtxshader.isValid())
+    {
+        UID uid__concrete_vtxShader;
+        if (!virtasset_get_info (ctx, params.uid__virtual_vtxshader, NULL, &uid__concrete_vtxShader))   return false;
+        if (!dependencyRT_add (ctx, out_result->uid_concrete_asset, uid__concrete_vtxShader)) return false;
+    }
+    if (params.uid__virtual_pxlshader.isValid())
+    {
+        UID uid__concrete_pxlShader;
+        if (!virtasset_get_info (ctx, params.uid__virtual_pxlshader, NULL, &uid__concrete_pxlShader))   return false;
+        if (!dependencyRT_add (ctx, out_result->uid_concrete_asset, uid__concrete_pxlShader)) return false;
+    }       
 
     
     //a questo punto devo davvero creare il file dell'asset
@@ -255,9 +243,6 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_as
             return false;
         }
         GOSFREE_SCRAP(buffer);
-
-        //aggiungo la dipendenza runtime di questo asset verso il vtx shader
-        dependencyRT_add (ctx, uid_concrete_asset, uid__concrete_vtxShader);
     }
 
     UID uid__concrete_pxlShader;
@@ -283,10 +268,6 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_as
             return false;
         }
         GOSFREE_SCRAP(buffer);
-
-        //aggiungo la dipendenza runtime di questo asset verso il pxl shader
-        dependencyRT_add (ctx, uid_concrete_asset, uid__concrete_pxlShader);
-
     }
 
     if (!reflect.endParseFromMemory())

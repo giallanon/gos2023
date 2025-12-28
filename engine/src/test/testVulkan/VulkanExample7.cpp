@@ -39,15 +39,15 @@ bool VulkanExample7::virtual_onInit ()
 {
     //builder per ricompilare gli asset se necessario
     {
-        gos::asset::Builder builder(gpu);
-        if (!builder.buildAll("shader/example7", true))
+        gos::asset2::Builder builder(gpu);
+        if (!builder.build("shader/example7", true))
             return false;
     }
 
     //theHub
     theHub.setup ("shader/example7", gpu);
     
-    const asset::Asset_pipe *thePipe;
+    const asset2::Asset_pipe *thePipe;
     if (bUsePipe1)
     {
         theHub.getHandle("pipe_1", &assetPipe1);
@@ -152,7 +152,7 @@ bool VulkanExample7::virtual_onInit ()
 //************************************
 bool VulkanExample7::sampleImage1 (GPUCmdBufferHandle &cmdBufferHandle, u32 dstW, u32 dstH)
 {
-    const asset::Asset_pipe *pipe;
+    const asset2::Asset_pipe *pipe;
     if (!theHub.getAsset(assetPipe1, &pipe))
         return false;
 
@@ -210,7 +210,7 @@ bool VulkanExample7::sampleImage1 (GPUCmdBufferHandle &cmdBufferHandle, u32 dstW
 //************************************
 bool VulkanExample7::sampleImage2 (GPUCmdBufferHandle &cmdBufferHandle, u32 dstW, u32 dstH)
 {
-    const asset::Asset_pipe *pipe;
+    const asset2::Asset_pipe *pipe;
     if (!theHub.getAsset(assetPipe2, &pipe))
         return false;
 

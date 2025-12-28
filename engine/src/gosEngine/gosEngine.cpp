@@ -1,13 +1,21 @@
 #include "gosEngine.h"
 #include "../gos/memory/gosAllocatorHeap.h"
-#include "../gosAsset/gosAssetBuilder.h"
+#include "../gosAsset2/gosAsset2Builder.h"
 
 using namespace gos;
 
 typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Safe>		GOSENGINEMemAllocatorTS;
 
-#define GOS_ENGINE__ASSET_HUB_PATH "@w/data"
+#define GOS_ENGINE__ASSET_HUB_PATH "@w/assets"
 
+
+//******************************** 
+void Engine::createAssetFolderStructure()
+{
+    asset2::DBContext ctx;
+    asset2::dbcontext_open (GOS_ENGINE__ASSET_HUB_PATH, true, &ctx);
+    asset2::dbcontext_close (ctx);
+}
 
 //******************************** 
 Engine::Engine()
@@ -163,12 +171,16 @@ void Engine::toggleVSync()
 //******************************** 
 void Engine::priv_assetHub_create()
 {
-    assetHub = GOSNEW(gos::getSysHeapAllocator(), asset::Hub)();
+    if (NULL != assetHub)
+        return;
+    assetHub = GOSNEW(gos::getSysHeapAllocator(), asset2::Hub)();
     assetHub->setup (GOS_ENGINE__ASSET_HUB_PATH, gpu);
 }
 //******************************** 
 void Engine::priv_assetHub_delete()
 {
+    if (NULL == assetHub)
+        return;
     GOSDELETE(gos::getSysHeapAllocator(), assetHub);
     assetHub = NULL;
 }
@@ -178,7 +190,7 @@ bool Engine::assetHub_rebuildAll()
 {
     priv_assetHub_delete();
 
-    gos::asset::Builder builder (gpu);
+    gos::asset2::Builder builder (gpu);
     if (!builder.rebuildAll (GOS_ENGINE__ASSET_HUB_PATH, true))
         return false;
     priv_assetHub_create();
@@ -190,8 +202,8 @@ bool Engine::assetHub_buildAll()
 {
     priv_assetHub_delete();
 
-    gos::asset::Builder builder (gpu);
-    if (!builder.buildAll (GOS_ENGINE__ASSET_HUB_PATH, true))
+    gos::asset2::Builder builder (gpu);
+    if (!builder.build (GOS_ENGINE__ASSET_HUB_PATH, true))
         return false;
     priv_assetHub_create();
     return true;

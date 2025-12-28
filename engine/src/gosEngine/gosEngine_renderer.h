@@ -66,7 +66,7 @@ namespace gos
             gos::Allocator              *localAllocator;
             gos::Engine                 *engine;
             gos::GPU                    *gpu;
-            asset::Handle               assHandle_pipe;
+            asset2::Handle              assHandle_pipe;
 
             GPUZBufferHandle            handle_zbuffer;
             GPURenderTargetHandle       handle_rt0;

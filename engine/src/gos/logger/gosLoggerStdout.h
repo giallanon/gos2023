@@ -21,7 +21,9 @@ namespace gos
                             LoggerStdout();
 		virtual             ~LoggerStdout();
 
+        void                enableStdouLogging()                                            { bShoudLogToStdout=true; }
         void                disableStdouLogging()                                           { bShoudLogToStdout=false; }
+        
         void                enableFileLogging (const char *fullFolderPathAndName);
                                 //accetta il path di un folder dentro al quale crea un certo numero di file di log in totale autonomia
 

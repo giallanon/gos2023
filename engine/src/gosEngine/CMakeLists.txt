@@ -49,7 +49,7 @@ gosEngine_vtxBufferMan.h
 gosEngine.cpp
 gosEngine.h
 gosEngineEnumAndDefine.h
- "entity/gosEntityDefaultComponents.h")
+)
 
 #====================================================
 # info a video

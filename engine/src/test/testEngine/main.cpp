@@ -13,12 +13,13 @@ int main()
 
     {
         gos::Engine engine;
+        engine.createAssetFolderStructure();
+
         if (!engine.setup (1024, 768, "test engine"))
             return -2;
 
         //if (!engine.assetHub_rebuildAll())  return -3;
         if (!engine.assetHub_buildAll())  return -3;
-
         {
             //Test1 test;         test.run (&engine);
 
