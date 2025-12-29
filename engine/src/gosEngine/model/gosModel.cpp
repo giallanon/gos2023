@@ -1,36 +1,26 @@
 #include "gosModel.h"
+#include "../gos/gosMagicUID.h"
 
 using namespace gos;
 using namespace gos::model;
 
 //************************** 
-Model::Model()
+Model::Model (gos::Allocator *allocatorIN, Skeleton *skeletonIN, const Mesh *meshListIN, u32 numMeshesIN)
 {
-    allocator = gos::getSysHeapAllocator();
-    skeleton = NULL;
-    meshList.setup (allocator, 8);
+    allocator = allocatorIN;
+    skeleton = skeletonIN;
+    numMeshes = numMeshesIN;
+    meshList = GOSALLOCT(Mesh*, allocator, numMeshes * sizeof(Mesh));
+    memcpy (meshList, meshListIN, numMeshes * sizeof(Mesh));
 }
 
 //************************** 
-void Model::priv_free()
+Model::~Model()
 {
     if (NULL == allocator)
         return;
-
-    meshList.unsetup ();
+    GOSFREE(allocator, meshList);
+    meshList = NULL;
     allocator = NULL;
 }
 
-
-//************************** 
-void Model::addMesh (gos::ENGShape shape, u32 material_indexIN, const char *boneName)
-{
-    const u32 boneIndex = skeleton->getBoneIndexByName(boneName);
-    assert (boneIndex != u32MAX);
-
-    meshList.append ({ 
-        .shape_handle = shape,
-        .bone_index = static_cast<u16>(boneIndex),
-        .material_index = static_cast<u16>(material_indexIN)
-    });
-}

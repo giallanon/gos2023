@@ -31,8 +31,14 @@ entity/gosEntityUniqueList.h
 
 model/gosModel.cpp
 model/gosModel.h
+model/gosModelBuilder.cpp
+model/gosModelImport_glTF.cpp
+model/gosModelImport_glTF.h
+model/gosModelInstance.cpp
 model/gosSkeleton.cpp
 model/gosSkeleton.h
+model/gosSkeletonBuilder.cpp
+model/gosSkeletonInstance.cpp
 
 gosEngine_dynTextureArray.cpp
 gosEngine_dynTextureArray.h

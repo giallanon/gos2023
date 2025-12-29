@@ -6,7 +6,7 @@
 #include "VulkanExample4.h"
 #include "VulkanExample5.h"
 #include "VulkanExample6.h"
-#include "VulkanExample7.h"
+
 
 //******************************** 
 template<class VKAPP>
@@ -59,17 +59,6 @@ void testWithWindow()
 }
 
 //******************************** 
-void testWindoless()
-{
-    gos::GPU gpu;
-    if (gpu.init (GOSWinHandle::INVALID(), false))
-    {
-        runExampleNoWin<VulkanExample7>(&gpu);  // VulkanExample7
-        gpu.deinit();
-    }
-}
-
-//******************************** 
 int main()
 {
     gos::sGOSInit init;
@@ -78,8 +67,9 @@ int main()
     init.setLogMode (gos::sGOSInit::eLogMode::both_console_and_file);
     if (gos::init (init, "testVulkan"))
     {
-        //testWindoless();
-        testWithWindow();
+        gos::fs::addAlias ("@common_assets", "../../common_assets", eAliasPathMode::relativeToAppFolder);
+
+       testWithWindow();
 
         gos::deinit();
     }

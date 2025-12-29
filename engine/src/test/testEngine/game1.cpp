@@ -305,7 +305,7 @@ bool Game1::priv_createShapes()
 //***************************************
 void Game1::priv_createModel_mainPlayer()
 {
-	skeleton1 = GOSNEW(allocator, gos::Skeleton)();
+	//skeleton1
 	{
 		gos::SkeletonBuilder builder;
 
@@ -323,32 +323,36 @@ void Game1::priv_createModel_mainPlayer()
             mT.buildTranslation (vec3f(0.8f, 0.05f, 0));
             mS.buildScale  (vec3f(0.1f, 0.1f, 0.1f));
 			bone->matrix = mT * mS;
-		builder.end (gos::getSysHeapAllocator(), skeleton1);
+		skeleton1 = builder.end (allocator);
 	}    
 
-	model_player = GOSNEW(allocator, model::Model)();
+	//model_player
 	{
-		model_player->setSkeleton(skeleton1);
-		model_player->addMesh (engShape_cyl, material_indices[0], "piedi");
-		model_player->addMesh (engShape_cube, material_indices[1], "occhi");
-		model_player->addMesh (engShape_cube, material_indices[2], "coso-rotante");
+		model::Builder builder;
+		builder.begin(skeleton1);
+		builder.addMeshToBone (engShape_cyl, material_indices[0], "piedi");
+		builder.addMeshToBone (engShape_cube, material_indices[1], "occhi");
+		builder.addMeshToBone (engShape_cube, material_indices[2], "coso-rotante");
+		model_player = builder.end (allocator);
 	}    
 }
 
 //***************************************
 void Game1::priv_createModel_pavimento()
 {
-	skeleton2 = GOSNEW(allocator, gos::Skeleton)();
+	//skeleton2
 	{
         gos::SkeletonBuilder builder;
 		builder.begin ("piedi");
-		builder.end (gos::getSysHeapAllocator(), skeleton2);
+		skeleton2 = builder.end (allocator);
 	}    
 
-	model_pavimento = GOSNEW(allocator, model::Model)();
+	//model_pavimento = GOSNEW(allocator, model::Model)();
 	{
-		model_pavimento->setSkeleton(skeleton2);
-		model_pavimento->addMesh (engShape_cube, material_indices[3], "piedi");
+		model::Builder builder;
+		builder.begin(skeleton2);
+		builder.addMeshToBone (engShape_cube, material_indices[3], "piedi");
+		model_pavimento = builder.end (allocator);
 	}    
 }
 

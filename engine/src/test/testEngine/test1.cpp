@@ -125,7 +125,7 @@ bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out_cube, gos
 //***************************************
 void Test1::priv_model_setup(gos::ENGShape shape_cube, gos::ENGShape shape_cylinder)
 {
-	skeleton = GOSNEW(allocator, gos::Skeleton)();
+	//skeleton
 	{
 		gos::SkeletonBuilder builder;
 
@@ -135,15 +135,17 @@ void Test1::priv_model_setup(gos::ENGShape shape_cube, gos::ENGShape shape_cylin
 			bone->matrix.buildTranslation(vec3f(0,  1.3f, 0));
 		builder.addChildTo (iRoot, "down-arm", &bone);
 			bone->matrix.buildTranslation(vec3f(0, -1.3f, 0));
-		builder.end (gos::getSysHeapAllocator(), skeleton);
+		skeleton = builder.end (allocator);
 	}
 
-	model = GOSNEW(allocator, model::Model)();
+	//model
 	{
-		model->setSkeleton(skeleton);
-		model->addMesh (shape_cylinder, 0, "root");
-		model->addMesh (shape_cube, 1, "up-arm");
-		model->addMesh (shape_cube, 2, "down-arm");
+		model::Builder builder;
+		builder.begin(skeleton);
+		builder.addMeshToBone (shape_cylinder, 0, "root");
+		builder.addMeshToBone (shape_cube, 1, "up-arm");
+		builder.addMeshToBone (shape_cube, 2, "down-arm");
+		model = builder.end(allocator);
 	}
  }
 
@@ -267,11 +269,10 @@ bool Test1::priv_run4 ()
 		engine->assetHub->getAssetWithTimeout(assHandle_texChecker, &tex, 5000);
 		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->handle_texture);
 
-		u32 material_indices[4];
-		material_indices[0] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
-		material_indices[1] = renderer->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
-		material_indices[2] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 0.2f, 0.2f));
-		material_indices[3] = renderer->material_create (texture_index__texChecker, vec3f(0.2f, 1.0f, 0.2f));
+		renderer->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
+		renderer->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
+		renderer->material_create (texture_index__texBianca, vec3f(1.0f, 0.2f, 0.2f));
+		renderer->material_create (texture_index__texChecker, vec3f(0.2f, 1.0f, 0.2f));
 	}
 
 

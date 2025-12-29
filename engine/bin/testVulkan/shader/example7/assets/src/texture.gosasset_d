@@ -1,8 +1,0 @@
-@tex2D: textureEs1
-{
-	src: 	Tiling_procedural_textures.png
-	srcColorSpace:	sRGB
-
-	dstNumMipMap: max
-	dstFmt:U8_RGBA
-}

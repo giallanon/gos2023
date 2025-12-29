@@ -63,17 +63,12 @@ bool VulkanExample6::priv_loadModel()
         .addNorm3(offsetof(Vertex, normal))
     .end();
 
-    //gos::shape::importFrom_dae ("shader/example6/esempio.dae", vtxLayot, gos::getSysHeapAllocator(), shapeList);
-    //gos::shape::importFrom_dae ("shader/example6/omino/omino2.dae", vtxLayot, gos::getSysHeapAllocator(), shapeList);
-    //gos::shape::importFrom_dae ("shader/example6/sponza/sponza.dae", vtxLayot, gos::getSysHeapAllocator(), shapeList);
+    //if (!gos::shape::importFrom_glTF ("@common_assets/model3d/cubo-normal.mapped/cubo.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    if (!gos::shape::importFrom_glTF ("@common_assets/model3d/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    //if (!gos::shape::importFrom_glTF ("@common_assets/model3d/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    //if (!gos::shape::importFrom_glTF ("@common_assets/model3d/esempio2.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
     
-    //if (!gos::shape::importFrom_glTF ("shader/example6/cubo-normal.mapped/cubo.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-    //if (!gos::shape::importFrom_glTF ("shader/example6/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-    //if (!gos::shape::importFrom_glTF ("shader/example6/angolo.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-    //if (!gos::shape::importFrom_glTF ("shader/example6/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-    //if (!gos::shape::importFrom_glTF ("shader/example6/esempio2.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
-    
-    if (!gos::shape::importFrom_glTF ("shader/example6/altro/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
+    //if (!gos::shape::importFrom_glTF ("@common_assets/model3d/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
     //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Sponza/glTF/Sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
     //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/DamagedHelmet/glTF/DamagedHelmet.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;
     //if (!gos::shape::importFrom_glTF ("/home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Duck/glTF-Binary/Duck.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList)) return false;

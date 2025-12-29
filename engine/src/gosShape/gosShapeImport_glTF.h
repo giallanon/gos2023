@@ -4,10 +4,6 @@
 #include "../gos/gosFastArray.h"
 #include "../gos/gosIniFile.h"
 
-namespace tinyxml2
-{
-	class XMLElement;
-}
 
 namespace gos
 { 

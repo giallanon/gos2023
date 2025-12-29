@@ -12,22 +12,22 @@
 class Game1
 {
 public:
-			Game1();
-			~Game1();
-	void	run (gos::Engine *engine);
+					Game1();
+					~Game1();
+	void			run (gos::Engine *engine);
 
 private:
 	static constexpr u8 NUM_MAX_MISSILE = 12;
 
 private:
-	void	doCPUStuff ();
-    bool    priv_loadAssets();
-    void    priv_loop();
-	bool 	priv_createShapes();
-	void 	priv_createModel_mainPlayer();
-	void 	priv_createModel_pavimento();
+	void			doCPUStuff ();
+    bool    		priv_loadAssets();
+    void    		priv_loop();
+	bool 			priv_createShapes();
+	void 			priv_createModel_mainPlayer();
+	void 			priv_createModel_pavimento();
 	gos::ENGShape	priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC);
-	void	priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir);
+	void			priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir);
 
 
 private:
@@ -44,10 +44,10 @@ private:
 	gos::asset2::Handle				assHandle_texChecker;
     u32								material_indices[4];
 
-	gos::Skeleton				*skeleton1;
-	gos::Skeleton				*skeleton2;
-	gos::model::Model			*model_player;
-	gos::model::Model			*model_pavimento;
+	gos::Skeleton					*skeleton1;
+	gos::Skeleton					*skeleton2;
+	gos::model::Model				*model_player;
+	gos::model::Model				*model_pavimento;
     gos::FPSMovement				movement;
 	CharacterController				charCtrl;
 	gos::Entity						ent_mainPlayer;

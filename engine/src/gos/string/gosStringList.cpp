@@ -37,7 +37,7 @@ u32 StringList::serialize_toMemory (u8 *mem, u32 sizeof_mem) const
 }
 
 //***************************************
-u32 StringList::serialize_fromMemory (gos::Allocator *allocatorIN, const u8 *mem, u32 sizeof_mem)
+u32 StringList::deserialize_fromMemory (gos::Allocator *allocatorIN, const u8 *mem, u32 sizeof_mem)
 {
     unsetup();
 

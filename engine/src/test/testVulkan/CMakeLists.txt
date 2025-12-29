@@ -44,8 +44,6 @@ VulkanExample5.cpp
 VulkanExample5.h
 VulkanExample6.cpp
 VulkanExample6.h
-VulkanExample7.cpp
-VulkanExample7.h
  )
 
 

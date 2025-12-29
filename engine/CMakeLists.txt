@@ -120,7 +120,6 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGeom)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosShape)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosInput)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosImage)
-#add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosAsset)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosAsset2)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGPU)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosEngine)
@@ -131,7 +130,6 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testEngine)
 
 #add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/glslParser)
-#add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/assetBuilder)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/assetBuilder2)
 
 

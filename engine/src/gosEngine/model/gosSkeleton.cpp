@@ -1,113 +1,72 @@
 #include "gosSkeleton.h"
+#include "../gos/gosMagicUID.h"
 
 using namespace gos;
 
-/**********************************************************************
- * 
- * SkeletonBuilder
- * 
- ***********************************************************************/
-SkeletonBuilder::SkeletonBuilder()
+
+//***********************************************************************
+Skeleton* Skeleton::createFromMemory (gos::Allocator *allocatorIN, const u8 *buffer, u32 sizeof_buffer, u32 *out__numByteUsed)
 {
-    gos::Allocator *allocator = gos::getScrapAllocator();
+    assert (NULL != out__numByteUsed);
 
-    nameList.setup (allocator, 1024);
-    boneList.setup (allocator, 64);
-}
-
-SkeletonBuilder::~SkeletonBuilder()
-{
-    nameList.unsetup();
-    boneList.unsetup();
-}
-
-u32 SkeletonBuilder::priv_newBone (const char *name)
-{
-    assert (numBones < 0xff);
-    Bone bone;
-    bone.matrix.identity();
-    bone.firstChildIndex = bone.sigblinIndex = 0xFF;
-    bone.nameIndex = static_cast<u16>( nameList.add(name));
-
-    boneList.append(bone);
-    return numBones++;
-}
-
-u32 SkeletonBuilder::begin (const char *rootName, Bone **out_canBeNULL)
-{
-    numBones = 0;
-    nameList.reset();
-    boneList.reset();
-    const u32 newBoneIndex = priv_newBone (rootName);
-
-    if (NULL != out_canBeNULL)
-        *out_canBeNULL = &boneList[newBoneIndex];
-
-    return newBoneIndex;
-}
-
-u32 SkeletonBuilder::addChildTo (u32 srcBoneIndex, const char *dstBoneName, Bone **out_canBeNULL)
-{
-    assert (srcBoneIndex < numBones);
-
-    const u32 newBoneIndex = priv_newBone (dstBoneName);
-    Bone *srcBone = &boneList[srcBoneIndex];
-    Bone *newBone = &boneList[newBoneIndex];
-
-    if (0xFF != srcBone->firstChildIndex)
+    if (sizeof_buffer < 4)
     {
-        newBone->sigblinIndex = srcBone->firstChildIndex;
+        logger::err ("Skeleton::deserialize => input buffer is too small (%d, expected at least 4 byte)\n", sizeof_buffer);
+        return 0;
     }
-    srcBone->firstChildIndex = newBoneIndex;
 
-    if (NULL != out_canBeNULL)
-        *out_canBeNULL = newBone;
-    return newBoneIndex;
-}
+    u32 ct = 0;
 
-u32 SkeletonBuilder::addSiblingdTo (u32 srcBoneIndex, const char *dstBoneName, Bone **out_canBeNULL)
-{
-    assert (srcBoneIndex < numBones);
+    //header    
+    const u32 magic = utils::bufferReadU32 (&buffer[ct]);
+    ct += 4;
+    if (!magic::signatureMatch (magic, GOS_MAGIC__ENGINE_SKELETON))     { logger::err ("Skeleton::deserialize => invalid signature\n"); return 0; }
+    if (!gos::magic::versionMatch (magic, GOS_MAGIC__DATA_BLOB_DEF))    { logger::err ("Skeleton::deserialize => invalid file version\n"); return 0; }
 
-    const u32 newBoneIndex = priv_newBone (dstBoneName);
-    Bone *srcBone = &boneList[srcBoneIndex];
-    Bone *newBone = &boneList[newBoneIndex];
-    
-    if (0xFF != srcBone->sigblinIndex)
+    const u32 sizeof_memoryBlock = utils::bufferReadU32 (&buffer[ct]);
+    ct += 4;
+
+    //memory block
+    const u32 total_size_needed = 4 + sizeof_memoryBlock;
+    if (sizeof_buffer < total_size_needed)
     {
-        newBone->sigblinIndex = srcBone->sigblinIndex;
+        logger::err ("Skeleton::deserialize => input buffer is too small (%d, expected %d)\n", sizeof_buffer, total_size_needed);
+        return 0;
     }
-    srcBone->sigblinIndex = newBoneIndex;
 
-    if (NULL != out_canBeNULL)
-        *out_canBeNULL = newBone;
-    return newBoneIndex;    
-}
+    const u32 numBones = utils::bufferReadU32 (&buffer[ct]);
+    ct += 4;
 
-void SkeletonBuilder::end (gos::Allocator *allocatorIN, Skeleton *out)
-{
-    out->priv_alloc (allocatorIN, numBones);
-    memcpy (out->boneList, boneList._queryPointer(), sizeof(Bone) * numBones);
-    out->nameList.clone_from (allocatorIN, nameList);
-}
+    //Creo lo skeleton
+    Skeleton *sk = GOSNEW(allocatorIN, Skeleton)(allocatorIN, numBones);
+    memcpy (sk->boneList, &buffer[ct], sizeof(Bone) * numBones);
+    ct += sizeof(Bone) * numBones;
 
-
-
-
-/**********************************************************************
- * 
- * Skeleton
- * 
- ***********************************************************************/
-void Skeleton::priv_alloc (gos::Allocator *allocatorIN, u32 numBonesIN)
-{
-    priv_free();
+    u32 n = sk->nameList.deserialize_fromMemory (allocatorIN, &buffer[ct], sizeof_buffer - ct);
+    if (0 == n)
+    {
+        logger::err ("Skeleton::deserialize => error deserializing nameList\n");
+        return 0;
+    }
+    ct += n;
     
+
+
+    assert (ct == total_size_needed);
+    assert (ct <= sizeof_buffer);
+    *out__numByteUsed = total_size_needed;
+    return sk;
+}
+
+//***********************************************************************
+Skeleton::Skeleton (gos::Allocator *allocatorIN, u32 numBonesIN)
+{
     allocator = allocatorIN;
     numBones = numBonesIN;
     boneList = GOSALLOCT(Bone*, allocator, sizeof(Bone) * numBones);
 }
 
+//***********************************************************************
 void Skeleton::priv_free()
 {
     if (NULL == allocator)
@@ -117,7 +76,8 @@ void Skeleton::priv_free()
     allocator = NULL;
 }
 
-u32 Skeleton::getBoneIndexByName (const char *name) const
+//***********************************************************************
+u32 Skeleton::bone_getIndexByName (const char *name) const
 {
     for (u32 i=0; i<numBones; i++)
     {
@@ -127,61 +87,81 @@ u32 Skeleton::getBoneIndexByName (const char *name) const
     return u32MAX;
 }
 
-Bone* Skeleton::getBoneByName (const char *name) const
+//***********************************************************************
+Bone* Skeleton::bone_getByName (const char *name) const
 {
-    const u32 index = getBoneIndexByName(name);
+    const u32 index = bone_getIndexByName(name);
     if (u32MAX != index)
         return &boneList[index];
     return NULL;
 }
 
-SkeletonInstance* Skeleton::newInstance()
+//***********************************************************************
+SkeletonInstance* Skeleton::newInstance() const
 {
     return GOSNEW(allocator, SkeletonInstance)(this);
 }
 
-
-/**********************************************************************
- * 
- * SkeletonInstance
- * 
- ***********************************************************************/
-SkeletonInstance::SkeletonInstance (const Skeleton *modelIN)
+//***********************************************************************
+u32 Skeleton::serialize_toMemory (u8 *out_buffer, u32 sizeof_buffer) const
 {
-    model = modelIN;
-    numBones = model->getNumBones();
-    boneList = GOSALLOCT(Bone*, model->getAllocator(), sizeof(Bone) * numBones);
-    memcpy (boneList, model->getBoneList(), sizeof(Bone) * numBones);
-}
+    const u32 sizeof_header =
+          sizeof(u32)   //magic
+        + sizeof(u32);  //sizeof_memoryBlock
 
-void SkeletonInstance::priv_free()
-{
-    GOSFREE(model->getAllocator(), boneList);
-    boneList = NULL;
-}
+    const u32 sizeof_memoryBlock = 
+          sizeof(u32)                   //numBones
+        + sizeof(Bone) * numBones       //bone info
+        + nameList.serialize_calcSizeNeeded();  //nomi
 
-Bone* SkeletonInstance::getBoneByName (const char *name) const
-{
-    const u32 index = model->getBoneIndexByName(name);
-    if (u32MAX != index)
-        return &boneList[index];
-    return NULL;    
-}
-
-void SkeletonInstance::applyTransform (const mat4x4f &matW)
-{
-    priv_applyTransform_ric (0, matW);
-}
-
-void SkeletonInstance::priv_applyTransform_ric (u32 boneIndex, const mat4x4f &parent_matW)
-{
-    Bone *bone = &boneList[boneIndex];
-    bone->matrix = parent_matW * model->boneList[boneIndex].matrix;
     
-    u32 childrenIndex = bone->firstChildIndex;
-    while (0xFF != childrenIndex)
+    const u32 total_size_needed = sizeof_header + sizeof_memoryBlock;
+    if (NULL == out_buffer)
+        return total_size_needed;
+    if (sizeof_buffer < total_size_needed)
     {
-        priv_applyTransform_ric (childrenIndex, bone->matrix);
-        childrenIndex = boneList[childrenIndex].sigblinIndex;
+        logger::err ("Skeleton::serialize => sizeof_buffer is to small (%d, expexted %d)\n", sizeof_buffer, total_size_needed);
+        return 0;
     }
+
+    u32 ct = 0;
+
+    //header
+    ct += utils::bufferWriteU32 (&out_buffer[ct], GOS_MAGIC__ENGINE_SKELETON);
+    ct += utils::bufferWriteU32 (&out_buffer[ct], sizeof_memoryBlock);
+
+    //memory block
+    ct += utils::bufferWriteU32 (&out_buffer[ct], numBones);
+    memcpy (&out_buffer[ct], boneList, sizeof(Bone) * numBones);
+    ct += sizeof(Bone) * numBones;
+
+    ct += nameList.serialize_toMemory (&out_buffer[ct], sizeof_buffer - ct);
+    
+    assert (ct == total_size_needed);
+    assert (ct <= sizeof_buffer);
+    return total_size_needed;
 }
+
+//***********************************************************************
+void Skeleton::debug__print (gos::Logger *logger) const
+{
+    logger->log ("Num bones: %d\n", numBones);
+    debug__print_rec (logger, &boneList[0]);
+}
+void Skeleton::debug__print_rec (gos::Logger *logger, const Bone *bone) const
+{
+    logger->log ("name: %s\n", nameList.getStringAtOffset(bone->nameIndex));
+    logger->incIndent();
+
+    u8 index = bone->firstChildIndex;
+    while (0xFF != index)
+    {
+        bone = &boneList[index];
+        debug__print_rec (logger, bone);
+        index = bone->sigblinIndex;
+    }
+    logger->decIndent();
+}
+
+
+

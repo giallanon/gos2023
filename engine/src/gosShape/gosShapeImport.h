@@ -8,8 +8,6 @@ namespace gos
 { 
 	namespace shape
 	{
-		bool 	importFrom_dae (const char *filename, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, gos::ShapeList &out_shapeList);
-		
 		bool 	importFrom_glTF (const char *filename, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, gos::ShapeList &out_shapeList);
 
 	} //namespace shape
