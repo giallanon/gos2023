@@ -22,10 +22,20 @@ void test_modelImport()
     
     
     gos::model::glTFImporter imp;
-    gos::FastArray<gos::Shape> shapeList(gos::getScrapAllocator(), 128);
-    //imp.importFromFile ("/home/giallanon/gixprogram/gos2023/engine/common_assets/model3d/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList);
-    imp.importFromFile ("/home/giallanon/gixprogram/gos2023/engine/common_assets/model3d/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList);
-    //imp.importFromFile ("/home/giallanon/gixprogram/gos2023/engine/common_assets/model3d/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), shapeList);
+    gos::model::glTFImporter::Result result;
+
+    bool ret = imp.importFromFile ("/home/giallanon/gixprogram/gos2023/engine/common_assets/model3d/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
+    //bool ret = imp.importFromFile ("/home/giallanon/gixprogram/gos2023/engine/common_assets/model3d/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
+    //bool ret = imp.importFromFile ("/home/giallanon/gixprogram/gos2023/engine/common_assets/model3d/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
+
+
+    if (ret)
+    {
+	    gos::logger::log (eTextColor::green, "Skeleton:\n");
+	    gos::logger::incIndent();	
+	    result.skeleton->debug__print(gos::logger::getSystemLogger());
+	    gos::logger::decIndent();
+    }
 }
 
 
@@ -40,7 +50,7 @@ int main()
         return -1;
 
 
-    //test_modelImport(); return 0;
+    test_modelImport(); return 0;
 
 
     {

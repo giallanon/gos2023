@@ -182,6 +182,7 @@ glTFImporter::glTFImporter()
 	nodesList.setup (localAllocator, 128);
 	shapesInMesh.setup (localAllocator, 1024);
 	meshesList.setup (localAllocator, 1024);
+	shapeList.setup (localAllocator, 1024);
 }
 
 //********************************************
@@ -192,6 +193,7 @@ glTFImporter::~glTFImporter()
 	nodesList.unsetup ();
 	shapesInMesh.unsetup ();
 	meshesList.unsetup ();
+	shapeList.unsetup ();
 	priv_free();
 }
 
@@ -205,6 +207,7 @@ void glTFImporter::priv_free()
 	nodesList.reset();
 	shapesInMesh.reset ();
 	meshesList.reset ();
+	shapeList.reset();
 	
 	rootBone.deleteAllChildren (localAllocator);
 	rootBone.reset();
@@ -305,7 +308,7 @@ void glTFImporter::priv_parseMeshAttributes (const gos::IniFileSection *sec, Ava
 }
 
 //********************************************
-bool glTFImporter::priv_parseMesh (const gos::IniFileSection *sec)
+bool glTFImporter::priv_parseMesh (const gos::IniFileSection *sec, const VtxLayout &shape_desired_layout, gos::Allocator *shape_allocator)
 {
 	const u32 meshNum = meshesList.getNElem();
 	meshesList[meshNum].begin (shapesInMesh);
@@ -363,7 +366,7 @@ bool glTFImporter::priv_parseMesh (const gos::IniFileSection *sec)
 		}		
 
 		//preparo l'importer e creo la shape
-		shape::VtxLayoutReader vtxLayoutR (&shapeOut.vtxLayot);
+		shape::VtxLayoutReader vtxLayoutR (&shape_desired_layout);
 
 #define IMPORTA_USANDO_FACELIST
 
@@ -389,7 +392,7 @@ bool glTFImporter::priv_parseMesh (const gos::IniFileSection *sec)
 
 			//preparo l'importer
 			shape::ArraysImporter imp;
-			imp.beginUsingFaceList (shapeOut.vtxLayot, faceList._queryTypedPointer(), faceList.getNElem(), numElemPerTupla);
+			imp.beginUsingFaceList (shape_desired_layout, faceList._queryTypedPointer(), faceList.getNElem(), numElemPerTupla);
 #endif
 
 
@@ -422,18 +425,18 @@ bool glTFImporter::priv_parseMesh (const gos::IniFileSection *sec)
 		}
 		
 		Shape myShape;
-		if (!imp.end (shapeOut.shapeAllocator, &myShape))
+		if (!imp.end (shape_allocator, &myShape))
 		{
 			gos::logger::err ("glTFImporter::priv_parseMesh(%d) => error creating shape\n", index);
 			return false;
 		}
-		shapeOut.shapeList->append(myShape);
+		shapeList.append(myShape);
 
 		//materiale
 		const u32 material_index = prim->getOrDefaultAsU32 ("material", u32MAX);
 
 		//registro la primitiva nella mesh
-		meshesList[meshNum].addShape (shapeOut.shapeList->getNElem() -1, material_index);
+		meshesList[meshNum].addShape (shapeList.getNElem() -1, material_index);
 
 
 		//prossimo nodo 'primitives'
@@ -660,8 +663,8 @@ void glTFImporter::priv_applySkeleton (Bone *me)
 			for (u32 i=0; i<meshesList(ii).getNumShapes(); i++)
 			{
 				const u16 shapeIdx = meshesList(ii).getShapeIndex(i);
-				shape::shapeTransformPos (&shapeOut.shapeList->getElem(shapeIdx), me->globalTRS);
-				shape::shapeRotateNormals (&shapeOut.shapeList->getElem(shapeIdx), me->globalRot);
+				shape::shapeTransformPos (&shapeList.getElem(shapeIdx), me->globalTRS);
+				shape::shapeRotateNormals (&shapeList.getElem(shapeIdx), me->globalRot);
 			}
 		}
 	}
@@ -676,7 +679,7 @@ void glTFImporter::priv_applySkeleton (Bone *me)
 }
 
 //********************************************
-bool glTFImporter::importFromFile (const char *filename, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, gos::ShapeList &out_shapeList)
+bool glTFImporter::importFromFile (const char *filename, const VtxLayout &desiredLayout, gos::Allocator *result_allocatorIN, Result *out_results)
 {
 	u32 fsize;
 	u8 *buffer = fs::fileLoadInMemory (localAllocator, filename, &fsize);
@@ -686,21 +689,20 @@ bool glTFImporter::importFromFile (const char *filename, const VtxLayout &desire
 		return false;
 	}
 
-	const bool ret = importFromMemory (buffer, fsize, desiredLayout, shapeAllocator, out_shapeList);
+	const bool ret = importFromMemory (buffer, fsize, desiredLayout, result_allocatorIN, out_results);
 	GOSFREE(localAllocator, buffer);
 	return ret;
 }
 
 //********************************************
-bool glTFImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, gos::ShapeList &out_shapeList)
+bool glTFImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const VtxLayout &shape_desired_layout, gos::Allocator *result_allocatorIN, Result *out_results)
 {
 	priv_free();
 	timeStarted_msec = gos::getTimeSinceStart_msec();
 
-
-	shapeOut.shapeAllocator = shapeAllocator;
-	shapeOut.vtxLayot = desiredLayout;
-	shapeOut.shapeList = &out_shapeList;
+	out_results->free();
+	out_results->vtxLayot = shape_desired_layout;
+	out_results->allocator = result_allocatorIN;
 
 	if (sizeof_buffer < 20)
 	{
@@ -841,7 +843,7 @@ bool glTFImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 			if (NULL == sec)
 				break;
 			
-			if (!priv_parseMesh (sec))
+			if (!priv_parseMesh (sec, out_results->vtxLayot, out_results->allocator))
 			{
 				gos::logger::err ("glTFImporter::importFromMemory() => error parsing 'mesh[%d]\n", index);
 				return false;
@@ -850,9 +852,9 @@ bool glTFImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 		}
 
 		//glTF e' right handed, devo convertire tutto
-		for (u32 i=0; i<out_shapeList.getNElem(); i++)
+		for (u32 i=0; i<shapeList.getNElem(); i++)
 		{
-			gos::Shape *myShape = &out_shapeList[i];
+			gos::Shape *myShape = &shapeList[i];
 			shape::shapeRightHandedToLeftHanded (myShape);
 		}
 
@@ -905,14 +907,20 @@ bool glTFImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 	}
 	*/
 
+	//copio le shape in out_result
+	{
+		const u32 n = shapeList.getNElem();
+		if (n)
+		{
+			out_results->numShapes = n;
+			out_results->shapeList = GOSALLOCT(gos::Shape*, out_results->allocator, sizeof(gos::Shape) * n);
+			memcpy (out_results->shapeList, shapeList._queryPointer(), sizeof(gos::Shape) * n);
+		}
+	}
+
 
 	//creo lo skeleton
-	gos::Skeleton *skeleton = priv_build_gosSkeleton ();
-	logger::log (eTextColor::green, "Skeleton:\n");
-	logger::incIndent();	
-	skeleton->debug__print(gos::logger::getSystemLogger());
-	logger::decIndent();
-	GOSDELETE(gos::getSysHeapAllocator(), skeleton);
+	out_results->skeleton = priv_build_gosSkeleton (out_results->allocator);
 
 
 
@@ -930,7 +938,7 @@ bool glTFImporter::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 
 
 //********************************************
-gos::Skeleton* glTFImporter::priv_build_gosSkeleton () const
+gos::Skeleton* glTFImporter::priv_build_gosSkeleton (gos::Allocator *sk_allocator) const
 {
 	gos::SkeletonBuilder builder;
 
@@ -951,7 +959,7 @@ gos::Skeleton* glTFImporter::priv_build_gosSkeleton () const
 		const u32 skRootIndex = builder.begin ("root", NULL);
 		priv_build_gosSkeleton_rec (builder, &rootBone, skRootIndex);
 	}
-	return builder.end (gos::getSysHeapAllocator());
+	return builder.end (sk_allocator);
 }
 void glTFImporter::priv_build_gosSkeleton_rec (gos::SkeletonBuilder &builder, const glTFImporter::Bone *myBone, u32 skBoneIndex) const
 {
@@ -979,15 +987,15 @@ void glTFImporter::priv_printStatistics() const
 	logger::log (eTextColor::green, "glTFImporter::printStatistics()\n");
 	logger::incIndent();
 
-	const u32 numShapes = shapeOut.shapeList->getNElem();
+	const u32 numShapes = shapeList.getNElem();
 	logger::log ("num shapes: %d\n", numShapes);
 
 	u32 totNumVtx = 0;
 	u32 totNumIdx = 0;
 	for (u32 i=0; i<numShapes; i++)
 	{
-		const u32 numVtx = shapeOut.shapeList->queryElem(i).numVtx;
-		const u32 numIdx = shapeOut.shapeList->queryElem(i).numIdx;
+		const u32 numVtx = shapeList.queryElem(i).numVtx;
+		const u32 numIdx = shapeList.queryElem(i).numIdx;
 		logger::log ("shape #%d,  vtx=%d, idx=%d\n", i, numVtx, numIdx);
 
 		totNumVtx += numVtx;

@@ -20,11 +20,39 @@ namespace gos
 		class glTFImporter
 		{
 		public:
+			struct Result
+			{
+			public:
+						Result()		{ reset(); }
+						~Result()		{ free(); }
+				void 	reset()			{ allocator=NULL; numShapes=0; shapeList=NULL; skeleton=NULL; }
+				void 	free()			{ 
+					if (NULL == allocator) return;
+					if (shapeList)
+					{
+						for (u32 i=0; i<numShapes; i++)
+							shape::shapeFree(allocator, &shapeList[i]);
+						GOSFREE(allocator, shapeList);
+					}
+					if (skeleton) GOSDELETE(allocator, skeleton);
+					reset();
+				}
+
+			public:
+				gos::Allocator 		*allocator;
+				VtxLayout			vtxLayot;
+				u32 				numShapes;
+				gos::Shape 			*shapeList;
+				gos::Skeleton		*skeleton;
+
+			};
+
+		public:
 					glTFImporter();
 					~glTFImporter();
 
-			bool	importFromFile (const char *filename, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, gos::ShapeList &out_shapeList);
-			bool	importFromMemory (const u8 *buffer, u32 sizeof_buffer, const VtxLayout &desiredLayout, gos::Allocator *shapeAllocator, gos::ShapeList &out_shapeList);
+			bool	importFromFile (const char *filename, const VtxLayout &desiredLayout, gos::Allocator *results_allocator, Result *out_results);
+			bool	importFromMemory (const u8 *buffer, u32 sizeof_buffer, const VtxLayout &desiredLayout, gos::Allocator *results_allocator, Result *out_results);
 
 		private:
 			struct sHeader
@@ -81,13 +109,6 @@ namespace gos
 			private:
 				u32 	numElem;
 				u32 	elem[MAX_NUM_ELEM];
-			};
-
-			struct sShapeOut
-			{
-				gos::Allocator 		*shapeAllocator;
-				VtxLayout			vtxLayot;
-				FastArray<Shape> 	*shapeList;
 			};
 
 			struct sNode
@@ -178,7 +199,7 @@ namespace gos
 			void 	priv_free();
 			bool 	priv_parseBufferView (const gos::IniFileSection *sec);
 			bool 	priv_parseAccessor (const gos::IniFileSection *sec);
-			bool 	priv_parseMesh (const gos::IniFileSection *sec);
+			bool 	priv_parseMesh (const gos::IniFileSection *sec, const VtxLayout &shape_desired_layout, gos::Allocator *shape_allocator);
 			void 	priv_parseMeshAttributes (const gos::IniFileSection *sec, AvailVtxChannel *out) const;
 			bool 	priv_parseNodes (const gos::IniFileSection *sec);
 			bool 	priv_parseScene (const gos::IniFileSection *sec, Bone *bone);
@@ -192,7 +213,7 @@ namespace gos
 			void 	priv_printSkeleton_rec(const Bone *bone) const;
 
 
-			gos::Skeleton* 	priv_build_gosSkeleton () const;
+			gos::Skeleton* 	priv_build_gosSkeleton (gos::Allocator *sk_allocator) const;
 			void 	priv_build_gosSkeleton_rec (gos::SkeletonBuilder &builder, const glTFImporter::Bone *myBone, u32 skBoneIndex) const;
 
 		private:
@@ -200,12 +221,12 @@ namespace gos
 			const char 						*json;
 			const u8 						*bin;
 			u64 							timeStarted_msec;
-			sShapeOut						shapeOut;
 			gos::FastArray<sBufferView>		bufferViewList;
 			gos::FastArray<sAccessors>		accessorsList;
 			gos::FastArray<sNode>			nodesList;
 			gos::FastArray<sMeshInfo>		shapesInMesh;	//usato come array di appoggio per memorizzare l'elenco delle shape che stanno in ogni singola mesh
 			gos::FastArray<sMesh>			meshesList;
+			gos::FastArray<Shape> 			shapeList;
 			Bone							rootBone;
 		};
 		
