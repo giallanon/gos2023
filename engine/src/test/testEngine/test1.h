@@ -18,9 +18,9 @@ private:
 
 
 private:
-	bool	priv_shape_create(gos::Engine *engine, gos::ENGShape *out_cube, gos::ENGShape *out_cylinder);
-	void	priv_model_setup(gos::ENGShape shape_cube, gos::ENGShape shape_cylinder);
-	gos::ENGShape 	priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC);
+	bool	priv_shape_create(gos::Engine *engine, gos::ENGGPUShape *out_cube, gos::ENGGPUShape *out_cylinder);
+	void	priv_model_setup(gos::ENGGPUShape shape_cube, gos::ENGGPUShape shape_cylinder);
+	gos::ENGGPUShape 	priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC);
 
 	void	doCPUStuff ();
 	bool	priv_run4 ();

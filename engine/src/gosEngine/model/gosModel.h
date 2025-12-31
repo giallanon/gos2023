@@ -12,7 +12,7 @@ namespace gos
 
         struct Mesh
         {
-            gos::ENGShape   shape_handle;
+            gos::ENGGPUShape   shape_handle;
             u16             bone_index;
             u16             material_index;
         };        
@@ -29,7 +29,7 @@ namespace gos
                     ~Builder();
 
             void    begin (Skeleton *skeleton);
-            void    addMeshToBone (gos::ENGShape shape, u32 material_index, const char *boneName);
+            void    addMeshToBone (gos::ENGGPUShape shape, u32 material_index, const char *boneName);
             Model*  end (gos::Allocator *allocator);
 
         private:

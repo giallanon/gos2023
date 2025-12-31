@@ -90,7 +90,41 @@ namespace gos
                     list[index].key = key;
                     list[index].value = value;
                     return true;
-                }    
+                }
+                
+        /**
+         * @brief   se <key> non e' gia' presente, inserisce la coppia (key, value)
+         *          altrimenti sostituisce il vecchio <value> con <new_value>
+         * 
+         * @return  true se ha inserito, false se key esisteva gia'
+         */                
+        bool    insertOrReplaceValue (const TKEY &key, const TVALUE &new_value)
+                {
+                    if (list.getNElem() == 0)
+                    {
+                        list[0].key = key;
+                        list[0].value = new_value;
+                        return true;
+                    }
+
+                    sSearchRange s;
+                    s.start = 0;
+                    s.end_incluso = list.getNElem() - 1;
+
+                    u32 index;
+                    if (priv_binarySearch (s, key, &index))
+                    {
+                        list[index].value = new_value;
+                        return false;
+                    }
+
+                    if (index < list.getNElem())
+                        list.shiftaAvanti (index, 1);
+                    
+                    list[index].key = key;
+                    list[index].value = new_value;
+                    return true;
+                }
 
         /**
          * @brief   inserisce (value) nella giusta posizione mantenendo l'array ordinato. [pos] e' ottenibile chiamando findWithPos()
@@ -218,7 +252,7 @@ namespace gos
 
 
 
-
+        void        replaceValueAtPost (const Position &pos, const TVALUE &new_value)       { list[pos._index].value = new_value; }
         TVALUE*     getValueAtPos (const Position &pos) const                               { return &list.getElem(pos._index).value; }
         Allocator*  getAllocator() const                                                    { return list.getAllocator(); }
         u32         getNElem() const                                                        { return list.getNElem(); }

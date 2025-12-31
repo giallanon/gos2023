@@ -8,23 +8,15 @@ typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Threa
 
 #define GOS_ENGINE__ASSET_HUB_PATH "@w/assets"
 
-
-//******************************** 
-void Engine::createAssetFolderStructure()
-{
-    asset2::DBContext ctx;
-    asset2::dbcontext_open (GOS_ENGINE__ASSET_HUB_PATH, true, &ctx);
-    asset2::dbcontext_close (ctx);
-}
-
 //******************************** 
 Engine::Engine()
 {
     allocator = NULL;
     gpu = NULL;
     inputCtx = NULL;
-    assetHub = NULL;
     bQuitEngine = false;
+    asset_logger = NULL;
+    memset (resHandler_list, 0, sizeof(resHandler_list));
 }
 
 //******************************** 
@@ -34,22 +26,33 @@ void Engine::unsetup()
     if (NULL == gpu || NULL == allocator)
         return;
 
+    //chiedo al thread di morire e aspetto che termini
+    thread::pushMsg (msgq_1W, MSG_FOR_LOADER_THREAD__DIE, 0);
+    thread::waitEnd (hThreadLoader);
+    thread::deleteMsgQ (msgq_1R, msgq_1W);
+    thread::deleteMsgQ (msgq_2R, msgq_2W);
+
     //resource manager
     vtxBufferMan.unsetup();
     idxBufferMan.unsetup();
-    worldMatrixBufferMan.unsetup();
+    listof_loadedUID.unsetup();
+
     
     //handle lists
-    vtxBufferHandleList.unsetup();
-    idxBufferHandleList.unsetup();
-    shapeHandleList.unsetup();
+    handleList_vtxBuffer.unsetup();
+    handleList_idxBuffer.unsetup();
+    handleList_GPUShape.unsetup();
+    resHandler_texture.unsetup();
+    resHandler_pipeline.unsetup();
+    resHandler_vtxShader.unsetup();
+    resHandler_pxlShader.unsetup();
+    resHandler_shape.unsetup();
 
+    asset2::dbcontext_close (asset_ctx);
 
     //win & gpu
     GOSWinHandle mainWin = gpu->getWindow();
     
-    priv_assetHub_delete();
-
     gpu->deinit();
     GOSDELETE(gos::getSysHeapAllocator(), gpu);
     gpu = NULL;
@@ -60,6 +63,7 @@ void Engine::unsetup()
     gos::input::window_destroy (mainWin);
     gos::input::deinit();
 
+    GOSDELETE(allocator, asset_logger);
 
     //engine allocator
     GOSDELETE(gos::getSysHeapAllocator(), allocator);
@@ -92,8 +96,47 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
         return false;
     }
 
-    //assetHub
-    priv_assetHub_create();
+    //Creo un allocatore dedicato
+    GOSENGINEMemAllocatorTS *engAllocator = GOSNEW(gos::getSysHeapAllocator(), GOSENGINEMemAllocatorTS)("ENG");
+    engAllocator->setup (1024 * 1024 * 128); //128MB
+    this->allocator = engAllocator;
+
+
+    //asset
+    {
+        gos::LoggerStdout *ll = GOSNEW(allocator,gos::LoggerStdout)();
+        ll->enableStdouLogging();
+        asset_logger = ll;
+        if (!asset2::dbcontext_open (GOS_ENGINE__ASSET_HUB_PATH, true, &asset_ctx))
+        {
+            logger::err ("Engine::setup() => can't open asset contex in %s\n", GOS_ENGINE__ASSET_HUB_PATH);
+            return false;
+        }
+    }    
+    
+
+    //loader thread
+    //creo 2 code, una che uso per mandare msg da this al thread e una per mandare
+    //msg dal thread a this
+    thread::createMsgQ (&msgq_1R, &msgq_1W);
+    thread::createMsgQ (&msgq_2R, &msgq_2W);
+
+    sLoaderThreadInitParams params;
+    params.msgqR = msgq_1R;
+    params.msgqW = msgq_2W;
+    params.logger = asset_logger;
+    params.gpu = gpu;
+    params.ctx = &asset_ctx;
+    thread::eventCreate (&params.hEvent_started);
+
+    eThreadError err = thread::create (&hThreadLoader, Engine::LoaderThread_mainFN, &params);
+    if (err != eThreadError::none)
+    {
+        logger::err ("Engine::setup() => error creating thread: errcode=%d\n", static_cast<int>(err));
+        return false;
+    }
+
+
 
     //creo l'input context di default
     inputCtx = GOSNEW(gos::getSysHeapAllocator(), input::Context)("global");
@@ -136,20 +179,30 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     }
 
 
-    //Creo un allocatore dedicato per la GPU
-    GOSENGINEMemAllocatorTS *engAllocator = GOSNEW(gos::getSysHeapAllocator(), GOSENGINEMemAllocatorTS)("ENG");
-    engAllocator->setup (1024 * 1024 * 128); //128MB
-    this->allocator = engAllocator;
-
     //handle list
-    vtxBufferHandleList.setup (allocator);
-    idxBufferHandleList.setup (allocator);
-    shapeHandleList.setup (allocator);
-
+    handleList_vtxBuffer.setup (allocator);
+    handleList_idxBuffer.setup (allocator);
+    handleList_GPUShape.setup (allocator);
+    priv_setup_resource_handler(eAssetType::tex2D,      &resHandler_texture);
+    priv_setup_resource_handler(eAssetType::pipe,       &resHandler_pipeline);
+    priv_setup_resource_handler(eAssetType::vtx_shader, &resHandler_vtxShader);
+    priv_setup_resource_handler(eAssetType::pxl_shader, &resHandler_pxlShader);
+    priv_setup_resource_handler(eAssetType::shape,      &resHandler_shape);
+    
     //resource manager
     vtxBufferMan.setup (allocator, gpu);
     idxBufferMan.setup (allocator, gpu);
-    worldMatrixBufferMan.setup (allocator, NUM_MAX_WMATRIX);
+    listof_loadedUID.setup (allocator, 8192);
+
+
+    //attendo che il loader-thread abbia segnalato che e' partito
+    if (!thread::eventWait (params.hEvent_started, 20000))
+    {
+        logger::err ("Engine::setup() => error waiting for thread to start\n");
+        return false;
+    }
+    thread::eventDestroy (params.hEvent_started);
+
     return true;
 }
 
@@ -169,61 +222,54 @@ void Engine::toggleVSync()
 }
 
 //******************************** 
-void Engine::priv_assetHub_create()
-{
-    if (NULL != assetHub)
-        return;
-    assetHub = GOSNEW(gos::getSysHeapAllocator(), asset2::Hub)();
-    assetHub->setup (GOS_ENGINE__ASSET_HUB_PATH, gpu);
-}
-//******************************** 
-void Engine::priv_assetHub_delete()
-{
-    if (NULL == assetHub)
-        return;
-    GOSDELETE(gos::getSysHeapAllocator(), assetHub);
-    assetHub = NULL;
-}
-
-//******************************** 
-bool Engine::assetHub_rebuildAll()
-{
-    priv_assetHub_delete();
-
-    gos::asset2::Builder builder (gpu);
-    if (!builder.rebuildAll (GOS_ENGINE__ASSET_HUB_PATH, true))
-        return false;
-    priv_assetHub_create();
-    return true;
-}
-
-//******************************** 
-bool Engine::assetHub_buildAll()
-{
-    priv_assetHub_delete();
-
-    gos::asset2::Builder builder (gpu);
-    if (!builder.build (GOS_ENGINE__ASSET_HUB_PATH, true))
-        return false;
-    priv_assetHub_create();
-    return true;
-}
-
-//******************************** 
 bool Engine::update()
 {
     if (bQuitEngine)
         return false;
 
-    const u64 timenow_msec = gos::getTimeSinceStart_msec();
-    
-    //asset hub
-    assetHub->update(timenow_msec);
+    //loader-thread
+    priv_flushLoaderThreadMsg();
 
     //input
     gos::input::pollEvents();
     input::resolveEvents (gpu->getWindow(), inputCtx, &evtList);
     return true;
+}
+
+//******************************** 
+void Engine::priv_flushLoaderThreadMsg()
+{
+    const u32 nMsg = thread::popMultipleMsg(msgq_2R, loaderMsgList, LOADER_THREAD__NUM_MAX_MESSAGES_TO_READ);
+    for (u32 i=0; i<nMsg; i++)
+    {
+        switch (loaderMsgList[i].what)
+        {
+        default:
+            DBGBREAK;
+            break;
+
+        case MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK:
+        case MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO:
+            //il thread mi segnala che una risorsa e' stata caricata
+            {
+                const bool bLoadOK = (MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK == loaderMsgList[i].what);
+
+                asset2::UID uid;
+                uid._uid = loaderMsgList[i].paramU64;
+
+                if (bLoadOK)
+                    asset_logger->log (eTextColor::darkGreen, "asset::  [%s] %016" PRIX64 " loaded\n", asset2::enumToString(uid.getAssetType()), uid._uid);
+                else
+                    asset_logger->log (eTextColor::red, "asset::  [%s] %016" PRIX64 " FAILED to load\n", asset2::enumToString(uid.getAssetType()), uid._uid);
+
+                BaseResourceHandler *res_handler = priv_get_baseResourceHandler(uid.getAssetType());
+                res_handler->resource_onLoaded (loaderMsgList[i].buffer, bLoadOK);
+            }
+            break;
+        }
+
+        thread::deleteMsg (loaderMsgList[i]);
+    }
 }
 
 //******************************** 
@@ -270,6 +316,70 @@ bool Engine::inputEvent_getNext (InputEvent *out)
     }
 }
 
+//******************************** 
+bool Engine::asset_rebuildAll()
+{
+    asset2::dbcontext_close (asset_ctx);
+    gos::asset2::Builder builder (gpu);
+    const bool ret = builder.rebuildAll (GOS_ENGINE__ASSET_HUB_PATH, true);
+    asset2::dbcontext_open (GOS_ENGINE__ASSET_HUB_PATH, true, &asset_ctx);
+    return ret;
+}
+
+//******************************** 
+bool Engine::asset_build()
+{
+    asset2::dbcontext_close (asset_ctx);
+    gos::asset2::Builder builder (gpu);
+    const bool ret = builder.build (GOS_ENGINE__ASSET_HUB_PATH, true);
+    asset2::dbcontext_open (GOS_ENGINE__ASSET_HUB_PATH, true, &asset_ctx);
+    return ret;
+
+}
+
+//*****************************************
+bool Engine::asset_bind (asset2::UID uid, u32 handle_asU32)
+{
+    if (listof_loadedUID.insertIfNotExists (uid, handle_asU32))
+    {
+        asset_logger->log (eTextColor::darkGreen, "asset::  [%s] %016" PRIX64 " bind to handle %08X\n", asset2::enumToString(uid.getAssetType()), uid._uid, handle_asU32);
+
+        bool ret = true;
+
+        //gestisco le dipendenze di questo asset. Se lui dipende da altri, prima creare anche quelli
+        u8 memblock[1024];
+        asset2::FastUIDList fastUIDList;
+        fastUIDList.setupWithBase (memblock, sizeof(memblock), gos::getScrapAllocator());
+
+        asset_logger->incIndent();
+        asset2::asset_get_runtime_dependecies_list (asset_ctx, uid, false, &fastUIDList);
+        for (u32 i=0; i<fastUIDList.getNElem(); i++)
+        {
+            const asset2::UID uid_child = fastUIDList(i);
+            u32 handleAsU32;
+            if (!internal__from_asset_to_handle (uid_child, &handleAsU32))
+            {
+                //devo creare un handle appropriato per l'asset in questione
+                BaseResourceHandler *base_resHandler = priv_get_baseResourceHandler(uid_child.getAssetType());
+
+                u32 handle_asU32;
+                if (!base_resHandler->handle_get_or_create_from_asset (this, uid_child, engine::eLoadMode::onDemand, &handle_asU32))
+                    ret = false;
+            }
+        }
+        asset_logger->decIndent();
+        
+        return ret;
+    }
+    else
+    {
+        //uid era gia' nella lista degli asset bindati.. e' un errore
+        DBGBREAK;
+        return true;
+    }
+}
+
+
 
 //******************************** 
 bool Engine::vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer *out_handle)
@@ -281,29 +391,26 @@ bool Engine::vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer
     }
 
     assert (NULL != out_handle);
-    engine::VtxBuffer *s = vtxBufferHandleList.reserveTS(out_handle);
+    engine::ResVtxBuffer *s = handleList_vtxBuffer.reserveTS(out_handle);
     if (NULL == s)
     {
         logger::err ("Engine::vtxBuffer_create() => can't create handle\n");
         return false;
     }
 
+    s->brh.status = engine::eResStatus::ready;
     s->vbHandle = gpuResourceHandle;
     return true;
 }
 
-void Engine::vtxBuffer_release (ENGVtxBuffer &handle)
+void Engine::release (ENGVtxBuffer &handle)
 {
-    engine::VtxBuffer info;
-    if (vtxBufferHandleList.releaseTS (handle, &info))
-        priv_vtxBuffer_delete (&info);
+    engine::ResVtxBuffer res;
+    if (handleList_vtxBuffer.releaseTS (handle, &res))
+        gpu->deleteResource (res.vbHandle);
     handle.setInvalid();
 }
 
-void Engine::priv_vtxBuffer_delete (engine::VtxBuffer *info)
-{
-    gpu->deleteResource (info->vbHandle);
-}
 
 //******************************** 
 bool Engine::idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGIdxBuffer *out_handle)
@@ -315,43 +422,40 @@ bool Engine::idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGIdxBuffer
     }
 
     assert (NULL != out_handle);
-    engine::IdxBuffer *s = idxBufferHandleList.reserveTS(out_handle);
+    engine::ResIdxBuffer *s = handleList_idxBuffer.reserveTS(out_handle);
     if (NULL == s)
     {
         logger::err ("Engine::idxBuffer_create() => can't create handle\n");
         return false;
     }
 
+    s->brh.status = engine::eResStatus::ready;
     s->ibHandle = gpuResourceHandle;
     return true;
 }
 
-void Engine::idxBuffer_release (ENGIdxBuffer &handle)
+void Engine::release (ENGIdxBuffer &handle)
 {
-    engine::IdxBuffer info;
-    if (idxBufferHandleList.releaseTS (handle, &info))
-        priv_idxBuffer_delete (&info);
+    engine::ResIdxBuffer res;
+    if (handleList_idxBuffer.releaseTS (handle, &res))
+        gpu->deleteResource (res.ibHandle);
     handle.setInvalid();
 }
 
-void Engine::priv_idxBuffer_delete (engine::IdxBuffer *info)
-{
-    gpu->deleteResource (info->ibHandle);
-}
+
 
 
 //******************************** 
-bool Engine::shape_create (const gos::Shape *shape, ENGShape *out_handle)
+bool Engine::GPUShape_create (const gos::Shape *shape, ENGGPUShape *out_handle)
 {
     assert (NULL != out_handle);
-    engine::Shape *s = shapeHandleList.reserveTS(out_handle);
-    if (NULL == s)
+    engine::ResGPUShape *res = handleList_GPUShape.reserveTS(out_handle);
+    if (NULL == res)
     {
-        logger::err ("Engine::shape_create() => can't create handle\n");
+        logger::err ("Engine::GPUShape_create() => can't create handle\n");
         return false;
     }
 
-    
     u32 byteNeeded;
 
     //vtxbuffer
@@ -359,9 +463,9 @@ bool Engine::shape_create (const gos::Shape *shape, ENGShape *out_handle)
     {
         const u32 sizeOfAVertex = gos::shape::calcSizeOfAVertex(shape->vtxLayout);
         byteNeeded = sizeOfAVertex * shape->numVtx;
-        vtxBufferMan.reserve (byteNeeded, &s->alloc_vtxbuf_offset, &s->alloc_vtxbuf_size, &s->vbHandle);
-        s->vtxStart = s->alloc_vtxbuf_offset / sizeOfAVertex;
-        s->numVertex = shape->numVtx;
+        vtxBufferMan.reserve (byteNeeded, &res->alloc_vtxbuf_offset, &res->alloc_vtxbuf_size, &res->vbHandle);
+        res->vtxStart = res->alloc_vtxbuf_offset / sizeOfAVertex;
+        res->numVertex = shape->numVtx;
     }
 
     //idxBuffer    
@@ -369,26 +473,288 @@ bool Engine::shape_create (const gos::Shape *shape, ENGShape *out_handle)
     {
         const u32 sizeOfAnIndex = sizeof(u16);
         byteNeeded = sizeOfAnIndex * shape->numIdx;
-        idxBufferMan.reserve (byteNeeded, &s->alloc_idxbuf_offset, &s->alloc_idxbuf_size, &s->ibHandle);
-        s->indexStart = s->alloc_idxbuf_offset / sizeOfAnIndex;
-        s->numIndices = shape->numIdx;
+        idxBufferMan.reserve (byteNeeded, &res->alloc_idxbuf_offset, &res->alloc_idxbuf_size, &res->ibHandle);
+        res->indexStart = res->alloc_idxbuf_offset / sizeOfAnIndex;
+        res->numIndices = shape->numIdx;
     }
+
+    res->brh.status = engine::eResStatus::ready;
     return true;
 }
 
-void Engine::shape_release (ENGShape &handle)
+void Engine::release (ENGGPUShape &handle)
 {
-    engine::Shape info;
-    if (shapeHandleList.releaseTS (handle, &info))
-        priv_shape_delete (&info);
+    engine::ResGPUShape res;
+    if (handleList_GPUShape.releaseTS (handle, &res))
+    {
+        if (res.numVertex)
+            vtxBufferMan.release (res.vbHandle, res.alloc_vtxbuf_offset, res.alloc_vtxbuf_size);
+
+        if (res.numIndices)
+            idxBufferMan.release (res.ibHandle, res.alloc_idxbuf_offset, res.alloc_idxbuf_size);
+    }    
     handle.setInvalid();
 }
 
-void Engine::priv_shape_delete (engine::Shape *info)
-{
-    if (info->numVertex)
-        vtxBufferMan.release (info->vbHandle, info->alloc_vtxbuf_offset, info->alloc_vtxbuf_size);
 
-    if (info->numIndices)
-        idxBufferMan.release (info->ibHandle, info->alloc_idxbuf_offset, info->alloc_idxbuf_size);
+//******************************** 
+bool Engine::shape_createFromAsset (const char *uid_runtimeName, ENGShape *out_handle, engine::eLoadMode loadMode)
+{
+    assert (NULL != out_handle);
+    
+    asset2::UID uid;
+    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
+    {
+        logger::err ("Engine::shape_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
+        return false;
+    }
+
+    u32 handle_asU32;
+    if (!resHandler_shape.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
+        return false;
+
+    out_handle->setFromU32(handle_asU32);
+    return true;
 }
+
+bool Engine::shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, ENGShape *out_handle)
+{
+    assert (NULL != out_handle);
+    engine::ResShape *res = resHandler_shape.reserveTS(out_handle);
+    if (NULL == res)
+    {
+        logger::err ("Engine::shape_create() => can't create handle\n");
+        return false;
+    }
+
+    if (!shape::shapeAlloc (allocator, vtxLayout, numVtx, numIdx, &res->data.shape))
+    {
+        logger::err ("Engine::shape_create() => error during shapeAlloc\n");
+        resHandler_shape.releaseTS (*out_handle, res);
+        return false;
+    }
+    
+    res->brh.status = engine::eResStatus::ready;
+    return true;
+}
+
+
+
+//******************************** 
+bool Engine::texture2D_createFromAsset (const char *uid_runtimeName, ENGTexture *out_handle, engine::eLoadMode loadMode)
+{
+    assert (NULL != out_handle);
+    
+    asset2::UID uid;
+    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
+    {
+        logger::err ("Engine::texture_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
+        return false;
+    }
+
+    u32 handle_asU32;
+    if (!resHandler_texture.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
+        return false;
+
+    out_handle->setFromU32(handle_asU32);
+    return true;
+}
+
+bool Engine::texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle)
+{
+    GPUTextureHandle gpuResourceHandle;
+    if (!gpu->texture_create2D (dimx, dimy, nMipMap, fmt, memAccessMode, srcDATA, &gpuResourceHandle))
+    {
+        return false;
+    }
+
+    assert (NULL != out_handle);
+    engine::ResTexture *res = resHandler_texture.reserveTS(out_handle);
+    if (NULL == res)
+    {
+        logger::err ("Engine::texture_create2D() => can't create handle\n");
+        return false;
+    }
+
+    res->brh.status = engine::eResStatus::ready;
+    res->data.texHandle = gpuResourceHandle;
+    return true;
+}
+
+bool Engine::texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture *out_handle)
+{
+    GPUTextureHandle gpuResourceHandle;
+    if (!gpu->texture_create2D (im, srcTextureNum, memAccessMode, &gpuResourceHandle))
+    {
+        return false;
+    }
+
+    assert (NULL != out_handle);
+    engine::ResTexture *res = resHandler_texture.reserveTS(out_handle);
+    if (NULL == res)
+    {
+        logger::err ("Engine::texture_create2D() => can't create handle\n");
+        return false;
+    }
+
+    res->brh.status = engine::eResStatus::ready;
+    res->data.texHandle = gpuResourceHandle;
+    return true;
+}
+
+
+
+//******************************** 
+bool Engine::pipeline_createFromAsset (const char *uid_runtimeName, ENGPipeline *out_handle, engine::eLoadMode loadMode)
+{
+    assert (NULL != out_handle);
+    
+    asset2::UID uid;
+    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
+    {
+        logger::err ("Engine::pipeline_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
+        return false;
+    }
+
+    u32 handle_asU32;
+    if (!resHandler_pipeline.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
+        return false;
+
+    out_handle->setFromU32(handle_asU32);
+    return true;
+
+    return true;
+}
+
+
+
+//******************************** 
+bool Engine::vtxshader_createFromAsset (const char *uid_runtimeName, ENGVtxShader *out_handle, engine::eLoadMode loadMode)
+{
+    assert (NULL != out_handle);
+    
+    asset2::UID uid;
+    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
+    {
+        logger::err ("Engine::vtxshader_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
+        return false;
+    }
+    u32 handle_asU32;
+    if (!resHandler_vtxShader.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
+        return false;
+
+    out_handle->setFromU32(handle_asU32);
+    return true;
+}
+
+bool Engine::vtxshader_createFromFile (const char *filename, const char *mainFnName, ENGVtxShader *out_handle)
+{
+    GPUShaderHandle gpuResourceHandle;
+    if (!gpu->vtxshader_createFromFile (filename, mainFnName, &gpuResourceHandle))
+    {
+        return false;
+    }
+
+    assert (NULL != out_handle);
+    engine::ResShader *res = resHandler_vtxShader.reserveTS(out_handle);
+    if (NULL == res)
+    {
+        logger::err ("Engine::vtxshader_createFromFile() => can't create handle\n");
+        return false;
+    }
+
+    res->brh.status = engine::eResStatus::ready;
+    res->data.shaderHandle = gpuResourceHandle;
+    return true;
+}
+
+bool Engine::vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGVtxShader *out_handle)
+{
+    GPUShaderHandle gpuResourceHandle;
+    if (!gpu->vtxshader_createFromMemory (bufferIN, bufferSize, mainFnName, &gpuResourceHandle))
+    {
+        return false;
+    }
+
+    assert (NULL != out_handle);
+    engine::ResShader *res = resHandler_vtxShader.reserveTS(out_handle);
+    if (NULL == res)
+    {
+        logger::err ("Engine::vtxshader_createFromMemory() => can't create handle\n");
+        return false;
+    }
+
+    res->brh.status = engine::eResStatus::ready;
+    res->data.shaderHandle = gpuResourceHandle;
+    return true;
+}
+
+
+
+
+//******************************** 
+bool Engine::pxlshader_createFromAsset (const char *uid_runtimeName, ENGPxlShader *out_handle, engine::eLoadMode loadMode)
+{
+    assert (NULL != out_handle);
+    
+    asset2::UID uid;
+    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
+    {
+        logger::err ("Engine::pxlshader_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
+        return false;
+    }
+
+    u32 handle_asU32;
+    if (!resHandler_pxlShader.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
+        return false;
+
+    out_handle->setFromU32(handle_asU32);
+    return true;
+}
+
+bool Engine::pxlshader_createFromFile (const char *filename, const char *mainFnName, ENGPxlShader *out_handle)
+{
+    GPUShaderHandle gpuResourceHandle;
+    if (!gpu->pxlshader_createFromFile (filename, mainFnName, &gpuResourceHandle))
+    {
+        return false;
+    }
+
+    assert (NULL != out_handle);
+    engine::ResShader *res = resHandler_pxlShader.reserveTS(out_handle);
+    if (NULL == res)
+    {
+        logger::err ("Engine::pxlshader_createFromFile() => can't create handle\n");
+        return false;
+    }
+
+    res->brh.status = engine::eResStatus::ready;
+    res->data.shaderHandle = gpuResourceHandle;
+    return true;
+}
+
+bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGPxlShader *out_handle)
+{
+    GPUShaderHandle gpuResourceHandle;
+    if (!gpu->pxlshader_createFromMemory (bufferIN, bufferSize, mainFnName, &gpuResourceHandle))
+    {
+        return false;
+    }
+
+    assert (NULL != out_handle);
+    engine::ResShader *res = resHandler_pxlShader.reserveTS(out_handle);
+    if (NULL == res)
+    {
+        logger::err ("Engine::pxlshader_createFromMemory() => can't create handle\n");
+        return false;
+    }
+
+    res->brh.status = engine::eResStatus::ready;
+    res->data.shaderHandle = gpuResourceHandle;
+    return true;
+}
+
+
+
+
+

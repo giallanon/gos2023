@@ -26,7 +26,7 @@ private:
 	bool 			priv_createShapes();
 	void 			priv_createModel_mainPlayer();
 	void 			priv_createModel_pavimento();
-	gos::ENGShape	priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC);
+	gos::ENGGPUShape	priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC);
 	void			priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir);
 
 
@@ -38,10 +38,10 @@ private:
     gos::geom::Camera3				cam;
 	gos::engine::Renderer1			*renderer;
 
-	gos::ENGShape					engShape_cube;
-	gos::ENGShape					engShape_cyl;
-	gos::asset2::Handle				assHandle_texBianca;
-	gos::asset2::Handle				assHandle_texChecker;
+	gos::ENGGPUShape				handle_gpushape_cube;
+	gos::ENGGPUShape				handle_gpushape_cyl;
+	gos::ENGTexture					handle_texBianca;
+	gos::ENGTexture					handle_texChecker;
     u32								material_indices[4];
 
 	gos::Skeleton					*skeleton1;

@@ -29,7 +29,7 @@ namespace gos
             void    unsetup();
 
             void    begin (gos::geom::Camera3 *cam);
-            void    add (const ENGShape shape, const mat4x4f &m, u32 material_index);
+            void    add (const ENGGPUShape shape, const mat4x4f &m, u32 material_index);
             void    add (const ent::CompModelInstance *mi);
             void    end (gos::gpu::pipe2::CmdBufferWriter2 &cw);
 
@@ -59,14 +59,14 @@ namespace gos
             };
 
         private:
-            u64     priv_pack_renderable (ENGShape shape, u32 material_index, u32 matrix_index) const;
-            void    priv_unpack_renderable (u64 packed, ENGShape *out_shape, u32 *out_material_index, u32 *out_matrix_index) const;
+            u64     priv_pack_renderable (ENGGPUShape shape, u32 material_index, u32 matrix_index) const;
+            void    priv_unpack_renderable (u64 packed, ENGGPUShape *out_shape, u32 *out_material_index, u32 *out_matrix_index) const;
 
         private:
             gos::Allocator              *localAllocator;
             gos::Engine                 *engine;
             gos::GPU                    *gpu;
-            asset2::Handle              assHandle_pipe;
+            ENGPipeline                 handle_pipeline;
 
             GPUZBufferHandle            handle_zbuffer;
             GPURenderTargetHandle       handle_rt0;

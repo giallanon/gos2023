@@ -15,6 +15,8 @@ namespace gos
         pipe            = 3,
         tex2D           = 4,
         shape           = 5,
+
+        __NUM           = 5 //questo deve essere sempre uguale all'id + alto
     };
 
     namespace asset2

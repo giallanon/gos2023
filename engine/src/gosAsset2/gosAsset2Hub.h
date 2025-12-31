@@ -132,6 +132,9 @@ namespace gos
 
 
 
+			bool	runtimeNameToUID (const char *runtimeName, UID *out_uid)	{ return loader.runtimeNameToUID (runtimeName, out_uid); }
+
+
 			template<class TASSET>
 			bool 	internalUSE_getExistingAssetByUID (const UID &uid, const TASSET **out)
 			{

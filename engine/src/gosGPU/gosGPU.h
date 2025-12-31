@@ -203,8 +203,8 @@ namespace gos
         bool                        toVulkan (const GPUDescrPoolHandle handle, VkDescriptorPool *out) const;
 
         //================ descriptorSet layout
-        void                deleteResource (GPUDescrSetLayoutHandle &handle);
-        bool                toVulkan (const GPUDescrSetLayoutHandle handle, VkDescriptorSetLayout *out) const;
+        void                        deleteResource (GPUDescrSetLayoutHandle &handle);
+        bool                        toVulkan (const GPUDescrSetLayoutHandle handle, VkDescriptorSetLayout *out) const;
 
         //================ descriptorSetInstance
         bool                        descrSetInstance_create (const GPUDescrPoolHandle &poolHandle, const GPUDescrSetLayoutHandle &descrSetLayoutHandle, GPUDescrSetInstanceHandle *out_handle);

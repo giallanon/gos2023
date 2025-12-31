@@ -181,29 +181,30 @@ void Game1::run (gos::Engine *engineIN)
 //***************************************
 bool Game1::priv_loadAssets()
 {
-    if (!engine->assetHub->getHandle ("tex_bianca", &assHandle_texBianca, true))
-	{
-        return false;
-	}
-    if (!engine->assetHub->getHandle ("tex_checker", &assHandle_texChecker, true))
-	{
-        return false;
-	}
-
-
+	engine->texture2D_createFromAsset ("tex_bianca", &handle_texBianca);
+	engine->texture2D_createFromAsset ("tex_checker", &handle_texChecker, engine::eLoadMode::asap);
 
 
 	//binding di materiali al renderer
 	{
-		const asset2::Asset_tex2D *tex;
+		const gos::engine::ResTexture *tex;
 		u32	texture_index__texBianca = u32MAX;
 		u32	texture_index__texChecker = u32MAX;
 
-		engine->assetHub->getAssetWithTimeout(assHandle_texBianca, &tex, 5000);
-		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->handle_texture);
+		
+		if (!engine->get (handle_texBianca, &tex, 5000))
+		{
+			DBGBREAK;
+			return false;
+		}
+		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->data.texHandle);
 
-		engine->assetHub->getAssetWithTimeout(assHandle_texChecker, &tex, 5000);
-		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->handle_texture);
+		if (!engine->get (handle_texChecker, &tex, 5000))
+		{
+			DBGBREAK;
+			return false;
+		}
+		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->data.texHandle);
 
 		material_indices[0] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
 		material_indices[1] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 0.0f, 0.0f));
@@ -215,12 +216,12 @@ bool Game1::priv_loadAssets()
 }
 
 //***************************************
-gos::ENGShape Game1::priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC)
+gos::ENGGPUShape Game1::priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC)
 {
-	gos::ENGShape handle_shape;
+	gos::ENGGPUShape handle_shape;
 	handle_shape.setInvalid();
 
-	if (engine->shape_create (shapeSRC, &handle_shape))
+	if (engine->GPUShape_create (shapeSRC, &handle_shape))
 	{
 		const u32 SIZE_OF_IDX = shapeSRC->numIdx * sizeof(u16);
 		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shapeSRC->idxBuffer, SIZE_OF_IDX);
@@ -229,7 +230,10 @@ gos::ENGShape Game1::priv_create_engineShape (GPUStgBufferHandle stgBufferHandle
 		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shapeSRC->vtxBuffer, SIZE_OF_VTX);
 
 		//creo un job per pushare lo stage buffer in VB/IB
-		const engine::Shape *shapeInfo = engine->shape_getInfo (handle_shape);
+		const engine::ResGPUShape *shapeInfo;
+		if (!engine->get (handle_shape, &shapeInfo))
+			DBGBREAK;
+
 
 		gos::gpu::pipe2::CmdBufferWriter2 cw;
 		cw.begin (engine->gpu, cmdBufferHandle)
@@ -289,11 +293,11 @@ bool Game1::priv_createShapes()
 
 
 	//creo una engine::shape
-	engShape_cube = priv_create_engineShape(stgBufferHandle, cmdBufferHandle, &shape_cube);
+	handle_gpushape_cube = priv_create_engineShape(stgBufferHandle, cmdBufferHandle, &shape_cube);
 	shape::shapeFree (allocator, &shape_cube);
 
 
-	engShape_cyl = priv_create_engineShape (stgBufferHandle, cmdBufferHandle, &shape_cylinder);
+	handle_gpushape_cyl = priv_create_engineShape (stgBufferHandle, cmdBufferHandle, &shape_cylinder);
 	shape::shapeFree (allocator, &shape_cylinder);
 
 
@@ -330,9 +334,9 @@ void Game1::priv_createModel_mainPlayer()
 	{
 		model::Builder builder;
 		builder.begin(skeleton1);
-		builder.addMeshToBone (engShape_cyl, material_indices[0], "piedi");
-		builder.addMeshToBone (engShape_cube, material_indices[1], "occhi");
-		builder.addMeshToBone (engShape_cube, material_indices[2], "coso-rotante");
+		builder.addMeshToBone (handle_gpushape_cyl, material_indices[0], "piedi");
+		builder.addMeshToBone (handle_gpushape_cube, material_indices[1], "occhi");
+		builder.addMeshToBone (handle_gpushape_cube, material_indices[2], "coso-rotante");
 		model_player = builder.end (allocator);
 	}    
 }
@@ -351,7 +355,7 @@ void Game1::priv_createModel_pavimento()
 	{
 		model::Builder builder;
 		builder.begin(skeleton2);
-		builder.addMeshToBone (engShape_cube, material_indices[3], "piedi");
+		builder.addMeshToBone (handle_gpushape_cube, material_indices[3], "piedi");
 		model_pavimento = builder.end (allocator);
 	}    
 }
@@ -576,12 +580,11 @@ void Game1::priv_loop ()
 		comp->model_instance.unsetup();
 	});    
 
-    engine->shape_release(engShape_cube);
-    engine->shape_release(engShape_cyl);
-
-    //unload asset
-    engine->assetHub->unload (assHandle_texBianca);
-	engine->assetHub->unload (assHandle_texChecker);
+	//free asset
+    engine->release(handle_gpushape_cube);
+    engine->release(handle_gpushape_cyl);
+	engine->release (handle_texBianca);
+	engine->release (handle_texChecker);
 	
 
 	gpu->deleteResource (cmdBufferHandle);

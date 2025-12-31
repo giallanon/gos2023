@@ -29,7 +29,7 @@ void Builder::begin (Skeleton *skeletonIN)
 }
 
 //*******************************************
-void Builder::addMeshToBone (gos::ENGShape shape, u32 material_indexIN, const char *boneName)
+void Builder::addMeshToBone (gos::ENGGPUShape shape, u32 material_indexIN, const char *boneName)
 {
     const u32 boneIndex = skeleton->bone_getIndexByName(boneName);
     assert (boneIndex != u32MAX);

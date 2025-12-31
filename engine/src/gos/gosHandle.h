@@ -7,30 +7,11 @@ namespace gos
 	/*******************************************************************
 	 * 	HandleT
 	 * 
-	 *	E' un 32 bit diviso in 5 sezioni (detti canali):
+	 *	E' un 32 bit diviso in 4 sezioni (detti canali):
 	 *		A index 					=> identifica il numero massimo di handle allocabili
 	 *		B chunk						=> vedi HandleList
 	 *		C counter					=> quando un handle viene riciclato, il suo counter viene incrementato di 1 per generare un handle differente dal precedente
-	 *		D signature1 + signature2 	=> servono da PAD per raggiungere un totale di 32bit
-	 *										L'utilita' di avere SIG_1 e SIG_2 in luogo di un solo valore D e' quella di poter dichiarare handle con lo stesso valore
-	 *										di A,B e C ma, giocando con SIG_1 e SIG_2, riuscire a considerarli come tipi differenti.
-	 *										Per esempio:
-	 *											typedef HandleT<16,6,8, 0,2>  GOSHandle1;
-	 *											typedef HandleT<16,6,8, 1,1>  GOSHandle2;
-	 *										sono effettivamente 2 tipi diversi. In passato, in luogo di SIG_1 e 2 avevo D ma capitava di voler dichiarare 2 handle con
-	 *										gli stessi A,B,C e che quindi non potevo distinguere (le fn accettavano sia Handle1 che Handle2 senza prob).
-	 *										Per esempio:
-	 *											typedef HandleT<16,6,8, 2>  GOSHandleViewport;
-	 *											typedef HandleT<16,6,8, 2>  GOSHandleTexture;
-	 *										Pur esendo chiamati diversamente, ai fini pratici sono lo stesso identico tipo e quindi una fn che accetta GOSHandleViewport
-	 *										accetta anche GOSHandleTexture senza warning o errore.
-	 *										Giocando con SIG_1 e SIG_2 invece:
-	 *											typedef HandleT<16,6,8, 0,2>  GOSHandleViewport;
-	 *											typedef HandleT<16,6,8, 1,1>  GOSHandleTexture;
-	 *										diventano davvero 2 tipi diversi
-	 *
-	 *
-	 *	Ogni sezione e' composta da n bit, A per "index", B per "chunk", C per "counter", D per "signature1 + signature2".
+	 *		D pad 						=> servono da PAD per raggiungere un totale di 32bit
 	 *
 	 *	Incrementando il singolo canale, eventualmente il valore ripartira' da 0
 	 *

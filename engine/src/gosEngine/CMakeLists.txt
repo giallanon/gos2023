@@ -42,14 +42,14 @@ model/gosSkeletonInstance.cpp
 
 gosEngine_dynTextureArray.cpp
 gosEngine_dynTextureArray.h
-gosEngine_fixedSizeBufferTracker.cpp
-gosEngine_fixedSizeBufferTracker.h
 gosEngine_idxBufferMan.cpp
 gosEngine_idxBufferMan.h
+gosEngine_loaderThread_mainFN.cpp
 gosEngine_renderer.cpp
 gosEngine_renderer.h
 gosEngine_scene.cpp
 gosEngine_scene.h
+gosEngine_utils.cpp
 gosEngine_vtxBufferMan.cpp
 gosEngine_vtxBufferMan.h
 gosEngine.cpp

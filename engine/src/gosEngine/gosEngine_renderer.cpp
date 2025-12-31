@@ -28,8 +28,7 @@ void Renderer1::unsetup()
 
     if (NULL != gpu)
     {
-        engine->assetHub->unload (assHandle_pipe);
-        
+        engine->release(handle_pipeline);
         
         gpu->deleteResource(handle_zbuffer);
         gpu->deleteResource(handle_rt0);
@@ -57,7 +56,7 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
     gpu = engine->gpu;
 
     //load degli assets
-    if (!engine->assetHub->getHandle ("gosengine_pipe3", &assHandle_pipe, true))
+    if (!engine->pipeline_createFromAsset ("gosengine_pipe3", &handle_pipeline, engine::eLoadMode::asap))
         return false;    
 
 
@@ -133,14 +132,14 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
     }
 
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
-    const asset2::Asset_pipe *pipe;
-    engine->assetHub->getAssetWithTimeout (assHandle_pipe, &pipe, 5000);
+    const engine::ResPipeline *res_pipeline;
+    if (engine->get (handle_pipeline, &res_pipeline, 5000))
     {
         //alloco una istanza dei descriptor-set
         gos::gpu::DescrSetInstanceWriter dsw;
 
         //descriptor set 0
-        if (!gpu->descrSetInstance_create (handle_descrPool, pipe->handle_pipe, 0, &handle_descrSet0))
+        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->data.pipeHandle, 0, &handle_descrSet0))
         {
             gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_0\n");
             return false;
@@ -155,7 +154,7 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
         
 
         //descriptor set 1
-        if (!gpu->descrSetInstance_create (handle_descrPool, pipe->handle_pipe, 1, &handle_descrSet1))
+        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->data.pipeHandle, 1, &handle_descrSet1))
         {
             gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_0\n");
             return false;
@@ -169,7 +168,7 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
 
 
         //descriptor set 2        
-        if (!gpu->descrSetInstance_create (handle_descrPool, pipe->handle_pipe, 2, &handle_descrSet2))
+        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->data.pipeHandle, 2, &handle_descrSet2))
         {
             gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_0\n");
             return false;
@@ -255,7 +254,7 @@ const Renderer1::Material* Renderer1::material_query (u32 material_index) const
 
 
 //**********************************
-u64 Renderer1::priv_pack_renderable (ENGShape shape, u32 material_index, u32 matrix_index) const
+u64 Renderer1::priv_pack_renderable (ENGGPUShape shape, u32 material_index, u32 matrix_index) const
 {
     u64 ret = shape.viewAsU32();
     ret <<= 32;
@@ -270,7 +269,7 @@ u64 Renderer1::priv_pack_renderable (ENGShape shape, u32 material_index, u32 mat
 }
 
 //**********************************
-void Renderer1::priv_unpack_renderable (u64 packed, ENGShape *out_shape, u32 *out_material_index, u32 *out_matrix_index) const
+void Renderer1::priv_unpack_renderable (u64 packed, ENGGPUShape *out_shape, u32 *out_material_index, u32 *out_matrix_index) const
 {
     out_shape->setFromU32 ( (u32)(packed >> 32) );
     *out_material_index = (u32) ((packed >> 18) & 0x3FFF);
@@ -291,7 +290,7 @@ void Renderer1::begin (gos::geom::Camera3 *cam)
 }
 
 //**********************************
-void Renderer1::add (const ENGShape shape, const mat4x4f &m, u32 material_index)
+void Renderer1::add (const ENGGPUShape shape, const mat4x4f &m, u32 material_index)
 {
     if (matrix_nextIndex >= NUM_MAX_MATRIX)
         return;
@@ -328,8 +327,8 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
     if (0 == nRenderable)
         return;
 
-    const asset2::Asset_pipe *pipe;
-    if (!engine->assetHub->getAsset (assHandle_pipe, &pipe))
+    const engine::ResPipeline *res_pipeline;
+    if (!engine->get (handle_pipeline, &res_pipeline))
     {
         return;
     }
@@ -367,7 +366,7 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
     renderer.withRenderArea (handle_rt0)
             .withRT (handle_rt0, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.0f, 0.1f))
             .withZB (handle_zbuffer, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)
-			.bindPipeline (pipe->handle_pipe)
+			.bindPipeline (res_pipeline->data.pipeHandle)
 			.bindDescriptorSet (handle_descrSet0, 0)
 			.bindDescriptorSet (handle_descrSet1, 1)
 			.bindDescriptorSet (handle_descrSet2, 2);
@@ -377,7 +376,7 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
     u32 first_instance_index = 0;
     while (cur_index < nRenderable)
     {
-        ENGShape cur_shape;
+        ENGGPUShape cur_shape;
         u32 material_index;
         u32 matrix_index;
         priv_unpack_renderable (pRenderableList[cur_index], &cur_shape, &material_index, &matrix_index);
@@ -387,7 +386,7 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
         u32 numInstances = 1;
         while (cur_index < nRenderable)
         {
-            ENGShape shape;
+            ENGGPUShape shape;
             priv_unpack_renderable (pRenderableList[cur_index], &shape, &material_index, &matrix_index);
             if (cur_shape == shape)
             {
@@ -399,13 +398,16 @@ void Renderer1::end (gos::gpu::pipe2::CmdBufferWriter2 &cw)
         }
 
 
-        const engine::Shape *cur_shape_info = engine->shape_getInfo (cur_shape);
-        renderer
-            .bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
-            .drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index)
-            ;
+        const engine::ResGPUShape *cur_shape_info;
+        if (engine->get (cur_shape, &cur_shape_info))
+        {
+            renderer
+                .bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
+                .drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index)
+                ;
 
-        first_instance_index += numInstances;
+            first_instance_index += numInstances;
+        }
     }
 
     renderer.endRender();

@@ -16,43 +16,72 @@ namespace gos
 	GOS_DECL_HANDLE(10,7,14, ENGIdxBuffer);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
 	GOS_DECL_HANDLE(16,10,6, ENGTexture);			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^10=1024
 	GOS_DECL_HANDLE(16,12,4, ENGShape);				//2^16=65536 => num totale di oggetti, divisi in chunk da 2^12=4096
+	GOS_DECL_HANDLE(16,12,4, ENGGPUShape);			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^12=4096
+	GOS_DECL_HANDLE(10,7,14, ENGPipeline);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
+	GOS_DECL_HANDLE(10,8,14, ENGVtxShader);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
+	GOS_DECL_HANDLE(10,8,14, ENGPxlShader);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
 	
 
 	namespace engine
 	{
-		struct ResHandle
+		enum eLoadMode
 		{
-			u16     index;
-			u16     valid_if;
+			asap = 0,
+			onDemand = 1
 		};
 
-		struct VtxBuffer
+		enum class eResStatus : u8
 		{
+			ready		= 0,
+			notLoaded	= 1,		//esiste nell'engine ma non e' stata ancora caricata
+			loading		= 2,		//esiste nell'engine e' ed in fase di caricamente
+			unloading	= 3,		//esiste nell'engine ma la risorsa sta per essere deallocata
+			error 		= 0xff		//errore fatale. Esiste nell'engine ma probabilmente il loader non e' riuscito a caricarla, questo asset e' spacciato per sempre
+		};		
+
+		struct BaseResHandle
+		{
+		public:
+			void reset()			{ refCount = 0; uid.setInvalid(); status=eResStatus::error; }
+			bool isReady() const	{ return status==eResStatus::ready; }
+			bool isError() const	{ return status==eResStatus::error; }
+
+		public:
+			asset2::UID			uid;			//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
+			eResStatus			status;
+			u8					_pad0;
+			u8					_pad1;
+			u8					_pad2;
 			i32					refCount;
+		};
+
+		struct ResVtxBuffer
+		{
+		public:
+			void reset()		{ brh.reset(); vbHandle.setInvalid(); }
+
+		public:
+			BaseResHandle		brh;
 			GPUVtxBufferHandle	vbHandle;
-
-			void reset()		{ refCount = 0; vbHandle.setInvalid(); }
 		};
 
-		struct IdxBuffer
+		struct ResIdxBuffer
 		{
-			i32					refCount;
+		public:
+			void reset()		{ brh.reset(); ibHandle.setInvalid(); }
+
+		public:
+			BaseResHandle		brh;
 			GPUIdxBufferHandle	ibHandle;
-
-			void reset()		{ refCount = 0; ibHandle.setInvalid(); }
 		};
 
-		struct Texture
+		struct ResGPUShape
 		{
-			i32					refCount;
-			GPUTextureHandle	texHandle;
+		public:
+			void reset()		{ brh.reset(); vbHandle.setInvalid(); ibHandle.setInvalid(); numIndices=numVertex=0; alloc_vtxbuf_offset=alloc_vtxbuf_size=alloc_idxbuf_offset=alloc_idxbuf_size=0; }
 
-			void reset()		{ refCount = 0; texHandle.setInvalid(); }
-		};
-
-		struct Shape
-		{
-			i32					refCount;
+		public:
+			BaseResHandle		brh;
 
 			GPUVtxBufferHandle	vbHandle;
 			GPUIdxBufferHandle	ibHandle;
@@ -65,17 +94,121 @@ namespace gos
 			u32					alloc_vtxbuf_size;
 			u32					alloc_idxbuf_offset;
 			u32					alloc_idxbuf_size;
-
-			void reset()		{ refCount = 0; vbHandle.setInvalid(); ibHandle.setInvalid(); numIndices=numVertex=0; alloc_vtxbuf_offset=alloc_vtxbuf_size=alloc_idxbuf_offset=alloc_idxbuf_size=0; }
 		};
 
-		struct WorldMatrix
+
+
+		struct ResShape
 		{
-			gos::mat4x4f	matrix;
+		public:
+			struct Data
+			{
+				void 	reset()													{ shape.reset(); }
+				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ shape::shapeFree (allocator, &shape); reset(); }
+
+				gos::Shape	shape;
+			};
+
+			struct DataForLoaderThread
+			{
+				u32		handle_asU32;
+				Data	data;
+			};
+
+		public:
+			void reset()		{ brh.reset(); data.reset(); }
+
+		public:
+			BaseResHandle	brh;
+			Data			data;
 		};
 
 
 
+		struct ResTexture
+		{
+		public:
+			struct Data
+			{
+				void 	reset()													{ texHandle.setInvalid(); }
+				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ gpu->deleteResource (texHandle); reset(); }
+
+				GPUTextureHandle	texHandle;
+			};
+
+			struct DataForLoaderThread
+			{
+				u32		handle_asU32;
+				Data	data;
+			};			
+
+		public:
+			void reset()		{ brh.reset(); data.reset(); }
+
+		public:
+			BaseResHandle		brh;
+			Data				data;
+		};		
+
+
+
+		struct ResPipeline
+		{
+		public:
+			struct Data
+			{
+				GPUPipelineHandle	pipeHandle;
+				
+				void 	reset()													{ pipeHandle.setInvalid(); }
+				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ gpu->deleteResource (pipeHandle); reset(); }
+			};
+
+			struct DataForLoaderThread
+			{
+				u32		handle_asU32;
+				Data	data;
+			};
+
+		public:
+			void reset()		{ brh.reset(); data.reset(); }
+
+		public:
+			BaseResHandle		brh;
+			Data				data;
+		};
+
+
+
+		struct ResShader
+		{
+		public:
+			struct Data
+			{
+				GPUShaderHandle	shaderHandle;
+				
+				void 	reset()													{ shaderHandle.setInvalid(); }
+				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ gpu->deleteResource (shaderHandle); reset(); }
+			};
+
+			struct DataForLoaderThread
+			{
+				u32		handle_asU32;
+				Data	data;
+			};
+
+		public:
+			void reset()		{ brh.reset(); data.reset(); }
+
+		public:
+			BaseResHandle		brh;
+			Data				data;
+		};		
+
+
+
+
+
+		const char*		enumToString (engine::eLoadMode s);
 
 	} //namespace engine
 

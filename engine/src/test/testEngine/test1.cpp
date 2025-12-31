@@ -35,12 +35,12 @@ Test1::~Test1()
 }
 
 //***************************************
-gos::ENGShape Test1::priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC)
+gos::ENGGPUShape Test1::priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC)
 {
-	gos::ENGShape handle_shape;
+	gos::ENGGPUShape handle_shape;
 	handle_shape.setInvalid();
 
-	if (engine->shape_create (shapeSRC, &handle_shape))
+	if (engine->GPUShape_create (shapeSRC, &handle_shape))
 	{
 		const u32 SIZE_OF_IDX = shapeSRC->numIdx * sizeof(u16);
 		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shapeSRC->idxBuffer, SIZE_OF_IDX);
@@ -49,7 +49,9 @@ gos::ENGShape Test1::priv_create_engineShape (GPUStgBufferHandle stgBufferHandle
 		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shapeSRC->vtxBuffer, SIZE_OF_VTX);
 
 		//creo un job per pushare lo stage buffer in VB/IB
-		const engine::Shape *shapeInfo = engine->shape_getInfo (handle_shape);
+		const engine::ResGPUShape *shapeInfo;
+		if (!engine->get (handle_shape, &shapeInfo))
+			DBGBREAK;
 
 		gos::gpu::pipe2::CmdBufferWriter2 cw;
 		cw.begin (engine->gpu, cmdBufferHandle)
@@ -70,7 +72,7 @@ gos::ENGShape Test1::priv_create_engineShape (GPUStgBufferHandle stgBufferHandle
 }
 
 //***************************************
-bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out_cube, gos::ENGShape *out_cylinder)
+bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGGPUShape *out_cube, gos::ENGGPUShape *out_cylinder)
 {
 	//creo una shape
 	gos::Shape shape_cube;
@@ -107,12 +109,12 @@ bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out_cube, gos
 
 
 	//creo una engine::shape
-	gos::ENGShape handle_shapeCube = priv_create_engineShape(stgBufferHandle, cmdBufferHandle, &shape_cube);
+	gos::ENGGPUShape handle_shapeCube = priv_create_engineShape(stgBufferHandle, cmdBufferHandle, &shape_cube);
 	shape::shapeFree (allocator, &shape_cube);
 	*out_cube = handle_shapeCube;
 
 
-	gos::ENGShape handle_shapeCylinder = priv_create_engineShape (stgBufferHandle, cmdBufferHandle, &shape_cylinder);
+	gos::ENGGPUShape handle_shapeCylinder = priv_create_engineShape (stgBufferHandle, cmdBufferHandle, &shape_cylinder);
 	shape::shapeFree (allocator, &shape_cylinder);
 	*out_cylinder = handle_shapeCylinder;
 
@@ -123,7 +125,7 @@ bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGShape *out_cube, gos
 }
 
 //***************************************
-void Test1::priv_model_setup(gos::ENGShape shape_cube, gos::ENGShape shape_cylinder)
+void Test1::priv_model_setup(gos::ENGGPUShape shape_cube, gos::ENGGPUShape shape_cylinder)
 {
 	//skeleton
 	{
@@ -225,7 +227,7 @@ void Test1__entity_script_callback_3 (Entity ent, ent::Registry *registry)
 bool Test1::priv_run4 ()
 {
 	//shape
-	gos::ENGShape handle_shape_list[4];
+	gos::ENGGPUShape handle_shape_list[4];
 	if (!priv_shape_create (engine, &handle_shape_list[0], &handle_shape_list[1]))
 	{
 		DBGBREAK;
@@ -245,29 +247,24 @@ bool Test1::priv_run4 ()
 
 
     //load degli assets
-	asset2::Handle assHandle_texBianca;
-	asset2::Handle assHandle_texChecker;
-    if (!engine->assetHub->getHandle ("tex_bianca", &assHandle_texBianca, true))
-	{
-        return false;
-	}
-    if (!engine->assetHub->getHandle ("tex_checker", &assHandle_texChecker, true))
-	{
-        return false;
-	}	
+	gos::ENGTexture	handle_texBianca;
+	gos::ENGTexture	handle_texChecker;
+	engine->texture2D_createFromAsset ("tex_bianca", &handle_texBianca);
+	engine->texture2D_createFromAsset ("tex_checker", &handle_texChecker, engine::eLoadMode::asap);
 
 	//binding di materiali al renderer
 	{
-		
-		const asset2::Asset_tex2D *tex;
+		const gos::engine::ResTexture *tex;
 		u32	texture_index__texBianca = u32MAX;
 		u32	texture_index__texChecker = u32MAX;
 
-		engine->assetHub->getAssetWithTimeout(assHandle_texBianca, &tex, 5000);
-		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->handle_texture);
+		if (!engine->get (handle_texBianca, &tex, 5000))
+			return false;
+		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->data.texHandle);
 
-		engine->assetHub->getAssetWithTimeout(assHandle_texChecker, &tex, 5000);
-		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->handle_texture);
+		if (!engine->get (handle_texChecker, &tex, 5000))
+			return false;
+		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->data.texHandle);
 
 		renderer->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
 		renderer->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
@@ -472,11 +469,12 @@ bool Test1::priv_run4 ()
 
 
 	scene.unsetup();
-	engine->assetHub->unload (assHandle_texBianca);
-	engine->assetHub->unload (assHandle_texChecker);
+	engine->release (handle_texBianca);
+	engine->release (handle_texChecker);
+
 	
 	for (u8 i=0; i<4; i++)
-		engine->shape_release(handle_shape_list[i]);
+		engine->release(handle_shape_list[i]);
 	
 	GOSDELETE(allocator, renderer);
 	renderer = NULL;
