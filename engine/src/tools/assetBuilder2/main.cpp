@@ -42,6 +42,7 @@ int main()
     gpu.deinit();
 
 #ifdef GOS_PLATFORM__WINDOWS
+    printf ("\n\nPress a key to terminate\n");
     _getch();
 #endif
     

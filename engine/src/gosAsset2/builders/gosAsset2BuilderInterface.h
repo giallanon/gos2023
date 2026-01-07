@@ -10,6 +10,9 @@ namespace gos
 {
     namespace asset2
     {
+        class Builder; //FWD
+
+
         /*******************************
          * @brief BuilderInterface
          * 
@@ -17,15 +20,15 @@ namespace gos
         class BuilderInterface
         {
         public:
-                            BuilderInterface (eAssetType assetTypeIN)           { assetType=assetTypeIN; logger=NULL; }
-            virtual         ~BuilderInterface()                                 { }
+                            BuilderInterface (Builder *theBuilderIN, eAssetType assetTypeIN)            { assetType=assetTypeIN; logger=NULL; theBuilder=theBuilderIN; }
+            virtual         ~BuilderInterface()                                                         { }
 
-            eAssetType      getAssetType() const                                { return assetType; }
+            eAssetType      getAssetType() const                                                        { return assetType; }
 
-            virtual void    initOnce (gos::GPU *gpu)                            { }
-            virtual void    deinitOnce()                                        { }
+            virtual void    initOnce (gos::GPU *gpu)                                                    { }
+            virtual void    deinitOnce()                                                                { }
 
-            void            setLogger (gos::Logger *l)                          { logger= l; }
+            void            setLogger (gos::Logger *l)                                                  { logger= l; }
 
             virtual bool    build (DBContext &ctx, u64 buildTime_UTC, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result) = 0;
 
@@ -33,7 +36,8 @@ namespace gos
             bool            prot_isOneOfThis (const char *paramName, ...) const;
             bool            prot_needResource (DBContext &ctx, eResType resType, const char *absFilenameIN, UID *out_uid) const;
             bool            prot_needResolvedSubsection (DBContext &ctx, const gos::IniFileSection *sec, eAssetType assType, UID *out__virtual_uid) const;
-            bool            prot_seuptVirtualAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const;
+            bool            prot_setupVirtualAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const;
+            bool            prot_makeABSPathFromFilename (const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out) const;
 
         protected:
             gos::Logger     *logger;
@@ -42,6 +46,7 @@ namespace gos
             bool            priv_extractAllInludePaths (const char *absFilenameIN, gos::StringList *out) const;
 
         private:
+            Builder         *theBuilder;
             eAssetType      assetType;    
 
         };

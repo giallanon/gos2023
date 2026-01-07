@@ -27,7 +27,7 @@ namespace gos
         class Builder_tex2D : public BuilderInterface
         {
         public:
-                    Builder_tex2D ();
+                    Builder_tex2D (Builder *theBuilderIN);
                     ~Builder_tex2D()                                                            { }
 
             void    initOnce (gos::GPU *gpuIN);

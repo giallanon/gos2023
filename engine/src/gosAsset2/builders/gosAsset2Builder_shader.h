@@ -30,7 +30,7 @@ namespace gos
         class Builder_shader : public BuilderInterface
         {
         public:
-                        Builder_shader (eAssetType assTypeIN) : BuilderInterface (assTypeIN)            { }
+                        Builder_shader (Builder *theBuilderIN, eAssetType assTypeIN) : BuilderInterface (theBuilderIN, assTypeIN)            { }
                         ~Builder_shader()                                                               { }
 
             bool        build (DBContext &ctx, u64 buildTime_UTC, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result);
@@ -59,7 +59,7 @@ namespace gos
         class Builder_vtxShader : public Builder_shader
         {
         public:
-                        Builder_vtxShader () : Builder_shader (eAssetType::vtx_shader)  { }
+                        Builder_vtxShader (Builder *theBuilderIN) : Builder_shader (theBuilderIN, eAssetType::vtx_shader)  { }
                         ~Builder_vtxShader()                                            { }
         }; //class Builder_vtxShader
 
@@ -71,7 +71,7 @@ namespace gos
         class Builder_pxlShader : public Builder_shader
         {
         public:
-                    Builder_pxlShader () : Builder_shader (eAssetType::pxl_shader)      { }
+                    Builder_pxlShader (Builder *theBuilderIN) : Builder_shader (theBuilderIN, eAssetType::pxl_shader)      { }
                     ~Builder_pxlShader()                                                { }
         }; //class Builder_pxlShader
 

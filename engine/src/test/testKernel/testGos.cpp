@@ -406,15 +406,30 @@ namespace test4
         TEST_FAIL_IF(nFound!=4);
 
 
+        //ripeto il testo ma con il filtro only_file
+        nFound = 0;
+        TEST_ASSERT(gos::fs::findFirst (&ff, s1, "*.txt", eFileFindMode::only_file));
+        do
+        {
+            nFound++;
+        } while (gos::fs::findNext(ff));
+        gos::fs::findClose(ff);
+        TEST_FAIL_IF(nFound!=4);
+
+        //dato che non ci sono sottocartelle, findFirst deve ritornare false
+        TEST_ASSERT(false == gos::fs::findFirst (&ff, s1, "*.txt", eFileFindMode::only_folder));
+
+        //idem per file con estensione .pippo (che non esistono)
+        TEST_ASSERT(false == gos::fs::findFirst (&ff, s1, "*.pippo", eFileFindMode::only_file));
+
+
         //verifico che la risoluzione dei path speciali funzioni
         //Il carattere speciale "@" l'ho gia' testato prima, ora invece verifico che path che non iniziano con "/"
         //vengano automaticamente prefissi con il path dell'app
-        TEST_ASSERT(gos::fs::findFirst (&ff, gos::getAppPathNoSlash(), "*"));
+        TEST_ASSERT(gos::fs::findFirst (&ff, gos::getAppPathNoSlash(), "*", eFileFindMode::only_file));
         do
         {
-            if (gos::fs::findIsDirectory(ff))
-                continue;
-
+            TEST_ASSERT (false == gos::fs::findIsDirectory(ff));
 
             //ho trovato un file nella cartella dell'app.
             //Verifico di trovarlo anche unsando un path relativo

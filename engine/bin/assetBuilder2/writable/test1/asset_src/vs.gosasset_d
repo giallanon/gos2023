@@ -35,7 +35,8 @@
 //VS-1-d1-d2-d3
 @vtx_shader: VS-1-d1-d2-d3
 {
-  src: /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader
+  //src: /home/giallanon/gixprogram/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader
+  src: ../../test1/asset_src/shader/vs1.shader
   def: d1 d2 d3
 }
 

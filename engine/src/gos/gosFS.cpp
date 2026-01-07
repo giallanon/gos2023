@@ -36,9 +36,18 @@ bool fs::isPathAbsolute (const char *path)
 }
 
 //**************************************************************
-bool fs::addAlias (const char *alias, const char *realPathNoSlash, eAliasPathMode mode)
+void fs::removeAlias (const char *alias)
+{
+	pathResolver.removeAlias (alias);
+}
+
+//**************************************************************
+bool fs::addAlias (const char *alias, const char *realPathNoSlash, eAliasPathMode mode, bool bReplaceAliasIfAlreadyExists)
 {
 	char s[1024];
+
+	if (bReplaceAliasIfAlreadyExists)
+		fs::removeAlias (alias);
 
 	switch (mode)
 	{
@@ -579,7 +588,7 @@ void fs::folderDeleteAllFileWithJolly  (const char *utf8_pathSenzaSlashRESOLVABL
 }
 
 //******************************************
-void fs::makeABSPath (const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out)
+void fs::makeABSPathFromABSFilename (const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out)
 {
     assert (fs::isPathAbsolute(origin_absFilename));
 
@@ -589,8 +598,13 @@ void fs::makeABSPath (const char *origin_absFilename, const char *rel_or_abs_pat
         sprintf_s (s, sizeof(s), "%s", rel_or_abs_path);
     else
     {
-        fs::extractFilePathWithSlash (origin_absFilename, s, sizeof(s));
-        strcat_s (s, sizeof(s), rel_or_abs_path);
+		if (rel_or_abs_path[0] == '@')
+			fs::resolvePath (rel_or_abs_path, s, sizeof(s));
+		else
+		{
+			fs::extractFilePathWithSlash (origin_absFilename, s, sizeof(s));
+			strcat_s (s, sizeof(s), rel_or_abs_path);
+		}
     }    
 
     fs::pathSanitizeInPlace(s);

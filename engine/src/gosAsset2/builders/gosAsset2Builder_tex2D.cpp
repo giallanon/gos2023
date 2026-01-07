@@ -10,7 +10,7 @@ using namespace gos;
 using namespace gos::asset2;
 
 //************************************
-Builder_tex2D::Builder_tex2D () : BuilderInterface (eAssetType::tex2D)
+Builder_tex2D::Builder_tex2D (Builder *theBuilderIN) : BuilderInterface (theBuilderIN, eAssetType::tex2D)
 { 
     gpu = NULL;
     samplerHandle.setInvalid();
@@ -140,7 +140,7 @@ bool Builder_tex2D::priv_extractParams (const char *absFilename, const IniFileSe
         logger->log(eTextColor::red, "line %d => can't find param <src>\n", sec->getLineStarted());
         return false;
     }
-    fs::makeABSPath (absFilename, s, out_params->src, sizeof(out_params->src));
+    prot_makeABSPathFromFilename (absFilename, s, out_params->src, sizeof(out_params->src));
 
 
     //param:srcColorSpace      e' opzionale
@@ -245,7 +245,7 @@ bool Builder_tex2D::build (DBContext &ctx, u64 buildTime_UTC, const char *absFil
     //  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
     //  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
     //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
-    if (!prot_seuptVirtualAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
+    if (!prot_setupVirtualAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
         return false;
 
 

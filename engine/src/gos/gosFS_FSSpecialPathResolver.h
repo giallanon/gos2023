@@ -26,6 +26,7 @@ namespace gos
             void        setup (gos::Allocator *allocator);
             void        unsetup();
             bool        addAlias (const char *alias, const char *realPathNoSlash);
+            void        removeAlias (const char *alias);
             void        resolve (const char *path, char *out, u32 sizeof_out) const;
 
         private:
@@ -38,6 +39,7 @@ namespace gos
         private:
             bool            priv_resolve (const char *path, char *out, u32 sizeof_out)  const;
             const sAlias*   priv_findAlias (const char *alias) const;
+            u32             priv_findAliasIndex (const char *alias) const;
 
         private:
             gos::Allocator          *allocator;

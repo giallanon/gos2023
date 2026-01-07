@@ -1,9 +1,18 @@
 #include "gosAsset2BuilderInterface.h"
 #include "string/gosStringIncludeDetector.h"
+#include "../gosAsset2Builder.h"
 
 using namespace gos;
 using namespace gos::asset2;
 
+
+
+//******************************************
+bool BuilderInterface::prot_makeABSPathFromFilename (const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out) const
+{
+    return theBuilder->internal__makeABSPathFromFilename (origin_absFilename, rel_or_abs_path, out, sizeof_out);
+
+}
 
 //******************************************
 bool BuilderInterface::prot_isOneOfThis (const char *paramName, ...) const
@@ -139,7 +148,7 @@ bool BuilderInterface::priv_extractAllInludePaths (const char *absFilenameIN, go
 
 		//i path degli include possono essere relativi
 		char absIncludeFilename[1024];
-        fs::makeABSPath (absFilenameIN, s, absIncludeFilename, sizeof(absIncludeFilename));
+        prot_makeABSPathFromFilename (absFilenameIN, s, absIncludeFilename, sizeof(absIncludeFilename));
 		out->add(absIncludeFilename);
 	}
 
@@ -148,7 +157,7 @@ bool BuilderInterface::priv_extractAllInludePaths (const char *absFilenameIN, go
 }
 
 //****************************** 
-bool BuilderInterface::prot_seuptVirtualAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const
+bool BuilderInterface::prot_setupVirtualAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const
 {
     //calcolo assetUID
     if (!asset_createUID (getAssetType(), params, sizeof_params, &out_result->uid_concrete_asset))

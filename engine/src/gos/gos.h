@@ -135,7 +135,8 @@ namespace gos
 		//
 		//	[aliasNoChioccola] e' l'alias da aggiungere
 		//	[realPathNoSlash] e' il path reale, non deve terminare con /
-		bool 			addAlias (const char *alias, const char *realPathNoSlash, eAliasPathMode mode);
+		bool 			addAlias (const char *alias, const char *realPathNoSlash, eAliasPathMode mode, bool bReplaceAliasIfAlreadyExists = false);
+		void			removeAlias (const char *alias);
 
 						//path che comprendono degli alias, o che hanno dei percorsi relativi
 						//vengono completamente espansi
@@ -145,7 +146,7 @@ namespace gos
 						//o assoluto.
 						//Ritorna in out il path assoluto di <rel_or_abs_path> relativamente a <origin_absFilename> gia'
 						//sanitizzato
-		void 			makeABSPath (const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out);
+		void 			makeABSPathFromABSFilename (const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out);
 
 		bool			isPathAbsolute (const char *path);
 		void 			pathSanitize (const char *utf8_path, char *out_utf8sanitizedPath, u32 sizeOfOutSanitzed);

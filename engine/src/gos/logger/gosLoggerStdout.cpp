@@ -26,17 +26,23 @@ LoggerStdout::LoggerStdout()
 LoggerStdout::~LoggerStdout() 
 {
     gos::thread::mutexDestroy(mutex);
-    if (NULL != logToFile)
-    {
-        delete logToFile;
-        logToFile = NULL;
-    }
+    disableFileLogging();
 }
 
 //*************************************************
 void LoggerStdout::enableFileLogging (const char *fullFolderPathAndName)
 {
     logToFile = new LogToFile (fullFolderPathAndName);
+}
+
+//*************************************************
+void LoggerStdout::disableFileLogging()
+{
+    if (NULL != logToFile)
+    {
+        delete logToFile;
+        logToFile = NULL;
+    }
 }
 
 //*************************************************

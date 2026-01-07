@@ -79,7 +79,7 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 	gos::fs::pathSanitizeInPlace(s);
 	gosGlobals.pathToWritableFolder = gos::string::utf8::allocStr (gos::getSysHeapAllocator(), s);
 	gos::fs::folderCreate (gosGlobals.pathToWritableFolder);
-	gos::fs::addAlias ("@w", gosGlobals.pathToWritableFolder, eAliasPathMode::absolutePath);
+	gos::fs::addAlias ("@w", gosGlobals.pathToWritableFolder, eAliasPathMode::absolutePath, false);
 
 
 	gosGlobals.lengthOfAppPathConSlash = gos::string::utf8::lengthInByte (gos::getAppPathNoSlash());

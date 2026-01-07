@@ -20,6 +20,7 @@ Builder::Builder(gos::GPU *gpuIN)
 	gpu = gpuIN;
 	localAllocator = gos::getSysHeapAllocator();
 	logger = &loggerStdout;
+	aliasList.setup (localAllocator, 256);
 
 	memset (builderList, 0, sizeof(builderList));
 	addBuilder<Builder_vtxShader>();
@@ -31,6 +32,9 @@ Builder::Builder(gos::GPU *gpuIN)
 //****************************** 
 Builder::~Builder()
 {
+	priv_alias_deleteAll();
+	aliasList.unsetup();
+
 	for (u32 i=0; i<NUM_MAX_BUILDERS; i++)
 	{
 		if (NULL != builderList[i])
@@ -149,6 +153,7 @@ bool Builder::debug_sanityCheck (const char *baseFolder)
 		return false;
 	}
 	
+	logger->log ("building...\n");
 	loggerStdout.disableStdouLogging();
 	bool ret = priv_build (ctxSanity, false);
 	loggerStdout.enableStdouLogging();
@@ -159,25 +164,30 @@ bool Builder::debug_sanityCheck (const char *baseFolder)
 	}
 	else
 	{
-		if (debug_sanityCheck__compareDB (ctxSanity, baseFolder))
-		{
-			logger->log (eTextColor::green, "success\n");
-			
-			//delete db sanity
-			sprintf_s (s, sizeof(s), "%s/%s", baseFolder, SANITY_DB_NAME);
-			fs::fileDelete(s);
-
-			//delete fs::folderDelete (log_folder);
-			fs::folderDeleteAllFileRecursively (log_folder, eFolderDeleteMode::deleteAlsoTheSubfolderAndTheMainFolder);
-		}
-		else
-		{
-			save_dependencies_report (baseFolder, SANITY_DB_NAME);
-			save_asset_manifest (baseFolder, SANITY_DB_NAME);
-			logger->log (eTextColor::red, "FAILED\n");
-		}
+		logger->log ("comparing...\n");
+		ret = debug_sanityCheck__compareDB (ctxSanity, baseFolder);
 	}
 	asset2::dbcontext_close (ctxSanity);
+
+	//pulizia finale
+	if (ret)
+	{
+		logger->log (eTextColor::green, "success\n");
+		loggerStdout.disableFileLogging();
+			
+		//delete db sanity
+		sprintf_s (s, sizeof(s), "%s/%s", baseFolder, SANITY_DB_NAME);
+		fs::fileDelete(s);
+
+		//delete fs::folderDelete (log_folder);
+		fs::folderDeleteAllFileRecursively (log_folder, eFolderDeleteMode::deleteAlsoTheSubfolderAndTheMainFolder);
+	}
+	else
+	{
+		save_dependencies_report (baseFolder, SANITY_DB_NAME);
+		save_asset_manifest (baseFolder, SANITY_DB_NAME);
+		logger->log (eTextColor::red, "FAILED\n");
+	}
 
 	return ret;
 }
@@ -362,6 +372,7 @@ bool Builder::priv_build (DBContext &ctx,  bool bDoCreateAssetFile)
 	dt.setNow_UTC();
 	buildTime_UTC = dt.getAsNiceU64();
 
+	priv_alias_deleteAll();
 
 	HashedStringList listof_gosAssetd_toBeRebuilt(localAllocator, 256);
 	UniqueUIDList listof_possibile_assets_to_be_deleted(localAllocator, 256);
@@ -712,7 +723,6 @@ bool Builder::priv_gosassetd_build (DBContext &ctx, bool bDoCreateAssetFile, con
 
 
 	//vado alla ricerca di eventuali #include
-	UniqueUIDList listof_uid(localAllocator, 32);
 	gos::IniFileSection *section = ini.getRoot();
 	for (u32 iSec=0; iSec<section->getNSubsection(); iSec++)
 	{
@@ -729,95 +739,147 @@ bool Builder::priv_gosassetd_build (DBContext &ctx, bool bDoCreateAssetFile, con
 		char assetClass[64];
 		priv_fromDirectiveNameToAssetClassName (subName, assetClass, sizeof(assetClass));
 
-		//se non e' una @include, la skippo
-		if (0 != strcmp(assetClass, "include"))
-			continue;
-
-		//recupero il path dell'include
-		char s[512];
-		sub->getOrDefault("__value", "!", s, sizeof(s));
-		if (s[0] == '!')
+		//se non e' una @include o una @alias, skippo la sezione
+		bool bSkipSection = false;
+		if (0 == strcmp(assetClass, "include"))
 		{
-			logger->log (eTextColor::red, "line %d, include does not state a path\n", sub->getLineStarted());
-			return false;
-		}
-
-		char absIncludePath[512];
-		fs::makeABSPath (absFilename, s, absIncludePath, sizeof(absIncludePath));
-
-		if (!fs::fileExists(absIncludePath))
-		{
-			logger->log (eTextColor::red, "line %d, included file '%s' does not exists\n", sub->getLineStarted(), absIncludePath);
-			return false;
-		}
-
-		fs::extractFileExt (absIncludePath, s, sizeof(s));
-		if (0 != strcmp(s, "gosasset_d"))
-		{
-			logger->log (eTextColor::red, "line %d, included file '%s' must be a 'gosasset_d' file\n", sub->getLineStarted(), absIncludePath);
-			return false;
-		}
-
-		UID uid_of_included_ini;
-		res_createUID (eResType::gosasset_d, absIncludePath, &uid_of_included_ini);
-		if (!res_exists (ctx, eResType::gosasset_d, absIncludePath, NULL))
-		{
-			//non e' nel DB, vuol dire che devo prima buildarlo e poi posso proseguire con il build di me stesso
-			logger->log ("building included file %s\n", absIncludePath);
-			logger->incIndent();
-			const bool ret = priv_gosassetd_build (ctx, bDoCreateAssetFile, absIncludePath, out_listOfBuiltAssets);
-			logger->decIndent();
-			if (!ret)
+			if (!priv_gosassetd_build_parseIncludeSection (ctx, bDoCreateAssetFile, absFilename, uid_of_iniFile, sub, listof_knownRTname, out_listOfBuiltAssets))
 				return false;
 		}
-		else
+		else if (0 == strcmp(assetClass, "alias"))
 		{
-			//e' gia' nel DB, vuol dire che non e' stata modificata/deletata oppure e' gia'
-			//stat rebuildata
-			logger->log ("parsing included file %s\n", absIncludePath);
+			if (!priv_gosassetd_build_parseAliasSection(absFilename, sub))
+				return false;
 		}
-
-		//io dipendo dal mio include
-		dependency_add (ctx, uid_of_iniFile, uid_of_included_ini);
-
-
-		//qui siamo sicuri che l'include e' stata buildata con successo. 
-		//Recupero un elenco di gosasset_d da cui <uid_of_included_ini> dipende (in sostanza, tutti gli include degli include degli include..
-		listof_uid.reset();
-		listof_uid.insertIfNotExists(uid_of_included_ini);
-		dependency_get_dependecies_list (ctx, uid_of_included_ini, false, &listof_uid, [](const UID childUID) {
-			return childUID.isAResourceOfType(eResType::gosasset_d);
-		});
-
-		//aggiungo tutti i simboli di tutti gli include degli include
-		listof_uid.forEach ([&ctx, &listof_knownRTname] (u32 index, const UID uid){
-			assert (uid.isAResourceOfType(eResType::gosasset_d));
-			
-
-			char s[512];
-			sprintf_s (s, sizeof(s), "SELECT rtname FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE UID_ini=%" PRIu64 "", uid._uid);
-
-			db::RST rst;
-			if (db::query (ctx.db, s, &rst))
-			{
-				while (rst.fetchRow())
-				{
-					const char *rtname = rst.getVal(0);
-					if (rtname[0] != '_' && rtname[1] != '_')
-					{
-						listof_knownRTname.add (rtname);
-					}
-				}			
-			}
-			return true;
-		});
-		
 	}
 
 
 	//buildo tutte le sezioni
 	u32 nextAnonymAssetName = 0;
 	return priv_gosassetd_buildSection (ctx, bDoCreateAssetFile, nextAnonymAssetName, listof_knownRTname, absFilename, uid_of_iniFile, ini.getRoot(), out_listOfBuiltAssets);
+}
+
+//****************************** 
+bool Builder::priv_gosassetd_build_parseIncludeSection (DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sub, UniqueStringList &in_out_listof_knownRTname, UniqueUIDList *out_listOfBuiltAssets)
+{
+	//recupero il path dell'include
+	char s[512];
+	sub->getOrDefault("__value", "!", s, sizeof(s));
+	if (s[0] == '!')
+	{
+		logger->log (eTextColor::red, "line %d, include does not state a path\n", sub->getLineStarted());
+		return false;
+	}
+
+	char absIncludePath[512];
+	internal__makeABSPathFromFilename (absFilename, s, absIncludePath, sizeof(absIncludePath));
+
+	if (!fs::fileExists(absIncludePath))
+	{
+		logger->log (eTextColor::red, "line %d, included file '%s' does not exists\n", sub->getLineStarted(), absIncludePath);
+		return false;
+	}
+
+	fs::extractFileExt (absIncludePath, s, sizeof(s));
+	if (0 != strcmp(s, "gosasset_d"))
+	{
+		logger->log (eTextColor::red, "line %d, included file '%s' must be a 'gosasset_d' file\n", sub->getLineStarted(), absIncludePath);
+		return false;
+	}
+
+	UID uid_of_included_ini;
+	res_createUID (eResType::gosasset_d, absIncludePath, &uid_of_included_ini);
+	if (!res_exists (ctx, eResType::gosasset_d, absIncludePath, NULL))
+	{
+		//non e' nel DB, vuol dire che devo prima buildarlo e poi posso proseguire con il build di me stesso
+		logger->log ("building included file %s\n", absIncludePath);
+		logger->incIndent();
+		const bool ret = priv_gosassetd_build (ctx, bDoCreateAssetFile, absIncludePath, out_listOfBuiltAssets);
+		logger->decIndent();
+		if (!ret)
+			return false;
+	}
+	else
+	{
+		//e' gia' nel DB, vuol dire che non e' stata modificata/deletata oppure e' gia'
+		//stat rebuildata
+		logger->log ("parsing included file %s\n", absIncludePath);
+	}
+
+	//io dipendo dal mio include
+	dependency_add (ctx, uid_of_iniFile, uid_of_included_ini);
+
+
+	//qui siamo sicuri che l'include e' stata buildata con successo. 
+	//Recupero un elenco di gosasset_d da cui <uid_of_included_ini> dipende (in sostanza, tutti gli include degli include degli include..
+	UniqueUIDList listof_uid(localAllocator, 32);
+	listof_uid.reset();
+	listof_uid.insertIfNotExists(uid_of_included_ini);
+	dependency_get_dependecies_list (ctx, uid_of_included_ini, false, &listof_uid, [](const UID childUID) {
+		return childUID.isAResourceOfType(eResType::gosasset_d);
+	});
+
+	//aggiungo tutti i simboli di tutti gli include degli include
+	listof_uid.forEach ([&ctx, &in_out_listof_knownRTname] (u32 index, const UID uid){
+		assert (uid.isAResourceOfType(eResType::gosasset_d));
+			
+
+		char s[512];
+		sprintf_s (s, sizeof(s), "SELECT rtname FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE UID_ini=%" PRIu64 "", uid._uid);
+
+		db::RST rst;
+		if (db::query (ctx.db, s, &rst))
+		{
+			while (rst.fetchRow())
+			{
+				const char *rtname = rst.getVal(0);
+				if (rtname[0] != '_' && rtname[1] != '_')
+				{
+					in_out_listof_knownRTname.add (rtname);
+				}
+			}			
+		}
+		return true;
+	});
+
+	return true;
+}
+
+//****************************** 
+bool Builder::priv_gosassetd_build_parseAliasSection (const char *absFilename, const gos::IniFileSection *sub)
+{
+	char alias[128];
+	if (!sub->get("name", alias, sizeof(alias)))
+	{
+		logger->log (eTextColor::red, "line %d => invalid alias directive: param 'name' not found\n", sub->getLineStarted());
+		return false;
+	}
+
+	char path[512];
+	if (!sub->get("path", path, sizeof(path)))
+	{
+		logger->log (eTextColor::red, "line %d => invalid alias directive: param 'path' not found\n", sub->getLineStarted());
+		return false;
+	}
+
+	char alias_abs_path[1024];
+	fs::makeABSPathFromABSFilename (absFilename, path, alias_abs_path, sizeof(alias_abs_path));
+
+	const u32 index = priv_alias_findIndexByName(alias);
+	if (u32MAX == index)
+	{
+		const u32 n = aliasList.getNElem();
+		aliasList[n].alias = gos::string::utf8::allocStr (localAllocator, alias);
+		aliasList[n].path = gos::string::utf8::allocStr (localAllocator, alias_abs_path);
+
+		logger->log (eTextColor::grey, "line %d => new alias '%s' => '%s'\n", sub->getLineStarted(), alias, alias_abs_path);
+		return true;
+	}
+
+
+	logger->log (eTextColor::red, "line %d => alias '%s' was already defined (path: %s)\n", sub->getLineStarted(), alias, alias_abs_path);
+	return false;
+
 }
 
 //****************************** 
@@ -838,8 +900,8 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFi
 		char assetClass[64];
 		priv_fromDirectiveNameToAssetClassName (subName, assetClass, sizeof(assetClass));
 
-		//se e' una @include, la skippo
-		if (0 == strcmp(assetClass, "include"))
+		//se e' una @include/@alias, la skippo
+		if (0 == strcmp(assetClass, "include") || 0 == strcmp(assetClass, "alias"))
 			continue;
 
 		//altrimenti verifico che ci sia un builder adeguato
@@ -938,3 +1000,77 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFi
 
 	return true;
 }
+
+
+//****************************** 
+void Builder::priv_alias_deleteAll()
+{
+	for (u32 i = 0; i < aliasList.getNElem(); i++)
+	{
+		GOSFREE(localAllocator, aliasList[i].alias);
+		GOSFREE(localAllocator, aliasList[i].path);
+	}
+	aliasList.reset();
+}
+
+//****************************** 
+u32 Builder::priv_alias_findIndexByName (const char *alias) const
+{
+	for (u32 i = 0; i < aliasList.getNElem(); i++)
+	{
+		if (0 == strcmp (aliasList(i).alias, alias))
+			return i;
+	}
+	return u32MAX;
+}
+
+//****************************** 
+bool Builder::internal__makeABSPathFromFilename (const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out) const
+{
+    if (rel_or_abs_path[0] == '<')
+    {
+        //inizia con una alias definito in qualche include file
+        char alias_resolved[128];
+        alias_resolved[0] = 0x00;
+
+        u32 i = 0;
+		while (rel_or_abs_path[i++] != 0x00)
+		{
+			if (rel_or_abs_path[i] == '>')
+			{
+				memcpy (alias_resolved, &rel_or_abs_path[1], i - 1);
+				alias_resolved[i - 1] = 0x00;
+				break;
+			}
+		}
+        if (0x00 == alias_resolved[0])
+        {
+            logger->log (eTextColor::red, "invalid alias: it starts with '<' but does not end with '>' [%s]\n", rel_or_abs_path);
+            return false;
+        }
+
+		//cerco l'alias nella lista
+		const u32 index = priv_alias_findIndexByName(alias_resolved);
+		if (u32MAX == index)
+		{
+			logger->log (eTextColor::red, "invalid alias: [%s] was not defined\n", alias_resolved);
+			return false;
+		}
+
+		char s[1024];
+		sprintf_s (s, sizeof(s), "%s%s", aliasList(index).path, &rel_or_abs_path[i+1]);
+		fs::makeABSPathFromABSFilename (origin_absFilename, s, out, sizeof_out);
+		return true;
+    }
+    else
+    {
+        fs::makeABSPathFromABSFilename (origin_absFilename, rel_or_abs_path, out, sizeof_out);
+        return true;
+    }
+}
+
+
+
+//TODO
+// gli alis definiti nei gosasset_d vanno messi nel DB in una tabella perhce' quando rebuildo un file che include un file che definisce gli alias, devo poter recuperare gli
+// alias definiti nel file incluso senza necessariamente doverlo rebuildare

@@ -18,22 +18,23 @@ namespace gos
     public:
 
     public:
-                            LoggerStdout();
-		virtual             ~LoggerStdout();
+                    LoggerStdout();
+		virtual     ~LoggerStdout();
 
-        void                enableStdouLogging()                                            { bShoudLogToStdout=true; }
-        void                disableStdouLogging()                                           { bShoudLogToStdout=false; }
+        void        enableStdouLogging()                                            { bShoudLogToStdout=true; }
+        void        disableStdouLogging()                                           { bShoudLogToStdout=false; }
         
-        void                enableFileLogging (const char *fullFolderPathAndName);
-                                //accetta il path di un folder dentro al quale crea un certo numero di file di log in totale autonomia
+                    //accetta il path di un folder dentro al quale crea un certo numero di file di log in totale autonomia
+        void        enableFileLogging (const char *fullFolderPathAndName);
+        void        disableFileLogging();
 
-		void                incIndent();
-		void                decIndent();
+		void        incIndent();
+		void        decIndent();
 
-        void                vlog (const char *format, va_list argptr);
-        void                vlog (const eTextColor col, const char *format, va_list argptr);
-        void                vlogWithPrefix (const char *prefix, const char *format, va_list argptr);
-        void                vlogWithPrefix (const eTextColor col, const char *prefix, const char *format, va_list argptr);
+        void        vlog (const char *format, va_list argptr);
+        void        vlog (const eTextColor col, const char *format, va_list argptr);
+        void        vlogWithPrefix (const char *prefix, const char *format, va_list argptr);
+        void        vlogWithPrefix (const eTextColor col, const char *prefix, const char *format, va_list argptr);
 
 
     private:

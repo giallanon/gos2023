@@ -185,7 +185,7 @@ bool asset2::dbcontext_open_ex (const char *baseFolderIN, const char *dbName, bo
 
     char baseFolder[1024];
     fs::resolvePath (baseFolderIN, baseFolder, sizeof(baseFolder));
-    
+
     //se necessario, crea la struttura di directory
     char s[1024];
     if (bCreateANewDBIfNotExists)

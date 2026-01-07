@@ -352,6 +352,56 @@ u64 platform::FS_fileTell(OSFile &h)
 }
 
 
+/*****************************************************
+* ritorna:
+*	false se non e' un file/directory da considerare (per esempio perche' e' un file hidden o la directory "." o il filename non matcha il jolly)
+*	true se e' un file valido che matcha il patterno jolly (e il filtro attuale consente i file)
+*	true se e' una directory valida (e il filtro attuale consente le directory)
+*/
+static bool FS_findFile_doesMatch (platform::OSFileFind &ff)
+{
+		if ((ff.findData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != 0) return false;
+		if ((ff.findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0) return false;
+		if ((ff.findData.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) != 0) return false;
+
+		win32::wchar_to_utf8 (ff.findData.cFileName, u32MAX, ff.utf8_curFilename, sizeof(ff.utf8_curFilename));
+		if (FS_findIsDirectory(ff))
+		{
+			//e' una dir
+
+			// il filtro consente le directory?
+            if (0 == (ff.findMode & platform::OSFileFind::ALLOW_FOLDER))
+                return false;
+
+			if (ff.utf8_curFilename[0] == '.')
+			{
+				//se e' la directory "." bisogna skipparla
+				if (0x00 == ff.utf8_curFilename[1])
+					return false;
+
+				//se e' la directory ".." bisogna skipparla
+				if ('.' == ff.utf8_curFilename[1] && 0x00 == ff.utf8_curFilename[2])
+					return false;
+			}
+			
+			//e' una directory buona (nientre filtro jolly sulle dire)
+            return true;
+		}
+		else 
+		{
+            //E' un file
+            
+			// il filtro consente i file?
+			if (0 == (ff.findMode & platform::OSFileFind::ALLOW_FILE))
+                return false;
+
+			//il filename matcha?
+			if (fs::doesFileNameMatchJolly(ff.utf8_curFilename, ff.utf8_jolly))
+				return true;
+		}
+
+		return false;
+}
 
 
 //*****************************************************
@@ -379,17 +429,9 @@ bool platform::FS_findFirst (OSFileFind *ff, const char *utf8_path, const char *
 		return false;
 
 	strcpy_s ((char*)ff->utf8_jolly, sizeof(ff->utf8_jolly), (const char*)utf8_jolly);
-	do
-	{
-		if ((ff->findData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != 0) continue;
-		if ((ff->findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0) continue;
-		if ((ff->findData.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) != 0) continue;
-		
-		win32::wchar_to_utf8 (ff->findData.cFileName, u32MAX, ff->utf8_curFilename, sizeof(ff->utf8_curFilename));
-		if (FS_findIsDirectory(*ff) || fs::doesFileNameMatchJolly(ff->utf8_curFilename, utf8_jolly))
-			return true;
-	} while (FS_findNext(*ff));
-	
+
+	if (FS_findFile_doesMatch(*ff))
+		return true;
     if (FS_findNext(*ff))
         return true;
     FS_findClose(*ff);
@@ -402,38 +444,8 @@ bool platform::FS_findNext(OSFileFind &ff)
 	assert(ff.h != INVALID_HANDLE_VALUE);
 	while (FindNextFile(ff.h, &ff.findData))
 	{
-		if ((ff.findData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != 0) continue;
-		if ((ff.findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0) continue;
-		if ((ff.findData.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) != 0) continue;
-
-		win32::wchar_to_utf8 (ff.findData.cFileName, u32MAX, ff.utf8_curFilename, sizeof(ff.utf8_curFilename));
-		if (FS_findIsDirectory(ff))
-		{
-			//e' una dir
-			bool bSkipThisFolder = false;
-
-            if (0 == (ff.findMode & OSFileFind::ALLOW_FOLDER))
-                bSkipThisFolder = true;
-            else
-			{
-				if (ff.utf8_curFilename[0] == '.')
-				{
-					if (0x00 == ff.utf8_curFilename[1])
-						bSkipThisFolder = true;
-					else if ('.' == ff.utf8_curFilename[1] && 0x00 == ff.utf8_curFilename[2])
-						bSkipThisFolder = true;
-				}
-			}
-
-            if (!bSkipThisFolder)
-                return true;
-		}
-		else if (fs::doesFileNameMatchJolly(ff.utf8_curFilename, ff.utf8_jolly))
-		{
-            //E' un file
-            if (0 != (ff.findMode & OSFileFind::ALLOW_FILE))
-                return true;	
-		}
+		if (FS_findFile_doesMatch(ff))
+			return true;
 	}
 	return false;
 }

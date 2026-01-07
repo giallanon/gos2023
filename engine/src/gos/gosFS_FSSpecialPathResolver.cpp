@@ -29,6 +29,18 @@ void fs::SpecialPathResolver::unsetup()
     allocator = NULL;
 }
 
+//*********************************************
+void fs::SpecialPathResolver::removeAlias (const char *alias)
+{
+    const u32 index = priv_findAliasIndex(&alias[1]);
+    if (u32MAX == index)
+        return;
+
+    GOSFREE(allocator, listString[index].alias);    
+    GOSFREE(allocator, listString[index].realPathNoSlash);
+    listString.removeAndSwapWithLast(index);    
+}
+
 
 //*********************************************
 bool fs::SpecialPathResolver::addAlias (const char *alias, const char *realPathNoSlash) 
@@ -52,16 +64,24 @@ bool fs::SpecialPathResolver::addAlias (const char *alias, const char *realPathN
 }
 
 //*********************************************
-const fs::SpecialPathResolver::sAlias* fs::SpecialPathResolver::priv_findAlias (const char *alias) const
+u32 fs::SpecialPathResolver::priv_findAliasIndex (const char *alias) const
 {
     const u32 n= listString.getNElem();
     for (u32 i=0; i<n; i++)
     {
         if (string::utf8::areEqual (listString(i).alias, alias, true))
-            return &listString(i);
+            return i;
     }
+    return u32MAX;
+}
 
-    return NULL;
+//*********************************************
+const fs::SpecialPathResolver::sAlias* fs::SpecialPathResolver::priv_findAlias (const char *alias) const
+{
+    const u32 index = priv_findAliasIndex(alias);
+    if (u32MAX == index)
+        return NULL;
+    return &listString(index);
 }
 
 //*********************************************

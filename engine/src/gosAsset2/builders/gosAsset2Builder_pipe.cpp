@@ -174,7 +174,7 @@ bool Builder_pipe::build (DBContext &ctx, u64 buildTime_UTC, const char *absFile
     //  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
     //  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
     //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
-    if (!prot_seuptVirtualAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
+    if (!prot_setupVirtualAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
         return false;
 
 
