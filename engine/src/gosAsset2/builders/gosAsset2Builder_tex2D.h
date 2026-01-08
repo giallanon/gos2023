@@ -27,12 +27,12 @@ namespace gos
         class Builder_tex2D : public BuilderInterface
         {
         public:
-                    Builder_tex2D (Builder *theBuilderIN);
+                    Builder_tex2D ();
                     ~Builder_tex2D()                                                            { }
 
             void    initOnce (gos::GPU *gpuIN);
             void    deinitOnce();
-            bool    build (DBContext &ctx, u64 buildTime_UTC, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result);
+            bool    build (DBContext &ctx, u64 buildTime_UTC, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result);
 
 
         private:
@@ -47,7 +47,7 @@ namespace gos
             };
 
         private:
-            bool    priv_extractParams (const char *absFilename, const IniFileSection *sec, Params *out_params);
+            bool    priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, const IniFileSection *sec, Params *out_params);
             bool    priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const Params &params, const char *filenameDST);
             bool    priv_create_GPUResourceOnce();
             bool    priv_save (const gpu::sMappedImage &src, gos::image::Builder &builder, eImageFormat dstFmt, u32 srcW, u32 srcH, u32 mipMapNum_0toN, u32 numPallini);

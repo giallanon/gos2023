@@ -7,12 +7,6 @@ using namespace gos::asset2;
 
 
 
-//******************************************
-bool BuilderInterface::prot_makeABSPathFromFilename (const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out) const
-{
-    return theBuilder->internal__makeABSPathFromFilename (origin_absFilename, rel_or_abs_path, out, sizeof_out);
-
-}
 
 //******************************************
 bool BuilderInterface::prot_isOneOfThis (const char *paramName, ...) const
@@ -75,7 +69,7 @@ bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::I
 }
 
 //******************************************
-bool BuilderInterface::prot_needResource (DBContext &ctx, eResType resTypeIN, const char *absFilenameIN, UID *out_uid) const
+bool BuilderInterface::prot_needResource (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, eResType resTypeIN, const char *absFilenameIN, UID *out_uid) const
 {
     assert (NULL != absFilenameIN);
     assert (NULL != out_uid);
@@ -103,7 +97,7 @@ bool BuilderInterface::prot_needResource (DBContext &ctx, eResType resTypeIN, co
     if (eResType::shader_txt == resTypeIN)
     {
         gos::StringList includeList(gos::getScrapAllocator(), 1024);
-        if (!priv_extractAllInludePaths(absFilenameIN, &includeList))
+        if (!priv_extractAllInludePaths(ctx, listof_UID_of_known_ini_file, absFilenameIN, &includeList))
         {
             logger->log (eTextColor::red, "error extracting include-file from resource %s\n", absFilenameIN);
             return false;
@@ -115,7 +109,7 @@ bool BuilderInterface::prot_needResource (DBContext &ctx, eResType resTypeIN, co
         while (NULL != (absIncludePath = includeList.next(&iter)))
         {
             UID shaderUID;
-            if (prot_needResource (ctx, eResType::shader_txt, absIncludePath, &shaderUID))
+            if (prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::shader_txt, absIncludePath, &shaderUID))
             {
                 if (!dependency_exists (ctx, *out_uid, shaderUID))
                     dependency_add (ctx, *out_uid, shaderUID);
@@ -128,7 +122,7 @@ bool BuilderInterface::prot_needResource (DBContext &ctx, eResType resTypeIN, co
 }
 
 //****************************** 
-bool BuilderInterface::priv_extractAllInludePaths (const char *absFilenameIN, gos::StringList *out) const
+bool BuilderInterface::priv_extractAllInludePaths (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilenameIN, gos::StringList *out) const
 {
 	bool ret = true;
 	u32 fsize=0;
@@ -148,7 +142,8 @@ bool BuilderInterface::priv_extractAllInludePaths (const char *absFilenameIN, go
 
 		//i path degli include possono essere relativi
 		char absIncludeFilename[1024];
-        prot_makeABSPathFromFilename (absFilenameIN, s, absIncludeFilename, sizeof(absIncludeFilename));
+        if (!asset2::Builder::makeABSPathFromFilename (ctx, logger, listof_UID_of_known_ini_file, absFilenameIN, s, absIncludeFilename, sizeof(absIncludeFilename)))
+            return false;
 		out->add(absIncludeFilename);
 	}
 

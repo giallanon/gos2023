@@ -10,7 +10,7 @@ using namespace gos;
 using namespace gos::asset2;
 
 //************************************
-Builder_tex2D::Builder_tex2D (Builder *theBuilderIN) : BuilderInterface (theBuilderIN, eAssetType::tex2D)
+Builder_tex2D::Builder_tex2D () : BuilderInterface (eAssetType::tex2D)
 { 
     gpu = NULL;
     samplerHandle.setInvalid();
@@ -121,7 +121,7 @@ void Builder_tex2D::deinitOnce()
 }
 
 //************************************
-bool Builder_tex2D::priv_extractParams (const char *absFilename, const IniFileSection *sec, Params *out_params)
+bool Builder_tex2D::priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, const IniFileSection *sec, Params *out_params)
 {
     assert (NULL != sec);
     assert (NULL != out_params);
@@ -140,7 +140,8 @@ bool Builder_tex2D::priv_extractParams (const char *absFilename, const IniFileSe
         logger->log(eTextColor::red, "line %d => can't find param <src>\n", sec->getLineStarted());
         return false;
     }
-    prot_makeABSPathFromFilename (absFilename, s, out_params->src, sizeof(out_params->src));
+    if (!asset2::Builder::makeABSPathFromFilename (ctx, logger, listof_UID_of_known_ini_file, absFilename, s, out_params->src, sizeof(out_params->src)))
+        return false;
 
 
     //param:srcColorSpace      e' opzionale
@@ -200,7 +201,7 @@ bool Builder_tex2D::priv_extractParams (const char *absFilename, const IniFileSe
 }
 
 //************************************
-bool Builder_tex2D::build (DBContext &ctx, u64 buildTime_UTC, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result)
+bool Builder_tex2D::build (DBContext &ctx, u64 buildTime_UTC, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result)
 {
     assert (ctx.isValid());
     assert (NULL != sec);
@@ -217,7 +218,7 @@ bool Builder_tex2D::build (DBContext &ctx, u64 buildTime_UTC, const char *absFil
 
     //parse della sezione
     Params params;
-    if (!priv_extractParams(absFilename, sec, &params))
+    if (!priv_extractParams(ctx, listof_UID_of_known_ini_file, absFilename, sec, &params))
     {
         logger->log (eTextColor::red, "error parsing IniFileSection\n");
         return false;
@@ -225,7 +226,7 @@ bool Builder_tex2D::build (DBContext &ctx, u64 buildTime_UTC, const char *absFil
 
     //il parametro src indica una risorsa eResType::image da cui io dipendo
     //La risorsa deve esistere nel DB
-    if (!prot_needResource (ctx, eResType::image, params.src, &params.uid__resource_image))
+    if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::image, params.src, &params.uid__resource_image))
     {
         logger->log (eTextColor::red, "resource [%s] '%s' not found in DB\n", asset2::enumToString(eResType::image), params.src);
         return false;

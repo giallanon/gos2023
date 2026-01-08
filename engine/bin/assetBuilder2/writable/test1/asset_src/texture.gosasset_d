@@ -1,6 +1,7 @@
 @include: common.gosasset_d
 
 
+
 @tex2D: facciaTexture
 {
 	//src: /home/giallanon/gixprogram/gos2023/engine/common_assets/images/faccia512x512.jpg

@@ -1,0 +1,945 @@
+
+
+========================== RESOURCES LIST ==========================
+
+Resource UID     | Type         | Abspath
+-----------------+--------------+--------------------------------
+0000010027DAF7D2 | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d" 
+
+  depends on (2): 0000020003308E33  00000200EFD2EB6D  
+	0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+
+  required by (14): 00000100F553CE57  010100001FE3F6DE  010100004D4EA475  010100004F9D3C62  0101000062C472A3  010100006727BFD5  0101000071D07976  010100008E808B62  01010000A5CB4003  01010000AD37CECC  01020000D4212EB4  01030000183877BB  010300001C83B832  01030000BDA180F1  
+	0101000062C472A3 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "__0000010027DAF7D2_000000" | 0001000056033D20
+	010100004D4EA475 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@8 | "VS-1" | 0001000056033D20
+		01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+	01010000AD37CECC | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@15 | "VS-2" | 00010000F574CA90
+	010100008E808B62 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@22 | "__0000010027DAF7D2_000001" | 00010000F9172A9E
+	01010000A5CB4003 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@29 | "__0000010027DAF7D2_000002" | 00010000F9172A9E
+	010100004F9D3C62 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@36 | "VS-1-d1-d2-d3" | 00010000F9172A9E
+	0101000071D07976 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@44 | "alias-VS-1-d1-d2-d3" | 00010000F9172A9E
+	00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		010100001FE3F6DE | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@10 | "__00000100F553CE57_000001" | 0001000056033D20
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+		01020000D4212EB4 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" | 00020000E8F99D1A
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+		010100006727BFD5 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@22 | "vs-per-pipe1" | 00010000F574CA90
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+
+-----------------+--------------+--------------------------------
+000001002C302F59 | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d" 
+
+  depends on (2): 000002000D1069B8  00000200E1F20CE6  
+	000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+	00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+
+  required by (9): 00000100F553CE57  010100001FE3F6DE  010100006727BFD5  0102000093D50934  01020000A2BED042  01020000D4212EB4  01030000183877BB  010300001C83B832  01030000BDA180F1  
+	0102000093D50934 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@3 | "PS-1" | 00020000E8F99D1A
+		01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+	01020000A2BED042 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@9 | "PS-2" | 000200004B8E6AAA
+	00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		010100001FE3F6DE | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@10 | "__00000100F553CE57_000001" | 0001000056033D20
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+		01020000D4212EB4 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" | 00020000E8F99D1A
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+		010100006727BFD5 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@22 | "vs-per-pipe1" | 00010000F574CA90
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+
+-----------------+--------------+--------------------------------
+000001005AE712C7 | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d" 
+
+  depends on (4): 000002000FEE1467  0000020084DE20C4  00000200CC5475E8  00000200F7AD06F1  
+	0000020084DE20C4 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader"
+		000002000FEE1467 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+			00000200F7AD06F1 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+	00000200CC5475E8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader"
+		000002000FEE1467 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+			00000200F7AD06F1 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+
+  required by (2): 0101000052727FF9  01020000FCB4A1ED  
+	0101000052727FF9 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 00010000B896893B
+	01020000FCB4A1ED | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 00020000A8A6D10E
+
+-----------------+--------------+--------------------------------
+000001006FFC27BC | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d" 
+
+  depends on (4): 000002000A949FBC  00000200421ECA90  000002007F23591F  00000200BECB843C  
+	000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+		000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+			00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+	00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+		000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+			00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+
+  required by (7): 000001008F3DDCE4  00000100D69F2642  0101000010C8D1D1  010200002FF096C6  01030000797942BF  010400008220152B  01040000EDB6FAB8  
+	0101000010C8D1D1 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@10 | "__000001006FFC27BC_000000" | 00010000373B5A0D
+		01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+	010200002FF096C6 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@15 | "__000001006FFC27BC_000001" | 000200003820F8F4
+		01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+	01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+	000001008F3DDCE4 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/common.gosasset_d"
+		00000100D69F2642 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d"
+			01040000EDB6FAB8 | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@5 | "facciaTexture" | 000400005D9D7C19
+			010400008220152B | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@15 | "faccia256Texture" | 000400002435BBE1
+
+-----------------+--------------+--------------------------------
+000001008F3DDCE4 | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/common.gosasset_d" 
+
+  depends on (5): 000001006FFC27BC  000002000A949FBC  00000200421ECA90  000002007F23591F  00000200BECB843C  
+	000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+		000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+			000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+				00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+		00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+			000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+				00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+
+  required by (3): 00000100D69F2642  010400008220152B  01040000EDB6FAB8  
+	00000100D69F2642 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d"
+		01040000EDB6FAB8 | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@5 | "facciaTexture" | 000400005D9D7C19
+		010400008220152B | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@15 | "faccia256Texture" | 000400002435BBE1
+
+-----------------+--------------+--------------------------------
+00000100D69F2642 | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d" 
+
+  depends on (8): 000001006FFC27BC  000001008F3DDCE4  000002000A949FBC  00000200421ECA90  000002007F23591F  00000200BECB843C  000003002F66EED2  00000300C6716E64  
+	000001008F3DDCE4 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/common.gosasset_d"
+		000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+			000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+				000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+					00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+			00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+				000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+					00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+	000003002F66EED2 | resource | image        | "C:/rhea/rheaSRC/gos2023/engine/common_assets/images/faccia512x512.jpg"
+	00000300C6716E64 | resource | image        | "C:/rhea/rheaSRC/gos2023/engine/common_assets/images/Tiling_procedural_textures.png"
+
+  required by (2): 010400008220152B  01040000EDB6FAB8  
+	01040000EDB6FAB8 | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@5 | "facciaTexture" | 000400005D9D7C19
+	010400008220152B | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@15 | "faccia256Texture" | 000400002435BBE1
+
+-----------------+--------------+--------------------------------
+00000100F553CE57 | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d" 
+
+  depends on (6): 0000010027DAF7D2  000001002C302F59  0000020003308E33  000002000D1069B8  00000200E1F20CE6  00000200EFD2EB6D  
+	0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+		000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+	0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+	00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+
+  required by (6): 010100001FE3F6DE  010100006727BFD5  01020000D4212EB4  01030000183877BB  010300001C83B832  01030000BDA180F1  
+	010100001FE3F6DE | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@10 | "__00000100F553CE57_000001" | 0001000056033D20
+		01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+	01020000D4212EB4 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" | 00020000E8F99D1A
+		01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+		010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+	01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+	010100006727BFD5 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@22 | "vs-per-pipe1" | 00010000F574CA90
+		010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+	010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+	01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+
+-----------------+--------------+--------------------------------
+0000020003308E33 | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader" 
+
+  depends on (0): 
+
+  required by (15): 0000010027DAF7D2  00000100F553CE57  010100001FE3F6DE  010100004D4EA475  010100004F9D3C62  0101000062C472A3  010100006727BFD5  0101000071D07976  010100008E808B62  01010000A5CB4003  01010000AD37CECC  01020000D4212EB4  01030000183877BB  010300001C83B832  01030000BDA180F1  
+	0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		0101000062C472A3 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "__0000010027DAF7D2_000000" | 0001000056033D20
+		010100004D4EA475 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@8 | "VS-1" | 0001000056033D20
+			01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+		01010000AD37CECC | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@15 | "VS-2" | 00010000F574CA90
+		010100008E808B62 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@22 | "__0000010027DAF7D2_000001" | 00010000F9172A9E
+		01010000A5CB4003 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@29 | "__0000010027DAF7D2_000002" | 00010000F9172A9E
+		010100004F9D3C62 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@36 | "VS-1-d1-d2-d3" | 00010000F9172A9E
+		0101000071D07976 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@44 | "alias-VS-1-d1-d2-d3" | 00010000F9172A9E
+		00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+			010100001FE3F6DE | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@10 | "__00000100F553CE57_000001" | 0001000056033D20
+				01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+			01020000D4212EB4 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" | 00020000E8F99D1A
+				01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+				010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+			010100006727BFD5 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@22 | "vs-per-pipe1" | 00010000F574CA90
+				010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+			01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+	0101000062C472A3 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "__0000010027DAF7D2_000000" | 0001000056033D20
+	010100004D4EA475 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@8 | "VS-1" | 0001000056033D20
+		01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+	010100008E808B62 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@22 | "__0000010027DAF7D2_000001" | 00010000F9172A9E
+	01010000A5CB4003 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@29 | "__0000010027DAF7D2_000002" | 00010000F9172A9E
+	010100004F9D3C62 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@36 | "VS-1-d1-d2-d3" | 00010000F9172A9E
+	0101000071D07976 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@44 | "alias-VS-1-d1-d2-d3" | 00010000F9172A9E
+	00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		010100001FE3F6DE | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@10 | "__00000100F553CE57_000001" | 0001000056033D20
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+		01020000D4212EB4 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" | 00020000E8F99D1A
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+		010100006727BFD5 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@22 | "vs-per-pipe1" | 00010000F574CA90
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+	010100001FE3F6DE | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@10 | "__00000100F553CE57_000001" | 0001000056033D20
+		01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+
+-----------------+--------------+--------------------------------
+000002000A949FBC | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader" 
+
+  depends on (2): 000002007F23591F  00000200BECB843C  
+	000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+		00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+
+  required by (8): 000001006FFC27BC  000001008F3DDCE4  00000100D69F2642  0101000010C8D1D1  010200002FF096C6  01030000797942BF  010400008220152B  01040000EDB6FAB8  
+	000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+		0101000010C8D1D1 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@10 | "__000001006FFC27BC_000000" | 00010000373B5A0D
+			01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+		010200002FF096C6 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@15 | "__000001006FFC27BC_000001" | 000200003820F8F4
+			01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+		01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+		000001008F3DDCE4 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/common.gosasset_d"
+			00000100D69F2642 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d"
+				01040000EDB6FAB8 | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@5 | "facciaTexture" | 000400005D9D7C19
+				010400008220152B | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@15 | "faccia256Texture" | 000400002435BBE1
+	010200002FF096C6 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@15 | "__000001006FFC27BC_000001" | 000200003820F8F4
+		01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+
+-----------------+--------------+--------------------------------
+000002000D1069B8 | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader" 
+
+  depends on (0): 
+
+  required by (10): 000001002C302F59  00000100F553CE57  010100001FE3F6DE  010100006727BFD5  0102000093D50934  01020000A2BED042  01020000D4212EB4  01030000183877BB  010300001C83B832  01030000BDA180F1  
+	000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+		0102000093D50934 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@3 | "PS-1" | 00020000E8F99D1A
+			01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+		01020000A2BED042 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@9 | "PS-2" | 000200004B8E6AAA
+		00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+			010100001FE3F6DE | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@10 | "__00000100F553CE57_000001" | 0001000056033D20
+				01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+			01020000D4212EB4 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" | 00020000E8F99D1A
+				01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+				010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+			010100006727BFD5 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@22 | "vs-per-pipe1" | 00010000F574CA90
+				010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+			01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+	0102000093D50934 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@3 | "PS-1" | 00020000E8F99D1A
+		01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+	00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		010100001FE3F6DE | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@10 | "__00000100F553CE57_000001" | 0001000056033D20
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+		01020000D4212EB4 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" | 00020000E8F99D1A
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+		010100006727BFD5 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@22 | "vs-per-pipe1" | 00010000F574CA90
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+	01020000D4212EB4 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" | 00020000E8F99D1A
+		01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+		010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+
+-----------------+--------------+--------------------------------
+000002000FEE1467 | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader" 
+
+  depends on (1): 00000200F7AD06F1  
+	00000200F7AD06F1 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+
+  required by (5): 000001005AE712C7  0000020084DE20C4  00000200CC5475E8  0101000052727FF9  01020000FCB4A1ED  
+	00000200CC5475E8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader"
+		000001005AE712C7 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+			0101000052727FF9 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 00010000B896893B
+			01020000FCB4A1ED | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 00020000A8A6D10E
+		0101000052727FF9 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 00010000B896893B
+	0000020084DE20C4 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader"
+		000001005AE712C7 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+			0101000052727FF9 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 00010000B896893B
+			01020000FCB4A1ED | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 00020000A8A6D10E
+		01020000FCB4A1ED | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 00020000A8A6D10E
+
+-----------------+--------------+--------------------------------
+00000200421ECA90 | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader" 
+
+  depends on (2): 000002007F23591F  00000200BECB843C  
+	000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+		00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+
+  required by (8): 000001006FFC27BC  000001008F3DDCE4  00000100D69F2642  0101000010C8D1D1  010200002FF096C6  01030000797942BF  010400008220152B  01040000EDB6FAB8  
+	000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+		0101000010C8D1D1 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@10 | "__000001006FFC27BC_000000" | 00010000373B5A0D
+			01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+		010200002FF096C6 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@15 | "__000001006FFC27BC_000001" | 000200003820F8F4
+			01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+		01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+		000001008F3DDCE4 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/common.gosasset_d"
+			00000100D69F2642 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d"
+				01040000EDB6FAB8 | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@5 | "facciaTexture" | 000400005D9D7C19
+				010400008220152B | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@15 | "faccia256Texture" | 000400002435BBE1
+	0101000010C8D1D1 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@10 | "__000001006FFC27BC_000000" | 00010000373B5A0D
+		01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+
+-----------------+--------------+--------------------------------
+000002007F23591F | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader" 
+
+  depends on (1): 00000200BECB843C  
+	00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+
+  required by (10): 000001006FFC27BC  000001008F3DDCE4  00000100D69F2642  000002000A949FBC  00000200421ECA90  0101000010C8D1D1  010200002FF096C6  01030000797942BF  010400008220152B  01040000EDB6FAB8  
+	00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+		000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+			0101000010C8D1D1 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@10 | "__000001006FFC27BC_000000" | 00010000373B5A0D
+				01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+			010200002FF096C6 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@15 | "__000001006FFC27BC_000001" | 000200003820F8F4
+				01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+			01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+			000001008F3DDCE4 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/common.gosasset_d"
+				00000100D69F2642 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d"
+					01040000EDB6FAB8 | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@5 | "facciaTexture" | 000400005D9D7C19
+					010400008220152B | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@15 | "faccia256Texture" | 000400002435BBE1
+		0101000010C8D1D1 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@10 | "__000001006FFC27BC_000000" | 00010000373B5A0D
+			01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+	000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+		000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+			0101000010C8D1D1 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@10 | "__000001006FFC27BC_000000" | 00010000373B5A0D
+				01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+			010200002FF096C6 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@15 | "__000001006FFC27BC_000001" | 000200003820F8F4
+				01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+			01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+			000001008F3DDCE4 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/common.gosasset_d"
+				00000100D69F2642 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d"
+					01040000EDB6FAB8 | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@5 | "facciaTexture" | 000400005D9D7C19
+					010400008220152B | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@15 | "faccia256Texture" | 000400002435BBE1
+		010200002FF096C6 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@15 | "__000001006FFC27BC_000001" | 000200003820F8F4
+			01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+
+-----------------+--------------+--------------------------------
+0000020084DE20C4 | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader" 
+
+  depends on (2): 000002000FEE1467  00000200F7AD06F1  
+	000002000FEE1467 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+		00000200F7AD06F1 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+
+  required by (3): 000001005AE712C7  0101000052727FF9  01020000FCB4A1ED  
+	000001005AE712C7 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+		0101000052727FF9 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 00010000B896893B
+		01020000FCB4A1ED | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 00020000A8A6D10E
+	01020000FCB4A1ED | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 00020000A8A6D10E
+
+-----------------+--------------+--------------------------------
+00000200BECB843C | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader" 
+
+  depends on (0): 
+
+  required by (11): 000001006FFC27BC  000001008F3DDCE4  00000100D69F2642  000002000A949FBC  00000200421ECA90  000002007F23591F  0101000010C8D1D1  010200002FF096C6  01030000797942BF  010400008220152B  01040000EDB6FAB8  
+	000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+		00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+			000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+				0101000010C8D1D1 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@10 | "__000001006FFC27BC_000000" | 00010000373B5A0D
+					01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+				010200002FF096C6 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@15 | "__000001006FFC27BC_000001" | 000200003820F8F4
+					01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+				01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+				000001008F3DDCE4 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/common.gosasset_d"
+					00000100D69F2642 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d"
+						01040000EDB6FAB8 | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@5 | "facciaTexture" | 000400005D9D7C19
+						010400008220152B | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@15 | "faccia256Texture" | 000400002435BBE1
+			0101000010C8D1D1 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@10 | "__000001006FFC27BC_000000" | 00010000373B5A0D
+				01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+		000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+			000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+				0101000010C8D1D1 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@10 | "__000001006FFC27BC_000000" | 00010000373B5A0D
+					01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+				010200002FF096C6 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@15 | "__000001006FFC27BC_000001" | 000200003820F8F4
+					01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+				01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+				000001008F3DDCE4 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/common.gosasset_d"
+					00000100D69F2642 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d"
+						01040000EDB6FAB8 | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@5 | "facciaTexture" | 000400005D9D7C19
+						010400008220152B | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@15 | "faccia256Texture" | 000400002435BBE1
+			010200002FF096C6 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@15 | "__000001006FFC27BC_000001" | 000200003820F8F4
+				01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+
+-----------------+--------------+--------------------------------
+00000200CC5475E8 | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader" 
+
+  depends on (2): 000002000FEE1467  00000200F7AD06F1  
+	000002000FEE1467 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+		00000200F7AD06F1 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+
+  required by (3): 000001005AE712C7  0101000052727FF9  01020000FCB4A1ED  
+	000001005AE712C7 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+		0101000052727FF9 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 00010000B896893B
+		01020000FCB4A1ED | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 00020000A8A6D10E
+	0101000052727FF9 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 00010000B896893B
+
+-----------------+--------------+--------------------------------
+00000200E1F20CE6 | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader" 
+
+  depends on (0): 
+
+  required by (10): 000001002C302F59  00000100F553CE57  010100001FE3F6DE  010100006727BFD5  0102000093D50934  01020000A2BED042  01020000D4212EB4  01030000183877BB  010300001C83B832  01030000BDA180F1  
+	000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+		0102000093D50934 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@3 | "PS-1" | 00020000E8F99D1A
+			01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+		01020000A2BED042 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@9 | "PS-2" | 000200004B8E6AAA
+		00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+			010100001FE3F6DE | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@10 | "__00000100F553CE57_000001" | 0001000056033D20
+				01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+			01020000D4212EB4 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" | 00020000E8F99D1A
+				01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+				010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+			010100006727BFD5 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@22 | "vs-per-pipe1" | 00010000F574CA90
+				010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+			01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+	01020000A2BED042 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@9 | "PS-2" | 000200004B8E6AAA
+
+-----------------+--------------+--------------------------------
+00000200EFD2EB6D | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader" 
+
+  depends on (0): 
+
+  required by (15): 0000010027DAF7D2  00000100F553CE57  010100001FE3F6DE  010100004D4EA475  010100004F9D3C62  0101000062C472A3  010100006727BFD5  0101000071D07976  010100008E808B62  01010000A5CB4003  01010000AD37CECC  01020000D4212EB4  01030000183877BB  010300001C83B832  01030000BDA180F1  
+	0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		0101000062C472A3 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "__0000010027DAF7D2_000000" | 0001000056033D20
+		010100004D4EA475 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@8 | "VS-1" | 0001000056033D20
+			01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+		01010000AD37CECC | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@15 | "VS-2" | 00010000F574CA90
+		010100008E808B62 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@22 | "__0000010027DAF7D2_000001" | 00010000F9172A9E
+		01010000A5CB4003 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@29 | "__0000010027DAF7D2_000002" | 00010000F9172A9E
+		010100004F9D3C62 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@36 | "VS-1-d1-d2-d3" | 00010000F9172A9E
+		0101000071D07976 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@44 | "alias-VS-1-d1-d2-d3" | 00010000F9172A9E
+		00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+			010100001FE3F6DE | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@10 | "__00000100F553CE57_000001" | 0001000056033D20
+				01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+			01020000D4212EB4 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" | 00020000E8F99D1A
+				01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+				010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+			010100006727BFD5 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@22 | "vs-per-pipe1" | 00010000F574CA90
+				010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+			01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+	01010000AD37CECC | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@15 | "VS-2" | 00010000F574CA90
+	00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		010100001FE3F6DE | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@10 | "__00000100F553CE57_000001" | 0001000056033D20
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+		01020000D4212EB4 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" | 00020000E8F99D1A
+			01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+		010100006727BFD5 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@22 | "vs-per-pipe1" | 00010000F574CA90
+			010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+		01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+	010100006727BFD5 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@22 | "vs-per-pipe1" | 00010000F574CA90
+		010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+
+-----------------+--------------+--------------------------------
+00000200F7AD06F1 | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader" 
+
+  depends on (0): 
+
+  required by (6): 000001005AE712C7  000002000FEE1467  0000020084DE20C4  00000200CC5475E8  0101000052727FF9  01020000FCB4A1ED  
+	000002000FEE1467 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+		00000200CC5475E8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader"
+			000001005AE712C7 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+				0101000052727FF9 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 00010000B896893B
+				01020000FCB4A1ED | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 00020000A8A6D10E
+			0101000052727FF9 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 00010000B896893B
+		0000020084DE20C4 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader"
+			000001005AE712C7 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+				0101000052727FF9 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" | 00010000B896893B
+				01020000FCB4A1ED | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 00020000A8A6D10E
+			01020000FCB4A1ED | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" | 00020000A8A6D10E
+
+-----------------+--------------+--------------------------------
+000003002F66EED2 | image        | "C:/rhea/rheaSRC/gos2023/engine/common_assets/images/faccia512x512.jpg" 
+
+  depends on (0): 
+
+  required by (3): 00000100D69F2642  010400008220152B  01040000EDB6FAB8  
+	00000100D69F2642 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d"
+		01040000EDB6FAB8 | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@5 | "facciaTexture" | 000400005D9D7C19
+		010400008220152B | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@15 | "faccia256Texture" | 000400002435BBE1
+	01040000EDB6FAB8 | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@5 | "facciaTexture" | 000400005D9D7C19
+
+-----------------+--------------+--------------------------------
+00000300C6716E64 | image        | "C:/rhea/rheaSRC/gos2023/engine/common_assets/images/Tiling_procedural_textures.png" 
+
+  depends on (0): 
+
+  required by (3): 00000100D69F2642  010400008220152B  01040000EDB6FAB8  
+	00000100D69F2642 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d"
+		01040000EDB6FAB8 | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@5 | "facciaTexture" | 000400005D9D7C19
+		010400008220152B | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@15 | "faccia256Texture" | 000400002435BBE1
+	010400008220152B | v-asset  | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@15 | "faccia256Texture" | 000400002435BBE1
+
+
+
+========================== VIRTUAL ASSETS LIST ==========================
+
+Asset UID        | Type         | Declared in                | runtimeName-list
+-----------------+--------------+--------------------------------
+0101000010C8D1D1 | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@10 | "__000001006FFC27BC_000000" 
+
+  depends on (6): 000001006FFC27BC  000002000A949FBC  00000200421ECA90  000002007F23591F  00000200BECB843C  00010000373B5A0D  
+	000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+		000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+			000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+				00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+		00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+			000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+				00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+	00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+		000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+			00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+	00010000373B5A0D | asset    | 
+
+  required by (1): 01030000797942BF  
+	01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+
+-----------------+--------------+--------------------------------
+010100001FE3F6DE | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@10 | "__00000100F553CE57_000001" 
+
+  depends on (8): 0000010027DAF7D2  000001002C302F59  00000100F553CE57  0000020003308E33  000002000D1069B8  00000200E1F20CE6  00000200EFD2EB6D  0001000056033D20  
+	00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+			0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+			00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+		000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+			000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+			00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	0001000056033D20 | asset    | 
+
+  required by (1): 01030000BDA180F1  
+	01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+
+-----------------+--------------+--------------------------------
+010100004D4EA475 | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@8 | "VS-1" 
+
+  depends on (4): 0000010027DAF7D2  0000020003308E33  00000200EFD2EB6D  0001000056033D20  
+	0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	0001000056033D20 | asset    | 
+
+  required by (1): 01030000183877BB  
+	01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+
+-----------------+--------------+--------------------------------
+010100004F9D3C62 | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@36 | "VS-1-d1-d2-d3" 
+
+  depends on (4): 0000010027DAF7D2  0000020003308E33  00000200EFD2EB6D  00010000F9172A9E  
+	0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	00010000F9172A9E | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+0101000052727FF9 | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@1 | "VS-phong" 
+
+  depends on (6): 000001005AE712C7  000002000FEE1467  0000020084DE20C4  00000200CC5475E8  00000200F7AD06F1  00010000B896893B  
+	000001005AE712C7 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+		0000020084DE20C4 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader"
+			000002000FEE1467 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+				00000200F7AD06F1 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+		00000200CC5475E8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader"
+			000002000FEE1467 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+				00000200F7AD06F1 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+	00000200CC5475E8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader"
+		000002000FEE1467 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+			00000200F7AD06F1 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+	00010000B896893B | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+0101000062C472A3 | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@2 | "__0000010027DAF7D2_000000" 
+
+  depends on (4): 0000010027DAF7D2  0000020003308E33  00000200EFD2EB6D  0001000056033D20  
+	0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	0001000056033D20 | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+010100006727BFD5 | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@22 | "vs-per-pipe1" 
+
+  depends on (8): 0000010027DAF7D2  000001002C302F59  00000100F553CE57  0000020003308E33  000002000D1069B8  00000200E1F20CE6  00000200EFD2EB6D  00010000F574CA90  
+	00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+			0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+			00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+		000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+			000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+			00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	00010000F574CA90 | asset    | 
+
+  required by (1): 010300001C83B832  
+	010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+
+-----------------+--------------+--------------------------------
+0101000071D07976 | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@44 | "alias-VS-1-d1-d2-d3" 
+
+  depends on (4): 0000010027DAF7D2  0000020003308E33  00000200EFD2EB6D  00010000F9172A9E  
+	0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	00010000F9172A9E | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+010100008E808B62 | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@22 | "__0000010027DAF7D2_000001" 
+
+  depends on (4): 0000010027DAF7D2  0000020003308E33  00000200EFD2EB6D  00010000F9172A9E  
+	0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	00010000F9172A9E | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+01010000A5CB4003 | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@29 | "__0000010027DAF7D2_000002" 
+
+  depends on (4): 0000010027DAF7D2  0000020003308E33  00000200EFD2EB6D  00010000F9172A9E  
+	0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+	00010000F9172A9E | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+01010000AD37CECC | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@15 | "VS-2" 
+
+  depends on (4): 0000010027DAF7D2  0000020003308E33  00000200EFD2EB6D  00010000F574CA90  
+	0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	00010000F574CA90 | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+010200002FF096C6 | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@15 | "__000001006FFC27BC_000001" 
+
+  depends on (6): 000001006FFC27BC  000002000A949FBC  00000200421ECA90  000002007F23591F  00000200BECB843C  000200003820F8F4  
+	000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+		000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+			000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+				00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+		00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+			000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+				00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+	000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+		000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+			00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+	000200003820F8F4 | asset    | 
+
+  required by (1): 01030000797942BF  
+	01030000797942BF | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" | 00030000F5A22A14
+
+-----------------+--------------+--------------------------------
+0102000093D50934 | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@3 | "PS-1" 
+
+  depends on (4): 000001002C302F59  000002000D1069B8  00000200E1F20CE6  00020000E8F99D1A  
+	000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+		000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+	000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+	00020000E8F99D1A | asset    | 
+
+  required by (1): 01030000183877BB  
+	01030000183877BB | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" | 000300008AAE5F1C
+
+-----------------+--------------+--------------------------------
+01020000A2BED042 | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@9 | "PS-2" 
+
+  depends on (4): 000001002C302F59  000002000D1069B8  00000200E1F20CE6  000200004B8E6AAA  
+	000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+		000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+	00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+	000200004B8E6AAA | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+01020000D4212EB4 | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" 
+
+  depends on (8): 0000010027DAF7D2  000001002C302F59  00000100F553CE57  0000020003308E33  000002000D1069B8  00000200E1F20CE6  00000200EFD2EB6D  00020000E8F99D1A  
+	00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+			0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+			00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+		000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+			000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+			00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+	00020000E8F99D1A | asset    | 
+
+  required by (2): 010300001C83B832  01030000BDA180F1  
+	01030000BDA180F1 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" | 00030000331831F3
+	010300001C83B832 | v-asset  | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" | 000300000A28F560
+
+-----------------+--------------+--------------------------------
+01020000FCB4A1ED | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d@6 | "PS-phong" 
+
+  depends on (6): 000001005AE712C7  000002000FEE1467  0000020084DE20C4  00000200CC5475E8  00000200F7AD06F1  00020000A8A6D10E  
+	000001005AE712C7 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/phong.gosasset_d"
+		0000020084DE20C4 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader"
+			000002000FEE1467 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+				00000200F7AD06F1 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+		00000200CC5475E8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.vert.shader"
+			000002000FEE1467 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+				00000200F7AD06F1 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+	0000020084DE20C4 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.frag.shader"
+		000002000FEE1467 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/phong.include.shader"
+			00000200F7AD06F1 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/phong/PIPE.include.shader"
+	00020000A8A6D10E | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+01030000183877BB | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@38 | "pipe-2" 
+
+  depends on (12): 0000010027DAF7D2  000001002C302F59  00000100F553CE57  0000020003308E33  000002000D1069B8  00000200E1F20CE6  00000200EFD2EB6D  0001000056033D20  00020000E8F99D1A  000300008AAE5F1C  010100004D4EA475  0102000093D50934  
+	00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+			0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+			00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+		000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+			000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+			00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	000300008AAE5F1C | asset    | 
+	010100004D4EA475 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d@8 | "VS-1" | 0001000056033D20
+		0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+			0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+			00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		0001000056033D20 | asset    | 
+	0102000093D50934 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d@3 | "PS-1" | 00020000E8F99D1A
+		000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+			000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+			00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+		000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00020000E8F99D1A | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+010300001C83B832 | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@29 | "pipe-1" 
+
+  depends on (12): 0000010027DAF7D2  000001002C302F59  00000100F553CE57  0000020003308E33  000002000D1069B8  00000200E1F20CE6  00000200EFD2EB6D  00010000F574CA90  00020000E8F99D1A  000300000A28F560  010100006727BFD5  01020000D4212EB4  
+	00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+			0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+			00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+		000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+			000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+			00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	000300000A28F560 | asset    | 
+	010100006727BFD5 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@22 | "vs-per-pipe1" | 00010000F574CA90
+		00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+			0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+				0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+				00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+			000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+				000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+				00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+			0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+			000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+			00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+		00010000F574CA90 | asset    | 
+	01020000D4212EB4 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" | 00020000E8F99D1A
+		00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+			0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+				0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+				00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+			000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+				000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+				00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+			0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+			000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+			00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+		000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00020000E8F99D1A | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+01030000797942BF | pipe         | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@1 | "GOS__pipe_phong" 
+
+  depends on (10): 000001006FFC27BC  000002000A949FBC  00000200421ECA90  000002007F23591F  00000200BECB843C  00010000373B5A0D  000200003820F8F4  00030000F5A22A14  0101000010C8D1D1  010200002FF096C6  
+	000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+		000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+			000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+				00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+		00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+			000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+				00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+	00030000F5A22A14 | asset    | 
+	0101000010C8D1D1 | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@10 | "__000001006FFC27BC_000000" | 00010000373B5A0D
+		000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+			000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+				000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+					00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+			00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+				000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+					00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+		00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+			000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+				00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+		00010000373B5A0D | asset    | 
+	010200002FF096C6 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d@15 | "__000001006FFC27BC_000001" | 000200003820F8F4
+		000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+			000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+				000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+					00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+			00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+				000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+					00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+		000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+			000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+				00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+		000200003820F8F4 | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+01030000BDA180F1 | pipe         | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@6 | "__00000100F553CE57_000000" 
+
+  depends on (12): 0000010027DAF7D2  000001002C302F59  00000100F553CE57  0000020003308E33  000002000D1069B8  00000200E1F20CE6  00000200EFD2EB6D  0001000056033D20  00020000E8F99D1A  00030000331831F3  010100001FE3F6DE  01020000D4212EB4  
+	00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+		0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+			0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+			00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+		000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+			000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+			00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+	00030000331831F3 | asset    | 
+	010100001FE3F6DE | v-asset  | vtx_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@10 | "__00000100F553CE57_000001" | 0001000056033D20
+		00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+			0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+				0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+				00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+			000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+				000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+				00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+			0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+			000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+			00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+		0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+		0001000056033D20 | asset    | 
+	01020000D4212EB4 | v-asset  | pxl_shader   | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d@15 | "ps-per-pipe1" | 00020000E8F99D1A
+		00000100F553CE57 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/pipe.gosasset_d"
+			0000010027DAF7D2 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/vs.gosasset_d"
+				0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+				00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+			000001002C302F59 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/subfolder_01/ps.gosasset_d"
+				000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+				00000200E1F20CE6 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps2.shader"
+			0000020003308E33 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs1.shader"
+			000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+			00000200EFD2EB6D | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/vs2.shader"
+		000002000D1069B8 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/shader/ps1.shader"
+		00020000E8F99D1A | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+010400008220152B | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@15 | "faccia256Texture" 
+
+  depends on (10): 000001006FFC27BC  000001008F3DDCE4  00000100D69F2642  000002000A949FBC  00000200421ECA90  000002007F23591F  00000200BECB843C  000003002F66EED2  00000300C6716E64  000400002435BBE1  
+	00000100D69F2642 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d"
+		000001008F3DDCE4 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/common.gosasset_d"
+			000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+				000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+					000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+						00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+				00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+					000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+						00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+		000003002F66EED2 | resource | image        | "C:/rhea/rheaSRC/gos2023/engine/common_assets/images/faccia512x512.jpg"
+		00000300C6716E64 | resource | image        | "C:/rhea/rheaSRC/gos2023/engine/common_assets/images/Tiling_procedural_textures.png"
+	00000300C6716E64 | resource | image        | "C:/rhea/rheaSRC/gos2023/engine/common_assets/images/Tiling_procedural_textures.png"
+	000400002435BBE1 | asset    | 
+
+  required by (0): 
+
+-----------------+--------------+--------------------------------
+01040000EDB6FAB8 | tex2D        | C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d@5 | "facciaTexture" 
+
+  depends on (10): 000001006FFC27BC  000001008F3DDCE4  00000100D69F2642  000002000A949FBC  00000200421ECA90  000002007F23591F  00000200BECB843C  000003002F66EED2  00000300C6716E64  000400005D9D7C19  
+	00000100D69F2642 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/texture.gosasset_d"
+		000001008F3DDCE4 | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/bin/assetBuilder2/writable/test1/asset_src/common.gosasset_d"
+			000001006FFC27BC | resource | gosasset_d   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/main.gosasset_d"
+				000002000A949FBC | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.frag.shader"
+					000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+						00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+				00000200421ECA90 | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.vert.shader"
+					000002007F23591F | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/phong.include.shader"
+						00000200BECB843C | resource | shader_txt   | "C:/rhea/rheaSRC/gos2023/engine/common_assets/pipe__renderer_phong/PIPE.include.shader"
+		000003002F66EED2 | resource | image        | "C:/rhea/rheaSRC/gos2023/engine/common_assets/images/faccia512x512.jpg"
+		00000300C6716E64 | resource | image        | "C:/rhea/rheaSRC/gos2023/engine/common_assets/images/Tiling_procedural_textures.png"
+	000003002F66EED2 | resource | image        | "C:/rhea/rheaSRC/gos2023/engine/common_assets/images/faccia512x512.jpg"
+	000400005D9D7C19 | asset    | 
+
+  required by (0): 
+

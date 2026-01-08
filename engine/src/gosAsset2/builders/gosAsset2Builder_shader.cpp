@@ -8,7 +8,7 @@ using namespace gos;
 using namespace gos::asset2;
 
 //************************************
-bool Builder_shader::priv_extractParams (const char *absFilename, const IniFileSection *sec, Params *out_params)
+bool Builder_shader::priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, const IniFileSection *sec, Params *out_params)
 {
     assert (NULL != sec);
     assert (NULL != out_params);
@@ -22,7 +22,8 @@ bool Builder_shader::priv_extractParams (const char *absFilename, const IniFileS
         logger->log(eTextColor::red, "line %d => can't find param <src>\n", sec->getLineStarted());
         return false;
     }
-    prot_makeABSPathFromFilename (absFilename, s, out_params->src, sizeof(out_params->src));
+    if (!asset2::Builder::makeABSPathFromFilename (ctx, logger, listof_UID_of_known_ini_file, absFilename, s, out_params->src, sizeof(out_params->src)))
+        return false;
 
 
 
@@ -56,7 +57,7 @@ bool Builder_shader::priv_extractParams (const char *absFilename, const IniFileS
             return false;
         });
 
-        const u32 n = list.getNElem();
+        u32 n = list.getNElem();
         assert (n>0);
         sprintf_s (out_params->def, sizeof(out_params->def), "%s", list(0).getBuffer());
         for (u32 i=1; i<n; i++)
@@ -64,6 +65,15 @@ bool Builder_shader::priv_extractParams (const char *absFilename, const IniFileS
             strcat_s (out_params->def, sizeof(out_params->def), " ");
             strcat_s (out_params->def, sizeof(out_params->def), list(i).getBuffer());
         }
+
+#ifdef _DEBUG
+        //per lo meno nella versione WINDOWS, la sprintf_s in versione DEBUG riempe out_params->def di 0xFE, probabilmente per detectare
+        //i buffer overflow. Il fatto di avere degli 0xFE al posto dei normali 0x00 che ci dovrebbero essere, altera il calcolo dell'asset UID visto
+        //che il buffer che fornisco a prot_setupVirtualAsset() e' diverso nella versione debug rispetto alla versione release.
+        //Per fixare la cosa, riempo di 0x00 la parte non usata di out_params->def
+        n = (u32)strlen(out_params->def);
+        memset (&out_params->def[n], 0x00, sizeof(out_params->def)-n);
+#endif
     }
 
 
@@ -83,7 +93,7 @@ bool Builder_shader::priv_extractParams (const char *absFilename, const IniFileS
 }
 
 //************************************
-bool Builder_shader::build (DBContext &ctx, u64 buildTime_UTC, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result)
+bool Builder_shader::build (DBContext &ctx, u64 buildTime_UTC, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result)
 {
     assert (ctx.isValid());
     assert (NULL != sec);
@@ -93,12 +103,12 @@ bool Builder_shader::build (DBContext &ctx, u64 buildTime_UTC, const char *absFi
 
     //parse della sezione
     Params params;
-    if (!priv_extractParams(absFilename, sec, &params))
+    if (!priv_extractParams(ctx, listof_UID_of_known_ini_file, absFilename, sec, &params))
         return false;
 
     //il parametro src indica una risorsa eResType::shader_txt da cui io dipendo
     //La risorsa deve esistere nel DB. Se non c'e' gia', al devo inserire
-    if (!prot_needResource (ctx, eResType::shader_txt, params.src, &params.uid__resource_shader_txt))
+    if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::shader_txt, params.src, &params.uid__resource_shader_txt))
     {
         logger->log (eTextColor::red, "resource [%s] '%s' not found in DB\n", asset2::enumToString(eResType::shader_txt), params.src);
         return false;

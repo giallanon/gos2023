@@ -1,6 +1,7 @@
 @include: vs.gosasset_d
 @include: subfolder_01/ps.gosasset_d
 
+
 //PIPE noname
 @pipe
 {

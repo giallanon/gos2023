@@ -26,6 +26,8 @@ namespace gos
 
             static void         save_asset_manifest (const char *baseFolder, const char *dbName = NULL);
 
+            static bool         makeABSPathFromFilename (DBContext &ctx, gos::Logger *logger, const UniqueUIDList &listof_UID_of_known_ini_file, const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out);
+
 		public:
 						Builder (gos::GPU *gpuIN);
 						~Builder();
@@ -33,7 +35,7 @@ namespace gos
                         template<class TBUILDER>
             bool        addBuilder ()
                         {
-                            TBUILDER *builder = GOSNEW(localAllocator, TBUILDER)(this);
+                            TBUILDER *builder = GOSNEW(localAllocator, TBUILDER)();
                             if (priv_addBuilder(builder))
                                 return true;
                             GOSDELETE(localAllocator, builder);
@@ -44,10 +46,6 @@ namespace gos
 			bool		build (const char *baseFolder, bool bVerbose);
 
             bool        debug_sanityCheck (const char *baseFolder);
-
-
-        public:
-            bool        internal__makeABSPathFromFilename (const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out) const;
 
         private:
             enum class eBuildStatus : u8
@@ -97,15 +95,18 @@ namespace gos
 			bool		priv_gosassetd_scan_folder (DBContext &ctx, const char *folder_path, HashedStringList *out_listof_gosassetd_toRebuild) const;
             bool        priv_gosassetd_scan_folder_parse (DBContext &ctx, const char *filename, HashedStringList *out_listof_gosassetd_toRebuild) const;
             bool        priv_gosassetd_build (DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UniqueUIDList *out_listOfBuiltAssets);
-            bool        priv_gosassetd_build_parseIncludeSection (DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sub, UniqueStringList &in_out_listof_knownRTname, UniqueUIDList *out_listOfBuiltAssets);
-            bool        priv_gosassetd_build_parseAliasSection (const char *absFilename, const gos::IniFileSection *sub);
-            bool        priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFile, u32 &in_out_nextAnonymAssetName, UniqueStringList &in_out_listof_knownRTname, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets);
+            bool        priv_gosassetd_build_parseIncludeSection (DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sub, 
+                                                                    UniqueStringList &in_out__listof_knownRTname, 
+                                                                    UniqueUIDList &in_out__listof_UID_of_known_ini_file,
+                                                                    UniqueUIDList *out_listOfBuiltAssets);
+            bool        priv_gosassetd_build_parseAliasSection (DBContext &ctx, UID uid_of_iniFile, const char *absFilename, const gos::IniFileSection *sub);
+            bool        priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFile, u32 &in_out_nextAnonymAssetName, 
+                                                     UniqueStringList &in_out_listof_knownRTname, 
+                                                     const UniqueUIDList &listof_UID_of_known_ini_file, 
+                                                     const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets);
 
             BuilderInterface*   priv_findBuilderByClassName (const char *assetClassName) const;
             
-            u32         priv_alias_findIndexByName (const char *alias) const;
-            void        priv_alias_deleteAll();
-
             bool        debug_sanityCheck__compareDB (DBContext &ctxSanity, const char *baseFolder);
             u32         debug_sanityCheck__count (db::RST &rst) const;
             bool        debug_sanityCheck__compare (db::RST &rst1, db::RST &rst2, u32 rowIndex) const;
@@ -118,7 +119,6 @@ namespace gos
             gos::LoggerNull     loggerNull;
             gos::LoggerStdout   loggerStdout;
             BuilderInterface    *builderList[NUM_MAX_BUILDERS];
-            gos::FastArray<sAlias>  aliasList;
 
             u64                 buildTime_UTC;
 

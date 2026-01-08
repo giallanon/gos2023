@@ -20,7 +20,6 @@ Builder::Builder(gos::GPU *gpuIN)
 	gpu = gpuIN;
 	localAllocator = gos::getSysHeapAllocator();
 	logger = &loggerStdout;
-	aliasList.setup (localAllocator, 256);
 
 	memset (builderList, 0, sizeof(builderList));
 	addBuilder<Builder_vtxShader>();
@@ -32,9 +31,6 @@ Builder::Builder(gos::GPU *gpuIN)
 //****************************** 
 Builder::~Builder()
 {
-	priv_alias_deleteAll();
-	aliasList.unsetup();
-
 	for (u32 i=0; i<NUM_MAX_BUILDERS; i++)
 	{
 		if (NULL != builderList[i])
@@ -222,7 +218,7 @@ bool Builder::debug_sanityCheck__compareDB (DBContext &ctxSanity, const char *ba
 	if (!debug_sanityCheck__cmp_table (ctxSanity, ctx, s, GOS_ASSET2__TABLE_DEPENDS_RUNTIME))
 		ret = false;
 
-	sprintf_s (s, sizeof(s), "SELECT UID,UID_ini,line,UID_asset FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " ORDER BY UID,UID_ini,line,UID_asset");
+	sprintf_s (s, sizeof(s), "	");
 	if (!debug_sanityCheck__cmp_table (ctxSanity, ctx, s, GOS_ASSET2__TABLE_VIRTUAL_ASSET))
 		ret = false;
 
@@ -286,7 +282,10 @@ bool Builder::debug_sanityCheck__cmp_table (DBContext &ctx_sanity, DBContext &ct
             if (!debug_sanityCheck__compare (rst1, rst2, i))
             {
                 ret = false;
-                logger->log ("table '%s', row %d => value for col '%s' differs\n", tableName, rowNum, rst1.getColName(i));
+
+				const char *v1 = rst1.getVal(i);
+				const char *v2 = rst2.getVal(i);
+                logger->log ("table '%s', row %d => value for col '%s' differs  [%s] [%s]\n", tableName, rowNum, rst1.getColName(i), v1, v2);
             }
         }
     }
@@ -371,8 +370,6 @@ bool Builder::priv_build (DBContext &ctx,  bool bDoCreateAssetFile)
 	gos::DateTime dt;
 	dt.setNow_UTC();
 	buildTime_UTC = dt.getAsNiceU64();
-
-	priv_alias_deleteAll();
 
 	HashedStringList listof_gosAssetd_toBeRebuilt(localAllocator, 256);
 	UniqueUIDList listof_possibile_assets_to_be_deleted(localAllocator, 256);
@@ -720,7 +717,8 @@ bool Builder::priv_gosassetd_build (DBContext &ctx, bool bDoCreateAssetFile, con
 	}
 
 	UniqueStringList listof_knownRTname(localAllocator, 2048);
-
+	UniqueUIDList listof_UID_of_known_ini_file(localAllocator, 32);
+	listof_UID_of_known_ini_file.insertIfNotExists(uid_of_iniFile);
 
 	//vado alla ricerca di eventuali #include
 	gos::IniFileSection *section = ini.getRoot();
@@ -743,12 +741,12 @@ bool Builder::priv_gosassetd_build (DBContext &ctx, bool bDoCreateAssetFile, con
 		bool bSkipSection = false;
 		if (0 == strcmp(assetClass, "include"))
 		{
-			if (!priv_gosassetd_build_parseIncludeSection (ctx, bDoCreateAssetFile, absFilename, uid_of_iniFile, sub, listof_knownRTname, out_listOfBuiltAssets))
+			if (!priv_gosassetd_build_parseIncludeSection (ctx, bDoCreateAssetFile, absFilename, uid_of_iniFile, sub, listof_knownRTname, listof_UID_of_known_ini_file, out_listOfBuiltAssets))
 				return false;
 		}
 		else if (0 == strcmp(assetClass, "alias"))
 		{
-			if (!priv_gosassetd_build_parseAliasSection(absFilename, sub))
+			if (!priv_gosassetd_build_parseAliasSection(ctx, uid_of_iniFile, absFilename, sub))
 				return false;
 		}
 	}
@@ -756,11 +754,11 @@ bool Builder::priv_gosassetd_build (DBContext &ctx, bool bDoCreateAssetFile, con
 
 	//buildo tutte le sezioni
 	u32 nextAnonymAssetName = 0;
-	return priv_gosassetd_buildSection (ctx, bDoCreateAssetFile, nextAnonymAssetName, listof_knownRTname, absFilename, uid_of_iniFile, ini.getRoot(), out_listOfBuiltAssets);
+	return priv_gosassetd_buildSection (ctx, bDoCreateAssetFile, nextAnonymAssetName, listof_knownRTname, listof_UID_of_known_ini_file, absFilename, uid_of_iniFile, ini.getRoot(), out_listOfBuiltAssets);
 }
 
 //****************************** 
-bool Builder::priv_gosassetd_build_parseIncludeSection (DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sub, UniqueStringList &in_out_listof_knownRTname, UniqueUIDList *out_listOfBuiltAssets)
+bool Builder::priv_gosassetd_build_parseIncludeSection (DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sub, UniqueStringList &in_out__listof_knownRTname, UniqueUIDList &in_out__listof_UID_of_known_ini_file, UniqueUIDList *out_listOfBuiltAssets)
 {
 	//recupero il path dell'include
 	char s[512];
@@ -772,7 +770,8 @@ bool Builder::priv_gosassetd_build_parseIncludeSection (DBContext &ctx, bool bDo
 	}
 
 	char absIncludePath[512];
-	internal__makeABSPathFromFilename (absFilename, s, absIncludePath, sizeof(absIncludePath));
+	if (!makeABSPathFromFilename (ctx, logger, in_out__listof_UID_of_known_ini_file, absFilename, s, absIncludePath, sizeof(absIncludePath)))
+		return false;
 
 	if (!fs::fileExists(absIncludePath))
 	{
@@ -812,15 +811,13 @@ bool Builder::priv_gosassetd_build_parseIncludeSection (DBContext &ctx, bool bDo
 
 	//qui siamo sicuri che l'include e' stata buildata con successo. 
 	//Recupero un elenco di gosasset_d da cui <uid_of_included_ini> dipende (in sostanza, tutti gli include degli include degli include..
-	UniqueUIDList listof_uid(localAllocator, 32);
-	listof_uid.reset();
-	listof_uid.insertIfNotExists(uid_of_included_ini);
-	dependency_get_dependecies_list (ctx, uid_of_included_ini, false, &listof_uid, [](const UID childUID) {
+	in_out__listof_UID_of_known_ini_file.insertIfNotExists(uid_of_included_ini);
+	dependency_get_dependecies_list (ctx, uid_of_included_ini, false, &in_out__listof_UID_of_known_ini_file, [](const UID childUID) {
 		return childUID.isAResourceOfType(eResType::gosasset_d);
 	});
 
-	//aggiungo tutti i simboli di tutti gli include degli include
-	listof_uid.forEach ([&ctx, &in_out_listof_knownRTname] (u32 index, const UID uid){
+	//aggiungo tutti gli "rtname" definiti in tutti gli include degli include
+	in_out__listof_UID_of_known_ini_file.forEach ([&ctx, &in_out__listof_knownRTname] (u32 index, const UID uid){
 		assert (uid.isAResourceOfType(eResType::gosasset_d));
 			
 
@@ -835,7 +832,7 @@ bool Builder::priv_gosassetd_build_parseIncludeSection (DBContext &ctx, bool bDo
 				const char *rtname = rst.getVal(0);
 				if (rtname[0] != '_' && rtname[1] != '_')
 				{
-					in_out_listof_knownRTname.add (rtname);
+					in_out__listof_knownRTname.add (rtname);
 				}
 			}			
 		}
@@ -846,7 +843,7 @@ bool Builder::priv_gosassetd_build_parseIncludeSection (DBContext &ctx, bool bDo
 }
 
 //****************************** 
-bool Builder::priv_gosassetd_build_parseAliasSection (const char *absFilename, const gos::IniFileSection *sub)
+bool Builder::priv_gosassetd_build_parseAliasSection (DBContext &ctx, UID uid_of_iniFile, const char *absFilename, const gos::IniFileSection *sub)
 {
 	char alias[128];
 	if (!sub->get("name", alias, sizeof(alias)))
@@ -865,13 +862,10 @@ bool Builder::priv_gosassetd_build_parseAliasSection (const char *absFilename, c
 	char alias_abs_path[1024];
 	fs::makeABSPathFromABSFilename (absFilename, path, alias_abs_path, sizeof(alias_abs_path));
 
-	const u32 index = priv_alias_findIndexByName(alias);
-	if (u32MAX == index)
+	if (!alias_get_info (ctx, alias, NULL, 0, NULL))
 	{
-		const u32 n = aliasList.getNElem();
-		aliasList[n].alias = gos::string::utf8::allocStr (localAllocator, alias);
-		aliasList[n].path = gos::string::utf8::allocStr (localAllocator, alias_abs_path);
-
+		if (!alias_insert (ctx, uid_of_iniFile, alias, alias_abs_path))
+			return false;
 		logger->log (eTextColor::grey, "line %d => new alias '%s' => '%s'\n", sub->getLineStarted(), alias, alias_abs_path);
 		return true;
 	}
@@ -883,7 +877,7 @@ bool Builder::priv_gosassetd_build_parseAliasSection (const char *absFilename, c
 }
 
 //****************************** 
-bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFile, u32 &in_out_nextAnonymAssetName, UniqueStringList &in_out_listof_knownRTname, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets)
+bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFile, u32 &in_out_nextAnonymAssetName, UniqueStringList &in_out_listof_knownRTname, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets)
 {
 	for (u32 iSec=0; iSec<section->getNSubsection(); iSec++)
 	{
@@ -951,13 +945,13 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFi
 			//di poter buildare l'asset
 			if (sub->getNSubsection())
 			{
-				if (!priv_gosassetd_buildSection (ctx, bDoCreateAssetFile, in_out_nextAnonymAssetName, in_out_listof_knownRTname, absFilename, uid_of_iniFile, sub, out_listOfBuiltAssets))
+				if (!priv_gosassetd_buildSection (ctx, bDoCreateAssetFile, in_out_nextAnonymAssetName, in_out_listof_knownRTname, listof_UID_of_known_ini_file, absFilename, uid_of_iniFile, sub, out_listOfBuiltAssets))
 					break;
 			}
 
 			sBuildResult result;
 			builder->setLogger(logger);
-			if (!builder->build (ctx, buildTime_UTC, absFilename, uid_of_iniFile, sub, bDoCreateAssetFile, &result))
+			if (!builder->build (ctx, buildTime_UTC, listof_UID_of_known_ini_file, absFilename, uid_of_iniFile, sub, bDoCreateAssetFile, &result))
 				break;
 
 			//aggiungo rt-name alla lista dei nomi noti da questo file
@@ -1002,63 +996,52 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFi
 }
 
 
-//****************************** 
-void Builder::priv_alias_deleteAll()
+//******************************************
+bool Builder::makeABSPathFromFilename (DBContext &ctx, gos::Logger *logger, const UniqueUIDList &listof_UID_of_known_ini_file, const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out)
 {
-	for (u32 i = 0; i < aliasList.getNElem(); i++)
-	{
-		GOSFREE(localAllocator, aliasList[i].alias);
-		GOSFREE(localAllocator, aliasList[i].path);
-	}
-	aliasList.reset();
-}
+	assert (NULL != logger);
+	assert (ctx.isValid());
 
-//****************************** 
-u32 Builder::priv_alias_findIndexByName (const char *alias) const
-{
-	for (u32 i = 0; i < aliasList.getNElem(); i++)
-	{
-		if (0 == strcmp (aliasList(i).alias, alias))
-			return i;
-	}
-	return u32MAX;
-}
-
-//****************************** 
-bool Builder::internal__makeABSPathFromFilename (const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out) const
-{
     if (rel_or_abs_path[0] == '<')
     {
         //inizia con una alias definito in qualche include file
-        char alias_resolved[128];
-        alias_resolved[0] = 0x00;
+        char alias[128];
+        alias[0] = 0x00;
 
         u32 i = 0;
 		while (rel_or_abs_path[i++] != 0x00)
 		{
 			if (rel_or_abs_path[i] == '>')
 			{
-				memcpy (alias_resolved, &rel_or_abs_path[1], i - 1);
-				alias_resolved[i - 1] = 0x00;
+				memcpy (alias, &rel_or_abs_path[1], i - 1);
+				alias[i - 1] = 0x00;
 				break;
 			}
 		}
-        if (0x00 == alias_resolved[0])
+        if (0x00 == alias[0])
         {
             logger->log (eTextColor::red, "invalid alias: it starts with '<' but does not end with '>' [%s]\n", rel_or_abs_path);
             return false;
         }
 
-		//cerco l'alias nella lista
-		const u32 index = priv_alias_findIndexByName(alias_resolved);
-		if (u32MAX == index)
+		//cerco l'alias nel DB
+		UID uid_of_inifile_where_alias_is_defined;
+        char alias_resolved[1024];
+		if (!alias_get_info (ctx, alias, alias_resolved, sizeof(alias_resolved), &uid_of_inifile_where_alias_is_defined))
 		{
-			logger->log (eTextColor::red, "invalid alias: [%s] was not defined\n", alias_resolved);
+			logger->log (eTextColor::red, "invalid alias: [%s] not found in DB\n", alias);
+			return false;
+		}
+
+		//ho trovato l'alias ma l'UID dell'ini file in cui l'alias e' stato definito deve essere uno degli UID che io conosco (ovvero che ho incluso)
+		if (!listof_UID_of_known_ini_file.exists (uid_of_inifile_where_alias_is_defined))
+		{
+			logger->log (eTextColor::red, "alias [%s] is not defined in this module\n", alias);
 			return false;
 		}
 
 		char s[1024];
-		sprintf_s (s, sizeof(s), "%s%s", aliasList(index).path, &rel_or_abs_path[i+1]);
+		sprintf_s (s, sizeof(s), "%s%s", alias_resolved, &rel_or_abs_path[i+1]);
 		fs::makeABSPathFromABSFilename (origin_absFilename, s, out, sizeof_out);
 		return true;
     }
@@ -1068,9 +1051,3 @@ bool Builder::internal__makeABSPathFromFilename (const char *origin_absFilename,
         return true;
     }
 }
-
-
-
-//TODO
-// gli alis definiti nei gosasset_d vanno messi nel DB in una tabella perhce' quando rebuildo un file che include un file che definisce gli alias, devo poter recuperare gli
-// alias definiti nel file incluso senza necessariamente doverlo rebuildare

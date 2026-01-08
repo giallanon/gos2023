@@ -8,6 +8,7 @@
 #define GOS_ASSET2__TABLE_ASSET_LIST        "assetList"
 #define GOS_ASSET2__TABLE_DEPENDS_RUNTIME   "dependsRT"
 #define GOS_ASSET2__TABLE_VIRTUAL_ASSET     "virtasset"
+#define GOS_ASSET2__TABLE_ALIAS             "aliases"
 
 namespace gos
 {
@@ -55,6 +56,10 @@ namespace gos
                     //elimina l'assety UID dal DB e da filesystem, eliminando anche le sue dipendenze
         bool        asset_delete (DBContext &ctx, const UID &uid);
 
+
+        //================ alias
+        bool        alias_insert (DBContext &ctx, UID uid_of_inifile, const char *alias, const char *absPath);
+        bool        alias_get_info (DBContext &ctx, const char *alias, char *out_CAN_BE_NULL_path, u32 sizeof__out_path, UID *out_CAN_BE_NULL_uid_of_inifile);
 
 
         //================ dependencies

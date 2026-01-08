@@ -119,6 +119,18 @@ PRIMARY KEY('UID','UID_ini','line'))");
 
             if (!db::exec (db, s))
                 break;
+
+
+            //table: GOS_ASSET2__TABLE_ALIAS
+            sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET2__TABLE_ALIAS " (\
+alias VARCHAR(64) NOT NULL PRIMARY KEY,\
+UID_ini UNSIGNED INT8 NOT NULL,\
+abspath VARCHAR(512) NOT NULL)\
+");
+            if (!db::exec (db, s))
+                break;
+
+
         //fine di while(1)
         return true;
     }
@@ -377,9 +389,63 @@ bool asset2::res_delete (DBContext &ctx, const UID &uid)
     sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_DEPENDS " WHERE childUID=%" PRIu64 "", uid._uid);
     db::exec (ctx.db, s);
 
+    if (uid.isAResourceOfType(eResType::gosasset_d))
+    {
+        sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_ALIAS " WHERE UID_ini=%" PRIu64 "", uid._uid);
+        db::exec (ctx.db, s);
+    }
     return true;
 }
 
+
+
+//*******************************************************
+bool asset2::alias_insert (DBContext &ctx, UID uid_of_inifile, const char *alias, const char *absPath)
+{
+    assert (uid_of_inifile.isAResourceOfType(eResType::gosasset_d));
+    assert (NULL != alias);
+    assert (NULL != absPath);
+
+    if (!ctx.isValid())
+    {
+        logger::err ("alias_insert () => invalid ctx\n");
+        return false;
+    }
+
+    char s[1024];
+    sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET2__TABLE_ALIAS " (alias,UID_ini,abspath) VALUES('%s',%" PRIu64 ",'%s');", alias, uid_of_inifile._uid, absPath);
+    if (!db::exec (ctx.db, s))
+    {
+        logger::err ("alias_insert() => error inserting into table\n");
+        return false;
+    }
+
+    return true;
+}
+
+//*******************************************************
+bool asset2::alias_get_info (DBContext &ctx, const char *alias, char *out_CAN_BE_NULL_path, u32 sizeof__out_path, UID *out_CAN_BE_NULL_uid_of_inifile)
+{
+    if (!ctx.isValid())
+    {
+        logger::err ("alias_get_info() => invalid ctx\n");
+        return false;
+    }
+
+    db::RST rst;
+    char s[128];
+    
+    sprintf_s (s, sizeof(s), "SELECT UID_ini,abspath FROM " GOS_ASSET2__TABLE_ALIAS " WHERE alias='%s'", alias);
+    if (!db::query (ctx.db, s, &rst)) return false;
+    if (rst.fetchRow())
+    {
+        if (NULL != out_CAN_BE_NULL_uid_of_inifile)         out_CAN_BE_NULL_uid_of_inifile->_uid = rst.getValAsU64(0);
+        if (NULL != out_CAN_BE_NULL_path)                   sprintf_s (out_CAN_BE_NULL_path, sizeof__out_path, "%s", rst.getVal(1));
+        return true;
+    }
+
+    return false;
+}
 
 
 

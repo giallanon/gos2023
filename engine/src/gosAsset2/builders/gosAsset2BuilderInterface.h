@@ -20,7 +20,7 @@ namespace gos
         class BuilderInterface
         {
         public:
-                            BuilderInterface (Builder *theBuilderIN, eAssetType assetTypeIN)            { assetType=assetTypeIN; logger=NULL; theBuilder=theBuilderIN; }
+                            BuilderInterface (eAssetType assetTypeIN)                                   { assetType=assetTypeIN; logger=NULL; }
             virtual         ~BuilderInterface()                                                         { }
 
             eAssetType      getAssetType() const                                                        { return assetType; }
@@ -30,23 +30,21 @@ namespace gos
 
             void            setLogger (gos::Logger *l)                                                  { logger= l; }
 
-            virtual bool    build (DBContext &ctx, u64 buildTime_UTC, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result) = 0;
+            virtual bool    build (DBContext &ctx, u64 buildTime_UTC, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result) = 0;
 
         protected:
             bool            prot_isOneOfThis (const char *paramName, ...) const;
-            bool            prot_needResource (DBContext &ctx, eResType resType, const char *absFilenameIN, UID *out_uid) const;
+            bool            prot_needResource (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, eResType resType, const char *absFilenameIN, UID *out_uid) const;
             bool            prot_needResolvedSubsection (DBContext &ctx, const gos::IniFileSection *sec, eAssetType assType, UID *out__virtual_uid) const;
             bool            prot_setupVirtualAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const;
-            bool            prot_makeABSPathFromFilename (const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out) const;
 
         protected:
             gos::Logger     *logger;
 
         private:
-            bool            priv_extractAllInludePaths (const char *absFilenameIN, gos::StringList *out) const;
+            bool            priv_extractAllInludePaths (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilenameIN, gos::StringList *out) const;
 
         private:
-            Builder         *theBuilder;
             eAssetType      assetType;    
 
         };
