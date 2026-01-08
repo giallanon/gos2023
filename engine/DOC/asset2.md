@@ -23,8 +23,8 @@ Il builder si accorge di questa cosa e associa lo stesso concrete-asset ai 2 vir
 concrete-asset anche se lo fanno utilizzando 2 diversi runtime-name.
 Ai fini del runtime, caricare lo shader usando il runtime-name-1 o il runtime-name-2 equivale a caricare lo stesso identico concrete-shader
 
-## (concrete) Asset
-E' una risorsa direttamente consumabile dall'engine e viene creata dal processo di BUILD assemblando varie <Resource>.
+## Concrete-asset
+E' l'unica risorsa direttamente consumabile dall'engine e viene creata dal processo di BUILD assemblando varie <Resource>.
 Per creare un asset, è necessario creare una sezione all'interno di un file .gosasset_d.
 Ogni <Asset> ha bisogno di un <AssetBuilder> e di un <AssetLoader> che si occupano rispettivamente di buildare la risorsa
 durante il processo di build, e di caricarla a runtime durante il normale funzionamento dell'engine.
@@ -177,3 +177,47 @@ Questi 3 virtual-asset di tipo pipeline_def generano puntano tutti allo stesso c
 "pipelinedef_7" è come "pipelinedef_6" ma, in più, aggiunge un ulteriore nuovo runtimeName allo shader "esempio_1".
 
 Alla fine del processo di build, lo shader "esempio_1" ha 3 runtimeName: "esempio_1", "esempio_2" e "mio_shader_7"
+
+
+
+### pensate per importazione model 3D ###
+
+@imported-3dmodel: <rtname>
+{
+    (mandatory) src: ...xxx.glb                         => il modello 3d da importare
+    (optional)	scale: [varie opzioni]
+                        uniform-resize-y; <number>      => dato AABB del modello, riscala il modello in maniera proporzionale affinchè la dimy di AABB sia esattamente uguale a <number>
+                        uniform-resize-x; <number>
+                        uniform-resize-z; <number>
+                        
+    (optional)	translate: [varie opzioni]
+                            center-at; <x>; <y>; <z>            => dato AABB del modello, muove il centro dell'AABB alle coordinate x,y,z
+                            bottom-center-at; <x>; <y>; <z>     => dato AABB del modello, muove il centro della faccia bottom dell'AABB alle coordinate x,y,z
+}
+
+
+
+@3dmodel
+{
+    src: <rtname-imported-3dmodel>  => crea un 3dmodel utilizzando tutte le shape/material/skeleton di un determinato <imported-3dmodel> 
+}
+
+@3dmodel
+{
+    shape:  <shape-name>;<rtname-imported-3dmodel>.<name-name>    => definisce una shape di nome <shape-name> presa dalla shape di nome <name-name> di un determinato <imported-3dmodel>
+    ...
+    shape: ...
+    
+    material: <material-name>;<rtname-imported-3dmodel>.<material-name>
+    ...
+    material: ...
+    
+    
+    skeleton: none                          => vuol dire uno skeleton di default consistente del solo nodo root automaticamente generato
+              <rtname-imported-3dmodel>     => lo sk di un determinato <imported-3dmodel>
+    
+    
+    mesh: <shape-name>;<material-name>;<bone-name>;<local-transform-matrix3x3>
+    ...
+    mesh: ...
+}

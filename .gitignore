@@ -77,3 +77,7 @@ engine/bin/testEngine/writable/data/assets/src/__build.gosasset_d
 engine/bin/testEngine/writable/debug_imported_glTF.ini
 
 engine/bin/testEngine/writable/debug_imported_glTF.json
+
+engine/bin/assetBuilder2/writable/test1/asset_bin/__asset_manifest.txt
+
+engine/bin/assetBuilder2/writable/test1/asset_bin/__dependencies.txt
