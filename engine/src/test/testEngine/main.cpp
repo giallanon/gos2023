@@ -24,9 +24,16 @@ void test_modelImport()
     gos::model::glTFImporter imp;
     gos::model::glTFImporter::Result result;
 
-    bool ret = imp.importFromFile ("/home/giallanon/gixprogram/gos2023/engine/common_assets/model3d/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
-    //bool ret = imp.importFromFile ("/home/giallanon/gixprogram/gos2023/engine/common_assets/model3d/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
-    //bool ret = imp.importFromFile ("/home/giallanon/gixprogram/gos2023/engine/common_assets/model3d/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
+#ifdef GOS_PLATFORM__WINDOWS
+    #define COMMON_PATH "C:/rhea\rheaSRC/gos2023/engine/common_assets"
+#else
+    #define COMMON_PATH "/home/giallanon/gixprogram/gos2023/engine/common_assets"
+#endif
+
+
+    bool ret = imp.importFromFile (COMMON_PATH "/model3d/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
+    //bool ret = imp.importFromFile (COMMON_PATH "/model3d/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
+    //bool ret = imp.importFromFile (COMMON_PATH "/model3d/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
 
 
     if (ret)
@@ -50,7 +57,7 @@ int main()
         return -1;
 
 
-    //test_modelImport(); return 0;
+    test_modelImport(); return 0;
 
 
     {
