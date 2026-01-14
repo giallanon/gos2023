@@ -6,6 +6,9 @@
 #include "gosEngine_scene.h"
 #include "../gos/logger/gosLoggerStdout.h"
 #include "../gosAsset2/gosAsset2.h"
+#include "line3d/gosEngine_line3d.h"
+
+
 
 namespace gos
 {
@@ -52,6 +55,11 @@ namespace gos
         //=============================
         bool            assetHub_rebuildAll();
         bool            assetHub_buildAll();
+
+        //============================= line 3d
+        Line3DCtx*      line3d_createCtx();
+        void            line3d_destroyCtx(Line3DCtx *ctx);
+
 
         //============================= vtxBuffer
         bool            vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer *out_handle);

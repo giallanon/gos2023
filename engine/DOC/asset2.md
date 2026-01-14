@@ -186,7 +186,7 @@ Alla fine del processo di build, lo shader "esempio_1" ha 3 runtimeName: "esempi
 {
     (mandatory) src: ...xxx.glb                         => il modello 3d da importare
     (optional)	scale: [varie opzioni]
-                        uniform-resize-y; <number>      => dato AABB del modello, riscala il modello in maniera proporzionale affinchè la dimy di AABB sia esattamente uguale a <number>
+                        uniform-resize-y; <number>      => dato AABB del modello, riscala il modello in maniera uniforme affinchè la dimy di AABB sia esattamente uguale a <number>
                         uniform-resize-x; <number>
                         uniform-resize-z; <number>
                         
@@ -194,27 +194,29 @@ Alla fine del processo di build, lo shader "esempio_1" ha 3 runtimeName: "esempi
                             center-at; <x>; <y>; <z>            => dato AABB del modello, muove il centro dell'AABB alle coordinate x,y,z
                             bottom-center-at; <x>; <y>; <z>     => dato AABB del modello, muove il centro della faccia bottom dell'AABB alle coordinate x,y,z
 }
+Questo genera N asset di tipo shape, M asset di tipo Material (che a sua volta possono riferire ad asset di tipo Texture), J asset
+di tipo Skeleton
 
 
 
-@3dmodel
+@3dmodel: <rtname>
 {
-    src: <rtname-imported-3dmodel>  => crea un 3dmodel utilizzando tutte le shape/material/skeleton di un determinato <imported-3dmodel> 
+    src: <rtname-of-imported-3dmodel>  => crea un 3dmodel utilizzando tutte le shape/material/skeleton di un determinato <imported-3dmodel> 
 }
 
-@3dmodel
+@3dmodel: <rtname>
 {
-    shape:  <shape-name>;<rtname-imported-3dmodel>.<name-name>    => definisce una shape di nome <shape-name> presa dalla shape di nome <name-name> di un determinato <imported-3dmodel>
+    shape:  <shape-name>;<rtname-of-imported-3dmodel>.<name>    => definisce una shape di nome <shape-name> presa dalla shape di nome <name> di un determinato <imported-3dmodel>
     ...
     shape: ...
     
-    material: <material-name>;<rtname-imported-3dmodel>.<material-name>
+    material: <material-name>;<rtname-of-imported-3dmodel>.<material-name>
     ...
     material: ...
     
     
     skeleton: none                          => vuol dire uno skeleton di default consistente del solo nodo root automaticamente generato
-              <rtname-imported-3dmodel>     => lo sk di un determinato <imported-3dmodel>
+              <rtname-of-imported-3dmodel>     => lo sk di un determinato <imported-3dmodel>
     
     
     mesh: <shape-name>;<material-name>;<bone-name>;<local-transform-matrix3x3>

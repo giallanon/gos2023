@@ -29,6 +29,9 @@ entity/gosEntityRegistry.cpp
 entity/gosEntityRegistry.h
 entity/gosEntityUniqueList.h
 
+line3d/gosEngine_line3d.cpp
+line3d/gosEngine_line3d.h
+
 model/gosModel.cpp
 model/gosModel.h
 model/gosModelBuilder.cpp
