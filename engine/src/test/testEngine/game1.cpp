@@ -283,26 +283,33 @@ bool Game1::priv_createShapes()
 			return false;
 	}
 
-	//staging buffer per la copia di VB/IB in GPU
-	GPUStgBufferHandle stgBufferHandle;
-	engine->gpu->stagingBuffer_create (8192, &stgBufferHandle);
-
-	GPUCmdBufferHandle cmdBufferHandle;
-	if (!engine->gpu->cmdBuffer_create (eGPUQueueFamily::transfer, &cmdBufferHandle))
-		return false;
 
 
-	//creo una engine::shape
-	handle_gpushape_cube = priv_create_engineShape(stgBufferHandle, cmdBufferHandle, &shape_cube);
+	engine->utils__quick_and_dirty__create_GPUSHape_and_stageIt_to_VB_IB (&shape_cube, &handle_gpushape_cube); 
 	shape::shapeFree (allocator, &shape_cube);
-
-
-	handle_gpushape_cyl = priv_create_engineShape (stgBufferHandle, cmdBufferHandle, &shape_cylinder);
+	engine->utils__quick_and_dirty__create_GPUSHape_and_stageIt_to_VB_IB (&shape_cylinder, &handle_gpushape_cyl); 
 	shape::shapeFree (allocator, &shape_cylinder);
 
+	////staging buffer per la copia di VB/IB in GPU
+	//GPUStgBufferHandle stgBufferHandle;
+	//engine->gpu->stagingBuffer_create (8192, &stgBufferHandle);
 
-	engine->gpu->deleteResource(cmdBufferHandle);
-	engine->gpu->deleteResource(stgBufferHandle);
+	//GPUCmdBufferHandle cmdBufferHandle;
+	//if (!engine->gpu->cmdBuffer_create (eGPUQueueFamily::transfer, &cmdBufferHandle))
+	//	return false;
+
+
+	////creo una engine::shape
+	//handle_gpushape_cube = priv_create_engineShape(stgBufferHandle, cmdBufferHandle, &shape_cube);
+	//shape::shapeFree (allocator, &shape_cube);
+
+
+	//handle_gpushape_cyl = priv_create_engineShape (stgBufferHandle, cmdBufferHandle, &shape_cylinder);
+	//shape::shapeFree (allocator, &shape_cylinder);
+
+
+	//engine->gpu->deleteResource(cmdBufferHandle);
+	//engine->gpu->deleteResource(stgBufferHandle);
 	return true;
 }
 

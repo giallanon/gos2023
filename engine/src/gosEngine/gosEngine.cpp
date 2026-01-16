@@ -754,6 +754,53 @@ bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, c
     return true;
 }
 
+//*******************************************
+void Engine::utils__quick_and_dirty__create_GPUSHape_and_stageIt_to_VB_IB (const gos::Shape *shapeSRC, ENGGPUShape *out_handle)
+{
+    if (!GPUShape_create (shapeSRC, out_handle))
+    {
+        DBGBREAK;
+        return;
+    }
+
+    const u32 SIZE_OF_IDX = shapeSRC->numIdx * sizeof(u16);
+    const u32 SIZE_OF_VTX = shape::calcSizeOfAVertex(shapeSRC->vtxLayout) * shapeSRC->numVtx;
+    const u32 SIZE_OF_STAGE_BUFFER = SIZE_OF_IDX + SIZE_OF_VTX;
+
+    GPUStgBufferHandle stgBufferHandle;
+    gpu->stagingBuffer_create (SIZE_OF_STAGE_BUFFER, &stgBufferHandle);
+    gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shapeSRC->idxBuffer, SIZE_OF_IDX);
+    gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shapeSRC->vtxBuffer, SIZE_OF_VTX);
+
+    const engine::ResGPUShape *shapeInfo;
+    if (!get (*out_handle, &shapeInfo))
+    {
+        DBGBREAK;
+        return;
+    }
+
+    //creo un job per pushare lo stage buffer in VB/IB
+    GPUCmdBufferHandle cmdBufferHandle;
+    gpu->cmdBuffer_create (eGPUQueueFamily::transfer, &cmdBufferHandle);
+
+    gos::gpu::pipe2::CmdBufferWriter2 cw;
+    cw.begin (gpu, cmdBufferHandle)
+        .copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, shapeInfo->alloc_idxbuf_offset, SIZE_OF_IDX)
+        .copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, shapeInfo->alloc_vtxbuf_offset, SIZE_OF_VTX)
+        .end();
+
+    gpu::TransferJob job;
+    job.setup (gpu);
+    job.submit(cmdBufferHandle);
+
+    while (!job.hasFinished())
+    {
+    }
+
+	gpu->deleteResource(cmdBufferHandle);
+	gpu->deleteResource(stgBufferHandle);
+
+}
 
 
 

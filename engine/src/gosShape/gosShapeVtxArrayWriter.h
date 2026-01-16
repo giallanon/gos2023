@@ -103,6 +103,7 @@ namespace gos
 						return out->isValid();
 					}
 
+			bool 	getPos2 (Elem<vec2f> *out)							{ return get<vec2f> (eVtxLayoutSemantic::position, 0, eDataFormat::_2f32, out); }
 			bool 	getPos3 (Elem<vec3f> *out)							{ return get<vec3f> (eVtxLayoutSemantic::position, 0, eDataFormat::_3f32, out); }
 			bool 	getNorm3 (Elem<vec3f> *out)							{ return get<vec3f> (eVtxLayoutSemantic::normal, 0, eDataFormat::_3f32, out); }
 			bool 	getTexCoord (Elem<vec2f> *out, u8 index=0)			{ return get<vec2f> (eVtxLayoutSemantic::texCoord, index, eDataFormat::_2f32, out); }

@@ -1,6 +1,8 @@
+@include: common.gosasset_d
+
 @tex2D: tex_bianca
 {
-	src: /home/giallanon/gixprogram/gos2023/engine/common_assets/images/bianca.png
+	src: <common_assets>/images/bianca.png
 	srcColorSpace:	sRGB
 
 	dstNumMipMap: 1
@@ -10,7 +12,7 @@
 
 @tex2D: tex_checker
 {
-	src: /home/giallanon/gixprogram/gos2023/engine/common_assets/images/checker_color_1k.jpg
+	src: <common_assets>/images/checker_color_1k.jpg
 	srcColorSpace:	sRGB
 
 	dstNumMipMap: max

@@ -89,6 +89,7 @@ namespace gos
 										return *this;
 									}
 
+			VtxLayoutWriter&		addPos2 (u32 offset, u8 index=0) 													{ return add (offset, eVtxLayoutSemantic::position, index, eDataFormat::_2f32); }
 			VtxLayoutWriter&		addPos3 (u32 offset, u8 index=0) 													{ return add (offset, eVtxLayoutSemantic::position, index, eDataFormat::_3f32); }
 			VtxLayoutWriter&		addNorm3 (u32 offset, u8 index=0) 													{ return add (offset, eVtxLayoutSemantic::normal, index, eDataFormat::_3f32); }
 			VtxLayoutWriter&		addTexCoord (u32 offset, u8 index=0) 												{ return add (offset, eVtxLayoutSemantic::texCoord, index, eDataFormat::_2f32); }

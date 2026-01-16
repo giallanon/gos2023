@@ -1,2 +1,8 @@
+@alias
+{
+	name: common_assets
+	path: ../../../../../common_assets
+}
+
 //renderer per gos-engine
-@include: /home/giallanon/gixprogram/gos2023/engine/common_assets/gosengine/pipe3/main.gosasset_d
+@include: <common_assets>//gosengine/pipe3/main.gosasset_d

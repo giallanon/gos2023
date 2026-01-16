@@ -6,7 +6,7 @@
 #include "gosEngine_scene.h"
 #include "../gos/logger/gosLoggerStdout.h"
 #include "../gosAsset2/gosAsset2.h"
-#include "line3d/gosEngine_line3d.h"
+#include "line3d/gosEngine_rend_line2d.h"
 
 
 
@@ -56,9 +56,8 @@ namespace gos
         bool            assetHub_rebuildAll();
         bool            assetHub_buildAll();
 
-        //============================= line 3d
-        Line3DCtx*      line3d_createCtx();
-        void            line3d_destroyCtx(Line3DCtx *ctx);
+        //=======================
+        void            utils__quick_and_dirty__create_GPUSHape_and_stageIt_to_VB_IB (const gos::Shape *shape, ENGGPUShape *out_handle); 
 
 
         //============================= vtxBuffer
@@ -305,12 +304,21 @@ namespace gos
         void            priv_setup_resource_handler (eAssetType assetType, ResouceHandler<HANDLE_TYPE, HANDLE_STRUCT> *res_handler)
                         {
                             res_handler->setup (allocator, assetType);
-                            resHandler_list[(int)assetType] = res_handler;
+
+                            const u32 index = (u32)assetType;
+                            assert (index <= (u32)eAssetType::__NUM);
+                            resHandler_list[index] = res_handler;
                         }
         void            priv_flushLoaderThreadMsg();
         bool            asset_bind (asset2::UID uid, u32 handle_asU32);
 
-        BaseResourceHandler*    priv_get_baseResourceHandler (eAssetType assetType) const       { BaseResourceHandler *ret = resHandler_list[(int)assetType]; assert (NULL != ret); return ret; }
+        BaseResourceHandler*    priv_get_baseResourceHandler (eAssetType assetType) const
+                        { 
+                            const u32 index = (u32)assetType;
+                            assert (index <= (u32)eAssetType::__NUM);
+                            assert (NULL != resHandler_list[index]);
+                            return resHandler_list[index];
+                        }
 
     public:
                         /***
@@ -483,7 +491,7 @@ namespace gos
         asset2::DBContext                           asset_ctx;
         HashListOfLoadedUID			                listof_loadedUID;	//mappa asset2::uid ad u32 che e' l'handle della risorsa nell'engine
 
-        BaseResourceHandler                                 *resHandler_list[(int)eAssetType::__NUM];
+        BaseResourceHandler                                 *resHandler_list[(u32)eAssetType::__NUM + 1];
         HList<ENGVtxBuffer, engine::ResVtxBuffer>           handleList_vtxBuffer;
         HList<ENGIdxBuffer, engine::ResIdxBuffer>           handleList_idxBuffer;
         HList<ENGGPUShape, engine::ResGPUShape>             handleList_GPUShape;
