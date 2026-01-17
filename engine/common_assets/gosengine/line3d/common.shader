@@ -26,4 +26,5 @@ layout(set = 1, binding = 1) readonly buffer SBO_1_1
 layout(push_constant) uniform PushConstantData
 {
     vec4    color_RGBA;
+    uint    line_width;
 } pc;

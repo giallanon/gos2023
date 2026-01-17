@@ -261,19 +261,19 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, V
 //************************************
 bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter2 &cw, VkImage swapChainImage, const asset2::Asset_pipe *pipe)
 {
+    gpu::RenderCtx rctx;
     cw
         .imageTransition (rt1, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
         .imageTransition (rt2, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
-        .imageTransition (zbufferHandle, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);        
+        .imageTransition (zbufferHandle, eImageLayout::undefined, eImageLayout::depth_attachment_optimal)
+        .renderCtx_define_begin(&rctx)
+            .withRenderArea (rt1)
+            .withRT (rt1, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.1f))
+            .withRT (rt2, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(1.0f, 0, 0))
+            .withZB (zbufferHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)
+        .define_end();
 
-    auto &rr = cw.beginRender();
-    rr
-        .withRenderArea (rt1)
-        .withRT (rt1, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.1f))
-        .withRT (rt2, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(1.0f, 0, 0))
-        .withZB (zbufferHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)    
-
-        .bindPipeline (pipe->handle_pipe)
+    rctx.bindPipeline (pipe->handle_pipe)
         .bindDescriptorSet (descrSetInstancerHandle, 0)
         .bindVtxBuffer(vtxBufferHandle)
         .bindIdxBufferU16(idxBufferHandle);
@@ -285,12 +285,12 @@ bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter2 &cw
     {
         const gos::Shape *myShape = &shapeList(i);
 
-        rr.drawIndexed (myShape->numIdx, 1, firstIndex, firstVtx, 0);
+        rctx.drawIndexed (myShape->numIdx, 1, firstIndex, firstVtx, 0);
 
         firstIndex += myShape->numIdx;
         firstVtx += myShape->numVtx;
     }
-    rr.endRender();
+    rctx.end_render_ctx();
 
 
     //copio RT1/RT2 nella immagine di swapchain corrente a turno
@@ -302,8 +302,7 @@ bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter2 &cw
         else
             rtToShow = rt1;
     }
-    cw  
-        .imageTransition (rtToShow, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
+    cw  .imageTransition (rtToShow, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
         .imageTransition (swapChainImage, eImageLayout::undefined, eImageLayout::transfer_dst)
         .copyImageToImage (rtToShow, swapChainImage, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
         .imageTransition (swapChainImage, eImageLayout::transfer_dst, eImageLayout::presentation);

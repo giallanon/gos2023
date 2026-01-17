@@ -62,7 +62,7 @@ namespace gos
         private:
             u64     priv_pack_renderable (ENGGPUShape shape, u32 material_index, u32 matrix_index) const;
             void    priv_unpack_renderable (u64 packed, ENGGPUShape *out_shape, u32 *out_material_index, u32 *out_matrix_index) const;
-            void    priv_do_render (gos::gpu::CmdBufferWriter2::BeginRend &cwr);
+            void    priv_do_render (gpu::RenderCtx &rctx);
 
         private:
             gos::Allocator              *localAllocator;

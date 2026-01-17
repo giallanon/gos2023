@@ -32,6 +32,9 @@ void Rend_line3d::Ctx::clear()
 	vtxList.reset();
 	program.reset();
 	line_started_at = u32MAX;
+	enable_depth_test(false);
+	enable_depth_write(false);
+	set_line_width(3);
 }
 
 //********************************************* 
@@ -58,6 +61,13 @@ void Rend_line3d::Ctx::enable_depth_test(bool b)
 		program.append ((u16)eCMD::enable_depth_test);
 	else
 		program.append ((u16)eCMD::disable_depth_test);
+}
+
+//********************************************* 
+void Rend_line3d::Ctx::set_line_width (u16 w)
+{
+	program.append ((u16)eCMD::set_line_width);
+	program.append (w);
 }
 
 //********************************************* 
@@ -105,12 +115,8 @@ void Rend_line3d::Ctx::closed_line (const FastArray<vec3f> &vtxList, u32 num_vtx
 		vtx_add (vtxList(i));
 
 	line_begin();
-	for (u32 i=0; i<num_vtx-1; i++)
-	{
+	for (u32 i=0; i<num_vtx; i++)
 		line_add_vtx (first_vtx_index++);
-		line_add_vtx (first_vtx_index);
-	}
-	line_add_vtx (first_vtx_index);
-	line_add_vtx (first_vtx_index-(num_vtx-1));
+	line_add_vtx (first_vtx_index - num_vtx);
 	line_end();
 }

@@ -324,17 +324,19 @@ void Renderer1::end (gos::gpu::CmdBufferWriter2 &cw)
 	cw  .imageTransition (handle_rt0, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
 		.imageTransition (handle_zbuffer, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
 
-    auto &cwr = cw.beginRender();
-    cwr .withRenderArea (handle_rt0)
-        .withRT (handle_rt0, eAttachmentLoadOp::clear, eAttachmentStoreOp::store, gos::ColorHDR(0, 0.0f, 0.1f))
-        .withZB (handle_zbuffer, eAttachmentLoadOp::clear, eAttachmentStoreOp::store);
+    gpu::RenderCtx rctx;
+    cw  .renderCtx_define_begin(&rctx)
+            .withRenderArea (handle_rt0)
+            .withRT (handle_rt0, eAttachmentLoadOp::clear, eAttachmentStoreOp::store, gos::ColorHDR(0, 0.0f, 0.1f))
+            .withZB (handle_zbuffer, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
+        .define_end();
 
-    priv_do_render (cwr);
-    cwr.endRender();
+    priv_do_render (rctx);
+    rctx.end_render_ctx();
 }
 
 //**********************************
-void Renderer1::priv_do_render (gos::gpu::CmdBufferWriter2::BeginRend &cwr)
+void Renderer1::priv_do_render (gpu::RenderCtx &rctx)
 {
     if (0 == nRenderable)
         return;
@@ -374,7 +376,7 @@ void Renderer1::priv_do_render (gos::gpu::CmdBufferWriter2::BeginRend &cwr)
 
 
     //command
-    cwr .bindPipeline (res_pipeline->data.pipeHandle)
+    rctx.bindPipeline (res_pipeline->data.pipeHandle)
         .bindDescriptorSet (handle_descrSet0, 0)
         .bindDescriptorSet (handle_descrSet1, 1)
         .bindDescriptorSet (handle_descrSet2, 2);
@@ -409,7 +411,7 @@ void Renderer1::priv_do_render (gos::gpu::CmdBufferWriter2::BeginRend &cwr)
         const engine::ResGPUShape *cur_shape_info;
         if (engine->get (cur_shape, &cur_shape_info))
         {
-            cwr .bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
+            rctx.bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
                 .drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index);
 
             first_instance_index += numInstances;

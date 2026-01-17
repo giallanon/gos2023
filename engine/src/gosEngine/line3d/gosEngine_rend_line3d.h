@@ -10,18 +10,24 @@ namespace gos
 	namespace engine
 	{
 		/**************
-		* @brief	
-		* 
+		* @brief	Rend_line3d
+		* 			Renderer per il rendering di line in 3d
 		* 
 		*/
 		class Rend_line3d
 		{
 		public:
-			struct Ctx
+			/*****************
+			 * @brief	Ctx
+			 * 			un contex contiene un elenco di punti, linee, colori e settaggi vari
+			 * 			Per renderizzare un ctx, utilizzare Rend_line3d->appendToCommandBuffer()
+			 */
+			class Ctx
 			{
 			public:
 						Ctx();
 						~Ctx()																	{ unsetup(); }
+
 				void	setup (gos::Allocator *allocator, u16 estimated_num_vtx);
 				void	unsetup ();
 
@@ -29,9 +35,10 @@ namespace gos
 
 				void	set_color (const gos::ColorU32 &col)									{ set_color(col.argb); }
 				void	set_color_ARGB (u32 argb);
+				void	set_line_width (u16 w);
+				
 				void 	enable_depth_test(bool b);
 				void 	enable_depth_write(bool b);
-
 
 				u16		vtx_add (const vec3f &p);
 				u16		vtx_add (f32 x, f32 y, f32 z)											{ return vtx_add (vec3f(x, y, z)); }
@@ -56,6 +63,7 @@ namespace gos
 					disable_depth_test	= 0x0004,
 					enable_depth_write	= 0x0005,
 					disable_depth_write	= 0x0006,
+					set_line_width		= 0x0007,
 				};
 
 			private:
@@ -73,7 +81,9 @@ namespace gos
 			bool	setup (gos::Allocator *allocator, gos::Engine *engineIN);
 			void	unsetup();
 
-			void	appendToCommandBuffer (Ctx *ctx, gos::gpu::CmdBufferWriter2::BeginRend &cwr, gos::geom::Camera3 *cam);
+			void	begin(gos::geom::Camera3 *cam, gpu::RenderCtx *rctx);
+			void	appendToCommandBuffer (const Ctx &ctx);
+			void	end();
 
 		private:
             struct SceneData
@@ -98,7 +108,8 @@ namespace gos
 
 		private:
 			static constexpr u32	NUM_MAX_SEGMENT_IN_BUFFER = 8192;
-			static constexpr u32	NUM_MAX_VTX_IN_BUFFER	= 256;
+			static constexpr u32	NUM_MAX_VTX_IN_BUFFER	= 8192;
+			static constexpr u8		FLAG__BEGIN_INVOKED	= 0;
 
 		private:
 			struct sState
@@ -106,13 +117,14 @@ namespace gos
 				u32		cur_color_ARGB;
 				bool 	bDepthTestEnabled;
 				bool 	bDepthWriteEnabled;
+				u32		cur_line_width;
 
 				u32 	first_instance_index;
 				u32 	num_seg_to_draw;
 			};
 
 		private:
-			void 	priv_flushProgram(sState &state, const engine::ResGPUShape *res_shape_segmento, gos::gpu::CmdBufferWriter2::BeginRend &cwr);
+			void 	priv_flushProgram(sState &state);
 
 		private:
             gos::Allocator              *localAllocator;
@@ -123,10 +135,15 @@ namespace gos
             GPUDescrSetInstanceHandle   handle_descrSet0;
             GPUDescrSetInstanceHandle   handle_descrSet1;
 			GPUUniformBufferHandle      handle_ubo_scene;
-
 			ENGGPUShape					handle_shape_segmento;
 			sSBO_segment				sbo_segment;
 			sSBO_vtx					sbo_vtx;
+			Flag8						flag;
+			u32							num_vtx_in_buffer;
+			u32 						num_seg_in_buffer;
+			sState 						state;
+			gpu::RenderCtx 				*rctx;
+			const engine::ResGPUShape 	*res_shape_segmento;
 
 
 

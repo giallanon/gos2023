@@ -384,21 +384,26 @@ bool Builder_tex2D::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_a
                 quadWH.set ((f32)srcImg_dimx, (f32)srcImg_dimy);
 
                 gos::gpu::CmdBufferWriter2 cw;
-                cw
-                    .begin (gpu, cmdBufferHandle)
+                cw  .begin (gpu, cmdBufferHandle)
                     .setViewport (viewportHandle)
                     .imageTransition (rt1, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
-                    .imageTransition (rtReadback, eImageLayout::undefined, eImageLayout::transfer_dst)
-                    .beginRender()
-                        .withRenderArea (rt1)
-                        .withRT (rt1, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 1.0f, 0))
-                        .bindPipeline (pipeHandle)
-                        .bindDescriptorSet(descrSetInstanceHandle, 0)
-                        .pushConstant (0, &screenWH, sizeof(screenWH))
-                        .pushConstant (1, &quadWH, sizeof(quadWH))
+                    .imageTransition (rtReadback, eImageLayout::undefined, eImageLayout::transfer_dst);
+
+                gos::gpu::RenderCtx rctx;
+                cw  .renderCtx_define_begin(&rctx)
+                    .withRenderArea (rt1)
+                    .withRT (rt1, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 1.0f, 0))
+                    .define_end();
+
+                assert (!rctx.anyError());
+                rctx.bindPipeline (pipeHandle)
+                    .bindDescriptorSet(descrSetInstanceHandle, 0)
+                    .pushConstant (0, &screenWH, sizeof(screenWH))
+                    .pushConstant (1, &quadWH, sizeof(quadWH))
                     .draw (6, 1, 0, 0)
-                    .endRender()
-                    .imageTransition (rt1, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
+                    .end_render_ctx();
+
+                cw  .imageTransition (rt1, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
                     .copyImageToImage (rt1, rtReadback, { rt_width, rt_height}, { rt_width, rt_height} )
                     .imageTransition (rtReadback, eImageLayout::transfer_dst, eImageLayout::general)
                 .end();            

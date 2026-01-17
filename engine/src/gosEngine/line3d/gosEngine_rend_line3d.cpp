@@ -11,6 +11,7 @@ Rend_line3d::Rend_line3d()
 {
 	engine = NULL;
     localAllocator = NULL;
+    flag.zero();
 }
 
 //********************************************* 
@@ -162,7 +163,65 @@ bool Rend_line3d::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
 
 
 //********************************************* 
-void Rend_line3d::priv_flushProgram (sState &state, const engine::ResGPUShape *res_shape_segmento, gos::gpu::CmdBufferWriter2::BeginRend &cwr)
+void Rend_line3d::begin (gos::geom::Camera3 *cam, gpu::RenderCtx *rctxIN)
+{
+    if (flag.isBitSet(FLAG__BEGIN_INVOKED))
+    {
+        DBGBREAK;
+        return;
+    }
+
+    const engine::ResPipeline *res_pipeline;
+    if (!engine->get (handle_pipeline, &res_pipeline))
+        return;
+
+    if (!engine->get (handle_shape_segmento, &res_shape_segmento))
+        return;   
+        
+        
+    flag.set(FLAG__BEGIN_INVOKED);
+    rctx = rctxIN;
+    num_vtx_in_buffer = 0;
+    num_seg_in_buffer = 0;
+
+    //default rendering params
+    state.num_seg_to_draw = 0;
+    state.first_instance_index = 0;
+    state.cur_line_width = 3;
+    state.cur_color_ARGB = 0xFFFF00FF;
+    state.bDepthTestEnabled = false;
+    state.bDepthWriteEnabled = false;
+
+
+    (*rctx)
+		.bindPipeline (res_pipeline->data.pipeHandle)
+		.bindDescriptorSet (handle_descrSet0, 0)
+		.bindDescriptorSet (handle_descrSet1, 1)
+        .bindVtxIdxBuffer (res_shape_segmento->vbHandle, 0, res_shape_segmento->ibHandle, 0);
+ 
+
+    SceneData scene;
+	scene.matVP = cam->getMatVP();
+	scene.screen_wh.set (gpu->swapChain_getWidth(), gpu->swapChain_getHeight());
+	gpu->writeAndSync (handle_ubo_scene, 0, &scene, sizeof(scene));
+
+}
+
+//********************************************* 
+void Rend_line3d::end()
+{
+    if (!flag.isBitSet(FLAG__BEGIN_INVOKED))
+    return;
+
+    flag.clear(FLAG__BEGIN_INVOKED);
+    gpu->buffer_manualSync_cpuWrite (sbo_vtx.mapped, 0, u32MAX);
+    gpu->buffer_manualSync_cpuWrite (sbo_segment.mapped, 0, u32MAX);
+    rctx = NULL;
+    res_shape_segmento = NULL;
+}
+
+//********************************************* 
+void Rend_line3d::priv_flushProgram (sState &state)
 {
     if (0 == state.num_seg_to_draw)
         return;
@@ -170,10 +229,11 @@ void Rend_line3d::priv_flushProgram (sState &state, const engine::ResGPUShape *r
     gos::ColorHDR col_RGBA;
     col_RGBA.setU32_argb (state.cur_color_ARGB);
 
-    cwr
+    (*rctx)
         .setDepthTestEnable(state.bDepthTestEnabled)
         .setDepthWriteEnable(state.bDepthWriteEnabled)
         .pushConstant (0, &col_RGBA.col.rgba, sizeof(col_RGBA.col.rgba))
+        .pushConstant (1, &state.cur_line_width, sizeof(state.cur_line_width))
         .drawIndexed (res_shape_segmento->numIndices, state.num_seg_to_draw, res_shape_segmento->indexStart, res_shape_segmento->vtxStart, state.first_instance_index);
 
     state.first_instance_index += state.num_seg_to_draw;
@@ -181,55 +241,45 @@ void Rend_line3d::priv_flushProgram (sState &state, const engine::ResGPUShape *r
 }
 
 //********************************************* 
-void Rend_line3d::appendToCommandBuffer (Ctx *ctx, gos::gpu::CmdBufferWriter2::BeginRend &cwr, gos::geom::Camera3 *cam)
+void Rend_line3d::appendToCommandBuffer (const Ctx &ctx)
 {
-    const engine::ResPipeline *res_pipeline;
-    if (!engine->get (handle_pipeline, &res_pipeline))
+    if (!flag.isBitSet(FLAG__BEGIN_INVOKED))
+    {
+        DBGBREAK;
         return;
-
-    const engine::ResGPUShape *res_shape_segmento;
-    if (!engine->get (handle_shape_segmento, &res_shape_segmento))
-        return;
+    }
 
     //default rendering params
-    sState state;
     state.num_seg_to_draw = 0;
-    state.first_instance_index = 0;
-    state.cur_color_ARGB = 0xFFFF00FF;
-    state.bDepthTestEnabled = false;
-    state.bDepthWriteEnabled = false;
+    state.first_instance_index = num_seg_in_buffer;
 
-
-    cwr
-		.bindPipeline (res_pipeline->data.pipeHandle)
-		.bindDescriptorSet (handle_descrSet0, 0)
-		.bindDescriptorSet (handle_descrSet1, 1)
-        .bindVtxIdxBuffer (res_shape_segmento->vbHandle, 0, res_shape_segmento->ibHandle, 0);
-
-
-
-    SceneData scene;
-	scene.matVP = cam->getMatVP();
-	scene.screen_wh.set (gpu->swapChain_getWidth(), gpu->swapChain_getHeight());
-	gpu->writeAndSync (handle_ubo_scene, 0, &scene, sizeof(scene));
-
-    //copio tutti i vtx is SBO
-    const u32 num_vtx = ctx->vtxList.getNElem();
+    //copio tutti i vtx di questo ctx in SBO
+    const u32 first_vtx_index = num_vtx_in_buffer;
+    const u32 num_vtx = ctx.vtxList.getNElem();
     if (0 == num_vtx)
         return;
-    memcpy (sbo_vtx.mapped.host_pt,  ctx->vtxList._queryPointer(), sizeof(vec3f) * num_vtx);
-    gpu->buffer_manualSync_cpuWrite (sbo_vtx.mapped, 0, u32MAX);
+    else
+    {
+        const u32 offset = num_vtx_in_buffer*sizeof(vec3f);
+        const u32 size =  sizeof(vec3f) * num_vtx;
+
+        u8 *pt = static_cast<u8*>(sbo_vtx.mapped.host_pt);
+        memcpy (&pt[offset], ctx.vtxList._queryPointer(), size);
+        //gpu->buffer_manualSync_cpuWrite (sbo_vtx.mapped, offset, size);
+
+        num_vtx_in_buffer += num_vtx;
+    }
     
     
 
-    //parse del program
+    //parse del program di ctx
     u32 *pt_segment_buffer = static_cast<u32*>(sbo_segment.mapped.host_pt);
-    u32 segment_buffer_ct = 0;
-    u32 n = ctx->program.getNElem();
+    
+    const u32 n = ctx.program.getNElem();
     u32 i = 0;
     while (i < n)
     {
-        const Ctx::eCMD cmd = (Ctx::eCMD)ctx->program(i++);
+        const Ctx::eCMD cmd = (Ctx::eCMD)ctx.program(i++);
         switch (cmd)
         {
         default:
@@ -238,12 +288,12 @@ void Rend_line3d::appendToCommandBuffer (Ctx *ctx, gos::gpu::CmdBufferWriter2::B
 
         case Ctx::eCMD::set_color_ARGB:
             {
-                u32 argb = (u32) (ctx->program(i++) << 16);
-                argb |= (u32) (ctx->program(i++));;
+                u32 argb = (u32) (ctx.program(i++) << 16);
+                argb |= (u32) (ctx.program(i++));;
 
                 if (argb != state.cur_color_ARGB)
                 {
-                    priv_flushProgram (state, res_shape_segmento, cwr);
+                    priv_flushProgram (state);
                     state.cur_color_ARGB = argb;
                 }
             }
@@ -252,7 +302,7 @@ void Rend_line3d::appendToCommandBuffer (Ctx *ctx, gos::gpu::CmdBufferWriter2::B
         case Ctx::eCMD::enable_depth_test:
             if (state.bDepthTestEnabled != true)
             {
-                priv_flushProgram (state, res_shape_segmento, cwr);
+                priv_flushProgram (state);
                 state.bDepthTestEnabled = true;
             }
             break;
@@ -260,7 +310,7 @@ void Rend_line3d::appendToCommandBuffer (Ctx *ctx, gos::gpu::CmdBufferWriter2::B
         case Ctx::eCMD::disable_depth_test:
             if (state.bDepthTestEnabled != false)
             {
-                priv_flushProgram (state, res_shape_segmento, cwr);
+                priv_flushProgram (state);
                 state.bDepthTestEnabled = false;
             }
             break;        
@@ -268,7 +318,7 @@ void Rend_line3d::appendToCommandBuffer (Ctx *ctx, gos::gpu::CmdBufferWriter2::B
         case Ctx::eCMD::enable_depth_write:
             if (state.bDepthWriteEnabled != true)
             {
-                priv_flushProgram (state, res_shape_segmento, cwr);
+                priv_flushProgram (state);
                 state.bDepthWriteEnabled = true;
             }
             break;         
@@ -276,40 +326,52 @@ void Rend_line3d::appendToCommandBuffer (Ctx *ctx, gos::gpu::CmdBufferWriter2::B
         case Ctx::eCMD::disable_depth_write:
             if (state.bDepthWriteEnabled != false)
             {
-                priv_flushProgram (state, res_shape_segmento, cwr);
+                priv_flushProgram (state);
                 state.bDepthWriteEnabled = false;
             }
             break;             
+        
+        case Ctx::eCMD::set_line_width:
+            {
+                const u16 w = ctx.program(i++);
+                if (w != state.cur_line_width)
+                {
+                    priv_flushProgram (state);
+                    state.cur_line_width = w;
+                }
+            }
+            break;
 
         case Ctx::eCMD::line_def:
             //inizio di una linea
             {
-                u16 num_vtx_in_linea = ctx->program(i++);
-                u16 vtx_index_1 = ctx->program(i++);
+                u16 num_vtx_in_linea = ctx.program(i++);
+                u16 vtx_index_1 = ctx.program(i++);
 
                 num_vtx_in_linea--;
                 while (num_vtx_in_linea--)
                 {
-                    const u16 vtx_index_2 = ctx->program(i++);
+                    const u16 vtx_index_2 = ctx.program(i++);
 
-                    const u32 packed_idx_1_2 = (u32)vtx_index_1 << 8 | vtx_index_2;
-                    pt_segment_buffer[segment_buffer_ct++] = packed_idx_1_2;
+                    const u32 packed_idx_1_2 = (u32)(first_vtx_index + vtx_index_1) << 8 | (first_vtx_index + vtx_index_2);
+                    pt_segment_buffer[num_seg_in_buffer++] = packed_idx_1_2;
+
                     state.num_seg_to_draw++;
+
                     vtx_index_1 = vtx_index_2;
                 }
 
-                assert (state.num_seg_to_draw <= NUM_MAX_SEGMENT_IN_BUFFER);
+                assert (num_seg_in_buffer <= NUM_MAX_SEGMENT_IN_BUFFER);
             }
             break;
         }
     }
 
-    priv_flushProgram (state, res_shape_segmento, cwr);
+    priv_flushProgram (state);
 
 
     //aggiornamento dell SSBO contenente i segmenti
-    gpu->buffer_manualSync_cpuWrite (sbo_segment.mapped, 0, u32MAX);
-    cwr.endRender();
+    //gpu->buffer_manualSync_cpuWrite (sbo_segment.mapped, 0, u32MAX);
 }
 
 

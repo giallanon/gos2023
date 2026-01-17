@@ -109,19 +109,22 @@ void VulkanExample2::moveVertex()
 bool VulkanExample2::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gpu::SwapchainImg &swapChainImage)
 {
     gos::gpu::CmdBufferWriter2 cw;
-    cw
-        .begin (gpu, cmdBufferHandle)
+    gpu::RenderCtx rctx;
+    cw  .begin (gpu, cmdBufferHandle)
         .setViewport (gpu->viewport_getDefault())
         .imageTransition (swapChainImage.image, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
-        .beginRender()
+        .renderCtx_define_begin(&rctx)
             .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
             .withRT (swapChainImage.imageView, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0,0,0))
-            .bindPipeline (pipelineHandle)
-            .bindVtxBuffer(vtxBufferHandle)
-            .draw(NUM_VERTEX, 1, 0, 0)
-            .endRender()
-        .imageTransition (swapChainImage.image, eImageLayout::color_attachment_optimal, eImageLayout::presentation)
-        .end();
+        .define_end();
+
+    rctx.bindPipeline (pipelineHandle)
+        .bindVtxBuffer(vtxBufferHandle)
+        .draw(NUM_VERTEX, 1, 0, 0)
+        .end_render_ctx();        
+
+    cw.imageTransition (swapChainImage.image, eImageLayout::color_attachment_optimal, eImageLayout::presentation)
+      .end();
 
         
     return true;

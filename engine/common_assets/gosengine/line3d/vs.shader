@@ -32,8 +32,7 @@ void main()
     const vec2 ay = normalize (vec2(-ax.y, ax.x));
 
     //in_position.x vale 0 se il vertice e' all'inizio del segmento, vale 1 se e' alla fine del segmento
-    const float LINE_WIDTH = 3.0;
-    vec2 p0 = screen_pos1 + in_position.x * ax + LINE_WIDTH * in_position.y * ay;
+    vec2 p0 = screen_pos1 + in_position.x * ax + pc.line_width * in_position.y * ay;
 
     //interpolo le componenti z e w in clip space
     const vec4 clip = mix(clip_pos1, clip_pos2, in_position.x);

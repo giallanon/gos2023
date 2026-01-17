@@ -184,22 +184,20 @@ bool SimpleLineRenderer::recordCommandBuffer (gpu::CmdBufferWriter2 &cw, VkImage
         .bindUniformBuffer (0, hUBO)
         .end();
 
-    // cw
-    //     .bindPipeline (pipelineHandle)
-    //     .bindDescriptorSet (hDescrSetInstance, 0)
-    //     .bindVtxBuffer (hVtxBuffer)
-    //     .bindIdxBufferU16 (hIdxBuffer)
-    //     .drawIndexed (idxList.getNElem(), 1, 0, 0, 0);
 
-    cw.beginRender()
-        .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
-        .withRT (rt, eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
-        .bindPipeline (pipelineHandle)
+
+    gpu::RenderCtx rctx;
+    cw  .renderCtx_define_begin(&rctx)
+            .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
+            .withRT (rt, eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
+        .define_end();
+
+    rctx.bindPipeline (pipelineHandle)
         .bindDescriptorSet (hDescrSetInstance, 0)
         .bindVtxBuffer (hVtxBuffer)
         .bindIdxBufferU16 (hIdxBuffer)
         .drawIndexed (idxList.getNElem(), 1, 0, 0, 0)
-        .endRender();
+        .end_render_ctx();
 
     return true;
 }    

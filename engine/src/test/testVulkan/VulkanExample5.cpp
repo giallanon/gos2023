@@ -469,19 +469,18 @@ bool VulkanExample5::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
 
 
     gos::gpu::CmdBufferWriter2 cw;
-    cw
-        .begin (gpu, cmdBufferHandle)
+    gpu::RenderCtx rctx;
+    cw  .begin (gpu, cmdBufferHandle)
         .setViewport (gpu->viewport_getDefault())
         .imageTransition (swapChainImage.image, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
-        .imageTransition (zbufferHandle, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
-    
+        .imageTransition (zbufferHandle, eImageLayout::undefined, eImageLayout::depth_attachment_optimal)
+        .renderCtx_define_begin(&rctx)
+            .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
+            .withRT (swapChainImage.imageView, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0, 0))
+            .withZB (zbufferHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, 1.0f, 0)
+        .define_end();
 
-    auto &rend = cw.beginRender();
-    rend
-        .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
-        .withRT (swapChainImage.imageView, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0, 0))
-        .withZB (zbufferHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, 1.0f, 0)
-        .bindPipeline (pipelineHandle)
+    rctx.bindPipeline (pipelineHandle)
         .bindDescriptorSet (descrSetInstancerHandle, 0)
         .bindVtxBuffers(vtxBufferHandle, world->hVBInstance)
         .bindIdxBufferU16(idxBufferHandle)
@@ -489,21 +488,18 @@ bool VulkanExample5::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
 
         if (gpuMSQ2.numIdx)
         {
-            rend
-                .bindIdxBufferU16(gpuMSQ2.idxBufferHandle)
+            rctx.bindIdxBufferU16(gpuMSQ2.idxBufferHandle)
                 .bindVtxBuffer(gpuMSQ2.vtxBufferHandle)
                 .drawIndexed (gpuMSQ2.numIdx, 1, 0, 0, 0);
         }
-    rend.endRender();
+    rctx.end_render_ctx();
 
     //line->recordCommandBuffer (rend, stgBufferHandle, cam);
     line->recordCommandBuffer (cw, swapChainImage.imageView, stgBufferHandle, cam);
     
 
-//    rend.endRender();
-    cw
-        .imageTransition (swapChainImage.image, eImageLayout::color_attachment_optimal, eImageLayout::presentation)
-        .end();
+    cw.imageTransition (swapChainImage.image, eImageLayout::color_attachment_optimal, eImageLayout::presentation)
+      .end();
 
     return true;
 }

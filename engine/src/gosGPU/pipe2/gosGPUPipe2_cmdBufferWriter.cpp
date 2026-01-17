@@ -64,27 +64,6 @@ CmdBufferWriter2& CmdBufferWriter2::setViewport (const GPUViewportHandle handle)
 }
 
 //***********************************************
-bool CmdBufferWriter2::end()
-{
-    while (1)
-    {
-        if (anyError())
-            break;
-
-        const VkResult result = vkEndCommandBuffer (vkCommandBuffer);
-        if (VK_SUCCESS != result)
-        {
-            gos::logger::err ("gpu::CmdBufferWriter2::end() => vkEndCommandBuffer() => %s\n", string_VkResult(result));
-            priv_setError();
-        }    
-        break;
-    }
-
-    vkCommandBuffer = NULL;
-    return !anyError();
-}
-
-//***********************************************
 CmdBufferWriter2& CmdBufferWriter2::imageTransition (const GPURenderTargetHandle &rtHandle, const eImageLayout currentLayout, const eImageLayout newLayout)
 {
     const gpu::RenderTarget *rt_info = gpu->getInfo (rtHandle);
@@ -242,9 +221,30 @@ CmdBufferWriter2& CmdBufferWriter2::copyImageToImage (const GPURenderTargetHandl
 }
 
 //***********************************************
-CmdBufferWriter2::BeginRend& CmdBufferWriter2::beginRender()
+bool CmdBufferWriter2::end()
 {
-    beginRend.priv_setup (gpu, this, vkCommandBuffer);
-    return beginRend;
+    while (1)
+    {
+        if (anyError())
+            break;
+
+        const VkResult result = vkEndCommandBuffer (vkCommandBuffer);
+        if (VK_SUCCESS != result)
+        {
+            gos::logger::err ("gpu::CmdBufferWriter2::end() => vkEndCommandBuffer() => %s\n", string_VkResult(result));
+            priv_setError();
+        }    
+        break;
+    }
+
+    vkCommandBuffer = NULL;
+    return !anyError();
+}
+
+//***********************************************
+CmdBufferWriter2::SetupRenderCtx& CmdBufferWriter2::renderCtx_define_begin (RenderCtx *out_renderCtx)
+{
+    setupRenderCtx.reset (gpu, this, vkCommandBuffer, out_renderCtx);
+    return setupRenderCtx;
 }
 

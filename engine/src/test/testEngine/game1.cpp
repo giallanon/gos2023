@@ -506,23 +506,32 @@ void Game1::priv_loop ()
 	line_ctx1.set_color_ARGB (0xFF00FF00); 	line_ctx1.line (0, 2);
 	line_ctx1.set_color_ARGB (0xFF0000FF); 	line_ctx1.line (0, 3);
 
+	gos::engine::Rend_line3d::Ctx line_ctx2;
+	line_ctx2.setup (allocator, 32);
 	{
 		FastArray<vec3f> vtxList (gos::getScrapAllocator(), 64);
 
 		static constexpr u8 NUM_POINT = 6;
 		geom::circle (&vtxList, vec3f(0,0,0), 4.0f, NUM_POINT, -90.0f);
-		line_ctx1.set_color_ARGB (0xFFFF00FF);
-		line_ctx1.enable_depth_test(true);
-		line_ctx1.closed_line (vtxList, NUM_POINT);
+		line_ctx2.set_color_ARGB (0xFFFF00FF);
+		line_ctx2.enable_depth_test(true);
+		line_ctx2.closed_line (vtxList, NUM_POINT);
 
 		vtxList.reset();
-		geom::circle (&vtxList, vec3f(8 * cosf(math::gradToRad(30)),0,0), 4.0f, NUM_POINT, -90.0f);
-		line_ctx1.set_color_ARGB (0xFF00FFFF); 
-		line_ctx1.enable_depth_test(false);
-		line_ctx1.closed_line (vtxList, NUM_POINT);
+		geom::circle (&vtxList, vec3f(0.3f + 8 * cosf(math::gradToRad(30)),0,0), 4.0f, NUM_POINT, -90.0f);
+		line_ctx2.set_color_ARGB (0xFF00FFFF); 
+		line_ctx2.enable_depth_test(false);
+		line_ctx2.closed_line (vtxList, NUM_POINT);
 
 	}
 
+	// gos::engine::Rend_line3d::Ctx line_ctx1;
+	// line_ctx1.setup (allocator, 32);
+	// line_ctx1.line (vec3f(0,0,0), vec3f(10,0,0));
+
+	// gos::engine::Rend_line3d::Ctx line_ctx2;
+	// line_ctx2.setup (allocator, 32);
+	// line_ctx2.line (vec3f(1,1,1), vec3f(5,5,5));
 
 
     //loop
@@ -606,29 +615,41 @@ void Game1::priv_loop ()
 			mainLoop.stat_onCommandBufferBegin();
 			{
 				renderer->begin(&cam);
-				// {
-                //     renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_mainPlayer) );
-                //     renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_pavimento) );
+				{
+                    renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_mainPlayer) );
+                    renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_pavimento) );
 
-				// 	for (u8 i = 0; i < NUM_MAX_MISSILE; i++)
-				// 	{
-				// 		if (ent_missile[i].isValid())
-				// 			renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_missile[i]) );
-				// 	}
+					for (u8 i = 0; i < NUM_MAX_MISSILE; i++)
+					{
+						if (ent_missile[i].isValid())
+							renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_missile[i]) );
+					}
 		
-				// }
+				}
 				renderer->end (cw);
 			}
 			mainLoop.stat_onCommandBufferEnd();
 
 
 			//line3d
-			auto &cwr = cw.beginRender();
-			cwr.withRenderArea (renderer->getHandle_rt0())
+			{
+				gpu::RenderCtx rctx;
+				cw	.renderCtx_define_begin(&rctx)
+					.withRenderArea (renderer->getHandle_rt0())
 					.withRT (renderer->getHandle_rt0(), eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.1f))
-					.withZB (renderer->getHandle_zbuffer(), eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care);
-			rend_line3d->appendToCommandBuffer (&line_ctx1, cwr, &cam);
+					.withZB (renderer->getHandle_zbuffer(), eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
+					.define_end();
+			
+					rend_line3d->begin (&cam, &rctx);
+						rend_line3d->appendToCommandBuffer (line_ctx2);
+						rend_line3d->appendToCommandBuffer (line_ctx1);
+						
+						
+						
+					rend_line3d->end();
 
+				rctx.end_render_ctx();
+			}
 
 			//present
 			cw	.imageTransition (renderer->getHandle_rt0(), eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)

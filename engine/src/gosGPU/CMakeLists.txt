@@ -20,7 +20,8 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC 
-pipe2/gosGPUPipe2_cmdBufferWriter_BeginRend.cpp
+pipe2/gosGPUPipe2_cmdBufferWriter_RenderCtx.cpp
+pipe2/gosGPUPipe2_cmdBufferWriter_RenderCtxProps.cpp
 pipe2/gosGPUPipe2_cmdBufferWriter_SetupRenderCtx.cpp
 pipe2/gosGPUPipe2_cmdBufferWriter.cpp
 pipe2/gosGPUPipe2_cmdBufferWriter.h

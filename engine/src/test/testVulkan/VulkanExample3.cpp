@@ -161,28 +161,30 @@ void VulkanExample3::moveVertex()
 bool VulkanExample3::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gpu::SwapchainImg &swapChainImage)
 {
     gos::gpu::CmdBufferWriter2 cw;
-    cw
-        .begin (gpu, cmdBufferHandle)
+    gpu::RenderCtx rctx;
+    cw  .begin (gpu, cmdBufferHandle)
         .setViewport (gpu->viewport_getDefault())
         .imageTransition (swapChainImage.image, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
-        .beginRender()
+        .renderCtx_define_begin(&rctx)
             .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
             .withRT (swapChainImage.imageView, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0,0,0))
-            .bindPipeline (pipelineHandle)
-            .bindVtxBuffer(vtxBufferHandle)
-            .bindIdxBufferU16(idxBufferHandle)
+            .define_end();
 
-            //draw primitive:
-            //      num-index => num di vertici che verranno passati al vxtshader
-            //      num-instances => 1 come minimo
-            //      ofsset-idxBuffer  => passare 1 significa che si parte dall'indice [1] dell'idxBuffer (quindi non parliamo di un offset in byte)
-            //      index-base = specifies an offset to add to the indices in the index buffer.
-            //      offset-instancin = non lo so...            
-            .drawIndexed(NUM_INDEX, 1, 0, 0, 0)
-            
-            .endRender()
-        .imageTransition (swapChainImage.image, eImageLayout::color_attachment_optimal, eImageLayout::presentation)
-        .end();
+    rctx.bindPipeline (pipelineHandle)
+        .bindVtxBuffer(vtxBufferHandle)
+        .bindIdxBufferU16(idxBufferHandle)
+
+        //draw primitive:
+        //      num-index => num di vertici che verranno passati al vxtshader
+        //      num-instances => 1 come minimo
+        //      ofsset-idxBuffer  => passare 1 significa che si parte dall'indice [1] dell'idxBuffer (quindi non parliamo di un offset in byte)
+        //      index-base = specifies an offset to add to the indices in the index buffer.
+        //      offset-instancin = non lo so...            
+        .drawIndexed(NUM_INDEX, 1, 0, 0, 0)
+        .end_render_ctx();
+
+    cw.imageTransition (swapChainImage.image, eImageLayout::color_attachment_optimal, eImageLayout::presentation)
+      .end();
 
         
     return true;
