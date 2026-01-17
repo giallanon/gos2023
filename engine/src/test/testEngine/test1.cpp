@@ -53,7 +53,7 @@ gos::ENGGPUShape Test1::priv_create_engineShape (GPUStgBufferHandle stgBufferHan
 		if (!engine->get (handle_shape, &shapeInfo))
 			DBGBREAK;
 
-		gos::gpu::pipe2::CmdBufferWriter2 cw;
+		gos::gpu::CmdBufferWriter2 cw;
 		cw.begin (engine->gpu, cmdBufferHandle)
 			.copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, shapeInfo->alloc_idxbuf_offset, SIZE_OF_IDX)
 			.copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, shapeInfo->alloc_vtxbuf_offset, SIZE_OF_VTX)
@@ -426,7 +426,7 @@ bool Test1::priv_run4 ()
         {
 			mainLoop.stat_onCommandBufferBegin();
 			{
-				gos::gpu::pipe2::CmdBufferWriter2 cw;
+				gos::gpu::CmdBufferWriter2 cw;
 				cw	.begin (gpu, cmdBufferHandle)
 					.setViewport (gpu->viewport_getDefault());
 

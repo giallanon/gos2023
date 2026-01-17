@@ -3,9 +3,8 @@
 
 using namespace gos;
 using namespace gos::gpu;
-using namespace gos::gpu::pipe2;
 
-typedef pipe2::CmdBufferWriter2::BeginRend CMDBUFV_BGREND_CLASS;
+typedef CmdBufferWriter2::BeginRend CMDBUFV_BGREND_CLASS;
 
 
 //*********************************
@@ -148,6 +147,25 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::withZB (const GPUZBufferHandl
     return *this;
 }
 
+//***********************************************
+CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::setDepthTestEnable (bool b)
+{
+    if (!anyError())
+    {
+        vkCmdSetDepthTestEnable (vkCommandBuffer, b == true ? 1 : 0);
+    }
+    return *this;
+}
+
+//***********************************************
+CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::setDepthWriteEnable (bool b)
+{
+    if (!anyError())
+    {
+        vkCmdSetDepthWriteEnable (vkCommandBuffer, b == true ? 1 : 0);
+    }
+    return *this;
+}
 
 //*********************************
 void CmdBufferWriter2::BeginRend::priv_recordBeginRenderingIfNeeded()
@@ -208,7 +226,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindDescriptorSet (const GPUD
 
     if (NULL == curPipeline)
     {
-        gos::logger::err ("gpu::pipe2::CmdBufferWriter::bindDescriptorSet() => no pipeline bound\n");
+        gos::logger::err ("gpu::CmdBufferWriter::bindDescriptorSet() => no pipeline bound\n");
         priv_setError();
         return *this;
     }        
@@ -217,7 +235,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindDescriptorSet (const GPUD
     const gpu::DescrSetInstance *ds = gpu->getInfo(handle);
     if (NULL == ds)
     {
-        gos::logger::err ("gpu::pipe2::CmdBufferWriter::bindDescriptorSet() => invalid descrSetInstace handle\n");
+        gos::logger::err ("gpu::CmdBufferWriter::bindDescriptorSet() => invalid descrSetInstace handle\n");
         priv_setError();
         return *this;
     }           
@@ -278,7 +296,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindVtxBuffer (const GPUVtxBu
     const gpu::Buffer *vtxBuffer = gpu->getInfo(handle);
     if (NULL == vtxBuffer)
     {
-        gos::logger::err ("gpu::pipe2::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
+        gos::logger::err ("gpu::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
         priv_setError();
         return *this;
     }            
@@ -310,7 +328,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindVtxBuffers (const GPUVtxB
     const gpu::Buffer *vtxBuffer0 = gpu->getInfo (handleStream0);
     if (NULL == vtxBuffer0)
     {
-        gos::logger::err ("gpu::pipe2::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
+        gos::logger::err ("gpu::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
         priv_setError();
         return *this;
     }            
@@ -318,7 +336,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindVtxBuffers (const GPUVtxB
     const gpu::Buffer *vtxBuffer1 = gpu->getInfo (handleStream1);
     if (NULL == vtxBuffer1)
     {
-        gos::logger::err ("gpu::pipe2::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
+        gos::logger::err ("gpu::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
         priv_setError();
         return *this;
     }            
@@ -352,7 +370,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::bindIdxBufferU16 (const GPUId
     const gpu::Buffer *idxBuffer = gpu->getInfo (handle);
     if (NULL == idxBuffer)
     {
-        gos::logger::err ("gpu::pipe2::CmdBufferWriter::bindIdxBufferU16() => invalid idxBufferHandle\n");
+        gos::logger::err ("gpu::CmdBufferWriter::bindIdxBufferU16() => invalid idxBufferHandle\n");
         priv_setError();
         return *this;
     }            
@@ -372,7 +390,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::pushConstant (u8 whichOne, co
     assert (NULL != curPipeline);
     // if (NULL == curPipeline)
     // {
-    //     gos::logger::err ("gpu::pipe2::CmdBufferWriter::pushConstant(%d) => no pipeline bound\n", whichOne);
+    //     gos::logger::err ("gpu::CmdBufferWriter::pushConstant(%d) => no pipeline bound\n", whichOne);
     //     priv_setError();
     //     return *this;
     // }
@@ -380,7 +398,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::pushConstant (u8 whichOne, co
     assert (whichOne < GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE);
     // if (whichOne >= GOSGPU__NUM_MAX_PUSH_CONSTANT_PER_PIPELINE)
     // {
-    //     gos::logger::err ("gpu::pipe2::CmdBufferWriter::pushConstant(%d) => invalid index\n", whichOne);
+    //     gos::logger::err ("gpu::CmdBufferWriter::pushConstant(%d) => invalid index\n", whichOne);
     //     priv_setError();
     //     return *this;
     // }
@@ -388,7 +406,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::pushConstant (u8 whichOne, co
     assert (curPipeline->pcList[whichOne].size == sizeof_data);
     // if (curPipeline->pcList[whichOne].size != sizeof_data)
     // {
-    //     gos::logger::err ("gpu::pipe2::CmdBufferWriter::pushConstant(%d) => size does not match\n", whichOne);
+    //     gos::logger::err ("gpu::CmdBufferWriter::pushConstant(%d) => size does not match\n", whichOne);
     //     priv_setError();
     //     return *this;
     // }
@@ -426,7 +444,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::drawIndexed (u32 indexCount, 
     assert (NULL != curPipeline);
     // if (NULL == curPipeline)
     // {
-    //     gos::logger::err ("gpu::pipe2::CmdBufferWriter::drawIndexed => no pipeline bound\n");
+    //     gos::logger::err ("gpu::CmdBufferWriter::drawIndexed => no pipeline bound\n");
     //     priv_setError();
     //     return *this;
     // }
@@ -447,7 +465,7 @@ CMDBUFV_BGREND_CLASS& CmdBufferWriter2::BeginRend::draw (u32 vtxCount, u32 insta
     assert (NULL != curPipeline);
     // if (NULL == curPipeline)
     // {
-    //     gos::logger::err ("gpu::pipe2::CmdBufferWriter::drawIndexed => no pipeline bound\n");
+    //     gos::logger::err ("gpu::CmdBufferWriter::drawIndexed => no pipeline bound\n");
     //     priv_setError();
     //     return *this;
     // }

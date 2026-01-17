@@ -4,8 +4,6 @@
 
 using namespace gos;
 using namespace gos::gpu;
-using namespace gos::gpu::pipe2;
-
 
 
 //***********************************************
@@ -26,7 +24,7 @@ CmdBufferWriter2& CmdBufferWriter2::begin (GPU *gpuIN, const GPUCmdBufferHandle 
     const gpu::CommandBuffer *cmdBuffer = gpu->getInfo(handle);
     if (NULL == cmdBuffer)
     {
-        gos::logger::err ("gpu::pipe2::CmdBufferWriter2::begin => invalid cmdBufferHandle\n");
+        gos::logger::err ("gpu::CmdBufferWriter2::begin => invalid cmdBufferHandle\n");
         priv_setError();
     }
     vkCommandBuffer = cmdBuffer->vkHandle;
@@ -40,7 +38,7 @@ CmdBufferWriter2& CmdBufferWriter2::begin (GPU *gpuIN, const GPUCmdBufferHandle 
     VkResult result = vkBeginCommandBuffer (vkCommandBuffer, &beginInfo);
     if (VK_SUCCESS != result)
     {
-        gos::logger::err ("gpu::pipe2::CmdBufferWriter2::begin() => vkBeginCommandBuffer() => %s\n", string_VkResult(result));
+        gos::logger::err ("gpu::CmdBufferWriter2::begin() => vkBeginCommandBuffer() => %s\n", string_VkResult(result));
         priv_setError();
     }
 
@@ -76,7 +74,7 @@ bool CmdBufferWriter2::end()
         const VkResult result = vkEndCommandBuffer (vkCommandBuffer);
         if (VK_SUCCESS != result)
         {
-            gos::logger::err ("gpu::pipe2::CmdBufferWriter2::end() => vkEndCommandBuffer() => %s\n", string_VkResult(result));
+            gos::logger::err ("gpu::CmdBufferWriter2::end() => vkEndCommandBuffer() => %s\n", string_VkResult(result));
             priv_setError();
         }    
         break;

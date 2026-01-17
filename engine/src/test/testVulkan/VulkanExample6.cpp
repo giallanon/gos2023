@@ -247,7 +247,7 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, V
 
     
     
-    gos::gpu::pipe2::CmdBufferWriter2 cw;
+    gos::gpu::CmdBufferWriter2 cw;
     cw
         .begin (gpu, cmdBufferHandle)
         .setViewport (gpu->viewport_getDefault());
@@ -259,7 +259,7 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, V
 
 
 //************************************
-bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::pipe2::CmdBufferWriter2 &cw, VkImage swapChainImage, const asset2::Asset_pipe *pipe)
+bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter2 &cw, VkImage swapChainImage, const asset2::Asset_pipe *pipe)
 {
     cw
         .imageTransition (rt1, eImageLayout::undefined, eImageLayout::color_attachment_optimal)

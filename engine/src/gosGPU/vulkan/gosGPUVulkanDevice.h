@@ -35,6 +35,7 @@ namespace gos
 
         u32                     limits_get_minStorageBufferOffsetAlignment() const  { return static_cast<u32>(phyDevInfo.deviceProperties.limits.minStorageBufferOffsetAlignment); }
         u32                     limits_get_maxStorageBufferRange() const            { return static_cast<u32>(phyDevInfo.deviceProperties.limits.maxStorageBufferRange); }
+        u32                     limits_get_nonCoherentAtomSize() const              { return static_cast<u32>(phyDevInfo.deviceProperties.limits.nonCoherentAtomSize); }
 
         //===================== queue
         void                    waitIdle()                                                                                                      { vkDeviceWaitIdle(vkDev); }

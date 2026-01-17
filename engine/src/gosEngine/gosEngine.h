@@ -6,7 +6,7 @@
 #include "gosEngine_scene.h"
 #include "../gos/logger/gosLoggerStdout.h"
 #include "../gosAsset2/gosAsset2.h"
-#include "line3d/gosEngine_rend_line2d.h"
+#include "line3d/gosEngine_rend_line3d.h"
 
 
 
@@ -46,6 +46,7 @@ namespace gos
         bool                update();
         bool                inputEvent_getNext (InputEvent *out);
         input::eMouseMode   getMouseMode() const;
+        void			    setMouseMode (input::eMouseMode mode);
         
         
         //=============================

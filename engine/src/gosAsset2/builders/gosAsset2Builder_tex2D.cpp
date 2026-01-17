@@ -61,10 +61,10 @@ bool Builder_tex2D::priv_create_GPUResourceOnce()
 
         if (ret)
         {
-            gpu::pipe2::Pipeline_def def;
+            gpu::Pipeline_def def;
             def
                 .reset()
-                .add_rt (eImageFormat::U8_RGBA)
+                .rt_add (eImageFormat::U8_RGBA)
                 .shader_add (vtxShaderHandle)
                 .shader_add (pxlShaderHandle)
                 .pushConst_add (0, 8, eShaderType::vtxShader)   //screenWH
@@ -383,7 +383,7 @@ bool Builder_tex2D::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_a
                 vec2f quadWH;
                 quadWH.set ((f32)srcImg_dimx, (f32)srcImg_dimy);
 
-                gos::gpu::pipe2::CmdBufferWriter2 cw;
+                gos::gpu::CmdBufferWriter2 cw;
                 cw
                     .begin (gpu, cmdBufferHandle)
                     .setViewport (viewportHandle)

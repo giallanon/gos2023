@@ -1373,7 +1373,7 @@ bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, c
     memcpy (s->mapped_host_pt, dataSRC, howManyByteToCopy);
 
     //copio lo staging buffer nel buffer in GPU
-    gpu::pipe2::CmdBufferWriter2 *cw = helperImmediateTransferCmd.begin();
+    gpu::CmdBufferWriter2 *cw = helperImmediateTransferCmd.begin();
     cw->copyBuffer (handleSRC, handleDST, 0, offsetDST, howManyByteToCopy);
     helperImmediateTransferCmd.end();
     return true;
@@ -1401,7 +1401,7 @@ bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, c
     memcpy (s->mapped_host_pt, dataSRC, howManyByteToCopy);
 
     //copia di stgBuffer nel buffer in GPU
-    gpu::pipe2::CmdBufferWriter2 *cw = helperImmediateTransferCmd.begin();
+    gpu::CmdBufferWriter2 *cw = helperImmediateTransferCmd.begin();
     cw->copyBuffer (handleSRC, handleDST, 0, offsetDST, howManyByteToCopy);
     helperImmediateTransferCmd.end();
     return true;
@@ -1845,7 +1845,7 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
 
         //L'immagine appena creata ha il layout VK_IMAGE_LAYOUT_UNDEFINED
         //Per poterci copiare dentro srcDATA, devo trasformarla in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-        gpu::pipe2::CmdBufferWriter2 *cw = helperImmediateTransferCmd.begin();
+        gpu::CmdBufferWriter2 *cw = helperImmediateTransferCmd.begin();
         cw->imageTransition (vkImageHandle, eImageLayout::undefined, eImageLayout::transfer_dst);
 
         //una volta che immagine è in stato VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, ci posso copiare dentro il contenuto dello stgBuffer
@@ -2122,7 +2122,7 @@ const gpu::Sampler* GPU::getInfo (const GPUSamplerHandle handle) const
  * 
  * 
  *************************************************************************************************************/
-bool GPU::priv_descrSetLayout_build_v2 (const gpu::pipe2::Pipeline_def::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle, VkDescriptorSetLayout *out_vkHandle)
+bool GPU::priv_descrSetLayout_build_v2 (const gpu::Pipeline_def::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle, VkDescriptorSetLayout *out_vkHandle)
 {
     //TODO: cachare i descriptor-set ed eventualmente riutilizzarli visto che sono dei descrittori, non e' necessario
     //      crearne N diversi che descrivono la stessa cosa
@@ -2230,7 +2230,7 @@ const gpu::Pipeline2* GPU::getInfo (const GPUPipelineHandle handle) const
 
 
 //************************************
-bool GPU::pipeline_createNew (const gpu::pipe2::Pipeline_def &rpd, GPUPipelineHandle *out_handle)
+bool GPU::pipeline_createNew (const gpu::Pipeline_def &rpd, GPUPipelineHandle *out_handle)
 {
     assert (NULL != out_handle);
     out_handle->setInvalid();
@@ -2257,14 +2257,14 @@ bool GPU::pipeline_createNew (const gpu::pipe2::Pipeline_def &rpd, GPUPipelineHa
 }
 
 //************************************
-bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pipeline2 *out)
+bool GPU::priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 *out)
 {
     assert (NULL != out);
     out->reset();
     
 
 #ifdef _DEBUG
-    if (0 == rpd.numRT && !rpd.zbuffer_enabled)
+    if (0 == rpd.numRT && !rpd.zbuffer_is_enabled())
     {
         //non hai definito nemmeno 1 rt e nemmeno lo ZB, mi sa che e' un errore
         DBGBREAK;
@@ -2550,8 +2550,8 @@ bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pip
     {
         memset (&depthStencil, 0, sizeof(depthStencil));
         depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        depthStencil.depthTestEnable = (rpd.zbuffer_enabled) ? VK_TRUE : VK_FALSE;
-        depthStencil.depthWriteEnable = rpd.zbuffer_write ? VK_TRUE : VK_FALSE;
+        depthStencil.depthTestEnable = (rpd.zbuffer_is_enabled()) ? VK_TRUE : VK_FALSE;
+        depthStencil.depthWriteEnable = rpd.zbuffer_is_write_enabled() ? VK_TRUE : VK_FALSE;
         depthStencil.depthCompareOp = gpu::toVulkan (rpd.zbuffer_cmpFn);
         depthStencil.depthBoundsTestEnable = VK_FALSE;
         depthStencil.minDepthBounds = 0.0f; // Optional
@@ -2579,17 +2579,24 @@ bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pip
     //pipeline dynamic state
     //Si indicano qui quali stati delle pipeline sono dinamici e che quindi possono essere settati dinamicamente di volta in volta.
     //Gli stati non dinamici (cioe' quasi tutti), sono definiti nella pipeline e non potranno mai cambiare (alpha blending, culling, etc)
-    const VkDynamicState dynamicStateList[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    u32 num_dynamic_state = 0;
+    VkDynamicState dynamicStateList[8];
+        dynamicStateList[num_dynamic_state++] = VK_DYNAMIC_STATE_VIEWPORT;
+        dynamicStateList[num_dynamic_state++] = VK_DYNAMIC_STATE_SCISSOR;
+
+        if (rpd.zbuffer_is_depthTestEnablingDisabling_enabled())      dynamicStateList[num_dynamic_state++] = VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE;
+        if (rpd.zbuffer_is_depthWriteEnablingDisabling_enabled())     dynamicStateList[num_dynamic_state++] = VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE;
+
     VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo;
     pipelineCreateInfo.pDynamicState = &dynamicStateCreateInfo;
     {
         memset (&dynamicStateCreateInfo, 0, sizeof(dynamicStateCreateInfo));
         dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dynamicStateCreateInfo.dynamicStateCount = sizeof(dynamicStateList) / sizeof(VkDynamicState);
+        dynamicStateCreateInfo.dynamicStateCount = num_dynamic_state;
         dynamicStateCreateInfo.pDynamicStates = dynamicStateList;
     }
 
-    //Viewport (dinamica, va settata ogni colta con i comandi del renderBuffer
+    //Viewport (dinamica, va settata ogni volta con i comandi del renderBuffer
     VkPipelineViewportStateCreateInfo viewportStateCreateInfo;
     pipelineCreateInfo.pViewportState = &viewportStateCreateInfo;
     {
@@ -2665,7 +2672,7 @@ bool GPU::priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pip
         memset (&pipeline_rendering_create_info, 0, sizeof(pipeline_rendering_create_info));
         pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
 
-        if (rpd.zbuffer_enabled)
+        if (rpd.zbuffer_is_enabled())
         {
             eImageFormat fmt = rpd.zbuffer_format;
             if (eImageFormat::_DEPTH_BEST == fmt)

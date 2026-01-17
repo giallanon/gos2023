@@ -20,6 +20,14 @@ private:
 	static constexpr u8 NUM_MAX_MISSILE = 12;
 
 private:
+	enum class eCameraMode : u8
+	{
+		third_person = 0,
+		free_cam = 1
+	};
+
+
+private:
 	void			doCPUStuff ();
     bool    		priv_loadAssets();
     void    		priv_loop();
@@ -37,6 +45,7 @@ private:
 	gos::ent::Registry				entRegistry;
     gos::geom::Camera3				cam;
 	gos::engine::Renderer1			*renderer;
+	gos::engine::Rend_line3d		*rend_line3d;
 
 	gos::ENGGPUShape				handle_gpushape_cube;
 	gos::ENGGPUShape				handle_gpushape_cyl;
@@ -44,6 +53,7 @@ private:
 	gos::ENGTexture					handle_texChecker;
     u32								material_indices[4];
 
+	eCameraMode						cameraMode;
 	gos::Skeleton					*skeleton1;
 	gos::Skeleton					*skeleton2;
 	gos::model::Model				*model_player;

@@ -23,9 +23,10 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
     out_params->cullMode = eCullMode::CCW;
     out_params->drawPrimitive = eDrawPrimitive::trisList;
 
-    out_params->zbuffer_enabled = true;
+    out_params->zbuffer_flag.zero();
+    out_params->zbuffer_flag.set (gpu::Pipeline_def::ZBUFFER_FLAG__ENABLED);
+    out_params->zbuffer_flag.set (gpu::Pipeline_def::ZBUFFER_FLAG__ZWRITE_ENABLED);
     out_params->zbuffer_format = eImageFormat::_DEPTH_BEST;
-    out_params->zbuffer_write = true;
     out_params->zbuffer_cmpFn = eZFunc::LESS;
 
     //parse dell'ini
@@ -71,7 +72,7 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
         }
         if (0 == strcasecmp(s2, "none"))
         {
-            out_params->zbuffer_enabled = false;
+            out_params->zbuffer_flag.clear (gpu::Pipeline_def::ZBUFFER_FLAG__ENABLED);
         }
         else
         {
@@ -89,7 +90,7 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
                 return false;
             }
             if (string::utf8::toI32(s2) == 0)
-                out_params->zbuffer_write = false;
+                out_params->zbuffer_flag.clear (gpu::Pipeline_def::ZBUFFER_FLAG__ZWRITE_ENABLED);
 
             //cmpFn
             if (!stringParser.next(s2, sizeof(s2)))
@@ -102,6 +103,13 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
                 logger::err ("Builder_pipe::extractParams => invalid option(3) '%s' for <zb>\n", s);
                 return false;
             }
+
+
+            //opzionalmente, dato che un zb e' stato definito, ci possono essere zb_allow_depthTestEnablingDisabling e zb_allow_depthWriteEnablingDisabling
+            if (1 == sec->getOrDefaultAsU32 ("zb_allow_depthTestEnablingDisabling", 0))
+                out_params->zbuffer_flag.set (gpu::Pipeline_def::ZBUFFER_FLAG__ALLOW_DEPTH_TEST_ENABLE_DISABLE);
+            if (1 == sec->getOrDefaultAsU32 ("zb_allow_depthWriteEnablingDisabling", 0))
+                out_params->zbuffer_flag.set (gpu::Pipeline_def::ZBUFFER_FLAG__ALLOW_DEPTH_WRITE_ENABLE_DISABLE);
         }
     }
 
@@ -127,7 +135,9 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
     {
         const char *paramName = sec->getIdentifierByIndex(i);
         if (!prot_isOneOfThis(paramName, "rt0", "rt1", "rt2", "rt3", "rt4", "rt5", "rt6", "rt7", "rt8", "rt9", "rt10", "rt11", "rt12",
-                "rt13", "rt14", "rt15", "zb", "cullMode", "drawPrimitive", "wireframe", NULL))
+                "rt13", "rt14", "rt15", 
+                "zb", "zb_allow_depthTestEnablingDisabling", "zb_allow_depthWriteEnablingDisabling",
+                "cullMode", "drawPrimitive", "wireframe", NULL))
         {
             gos::logger::err ("Builder_shader::extractParams => <%s> is not a valid one\n", paramName);
             return false;
@@ -297,9 +307,8 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_as
         buffer.writeU8 (static_cast<u8>(params.bWireframe));
 
         //zbuffer
-        buffer.writeU8 (static_cast<u8>(params.zbuffer_enabled));
+        buffer.writeU8 (static_cast<u8>(params.zbuffer_flag.getBitmask()));
         buffer.writeU8 (static_cast<u8>(params.zbuffer_format));
-        buffer.writeU8 (static_cast<u8>(params.zbuffer_write));
         buffer.writeU8 (static_cast<u8>(params.zbuffer_cmpFn)); 
 
         //render target

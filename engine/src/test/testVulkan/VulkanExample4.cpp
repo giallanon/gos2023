@@ -163,13 +163,13 @@ bool VulkanExample4::virtual_onInit ()
 
 
     //pipeline
-    gpu::pipe2::Pipeline_def def;
+    gpu::Pipeline_def def;
     def
         .reset()
         .shader_add (vtxShaderHandle)
         .shader_add (fragShaderHandle)
-        .add_rt (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN)
-        .set_zbuffer(eImageFormat::_DEPTH_BEST)
+        .rt_add (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN)
+        .zbuffer_define(eImageFormat::_DEPTH_BEST)
         .vtxStream_add (eVtxStreamInputRate::perVertex)
             .add (0, offsetof(Vertex, pos), eDataFormat::_3f32)        //position
             .add (1, offsetof(Vertex, colorRGB), eDataFormat::_3f32)   //color
@@ -355,7 +355,7 @@ bool VulkanExample4::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
     }
 
         
-    gos::gpu::pipe2::CmdBufferWriter2 cw;
+    gos::gpu::CmdBufferWriter2 cw;
     cw
         .begin (gpu, cmdBufferHandle)
         .setViewport (gpu->viewport_getDefault())

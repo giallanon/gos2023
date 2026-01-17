@@ -36,7 +36,7 @@ static constexpr u32 GOS_MAGIC__VTX_LAYOUT          = gos::magic::_makeID (0xA70
 
 
 //i magic definiti nel modulo gos::Asset con 0xA90000
-static constexpr u32 GOS_MAGIC__ASSET_PIPELINE_DEF      = gos::magic::_makeID (0xA90000, 0x03);
+static constexpr u32 GOS_MAGIC__ASSET_PIPELINE_DEF      = gos::magic::_makeID (0xA90000, 0x04);
 
 
 

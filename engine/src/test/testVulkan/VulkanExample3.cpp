@@ -75,14 +75,14 @@ bool VulkanExample3::virtual_onInit ()
     }
 
     //pipeline
-    gpu::pipe2::Pipeline_def def;
+    gpu::Pipeline_def def;
     def
         .reset()
         .set_cullMode (eCullMode::CCW)
         .set_drawPrimitive (eDrawPrimitive::trisList)
         .shader_add (vtxShaderHandle)
         .shader_add (fragShaderHandle)
-        .add_rt (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN)
+        .rt_add (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN)
         .vtxStream_add (eVtxStreamInputRate::perVertex)
             .add(0, offsetof(Vertex, pos), eDataFormat::_2f32)
             .add(1, offsetof(Vertex, colorRGB), eDataFormat::_3f32)
@@ -160,7 +160,7 @@ void VulkanExample3::moveVertex()
 //************************************
 bool VulkanExample3::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gpu::SwapchainImg &swapChainImage)
 {
-    gos::gpu::pipe2::CmdBufferWriter2 cw;
+    gos::gpu::CmdBufferWriter2 cw;
     cw
         .begin (gpu, cmdBufferHandle)
         .setViewport (gpu->viewport_getDefault())

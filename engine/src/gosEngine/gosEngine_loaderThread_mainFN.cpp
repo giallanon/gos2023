@@ -212,7 +212,7 @@ public:
                 break;
             }
 
-            gpu::pipe2::Pipeline_def def;
+            gpu::Pipeline_def def;
             def.reset();
 
 
@@ -256,13 +256,24 @@ public:
 
             //zbuffer
             {
-                const bool zEnabled = reader.readBool();
+                Flag8 zbuffer_flag;
+                zbuffer_flag.setBitmask (reader.readU8());
                 const eImageFormat fmt = static_cast<eImageFormat>(reader.readU8());
-                const bool zwrite = reader.readBool();
                 const eZFunc zfunc = static_cast<eZFunc>(reader.readU8());
 
-                if (zEnabled)
-                    def.set_zbuffer (fmt, zwrite, zfunc);
+                if (zbuffer_flag.isBitSet(gpu::Pipeline_def::ZBUFFER_FLAG__ENABLED))
+                {
+                    bool zwrite = false;
+                    if (zbuffer_flag.isBitSet(gpu::Pipeline_def::ZBUFFER_FLAG__ZWRITE_ENABLED))
+                        zwrite = true;
+                    def.zbuffer_define (fmt, zwrite, zfunc);
+
+                    if (zbuffer_flag.isBitSet(gpu::Pipeline_def::ZBUFFER_FLAG__ALLOW_DEPTH_TEST_ENABLE_DISABLE))
+                        def.zbuffer_allow_depthTestEnablingDisabling();
+
+                    if (zbuffer_flag.isBitSet(gpu::Pipeline_def::ZBUFFER_FLAG__ALLOW_DEPTH_WRITE_ENABLE_DISABLE))
+                        def.zbuffer_allow_depthWriteEnablingDisabling();
+                }
             }
 
 
@@ -271,7 +282,7 @@ public:
             for (u32 i=0; i<n; i++)
             {
                 const eImageFormat fmt = static_cast<eImageFormat>(reader.readU8());
-                def.add_rt (fmt);
+                def.rt_add (fmt);
             }
 
             //vtx declaration

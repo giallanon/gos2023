@@ -34,14 +34,14 @@ bool VulkanExample1::virtual_onInit ()
     }
     
     //pipeline
-    gpu::pipe2::Pipeline_def def;
+    gpu::Pipeline_def def;
     def
         .reset()
         .set_cullMode (eCullMode::CCW)
         .set_drawPrimitive (eDrawPrimitive::trisList)
         .shader_add (vtxShaderHandle)
         .shader_add (fragShaderHandle)
-        .add_rt (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN);
+        .rt_add (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN);
 
 
     if (!gpu->pipeline_createNew (def, &pipelineHandle))
@@ -58,7 +58,7 @@ bool VulkanExample1::virtual_onInit ()
 //************************************
 bool VulkanExample1::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gpu::SwapchainImg &swapChainImage)
 {
-    gos::gpu::pipe2::CmdBufferWriter2 cw;
+    gos::gpu::CmdBufferWriter2 cw;
     cw
         .begin (gpu, cmdBufferHandle)
         .setViewport (gpu->viewport_getDefault())

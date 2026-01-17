@@ -91,6 +91,7 @@ namespace gos
 		bool	operator!= (const Flag64& b) const		{ return flag != b.flag; }
 
 		u64		getBitmask() const						{ return flag; }
+		void	setBitmask(u64 bitmask)					{ flag = bitmask; }
 
 	private:
 		u64 	flag;
@@ -113,6 +114,7 @@ namespace gos
 		bool	operator!= (const Flag32& b) const		{ return flag != b.flag; }
 
 		u32		getBitmask() const 						{ return flag; }
+		void	setBitmask(u32 bitmask)					{ flag = bitmask; }
 
 	private:
 		u32 	flag;
@@ -137,6 +139,7 @@ namespace gos
 		bool	operator!= (const Flag16& b) const		{ return flag != b.flag; }
 
 		u16		getBitmask() const						{ return flag; }
+		void	setBitmask(u16 bitmask)					{ flag = bitmask; }
 
 	private:
 		u16 	flag;
@@ -164,6 +167,7 @@ namespace gos
 		bool	operator!= (const Flag8& b) const		{ return flag != b.flag; }
 		
 		u8 		getBitmask() const 						{ return flag; }
+		void	setBitmask(u8 bitmask)					{ flag = bitmask; }
 
 	private:
 		u8 		flag;

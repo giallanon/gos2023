@@ -45,15 +45,15 @@ bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHa
     }
 
     //pipeline
-    gpu::pipe2::Pipeline_def def;
+    gpu::Pipeline_def def;
     def
         .reset()
         .set_cullMode (eCullMode::NONE)
         .set_drawPrimitive (eDrawPrimitive::lineList)
         .shader_add (hVtxShader)
         .shader_add (hFragShader)
-        .add_rt (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN)
-        .set_zbuffer (eImageFormat::_DEPTH_BEST, false, eZFunc::ALWAYS)
+        .rt_add (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN)
+        .zbuffer_define (eImageFormat::_DEPTH_BEST, false, eZFunc::ALWAYS)
         .vtxStream_add (eVtxStreamInputRate::perVertex)
             .add (00, offsetof(sVertex, pos), eDataFormat::_3f32)
             .add (1, offsetof(sVertex, col), eDataFormat::_3f32)
@@ -136,7 +136,7 @@ void SimpleLineRenderer::end()
 }
 
 //*****************************
-bool SimpleLineRenderer::recordCommandBuffer (gpu::pipe2::CmdBufferWriter2 &cw, VkImageView rt, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam)
+bool SimpleLineRenderer::recordCommandBuffer (gpu::CmdBufferWriter2 &cw, VkImageView rt, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam)
 {
     if (vtxList.getNElem() == 0)
         return false;

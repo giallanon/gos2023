@@ -22,8 +22,8 @@ public:
 
     void    end();
 
-    //bool    recordCommandBuffer (gos::gpu::pipe2::CmdBufferWriter2::BeginRend &cw, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam);
-    bool    recordCommandBuffer (gos::gpu::pipe2::CmdBufferWriter2 &cw, VkImageView rt, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam);
+    //bool    recordCommandBuffer (gos::gpu::CmdBufferWriter2::BeginRend &cw, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam);
+    bool    recordCommandBuffer (gos::gpu::CmdBufferWriter2 &cw, VkImageView rt, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam);
 
 private:
     struct sVertex

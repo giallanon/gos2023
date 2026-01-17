@@ -39,7 +39,7 @@ VkCommandBuffer GPU::ImmediateTransferCmd::getVulkanCmdBufferHandle() const
 }
 
 //*************************************************************************
-gpu::pipe2::CmdBufferWriter2* GPU::ImmediateTransferCmd::begin()
+gpu::CmdBufferWriter2* GPU::ImmediateTransferCmd::begin()
 {
     //perparo un command buffer per il trasferimento dei dati
     if (handle_cmdBuffer.isInvalid())

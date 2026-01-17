@@ -279,6 +279,12 @@ input::eMouseMode Engine::getMouseMode() const
 }
 
 //******************************** 
+void Engine::setMouseMode (input::eMouseMode mode)
+{
+    input::window_setMouseMode (gpu->getWindow(), mode);
+}
+
+//******************************** 
 bool Engine::inputEvent_getNext (InputEvent *out)
 {
     while (1)
@@ -310,6 +316,7 @@ bool Engine::inputEvent_getNext (InputEvent *out)
             break;
 
         case COMPILE_TIME_STR_CRC32("toggle_mouse_mode"):
+        printf ("engine:: toggle mouse mode\n");
             input::window_toggleMouseMode(gpu->getWindow());
             break;
         }
@@ -783,7 +790,7 @@ void Engine::utils__quick_and_dirty__create_GPUSHape_and_stageIt_to_VB_IB (const
     GPUCmdBufferHandle cmdBufferHandle;
     gpu->cmdBuffer_create (eGPUQueueFamily::transfer, &cmdBufferHandle);
 
-    gos::gpu::pipe2::CmdBufferWriter2 cw;
+    gos::gpu::CmdBufferWriter2 cw;
     cw.begin (gpu, cmdBufferHandle)
         .copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, shapeInfo->alloc_idxbuf_offset, SIZE_OF_IDX)
         .copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, shapeInfo->alloc_vtxbuf_offset, SIZE_OF_VTX)

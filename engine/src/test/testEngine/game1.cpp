@@ -1,6 +1,6 @@
 #include "game1.h"
 #include "gosShapePrefabs.h"
-
+#include "gosGeomUtils.h"
 
 using namespace gos;
 
@@ -24,6 +24,7 @@ Game1::Game1()
 	entRegistry.addComponentHandler<CompMissile>();
 
 	renderer = NULL;
+	rend_line3d = NULL;
     skeleton1 = NULL;
     skeleton2 = NULL;
     model_player = NULL;
@@ -32,6 +33,9 @@ Game1::Game1()
 	num_missile_alive = 0;
 	for (u8 i=0; i<NUM_MAX_MISSILE; i++)
 		ent_missile[i].setInvalid();
+
+	cameraMode = eCameraMode::third_person;
+
 }
 
 //***************************************
@@ -39,103 +43,11 @@ Game1::~Game1()
 {
 	entRegistry.unsetup();
 	GOSDELETE(allocator, renderer);
+	GOSDELETE(allocator, rend_line3d);
     GOSDELETE(allocator, skeleton1);
     GOSDELETE(allocator, skeleton2);
     GOSDELETE(allocator, model_player);
     GOSDELETE(allocator, model_pavimento);
-}
-
-//**********************************
-void Game1::doCPUStuff ()
-{
-    const u64 timeNow_msec = gos::getTimeSinceStart_msec();
-
-
-	const u8 isCameraFree = engine->getMouseMode() == input::eMouseMode::absolute;
-
-	Engine::InputEvent ev;
-	while (engine->inputEvent_getNext(&ev))
-	{
-		switch (ev.actionID)
-		{
-		case COMPILE_TIME_STR_CRC32("mouse-wheel"):
-			charCtrl.camera_adjust_distance ( (ev.value<0)? true: false);
-			break;
-
-		case COMPILE_TIME_STR_CRC32("mouse-LB"):
-		{
-			const ent::CompPos *cpos = entRegistry.query<ent::CompPos>(ent_mainPlayer);
-			
-			vec3f ax,ay,az;
-			cpos->quat.toAxis (&ax, &ay, &az);
-			priv_spawnMissile (cpos->pos, az);
-		}
-		break;
-
-		case COMPILE_TIME_STR_CRC32("move_forward"):
-			if (isCameraFree)
-				movement.moveForward ((ev.value == 1));
-			else
-				charCtrl.moveForward ((ev.value == 1));
-			break;
-
-		case COMPILE_TIME_STR_CRC32("move_backward"):
-			if (isCameraFree)
-				movement.moveBackward ((ev.value == 1));
-			else
-				charCtrl.moveBackward ((ev.value == 1));
-			break;
-
-		case COMPILE_TIME_STR_CRC32("strafe_left"):
-			if (isCameraFree)
-				movement.strafeLeft ((ev.value == 1));  
-			else
-				charCtrl.strafeLeft ((ev.value == 1));  
-			break;
-
-		case COMPILE_TIME_STR_CRC32("strafe_right"):
-			if (isCameraFree)
-				movement.strafeRight ((ev.value == 1));
-			else
-				charCtrl.strafeRight ((ev.value == 1));
-			break;
-
-		case COMPILE_TIME_STR_CRC32("rotateY"):
-			if (isCameraFree)
-				movement.rotateY ((ev.value < 0));
-			else
-				charCtrl.camera_rotate_aboutY ((ev.value > 0));
-			break;
-
-		case COMPILE_TIME_STR_CRC32("rotateX"):
-			if (isCameraFree)
-				movement.rotateX ((ev.value < 0));
-			else
-				charCtrl.camera_rotate_aboutX ((ev.value < 0));
-			break;
-
-		case COMPILE_TIME_STR_CRC32("strafe_up"):
-			if (isCameraFree)
-				movement.strafeUp ((ev.value == 1));
-			break;
-
-		case COMPILE_TIME_STR_CRC32("strafe_down"):
-			if (isCameraFree)
-				movement.strafeDown ((ev.value == 1));
-			break;
-		}
-	}
-
-	//charCtrl
-
-    //gestione del movimento
-	if (isCameraFree)
-		movement.update(timeNow_msec);
-	else
-		charCtrl.update(entRegistry, timeNow_msec);
-
-
-    cam.markUpdated();
 }
 
 //***************************************
@@ -147,14 +59,20 @@ void Game1::run (gos::Engine *engineIN)
 	//input
 	engine->inputCtx->
 		action_add ("mouse-wheel")
-		.action_add ("mouse-LB");
+		.action_add ("mouse-LB")
+		.action_add ("toggle_cam_mode");
 
 	engine->inputCtx->action_bindToAxleREL ("mouse-wheel", input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::both);
 	engine->inputCtx->action_bindToBtn ("mouse-LB", input::eOrigin::mouse, 0, input::eButtonStatus::pressed);
+	engine->inputCtx->action_bindToBtn ("toggle_cam_mode", input::eOrigin::keyboard, GLFW_KEY_TAB, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LSHIFT));
 
 	//renderer
 	renderer = GOSNEW(allocator, gos::engine::Renderer1)();
 	renderer->setup (allocator, engine);
+
+
+	rend_line3d = GOSNEW(allocator, gos::engine::Rend_line3d)();
+	rend_line3d->setup (allocator, engine);
 
 	//setup camera
     cam.setPerspectiveFovLH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 250.0f);
@@ -177,6 +95,109 @@ void Game1::run (gos::Engine *engineIN)
     priv_createModel_pavimento();
     priv_loop();
 }
+
+
+//**********************************
+void Game1::doCPUStuff ()
+{
+    const u64 timeNow_msec = gos::getTimeSinceStart_msec();
+
+	Engine::InputEvent ev;
+	while (engine->inputEvent_getNext(&ev))
+	{
+		switch (ev.actionID)
+		{
+		case COMPILE_TIME_STR_CRC32("toggle_cam_mode"):
+			if (eCameraMode::third_person == cameraMode)
+				cameraMode = eCameraMode::free_cam;
+			else
+				cameraMode = eCameraMode::third_person;
+			break;
+
+
+
+		case COMPILE_TIME_STR_CRC32("mouse-wheel"):
+			charCtrl.camera_adjust_distance ( (ev.value<0)? true: false);
+			break;
+
+		case COMPILE_TIME_STR_CRC32("mouse-LB"):
+		{
+			const ent::CompPos *cpos = entRegistry.query<ent::CompPos>(ent_mainPlayer);
+			
+			vec3f ax,ay,az;
+			cpos->quat.toAxis (&ax, &ay, &az);
+			priv_spawnMissile (cpos->pos, az);
+		}
+		break;
+
+		case COMPILE_TIME_STR_CRC32("move_forward"):
+			if (eCameraMode::free_cam == cameraMode)
+				movement.moveForward ((ev.value == 1));
+			else
+				charCtrl.moveForward ((ev.value == 1));
+			break;
+
+		case COMPILE_TIME_STR_CRC32("move_backward"):
+			if (eCameraMode::free_cam == cameraMode)
+				movement.moveBackward ((ev.value == 1));
+			else
+				charCtrl.moveBackward ((ev.value == 1));
+			break;
+
+		case COMPILE_TIME_STR_CRC32("strafe_left"):
+			if (eCameraMode::free_cam == cameraMode)
+				movement.strafeLeft ((ev.value == 1));  
+			else
+				charCtrl.strafeLeft ((ev.value == 1));  
+			break;
+
+		case COMPILE_TIME_STR_CRC32("strafe_right"):
+			if (eCameraMode::free_cam == cameraMode)
+				movement.strafeRight ((ev.value == 1));
+			else
+				charCtrl.strafeRight ((ev.value == 1));
+			break;
+
+		case COMPILE_TIME_STR_CRC32("rotateY"):
+			if (eCameraMode::free_cam == cameraMode)
+				movement.rotateY ((ev.value < 0));
+			else
+				charCtrl.camera_rotate_aboutY ((ev.value > 0));
+			break;
+
+		case COMPILE_TIME_STR_CRC32("rotateX"):
+			if (eCameraMode::free_cam == cameraMode)
+				movement.rotateX ((ev.value < 0));
+			else
+				charCtrl.camera_rotate_aboutX ((ev.value < 0));
+			break;
+
+		case COMPILE_TIME_STR_CRC32("strafe_up"):
+			if (eCameraMode::free_cam == cameraMode)
+				movement.strafeUp ((ev.value == 1));
+			break;
+
+		case COMPILE_TIME_STR_CRC32("strafe_down"):
+			if (eCameraMode::free_cam == cameraMode)
+				movement.strafeDown ((ev.value == 1));
+			break;
+
+		}
+	}
+
+	//charCtrl
+
+    //gestione del movimento
+	if (eCameraMode::free_cam == cameraMode)
+		movement.update(timeNow_msec);
+	else
+		charCtrl.update(entRegistry, timeNow_msec);
+		
+
+
+    cam.markUpdated();
+}
+
 
 //***************************************
 bool Game1::priv_loadAssets()
@@ -235,7 +256,7 @@ gos::ENGGPUShape Game1::priv_create_engineShape (GPUStgBufferHandle stgBufferHan
 			DBGBREAK;
 
 
-		gos::gpu::pipe2::CmdBufferWriter2 cw;
+		gos::gpu::CmdBufferWriter2 cw;
 		cw.begin (engine->gpu, cmdBufferHandle)
 			.copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, shapeInfo->alloc_idxbuf_offset, SIZE_OF_IDX)
 			.copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, shapeInfo->alloc_vtxbuf_offset, SIZE_OF_VTX)
@@ -470,6 +491,40 @@ void Game1::priv_loop ()
 	//char controller
 	charCtrl.bind (ent_mainPlayer, &cam);
 
+
+	//line3d
+	gos::engine::Rend_line3d::Ctx line_ctx1;
+	line_ctx1.setup (allocator, 32);
+
+	line_ctx1.clear();
+	line_ctx1.vtx_add (0,0,0);
+	line_ctx1.vtx_add (10,0,0);
+	line_ctx1.vtx_add (0,10,0);
+	line_ctx1.vtx_add (0,0,10);
+	
+	line_ctx1.set_color_ARGB (0xFFFF0000); 	line_ctx1.line (0, 1);
+	line_ctx1.set_color_ARGB (0xFF00FF00); 	line_ctx1.line (0, 2);
+	line_ctx1.set_color_ARGB (0xFF0000FF); 	line_ctx1.line (0, 3);
+
+	{
+		FastArray<vec3f> vtxList (gos::getScrapAllocator(), 64);
+
+		static constexpr u8 NUM_POINT = 6;
+		geom::circle (&vtxList, vec3f(0,0,0), 4.0f, NUM_POINT, -90.0f);
+		line_ctx1.set_color_ARGB (0xFFFF00FF);
+		line_ctx1.enable_depth_test(true);
+		line_ctx1.closed_line (vtxList, NUM_POINT);
+
+		vtxList.reset();
+		geom::circle (&vtxList, vec3f(8 * cosf(math::gradToRad(30)),0,0), 4.0f, NUM_POINT, -90.0f);
+		line_ctx1.set_color_ARGB (0xFF00FFFF); 
+		line_ctx1.enable_depth_test(false);
+		line_ctx1.closed_line (vtxList, NUM_POINT);
+
+	}
+
+
+
     //loop
     u64 nextTimeUpdate_msec = 0;
     gpu::MainLoop2 mainLoop;
@@ -544,35 +599,43 @@ void Game1::priv_loop ()
         gpu::SwapchainImg swapchainImg;
         if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
+			gos::gpu::CmdBufferWriter2 cw;
+			cw	.begin (gpu, cmdBufferHandle)
+				.setViewport (gpu->viewport_getDefault());
+
 			mainLoop.stat_onCommandBufferBegin();
 			{
-				gos::gpu::pipe2::CmdBufferWriter2 cw;
-				cw	.begin (gpu, cmdBufferHandle)
-					.setViewport (gpu->viewport_getDefault());
-
 				renderer->begin(&cam);
-				{
-                    renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_mainPlayer) );
-                    renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_pavimento) );
+				// {
+                //     renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_mainPlayer) );
+                //     renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_pavimento) );
 
-					for (u8 i = 0; i < NUM_MAX_MISSILE; i++)
-					{
-						if (ent_missile[i].isValid())
-							renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_missile[i]) );
-					}
+				// 	for (u8 i = 0; i < NUM_MAX_MISSILE; i++)
+				// 	{
+				// 		if (ent_missile[i].isValid())
+				// 			renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_missile[i]) );
+				// 	}
 		
-				}
+				// }
 				renderer->end (cw);
-
-
-				cw	.imageTransition (renderer->getHandle_rt0(), eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
-					.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)
-					.copyImageToImage (renderer->getHandle_rt0(), swapchainImg.image, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
-					.imageTransition (swapchainImg.image, eImageLayout::transfer_dst, eImageLayout::presentation)
-					.end();
 			}
 			mainLoop.stat_onCommandBufferEnd();
 
+
+			//line3d
+			auto &cwr = cw.beginRender();
+			cwr.withRenderArea (renderer->getHandle_rt0())
+					.withRT (renderer->getHandle_rt0(), eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.1f))
+					.withZB (renderer->getHandle_zbuffer(), eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care);
+			rend_line3d->appendToCommandBuffer (&line_ctx1, cwr, &cam);
+
+
+			//present
+			cw	.imageTransition (renderer->getHandle_rt0(), eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
+				.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)
+				.copyImageToImage (renderer->getHandle_rt0(), swapchainImg.image, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
+				.imageTransition (swapchainImg.image, eImageLayout::transfer_dst, eImageLayout::presentation)
+				.end();
 
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }		

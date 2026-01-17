@@ -35,6 +35,8 @@ gosGeomPlane3.cpp
 gosGeomPlane3.h
 gosGeomPos3.cpp
 gosGeomPos3.h
+gosGeomUtils.cpp
+gosGeomUtils.h
 )
 
 

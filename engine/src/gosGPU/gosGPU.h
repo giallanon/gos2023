@@ -193,7 +193,7 @@ namespace gos
 
 
         //================ Pipeline
-        bool                        pipeline_createNew (const gpu::pipe2::Pipeline_def &rpd, GPUPipelineHandle *out_handle);
+        bool                        pipeline_createNew (const gpu::Pipeline_def &rpd, GPUPipelineHandle *out_handle);
         void                        deleteResource (GPUPipelineHandle &handle);
         const gpu::Pipeline2*       getInfo (const GPUPipelineHandle handle) const;
         
@@ -377,7 +377,7 @@ namespace gos
                                             ImmediateTransferCmd();
             void                            setup (GPU *gpuIN, gos::eGPUQueueFamily queueTypeIN);
             void                            unsetup ();
-            gpu::pipe2::CmdBufferWriter2*   begin();
+            gpu::CmdBufferWriter2*   begin();
             void                            end();
 
             VkCommandBuffer                 getVulkanCmdBufferHandle() const;
@@ -386,7 +386,7 @@ namespace gos
             gos::GPU                        *gpu;
             gos::eGPUQueueFamily              queueType;
             GPUCmdBufferHandle              handle_cmdBuffer;
-            gpu::pipe2::CmdBufferWriter2    cw;
+            gpu::CmdBufferWriter2    cw;
             
         };
 
@@ -524,8 +524,8 @@ namespace gos
                             }
 
 
-        bool                priv_descrSetLayout_build_v2 (const gpu::pipe2::Pipeline_def::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle, VkDescriptorSetLayout *out_vkHandle);
-        bool                priv_pipeline2_doCreate (const gpu::pipe2::Pipeline_def &rpd, gpu::Pipeline2 *out);
+        bool                priv_descrSetLayout_build_v2 (const gpu::Pipeline_def::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle, VkDescriptorSetLayout *out_vkHandle);
+        bool                priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 *out);
 
     private:
         gos::Allocator              *allocator;

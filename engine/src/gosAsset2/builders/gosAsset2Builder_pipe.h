@@ -20,6 +20,10 @@
 					oppure
 				zb: none
 				
+    (optional)	zb_allow_depthTestEnablingDisabling: 1          => serve per abilitare la possibilita' di settare al volo il depthTest
+    (optional)	zb_allow_depthWriteEnablingDisabling: 1         => serve per abilitare la possibilita' di settare al volo il depthWrite
+
+
 				
 	(optional)	cullMode: CCW					=> <mode>							=> default: eCullMode::CCW
 	(optional)	drawPrimitive: trisList			=> <primitive>						=> default: trisList
@@ -59,9 +63,8 @@ namespace gos
                 eDrawPrimitive  drawPrimitive;
                 u8              bWireframe;
 
-                u8              zbuffer_enabled;
+                Flag8           zbuffer_flag;
                 eImageFormat    zbuffer_format;
-                bool            zbuffer_write;
                 eZFunc          zbuffer_cmpFn;
 
                 u32             numRT;
