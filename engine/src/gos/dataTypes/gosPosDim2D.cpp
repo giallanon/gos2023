@@ -66,7 +66,7 @@ void Pos2D::setFromString (const char *s)
 
 		case '%':
 			assert (value > 0);
-			mode = eMode::absolute;
+			mode = eMode::perc;
 			break;
 		}
 	}
@@ -131,7 +131,7 @@ void Dim2D::setFromString (const char *s)
 
 		case '%':
 			assert (value > 0);
-			mode = eMode::absolute;
+			mode = eMode::perc;
 			break;
 		}
 	}

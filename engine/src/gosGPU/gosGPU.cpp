@@ -805,6 +805,8 @@ bool GPU::renderTarget_create (const gos::Dim2D &dimx, const gos::Dim2D &dimy, e
     assert (NULL != out_handle);
     out_handle->setInvalid();
 
+	if (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN == fmt)
+		fmt = this->swapChain_getImageFormat();
 
     //riservo un handle
     gos::gpu::RenderTarget *rt = renderTargetList.reserve (out_handle);

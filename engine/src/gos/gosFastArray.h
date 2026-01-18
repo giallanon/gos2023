@@ -126,6 +126,7 @@ namespace gos
                             nElem = source.nElem;
                         }
 
+		void 			appendFrom(const FastArray<T> &source)															{ for (u32 i=0; i<source.nElem; i++) append(source(i)); }
 
                         //======================================= fn
         void			reset()																							{ nElem=0; }

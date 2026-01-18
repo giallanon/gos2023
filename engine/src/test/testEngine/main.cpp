@@ -1,5 +1,6 @@
 #include "test1.h"
 #include "game1.h"
+#include "test_exa1.h"
 
 
 #include "../gosEngine/model/gosModelImport_glTF.h"
@@ -68,10 +69,9 @@ int main()
         if (!engine.asset_build())  return -3;
         //if (!engine.asset_rebuildAll())  return -3;
         {
-            //Test1 test;         test.run (&engine);
-
-            Game1 game;       game.run (&engine);
-
+            //Test1 test;		test.run (&engine);
+            //Game1 game;		game.run (&engine);
+			Test_exa1 test;		test.run(&engine);
         }
     }
     

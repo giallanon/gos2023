@@ -33,7 +33,7 @@ namespace gos
 
 				void	clear();
 
-				void	set_color (const gos::ColorU32 &col)									{ set_color(col.argb); }
+				void	set_color_ARGB (const gos::ColorU32 &col)								{ set_color_ARGB (col.argb); }
 				void	set_color_ARGB (u32 argb);
 				void	set_line_width (u16 w);
 				
@@ -107,8 +107,8 @@ namespace gos
 			};
 
 		private:
-			static constexpr u32	NUM_MAX_SEGMENT_IN_BUFFER = 8192;
-			static constexpr u32	NUM_MAX_VTX_IN_BUFFER	= 8192;
+			static constexpr u32	NUM_MAX_SEGMENT_IN_BUFFER = 0xFFFF; //8192;
+			static constexpr u32	NUM_MAX_VTX_IN_BUFFER	= 0xFFFF; //8192;
 			static constexpr u8		FLAG__BEGIN_INVOKED	= 0;
 
 		private:

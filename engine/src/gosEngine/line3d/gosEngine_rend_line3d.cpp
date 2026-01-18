@@ -216,6 +216,7 @@ void Rend_line3d::end()
     flag.clear(FLAG__BEGIN_INVOKED);
     gpu->buffer_manualSync_cpuWrite (sbo_vtx.mapped, 0, u32MAX);
     gpu->buffer_manualSync_cpuWrite (sbo_segment.mapped, 0, u32MAX);
+	gpu->waitIdle();
     rctx = NULL;
     res_shape_segmento = NULL;
 }
@@ -353,7 +354,7 @@ void Rend_line3d::appendToCommandBuffer (const Ctx &ctx)
                 {
                     const u16 vtx_index_2 = ctx.program(i++);
 
-                    const u32 packed_idx_1_2 = (u32)(first_vtx_index + vtx_index_1) << 8 | (first_vtx_index + vtx_index_2);
+                    const u32 packed_idx_1_2 = (u32)(first_vtx_index + vtx_index_1) << 16 | (first_vtx_index + vtx_index_2);
                     pt_segment_buffer[num_seg_in_buffer++] = packed_idx_1_2;
 
                     state.num_seg_to_draw++;

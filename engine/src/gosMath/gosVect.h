@@ -56,8 +56,8 @@ namespace gos
 			void					operator*= (const T &b)								{ x*=b; y*=b; }
 			void					operator/= (const T &b)								{ assert(b!=0); x/=b; y/=b; }
 
-			T						distance (const my_type &a, const my_type &b)		{ return (b-a).length(); }
-			T						distance2 (const my_type &a, const my_type &b)		{ return (b-a).length2(); }
+			// T						distance (const my_type &a, const my_type &b)		{ return (b-a).length(); }
+			// T						distance2 (const my_type &a, const my_type &b)		{ return (b-a).length2(); }
 		};
 
 		/*=========================================================================
@@ -101,8 +101,8 @@ namespace gos
 			void					operator*= (const my_type &b)							{ x*=b.x; y*=b.y; z*=b.z; }
 			void					operator*= (const T &b)									{ x*=b; y*=b; z*=b; }
 			void					operator/= (const T &b)									{ assert(b != 0); x /= b; y /= b; z /= b; }
-			T						distance (const my_type &a, const my_type &b)			{ return (b-a).length(); }
-			T						distance2 (const my_type &a, const my_type &b)			{ return (b-a).length2(); }
+			// T						distance (const my_type &a, const my_type &b)			{ return (b-a).length(); }
+			// T						distance2 (const my_type &a, const my_type &b)			{ return (b-a).length2(); }
 		};
 
 		/*=========================================================================
@@ -148,8 +148,8 @@ namespace gos
 			void					operator*= (const T &b)										{ x*=b; y*=b; z*=b; w*=b; }
 			void					operator/= (const T &b)										{ assert(b != 0); x /= b; y /= b; z /= b; w /= b;}
 
-			T						distance (const my_type &a, const my_type &b)				{ return (b-a).length(); }
-			T						distance2 (const my_type &a, const my_type &b)				{ return (b-a).length2(); }
+			// T						distance (const my_type &a, const my_type &b)				{ return (b-a).length(); }
+			// T						distance2 (const my_type &a, const my_type &b)				{ return (b-a).length2(); }
 		};
 
 	} //namespace math

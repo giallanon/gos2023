@@ -25,6 +25,8 @@ characterController.h
 game1.cpp
 game1.h
 main.cpp
+test_exa1.cpp
+test_exa1.h
 test1.cpp
 test1.h
  )

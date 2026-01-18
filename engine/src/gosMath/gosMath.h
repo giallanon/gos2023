@@ -116,6 +116,20 @@ namespace gos
 									return Vec3<T> (a.x + (b.x - a.x) * t01, a.y + (b.y - a.y) * t01, a.z + (b.z - a.z) * t01);
 								}
 
+
+								template<class T>
+		T						distance (const Vec2<T> &a, const Vec2<T> &b)		{ return (b-a).length(); }
+								template<class T>
+		T						distance2 (const Vec2<T> &a, const Vec2<T> &b)		{ return (b-a).length2(); }
+								template<class T>
+		T						distance (const Vec3<T> &a, const Vec3<T> &b)		{ return (b-a).length(); }
+								template<class T>
+		T						distance2 (const Vec3<T> &a, const Vec3<T> &b)		{ return (b-a).length2(); }
+								template<class T>
+		T						distance (const Vec4<T> &a, const Vec4<T> &b)		{ return (b-a).length(); }
+								template<class T>
+		T						distance2 (const Vec4<T> &a, const Vec4<T> &b)		{ return (b-a).length2(); }
+		
 		/*=========================================================
 		 * 
 		 * matrix math

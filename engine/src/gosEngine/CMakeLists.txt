@@ -33,6 +33,11 @@ line3d/gosEngine_rend_line3d.cpp
 line3d/gosEngine_rend_line3d.h
 line3d/gosEngine_rend_line3d_ctx.cpp
 
+loaders/gosEngineLoaders_pipe.h
+loaders/gosEngineLoaders_shader.h
+loaders/gosEngineLoaders_tex2D.h
+loaders/gosEngineLoaders.h
+
 model/gosModel.cpp
 model/gosModel.h
 model/gosModelBuilder.cpp

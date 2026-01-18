@@ -12,8 +12,8 @@ void main()
 {
     //indici del vtx-start  vtx-end della linea in 3d
     const uint packed_idx_1_2 = indexList.idx[gl_InstanceIndex];
-    const uint idx1 = 3 * (packed_idx_1_2 & 0xFF00) >> 8;
-    const uint idx2 = 3 * (packed_idx_1_2 & 0x00FF);
+    const uint idx1 = 3 * (packed_idx_1_2 & 0xFFFF0000) >> 16;
+    const uint idx2 = 3 * (packed_idx_1_2 & 0x0000FFFF);
 
     //vertici start-vtx e end-vtx in world pos
     const vec3 world_pos1 = vec3 (vtxList.pos[idx1], vtxList.pos[idx1+1], vtxList.pos[idx1+2]);

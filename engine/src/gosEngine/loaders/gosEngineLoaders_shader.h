@@ -1,0 +1,59 @@
+#ifndef _gosEngineLoaders_shader_h_
+#define _gosEngineLoaders_shader_h_
+#include "gosEngineLoaders.h"
+
+namespace gos
+{
+    namespace engine
+    {
+        namespace loaders
+        {
+            //********************************************************
+            class Loader_vtxShader : public loaders::BaseLoader
+            {
+            public:
+                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *out_dataIN)
+                {
+                    ResShader::DataForLoaderThread *out_data = static_cast<ResShader::DataForLoaderThread*>(out_dataIN);
+                    gos::GPU *gpu = loaderInfo.gpu;
+
+                    char s[1024];
+                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, uid, s, sizeof(s));
+                    if (!gpu->vtxshader_createFromFile (s, "main", &out_data->data.shaderHandle))
+                        return false;
+
+                    //mi aggiungo alla lista degli asset noti
+                    loaderInfo.listof_knownAssets->add_or_replace (uid, &out_data->data, sizeof(out_data->data));
+                    return true;
+                }
+            };
+
+
+            //********************************************************
+            class Loader_pxlShader : public loaders::BaseLoader
+            {
+            public:
+                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *out_dataIN)
+                {
+                    ResShader::DataForLoaderThread *out_data = static_cast<ResShader::DataForLoaderThread*>(out_dataIN);
+                    gos::GPU *gpu = loaderInfo.gpu;
+
+                    char s[1024];
+                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, uid, s, sizeof(s));
+                    if (!gpu->pxlshader_createFromFile (s, "main", &out_data->data.shaderHandle))
+                        return false;
+
+                    //mi aggiungo alla lista degli asset noti
+                    loaderInfo.listof_knownAssets->add_or_replace (uid, &out_data->data, sizeof(out_data->data));
+                    return true;
+
+                }
+            };
+
+
+        } //namespace loaders
+    } //namespace engine
+} //namespace gos
+
+
+#endif //_gosEngineLoaders_shader_h_
