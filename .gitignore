@@ -82,3 +82,7 @@ engine/bin/assetBuilder2/writable/test1/asset_bin/__asset_manifest.txt
 
 engine/bin/assetBuilder2/writable/test1/asset_bin/__dependencies.txt
 engine/bin/testEngine/writable/assets/assets2.sqlite3
+
+engine/bin/assetBuilder2/writable/test2/asset_bin/__asset_manifest.txt
+
+engine/bin/assetBuilder2/writable/test2/asset_bin/__dependencies.txt

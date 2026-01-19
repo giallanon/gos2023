@@ -1,0 +1,23 @@
+src: /home/giallanon/gixprogram/gos2023/engine/common_assets/model3d/albero/albero.glb
+
+
+============= VTX LAYOUT ==============
+offset | format    | semantic   | index
+---------------------------------------
+     0 | _3f32     | position   | 0
+    12 | _3f32     | normal     | 0
+    24 | _2f32     | texCoord   | 0
+
+
+============= SHAPE ===============
+#   | num-vertex | num-index | name
+-----------------------------------
+000 |        352 |       792 | Cylinder
+001 |        270 |       300 | Icosphere
+
+
+======== SKELETON ==========
+Num bones: 3
+name: root
+    name: Cylinder
+    name: Icosphere

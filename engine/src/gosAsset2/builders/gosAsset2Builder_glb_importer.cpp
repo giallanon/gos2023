@@ -4,7 +4,7 @@
 #include "../../gos/gosUtils.h"
 
 
-#define GOS__glTF_VERBOSE
+#undef GOS__glTF_VERBOSE
 
 
 using namespace gos;
@@ -786,7 +786,7 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 		ct+=binChunkLen;		
 	}
 
-#ifdef _DEBUG
+#ifdef GOS__glTF_VERBOSE
 	{
 		gos::File hFile;
 		fs::fileOpenForW (&hFile, "@w/debug_imported_glTF.json");
@@ -802,7 +802,8 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 		gos::logger::err ("Importer_glb::importFromMemory() => unable to parse json block\n");
 		return false;
 	}
-#ifdef _DEBUG
+	
+#ifdef GOS__glTF_VERBOSE
 	ini.saveAs ("@w/debug_imported_glTF.ini");
 #endif
 
@@ -919,14 +920,6 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 		priv_applySkeleton (&rootBone);
 	}
 
-
-	/*glTF e' right handed, devo convertire tutto
-	for (u32 i=0; i<out_shapeList.getNElem(); i++)
-	{
-		gos::Shape *myShape = &out_shapeList[i];
-		shape::shapeRightHandedToLeftHanded (myShape);
-	}
-	*/
 
 	//copio le shape in out_result
 	{

@@ -1,0 +1,37 @@
+src: /home/giallanon/gixprogram/gos2023/engine/common_assets/model3d/omino/omino.glb
+
+
+============= VTX LAYOUT ==============
+offset | format    | semantic   | index
+---------------------------------------
+     0 | _3f32     | position   | 0
+    12 | _3f32     | normal     | 0
+    24 | _2f32     | texCoord   | 0
+
+
+============= SHAPE ===============
+#   | num-vertex | num-index | name
+-----------------------------------
+000 |       4306 |      4344 | Cube.001
+
+
+======== SKELETON ==========
+Num bones: 18
+name: Armature
+    name: Cube.001
+    name: Torso
+        name: Chest
+            name: Neck
+                name: Head
+            name: Upper_Arm.L
+                name: Lower_Arm.L
+                    name: Hand.L
+            name: Upper_Arm.R
+                name: Lower_Arm.R
+                    name: Hand.R
+        name: Upper_Leg.L
+            name: Lower_Leg.L
+                name: Foot.L
+        name: Upper_Leg.R
+            name: Lower_Leg.R
+                name: Foot.R

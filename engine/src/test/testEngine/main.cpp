@@ -40,7 +40,7 @@ void test_modelImport()
     {
 	    gos::logger::log (eTextColor::green, "Skeleton:\n");
 	    gos::logger::incIndent();	
-	    result.skeleton->debug__print(gos::logger::getSystemLogger());
+	    //result.skeleton->debug__print(gos::logger::getSystemLogger());
 	    gos::logger::decIndent();
     }
 

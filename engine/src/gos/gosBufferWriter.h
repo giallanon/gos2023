@@ -31,6 +31,10 @@ namespace gos
         bool    writeU32 (u32 data)                                     { return priv_writeU32At (cursor, data, true); }
         bool    writeU64 (u64 data)                                     { return priv_writeU64At (cursor, data, true); }
 
+				//avanza il cursore di <howManyByte> ridimensionando il buffer se necessario e ritorna il pt
+				//alla zona di memoria appena riservata (ci puoi memcpyare dentro)
+		u8*		reserveSpace (u32 howManyByte);
+
                 //write: scrivono il dato alla posizione <offset> e NON muovono il cursore. Ritornano false se non e' stato
                 //possibile scrivere
         bool    writeAt (u32 offset, const void *src, u32 howManyByte)  { return priv_writeAt    (offset, src, howManyByte, false); }

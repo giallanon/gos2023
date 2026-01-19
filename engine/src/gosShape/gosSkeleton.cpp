@@ -143,24 +143,24 @@ u32 Skeleton::serialize_toMemory (u8 *out_buffer, u32 sizeof_buffer) const
 }
 
 //***********************************************************************
-void Skeleton::debug__print (gos::Logger *logger) const
+void Skeleton::debug__print (gos::UTF8String &out) const
 {
-    logger->log ("Num bones: %d\n", numBones);
-    debug__print_rec (logger, &boneList[0]);
+    out << "Num bones: "<< STRFMT("%d", numBones) << "\n";
+    debug__print_rec (out, 0, &boneList[0]);
 }
-void Skeleton::debug__print_rec (gos::Logger *logger, const Bone *bone) const
+void Skeleton::debug__print_rec (gos::UTF8String &out, u32 indent, const Bone *bone) const
 {
-    logger->log ("name: %s\n", nameList.getStringAtOffset(bone->nameIndex));
-    logger->incIndent();
+	out.fillRowUntilColumn (indent, ' ');
+    out << "name: " << nameList.getStringAtOffset(bone->nameIndex) << "\n";
+    
 
     u8 index = bone->firstChildIndex;
     while (0xFF != index)
     {
         bone = &boneList[index];
-        debug__print_rec (logger, bone);
+        debug__print_rec (out, indent+4, bone);
         index = bone->sigblinIndex;
     }
-    logger->decIndent();
 }
 
 

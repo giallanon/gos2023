@@ -58,10 +58,22 @@ bool BufferW_interface::writePadUntilMultiplo8()
     return true;
 }
 
+//*********************************** 
+u8* BufferW_interface::reserveSpace (u32 howManyByte)
+{
+	const u32 pos = cursor;
+	if (!priv_writeAt (cursor, NULL, howManyByte, true))
+		return NULL;
+	
+	return &buffer[pos];
+}
 
 //*********************************** 
 bool BufferW_interface::priv_writeAt (u32 offset, const void *src, u32 howManyByte, bool bMoveCursor)
 {
+	if (0 == howManyByte)
+		return true;
+
     const u32 finalOffset = offset + howManyByte;
     if (finalOffset > bufferSize)
     {
@@ -73,7 +85,8 @@ bool BufferW_interface::priv_writeAt (u32 offset, const void *src, u32 howManyBy
         bufferSize = newSize;        
     }
 
-    memcpy (&buffer[offset], src, howManyByte);
+	if (NULL != src)
+    	memcpy (&buffer[offset], src, howManyByte);
 
     if (finalOffset > maxWritePos)
         maxWritePos = finalOffset;

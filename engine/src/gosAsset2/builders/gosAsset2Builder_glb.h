@@ -5,11 +5,11 @@
 
 /* Sintassi:
 
-@import-glb: <rtname>    => il runtimeName e' mandatorio
+@imported_glb: <rtname>    => il runtimeName e' mandatorio
 {
     (mandatory) src: ...xxx.glb                         => il modello 3d da importare
     (optional)	scale: [varie opzioni]
-                        uniform-resize-y; <number>      => dato AABB del modello, riscala il modello in maniera uniforme affinchè la dimy di AABB sia esattamente uguale a <number>
+                        uniform-resize-y; <number>      => dato AABB del modello, riscala il modello in maniera uniforme affinchï¿½ la dimy di AABB sia esattamente uguale a <number>
                         uniform-resize-x; <number>
                         uniform-resize-z; <number>
                         

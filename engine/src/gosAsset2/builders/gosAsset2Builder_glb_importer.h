@@ -223,6 +223,7 @@ namespace gos
 			void 	priv_resolveSkeleton (Bone *rootBone);
 			void 	priv_resolveSkeletonChildren (Bone *bone, const Bone *father);
 			void 	priv_applySkeleton (Bone *rootBone);
+			
 			void 	priv_printStatistics() const;
 			void 	priv_printSkeleton() const;
 			void 	priv_printSkeleton_rec(const Bone *bone) const;

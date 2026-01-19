@@ -3,6 +3,7 @@
 #include "gosShapeEnumAndDefine.h"
 #include "../gos/gos.h"
 #include "../gos/string/gosStringList.h"
+#include "../gos/string/gosUTF8String.h"
 
 namespace gos
 {
@@ -88,14 +89,14 @@ namespace gos
         gos::Allocator*     getAllocator() const                                    { return allocator; }
 
 
-        void                debug__print (gos::Logger *logger) const;
+        void                debug__print (gos::UTF8String &out) const;
 
 
     private:
                             //una istanza di Skeleton la puoi ottenere via SkeletonBuilder oppure tramite Skeleton::createFromMemory()
                             Skeleton (gos::Allocator *allocatorIN, u32 numBones);
         void                priv_free();
-        void                debug__print_rec (gos::Logger *logger, const Bone *bone) const;
+        void                debug__print_rec (gos::UTF8String &out, u32 indent, const Bone *bone) const;
 
     private:
         gos::Allocator      *allocator;
