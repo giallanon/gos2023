@@ -44,8 +44,11 @@ gosShapeVtxElem.h
 gosShapeVtxLayout.h
 gosShapeVtxLayout.cpp
 
-#../external/tinyxml/tinyxml2.cpp
-#../external/tinyxml/tinyxml2.h
+gosSkeleton.cpp
+gosSkeleton.h
+gosSkeletonBuilder.cpp
+gosSkeletonInstance.cpp
+
 )
 
 

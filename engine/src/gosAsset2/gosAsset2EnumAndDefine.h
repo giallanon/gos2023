@@ -15,8 +15,9 @@ namespace gos
         pipe            = 3,
         tex2D           = 4,
         shape           = 5,
+        imported_glb    = 6,
 
-        __NUM           = 5 //questo deve essere sempre uguale all'id + alto
+        __NUM           = 6 //questo deve essere sempre uguale all'id + alto
     };
 
     namespace asset2
@@ -27,8 +28,9 @@ namespace gos
             gosasset_d      = 1,
             shader_txt      = 2,
             image           = 3,
+            model_glb       = 4,
             
-            __FINISHED      = 4 //questo deve sempre essere uguale al valore dell'ultimo enum + 1
+            __FINISHED      = 5 //questo deve sempre essere uguale al valore dell'ultimo enum + 1
                                 //E' importante mantenere enumToString() coerente con questa enum
         };
 

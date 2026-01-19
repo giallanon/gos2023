@@ -33,7 +33,7 @@ include_directories(${PROJECT_SOURCE_DIR}/../../gosInput)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosImage)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosGPU)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosAsset2)
-include_directories(${PROJECT_SOURCE_DIR}/../../gosDB.h)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosDB)
 
 #====================================================
 # additional library to be linked

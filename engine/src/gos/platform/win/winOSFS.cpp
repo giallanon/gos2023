@@ -262,7 +262,12 @@ bool platform::FS_fileOpen  (OSFile *out_h, const char *utf8_filePathAndName, eF
 
 	DWORD dwCreationDisposition = OPEN_EXISTING;
 	if (bCreateIfNotExists)
-		dwCreationDisposition = OPEN_ALWAYS;
+	{
+		if (bAppend)
+			dwCreationDisposition = OPEN_ALWAYS;	//se esiste lo apre, se non esiste lo crea
+		else
+			dwCreationDisposition = CREATE_ALWAYS;	//se esiste lo tronca, se non esiste lo crea
+	}
 
 	DWORD dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
 	

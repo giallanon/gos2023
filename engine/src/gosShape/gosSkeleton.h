@@ -1,6 +1,8 @@
 #ifndef _gosSkeleton_h_
 #define _gosSkeleton_h_
-#include "../gosEngineEnumAndDefine.h"
+#include "gosShapeEnumAndDefine.h"
+#include "../gos/gos.h"
+#include "../gos/string/gosStringList.h"
 
 namespace gos
 {

@@ -1,6 +1,6 @@
 #ifndef _gosModel_h_
 #define _gosModel_h_
-#include "gosSkeleton.h"
+#include "../gosShape/gosSkeleton.h"
 #include "../gosEngineEnumAndDefine.h"
 
 namespace gos

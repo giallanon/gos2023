@@ -22,6 +22,10 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC
+builders/gosAsset2Builder_glb.h
+builders/gosAsset2Builder_glb.cpp
+builders/gosAsset2Builder_glb_importer.cpp
+builders/gosAsset2Builder_glb_importer.h
 builders/gosAsset2Builder_pipe.cpp
 builders/gosAsset2Builder_pipe.h
 builders/gosAsset2Builder_shader.cpp
@@ -78,6 +82,7 @@ include_directories(${PROJECT_SOURCE_DIR}/../gos)
 include_directories(${PROJECT_SOURCE_DIR}/../gosDB)
 include_directories(${PROJECT_SOURCE_DIR}/../gosGPU)
 include_directories(${PROJECT_SOURCE_DIR}/../gosImage)
+
 
 #====================================================
 # additional include path

@@ -3,7 +3,7 @@
 #include "test_exa1.h"
 
 
-#include "../gosEngine/model/gosModelImport_glTF.h"
+#include "../gosAsset2/builders/gosAsset2Builder_glb_importer.h"
 void test_modelImport()
 {
     struct Vertex 
@@ -21,19 +21,18 @@ void test_modelImport()
         .addNorm3(offsetof(Vertex, normal))
     .end();
     
-    
-    gos::model::glTFImporter imp;
-    gos::model::glTFImporter::Result result;
+    gos::asset2::Importer_glb imp;
+    gos::asset2::Importer_glb::Result result;
 
 #ifdef GOS_PLATFORM__WINDOWS
-    #define COMMON_PATH "C:/rhea\rheaSRC/gos2023/engine/common_assets"
+    #define COMMON_PATH "C:/rhea/rheaSRC/gos2023/engine/common_assets"
 #else
     #define COMMON_PATH "/home/giallanon/gixprogram/gos2023/engine/common_assets"
 #endif
 
 
-    bool ret = imp.importFromFile (COMMON_PATH "/model3d/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
-    //bool ret = imp.importFromFile (COMMON_PATH "/model3d/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
+    //bool ret = imp.importFromFile (COMMON_PATH "/model3d/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
+    bool ret = imp.importFromFile (COMMON_PATH "/model3d/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
     //bool ret = imp.importFromFile (COMMON_PATH "/model3d/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
 
 
@@ -44,6 +43,11 @@ void test_modelImport()
 	    result.skeleton->debug__print(gos::logger::getSystemLogger());
 	    gos::logger::decIndent();
     }
+
+#ifdef GOS_PLATFORM__WINDOWS
+    _getch();
+#endif
+
 }
 
 
@@ -58,7 +62,7 @@ int main()
         return -1;
 
 
-    //test_modelImport(); return 0;
+    test_modelImport(); return 0;
 
 
     {

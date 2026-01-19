@@ -17,6 +17,7 @@ const char* asset2::enumToString (eResType s)
     case eResType::gosasset_d:      return "gosasset_d";
     case eResType::shader_txt:      return "shader_txt";
     case eResType::image:           return "image";
+    case eResType::model_glb:       return "model_glb";
 	}
 }
 
@@ -31,6 +32,7 @@ const char* asset2::enumToString (eAssetType s)
     case eAssetType::pipe:              return "pipe";
     case eAssetType::tex2D:             return "tex2D";
     case eAssetType::shape:             return "shape";
+    case eAssetType::imported_glb:      return "imported_glb";
 	}
 }
 

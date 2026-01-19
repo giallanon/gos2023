@@ -182,7 +182,7 @@ Alla fine del processo di build, lo shader "esempio_1" ha 3 runtimeName: "esempi
 
 ### pensate per importazione model 3D ###
 
-@imported-3dmodel: <rtname>
+@import-glb: <rtname>
 {
     (mandatory) src: ...xxx.glb                         => il modello 3d da importare
     (optional)	scale: [varie opzioni]
