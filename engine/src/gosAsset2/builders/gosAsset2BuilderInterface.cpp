@@ -151,11 +151,29 @@ bool BuilderInterface::priv_extractAllInludePaths (DBContext &ctx, const UniqueU
 	return ret;
 }
 
-//****************************** 
+/****************************** 
+ * <params> e' usato per determinare UID del concrete-asset
+ * <rtname
+ */
 bool BuilderInterface::prot_setupVirtualAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const
 {
+    //recuper il rtname del virtual asset
+	char rtname[128];
+    memset (rtname, 0, sizeof(rtname));
+    sec->get("__value", rtname, sizeof(rtname));
+
+	return prot_setupVirtualAsset_ex (ctx, getAssetType(), params, sizeof_params, rtname, uid_of_iniFile, sec->getLineStarted(), out_result);
+}
+
+
+/****************************** 
+ * <params> e' usato per determinare UID del concrete-asset
+ * <rtname> + <virtual_asset__declared_at_uid_of_iniFile> + <virtual_asset__declared_on_lineNum> sono usate per creare UID del virtual asseet
+ */
+bool BuilderInterface::prot_setupVirtualAsset_ex (DBContext &ctx, eAssetType assetType, const void *params, u32 sizeof_params, const char *rtname, UID virtual_asset__declared_at_uid_of_iniFile, u32 virtual_asset__declared_on_lineNum, sBuildResult *out_result) const
+{
     //calcolo assetUID
-    if (!asset_createUID (getAssetType(), params, sizeof_params, &out_result->uid_concrete_asset))
+    if (!asset_createUID (assetType, params, sizeof_params, &out_result->uid_concrete_asset))
     {
         gos::logger::err ("error generating UID of concrete asset\n");
         return false;
@@ -163,10 +181,7 @@ bool BuilderInterface::prot_setupVirtualAsset (DBContext &ctx, const void *param
 
 
     //inserisco il virtual asset nel DB
-    char rtname[128];
-    memset (rtname, 0, sizeof(rtname));
-    sec->get("__value", rtname, sizeof(rtname));
-    if (!virtasset_insert (ctx, getAssetType(), rtname, uid_of_iniFile, sec->getLineStarted(), out_result->uid_concrete_asset, &out_result->uid_virtual_asset))
+    if (!virtasset_insert (ctx, assetType, rtname, virtual_asset__declared_at_uid_of_iniFile, virtual_asset__declared_on_lineNum, out_result->uid_concrete_asset, &out_result->uid_virtual_asset))
     {
         logger->log (eTextColor::red, "error inserting UID of virtual asset\n");
         return false;
@@ -188,8 +203,8 @@ bool BuilderInterface::prot_setupVirtualAsset (DBContext &ctx, const void *param
         }        
     }
 
-    //aggiungo le dipendenze di virtual-asset ve l'inifile e il concrete asset
-    if (!dependency_add (ctx, out_result->uid_virtual_asset, uid_of_iniFile)) return false;
+    //aggiungo le dipendenze di virtual-asset verso l'inifile e il concrete asset
+    if (!dependency_add (ctx, out_result->uid_virtual_asset, virtual_asset__declared_at_uid_of_iniFile)) return false;
     if (!dependency_add (ctx, out_result->uid_virtual_asset, out_result->uid_concrete_asset)) return false;
 
     return true;

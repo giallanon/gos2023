@@ -12,22 +12,19 @@ using namespace gos;
 using namespace gos::asset2;
 
 //************************************
-bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_params)
+bool Builder_pipe::priv_extractParams ()
 {
-    assert (NULL != sec);
-    assert (NULL != out_params);
-    
     //setto i default
-    memset (out_params, 0, sizeof(Params));
-    out_params->magic = GOS_MAGIC__ASSET_PIPELINE_DEF;
-    out_params->cullMode = eCullMode::CCW;
-    out_params->drawPrimitive = eDrawPrimitive::trisList;
+    memset (&params, 0, sizeof(Params));
+    params.magic = GOS_MAGIC__ASSET_PIPELINE_DEF;
+    params.cullMode = eCullMode::CCW;
+    params.drawPrimitive = eDrawPrimitive::trisList;
 
-    out_params->zbuffer_flag.zero();
-    out_params->zbuffer_flag.set (gpu::Pipeline_def::ZBUFFER_FLAG__ENABLED);
-    out_params->zbuffer_flag.set (gpu::Pipeline_def::ZBUFFER_FLAG__ZWRITE_ENABLED);
-    out_params->zbuffer_format = eImageFormat::_DEPTH_BEST;
-    out_params->zbuffer_cmpFn = eZFunc::LESS;
+    params.zbuffer_flag.zero();
+    params.zbuffer_flag.set (gpu::Pipeline_def::ZBUFFER_FLAG__ENABLED);
+    params.zbuffer_flag.set (gpu::Pipeline_def::ZBUFFER_FLAG__ZWRITE_ENABLED);
+    params.zbuffer_format = eImageFormat::_DEPTH_BEST;
+    params.zbuffer_cmpFn = eZFunc::LESS;
 
     //parse dell'ini
     string::utf8::StringListParser stringParser;
@@ -37,7 +34,7 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
     char s2[256];
     if (sec->get("cullMode", s, sizeof(s)))
     {
-        if (!gos::utils::stringToEnum (s, &out_params->cullMode))
+        if (!gos::utils::stringToEnum (s, &params.cullMode))
         {
             logger::err ("Builder_pipe::extractParams => invalid option '%s' for <cullMode>\n", s);
             return false;
@@ -47,7 +44,7 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
     //param: drawPrimitive
     if (sec->get("drawPrimitive", s, sizeof(s)))
     {
-        if (!gos::utils::stringToEnum (s, &out_params->drawPrimitive))
+        if (!gos::utils::stringToEnum (s, &params.drawPrimitive))
         {
             logger::err ("Builder_pipe::extractParams => invalid option '%s' for <drawPrimitive>\n", s);
             return false;
@@ -58,7 +55,7 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
     if (sec->get("wireframe", s, sizeof(s)))
     {
         if (string::utf8::toI32(s) != 0)
-            out_params->bWireframe = 1;
+            params.bWireframe = 1;
     }
 
     //param: zb
@@ -72,12 +69,12 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
         }
         if (0 == strcasecmp(s2, "none"))
         {
-            out_params->zbuffer_flag.clear (gpu::Pipeline_def::ZBUFFER_FLAG__ENABLED);
+            params.zbuffer_flag.clear (gpu::Pipeline_def::ZBUFFER_FLAG__ENABLED);
         }
         else
         {
             //3 parametri: <imgFormat = BEST | ...>, <zwrite = 0|1>, <zcmpFn = LESS|...>
-            if (!utils::stringToEnum(s2, &out_params->zbuffer_format))
+            if (!utils::stringToEnum(s2, &params.zbuffer_format))
             {
                 logger::err ("Builder_pipe::extractParams => invalid option(1) '%s' for <zb>\n", s);
                 return false;
@@ -90,7 +87,7 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
                 return false;
             }
             if (string::utf8::toI32(s2) == 0)
-                out_params->zbuffer_flag.clear (gpu::Pipeline_def::ZBUFFER_FLAG__ZWRITE_ENABLED);
+                params.zbuffer_flag.clear (gpu::Pipeline_def::ZBUFFER_FLAG__ZWRITE_ENABLED);
 
             //cmpFn
             if (!stringParser.next(s2, sizeof(s2)))
@@ -98,7 +95,7 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
                 logger::err ("Builder_pipe::extractParams => invalid option(3) '%s' for <zb>\n", s);
                 return false;
             }
-            if (!utils::stringToEnum(s2, &out_params->zbuffer_cmpFn))
+            if (!utils::stringToEnum(s2, &params.zbuffer_cmpFn))
             {
                 logger::err ("Builder_pipe::extractParams => invalid option(3) '%s' for <zb>\n", s);
                 return false;
@@ -107,9 +104,9 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
 
             //opzionalmente, dato che un zb e' stato definito, ci possono essere zb_allow_depthTestEnablingDisabling e zb_allow_depthWriteEnablingDisabling
             if (1 == sec->getOrDefaultAsU32 ("zb_allow_depthTestEnablingDisabling", 0))
-                out_params->zbuffer_flag.set (gpu::Pipeline_def::ZBUFFER_FLAG__ALLOW_DEPTH_TEST_ENABLE_DISABLE);
+                params.zbuffer_flag.set (gpu::Pipeline_def::ZBUFFER_FLAG__ALLOW_DEPTH_TEST_ENABLE_DISABLE);
             if (1 == sec->getOrDefaultAsU32 ("zb_allow_depthWriteEnablingDisabling", 0))
-                out_params->zbuffer_flag.set (gpu::Pipeline_def::ZBUFFER_FLAG__ALLOW_DEPTH_WRITE_ENABLE_DISABLE);
+                params.zbuffer_flag.set (gpu::Pipeline_def::ZBUFFER_FLAG__ALLOW_DEPTH_WRITE_ENABLE_DISABLE);
         }
     }
 
@@ -120,12 +117,12 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
         if (!sec->get (s, s2, sizeof(s2)))
             break;
 
-        if (!utils::stringToEnum (s2, &out_params->renderTargetFormat[out_params->numRT]))
+        if (!utils::stringToEnum (s2, &params.renderTargetFormat[params.numRT]))
         {
             logger::err ("Builder_pipe::extractParams => invalid option '%s' for <rt[%d]>\n", s2, i);
             return false;
         }
-        out_params->numRT++;
+        params.numRT++;
     }
 
 
@@ -148,17 +145,15 @@ bool Builder_pipe::priv_extractParams (const IniFileSection *sec, Params *out_pa
 }
 
 //************************************
-bool Builder_pipe::build (DBContext &ctx, u64 buildTime_UTC, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result)
+bool Builder_pipe::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
 {
     assert (ctx.isValid());
-    assert (NULL != sec);
-    assert (NULL != out_result);
-
-    out_result->reset();
+    assert (NULL != secIN);
+	uid_of_iniFile = uid_of_iniFileIN;
+	sec = secIN;
 
     //parse della sezione
-    Params params;
-    if (!priv_extractParams(sec, &params))
+    if (!priv_extractParams())
     {
         gos::logger::err ("error parsing IniFileSection\n");
         return false;
@@ -178,8 +173,18 @@ bool Builder_pipe::build (DBContext &ctx, u64 buildTime_UTC, const UniqueUIDList
         return false;
     }
 
+    return true;
+}
 
-    //setup di virtual-asset
+//************************************
+bool Builder_pipe::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out_bCallMeAgain, sBuildResult *out_result)
+{
+	assert (NULL != out_bCallMeAgain);
+	assert (NULL != out_result);
+	*out_bCallMeAgain = false;
+    out_result->reset();
+
+	//setup di virtual-asset
     //All'uscita da questa fn:
     //  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
     //  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
@@ -217,9 +222,8 @@ bool Builder_pipe::build (DBContext &ctx, u64 buildTime_UTC, const UniqueUIDList
         return priv_do_create_assetFile (ctx, out_result->uid_concrete_asset, params, filenameDST);
     }
 
-    return true;
+	return true;
 }
-
 
 //************************************
 bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const Params &params, const char *filenameDST) const

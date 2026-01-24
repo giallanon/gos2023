@@ -16,8 +16,9 @@ namespace gos
         tex2D           = 4,
         shape           = 5,
         imported_glb    = 6,
+		skeleton    	= 7,
 
-        __NUM           = 6 //questo deve essere sempre uguale all'id + alto
+        __NUM           = 7 //questo deve essere sempre uguale all'id + alto
     };
 
     namespace asset2

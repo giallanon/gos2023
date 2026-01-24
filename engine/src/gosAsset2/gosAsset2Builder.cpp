@@ -367,7 +367,6 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 {
 	gos::DateTime dt;
 	dt.setNow_UTC();
-	buildTime_UTC = dt.getAsNiceU64();
 
 	HashedStringList listof_gosAssetd_toBeRebuilt(localAllocator, 256);
 	UniqueUIDList listof_possibile_concrete_assets_to_be_deleted(localAllocator, 256);
@@ -868,6 +867,8 @@ bool Builder::priv_gosassetd_build_parseAliasSection(DBContext &ctx, UID uid_of_
 //******************************
 bool Builder::priv_gosassetd_buildSection(DBContext &ctx, bool bDoCreateAssetFile, u32 &in_out_nextAnonymAssetName, UniqueStringList &in_out_listof_knownRTname, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets)
 {
+	UniqueUIDList hashList1(localAllocator, 256);
+
 	for (u32 iSec = 0; iSec < section->getNSubsection(); iSec++)
 	{
 		// deve essere di tipo direttiva, altrimenti e' un errore
@@ -938,37 +939,50 @@ bool Builder::priv_gosassetd_buildSection(DBContext &ctx, bool bDoCreateAssetFil
 					break;
 			}
 
-			sBuildResult result;
+
+			//invoco il builder per creare fisicamente gli asset
+			bool bBuildSuccess = false;
 			builder->setLogger(logger);
-			if (!builder->build(ctx, buildTime_UTC, listof_UID_of_known_ini_file, absFilename, uid_of_iniFile, sub, bDoCreateAssetFile, &result))
+			if (builder->build_begin(ctx, listof_UID_of_known_ini_file, absFilename, uid_of_iniFile, sub))
+			{
+				bool bContinue = true;
+				while(bContinue)
+				{
+					sBuildResult result;
+					bBuildSuccess = builder->build_exe (ctx, bDoCreateAssetFile, &bContinue, &result);
+					if (false == bBuildSuccess)
+						break;
+
+					// report a video del risultato della build
+					eTextColor color = eTextColor::green;
+					if (eBuildResult::was_already_built == result.result)
+						color = eTextColor::darkBlue;
+					logger->log(color, "[%-17s] %016" PRIX64 " [%016" PRIX64 "]\n", asset2::enumToString(result.result), result.uid_virtual_asset._uid, result.uid_concrete_asset._uid);
+
+
+					// calcolo e scrivo le dipendenze runtime di questo asset
+					// Per "dipendenze runtime" intendo una lista di altri asset (e non risorse) dai quali questo asset dipende
+					if (eBuildResult::just_built == result.result)
+					{
+						out_listOfBuiltAssets->insertIfNotExists(result.uid_concrete_asset);
+
+						dependency_get_dependecies_list(ctx, result.uid_concrete_asset, true, &hashList1);
+						auto list = hashList1._queryList();
+						for (u32 i = 0; i < list->getNElem(); i++)
+						{
+							const UID childUID = list->queryElem(i);
+							if (childUID.isAnAsset())
+								dependencyRT_add(ctx, result.uid_concrete_asset, childUID);
+						}
+					}
+				}
+				builder->build_end();
+			}
+			if (!bBuildSuccess)
 				break;
 
 			// aggiungo rt-name alla lista dei nomi noti da questo file
 			in_out_listof_knownRTname.add(assetRuntimeName);
-
-			// report a video del risultato della build
-			eTextColor color = eTextColor::green;
-			if (eBuildResult::was_already_built == result.result)
-				color = eTextColor::darkBlue;
-			logger->log(color, "[%-17s] %016" PRIX64 " [%016" PRIX64 "]\n", asset2::enumToString(result.result), result.uid_virtual_asset._uid, result.uid_concrete_asset._uid);
-
-			// calcolo e scrivo le dipendenze runtime di questo asset
-			// Per "dipendenze runtime" intendo una lista di altri asset (e non risorse) dai quali questo asset dipende
-			if (eBuildResult::just_built == result.result)
-			{
-				out_listOfBuiltAssets->insertIfNotExists(result.uid_concrete_asset);
-
-				UniqueUIDList hashList1(localAllocator, 256);
-				dependency_get_dependecies_list(ctx, result.uid_concrete_asset, true, &hashList1);
-
-				auto list = hashList1._queryList();
-				for (u32 i = 0; i < list->getNElem(); i++)
-				{
-					const UID childUID = list->queryElem(i);
-					if (childUID.isAnAsset())
-						dependencyRT_add(ctx, result.uid_concrete_asset, childUID);
-				}
-			}
 
 			// fine while (1)
 			ret = true;

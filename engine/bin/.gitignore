@@ -3,3 +3,7 @@ testVulkan/testVulkan__linux_Release
 
 ProfileServer/ProfileServer__linux_Debug
 ProfileServer/ProfileServer__linux_Release
+
+*.gosasset.model_info.txt
+__asset_manifest.txt
+__dependencies.txt

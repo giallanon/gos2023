@@ -121,15 +121,14 @@ void Builder_tex2D::deinitOnce()
 }
 
 //************************************
-bool Builder_tex2D::priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, const IniFileSection *sec, Params *out_params)
+bool Builder_tex2D::priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename)
 {
     assert (NULL != sec);
-    assert (NULL != out_params);
     
     //setto i default
-    memset (out_params, 0, sizeof(Params));
-    out_params->srcIs_sRGB = 1;
-    out_params->dstNumMipMap = u16MAX;
+    memset (&params, 0, sizeof(Params));
+    params.srcIs_sRGB = 1;
+    params.dstNumMipMap = u16MAX;
 
     //parse della section
     char s[1024];
@@ -140,15 +139,15 @@ bool Builder_tex2D::priv_extractParams (DBContext &ctx, const UniqueUIDList &lis
         logger->log(eTextColor::red, "line %d => can't find param <src>\n", sec->getLineStarted());
         return false;
     }
-    if (!asset2::Builder::makeABSPathFromFilename (ctx, logger, listof_UID_of_known_ini_file, absFilename, s, out_params->src, sizeof(out_params->src)))
+    if (!asset2::Builder::makeABSPathFromFilename (ctx, logger, listof_UID_of_known_ini_file, absFilename, s, params.src, sizeof(params.src)))
         return false;
 
 
     //param:srcColorSpace      e' opzionale
     if (sec->get("srcColorSpace", s, sizeof(s)))
     {
-        if (strcmp(s, "sRGB") == 0)         out_params->srcIs_sRGB = 1;
-        else if (strcmp(s, "RGB") == 0)     out_params->srcIs_sRGB = 0;
+        if (strcmp(s, "sRGB") == 0)         params.srcIs_sRGB = 1;
+        else if (strcmp(s, "RGB") == 0)     params.srcIs_sRGB = 0;
         else
         {
             logger->log(eTextColor::red, "line %d => invalid option '%s' for <srcColorSpace>\n", sec->getLineStarted(), s);
@@ -160,7 +159,7 @@ bool Builder_tex2D::priv_extractParams (DBContext &ctx, const UniqueUIDList &lis
     if (sec->get("dstNumMipMap", s, sizeof(s)))
     {
         if (strcmp(s, "max") == 0)
-            out_params->dstNumMipMap = u16MAX;
+            params.dstNumMipMap = u16MAX;
         else
         {
             i32 n = gos::string::ansi::toI32(s);
@@ -169,7 +168,7 @@ bool Builder_tex2D::priv_extractParams (DBContext &ctx, const UniqueUIDList &lis
                 logger->log(eTextColor::red, "line %d => invalid option '%s' for <dstNumMipMap>. The value cannot be less than 1\n", sec->getLineStarted(), s);
                 return false;
             }
-            out_params->dstNumMipMap = static_cast<u16>(n);
+            params.dstNumMipMap = static_cast<u16>(n);
         }
     }
 
@@ -179,12 +178,12 @@ bool Builder_tex2D::priv_extractParams (DBContext &ctx, const UniqueUIDList &lis
         logger->log(eTextColor::red, "line %d => can't find param <dstFmt>\n", sec->getLineStarted());
         return false;
     }    
-    if (!gos::utils::stringToEnum (s, &out_params->dstFmt))
+    if (!gos::utils::stringToEnum (s, &params.dstFmt))
     {
         logger->log(eTextColor::red, "line %d => invalid option '%s' for <dstFmt> (invalid format)\n", sec->getLineStarted(), s);
         return false;
     }
-    switch (out_params->dstFmt)
+    switch (params.dstFmt)
     {
     case eImageFormat::U8_R:
     case eImageFormat::U8_RGB:
@@ -201,11 +200,13 @@ bool Builder_tex2D::priv_extractParams (DBContext &ctx, const UniqueUIDList &lis
 }
 
 //************************************
-bool Builder_tex2D::build (DBContext &ctx, u64 buildTime_UTC, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result)
+bool Builder_tex2D::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
 {
     assert (ctx.isValid());
-    assert (NULL != sec);
-    assert (NULL != out_result);
+    assert (NULL != secIN);
+	uid_of_iniFile = uid_of_iniFileIN;
+	sec = secIN;
+    
 
     if (NULL == gpu)
     {
@@ -214,11 +215,8 @@ bool Builder_tex2D::build (DBContext &ctx, u64 buildTime_UTC, const UniqueUIDLis
     }
 
 
-    out_result->reset();
-
     //parse della sezione
-    Params params;
-    if (!priv_extractParams(ctx, listof_UID_of_known_ini_file, absFilename, sec, &params))
+    if (!priv_extractParams(ctx, listof_UID_of_known_ini_file, absFilename))
     {
         logger->log (eTextColor::red, "error parsing IniFileSection\n");
         return false;
@@ -232,7 +230,18 @@ bool Builder_tex2D::build (DBContext &ctx, u64 buildTime_UTC, const UniqueUIDLis
         return false;
     }     
 
-    //questo file gosasset_d dipende dalla risorsa params.uid__resource_image)
+    return true;
+}
+
+//************************************
+bool Builder_tex2D::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out_bCallMeAgain, sBuildResult *out_result)
+{
+	assert (NULL != out_result);
+	assert (NULL != out_bCallMeAgain);
+	*out_bCallMeAgain = false;
+    out_result->reset();
+
+	//questo file gosasset_d dipende dalla risorsa params.uid__resource_image)
     if (!asset2::dependency_exists(ctx, uid_of_iniFile, params.uid__resource_image))
     {
         if (!asset2::dependency_add (ctx, uid_of_iniFile, params.uid__resource_image)) 
@@ -263,7 +272,7 @@ bool Builder_tex2D::build (DBContext &ctx, u64 buildTime_UTC, const UniqueUIDLis
         return priv_do_create_assetFile (ctx, out_result->uid_concrete_asset, params, filenameDST);
     }
 
-    return true;
+	return true;
 }
 
 

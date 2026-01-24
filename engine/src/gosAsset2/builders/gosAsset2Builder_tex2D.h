@@ -32,7 +32,10 @@ namespace gos
 
             void    initOnce (gos::GPU *gpuIN);
             void    deinitOnce();
-            bool    build (DBContext &ctx, u64 buildTime_UTC, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result);
+
+			bool 	build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec);
+			bool 	build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out_bCallMeAgain, sBuildResult *out_result);
+			void 	build_end()		{ }
 
 
         private:
@@ -47,12 +50,15 @@ namespace gos
             };
 
         private:
-            bool    priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, const IniFileSection *sec, Params *out_params);
+            bool    priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename);
             bool    priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const Params &params, const char *filenameDST);
             bool    priv_create_GPUResourceOnce();
             bool    priv_save (const gpu::sMappedImage &src, gos::image::Builder &builder, eImageFormat dstFmt, u32 srcW, u32 srcH, u32 mipMapNum_0toN, u32 numPallini);
 
         private:
+			Params 				params;
+			UID 				uid_of_iniFile;
+			const gos::IniFileSection *sec;
             gos::GPU            *gpu;
             GPUSamplerHandle    samplerHandle;
             GPUPipelineHandle   pipeHandle;
