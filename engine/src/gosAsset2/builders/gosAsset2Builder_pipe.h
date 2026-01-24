@@ -49,10 +49,12 @@ namespace gos
         class Builder_pipe : public BuilderInterface
         {
         public:
-                    Builder_pipe () : BuilderInterface (eAssetType::pipe)                        { }
-                    ~Builder_pipe()                                                                                                 { }
+                    Builder_pipe () : BuilderInterface (eAssetType::pipe)		{ }
+                    ~Builder_pipe()												{ }
 
-            bool    build (DBContext &ctx, u64 buildTime_UTC, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec, bool doCreateAnAssetFile, sBuildResult *out_result);
+			bool 	build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec);
+			bool 	build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out_bCallMeAgain, sBuildResult *out_result);
+			void 	build_end()	{ }
 
 
         private:
@@ -75,10 +77,15 @@ namespace gos
             };
 
         private:
-            bool    priv_extractParams (const IniFileSection *sec, Params *out_params);
+            bool    priv_extractParams ();
             bool    priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const Params &params, const char *filenameDST) const;
             u32     priv_writePushConstant_rec (gos::BufferW_linear &buffer, gos::datablob::DefElem &elem) const;
             
+		private:
+			Params 	params;
+			UID 	uid_of_iniFile;
+			const gos::IniFileSection *sec;
+
         }; //class Builder_pipe
 
     } //namespace asset2

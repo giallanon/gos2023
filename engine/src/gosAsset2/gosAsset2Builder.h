@@ -119,9 +119,6 @@ namespace gos
             gos::LoggerNull     loggerNull;
             gos::LoggerStdout   loggerStdout;
             BuilderInterface    *builderList[NUM_MAX_BUILDERS];
-
-            u64                 buildTime_UTC;
-
 		};
 
 	} //namespace asset2
