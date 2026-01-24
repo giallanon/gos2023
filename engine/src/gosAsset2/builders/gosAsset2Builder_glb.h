@@ -9,19 +9,23 @@
 @imported_glb: <rtname>    => il runtimeName e' mandatorio
 {
     (mandatory) src: ...xxx.glb                         => il modello 3d da importare
-    (optional)	scale: [varie opzioni]
+    
+	TODO:
+	(optional)	scale: [varie opzioni]
                         uniform-resize-y; <number>      => dato AABB del modello, riscala il modello in maniera uniforme affinch� la dimy di AABB sia esattamente uguale a <number>
                         uniform-resize-x; <number>
                         uniform-resize-z; <number>
-                        
+         
+	TODO:
     (optional)	translate: [varie opzioni]
                             center-at; <x>; <y>; <z>            => dato AABB del modello, muove il centro dell'AABB alle coordinate x,y,z
                             bottom-center-at; <x>; <y>; <z>     => dato AABB del modello, muove il centro della faccia bottom dell'AABB alle coordinate x,y,z
 }
 Questo genera:
     N asset di tipo shape, 
-    M asset di tipo Material (che a sua volta possono riferire ad asset di tipo Texture)
     J asset di tipo Skeleton
+	TODO: 	M asset di tipo Material (che a sua volta possono riferire ad asset di tipo Texture)
+    
 
 
 */
@@ -73,6 +77,7 @@ namespace gos
             bool    priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const Params &params, const char *filenameDST);
 			bool 	priv_build_shape (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result);
 			bool 	priv_build_skeleton (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result);
+			void 	priv_print_report(const char *filenameDST) const;
             
 		private:
 			Params 						params;

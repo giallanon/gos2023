@@ -148,6 +148,8 @@ bool Builder_glb::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out
 			fs::fileOpenForW (&f, filenameDST);
 			fs::fileWrite (f, params.src, sizeof(params.src)+1);
 			fs::fileClose(f);
+
+			priv_print_report (filenameDST);
 		}
 
 		return true;
@@ -272,3 +274,50 @@ bool Builder_glb::priv_build_skeleton (DBContext &ctx, bool doCreateAnAssetFile,
 	return true;
 }
 
+//************************************
+void Builder_glb::priv_print_report(const char *filenameDST) const
+{
+	gos::UTF8String out;
+	out.prealloc (1024);
+	
+	out << "src: " << params.src << "\n";
+
+	out << "\n\n============= VTX LAYOUT ==============\n";
+	{
+		out << "offset | format    | semantic   | index\n"
+			<< "---------------------------------------\n";
+		gos::shape::VtxLayoutReader vtxR(&buildCtx.vtxLayout);
+		for (u32 i=0; i<vtxR.getNumElem(); i++)
+		{
+			out << STRFMT("% 6d", vtxR.getOffset(i))
+				<< " | " << STRFMT("%-9s", gos::utils::enumToString(vtxR.getFormat(i)))
+				<< " | " << STRFMT("%-10s", shape::enumToString(vtxR.getSemantic(i)))
+				<< " | " << vtxR.getIndex(i)
+				<< "\n";
+		}
+	}
+
+	out << "\n\n============= SHAPE ===============\n";
+	{
+		out << "#   | num-vertex | num-index | name\n"
+			<< "-----------------------------------\n";
+		for (u32 i=0; i<buildCtx.imported.numShapes; i++)
+		{
+			out << STRFMT("%03d", i)
+				<< " | " << STRFMT("% 10d", buildCtx.imported.shapeList[i].numVtx)
+				<< " | " << STRFMT("% 9d", buildCtx.imported.shapeList[i].numIdx)
+				<< " | " << buildCtx.imported.shapeNameList[i]
+				<< "\n";
+		}
+	}
+
+	out << "\n\n======== SKELETON ==========\n";
+	{
+		buildCtx.imported.skeleton->debug__print(out);
+	}
+
+
+	char s[1024];
+	sprintf_s (s, sizeof(s), "%s.model_info.txt", filenameDST);
+	fs::fileSaveBuffer (s, out.getBuffer(), out.lengthInByte());
+}	
