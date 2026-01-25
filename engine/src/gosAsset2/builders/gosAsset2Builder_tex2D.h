@@ -60,6 +60,7 @@ namespace gos
 			UID 				uid_of_iniFile;
 			const gos::IniFileSection *sec;
             gos::GPU            *gpu;
+			gos::gpu::StageHelper	stageHelper;
             GPUSamplerHandle    samplerHandle;
             GPUPipelineHandle   pipeHandle;
             GPUDescrPoolHandle  descrPoolHandle;

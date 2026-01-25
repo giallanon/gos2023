@@ -181,7 +181,7 @@ gos::vec3f VulkanExample5::World::getPos3D (u32 x, u32 y) const
     return v;
 }
 
-void VulkanExample5::World::updateInstanceVB (GPUStgBufferHandle hStgBuffer)
+void VulkanExample5::World::updateInstanceVB (gos::gpu::StageHelper &stageHelper)
 {
     if (!bNeedUpdate)
         return;
@@ -219,10 +219,9 @@ void VulkanExample5::World::updateInstanceVB (GPUStgBufferHandle hStgBuffer)
         zz -= SPACE;
     }
 
-    if (!gpu->stagingBuffer_uploadToGPUBuffer (hStgBuffer, perInstanceData, hVBInstance, 0, sizeof(sPerInstanceData) * numInstances))
-    {
-        gos::logger::err ("VulkanExample5::World::updateInstanceVB() => can't upload to VtxBuffer\n");
-    }
+	stageHelper.begin()
+		.mem_to_buffer (perInstanceData, sizeof(sPerInstanceData) * numInstances, hVBInstance, 0)
+		.submit();
 
     GOSFREE(gos::getScrapAllocator(), perInstanceData);
 }

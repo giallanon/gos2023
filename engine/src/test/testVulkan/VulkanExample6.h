@@ -55,7 +55,7 @@ private:
     GPUZBufferHandle   zbufferHandle;
     GPUVtxBufferHandle      vtxBufferHandle;
     GPUIdxBufferHandle      idxBufferHandle;
-    GPUStgBufferHandle      stgBufferHandle;
+    gos::gpu::StageHelper	stageHelper;
 
     GPUDescrPoolHandle      descrPoolHandle;
     GPUDescrSetInstanceHandle descrSetInstancerHandle;

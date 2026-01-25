@@ -48,13 +48,13 @@ private:
     f32                     direction;
     void                    *ptToMappedStagingBuffer;
 
-    GPUVtxBufferHandle          vtxBufferHandle;
-    GPUIdxBufferHandle          idxBufferHandle;
-    GPUStgBufferHandle          stgBufferHandle;
+    GPUVtxBufferHandle		vtxBufferHandle;
+    GPUIdxBufferHandle		idxBufferHandle;
+    gos::gpu::StageHelper	stageHelper;
     
-    GPUPipelineHandle           pipelineHandle;
-    GPUShaderHandle             vtxShaderHandle;
-    GPUShaderHandle             fragShaderHandle;
+    GPUPipelineHandle		pipelineHandle;
+    GPUShaderHandle			vtxShaderHandle;
+    GPUShaderHandle			fragShaderHandle;
 };
 
 

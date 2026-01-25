@@ -20,6 +20,7 @@ Builder_tex2D::Builder_tex2D () : BuilderInterface (eAssetType::tex2D)
 void Builder_tex2D::initOnce (gos::GPU *gpuIN)
 { 
     gpu = gpuIN; 
+	stageHelper.setup (gpu, 8192*8192);
 }
 
 //************************************
@@ -113,6 +114,7 @@ bool Builder_tex2D::priv_create_GPUResourceOnce()
 void Builder_tex2D::deinitOnce()
 {
     //gpu->deleteResource (samplerHandle); non serve, ci pensa GPU da sola
+	stageHelper.unsetup();
     gpu->deleteResource(pipeHandle);
     gpu->deleteResource(descrSetInstanceHandle);
     gpu->deleteResource(descrPoolHandle);
@@ -305,7 +307,7 @@ bool Builder_tex2D::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_a
         if (params.srcIs_sRGB)
             srcImage.convert_sRGB_to_RGB();
 
-        result = gpu->texture_create2D (srcImage.getW(), srcImage.getH(), 1, eImageFormat::U8_RGBA, eMemAccessMode::onGPU, srcImage._bufferRGBA, &texHandle);
+        result = gpu->texture_create2D (srcImage.getW(), srcImage.getH(), 1, eImageFormat::U8_RGBA, eMemAccessMode::onGPU, srcImage._bufferRGBA, &texHandle, stageHelper);
         srcImage.free (gos::getSysHeapAllocator());
 
         if (!result)

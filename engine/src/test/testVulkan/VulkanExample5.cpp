@@ -34,7 +34,7 @@ void VulkanExample5::virtual_onCleanup()
     delete world;
     delete line;
     gpu->deleteResource (idxBufferHandle);
-    gpu->deleteResource (stgBufferHandle);
+    stageHelper.unsetup();
     gpu->deleteResource (vtxBufferHandle);
 
     gpu->deleteResource (vtxShaderHandle);
@@ -97,6 +97,8 @@ bool VulkanExample5::priv_loadSfera()
 //************************************
 bool VulkanExample5::virtual_onInit ()
 {
+	stageHelper.setup (gpu, 4096*4096);
+
     //input binding
     inputCtx.action_add ("LMB");
     inputCtx.action_bindToBtn ("LMB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
@@ -138,28 +140,11 @@ bool VulkanExample5::virtual_onInit ()
         return false;
     }
 
-    //Creo anche uno staging buffer
-    if (!gpu->stagingBuffer_create (1024*64, &stgBufferHandle))
-    {
-        gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->stagingBuffer_create() failed\n");
-        return false;
-    }    
-
     //copio i Vtx in vtxBuffer e idx in idxBuffer tramite lo staging buffer
-    {
-        if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, myShape.vtxBuffer, vtxBufferHandle, 0, sizeof(Vertex) * myShape.numVtx))
-        {
-            gos::logger::err ("VulkanApp::init() => can't upload to VtxBuffer\n");
-            return false;
-        }
-
-
-        if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, myShape.idxBuffer, idxBufferHandle, 0, sizeof(u16) * myShape.numIdx))
-        {
-            gos::logger::err ("VulkanApp::init() => can't upload to IdxBuffer\n");
-            return false;
-        }
-    }
+	stageHelper.begin()
+		.mem_to_buffer (myShape.vtxBuffer, sizeof(Vertex) * myShape.numVtx, vtxBufferHandle, 0)
+		.mem_to_buffer (myShape.idxBuffer, sizeof(u16) * myShape.numIdx, idxBufferHandle, 0)
+		.submit();
 
 
     //carico gli shader
@@ -252,7 +237,7 @@ bool VulkanExample5::virtual_onInit ()
     r++; world->set_ON_OFF (10,r); world->set_ON_OFF (9,r); world->set_ON_OFF (11,r); world->set_ON_OFF (8,r); world->set_ON_OFF (12,r);
     r++; world->set_ON_OFF (10,r); world->set_ON_OFF (9,r); world->set_ON_OFF (11,r);
     r++; world->set_ON_OFF (10,r);
-    world->updateInstanceVB (stgBufferHandle);
+    world->updateInstanceVB (stageHelper);
 
     priv_runMarchingSquare();
 
@@ -423,11 +408,15 @@ void VulkanExample5::priv_runMarchingSquare()
             }
 
             gpu->vertexBuffer_create (sizeof(Vertex) * gpuMSQ2.numVtx, eMemAccessMode::onGPU, &gpuMSQ2.vtxBufferHandle);
-            gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, vtx, gpuMSQ2.vtxBufferHandle, 0, sizeof(Vertex) * gpuMSQ2.numVtx);
+            gpu->indexBuffer_create (sizeof(u16) * gpuMSQ2.numIdx, eMemAccessMode::onGPU, &gpuMSQ2.idxBufferHandle);
+
+			stageHelper.begin()
+				.mem_to_buffer (vtx, sizeof(Vertex) * gpuMSQ2.numVtx, gpuMSQ2.vtxBufferHandle, 0)
+				.mem_to_buffer (idxList._queryPointer(), sizeof(u16) * gpuMSQ2.numIdx, gpuMSQ2.idxBufferHandle, 0)
+				.submit();
             GOSFREE(gos::getScrapAllocator(), vtx);
 
-            gpu->indexBuffer_create (sizeof(u16) * gpuMSQ2.numIdx, eMemAccessMode::onGPU, &gpuMSQ2.idxBufferHandle);
-            gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, idxList._queryPointer() , gpuMSQ2.idxBufferHandle, 0, sizeof(u16) * gpuMSQ2.numIdx);
+
         }
         vtxList.unsetup();
         idxList.unsetup();
@@ -452,7 +441,7 @@ void VulkanExample5::priv_doCPUStuff ()
 //************************************
 bool VulkanExample5::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, gos::gpu::SwapchainImg &swapChainImage)
 {
-    world->updateInstanceVB (stgBufferHandle);
+    world->updateInstanceVB (stageHelper);
 
     //upload di UBO su GPU
     ubo.camView = cam.getMatV();
@@ -495,7 +484,7 @@ bool VulkanExample5::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
     rctx.end_render_ctx();
 
     //line->recordCommandBuffer (rend, stgBufferHandle, cam);
-    line->recordCommandBuffer (cw, swapChainImage.imageView, stgBufferHandle, cam);
+    line->recordCommandBuffer (cw, swapChainImage.imageView, stageHelper, cam);
     
 
     cw.imageTransition (swapChainImage.image, eImageLayout::color_attachment_optimal, eImageLayout::presentation)

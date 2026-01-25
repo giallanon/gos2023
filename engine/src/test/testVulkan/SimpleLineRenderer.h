@@ -23,7 +23,7 @@ public:
     void    end();
 
     //bool    recordCommandBuffer (gos::gpu::CmdBufferWriter2::BeginRend &cw, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam);
-    bool    recordCommandBuffer (gos::gpu::CmdBufferWriter2 &cw, VkImageView rt, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam);
+    bool    recordCommandBuffer (gos::gpu::CmdBufferWriter2 &cw, VkImageView rt, gos::gpu::StageHelper &stageHelper, gos::geom::Camera3 &cam);
 
 private:
     struct sVertex

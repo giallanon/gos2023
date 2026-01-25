@@ -28,7 +28,7 @@ namespace gos
                         return false;
                     }
                     
-                    const bool ret = gpu->texture_create2D (&image, 0, eMemAccessMode::onGPU, &out_data->data.texHandle);
+                    const bool ret = gpu->texture_create2D (&image, 0, eMemAccessMode::onGPU, &out_data->data.texHandle, loaderInfo.stageHelper);
                     image::free (thread_allocator, image);
 
                     //mi aggiungo alla lista degli asset noti

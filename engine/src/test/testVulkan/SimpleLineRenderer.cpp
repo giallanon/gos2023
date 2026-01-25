@@ -136,7 +136,7 @@ void SimpleLineRenderer::end()
 }
 
 //*****************************
-bool SimpleLineRenderer::recordCommandBuffer (gpu::CmdBufferWriter2 &cw, VkImageView rt, GPUStgBufferHandle hStgBuffer, gos::geom::Camera3 &cam)
+bool SimpleLineRenderer::recordCommandBuffer (gpu::CmdBufferWriter2 &cw, VkImageView rt, gos::gpu::StageHelper &stageHelper, gos::geom::Camera3 &cam)
 {
     if (vtxList.getNElem() == 0)
         return false;
@@ -154,12 +154,6 @@ bool SimpleLineRenderer::recordCommandBuffer (gpu::CmdBufferWriter2 &cw, VkImage
             return false;
         }
 
-        if (!gpu->stagingBuffer_uploadToGPUBuffer (hStgBuffer, vtxList._queryPointer(), hVtxBuffer, 0, sizeof(sVertex) * vtxList.getNElem()))
-        {
-            gos::logger::err ("SimpleLineRenderer::recordCommandBuffer() => gpu->stagingBuffer_uploadToGPUBuffer() failed\n");
-            return false;
-        }        
-
         gpu->deleteResource (hIdxBuffer);
         if (!gpu->indexBuffer_create (sizeof(u16) * idxList.getNElem(), eMemAccessMode::onGPU, &hIdxBuffer))
         {
@@ -167,12 +161,10 @@ bool SimpleLineRenderer::recordCommandBuffer (gpu::CmdBufferWriter2 &cw, VkImage
             return false;
         }
 
-        if (!gpu->stagingBuffer_uploadToGPUBuffer (hStgBuffer, idxList._queryPointer(), hIdxBuffer, 0, sizeof(u16) * idxList.getNElem()))
-        {
-            gos::logger::err ("SimpleLineRenderer::recordCommandBuffer() => gpu->stagingBuffer_uploadToGPUBuffer() failed\n");
-            return false;
-        }        
-
+		stageHelper.begin()
+			.mem_to_buffer (vtxList._queryPointer(), sizeof(sVertex) * vtxList.getNElem(), hVtxBuffer, 0)
+			.mem_to_buffer (idxList._queryPointer(), sizeof(u16) * idxList.getNElem(), hIdxBuffer, 0)
+			.submit();
     }
 
     //upload di UBO su GPU

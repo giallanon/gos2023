@@ -19,7 +19,7 @@ void Loader_tex2D::unload (Loader *assetLoader, const DBContext &ctx, const UID 
 //******************************************************
 bool Loader_tex2D::load (Loader *assetLoader, const DBContext &ctx, const UID &uid, void *in_out_asset)
 {
-	Asset_tex2D *out = static_cast <Asset_tex2D*>(in_out_asset);
+	//Asset_tex2D *out = static_cast <Asset_tex2D*>(in_out_asset);
 	assert (uid.isValid());
 	assert (uid.isAnAssetOfType(this->getAssetType()));
 
@@ -34,8 +34,10 @@ bool Loader_tex2D::load (Loader *assetLoader, const DBContext &ctx, const UID &u
         return false;
     }
 
-    gos::GPU *gpu = assetLoader->getGPU();
-    const bool ret = gpu->texture_create2D (&image, 0, eMemAccessMode::onGPU, &out->handle_texture);
-    image::free (gos::getScrapAllocator(), image);
-    return ret;    
+	DBGBREAK;
+	return false;
+    // gos::GPU *gpu = assetLoader->getGPU();
+    // const bool ret = gpu->texture_create2D (&image, 0, eMemAccessMode::onGPU, &out->handle_texture);
+    // image::free (gos::getScrapAllocator(), image);
+    // return ret;    
 }

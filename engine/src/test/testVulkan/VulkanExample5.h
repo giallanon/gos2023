@@ -50,7 +50,7 @@ private:
         void    dec_scaleX (u32 x, u32 y);
         void    inc_scaleZ (u32 x, u32 y);
         void    dec_scaleZ (u32 x, u32 y);
-        void    updateInstanceVB (GPUStgBufferHandle hStgBuffer);
+        void    updateInstanceVB (gos::gpu::StageHelper &stageHelper);
 
         bool    mouseToGrid (const gos::GPU *gpu, gos::geom::Camera3 &cam, i16 mx, i16 my, u16 *out_x, u16 *out_y) const;
         u32     getNumInstances() const                                     { return dimx*dimy; }
@@ -139,12 +139,12 @@ private:
 
     GPUVtxBufferHandle      vtxBufferHandle;
     GPUIdxBufferHandle      idxBufferHandle;
-    GPUStgBufferHandle      stgBufferHandle;
+    gos::gpu::StageHelper	stageHelper;
 
-    GPUZBufferHandle       zbufferHandle;
-    GPUPipelineHandle           pipelineHandle;
-    GPUShaderHandle             vtxShaderHandle;
-    GPUShaderHandle             fragShaderHandle;
+    GPUZBufferHandle       	zbufferHandle;
+    GPUPipelineHandle		pipelineHandle;
+    GPUShaderHandle			vtxShaderHandle;
+    GPUShaderHandle			fragShaderHandle;
 
     GPUDescrPoolHandle          descrPoolHandle;
     GPUDescrSetInstanceHandle   descrSetInstancerHandle;

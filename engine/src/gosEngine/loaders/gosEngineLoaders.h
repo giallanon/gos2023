@@ -100,6 +100,7 @@ namespace gos
                 gos::GPU            *gpu;
                 asset2::DBContext   *ctx;
                 KnownAssets         *listof_knownAssets;
+				gpu::StageHelper	stageHelper;
             };
 
 

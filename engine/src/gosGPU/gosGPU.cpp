@@ -88,7 +88,6 @@ GPU::GPU()
     currentSwapChainImageIndex = 0;
     timeToRecreateSwapchain_msec = 0;
     bSwapChainRecreatedDuringThisFrame = false;
-    helperStagingBuffer.setInvalid();
 }
 
 //********************************************************** 
@@ -105,9 +104,6 @@ void GPU::deinit()
 
     gos::logger::log ("GPU::deinit()\n");
     gos::logger::incIndent();
-
-        deleteResource (helperStagingBuffer);
-        helperImmediateTransferCmd.unsetup();
 
         //delete dei Sampler
         {
@@ -312,9 +308,6 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
 
     //tutto ok
     gos::logger::log("\n");
-
-
-    helperImmediateTransferCmd.setup (this, eGPUQueueFamily::transfer);
     return true;
 }
 
@@ -628,20 +621,6 @@ void GPU::vsync_enable (bool b)
     vSync = b;
     timeToRecreateSwapchain_msec = gos::getTimeSinceStart_msec() + 200;
 }
-
-//************************************
-void GPU::priv_createHelperStagingBuffer (u32 size)
-{
-    if (helperStagingBuffer.isValid())
-    {
-        DBGBREAK;
-        return;
-    }
-
-    stagingBuffer_create (size, &helperStagingBuffer);
-}
-
-
 
 
 /************************************************************************************************************
@@ -1353,64 +1332,6 @@ bool GPU::stagingBuffer_memcpy (GPUStgBufferHandle &handleDST, u32 offsetDST, co
     return true;
 }
 
-//************************************
-bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy)
-{
-    gpu::Buffer *dstBuffer;
-    if (!priv_fromHandleToPointer(vtxBufferList, handleDST, &dstBuffer))
-    {
-        gos::logger::err ("GPU::stagingBuffer_uploadToGPUBuffer() => invalid handleDST\n");
-        return false;
-    }
-    
-    gpu::Buffer *s;
-    if (!priv_fromHandleToPointer(staginBufferList, handleSRC, &s))
-    {
-        gos::logger::err ("GPU::stagingBuffer_uploadToGPUBuffer() => invalid handleSRC\n");
-        return false;
-    }
-
-    //memcpy di dataSRC nello stagin buffer
-    assert (s->mapped_size >= howManyByteToCopy);
-    memcpy (s->mapped_host_pt, dataSRC, howManyByteToCopy);
-
-    //copio lo staging buffer nel buffer in GPU
-    gpu::CmdBufferWriter2 *cw = helperImmediateTransferCmd.begin();
-    cw->copyBuffer (handleSRC, handleDST, 0, offsetDST, howManyByteToCopy);
-    helperImmediateTransferCmd.end();
-    return true;
-}
-
-//************************************
-bool GPU::stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy)
-{
-    gpu::Buffer *dstBuffer;
-    if (!priv_fromHandleToPointer(idxBufferList, handleDST, &dstBuffer))
-    {
-        gos::logger::err ("GPU::stagingBuffer_uploadToGPUBuffer() => invalid handleDST\n");
-        return false;
-    }
-    
-    gpu::Buffer *s;
-    if (!priv_fromHandleToPointer(staginBufferList, handleSRC, &s))
-    {
-        gos::logger::err ("GPU::stagingBuffer_uploadToGPUBuffer() => invalid handleSRC\n");
-        return false;
-    }
-
-    //memcpy di dataSRC nello stgBuffer
-    assert (s->mapped_size >= howManyByteToCopy);
-    memcpy (s->mapped_host_pt, dataSRC, howManyByteToCopy);
-
-    //copia di stgBuffer nel buffer in GPU
-    gpu::CmdBufferWriter2 *cw = helperImmediateTransferCmd.begin();
-    cw->copyBuffer (handleSRC, handleDST, 0, offsetDST, howManyByteToCopy);
-    helperImmediateTransferCmd.end();
-    return true;
-}
-
-
-
 /************************************************************************************************************
  * Vertex buffer
  * 
@@ -1796,7 +1717,7 @@ const gpu::DescrSetInstance* GPU::getInfo (const GPUDescrSetInstanceHandle handl
  * 
  * 
  *************************************************************************************************************/
-bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, GPUTextureHandle *out_handle)
+bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, GPUTextureHandle *out_handle, gpu::StageHelper &helper)
 {
     assert (NULL != out_handle);
     assert (nMipMap >= 1);
@@ -1816,21 +1737,13 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
 
     if (NULL != srcDATA)
     {
-        //srcData non lo posso usare "as-is", lo devo copiare in uno staging buffer
-        if (helperStagingBuffer.isInvalid())
-            priv_createHelperStagingBuffer(4096 * 4096);
-        
-        gpu::Buffer *stg;
-        if (!staginBufferList.fromHandleToPointer (helperStagingBuffer, &stg))
-        {
-            gos::logger::err ("GPU::texture_create2D() => unable to access the 'helperStaginBuffer'\n");
-            return false;
-        }
-        assert (stg->mapped_size >= imageMemSize);
-        memcpy (stg->mapped_host_pt, srcDATA, imageMemSize);
+        //L'immagine appena creata ha il layout VK_IMAGE_LAYOUT_UNDEFINED
+        //Per poterci copiare dentro srcDATA, devo trasformarla in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+		helper.begin()
+			.imageTransition (vkImageHandle, eImageLayout::undefined, eImageLayout::transfer_dst)
+			.mem_to_stgBuffer (srcDATA, imageMemSize, NULL);
 
-
-    #ifdef _DEBUG
+#ifdef _DEBUG
         {
             u32 totalImgSize = 0;
             u32 w = dimx;
@@ -1843,12 +1756,7 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
             }
             assert (totalImgSize <= imageMemSize);
         }
-    #endif
-
-        //L'immagine appena creata ha il layout VK_IMAGE_LAYOUT_UNDEFINED
-        //Per poterci copiare dentro srcDATA, devo trasformarla in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-        gpu::CmdBufferWriter2 *cw = helperImmediateTransferCmd.begin();
-        cw->imageTransition (vkImageHandle, eImageLayout::undefined, eImageLayout::transfer_dst);
+#endif
 
         //una volta che immagine è in stato VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, ci posso copiare dentro il contenuto dello stgBuffer
         {
@@ -1876,9 +1784,11 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
                 h/=2;
             }
 
+			const gpu::CommandBuffer *vkCmdBuffer = getInfo(helper.get_cmdBuffer_handle());
+			const gpu::Buffer *stgBuffer = getInfo (helper.get_stagBuffer_handle());
             vkCmdCopyBufferToImage(
-                helperImmediateTransferCmd.getVulkanCmdBufferHandle(),
-                stg->vkHandle,
+                vkCmdBuffer->vkHandle,
+                stgBuffer->vkHandle,
                 vkImageHandle,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 nMipMap,
@@ -1886,10 +1796,9 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
             );        
         }
 
-
         //infine, devo transizionare l'immagine da VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL a VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        cw->imageTransition (vkImageHandle, eImageLayout::transfer_dst, eImageLayout::shader_readonly);
-        helperImmediateTransferCmd.end();
+        helper.imageTransition (vkImageHandle, eImageLayout::transfer_dst, eImageLayout::shader_readonly);
+        helper.submit();
     }
 
     //pare tutto ok, creo un nuovo handle
@@ -1933,8 +1842,7 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
     return true;
 }
 
-//************************************
-bool GPU::texture_create2D (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, GPUTextureHandle *out_handle)
+bool GPU::texture_create2D (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, GPUTextureHandle *out_handle, gpu::StageHelper &helper)
 {
     const image::sTextureHeader *header = image::getTextureInfo (*im, srcTextureNum);
     if (NULL == header)
@@ -1950,10 +1858,9 @@ bool GPU::texture_create2D (const gos::Image *im, u8 srcTextureNum, eMemAccessMo
         return false;
     }
 
-    return texture_create2D (header->width, header->height, header->numMipMap, header->fmt, memAccessMode, texData.textureData, out_handle);
+    return texture_create2D (header->width, header->height, header->numMipMap, header->fmt, memAccessMode, texData.textureData, out_handle, helper);
 }
 
-//************************************
 void GPU::deleteResource (GPUTextureHandle &handle)
 {
     gpu::Texture *s;
@@ -1973,7 +1880,6 @@ void GPU::deleteResource (GPUTextureHandle &handle)
     handle.setInvalid();
 }
 
-//************************************
 bool GPU::toVulkan (const GPUTextureHandle handle, VkImageView *out) const
 {
     gpu::Texture *s;
@@ -1988,7 +1894,6 @@ bool GPU::toVulkan (const GPUTextureHandle handle, VkImageView *out) const
     return false;    
 }
 
-//************************************
 const gpu::Texture* GPU::getInfo (const GPUTextureHandle handle) const
 {
     gpu::Texture *s;

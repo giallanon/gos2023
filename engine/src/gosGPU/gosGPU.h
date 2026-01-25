@@ -26,6 +26,7 @@
 #include "gosGPUUtils.h"
 #include "pipe2/gosGPUPipe2_pipeline_def.h"
 #include "pipe2/gosGPUPipe2_cmdBufferWriter.h"
+#include "GOSGPUStageHelper.h"
 
 namespace gos
 {
@@ -228,15 +229,6 @@ namespace gos
                 //memcopia <dataSRC> in <&handleDST[offsetDST]>
         bool                stagingBuffer_memcpy (GPUStgBufferHandle &handleDST, u32 offsetDST, const void *dataSRC, u32 sizeof_dataSRC);
 
-                /**
-                 * @brief stagingBuffer_uploadToGPUBuffer()
-                 * copia [dataSRC] in [handleDST] usando [handleSRC] come buffer di appoggio.
-                 * I passaggi sono:  [datSRC] viene memcpy in [handleSRC] e poi [handleSRC] viene pushato in [handleDST]
-                 */
-        bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUVtxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
-        bool                stagingBuffer_uploadToGPUBuffer (const GPUStgBufferHandle handleSRC, const void *dataSRC, const GPUIdxBufferHandle handleDST, u32 offsetDST, u32 howManyByteToCopy);
-        
-
         //================ buffer unmapping / manualSync
         void                buffer_unmap (gpu::sMappedBuffer &m);
         void                buffer_manualSync_cpuWrite (const gpu::sMappedBuffer &mapped_buffer, u32 offset, u32 size);
@@ -285,8 +277,8 @@ namespace gos
         void                deleteResource (GPUShaderHandle &shaderHandle);
 
         //================ texture
-		bool                texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, GPUTextureHandle *out_handle);
-        bool                texture_create2D (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, GPUTextureHandle *out_handle);
+		bool                texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, GPUTextureHandle *out_handle, gpu::StageHelper &helper);
+        bool                texture_create2D (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, GPUTextureHandle *out_handle, gpu::StageHelper &helper);
         void                deleteResource (GPUTextureHandle &handle);
         const gpu::Texture* getInfo (const GPUTextureHandle handle) const;
         bool                toVulkan (const GPUTextureHandle handle, VkImageView *out) const;
@@ -374,19 +366,19 @@ namespace gos
         class ImmediateTransferCmd
         {
         public:
-                                            ImmediateTransferCmd();
-            void                            setup (GPU *gpuIN, gos::eGPUQueueFamily queueTypeIN);
-            void                            unsetup ();
-            gpu::CmdBufferWriter2*   begin();
-            void                            end();
+									ImmediateTransferCmd();
+            void					setup (GPU *gpuIN, gos::eGPUQueueFamily queueTypeIN);
+            void					unsetup ();
+            gpu::CmdBufferWriter2*	begin();
+            void					end();
 
-            VkCommandBuffer                 getVulkanCmdBufferHandle() const;
+            VkCommandBuffer			getVulkanCmdBufferHandle() const;
 
         private:
-            gos::GPU                        *gpu;
-            gos::eGPUQueueFamily              queueType;
-            GPUCmdBufferHandle              handle_cmdBuffer;
-            gpu::CmdBufferWriter2    cw;
+            gos::GPU				*gpu;
+            gos::eGPUQueueFamily	queueType;
+            GPUCmdBufferHandle		handle_cmdBuffer;
+            gpu::CmdBufferWriter2	cw;
             
         };
 
@@ -421,10 +413,6 @@ namespace gos
         bool                priv_descrPool_onBuilderEnds (DescriptorPoolBuilder *builder);
 
         void                priv_samplerDelete (GPUSamplerHandle &handle);
-
-        void                priv_createHelperStagingBuffer (u32 size);
-        bool                immediateTransferCmd_begin();
-        bool                immediateTransferCmd_end();
 
         bool                priv_bufferCreate (VkBufferUsageFlags vkUsage, u32 sizeInByte, bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ, eMemAccessMode mode, gpu::Buffer *out);
         bool                priv_bufferMap (const GPUVtxBufferHandle handle, u32 offsetDST, u32 sizeInByte, void **out) const;
@@ -550,8 +538,8 @@ namespace gos
         eImageFormat                zbuffer_bestFmt_noStencil;
         eImageFormat                zbuffer_bestFmt_withStencil;
 
-        ImmediateTransferCmd        helperImmediateTransferCmd;
-        GPUStgBufferHandle          helperStagingBuffer;
+        //ImmediateTransferCmd        helperImmediateTransferCmd;
+        //GPUStgBufferHandle          helperStagingBuffer;
 
         HandleList<GPUShaderHandle, gpu::Shader>                    shaderList;
         HandleList<GPUViewportHandle, gpu::Viewport>                viewportlList;

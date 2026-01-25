@@ -35,6 +35,7 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
         loaderInfo.logger = params->logger;
         loaderInfo.gpu = params->gpu;
         loaderInfo.ctx = params->ctx;
+		loaderInfo.stageHelper.setup (params->gpu, 8192*8192);
 
         //segnalo che sono partito
         thread::eventFire (params->hEvent_started);
@@ -124,6 +125,7 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
     }
 
     listof_knownAssets.unsetup();
+	loaderInfo.stageHelper.unsetup();
 
     //free dell'allocator
     GOSDELETE(gos::getSysHeapAllocator(), localAllocator);

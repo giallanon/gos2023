@@ -65,6 +65,8 @@ gosGPUResShader.h
 gosGPUResTexture.h
 gosGPUResViewport.h
 
+GOSGPUStageHelper.cpp
+GOSGPUStageHelper.h
 gosGPUUtils.cpp
 gosGPUUtils.h
 )

@@ -80,11 +80,12 @@ namespace gos
 		struct ResGPUShape
 		{
 		public:
-			void reset()		{ brh.reset(); vbHandle.setInvalid(); ibHandle.setInvalid(); numIndices=numVertex=0; alloc_vtxbuf_offset=alloc_vtxbuf_size=alloc_idxbuf_offset=alloc_idxbuf_size=0; }
+			void reset()		{ brh.reset(); handle_shape.setInvalid(); vbHandle.setInvalid(); ibHandle.setInvalid(); numIndices=numVertex=0; alloc_vtxbuf_offset=alloc_vtxbuf_size=alloc_idxbuf_offset=alloc_idxbuf_size=0; }
 
 		public:
 			BaseResHandle		brh;
 
+			ENGShape			handle_shape;	//se valid, indica la ENGShape dalla quale this e' stata creata
 			GPUVtxBufferHandle	vbHandle;
 			GPUIdxBufferHandle	ibHandle;
 			u32					indexStart;		//posizione del primo idx di questa shape all'interno di vbHandle

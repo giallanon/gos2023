@@ -24,7 +24,7 @@ void VulkanExample4::virtual_onCleanup()
 {
     shape::shapeFree (gos::getSysHeapAllocator(), &myShape);
     gpu->deleteResource (idxBufferHandle);
-    gpu->deleteResource (stgBufferHandle);
+    stageHelper.unsetup();
     gpu->deleteResource (vtxBufferHandle);
 
     gpu->deleteResource (vtxShaderHandle);
@@ -43,6 +43,8 @@ void VulkanExample4::virtual_onCleanup()
 //************************************
 bool VulkanExample4::virtual_onInit ()
 {
+	stageHelper.setup (gpu, 4096*4096);
+
     //creo un cubo
     {
         gos::VtxLayout vtxLayout;
@@ -108,7 +110,7 @@ bool VulkanExample4::virtual_onInit ()
             gos::logger::err ("VulkanApp::init() => can't load image'\n");
             return false;
         }
-        gpu->texture_create2D (&im, 0, eMemAccessMode::onGPU, &texHandle);
+        gpu->texture_create2D (&im, 0, eMemAccessMode::onGPU, &texHandle, stageHelper);
         image::free (gos::getScrapAllocator(), im);
     }
 
@@ -126,17 +128,13 @@ bool VulkanExample4::virtual_onInit ()
 
     //copio i Vtx in vtxBuffer e idx in idxBuffer tramite lo staging array
     {
-        if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, myShape.vtxBuffer, vtxBufferHandle, 0, sizeof(Vertex) * myShape.numVtx))
-        {
-            gos::logger::err ("VulkanApp::init() => can't upload to VtxBuffer\n");
-            return false;
-        }
+		const u32 sizeof_vtxBuffer = sizeof(Vertex) * myShape.numVtx;
+		const u32 sizeof_idxBuffer = sizeof(u16) * myShape.numIdx;
 
-        if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, myShape.idxBuffer, idxBufferHandle, 0, sizeof(u16) * myShape.numIdx))
-        {
-            gos::logger::err ("VulkanApp::init() => can't upload to IdxBuffer\n");
-            return false;
-        }
+		stageHelper.begin()
+			.mem_to_buffer (myShape.vtxBuffer, sizeof_vtxBuffer, vtxBufferHandle, 0)
+			.mem_to_buffer (myShape.idxBuffer, sizeof_idxBuffer, idxBufferHandle, 0)
+			.submit();
     }
 
 
@@ -233,13 +231,6 @@ bool VulkanExample4::createVertexIndexStageBuffer()
     if (!gpu->indexBuffer_create (sizeof(u16)*myShape.numIdx, eMemAccessMode::onGPU, &idxBufferHandle))
     {
         gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->indexBuffer_create() failed\n");
-        return false;
-    }
-
-    //Creo anche uno staging buffer
-    if (!gpu->stagingBuffer_create (sizeInByte, &stgBufferHandle))
-    {
-        gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->stagingBuffer_create() failed\n");
         return false;
     }
 

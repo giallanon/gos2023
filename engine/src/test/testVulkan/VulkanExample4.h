@@ -65,7 +65,7 @@ private:
 
     GPUVtxBufferHandle      vtxBufferHandle;
     GPUIdxBufferHandle      idxBufferHandle;
-    GPUStgBufferHandle      stgBufferHandle;
+    gos::gpu::StageHelper	stageHelper;
 
     GPUPipelineHandle       pipelineHandle;
     GPUShaderHandle         vtxShaderHandle;

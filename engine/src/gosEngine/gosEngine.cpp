@@ -42,6 +42,7 @@ void Engine::unsetup()
     handleList_vtxBuffer.unsetup();
     handleList_idxBuffer.unsetup();
     handleList_GPUShape.unsetup();
+	map_of_shape_to_gpushape.unsetup();
     resHandler_texture.unsetup();
     resHandler_pipeline.unsetup();
     resHandler_vtxShader.unsetup();
@@ -186,6 +187,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     handleList_vtxBuffer.setup (allocator);
     handleList_idxBuffer.setup (allocator);
     handleList_GPUShape.setup (allocator);
+	map_of_shape_to_gpushape.setup (allocator, 8192);
     priv_setup_resource_handler(eAssetType::tex2D,      &resHandler_texture);
     priv_setup_resource_handler(eAssetType::pipe,       &resHandler_pipeline);
     priv_setup_resource_handler(eAssetType::vtx_shader, &resHandler_vtxShader);
@@ -455,16 +457,38 @@ void Engine::release (ENGIdxBuffer &handle)
 
 
 
-
 //******************************** 
-bool Engine::GPUShape_create (const gos::Shape *shape, ENGGPUShape *out_handle)
+bool Engine::GPUShape_create (ENGShape handle_shape, ENGGPUShape *out_handle)
+{
+	assert (NULL != out_handle);
+	if (map_of_shape_to_gpushape.find(handle_shape, out_handle))
+		return true;
+
+	const engine::ResShape *res_shape;
+	if (!get (handle_shape, &res_shape))
+    {
+        logger::err ("Engine::GPUShape_create() => invalid handle_shape\n");
+        return false;
+    }
+
+	engine::ResGPUShape *res = priv_GPUShape_create(&res_shape->data.shape, out_handle);
+	if (NULL == res)
+		return false;
+	res->handle_shape = handle_shape;
+
+	//mappo la coppia <shape, gpu_shape>
+	map_of_shape_to_gpushape.insertIfNotExists (handle_shape, *out_handle);
+	return true;
+}
+
+engine::ResGPUShape* Engine::priv_GPUShape_create (const gos::Shape *shape, ENGGPUShape *out_handle)
 {
     assert (NULL != out_handle);
     engine::ResGPUShape *res = handleList_GPUShape.reserveTS(out_handle);
     if (NULL == res)
     {
-        logger::err ("Engine::GPUShape_create() => can't create handle\n");
-        return false;
+        logger::err ("Engine::priv_GPUShape_create() => can't create handle\n");
+        return NULL;
     }
 
     u32 byteNeeded;
@@ -490,7 +514,18 @@ bool Engine::GPUShape_create (const gos::Shape *shape, ENGGPUShape *out_handle)
     }
 
     res->brh.status = engine::eResStatus::ready;
-    return true;
+    return res;
+}
+
+bool Engine::GPUShape_create (const gos::Shape *shape, ENGGPUShape *out_handle)
+{
+    engine::ResGPUShape *res = priv_GPUShape_create(shape, out_handle);
+    if (NULL == res)
+    {
+        logger::err ("Engine::GPUShape_create() => can't create handle\n");
+        return false;
+    }
+	return true;
 }
 
 void Engine::release (ENGGPUShape &handle)
@@ -503,6 +538,9 @@ void Engine::release (ENGGPUShape &handle)
 
         if (res.numIndices)
             idxBufferMan.release (res.ibHandle, res.alloc_idxbuf_offset, res.alloc_idxbuf_size);
+
+		//unmappo la coppia <shape, gpu_shape>
+		map_of_shape_to_gpushape.remove(res.handle_shape);
     }    
     handle.setInvalid();
 }
@@ -615,10 +653,10 @@ bool Engine::texture2D_createFromAsset (const char *uid_runtimeName, ENGTexture 
     return true;
 }
 
-bool Engine::texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle)
+bool Engine::texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle, gpu::StageHelper &stageHelper)
 {
     GPUTextureHandle gpuResourceHandle;
-    if (!gpu->texture_create2D (dimx, dimy, nMipMap, fmt, memAccessMode, srcDATA, &gpuResourceHandle))
+    if (!gpu->texture_create2D (dimx, dimy, nMipMap, fmt, memAccessMode, srcDATA, &gpuResourceHandle, stageHelper))
     {
         return false;
     }
@@ -636,10 +674,10 @@ bool Engine::texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt,
     return true;
 }
 
-bool Engine::texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture *out_handle)
+bool Engine::texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture *out_handle, gpu::StageHelper &stageHelper)
 {
     GPUTextureHandle gpuResourceHandle;
-    if (!gpu->texture_create2D (im, srcTextureNum, memAccessMode, &gpuResourceHandle))
+    if (!gpu->texture_create2D (im, srcTextureNum, memAccessMode, &gpuResourceHandle, stageHelper))
     {
         return false;
     }

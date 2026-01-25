@@ -24,7 +24,7 @@ void VulkanExample3::virtual_explain()
 void VulkanExample3::virtual_onCleanup() 
 {
     gpu->deleteResource (idxBufferHandle);
-    gpu->deleteResource (stgBufferHandle);
+    stageHelper.unsetup();
     gpu->deleteResource (vtxBufferHandle);
     gpu->deleteResource (vtxShaderHandle);
     gpu->deleteResource (fragShaderHandle);
@@ -110,11 +110,7 @@ bool VulkanExample3::createVertexIndexStageBuffer()
     }
 
     //Creo anche uno staging buffer
-    if (!gpu->stagingBuffer_create (sizeInByte, &stgBufferHandle))
-    {
-        gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->stagingBuffer_create() failed\n");
-        return false;
-    }
+	stageHelper.setup (gpu, sizeInByte);
 
     if (!gpu->indexBuffer_create (sizeof(u16)*NUM_INDEX, eMemAccessMode::onGPU, &idxBufferHandle))
     {
@@ -124,11 +120,9 @@ bool VulkanExample3::createVertexIndexStageBuffer()
 
 
     //copio gli indici nell'idxBuffer tramite uno staging buffer
-    if (!gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, indexList, idxBufferHandle, 0, sizeof(u16) * NUM_INDEX))
-    {
-        gos::logger::err ("VulkanApp::createVertexIndexStageBuffer() => gpu->stagingBuffer_uploadToGPUBuffer() failed\n");
-        return false;
-    }
+	stageHelper.begin()
+		.mem_to_buffer (indexList, sizeof(u16) * NUM_INDEX, idxBufferHandle, 0)
+		.submit();
 
     return true;
 }
@@ -138,8 +132,10 @@ bool VulkanExample3::copyIntoVtxBuffer()
 {
     //copio i Vtx in vtxBuffer tramite lo staging array
     const u32 sizeInByte = sizeof(Vertex) * NUM_VERTEX;
-    return gpu->stagingBuffer_uploadToGPUBuffer (stgBufferHandle, vertexList, vtxBufferHandle, 0, sizeInByte);
-
+	stageHelper.begin()
+		.mem_to_buffer (vertexList, sizeInByte, vtxBufferHandle, 0)
+		.submit();
+	return true;
 }
 
 //************************************

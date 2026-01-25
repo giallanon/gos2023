@@ -96,17 +96,20 @@ namespace gos
 
 
         //============================= GPUShape
-                        //crea una GPUShape e le riserva spazio in VB/IB che sono gestiti dall'engine.
-                        //La GPUShape ritornata ha gia' gli handler VB/IB settati correttamente anche se i vtx/idx
-                        //NON sono ancora stati copiati nei buffer (lo devi fare te)
+		/* 	Le GPUShape create hanno gia' gli handler VB/IB settati correttamente anche se i vtx/idx NON sono ancora stati copiati nei buffer (lo devi fare te).
+			Le GPUShape create a partire da una ENGShape sono mappate internamente in modo che una successiva chiamata a GPUShape_create(ENGShape, ENGGPUShape) ritorni
+			la ENGGPUShape senza ricrearla (se esisteva gia').
+		*/
+		bool            GPUShape_create (ENGShape handle_shape, ENGGPUShape *out_handle);
         bool            GPUShape_create (const gos::Shape *shape, ENGGPUShape *out_handle);
         void            release (ENGGPUShape &handle);
         bool            get (ENGGPUShape handle, const engine::ResGPUShape **out)                                  { return handleList_GPUShape.queryInfo(handle, out); }
+		bool            get (ENGShape handle, const engine::ResGPUShape **out);
         
         //============================= texture2D
         bool            texture2D_createFromAsset (const char *uid_runtimeName, ENGTexture *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
-        bool            texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle);
-        bool            texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture *out_handle);
+        bool            texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle, gpu::StageHelper &stageHelper);
+        bool            texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture *out_handle, gpu::StageHelper &stageHelper);
         void            release (ENGTexture &handle)                                                                { internal__asset_release(handle, resHandler_texture); }
         bool            get (ENGTexture handle, const engine::ResTexture **out, u64 timeout_msec = 0)               { return internal__resource_get_and_schedule_load_if_needed (handle, resHandler_texture, out, timeout_msec); }
 
@@ -316,6 +319,7 @@ namespace gos
                         }
         void            priv_flushLoaderThreadMsg();
         bool            asset_bind (asset2::UID uid, u32 handle_asU32);
+		engine::ResGPUShape* priv_GPUShape_create (const gos::Shape *shape, ENGGPUShape *out_handle);
 
         BaseResourceHandler*    priv_get_baseResourceHandler (eAssetType assetType) const
                         { 
@@ -500,6 +504,7 @@ namespace gos
         HList<ENGVtxBuffer, engine::ResVtxBuffer>           handleList_vtxBuffer;
         HList<ENGIdxBuffer, engine::ResIdxBuffer>           handleList_idxBuffer;
         HList<ENGGPUShape, engine::ResGPUShape>             handleList_GPUShape;
+		FastHashMap<ENGShape, ENGGPUShape>					map_of_shape_to_gpushape;
         ResouceHandler<ENGShape, engine::ResShape>          resHandler_shape;
         ResouceHandler<ENGTexture, engine::ResTexture>      resHandler_texture;
         ResouceHandler<ENGPipeline, engine::ResPipeline>    resHandler_pipeline;
