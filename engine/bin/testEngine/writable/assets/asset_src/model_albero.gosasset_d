@@ -1,4 +1,10 @@
-@include: model_import.gosasset_d
+@include: common.gosasset_d
+
+
+@imported_glb: glb-albero
+{
+    src: <common_assets>/model3d/albero/albero.glb
+}
 
 @model3d: model_albero
 {
@@ -10,3 +16,9 @@
 	[mesh]: sh-tronco; default; tronco; identity
 	[mesh]: sh-foglie; default; foglie; identity
 }
+
+
+// @imported_glb: glb-sponza
+// {
+//     src: <common_assets>/model3d/sponza/sponza.glb
+// }

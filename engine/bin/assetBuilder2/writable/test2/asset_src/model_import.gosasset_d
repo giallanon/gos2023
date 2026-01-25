@@ -1,0 +1,16 @@
+@alias
+{
+	name: common_assets
+	path: ../../../../../common_assets
+}
+
+@imported_glb: glb-albero
+{
+    src: <common_assets>/model3d/albero/albero.glb
+}
+
+
+// @imported_glb: glb-sponza
+// {
+//     src: <common_assets>/model3d/sponza/sponza.glb
+// }

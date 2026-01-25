@@ -11,7 +11,7 @@ void test (gos::GPU *gpu, const char *subfolder)
     char baseFolder[1024];
     sprintf_s (baseFolder, sizeof(baseFolder), "%s/%s", gos::getPhysicalPathToWritableFolder(), subfolder);
     
-	//ret = b.rebuildAll(baseFolder, true); b.save_dependencies_report (baseFolder); b.save_asset_manifest (baseFolder); return;
+	ret = b.rebuildAll(baseFolder, true); b.save_dependencies_report (baseFolder); b.save_asset_manifest (baseFolder); return;
     
     ret = b.build(baseFolder, true); 
     if (ret)

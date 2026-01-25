@@ -2,6 +2,11 @@
 #include "loaders/gosEngineLoaders_tex2D.h"
 #include "loaders/gosEngineLoaders_shader.h"
 #include "loaders/gosEngineLoaders_pipe.h"
+#include "loaders/gosEngineLoaders_shape.h"
+#include "loaders/gosEngineLoaders_skeleton.h"
+#include "loaders/gosEngineLoaders_model3d.h"
+
+
 
 using namespace gos;
 using namespace gos::engine;
@@ -24,7 +29,9 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
         const sLoaderThreadInitParams *params = reinterpret_cast<const sLoaderThreadInitParams*>(paramsIN);
         msgqR = params->msgqR;
         msgqW = params->msgqW;
-        loaderInfo.allocator = localAllocator;
+        loaderInfo.thread_allocator = localAllocator;
+		loaderInfo.engine_allocator = params->engine_allocator;
+		loaderInfo.engine = params->engine;
         loaderInfo.logger = params->logger;
         loaderInfo.gpu = params->gpu;
         loaderInfo.ctx = params->ctx;
@@ -42,6 +49,9 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
         loaderList[(u32)eAssetType::pxl_shader] = GOSNEW(localAllocator, loaders::Loader_pxlShader)();
         loaderList[(u32)eAssetType::tex2D] = GOSNEW(localAllocator, loaders::Loader_tex2D)();
         loaderList[(u32)eAssetType::pipe] = GOSNEW(localAllocator, loaders::Loader_pipeline)();
+		loaderList[(u32)eAssetType::shape] = GOSNEW(localAllocator, loaders::Loader_shape)();
+		loaderList[(u32)eAssetType::skeleton] = GOSNEW(localAllocator, loaders::Loader_skeleton)();
+		loaderList[(u32)eAssetType::model3d] = GOSNEW(localAllocator, loaders::Loader_model3d)();
     }
 
     //lista degli asset noti

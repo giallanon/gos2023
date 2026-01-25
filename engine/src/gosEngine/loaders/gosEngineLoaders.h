@@ -7,6 +7,8 @@
 
 namespace gos
 {
+	class Engine; //fwd
+	
     namespace engine
     {
         namespace loaders
@@ -91,7 +93,9 @@ namespace gos
             //********************************************************
             struct LoaderInfo
             {
-                gos::Allocator      *allocator;
+                gos::Allocator      *thread_allocator;
+				gos::Allocator		*engine_allocator;
+				Engine				*engine;
                 gos::Logger			*logger;
                 gos::GPU            *gpu;
                 asset2::DBContext   *ctx;

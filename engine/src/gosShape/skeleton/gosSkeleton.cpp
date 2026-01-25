@@ -27,7 +27,7 @@ Skeleton* Skeleton::createFromMemory (gos::Allocator *allocatorIN, const u8 *buf
     ct += 4;
 
     //memory block
-    const u32 total_size_needed = 4 + sizeof_memoryBlock;
+    const u32 total_size_needed = 8 + sizeof_memoryBlock;
     if (sizeof_buffer < total_size_needed)
     {
         logger::err ("Skeleton::deserialize => input buffer is too small (%d, expected %d)\n", sizeof_buffer, total_size_needed);
@@ -151,7 +151,9 @@ void Skeleton::debug__print (gos::UTF8String &out) const
 void Skeleton::debug__print_rec (gos::UTF8String &out, u32 indent, const Bone *bone) const
 {
 	out.fillRowUntilColumn (indent, ' ');
-    out << "name: " << nameList.getStringAtOffset(bone->nameIndex) << "\n";
+    out << "name: " << nameList.getStringAtOffset(bone->nameIndex) << "   ";
+	debug__print_matrix (out, bone->matrix);
+	out << "\n";
     
 
     u8 index = bone->firstChildIndex;
@@ -161,6 +163,15 @@ void Skeleton::debug__print_rec (gos::UTF8String &out, u32 indent, const Bone *b
         debug__print_rec (out, indent+4, bone);
         index = bone->sigblinIndex;
     }
+}
+
+//***********************************************************************
+void Skeleton::debug__print_matrix (gos::UTF8String &out, const mat4x4f &m) const
+{
+	for (u32 row=0; row<4; row++)
+	{
+		out << "[" << STRFMT("%.2f %.2f %.2f %.2f", m(row,0), m(row,1), m(row,2), m(row,3)) <<"] ";
+	}
 }
 
 

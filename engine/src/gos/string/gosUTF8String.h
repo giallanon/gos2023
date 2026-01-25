@@ -29,7 +29,7 @@ namespace gos
 	class UTF8String
 	{
 	public:
-							UTF8String ()																	{ priv_constructor(); }
+							UTF8String ()																{ priv_constructor(); }
 							UTF8String (const UTF8String &b);
 							UTF8String (const char* s);
 							~UTF8String();

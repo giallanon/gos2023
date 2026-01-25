@@ -31,6 +31,7 @@ namespace gos
         bool        res_update (DBContext &ctx, UID uid, u64 lastTimeMod);
         bool        res_exists (DBContext &ctx, eResType resType, const char *absFilenameIN, UID *out_CAN_BE_NULL_uid = NULL);
         bool        res_get_info (DBContext &ctx, UID uid, char *out_CAN_BE_NULL_abspath, u32 sizeof_outabspath, eResType *out_CAN_BE_NULL_resType, u64 *out_CAN_BE_NULL_lastTimeMod);
+		bool 		res_is_still_in_use(DBContext &ctx, UID uid);
         
                     //elimina la risorsa UID dal DB eliminando anche le sue dipendenze
         bool        res_delete (DBContext &ctx, const UID &uid);
@@ -40,7 +41,7 @@ namespace gos
         bool        virtasset_insert (DBContext &ctx, eAssetType assType, const char *rtname, UID uid_of_inifile, u32 declared_on_line, UID uid_of_concrete_asset, UID *out_uid);
         bool        virtasset_get_info (DBContext &ctx, UID uid, UID *out_CAN_BE_NULL_uid_ini, UID *out_CAN_BE_NULL_uid_concrete_asset);
         bool        virtasset_delete (DBContext &ctx, const UID &uid);
-        bool        virtasset_rtname_exists (DBContext &ctx, const char *rtname, UID *out__virtual_uid);
+        bool        virtasset_rtname_exists (DBContext &ctx, const char *rtname, UID *out__virtual_uid, UID *out_CAN_BE_NULL_uid_of_inifile = NULL, UID *out_CAN_BE_NULL_uid_of_concrete_asset = NULL);
 
 
         //================ asset

@@ -182,7 +182,7 @@ Alla fine del processo di build, lo shader "esempio_1" ha 3 runtimeName: "esempi
 
 ### pensate per importazione model 3D ###
 
-@import-glb: <rtname>
+@imported_glb: <rtname>
 {
     (mandatory) src: ...xxx.glb                         => il modello 3d da importare
     (optional)	scale: [varie opzioni]
@@ -199,12 +199,12 @@ di tipo Skeleton
 
 
 
-@3dmodel: <rtname>
+@model3d: <rtname>
 {
     src: <rtname-of-imported-3dmodel>  => crea un 3dmodel utilizzando tutte le shape/material/skeleton di un determinato <imported-3dmodel> 
 }
 
-@3dmodel: <rtname>
+@model3d: <rtname>
 {
     shape:  <shape-name>;<rtname-of-imported-3dmodel>.<name>    => definisce una shape di nome <shape-name> presa dalla shape di nome <name> di un determinato <imported-3dmodel>
     ...

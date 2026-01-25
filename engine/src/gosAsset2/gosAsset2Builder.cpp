@@ -6,6 +6,7 @@
 #include "builders/gosAsset2Builder_pipe.h"
 #include "builders/gosAsset2Builder_tex2D.h"
 #include "builders/gosAsset2Builder_glb.h"
+#include "builders/gosAsset2Builder_model3d.h"
 
 using namespace gos;
 using namespace gos::asset2;
@@ -23,6 +24,7 @@ Builder::Builder(gos::GPU *gpuIN)
 	addBuilder<Builder_pipe>();
 	addBuilder<Builder_tex2D>();
 	addBuilder<Builder_glb>();
+	addBuilder<Builder_model3d>();
 }
 
 //******************************
@@ -370,7 +372,9 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 
 	HashedStringList listof_gosAssetd_toBeRebuilt(localAllocator, 256);
 	UniqueUIDList listof_possibile_concrete_assets_to_be_deleted(localAllocator, 256);
+	UniqueUIDList listof_possibile_resources_to_be_deleted(localAllocator, 256);
 	UniqueUIDList listof_deleted_gosassetd(localAllocator, 256);
+	
 	bool ret = true;
 
 	// verifico lo stato di tutte le risorse presenti nel DB per vedere se qualcuna di queste
@@ -384,7 +388,7 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 
 		// scanno tutte le risorse gia' presenti nel DB
 		if (ret)
-			ret = priv_resource_scan_DB(ctx, &listof_gosAssetd_toBeRebuilt, &listof_deleted_gosassetd, &listof_possibile_concrete_assets_to_be_deleted);
+			ret = priv_resource_scan_DB(ctx, &listof_gosAssetd_toBeRebuilt, &listof_deleted_gosassetd, &listof_possibile_concrete_assets_to_be_deleted, &listof_possibile_resources_to_be_deleted);
 
 		logger->log("finished\n");
 	}
@@ -395,13 +399,14 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 	// dalla lista dei possibili concrete-asset da deletare, verifico quali sono effettivamente da cancellare
 	UniqueUIDList listof_deleted_assets(localAllocator, 256);
 	listof_possibile_concrete_assets_to_be_deleted.forEach([&ctx, &listof_deleted_assets](u32 index, const UID uid)
-												  {
+	{
 		if (!asset_is_still_in_use(ctx, uid))
 		{
 			listof_deleted_assets.insertIfNotExists(uid);
 			asset_delete(ctx, uid);
 		}
-		return true; });
+		return true;
+	});
 
 	// ora ho una lista di gosasset_d che devo rebuildare, la processo
 	UniqueUIDList listof_builtAssets(localAllocator, 256);
@@ -445,15 +450,34 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 
 	if (ret)
 	{
+		//elimino dal DB eventuali risorse che non servono piu'
+		if (listof_possibile_resources_to_be_deleted.getNElem())
+		{
+			logger->log("\nlist of removed resources:\n");
+			logger->incIndent();
+			listof_possibile_resources_to_be_deleted.forEach([&ctx, logger=this->logger](u32 index, const UID uid)
+			{
+				assert (uid.isAResource());
+				if (!res_is_still_in_use(ctx, uid))
+				{
+					logger->log ("removing [%-12s] %016" PRIX64 " because is no longer needed\n", asset2::enumToString (uid.getResourceType()), uid._uid);
+					res_delete(ctx, uid);
+				}
+				return true;
+			});
+			logger->decIndent();
+		}
+
 		// clean up del DB
 		if (listof_deleted_assets.getNElem())
 		{
 			logger->log("\nlist of deleted assets:\n");
 			logger->incIndent();
 			listof_deleted_assets.forEach([logger = this->logger](u32 index, const UID uid)
-										  {
+			{
 				logger->log ("[%-12s] %016" PRIX64 "\n", asset2::enumToString (uid.getAssetType()), uid._uid);
-				return true; });
+				return true; 
+			});
 			logger->decIndent();
 		}
 
@@ -462,9 +486,10 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 			logger->log("\nlist of built assets:\n");
 			logger->incIndent();
 			listof_builtAssets.forEach([logger = this->logger](u32 index, const UID uid)
-									   {
+			{
 				logger->log ("[%-12s] %016" PRIX64 "\n", asset2::enumToString (uid.getAssetType()), uid._uid);
-				return true; });
+				return true;
+			});
 			logger->decIndent();
 		}
 	}
@@ -475,7 +500,7 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 /******************************
  * Recupero tutte le risorse storate nel DB e per ciascuna di queste verifico se sono state modificate o eliminate.
  */
-bool Builder::priv_resource_scan_DB(DBContext &ctx, HashedStringList *out_listof_gosassetd_toRebuild, UniqueUIDList *out_listof_deleted_gosassetd, UniqueUIDList *out_listOfPossibileConcreteAssetsToBeDeleted) const
+bool Builder::priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listof_gosassetd_toRebuild, UniqueUIDList *out_listof_deleted_gosassetd, UniqueUIDList *out_listOfPossibileConcreteAssetsToBeDeleted, UniqueUIDList *out_listOfPossibileResourceToBeDeleted) const
 {
 	char s[1024];
 	sprintf_s(s, sizeof(s), "SELECT UID,lastTimeMod,abspath FROM " GOS_ASSET2__TABLE_RES " ORDER BY abspath");
@@ -533,7 +558,7 @@ bool Builder::priv_resource_scan_DB(DBContext &ctx, HashedStringList *out_listof
 			dependency_get_requireBy_list(ctx, elem.uid, true, &uidList);
 
 			uidList.forEach([&ctx, out_listof_gosassetd_toRebuild, out_listof_deleted_gosassetd, out_listOfPossibileConcreteAssetsToBeDeleted](u32 index, const UID uid)
-							{
+			{
 				if (uid.isAResource())
 				{
 					if (eResType::gosasset_d == uid.getResourceType())
@@ -568,7 +593,13 @@ bool Builder::priv_resource_scan_DB(DBContext &ctx, HashedStringList *out_listof
 					assert (uid.isAnAsset());
 					DBGBREAK;
 				}
-				return true; });
+				return true; 
+			});
+
+
+			//genero la lista di risorse da cui io dipendo. Se io sono stato modificato, allora forse anche
+			//le risorse da cui dipendo potrebbe non essere piu' utilis
+			dependency_get_dependecies_list(ctx, elem.uid, false, out_listOfPossibileResourceToBeDeleted);
 
 			// delete dal DB
 			uidList.forEach([&ctx](u32 index, const UID uid)

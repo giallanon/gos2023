@@ -1,7 +1,7 @@
 #ifndef _gosAsset2Builder_glb_importer_h_
 #define _gosAsset2Builder_glb_importer_h_
 #include "../../gosShape/gosShape.h"
-#include "../../gosShape/gosSkeleton.h"
+#include "../../gosShape/skeleton/gosSkeleton.h"
 #include "../../gos/gosFastArray.h"
 #include "../../gos/gosIniFile.h"
 

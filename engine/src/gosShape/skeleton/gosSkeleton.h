@@ -1,9 +1,9 @@
 #ifndef _gosSkeleton_h_
 #define _gosSkeleton_h_
-#include "gosShapeEnumAndDefine.h"
-#include "../gos/gos.h"
-#include "../gos/string/gosStringList.h"
-#include "../gos/string/gosUTF8String.h"
+#include "../gosShapeEnumAndDefine.h"
+#include "../../gos/gos.h"
+#include "../../gos/string/gosStringList.h"
+#include "../../gos/string/gosUTF8String.h"
 
 namespace gos
 {
@@ -97,6 +97,7 @@ namespace gos
                             Skeleton (gos::Allocator *allocatorIN, u32 numBones);
         void                priv_free();
         void                debug__print_rec (gos::UTF8String &out, u32 indent, const Bone *bone) const;
+		void                debug__print_matrix (gos::UTF8String &out, const mat4x4f &matrix) const;
 
     private:
         gos::Allocator      *allocator;

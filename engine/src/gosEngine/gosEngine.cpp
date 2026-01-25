@@ -47,6 +47,7 @@ void Engine::unsetup()
     resHandler_vtxShader.unsetup();
     resHandler_pxlShader.unsetup();
     resHandler_shape.unsetup();
+	resHandler_skeleton.unsetup();
 
     asset2::dbcontext_close (asset_ctx);
 
@@ -127,6 +128,8 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     params.logger = asset_logger;
     params.gpu = gpu;
     params.ctx = &asset_ctx;
+	params.engine_allocator = this->allocator;
+	params.engine = this;
     thread::eventCreate (&params.hEvent_started);
 
     eThreadError err = thread::create (&hThreadLoader, Engine::LoaderThread_mainFN, &params);
@@ -188,6 +191,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     priv_setup_resource_handler(eAssetType::vtx_shader, &resHandler_vtxShader);
     priv_setup_resource_handler(eAssetType::pxl_shader, &resHandler_pxlShader);
     priv_setup_resource_handler(eAssetType::shape,      &resHandler_shape);
+	priv_setup_resource_handler(eAssetType::skeleton,	&resHandler_skeleton);
     
     //resource manager
     vtxBufferMan.setup (allocator, gpu);
@@ -538,6 +542,50 @@ bool Engine::shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, E
     {
         logger::err ("Engine::shape_create() => error during shapeAlloc\n");
         resHandler_shape.releaseTS (*out_handle, res);
+        return false;
+    }
+    
+    res->brh.status = engine::eResStatus::ready;
+    return true;
+}
+
+
+//******************************** 
+bool Engine::skeleton_createFromAsset (const char *uid_runtimeName, ENGSkeleton *out_handle, engine::eLoadMode loadMode)
+{
+    assert (NULL != out_handle);
+    
+    asset2::UID uid;
+    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
+    {
+        logger::err ("Engine::skeleton_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
+        return false;
+    }
+
+    u32 handle_asU32;
+    if (!resHandler_skeleton.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
+        return false;
+
+    out_handle->setFromU32(handle_asU32);
+    return true;
+}
+
+bool Engine::skeleton_create (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *out_handle)
+{
+    assert (NULL != out_handle);
+    engine::ResSkeleton *res = resHandler_skeleton.reserveTS(out_handle);
+    if (NULL == res)
+    {
+        logger::err ("Engine::skeleton_create() => can't create handle\n");
+        return false;
+    }
+
+	u32 n;
+	res->data.skeleton = Skeleton::createFromMemory (allocator, buffer, sizeof_buffer, &n);
+    if (NULL == res->data.skeleton)
+    {
+        logger::err ("Engine::skeleton_create() => error during shapeAlloc\n");
+        resHandler_skeleton.releaseTS (*out_handle, res);
         return false;
     }
     

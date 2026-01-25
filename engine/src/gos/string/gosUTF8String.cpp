@@ -14,7 +14,7 @@ void UTF8String::priv_constructor()
 }
 
 //*******************************************
-UTF8String::UTF8String (const UTF8String &b)				{ priv_constructor(); setAllocator(gos::getScrapAllocator()); append(b); }
+UTF8String::UTF8String (const UTF8String &b)		{ priv_constructor(); setAllocator(gos::getScrapAllocator()); append(b); }
 UTF8String::UTF8String(const char* s)				{ priv_constructor(); setAllocator(gos::getScrapAllocator()); append(s); }
 
 
@@ -44,7 +44,7 @@ void UTF8String::prealloc (u32 newSizeInByte)
 	if (NULL == buffer)
 	{
 		if (NULL == allocator)
-			allocator =  gos::getSysHeapAllocator();
+			allocator =  gos::getScrapAllocator();
 		buffer = GOSALLOCT(char*,allocator, allocatedSize);
 		buffer[0] = 0;
 	}

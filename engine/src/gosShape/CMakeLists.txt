@@ -22,6 +22,11 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC
+skeleton/gosSkeleton.cpp
+skeleton/gosSkeleton.h
+skeleton/gosSkeletonBuilder.cpp
+skeleton/gosSkeletonInstance.cpp
+
 gosShape.cpp
 gosShape.h
 gosShapeEnumAndDefine.h
@@ -43,11 +48,6 @@ gosShapeVtxElem.cpp
 gosShapeVtxElem.h
 gosShapeVtxLayout.h
 gosShapeVtxLayout.cpp
-
-gosSkeleton.cpp
-gosSkeleton.h
-gosSkeletonBuilder.cpp
-gosSkeletonInstance.cpp
 
 )
 

@@ -34,6 +34,7 @@ const char* asset2::enumToString (eAssetType s)
     case eAssetType::shape:             return "shape";
     case eAssetType::imported_glb:      return "imported_glb";
 	case eAssetType::skeleton:      	return "skeleton";
+	case eAssetType::model3d:      		return "model3d";
 	}
 }
 
@@ -372,6 +373,29 @@ bool asset2::res_get_info (DBContext &ctx, UID uid, char *out_CAN_BE_NULL_abspat
 }
 
 //********************************************************** 
+bool asset2::res_is_still_in_use(DBContext &ctx, UID uid)
+{
+    assert (uid.isAResource());
+
+    if (!ctx.isValid())
+    {
+        logger::err ("res_is_still_in_use (%" PRIu64 ") => invalid ctx\n",  uid._uid);
+        return false;
+    }
+
+    db::RST rst;
+    char s[256];
+    sprintf_s (s, sizeof(s), "SELECT COUNT(UID) as n FROM " GOS_ASSET2__TABLE_DEPENDS " WHERE childUID=%" PRIu64 " ", uid._uid);
+    if (!db::query (ctx.db, s, &rst))
+    {
+        logger::err ("res_is_still_in_use (%" PRIu64 ") => error querying\n",  uid._uid);
+        return false;
+    }
+    rst.fetchRow();
+    return (rst.getValAsU64(0) > 0);
+}
+
+//********************************************************** 
 bool asset2::res_delete (DBContext &ctx, const UID &uid)
 {
     assert (uid.isAResource());
@@ -386,10 +410,7 @@ bool asset2::res_delete (DBContext &ctx, const UID &uid)
     sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_RES " WHERE UID=%" PRIu64 "", uid._uid);
     db::exec (ctx.db, s);
 
-    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_DEPENDS " WHERE UID=%" PRIu64 "", uid._uid);
-    db::exec (ctx.db, s);
-
-    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_DEPENDS " WHERE childUID=%" PRIu64 "", uid._uid);
+    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_DEPENDS " WHERE UID=%" PRIu64 " or childUID=%" PRIu64 "", uid._uid, uid._uid);
     db::exec (ctx.db, s);
 
     if (uid.isAResourceOfType(eResType::gosasset_d))
@@ -558,7 +579,7 @@ bool asset2::virtasset_delete (DBContext &ctx, const UID &uid)
 }
 
 //*******************************************************
-bool asset2::virtasset_rtname_exists (DBContext &ctx, const char *rtname, UID *out__virtual_uid)
+bool asset2::virtasset_rtname_exists (DBContext &ctx, const char *rtname, UID *out__virtual_uid, UID *out_CAN_BE_NULL_uid_of_inifile, UID *out_CAN_BE_NULL_uid_of_concrete_asset)
 {
     assert (NULL != out__virtual_uid);
 
@@ -571,11 +592,16 @@ bool asset2::virtasset_rtname_exists (DBContext &ctx, const char *rtname, UID *o
     db::RST rst;
     char s[128];
     
-    sprintf_s (s, sizeof(s), "SELECT UID FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE rtname='%s'", rtname);
+    sprintf_s (s, sizeof(s), "SELECT UID,UID_ini,UID_asset FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE rtname='%s'", rtname);
     if (!db::query (ctx.db, s, &rst)) return false;
     if (!rst.fetchRow()) return false;
 
     out__virtual_uid->_uid = rst.getValAsU64(0);
+
+	if (NULL != out_CAN_BE_NULL_uid_of_inifile)
+		out_CAN_BE_NULL_uid_of_inifile->_uid = rst.getValAsU64(1);
+	if (NULL != out_CAN_BE_NULL_uid_of_concrete_asset)
+		out_CAN_BE_NULL_uid_of_concrete_asset->_uid = rst.getValAsU64(2);
     return true;
 }
 
@@ -754,13 +780,24 @@ bool asset2::asset_delete (DBContext &ctx, const UID &uid)
 
     asset_manufacture_fullFilename (ctx, uid, s, sizeof(s));
     fs::fileDelete(s);
+	
 
-    //gli shader sono buildati anche con la versione "d"
+    //gli shader sono buildati anche con la versione "d" e ".reflect"
+	char s2[512];
     if (uid.isAnAssetOfType(eAssetType::vtx_shader) || uid.isAnAssetOfType(eAssetType::pxl_shader))
     {
-        strcat_s (s, sizeof(s), "d");
-        fs::fileDelete(s);
-    }
+        sprintf_s (s2, sizeof(s2), "%sd", s);	
+		fs::fileDelete(s2);
+
+        sprintf_s (s2, sizeof(s2), "%s.reflect", s);	
+		fs::fileDelete(s2);
+	}
+
+    if (uid.isAnAssetOfType(eAssetType::imported_glb))
+    {
+        sprintf_s (s2, sizeof(s2), "%s.model_info.txt", s);
+		fs::fileDelete(s2);
+	}	
     return true;
 }
 
@@ -874,6 +911,8 @@ bool asset2::dependency_add (DBContext &ctx, UID father, UID child)
 //*******************************************************
 bool asset2::dependencyRT_add (DBContext &ctx, UID uid_padre, UID uid_figlio)
 {
+	assert (uid_padre.isAnAsset());
+	assert (uid_figlio.isAnAsset());
     if (!ctx.isValid())
     {
         logger::err ("dependencyRT_add(%016" PRIX64 ",%016" PRIX64 ") => invalid ctx\n", uid_padre._uid, uid_figlio._uid);

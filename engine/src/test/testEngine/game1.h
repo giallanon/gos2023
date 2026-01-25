@@ -53,6 +53,8 @@ private:
 	gos::ENGTexture					handle_texChecker;
     u32								material_indices[4];
 
+	gos::ENGSkeleton				handle_sk1;
+
 	eCameraMode						cameraMode;
 	gos::Skeleton					*skeleton1;
 	gos::Skeleton					*skeleton2;

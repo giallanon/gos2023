@@ -14,7 +14,6 @@
 
 @tex2D: faccia256Texture
 {
-	//src: /home/giallanon/gixprogram/gos2023/engine/common_assets/images/Tiling_procedural_textures.png
 	src: <common_assets>/images/Tiling_procedural_textures.png
 	srcColorSpace:	sRGB
 

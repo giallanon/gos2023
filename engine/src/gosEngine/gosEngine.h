@@ -53,9 +53,6 @@ namespace gos
         void            toggleFullscreen()                              { gpu->toggleFullscreen(); }
         void            toggleVSync();
 
-        //=============================
-        bool            assetHub_rebuildAll();
-        bool            assetHub_buildAll();
 
         //=======================
         void            utils__quick_and_dirty__create_GPUSHape_and_stageIt_to_VB_IB (const gos::Shape *shape, ENGGPUShape *out_handle); 
@@ -75,21 +72,28 @@ namespace gos
         bool            vtxshader_createFromAsset (const char *uid_runtimeName, ENGVtxShader *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
         bool            vtxshader_createFromFile (const char *filename, const char *mainFnName, ENGVtxShader *out_handle);
         bool            vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGVtxShader *out_handle);
-        void            release (ENGVtxShader &handle)                                                            { internal__asset_release(handle, resHandler_vtxShader); }
-        bool            get (ENGVtxShader handle, const engine::ResShader **out, u64 timeout_msec = 0)            { return internal__resource_get_and_schedule_load_if_needed (handle, resHandler_vtxShader, out, timeout_msec); }
+        void            release (ENGVtxShader &handle)                                                            	{ internal__asset_release(handle, resHandler_vtxShader); }
+        bool            get (ENGVtxShader handle, const engine::ResShader **out, u64 timeout_msec = 0)            	{ return internal__resource_get_and_schedule_load_if_needed (handle, resHandler_vtxShader, out, timeout_msec); }
 
         //============================= pxlshader
         bool            pxlshader_createFromAsset (const char *uid_runtimeName, ENGPxlShader *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
         bool            pxlshader_createFromFile (const char *filename, const char *mainFnName, ENGPxlShader *out_handle);
         bool            pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGPxlShader *out_handle);
-        void            release (ENGPxlShader &handle)                                                            { internal__asset_release(handle, resHandler_pxlShader); }
-        bool            get (ENGPxlShader handle, const engine::ResShader **out, u64 timeout_msec = 0)            { return internal__resource_get_and_schedule_load_if_needed (handle, resHandler_pxlShader, out, timeout_msec); }
+        void            release (ENGPxlShader &handle)                                                            	{ internal__asset_release(handle, resHandler_pxlShader); }
+        bool            get (ENGPxlShader handle, const engine::ResShader **out, u64 timeout_msec = 0)            	{ return internal__resource_get_and_schedule_load_if_needed (handle, resHandler_pxlShader, out, timeout_msec); }
 
-        //============================= hape
+        //============================= shape
         bool            shape_createFromAsset (const char *uid_runtimeName, ENGShape *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
         bool            shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, ENGShape *out_handle);
-        void            release (ENGShape &handle)                                                                    { internal__asset_release(handle, resHandler_shape); }
-        bool            get (ENGShape handle, const engine::ResShape **out, u64 timeout_msec = 0)                     { return internal__resource_get_and_schedule_load_if_needed (handle, resHandler_shape, out, timeout_msec); }
+        void            release (ENGShape &handle)																	{ internal__asset_release(handle, resHandler_shape); }
+        bool            get (ENGShape handle, const engine::ResShape **out, u64 timeout_msec = 0)					{ return internal__resource_get_and_schedule_load_if_needed (handle, resHandler_shape, out, timeout_msec); }
+
+		//============================= skeleton
+        bool            skeleton_createFromAsset (const char *uid_runtimeName, ENGSkeleton *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
+        bool            skeleton_create (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *out_handle);
+        void            release (ENGSkeleton &handle)																{ internal__asset_release(handle, resHandler_skeleton); }
+        bool            get (ENGSkeleton handle, const engine::ResSkeleton **out, u64 timeout_msec = 0)        		{ return internal__resource_get_and_schedule_load_if_needed (handle, resHandler_skeleton, out, timeout_msec); }
+
 
         //============================= GPUShape
                         //crea una GPUShape e le riserva spazio in VB/IB che sono gestiti dall'engine.
@@ -501,6 +505,7 @@ namespace gos
         ResouceHandler<ENGPipeline, engine::ResPipeline>    resHandler_pipeline;
         ResouceHandler<ENGVtxShader, engine::ResShader>     resHandler_vtxShader;
         ResouceHandler<ENGPxlShader, engine::ResShader>     resHandler_pxlShader;
+		ResouceHandler<ENGSkeleton, engine::ResSkeleton>	resHandler_skeleton;
 
 
 
@@ -522,6 +527,8 @@ private:
             gos::Logger		    *logger;
             gos::GPU            *gpu;
             asset2::DBContext   *ctx;
+			gos::Allocator		*engine_allocator;
+			Engine				*engine;
         };
         
         static i16	        LoaderThread_mainFN (void *params);       

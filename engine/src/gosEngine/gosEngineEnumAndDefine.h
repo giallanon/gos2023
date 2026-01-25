@@ -6,6 +6,7 @@
 #include "../gosAsset2/gosAsset2EnumAndDefine.h"
 #include "../gosAsset2/gosAsset2Hub.h"
 #include "../gosShape/gosShape.h"
+#include "../gosShape/skeleton/gosSkeleton.h"
 #include "../gosGeom/gosGeomCamera3.h"
 
 
@@ -19,7 +20,8 @@ namespace gos
 	GOS_DECL_HANDLE(16,12,4, ENGGPUShape);			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^12=4096
 	GOS_DECL_HANDLE(10,7,14, ENGPipeline);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
 	GOS_DECL_HANDLE(10,8,14, ENGVtxShader);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-	GOS_DECL_HANDLE(10,8,14, ENGPxlShader);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
+	GOS_DECL_HANDLE(10,8,14, ENGPxlShader);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256ù
+	GOS_DECL_HANDLE(10,8,14, ENGSkeleton);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256ù
 	
 
 	namespace engine
@@ -205,7 +207,30 @@ namespace gos
 		};		
 
 
+		struct ResSkeleton
+		{
+		public:
+			struct Data
+			{
+				void 	reset()													{ skeleton = NULL; }
+				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ GOSDELETE(allocator, skeleton); reset(); }
 
+				gos::Skeleton	*skeleton;
+			};
+
+			struct DataForLoaderThread
+			{
+				u32		handle_asU32;
+				Data	data;
+			};
+
+		public:
+			void reset()		{ brh.reset(); data.reset(); }
+
+		public:
+			BaseResHandle	brh;
+			Data			data;
+		};
 
 
 		const char*		enumToString (engine::eLoadMode s);

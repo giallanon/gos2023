@@ -3,54 +3,6 @@
 #include "test_exa1.h"
 
 
-#include "../gosAsset2/builders/gosAsset2Builder_glb_importer.h"
-void test_modelImport()
-{
-    struct Vertex 
-    {
-        gos::vec3f  pos;
-        gos::vec2f  tutv0;
-        gos::vec3f  normal;
-    };
-
-    gos::VtxLayout vtxLayot;
-    gos::shape::VtxLayoutWriter writer(&vtxLayot);
-    writer.begin()
-        .addPos3(offsetof(Vertex, pos))
-        .addTexCoord(offsetof(Vertex, tutv0))
-        .addNorm3(offsetof(Vertex, normal))
-    .end();
-    
-    gos::asset2::Importer_glb imp;
-    gos::asset2::Importer_glb::Result result;
-
-#ifdef GOS_PLATFORM__WINDOWS
-    #define COMMON_PATH "C:/rhea/rheaSRC/gos2023/engine/common_assets"
-#else
-    #define COMMON_PATH "/home/giallanon/gixprogram/gos2023/engine/common_assets"
-#endif
-
-
-    //bool ret = imp.importFromFile (COMMON_PATH "/model3d/omino/omino.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
-    bool ret = imp.importFromFile (COMMON_PATH "/model3d/albero/albero.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
-    //bool ret = imp.importFromFile (COMMON_PATH "/model3d/sponza/sponza.glb", vtxLayot, gos::getSysHeapAllocator(), &result);
-
-
-    if (ret)
-    {
-	    gos::logger::log (eTextColor::green, "Skeleton:\n");
-	    gos::logger::incIndent();	
-	    //result.skeleton->debug__print(gos::logger::getSystemLogger());
-	    gos::logger::decIndent();
-    }
-
-#ifdef GOS_PLATFORM__WINDOWS
-    _getch();
-#endif
-
-}
-
-
 //******************************** 
 int main()
 {
@@ -61,10 +13,6 @@ int main()
     if (!gos::init (init, "gosEngine"))
         return -1;
 
-
-    test_modelImport(); return 0;
-
-
     {
         gos::Engine engine;
         if (!engine.setup (1024, 768, "test engine"))
@@ -74,8 +22,8 @@ int main()
         //if (!engine.asset_rebuildAll())  return -3;
         {
             //Test1 test;		test.run (&engine);
-            //Game1 game;		game.run (&engine);
-			Test_exa1 test;		test.run(&engine);
+            Game1 game;		game.run (&engine);
+			//Test_exa1 test;		test.run(&engine);
         }
     }
     

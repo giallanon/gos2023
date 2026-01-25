@@ -24,7 +24,6 @@ Game1::Game1()
 	entRegistry.addComponentHandler<CompMissile>();
 
 	renderer = NULL;
-	rend_line3d = NULL;
     skeleton1 = NULL;
     skeleton2 = NULL;
     model_player = NULL;
@@ -43,7 +42,6 @@ Game1::~Game1()
 {
 	entRegistry.unsetup();
 	GOSDELETE(allocator, renderer);
-	GOSDELETE(allocator, rend_line3d);
     GOSDELETE(allocator, skeleton1);
     GOSDELETE(allocator, skeleton2);
     GOSDELETE(allocator, model_player);
@@ -70,9 +68,6 @@ void Game1::run (gos::Engine *engineIN)
 	renderer = GOSNEW(allocator, gos::engine::Renderer1)();
 	renderer->setup (allocator, engine);
 
-
-	rend_line3d = GOSNEW(allocator, gos::engine::Rend_line3d)();
-	rend_line3d->setup (allocator, engine);
 
 	//setup camera
     cam.setPerspectiveFovLH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 250.0f);
@@ -459,6 +454,11 @@ void Game1::priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir)
 //***************************************
 void Game1::priv_loop ()
 {
+	engine->skeleton_createFromAsset ("glb-albero.skeleton0", &handle_sk1, engine::eLoadMode::asap);
+
+
+
+
     ent_mainPlayer = entRegistry.newEntity();
     {
 		entRegistry.addComponent<ent::CompTransform3>(ent_mainPlayer);
@@ -630,27 +630,6 @@ void Game1::priv_loop ()
 			}
 			mainLoop.stat_onCommandBufferEnd();
 
-
-			//line3d
-			{
-				gpu::RenderCtx rctx;
-				cw	.renderCtx_define_begin(&rctx)
-					.withRenderArea (renderer->getHandle_rt0())
-					.withRT (renderer->getHandle_rt0(), eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.1f))
-					.withZB (renderer->getHandle_zbuffer(), eAttachmentLoadOp::load, eAttachmentStoreOp::dont_care)
-					.define_end();
-			
-					rend_line3d->begin (&cam, &rctx);
-						rend_line3d->appendToCommandBuffer (line_ctx2);
-						rend_line3d->appendToCommandBuffer (line_ctx1);
-						
-						
-						
-					rend_line3d->end();
-
-				rctx.end_render_ctx();
-			}
-
 			//present
 			cw	.imageTransition (renderer->getHandle_rt0(), eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
 				.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)
@@ -659,8 +638,16 @@ void Game1::priv_loop ()
 				.end();
 
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
-        }		
+        }
+		
+
+		const engine::ResSkeleton *res_skeleton;
+		if (engine->get (handle_sk1, &res_skeleton))
+		{
+			res_skeleton->data.skeleton->bone_getByName("root");
+		}
 	}
+	engine->release(handle_sk1);
 
 	//free
 	gpu->waitIdle();

@@ -15,21 +15,21 @@ namespace gos
                 bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *out_dataIN)
                 {
                     ResTexture::DataForLoaderThread *out_data = static_cast<ResTexture::DataForLoaderThread*>(out_dataIN);
-                    gos::Allocator *allocator = loaderInfo.allocator;
+                    gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
                     gos::GPU *gpu = loaderInfo.gpu;
 
                     char s[1024];
                     asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, uid, s, sizeof(s));
 
                     gos::Image image;
-                    if (!image::load (allocator, s, &image))
+                    if (!image::load (thread_allocator, s, &image))
                     {
                         logger::err ("Loader_tex2D::load() => file not found %s\n", s);
                         return false;
                     }
                     
                     const bool ret = gpu->texture_create2D (&image, 0, eMemAccessMode::onGPU, &out_data->data.texHandle);
-                    image::free (allocator, image);
+                    image::free (thread_allocator, image);
 
                     //mi aggiungo alla lista degli asset noti
                     if (ret)
