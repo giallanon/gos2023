@@ -943,7 +943,7 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 
 
 	//creo lo skeleton
-	out_results->skeleton = priv_build_gosSkeleton (out_results->allocator);
+	priv_build_gosSkeleton (out_results->allocator, &out_results->skeleton);
 
 
 
@@ -961,9 +961,9 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 
 
 //********************************************
-gos::Skeleton* Importer_glb::priv_build_gosSkeleton (gos::Allocator *sk_allocator) const
+bool Importer_glb::priv_build_gosSkeleton (gos::Allocator *sk_allocator, gos::Skeleton *out) const
 {
-	gos::SkeletonBuilder builder;
+	gos::skeleton::Builder builder;
 
 	//se root ha piu' di un figlio, allora devo creare una "root" al livello superiore
 	if (NULL == rootBone.firstChild->nextSibling)
@@ -982,9 +982,9 @@ gos::Skeleton* Importer_glb::priv_build_gosSkeleton (gos::Allocator *sk_allocato
 		const u32 skRootIndex = builder.begin ("root", NULL);
 		priv_build_gosSkeleton_rec (builder, &rootBone, skRootIndex);
 	}
-	return builder.end (sk_allocator);
+	return builder.end (sk_allocator, out);
 }
-void Importer_glb::priv_build_gosSkeleton_rec (gos::SkeletonBuilder &builder, const Importer_glb::Bone *myBone, u32 skBoneIndex) const
+void Importer_glb::priv_build_gosSkeleton_rec (gos::skeleton::Builder &builder, const Importer_glb::Bone *myBone, u32 skBoneIndex) const
 {
 	myBone = myBone->firstChild;
 	while (myBone)

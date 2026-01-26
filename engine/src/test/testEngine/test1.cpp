@@ -129,7 +129,7 @@ void Test1::priv_model_setup(gos::ENGGPUShape shape_cube, gos::ENGGPUShape shape
 {
 	//skeleton
 	{
-		gos::SkeletonBuilder builder;
+		gos::skeleton::Builder builder;
 
 		gos::Bone *bone;
 		const u32 iRoot = builder.begin ("root");

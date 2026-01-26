@@ -44,7 +44,8 @@ loaders/gosEngineLoaders.h
 model/gosModel.cpp
 model/gosModel.h
 model/gosModelBuilder.cpp
-model/gosModelInstance.cpp
+model/gosModelReader.cpp
+
 
 gosEngine_dynTextureArray.cpp
 gosEngine_dynTextureArray.h
@@ -61,6 +62,7 @@ gosEngine_vtxBufferMan.h
 gosEngine.cpp
 gosEngine.h
 gosEngineEnumAndDefine.h
+gosEngineRes.h
 )
 
 #====================================================

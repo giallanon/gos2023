@@ -3,7 +3,7 @@
 #include "../../gosAsset2/gosAsset2.h"
 #include "../../gos/gosBufferReader.h"
 #include "../../gos/gosDataBlob.h"
-
+#include "../gosEngineRes.h"
 
 namespace gos
 {

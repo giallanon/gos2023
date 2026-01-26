@@ -25,7 +25,7 @@ add_library(${BINARY_OUTPUT_FILENAME} STATIC
 skeleton/gosSkeleton.cpp
 skeleton/gosSkeleton.h
 skeleton/gosSkeletonBuilder.cpp
-skeleton/gosSkeletonInstance.cpp
+skeleton/gosSkeletonReader.cpp
 
 gosShape.cpp
 gosShape.h
@@ -49,7 +49,7 @@ gosShapeVtxElem.h
 gosShapeVtxLayout.h
 gosShapeVtxLayout.cpp
 
-)
+ )
 
 
 #====================================================

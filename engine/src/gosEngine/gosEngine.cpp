@@ -618,9 +618,8 @@ bool Engine::skeleton_create (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *
         return false;
     }
 
-	u32 n;
-	res->data.skeleton = Skeleton::createFromMemory (allocator, buffer, sizeof_buffer, &n);
-    if (NULL == res->data.skeleton)
+	const u32 n = skeleton::deserialize (buffer, sizeof_buffer, allocator, &res->data.skeleton);
+    if (0 == n)
     {
         logger::err ("Engine::skeleton_create() => error during shapeAlloc\n");
         resHandler_skeleton.releaseTS (*out_handle, res);

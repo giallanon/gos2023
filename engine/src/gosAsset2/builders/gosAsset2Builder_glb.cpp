@@ -170,7 +170,7 @@ bool Builder_glb::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out
 			}
 
 			//passiamo a buildare lo scheletro (se esiste)
-			if (NULL != buildCtx.imported.skeleton)
+			if (skeleton::isValid(buildCtx.imported.skeleton))
 			{
 				buildCtx.whatToBuild = eWhatToBuild::skeleton;
 				buildCtx.iToBuild = 0;
@@ -264,9 +264,9 @@ bool Builder_glb::priv_build_skeleton (DBContext &ctx, bool doCreateAnAssetFile,
 		char filenameDST[1024];
 		asset_manufacture_fullFilename (ctx, out_result->uid_concrete_asset, filenameDST, sizeof(filenameDST));
 		
-		const u32 n = buildCtx.imported.skeleton->serialize_toMemory (NULL, 0);
+		const u32 n = skeleton::serialize (buildCtx.imported.skeleton, NULL, 0);
 		u8 *p = GOSALLOCT(u8*, gos::getScrapAllocator(), n);
-		buildCtx.imported.skeleton->serialize_toMemory (p, n);
+		skeleton::serialize (buildCtx.imported.skeleton, p, n);
 		fs::fileSaveBuffer (filenameDST, p, n);
 		GOSFREE(gos::getScrapAllocator(), p);
 	}
@@ -313,7 +313,7 @@ void Builder_glb::priv_print_report(const char *filenameDST) const
 
 	out << "\n\n======== SKELETON ==========\n";
 	{
-		buildCtx.imported.skeleton->debug__print(out);
+		skeleton::debug__print (buildCtx.imported.skeleton, out);
 	}
 
 

@@ -292,7 +292,8 @@ bool Builder_model3d::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool 
 	//durante "build_begin" ho determinato che le shape e lo skeleton da cui io dipendo sono validi asset.
 	//Carico lo skeleton
 	assert (uid_of_concrete_skeleton.isAnAssetOfType(eAssetType::skeleton));
-	Skeleton *skeleton = NULL;
+	Skeleton skeleton;
+	skeleton.reset();
 	{
 		char s[1024];
 		asset_manufacture_fullFilename (ctx, uid_of_concrete_skeleton, s, sizeof(s));
@@ -305,11 +306,10 @@ bool Builder_model3d::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool 
 			return false;
 		}
 	
-		u32 n;
-		skeleton = Skeleton::createFromMemory (localAllocator, buffer, fsize, &n);
+		u32 n = skeleton::deserialize (buffer, fsize, localAllocator, &skeleton);
 		GOSFREE(localAllocator, buffer);
 
-		if (NULL == skeleton)
+		if (0 == n)
 		{
 			logger->log (eTextColor::red, "error loading skeleton '%s'\n", s);
 			return false;
@@ -317,17 +317,20 @@ bool Builder_model3d::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool 
 	}
 
 	//avendo in mano lo skeletro, verifico che lo bone referenziate siano valide
+	skeleton::Reader skr;
+	skr.setup (&skeleton);
+
 	FastArray<sFinalMeshInfo> listof_final_meshes (localAllocator, parsed_params.listof_meshes.getNElem());
 	for (u32 i=0; i<parsed_params.listof_meshes.getNElem(); i++)
 	{
 		sFinalMeshInfo fm;
 		fm.my_material_index = parsed_params.listof_meshes(i).my_material_index;
 		fm.my_shape_index = parsed_params.listof_meshes(i).my_shape_index;
-		fm.bone_index = skeleton->bone_getIndexByName (parsed_params.listof_meshes(i).bone_name);
+		fm.bone_index = skr.bone_get_index_by_name (parsed_params.listof_meshes(i).bone_name);
 		if (u32MAX == fm.bone_index)
 		{
 			logger->log (eTextColor::red, "mesh %d need bone '%s' which is not a valid bone for the currente selected skeleton '%s'\n", i, parsed_params.listof_meshes(i).bone_name, parsed_params.skeleton_name);
-			GOSDELETE(localAllocator, skeleton);
+			skeleton::free (skeleton);
 			return false;
 		}
 
@@ -384,8 +387,8 @@ bool Builder_model3d::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool 
 
 		bool ret = prot_setupVirtualAsset (ctx, &params, needed, uid_of_iniFile, sec, out_result);
 		GOSFREE(gos::getScrapAllocator(), params);
-		GOSDELETE(localAllocator, skeleton);
-		skeleton = NULL;
+		
+		skeleton::free (skeleton);
 		if (!ret)
 			return false;
 	}

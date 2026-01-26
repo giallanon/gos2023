@@ -14,7 +14,7 @@ namespace gos
             public:
                 bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *out_dataIN)
                 {
-                    ResPipeline::DataForLoaderThread *out_data = static_cast<ResPipeline::DataForLoaderThread*>(out_dataIN);
+                    ResModel3d::DataForLoaderThread *out_data = static_cast<ResModel3d::DataForLoaderThread*>(out_dataIN);
                     gos::GPU *gpu = loaderInfo.gpu;
 
                     char s[1024];
@@ -35,161 +35,33 @@ namespace gos
                     while (1)
                     {
                         const u32 magic = reader.readU32();
-                        if (!magic::signatureMatch(magic, GOS_MAGIC__ASSET_PIPELINE_DEF) || !magic::versionMatch(magic, GOS_MAGIC__ASSET_PIPELINE_DEF))
+                        if (!magic::signatureMatch(magic, GOS_MAGIC__ASSET_MODEL3D) || !magic::versionMatch(magic, GOS_MAGIC__ASSET_MODEL3D))
                         {
                             logger::err ("Loader_model3d::load() => invalid magic for file %s\n", s);
                             break;
                         }
 
-                        gpu::Pipeline_def def;
-                        def.reset();
+
+                        asset2::UID uid_of_skeleton;
+                        uid_of_skeleton._uid = reader.readU64();
+
+                        const u32 num_shapes = reader.readU32();
+                        const u32 start_of_list_of_shape_uid = reader.tell();
+                        reader.advanceCursor (sizeof(u64) * num_shapes);
+
+                        const u32 num_materials = reader.readU32();
+                        const u32 start_of_list_of_material_uid = reader.tell();
+                        reader.advanceCursor (sizeof(u64) * num_materials);
 
 
-                        //uid vtx shader
-                        //L'asset dovrebbe gia' essere stato caricato perche' engine ha schedulato i vari load in maniera intelligente.
-                        //Se cosi' e', allora lo trovo in <listof_knownAssets>
-                        asset2::UID uid;
-                        uid._uid = reader.readU64 ();
-                        {
-                            const void *pt_to_data = loaderInfo.listof_knownAssets->find_data_by_uid (uid);
-                            if (NULL == pt_to_data)
-                            {
-                                logger::log (eTextColor::red, "asset::  Loader_model3d::load() => vtx_shader %016" PRIX64 " not available\n");
-                                break;
-                            }
-
-                            const engine::ResShader::Data *data = static_cast<const engine::ResShader::Data*>(pt_to_data);
-                            def.shader_add (data->shaderHandle);
-                        }
-                        
-
-                        //uid pxl shader
-                        uid._uid = reader.readU64 ();
-                        {
-                            const void *pt_to_data = loaderInfo.listof_knownAssets->find_data_by_uid (uid);
-                            if (NULL == pt_to_data)
-                            {
-                                logger::log (eTextColor::red, "asset::  Loader_model3d::load() => pxl_shader %016" PRIX64 " not available\n");
-                                break;
-                            }
-
-                            const engine::ResShader::Data *data = static_cast<const engine::ResShader::Data*>(pt_to_data);
-                            def.shader_add (data->shaderHandle);
-                        }
-
-                        //cull/draw
-                        def.set_cullMode (static_cast<eCullMode>(reader.readU8()));
-                        def.set_drawPrimitive (static_cast<eDrawPrimitive>(reader.readU8()));
-                        if (0 != reader.readU8())
-                            def.enable_wireframe();
-
-                        //zbuffer
-                        {
-                            Flag8 zbuffer_flag;
-                            zbuffer_flag.setBitmask (reader.readU8());
-                            const eImageFormat fmt = static_cast<eImageFormat>(reader.readU8());
-                            const eZFunc zfunc = static_cast<eZFunc>(reader.readU8());
-
-                            if (zbuffer_flag.isBitSet(gpu::Pipeline_def::ZBUFFER_FLAG__ENABLED))
-                            {
-                                bool zwrite = false;
-                                if (zbuffer_flag.isBitSet(gpu::Pipeline_def::ZBUFFER_FLAG__ZWRITE_ENABLED))
-                                    zwrite = true;
-                                def.zbuffer_define (fmt, zwrite, zfunc);
-
-                                if (zbuffer_flag.isBitSet(gpu::Pipeline_def::ZBUFFER_FLAG__ALLOW_DEPTH_TEST_ENABLE_DISABLE))
-                                    def.zbuffer_allow_depthTestEnablingDisabling();
-
-                                if (zbuffer_flag.isBitSet(gpu::Pipeline_def::ZBUFFER_FLAG__ALLOW_DEPTH_WRITE_ENABLE_DISABLE))
-                                    def.zbuffer_allow_depthWriteEnablingDisabling();
-                            }
-                        }
+                        const u32 num_meshes = reader.readU32();
 
 
-                        //render target
-                        u32 n = reader.readU32 ();
-                        for (u32 i=0; i<n; i++)
-                        {
-                            const eImageFormat fmt = static_cast<eImageFormat>(reader.readU8());
-                            def.rt_add (fmt);
-                        }
-
-                        //vtx declaration
-                        n = reader.readU32 ();
-                        if (n)
-                        {
-                            auto &builder = def.vtxStream_add(eVtxStreamInputRate::perVertex);
-                            for (u32 i = 0; i < n; i++)
-                            {
-                                const u8 binding = reader.readU8 ();
-                                const u32 offset = reader.readU32 ();
-                                const eDataFormat fmt = static_cast<eDataFormat> (reader.readU8 ());
-                                builder.add (binding, offset, fmt);
-                            }        
-                        }
-
-                        //push constant
-                        n = reader.readU32 ();
-                        while (n--)
-                        {
-                            const u32 offset = reader.readU32();
-                            const u32 paddedSize = reader.readU32();
-                            const eShaderType shaderType = static_cast<eShaderType> (reader.readU32());
-                            def.pushConst_add (offset, paddedSize, shaderType);
-                        }
-
-
-                        //descriptor set
-                        const u32 numSet = reader.readU32 ();
-                        for (u32 i = 0; i < numSet; i++)
-                        {
-                            auto &builder = def.descriptorset_add();
-
-                            eGPUDescriptrorSetOptionBitmask options;
-                            options.setFromU32 (reader.readU32 ());
-
-
-                            const u32 numElem = reader.readU32 ();
-                            for (u32 i2 = 0; i2 < numElem; i2++)
-                            {
-                                const u8 binding = reader.readU8();
-                                const eGPUDescriptrorType type = static_cast<eGPUDescriptrorType>(reader.readU8());
-                                u32 count = reader.readU32();
-                                eGPUDescriptrorUsageBitmask usage;
-                                usage.bitmask = reader.readU32();
-
-                                //TODO
-                                //u32MAX == count => il buffer e' di tipo bindless... in attesa di capirci megli qualcosa
-                                //                      semplicemente lo alloco "grosso"
-                                if (u32MAX == count)
-                                {
-                                    count = 1;
-                                    builder.addCreationFlag (VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
-                                }
-                                if (options.isset(eGPUDescriptrorSetOption::bindless))
-                                    builder.addCreationFlag (VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
-
-                                builder.add (binding, type, count, usage);
-                            }
-                        }        
-
-                        //creo la pipe
-                        if (!gpu->pipeline_createNew (def, &out_data->data.pipeHandle))
-                            break;
-
-
-
-                        //finito
-                        ret = true;
-                        break;
                     }
-                    GOSFREE_SCRAP(buffer);
 
                     //mi aggiungo alla lista degli asset noti
-                    if (ret)
-                        loaderInfo.listof_knownAssets->add_or_replace (uid, &out_data->data, sizeof(out_data->data));
-
-                    return ret;        
+                    loaderInfo.listof_knownAssets->add_or_replace (uid, &out_data->data, sizeof(out_data->data));
+                    return true;
                 }
             };
 

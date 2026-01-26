@@ -334,7 +334,7 @@ void Game1::priv_createModel_mainPlayer()
 {
 	//skeleton1
 	{
-		gos::SkeletonBuilder builder;
+		gos::skeleton::Builder builder;
 
         gos::mat4x4f mT, mS;
 
@@ -369,7 +369,7 @@ void Game1::priv_createModel_pavimento()
 {
 	//skeleton2
 	{
-        gos::SkeletonBuilder builder;
+        gos::skeleton::Builder builder;
 		builder.begin ("piedi");
 		skeleton2 = builder.end (allocator);
 	}    

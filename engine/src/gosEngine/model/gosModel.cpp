@@ -1,26 +1,23 @@
 #include "gosModel.h"
 #include "../gos/gosMagicUID.h"
+#include "../gosEngine.h"
 
 using namespace gos;
-using namespace gos::model;
 
 //************************** 
-Model::Model (gos::Allocator *allocatorIN, Skeleton *skeletonIN, const Mesh *meshListIN, u32 numMeshesIN)
+bool model::isValid (const Model &m)
 {
-    allocator = allocatorIN;
-    skeleton = skeletonIN;
-    numMeshes = numMeshesIN;
-    meshList = GOSALLOCT(Mesh*, allocator, numMeshes * sizeof(Mesh));
-    memcpy (meshList, meshListIN, numMeshes * sizeof(Mesh));
+	if (NULL == m.allocator)
+		return false;
+	const u32 magic = utils::bufferReadU32 (m.blob, 0);
+	return (GOS_MAGIC__ENGINE_MODEL == magic);	
 }
 
 //************************** 
-Model::~Model()
+void model::free (Model &m)
 {
-    if (NULL == allocator)
-        return;
-    GOSFREE(allocator, meshList);
-    meshList = NULL;
-    allocator = NULL;
+	if (NULL == m.allocator)
+		return;
+	GOSFREE(m.allocator, m.blob);
+	m.reset();
 }
-

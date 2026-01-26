@@ -1,6 +1,6 @@
 #ifndef _gosEngine_rend_line3d_h_
 #define _gosEngine_rend_line3d_h_
-#include "../gosEngineEnumAndDefine.h"
+#include "../gosEngineRes.h"
 #include "dataTypes/gosColorU32.h"
 
 namespace gos

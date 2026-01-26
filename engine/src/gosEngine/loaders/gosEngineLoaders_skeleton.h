@@ -29,15 +29,14 @@ namespace gos
                         return false;
                     }
 
-					u32 n;
-					out_data->data.skeleton = Skeleton::createFromMemory (loaderInfo.engine_allocator, buffer, fsize, &n);
-					if (NULL == out_data->data.skeleton)
+					u32 n = skeleton::deserialize (buffer, fsize, loaderInfo.engine_allocator, &out_data->data.skeleton);
+                    GOSFREE(thread_allocator, buffer);
+
+					if (0 == n)
                     {
-						GOSFREE(thread_allocator, buffer);
                         logger::err ("Loader_skeleton::load() => error creating skeleton from %s\n", s);
                         return false;
                     }
-					GOSFREE(thread_allocator, buffer);
 
 
                     //mi aggiungo alla lista degli asset noti

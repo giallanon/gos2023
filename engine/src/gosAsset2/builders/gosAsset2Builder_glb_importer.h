@@ -32,7 +32,7 @@ namespace gos
 			public:
 						Result()		{ reset(); }
 						~Result()		{ free(); }
-				void 	reset()			{ allocator=NULL; numShapes=0; shapeList=NULL; skeleton=NULL; shapeNameList=NULL; }
+				void 	reset()			{ allocator=NULL; numShapes=0; shapeList=NULL; skeleton.reset(); shapeNameList=NULL; }
 				void 	free()			{ 
 					if (NULL == allocator) return;
 					if (shapeList)
@@ -45,7 +45,7 @@ namespace gos
 						GOSFREE(allocator, shapeList);
 						GOSFREE(allocator, shapeNameList);
 					}
-					if (skeleton) GOSDELETE(allocator, skeleton);
+					gos::skeleton::free(skeleton);
 					reset();
 				}
 
@@ -54,7 +54,7 @@ namespace gos
 				u32 					numShapes;
 				gos::Shape 				*shapeList;
 				char					**shapeNameList;
-				gos::Skeleton			*skeleton;
+				gos::Skeleton			skeleton;
 
 			private:
 				gos::Allocator 			*allocator;
@@ -229,8 +229,8 @@ namespace gos
 			void 	priv_printSkeleton_rec(const Bone *bone) const;
 
 
-			gos::Skeleton* 	priv_build_gosSkeleton (gos::Allocator *sk_allocator) const;
-			void 	priv_build_gosSkeleton_rec (gos::SkeletonBuilder &builder, const Importer_glb::Bone *myBone, u32 skBoneIndex) const;
+			bool	priv_build_gosSkeleton (gos::Allocator *sk_allocator, gos::Skeleton *out) const;
+			void 	priv_build_gosSkeleton_rec (gos::skeleton::Builder &builder, const Importer_glb::Bone *myBone, u32 skBoneIndex) const;
 
 		private:
 			gos::Allocator 					*localAllocator;
