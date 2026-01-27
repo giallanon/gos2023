@@ -1,6 +1,7 @@
 #ifndef _gosEngineLoaders_model3d_h_
 #define _gosEngineLoaders_model3d_h_
 #include "gosEngineLoaders_shader.h"
+#include "../gosEngine.h"
 
 namespace gos
 {
@@ -15,7 +16,7 @@ namespace gos
                 bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *out_dataIN)
                 {
                     ResModel3d::DataForLoaderThread *out_data = static_cast<ResModel3d::DataForLoaderThread*>(out_dataIN);
-                    gos::GPU *gpu = loaderInfo.gpu;
+                    //gos::GPU *gpu = loaderInfo.gpu;
 
                     char s[1024];
                     asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, uid, s, sizeof(s));
@@ -56,12 +57,25 @@ namespace gos
 
                         const u32 num_meshes = reader.readU32();
 
+						if (!model::alloc (loaderInfo.engine_allocator, num_shapes, num_materials, num_meshes, &out_data->data.model))
+							break;
+
+						//skeleton
+						const void *pt_to_data = loaderInfo.listof_knownAssets->find_data_by_uid (uid_of_skeleton);
+						if (NULL == pt_to_data)
+						{
+							logger::log (eTextColor::red, "asset::  Loader_model3d::load() => skeleton %016" PRIX64 " not available\n");
+							break;
+						}
+
+						const engine::ResSkeleton::Data *data = static_cast<const engine::ResSkeleton::Data*>(pt_to_data);
+						def.shader_add (data->shaderHandle);						
 
                     }
 
                     //mi aggiungo alla lista degli asset noti
                     loaderInfo.listof_knownAssets->add_or_replace (uid, &out_data->data, sizeof(out_data->data));
-                    return true;
+                    return ret;
                 }
             };
 

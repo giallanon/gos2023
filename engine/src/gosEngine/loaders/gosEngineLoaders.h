@@ -19,12 +19,12 @@ namespace gos
              *          dove <pt_to_data> e' il membro 'Data' di una risorsa dell'engine (ad es: ResTexture::Data).
              *          E' un doppione perche' anche Engine tiene una lista degli asset, ma serve per caricare gli asset
              *          con dipendenza.
-             *          Ad esempio, una pipe viene schedulata caricando vtx_shader, poi pxl_shader e poi la pipe stessa-
-             *          Quando arriviamo a dove creare la pipe, mi servono vtx e pxl shader e non li posso chiedere all'engine
+             *          Ad esempio, una pipe viene schedulata caricando vtx_shader, poi pxl_shader e poi la pipe stessa.
+             *          Quando arriviamo a dover creare la pipe, mi servono vtx e pxl shader e non li posso chiedere all'engine
              *          per problemi di concorrenza ma anche per il fatto che l'engine potrebbe non essere ancora consapevole che
              *          vtx/pxl sono stati caricati e sono pronti (perche' non ha ancora processato il msg che LoaderThread gli ha
              *          mandato dicendo che gli shader sono ready).
-             *          A questo punto mi serve poter accedere agli shader e lo faccio utilizzando KnownAssets * 
+             *          A questo punto mi serve poter accedere agli shader e lo faccio utilizzando KnownAssets 
              */
             class KnownAssets
             {

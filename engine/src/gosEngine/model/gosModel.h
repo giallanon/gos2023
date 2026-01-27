@@ -35,8 +35,6 @@ namespace gos
      *      ..      u16     material_index
      *      ..      u16     pad
      */
-
-
     struct Model
     {
     public:
@@ -60,42 +58,15 @@ namespace gos
     
     namespace model
     {
+		class Def;	//fwd
+
         bool    isValid (const Model &sk);
-        void    free (Model &sk);
+		bool 	alloc (gos::Allocator *allocator, u16 num_shape, u16 num_material, u16 num_meshes, Model *out);
+		void    free (Model &sk);
 
-
-        /*******************************
-         * @brief   model::Builder
-         *          Classe di comodo per la costruzione di Model
-         */
-        class Builder
-        {
-        public:    
-                        Builder ();
-                        ~Builder();
-
-            Builder&    begin (Engine *eng);
-            Builder&    skeleton_set (ENGSkeleton handle);
-            Builder&    mesh_add (ENGGPUShape handle_shape, u32 material_index, const char *boneName);
-            bool        end (gos::Allocator *allocator, Model *out);
-
-            bool        anyErr() const                          { return bAnyErr; }
-
-        private:
-            struct Mesh
-            {
-                u32 shape_index;
-                u32 bone_index;
-                u32 material_index;
-            };
-
-        private:
-            ENGSkeleton             handle_skeleton;
-            Engine                  *eng;
-            FastArray<ENGGPUShape>  listof_shape;
-            FastArray<Mesh>         listof_mesh;
-            bool                    bAnyErr;
-        };         
+		bool	set_skeleton (Model &m, ENGSkeleton handle);
+		bool	set_shape (Model &m, u32 shape_num, ENGGPUShape handle);
+		bool 	set_mesh  (Model &m, u32 mesh_num, u16 shape_index, u16 bone_index, u16 material_index);
 
 
         /*******************************
@@ -125,67 +96,6 @@ namespace gos
             const Model *m;
         };
 
-        /******************************************
-         * @brief   Model
-         *          E' composta da uno <Skeleton> a da <numMeshes> Mesh
-         *          E' creato tramite un model::Builder
-         */
- /*       class Model
-        {
-        public:
-                            ~Model();
-
-            const Skeleton* skeleton_query() const;
-
-            u32             mesh_getNum() const                 { return numMeshes; }
-            const Mesh*     mesh_query(u32 i) const             { assert(i<numMeshes); return &meshList[i]; }
-            
-
-        private:
-                            Model (gos::Allocator *allocatorIN, Engine *engIN, ENGSkeleton handle_skeleton, const Mesh *meshList, u32 numMeshes);
-
-        private:
-            gos::Allocator  *allocator;
-            Engine          *eng;
-            ENGSkeleton     handle_skeleton;
-            Mesh            *meshList;
-            u32             numMeshes;
-
-        friend model::Builder;
-        }; */
-
-
-
-        /******************************************
-         * @brief   ModelInstance
-         * 
-         * 
-         */
-        //class ModelInstance
-        //{
-        //public:
-        //                                ModelInstance ()                                            { model=NULL; sk=NULL; }
-        //                                ~ModelInstance()                                            { priv_free(); }
-
-        //    void                        setup (const Model *modelIN)                                { model = modelIN; sk = model->skeleton_query()->newInstance(); }
-        //    void                        unsetup()                                                   { priv_free(); }
-        //    void                        applyTransform (const mat4x4f &matW)                        { sk->applyTransform(matW); }
-
-        //    SkeletonInstance*           skeleton_get ()                                             { return sk; }
-        //    const SkeletonInstance*     skeleton_query () const                                     { return sk; }
-        //    u32                         skeleton_getNumBones() const                                { return sk->bone_getNum(); }
-        //    Bone*                       skeleton_getBoneByIndex (u32 index)                         { return sk->getBoneByIndex(index); }
-
-        //    u32                         meshList_getNumElem() const                                 { return model->mesh_getNum(); }
-        //    const Mesh*                 meshList_getByIndex(u32 i) const                            { return model->mesh_query(i); }
-
-        //private:
-        //    void                        priv_free()                                                 { SkeletonInstance::free (sk); }
-
-        //private:
-        //    const Model         *model;
-        //    SkeletonInstance    *sk;
-        //};     
 
     } //namespace model
 } //namespace gos

@@ -79,7 +79,7 @@ u32 skeleton::deserialize (const u8 *buffer, u32 sizeof_buffer, gos::Allocator *
 
 	out->allocator = allocator;
 	out->blob = GOSALLOCT(u8*, allocator, total_size_of_blob);
-	memcpy (out->allocator, buffer, total_size_of_blob);
+	memcpy (out->blob, buffer, total_size_of_blob);
 	
 	return total_size_of_blob;
 }

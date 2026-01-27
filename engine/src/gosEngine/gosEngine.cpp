@@ -49,6 +49,7 @@ void Engine::unsetup()
     resHandler_pxlShader.unsetup();
     resHandler_shape.unsetup();
 	resHandler_skeleton.unsetup();
+	resHandler_model3d.unsetup();
 
     asset2::dbcontext_close (asset_ctx);
 
@@ -194,6 +195,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     priv_setup_resource_handler(eAssetType::pxl_shader, &resHandler_pxlShader);
     priv_setup_resource_handler(eAssetType::shape,      &resHandler_shape);
 	priv_setup_resource_handler(eAssetType::skeleton,	&resHandler_skeleton);
+	priv_setup_resource_handler(eAssetType::model3d,	&resHandler_model3d);
     
     //resource manager
     vtxBufferMan.setup (allocator, gpu);
@@ -629,6 +631,49 @@ bool Engine::skeleton_create (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *
     res->brh.status = engine::eResStatus::ready;
     return true;
 }
+
+//******************************** 
+bool Engine::model_createFromAsset (const char *uid_runtimeName, ENGModel3d *out_handle, engine::eLoadMode loadMode)
+{
+    assert (NULL != out_handle);
+    
+    asset2::UID uid;
+    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
+    {
+        logger::err ("Engine::model_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
+        return false;
+    }
+
+    u32 handle_asU32;
+    if (!resHandler_model3d.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
+        return false;
+
+    out_handle->setFromU32(handle_asU32);
+    return true;
+}
+
+bool Engine::model_create (u16 num_shape, u16 num_material, u16 num_meshes, ENGModel3d *out_handle)
+{
+    assert (NULL != out_handle);
+    engine::ResModel3d *res = resHandler_model3d.reserveTS(out_handle);
+    if (NULL == res)
+    {
+        logger::err ("Engine::model_create() => can't create handle\n");
+        return false;
+    }
+
+	res->data.model.reset();
+	if (!model::alloc (allocator, num_shape, num_material, num_meshes, &res->data.model))
+    {
+        logger::err ("Engine::model_create() => can't allocate model\n");
+		resHandler_model3d.releaseTS (*out_handle, res);
+        return false;
+    }
+    
+    res->brh.status = engine::eResStatus::ready;
+    return true;
+}
+
 
 
 
