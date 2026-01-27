@@ -14,7 +14,7 @@ namespace gos
             public:
                 bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *out_dataIN)
                 {
-                    ResPipeline::DataForLoaderThread *out_data = static_cast<ResPipeline::DataForLoaderThread*>(out_dataIN);
+                    ResPipeline *out_data = static_cast<ResPipeline*>(out_dataIN);
                     gos::GPU *gpu = loaderInfo.gpu;
 
                     char s[1024];
@@ -51,30 +51,63 @@ namespace gos
                         asset2::UID uid;
                         uid._uid = reader.readU64 ();
                         {
-                            const void *pt_to_data = loaderInfo.listof_knownAssets->find_data_by_uid (uid);
-                            if (NULL == pt_to_data)
+                            u32 handle_as_u32;
+                            if (!loaderInfo.engine->internal__from_asset_to_handle (uid, &handle_as_u32))
                             {
-                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => vtx_shader %016" PRIX64 " not available\n");
+                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => handle for vtx_shader %016" PRIX64 " not available\n");
                                 break;
                             }
 
-                            const engine::ResShader::Data *data = static_cast<const engine::ResShader::Data*>(pt_to_data);
-                            def.shader_add (data->shaderHandle);
+                            ENGVtxShader handle_vtxShader;
+                            handle_vtxShader.setFromU32 (handle_as_u32);
+                            ResShader *res;
+                            if (!loaderInfo.engine->internal__get_raw_data (handle_vtxShader, &res))
+                            {
+                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => unable to acces raw data for vtx_shader %016" PRIX64 "\n");
+                                break;
+                            }
+
+                            //const void *pt_to_data = loaderInfo.listof_knownAssets->find_data_by_uid (uid);
+                            //if (NULL == pt_to_data)
+                            //{
+                            //    logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => vtx_shader %016" PRIX64 " not available\n");
+                            //    break;
+                            //}
+
+                            //const engine::ResShader::Data *data = static_cast<const engine::ResShader::Data*>(pt_to_data);
+                            def.shader_add (res->data.shaderHandle);
                         }
                         
 
                         //uid pxl shader
                         uid._uid = reader.readU64 ();
                         {
-                            const void *pt_to_data = loaderInfo.listof_knownAssets->find_data_by_uid (uid);
-                            if (NULL == pt_to_data)
+                            u32 handle_as_u32;
+                            if (!loaderInfo.engine->internal__from_asset_to_handle (uid, &handle_as_u32))
                             {
-                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => pxl_shader %016" PRIX64 " not available\n");
+                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => handle for pxl_shader %016" PRIX64 " not available\n");
                                 break;
                             }
 
-                            const engine::ResShader::Data *data = static_cast<const engine::ResShader::Data*>(pt_to_data);
-                            def.shader_add (data->shaderHandle);
+
+                            ENGPxlShader handle_pxlShader;
+                            handle_pxlShader.setFromU32 (handle_as_u32);
+                            ResShader *res;
+                            if (!loaderInfo.engine->internal__get_raw_data (handle_pxlShader, &res))
+                            {
+                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => unable to acces raw data for pxl_shader %016" PRIX64 "\n");
+                                break;
+                            }
+
+                            //const void *pt_to_data = loaderInfo.listof_knownAssets->find_data_by_uid (uid);
+                            //if (NULL == pt_to_data)
+                            //{
+                            //    logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => pxl_shader %016" PRIX64 " not available\n");
+                            //    break;
+                            //}
+
+                            //const engine::ResShader::Data *data = static_cast<const engine::ResShader::Data*>(pt_to_data);
+                            def.shader_add (res->data.shaderHandle);
                         }
 
                         //cull/draw
@@ -184,10 +217,6 @@ namespace gos
                         break;
                     }
                     GOSFREE_SCRAP(buffer);
-
-                    //mi aggiungo alla lista degli asset noti
-                    if (ret)
-                        loaderInfo.listof_knownAssets->add_or_replace (uid, &out_data->data, sizeof(out_data->data));
 
                     return ret;        
                 }

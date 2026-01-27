@@ -28,6 +28,7 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
         loaderInfo.logger = params->logger;
         loaderInfo.gpu = params->gpu;
         loaderInfo.ctx = params->ctx;
+        loaderInfo.engine = params->engine;
 
         //segnalo che sono partito
         thread::eventFire (params->hEvent_started);
@@ -43,12 +44,6 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
         loaderList[(u32)eAssetType::tex2D] = GOSNEW(localAllocator, loaders::Loader_tex2D)();
         loaderList[(u32)eAssetType::pipe] = GOSNEW(localAllocator, loaders::Loader_pipeline)();
     }
-
-    //lista degli asset noti
-    loaders::KnownAssets listof_knownAssets;
-    listof_knownAssets.setup (localAllocator);
-    loaderInfo.listof_knownAssets = &listof_knownAssets;
-
 
     //loop
     static constexpr u8 NUM_MAX_MESSAGES = 64;
@@ -78,15 +73,16 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
                     {
                         asset2::UID uid;
                         uid._uid = msgList[i].paramU64;
+                        void *res = msgList[i].buffer;
 
                         loaderInfo.logger->log (eTextColor::darkGreen, "asset::MT  [%s] %016" PRIX64 " do load\n", asset2::enumToString(uid.getAssetType()), uid._uid);
 
                         loaders::BaseLoader *loader = loaderList[(u32)uid.getAssetType()];
                         assert (NULL != loader);
                         if (loader->load (loaderInfo, uid, msgList[i].buffer))
-                            thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK, uid._uid, msgList[i].buffer, msgList[i].bufferSize);
+                            thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK, uid._uid, res);
                         else
-                            thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO, uid._uid, msgList[i].buffer, msgList[i].bufferSize);
+                            thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO, uid._uid, res);
                     }
                     break;
                 }
@@ -112,8 +108,6 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
             loaderList[i] = NULL;
         }
     }
-
-    listof_knownAssets.unsetup();
 
     //free dell'allocator
     GOSDELETE(gos::getSysHeapAllocator(), localAllocator);

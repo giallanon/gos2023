@@ -75,15 +75,15 @@ namespace gos
         bool            vtxshader_createFromAsset (const char *uid_runtimeName, ENGVtxShader *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
         bool            vtxshader_createFromFile (const char *filename, const char *mainFnName, ENGVtxShader *out_handle);
         bool            vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGVtxShader *out_handle);
-        void            release (ENGVtxShader &handle)                                                            { internal__asset_release(handle, resHandler_vtxShader); }
-        bool            get (ENGVtxShader handle, const engine::ResShader **out, u64 timeout_msec = 0)            { return internal__resource_get_and_schedule_load_if_needed (handle, resHandler_vtxShader, out, timeout_msec); }
+        void            release (ENGVtxShader &handle)                                                              { internal__asset_release(handle, resHandler_vtxShader); }
+        bool            get (ENGVtxShader handle, const engine::ResShader **out, u64 timeout_msec = 0)              { return internal__resource_get_and_schedule_load_if_needed (handle, resHandler_vtxShader, out, timeout_msec); }
 
         //============================= pxlshader
         bool            pxlshader_createFromAsset (const char *uid_runtimeName, ENGPxlShader *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
         bool            pxlshader_createFromFile (const char *filename, const char *mainFnName, ENGPxlShader *out_handle);
         bool            pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGPxlShader *out_handle);
-        void            release (ENGPxlShader &handle)                                                            { internal__asset_release(handle, resHandler_pxlShader); }
-        bool            get (ENGPxlShader handle, const engine::ResShader **out, u64 timeout_msec = 0)            { return internal__resource_get_and_schedule_load_if_needed (handle, resHandler_pxlShader, out, timeout_msec); }
+        void            release (ENGPxlShader &handle)                                                              { internal__asset_release(handle, resHandler_pxlShader); }
+        bool            get (ENGPxlShader handle, const engine::ResShader **out, u64 timeout_msec = 0)              { return internal__resource_get_and_schedule_load_if_needed (handle, resHandler_pxlShader, out, timeout_msec); }
 
         //============================= hape
         bool            shape_createFromAsset (const char *uid_runtimeName, ENGShape *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
@@ -196,7 +196,6 @@ namespace gos
             virtual         ~BaseResourceHandler()  { }
 
             virtual bool    handle_get_or_create_from_asset (Engine *engine, asset2::UID uid, engine::eLoadMode loadMode, u32 *out_handleAsU32) = 0;
-            virtual void    resource_onLoaded (const void *res_dataForLoaderThread, bool bLoadOK) = 0;
             virtual void    resource_schedule_load (Engine *engine, u32 handle_asU32) = 0;
             virtual void    resource_release (Engine *engine, u32 handle_asU32) = 0;
         };
@@ -205,9 +204,6 @@ namespace gos
         template<class HANDLE_TYPE, class HANDLE_STRUCT>
         class ResouceHandler : public BaseResourceHandler
         {
-        private:
-            using ResDataForLoaderThread = typename HANDLE_STRUCT::DataForLoaderThread;
-
         public:
                             ResouceHandler ()           { }
             virtual         ~ResouceHandler ()          { }
@@ -223,6 +219,7 @@ namespace gos
 
             eAssetType      getAssetType() const                                                    { return assetType; }
             const HANDLE_STRUCT* getInfo (HANDLE_TYPE handle) const                                 { HANDLE_STRUCT *ret = NULL; handle_list.fromHandleToPointer (handle, &ret); return ret; }
+            HANDLE_STRUCT*  getRawData (HANDLE_TYPE handle)                                         { HANDLE_STRUCT *ret = NULL; handle_list.fromHandleToPointer (handle, &ret); return ret; }
 
             bool            handle_get_or_create_from_asset (Engine *engine, asset2::UID uid, engine::eLoadMode loadMode, u32 *out_handleAsU32)
                             {
@@ -242,25 +239,6 @@ namespace gos
                                 *out_handleAsU32 = handle.viewAsU32();
                                 return true;
                             }
-            void            resource_onLoaded (const void *res_dataForLoaderThreadIN, bool bLoadOK)
-            {
-                const ResDataForLoaderThread *dataForLoaderThread = static_cast<const ResDataForLoaderThread*>(res_dataForLoaderThreadIN);
-                
-                HANDLE_TYPE handle;
-                handle.setFromU32 (dataForLoaderThread->handle_asU32);
-
-                HANDLE_STRUCT *res;
-                handle_list.fromHandleToPointer (handle, &res);
-                if (bLoadOK)
-                {
-                    res->brh.status = engine::eResStatus::ready;
-                    res->data = dataForLoaderThread->data;
-                }
-                else
-                {
-                    res->brh.status = engine::eResStatus::error;
-                }
-            }
             void            resource_schedule_load (Engine *engine, u32 handle_asU32)
             {
                 HANDLE_TYPE handle;
@@ -279,10 +257,7 @@ namespace gos
                     return;
                 res->brh.status = engine::eResStatus::loading;
 
-                ResDataForLoaderThread data;
-                data.handle_asU32 = handle.viewAsU32();
-
-                engine->internal__send_load_msg_to_LoaderThread (res->brh.uid, &data, sizeof(data));
+                engine->internal__send_load_msg_to_LoaderThread (res->brh.uid, res);
             }
             void            resource_release (Engine *engine, u32 handle_asU32)
             {
@@ -322,6 +297,44 @@ namespace gos
                         }
 
     public:
+        bool            internal__from_asset_to_handle (asset2::UID uid, u32 *out__handleID) const          { return listof_loadedUID.find (uid, out__handleID); }
+
+                       /***
+                         * @brief   internal__get_raw_data
+                         *          ritorna false se <handle> e' invalido
+                         *          ritorna true altrimenti e <out> punta alla risorsa
+                         * 
+                         *          Per ogni <HANDLE_TYPE> e' necessario aggiungere un "if constexper" perche'
+                         *          bisogna indicare quale resHandler utilizzare per recuperare la risorsa
+                         */
+                        template<class HANDLE_TYPE, class RESOURCE_TYPE>
+        bool            internal__get_raw_data (HANDLE_TYPE handle, RESOURCE_TYPE **out)
+                        {
+                            if constexpr (std::is_same<HANDLE_TYPE, ENGVtxShader>::value)
+                                return internal__resource_get_raw_data (handle, resHandler_vtxShader, out);
+                            else if constexpr (std::is_same<HANDLE_TYPE, ENGPxlShader>::value)
+                                return internal__resource_get_raw_data (handle, resHandler_pxlShader, out);
+                            else
+                            {
+                                DBGBREAK;
+                                return false;
+                            }
+                        }
+
+    private:
+                       /***
+                         * @brief   internal__resource_get_raw_data
+                         *          ritorna false se <handle> e' invalido
+                         *          ritorna true altrimenti e <out> punta alla risorsa
+                         */
+                        template<class HANDLE_TYPE, class HANDLE_STRUCT>
+        bool            internal__resource_get_raw_data (HANDLE_TYPE handle, ResouceHandler<HANDLE_TYPE, HANDLE_STRUCT> &res_handler, HANDLE_STRUCT **out)
+                        {
+                            *out = res_handler.getRawData(handle);
+                            if (NULL == (*out)) return false;
+                            return true;
+                        }
+
                         /***
                          * @brief   internal__resource_get_and_schedule_load_if_needed
                          *          ritorna true se <out> e' gia' in stato eResStatus::ready
@@ -471,13 +484,11 @@ namespace gos
                             handle.setInvalid();
                         }
 
-        void            internal__send_load_msg_to_LoaderThread (asset2::UID uid, void *data, u32 sizeof_data)
+        void            internal__send_load_msg_to_LoaderThread (asset2::UID uid, void *data)
                         {
                             asset_logger->log (eTextColor::darkGreen, "asset::  [%s] %016" PRIX64 " loading\n", asset2::enumToString(uid.getAssetType()), uid._uid);
-                            thread::pushMsg (msgq_1W, MSG_FOR_LOADER_THREAD__LOAD, uid._uid, data, sizeof_data);
+                            thread::pushMsg (msgq_1W, MSG_FOR_LOADER_THREAD__LOAD, uid._uid, data);
                         }
-
-        bool            internal__from_asset_to_handle (asset2::UID uid, u32 *out__handleID) const          { return listof_loadedUID.find (uid, out__handleID); }
 
 
 
@@ -522,6 +533,7 @@ private:
             gos::Logger		    *logger;
             gos::GPU            *gpu;
             asset2::DBContext   *ctx;
+            Engine              *engine;
         };
         
         static i16	        LoaderThread_mainFN (void *params);       

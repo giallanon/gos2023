@@ -24,7 +24,7 @@ namespace gos
 
 	namespace engine
 	{
-		enum eLoadMode
+		enum class eLoadMode : u8
 		{
 			asap = 0,
 			onDemand = 1
@@ -109,12 +109,6 @@ namespace gos
 				gos::Shape	shape;
 			};
 
-			struct DataForLoaderThread
-			{
-				u32		handle_asU32;
-				Data	data;
-			};
-
 		public:
 			void reset()		{ brh.reset(); data.reset(); }
 
@@ -135,12 +129,6 @@ namespace gos
 
 				GPUTextureHandle	texHandle;
 			};
-
-			struct DataForLoaderThread
-			{
-				u32		handle_asU32;
-				Data	data;
-			};			
 
 		public:
 			void reset()		{ brh.reset(); data.reset(); }
@@ -163,12 +151,6 @@ namespace gos
 				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ gpu->deleteResource (pipeHandle); reset(); }
 			};
 
-			struct DataForLoaderThread
-			{
-				u32		handle_asU32;
-				Data	data;
-			};
-
 		public:
 			void reset()		{ brh.reset(); data.reset(); }
 
@@ -188,12 +170,6 @@ namespace gos
 				
 				void 	reset()													{ shaderHandle.setInvalid(); }
 				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ gpu->deleteResource (shaderHandle); reset(); }
-			};
-
-			struct DataForLoaderThread
-			{
-				u32		handle_asU32;
-				Data	data;
 			};
 
 		public:

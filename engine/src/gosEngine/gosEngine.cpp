@@ -127,6 +127,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     params.logger = asset_logger;
     params.gpu = gpu;
     params.ctx = &asset_ctx;
+    params.engine = this;
     thread::eventCreate (&params.hEvent_started);
 
     eThreadError err = thread::create (&hThreadLoader, Engine::LoaderThread_mainFN, &params);
@@ -256,14 +257,19 @@ void Engine::priv_flushLoaderThreadMsg()
 
                 asset2::UID uid;
                 uid._uid = loaderMsgList[i].paramU64;
+                void *res = loaderMsgList[i].buffer;
 
                 if (bLoadOK)
                     asset_logger->log (eTextColor::darkGreen, "asset::  [%s] %016" PRIX64 " loaded\n", asset2::enumToString(uid.getAssetType()), uid._uid);
                 else
                     asset_logger->log (eTextColor::red, "asset::  [%s] %016" PRIX64 " FAILED to load\n", asset2::enumToString(uid.getAssetType()), uid._uid);
 
-                BaseResourceHandler *res_handler = priv_get_baseResourceHandler(uid.getAssetType());
-                res_handler->resource_onLoaded (loaderMsgList[i].buffer, bLoadOK);
+
+                engine::BaseResHandle *brh = static_cast<engine::BaseResHandle*>(res);
+                if (bLoadOK)
+                    brh->status = engine::eResStatus::ready;
+                else
+                    brh->status = engine::eResStatus::error;
             }
             break;
         }

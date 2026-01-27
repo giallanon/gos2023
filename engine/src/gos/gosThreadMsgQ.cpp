@@ -292,6 +292,28 @@ void thread::pushMsg (const HThreadMsgW &h, u32 what, u64 paramU64, const void *
 }
 
 //**************************************************************
+void thread::pushMsg (const HThreadMsgW &h, u32 what, u64 paramU64, void *user_data)
+{
+    sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hWrite);
+
+    if (NULL == s)
+        return;
+
+    thread::sMsg msg;
+    memset (&msg, 0x00, sizeof(msg));
+    msg.what = what;
+    msg.paramU64 = paramU64;
+    msg.buffer = user_data;
+    msg.bufferSize = 0;
+
+    MUTEX_LOCK (s->cs);
+        s->fifo->push(msg);
+		gos::thread::eventFire (s->hEvent);
+    MUTEX_UNLOCK (s->cs);
+}
+
+
+//**************************************************************
 void thread::pushMsg2Buffer (const HThreadMsgW &h, u32 what, u64 paramU64, const void *src1, u32 sizeInBytes1, const void *src2, u32 sizeInBytes2)
 {
     sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hWrite);

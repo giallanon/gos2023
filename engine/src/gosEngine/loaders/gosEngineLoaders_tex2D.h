@@ -14,7 +14,7 @@ namespace gos
             public:
                 bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *out_dataIN)
                 {
-                    ResTexture::DataForLoaderThread *out_data = static_cast<ResTexture::DataForLoaderThread*>(out_dataIN);
+                    ResTexture *out_data = static_cast<ResTexture*>(out_dataIN);
                     gos::Allocator *allocator = loaderInfo.allocator;
                     gos::GPU *gpu = loaderInfo.gpu;
 
@@ -31,9 +31,6 @@ namespace gos
                     const bool ret = gpu->texture_create2D (&image, 0, eMemAccessMode::onGPU, &out_data->data.texHandle);
                     image::free (allocator, image);
 
-                    //mi aggiungo alla lista degli asset noti
-                    if (ret)
-                        loaderInfo.listof_knownAssets->add_or_replace (uid, &out_data->data, sizeof(out_data->data));
                     return ret;           
                 }
             };
