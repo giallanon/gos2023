@@ -8,6 +8,7 @@ namespace gos
 {
 	namespace engine
 	{
+		//************************************
 		struct ResVtxBuffer
 		{
 		public:
@@ -18,6 +19,8 @@ namespace gos
 			GPUVtxBufferHandle	vbHandle;
 		};
 
+
+		//************************************
 		struct ResIdxBuffer
 		{
 		public:
@@ -28,6 +31,50 @@ namespace gos
 			GPUIdxBufferHandle	ibHandle;
 		};
 
+
+		//************************************
+		struct ResShader
+		{
+		public:
+			struct Data
+			{
+				GPUShaderHandle	shaderHandle;
+				
+				void 	reset()													{ shaderHandle.setInvalid(); }
+				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ gpu->deleteResource (shaderHandle); reset(); }
+			};
+
+		public:
+			void reset()		{ brh.reset(); data.reset(); }
+
+		public:
+			BaseResHandle		brh;
+			Data				data;
+		};	
+
+
+		//************************************
+		struct ResTexture
+		{
+		public:
+			struct Data
+			{
+				void 	reset()													{ texHandle.setInvalid(); }
+				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ gpu->deleteResource (texHandle); reset(); }
+
+				GPUTextureHandle	texHandle;
+			};
+
+		public:
+			void reset()		{ brh.reset(); data.reset(); }
+
+		public:
+			BaseResHandle		brh;
+			Data				data;
+		};
+				
+		
+		//************************************
 		struct ResGPUShape
 		{
 		public:
@@ -51,7 +98,7 @@ namespace gos
 		};
 
 
-
+		//************************************
 		struct ResShape
 		{
 		public:
@@ -63,12 +110,6 @@ namespace gos
 				gos::Shape	shape;
 			};
 
-			struct DataForLoaderThread
-			{
-				u32		handle_asU32;
-				Data	data;
-			};
-
 		public:
 			void reset()		{ brh.reset(); data.reset(); }
 
@@ -78,34 +119,7 @@ namespace gos
 		};
 
 
-
-		struct ResTexture
-		{
-		public:
-			struct Data
-			{
-				void 	reset()													{ texHandle.setInvalid(); }
-				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ gpu->deleteResource (texHandle); reset(); }
-
-				GPUTextureHandle	texHandle;
-			};
-
-			struct DataForLoaderThread
-			{
-				u32		handle_asU32;
-				Data	data;
-			};			
-
-		public:
-			void reset()		{ brh.reset(); data.reset(); }
-
-		public:
-			BaseResHandle		brh;
-			Data				data;
-		};		
-
-
-
+		//************************************
 		struct ResPipeline
 		{
 		public:
@@ -117,12 +131,6 @@ namespace gos
 				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ gpu->deleteResource (pipeHandle); reset(); }
 			};
 
-			struct DataForLoaderThread
-			{
-				u32		handle_asU32;
-				Data	data;
-			};
-
 		public:
 			void reset()		{ brh.reset(); data.reset(); }
 
@@ -132,33 +140,7 @@ namespace gos
 		};
 
 
-
-		struct ResShader
-		{
-		public:
-			struct Data
-			{
-				GPUShaderHandle	shaderHandle;
-				
-				void 	reset()													{ shaderHandle.setInvalid(); }
-				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ gpu->deleteResource (shaderHandle); reset(); }
-			};
-
-			struct DataForLoaderThread
-			{
-				u32		handle_asU32;
-				Data	data;
-			};
-
-		public:
-			void reset()		{ brh.reset(); data.reset(); }
-
-		public:
-			BaseResHandle		brh;
-			Data				data;
-		};		
-
-
+		//************************************
 		struct ResSkeleton
 		{
 		public:
@@ -170,12 +152,6 @@ namespace gos
 				gos::Skeleton	skeleton;
 			};
 
-			struct DataForLoaderThread
-			{
-				u32		handle_asU32;
-				Data	data;
-			};
-
 		public:
 			void reset()		{ brh.reset(); data.reset(); }
 
@@ -185,6 +161,7 @@ namespace gos
 		};
 
 
+		//************************************
 		struct ResModel3d
 		{
 		public:
@@ -194,12 +171,6 @@ namespace gos
 				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ model::free(model); reset(); }
 
 				gos::Model	model;
-			};
-
-			struct DataForLoaderThread
-			{
-				u32		handle_asU32;
-				Data	data;
 			};
 
 		public:

@@ -26,7 +26,7 @@ namespace gos
 	
 	namespace engine
 	{
-		enum eLoadMode
+		enum class eLoadMode : u8
 		{
 			asap = 0,
 			onDemand = 1

@@ -76,6 +76,7 @@ namespace gos
 
                         //write
         void            pushMsg (const HThreadMsgW &h, u32 what, u64 paramU64, const void *src, u32 sizeInBytes);
+        void            pushMsg (const HThreadMsgW &h, u32 what, u64 paramU64, void *user_data);
         inline void     pushMsg (const HThreadMsgW &h, u32 what, u64 paramU64)                                           { pushMsg(h, what, paramU64, NULL, 0); }
         inline void     pushMsg (const HThreadMsgW &h, u32 what, const void *src, u32 sizeInBytes)                       { pushMsg(h, what, 0, src, sizeInBytes); }
         void            pushMsg2Buffer (const HThreadMsgW &h, u32 what, u64 paramU64, const void *src1, u32 sizeInBytes1, const void *src2, u32 sizeInBytes2);

@@ -12,18 +12,16 @@ namespace gos
             class Loader_vtxShader : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *out_dataIN)
+                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *res_dataIN)
                 {
-                    ResShader::DataForLoaderThread *out_data = static_cast<ResShader::DataForLoaderThread*>(out_dataIN);
+                    ResShader *res_data = static_cast<ResShader*>(res_dataIN);
                     gos::GPU *gpu = loaderInfo.gpu;
 
                     char s[1024];
                     asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, uid, s, sizeof(s));
-                    if (!gpu->vtxshader_createFromFile (s, "main", &out_data->data.shaderHandle))
+                    if (!gpu->vtxshader_createFromFile (s, "main", &res_data->data.shaderHandle))
                         return false;
 
-                    //mi aggiungo alla lista degli asset noti
-                    loaderInfo.listof_knownAssets->add_or_replace (uid, &out_data->data, sizeof(out_data->data));
                     return true;
                 }
             };
@@ -33,18 +31,16 @@ namespace gos
             class Loader_pxlShader : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *out_dataIN)
+                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *res_dataIN)
                 {
-                    ResShader::DataForLoaderThread *out_data = static_cast<ResShader::DataForLoaderThread*>(out_dataIN);
+                    ResShader *res_data = static_cast<ResShader*>(res_dataIN);
                     gos::GPU *gpu = loaderInfo.gpu;
 
                     char s[1024];
                     asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, uid, s, sizeof(s));
-                    if (!gpu->pxlshader_createFromFile (s, "main", &out_data->data.shaderHandle))
+                    if (!gpu->pxlshader_createFromFile (s, "main", &res_data->data.shaderHandle))
                         return false;
 
-                    //mi aggiungo alla lista degli asset noti
-                    loaderInfo.listof_knownAssets->add_or_replace (uid, &out_data->data, sizeof(out_data->data));
                     return true;
 
                 }

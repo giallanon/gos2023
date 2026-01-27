@@ -12,9 +12,9 @@ namespace gos
             class Loader_tex2D : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *out_dataIN)
+                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *res_dataIN)
                 {
-                    ResTexture::DataForLoaderThread *out_data = static_cast<ResTexture::DataForLoaderThread*>(out_dataIN);
+                    ResTexture *res_data = static_cast<ResTexture*>(res_dataIN);
                     gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
                     gos::GPU *gpu = loaderInfo.gpu;
 
@@ -28,12 +28,9 @@ namespace gos
                         return false;
                     }
                     
-                    const bool ret = gpu->texture_create2D (&image, 0, eMemAccessMode::onGPU, &out_data->data.texHandle, loaderInfo.stageHelper);
+                    const bool ret = gpu->texture_create2D (&image, 0, eMemAccessMode::onGPU, &res_data->data.texHandle, loaderInfo.stageHelper);
                     image::free (thread_allocator, image);
 
-                    //mi aggiungo alla lista degli asset noti
-                    if (ret)
-                        loaderInfo.listof_knownAssets->add_or_replace (uid, &out_data->data, sizeof(out_data->data));
                     return ret;           
                 }
             };

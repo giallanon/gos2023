@@ -35,7 +35,7 @@ void Engine::unsetup()
     //resource manager
     vtxBufferMan.unsetup();
     idxBufferMan.unsetup();
-    listof_loadedUID.unsetup();
+    listof_knownUID.unsetup();
 
     
     //handle lists
@@ -200,7 +200,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     //resource manager
     vtxBufferMan.setup (allocator, gpu);
     idxBufferMan.setup (allocator, gpu);
-    listof_loadedUID.setup (allocator, 8192);
+    listof_knownUID.setup (allocator, 8192);
 
 
     //attendo che il loader-thread abbia segnalato che e' partito
@@ -264,14 +264,19 @@ void Engine::priv_flushLoaderThreadMsg()
 
                 asset2::UID uid;
                 uid._uid = loaderMsgList[i].paramU64;
+                void *res = loaderMsgList[i].buffer;
 
                 if (bLoadOK)
                     asset_logger->log (eTextColor::darkGreen, "asset::  [%s] %016" PRIX64 " loaded\n", asset2::enumToString(uid.getAssetType()), uid._uid);
                 else
                     asset_logger->log (eTextColor::red, "asset::  [%s] %016" PRIX64 " FAILED to load\n", asset2::enumToString(uid.getAssetType()), uid._uid);
 
-                BaseResourceHandler *res_handler = priv_get_baseResourceHandler(uid.getAssetType());
-                res_handler->resource_onLoaded (loaderMsgList[i].buffer, bLoadOK);
+
+                engine::BaseResHandle *brh = static_cast<engine::BaseResHandle*>(res);
+                if (bLoadOK)
+                    brh->status = engine::eResStatus::ready;
+                else
+                    brh->status = engine::eResStatus::error;
             }
             break;
         }
@@ -355,7 +360,7 @@ bool Engine::asset_build()
 //*****************************************
 bool Engine::asset_bind (asset2::UID uid, u32 handle_asU32)
 {
-    if (listof_loadedUID.insertIfNotExists (uid, handle_asU32))
+    if (listof_knownUID.insertIfNotExists (uid, handle_asU32))
     {
         asset_logger->log (eTextColor::darkGreen, "asset::  [%s] %016" PRIX64 " bind to handle %08X\n", asset2::enumToString(uid.getAssetType()), uid._uid, handle_asU32);
 

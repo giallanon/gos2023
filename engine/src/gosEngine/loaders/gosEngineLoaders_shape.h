@@ -13,9 +13,9 @@ namespace gos
             class Loader_shape : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *out_dataIN)
+                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *res_dataIN)
                 {
-                    ResShape::DataForLoaderThread *out_data = static_cast<ResShape::DataForLoaderThread*>(out_dataIN);
+                    ResShape *res_data = static_cast<ResShape*>(res_dataIN);
 					gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
 
                     char s[1024];
@@ -29,17 +29,13 @@ namespace gos
                         return false;
                     }
 
-					if (!shape::deserialize (buffer, fsize, loaderInfo.engine_allocator, &out_data->data.shape))
+					if (!shape::deserialize (buffer, fsize, loaderInfo.engine_allocator, &res_data->data.shape))
                     {
 						GOSFREE(thread_allocator, buffer);
                         logger::err ("Loader_shape::load() => error creating shape from %s\n", s);
                         return false;
                     }
 					GOSFREE(thread_allocator, buffer);
-
-
-                    //mi aggiungo alla lista degli asset noti
-					loaderInfo.listof_knownAssets->add_or_replace (uid, &out_data->data, sizeof(out_data->data));
 
                     return true;
                 }

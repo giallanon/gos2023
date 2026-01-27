@@ -12,10 +12,11 @@ namespace gos
             class Loader_pipeline : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *out_dataIN)
+                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *res_dataIN)
                 {
-                    ResPipeline::DataForLoaderThread *out_data = static_cast<ResPipeline::DataForLoaderThread*>(out_dataIN);
+                    ResPipeline *res_data = static_cast<ResPipeline*>(res_dataIN);
                     gos::GPU *gpu = loaderInfo.gpu;
+					Engine *eng = loaderInfo.engine;
 
                     char s[1024];
                     asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, uid, s, sizeof(s));
@@ -47,34 +48,32 @@ namespace gos
 
                         //uid vtx shader
                         //L'asset dovrebbe gia' essere stato caricato perche' engine ha schedulato i vari load in maniera intelligente.
-                        //Se cosi' e', allora lo trovo in <listof_knownAssets>
                         asset2::UID uid;
                         uid._uid = reader.readU64 ();
                         {
-                            const void *pt_to_data = loaderInfo.listof_knownAssets->find_data_by_uid (uid);
-                            if (NULL == pt_to_data)
+                            ENGVtxShader handle_vtxShader;
+                            ResShader *res;
+							if (!eng->internal__from_asset_to_raw_data (uid, &handle_vtxShader, &res))
                             {
-                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => vtx_shader %016" PRIX64 " not available\n");
+                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => unable to match vtx_shader %016" PRIX64 " with raw data\n");
                                 break;
                             }
-
-                            const engine::ResShader::Data *data = static_cast<const engine::ResShader::Data*>(pt_to_data);
-                            def.shader_add (data->shaderHandle);
+                            
+                            def.shader_add (res->data.shaderHandle);
                         }
                         
 
                         //uid pxl shader
                         uid._uid = reader.readU64 ();
                         {
-                            const void *pt_to_data = loaderInfo.listof_knownAssets->find_data_by_uid (uid);
-                            if (NULL == pt_to_data)
+                            ENGPxlShader handle_pxlShader;
+                            ResShader *res;
+                            if (!eng->internal__from_asset_to_raw_data (uid, &handle_pxlShader, &res))
                             {
-                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => pxl_shader %016" PRIX64 " not available\n");
+                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => unable to match pxl_shader %016" PRIX64 " with raw data\n");
                                 break;
                             }
-
-                            const engine::ResShader::Data *data = static_cast<const engine::ResShader::Data*>(pt_to_data);
-                            def.shader_add (data->shaderHandle);
+                            def.shader_add (res->data.shaderHandle);
                         }
 
                         //cull/draw
@@ -174,7 +173,7 @@ namespace gos
                         }        
 
                         //creo la pipe
-                        if (!gpu->pipeline_createNew (def, &out_data->data.pipeHandle))
+                        if (!gpu->pipeline_createNew (def, &res_data->data.pipeHandle))
                             break;
 
 
@@ -184,10 +183,6 @@ namespace gos
                         break;
                     }
                     GOSFREE_SCRAP(buffer);
-
-                    //mi aggiungo alla lista degli asset noti
-                    if (ret)
-                        loaderInfo.listof_knownAssets->add_or_replace (uid, &out_data->data, sizeof(out_data->data));
 
                     return ret;        
                 }

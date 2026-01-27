@@ -13,9 +13,9 @@ namespace gos
             class Loader_skeleton : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *out_dataIN)
+                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *res_dataIN)
                 {
-                    ResSkeleton::DataForLoaderThread *out_data = static_cast<ResSkeleton::DataForLoaderThread*>(out_dataIN);
+                    ResSkeleton *res_data = static_cast<ResSkeleton*>(res_dataIN);
 					gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
 
                     char s[1024];
@@ -29,7 +29,7 @@ namespace gos
                         return false;
                     }
 
-					u32 n = skeleton::deserialize (buffer, fsize, loaderInfo.engine_allocator, &out_data->data.skeleton);
+					u32 n = skeleton::deserialize (buffer, fsize, loaderInfo.engine_allocator, &res_data->data.skeleton);
                     GOSFREE(thread_allocator, buffer);
 
 					if (0 == n)
@@ -37,10 +37,6 @@ namespace gos
                         logger::err ("Loader_skeleton::load() => error creating skeleton from %s\n", s);
                         return false;
                     }
-
-
-                    //mi aggiungo alla lista degli asset noti
-					loaderInfo.listof_knownAssets->add_or_replace (uid, &out_data->data, sizeof(out_data->data));
 
                     return true;
                 }

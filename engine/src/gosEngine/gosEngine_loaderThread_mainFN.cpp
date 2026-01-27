@@ -55,12 +55,6 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
 		loaderList[(u32)eAssetType::model3d] = GOSNEW(localAllocator, loaders::Loader_model3d)();
     }
 
-    //lista degli asset noti
-    loaders::KnownAssets listof_knownAssets;
-    listof_knownAssets.setup (localAllocator);
-    loaderInfo.listof_knownAssets = &listof_knownAssets;
-
-
     //loop
     static constexpr u8 NUM_MAX_MESSAGES = 64;
     thread::sMsg msgList[NUM_MAX_MESSAGES];
@@ -87,17 +81,17 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
 
                 case MSG_FOR_LOADER_THREAD__LOAD:
                     {
-                        asset2::UID uid;
-                        uid._uid = msgList[i].paramU64;
+						void *res = msgList[i].buffer;
 
+                        const asset2::UID uid = ((engine::BaseResHandle*)res)->uid;
                         loaderInfo.logger->log (eTextColor::darkGreen, "asset::MT  [%s] %016" PRIX64 " do load\n", asset2::enumToString(uid.getAssetType()), uid._uid);
 
                         loaders::BaseLoader *loader = loaderList[(u32)uid.getAssetType()];
                         assert (NULL != loader);
-                        if (loader->load (loaderInfo, uid, msgList[i].buffer))
-                            thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK, uid._uid, msgList[i].buffer, msgList[i].bufferSize);
+                        if (loader->load (loaderInfo, uid, res))
+                            thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK, uid._uid, res);
                         else
-                            thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO, uid._uid, msgList[i].buffer, msgList[i].bufferSize);
+                            thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO, uid._uid, res);
                     }
                     break;
                 }
@@ -124,7 +118,6 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
         }
     }
 
-    listof_knownAssets.unsetup();
 	loaderInfo.stageHelper.unsetup();
 
     //free dell'allocator
