@@ -38,21 +38,28 @@ const Model::Mesh* Reader::mesh_get_by_index (u32 index) const
 }
 
 //*******************************************
-u32 Reader::shape_get_num() const
+u32 Reader::gpushape_get_num() const
 {
 	assert (model::isValid(*m));
 	return utils::bufferReadU16 (&m->blob[8]);
 }
 
 //*******************************************
-ENGGPUShape Reader::shape_get_by_index (u32 index) const
+ENGGPUShape Reader::gpushape_get_by_index (u32 index) const
 {
-	assert (index < shape_get_num());
+	assert (index < gpushape_get_num());
 
 	ENGGPUShape ret;
 	ret.setFromU32 (utils::bufferReadU32 (&m->blob[20 + sizeof(u32) * index]));
 	return ret;
 }
+
+//*******************************************
+const ENGGPUShape* Reader::gpushape_get_pt_to_list () const
+{
+	return reinterpret_cast<const ENGGPUShape*>(&m->blob[20]);
+}
+
 
 //*******************************************
 u32 Reader::material_get_num() const

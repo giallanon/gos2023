@@ -34,6 +34,8 @@ const Bone* Reader::bone_get_by_name (const char *s) const
 		if (string::utf8::areEqual(s, name_get_by_index(i), false))
 			return bone_get_by_index(i);
 	}
+
+	DBGBREAK;
 	return NULL;
 }
 
@@ -46,6 +48,8 @@ u32 Reader::bone_get_index_by_name (const char *s) const
 		if (string::utf8::areEqual(s, name_get_by_index(i), false))
 			return i;
 	}
+
+	DBGBREAK;
 	return u32MAX;
 }
 

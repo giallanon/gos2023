@@ -9,7 +9,7 @@ bool model::isValid (const Model &m)
 {
 	if (NULL == m.allocator)
 		return false;
-	const u32 magic = utils::bufferReadU32 (m.blob, 0);
+	const u32 magic = utils::bufferReadU32 (m.blob);
 	return (GOS_MAGIC__ENGINE_MODEL == magic);	
 }
 
@@ -65,7 +65,7 @@ bool model::alloc (gos::Allocator *allocator, u16 num_shape, u16 num_material, u
 	}
 	
 	const u16 START_of_MESH = ct;
-	ct += utils::bufferWriteU16 (&out->blob[14], START_of_MESH);
+	utils::bufferWriteU16 (&out->blob[14], START_of_MESH);
 
 	assert (ct +sizeof(u16) * 4 * num_meshes == sizeof_blob);
 	return true;
@@ -81,14 +81,19 @@ bool model::set_skeleton (Model &m, ENGSkeleton handle)
 }
 
 //************************** 
-bool model::set_shape (Model &m, u32 shape_num, ENGGPUShape handle)
+bool model::set_gpushape (Model &m, u32 shape_num, ENGGPUShape handle)
 {
 	assert (model::isValid(m));
 
 	const u32 num_shape = utils::bufferReadU16 (&m.blob[8]);
+	assert (shape_num < num_shape);
 	if (shape_num < num_shape)
 	{
-		utils::bufferWriteU32 (&m.blob[20 + sizeof(u32)*shape_num], handle.viewAsU32());
+		
+		//utils::bufferWriteU32 (&m.blob[20 + sizeof(u32)*shape_num], handle.viewAsU32());
+		const u32 u = handle.viewAsU32();
+		memcpy (&m.blob[20 + sizeof(u32)*shape_num], &u, sizeof(u32) );
+		return true;
 	}
 
 	DBGBREAK;
@@ -96,19 +101,24 @@ bool model::set_shape (Model &m, u32 shape_num, ENGGPUShape handle)
 }
 
 //************************** 
-bool model::set_mesh  (Model &m, u32 mesh_num, u16 shape_index, u16 bone_index, u16 material_index)
+bool model::set_mesh  (Model &m, u32 mesh_num, u16 shape_indexIN, u16 bone_indexIN, u16 material_indexIN)
 {
 	assert (model::isValid(m));
 
 	const u32 num_meshes = utils::bufferReadU16 (&m.blob[12]);
+	assert (mesh_num < num_meshes);
 	if (mesh_num < num_meshes)
 	{
 		const u32 START_of_MESH = utils::bufferReadU16 (&m.blob[14]);
 		u32 ct = START_of_MESH + sizeof(u16) * 4 * mesh_num;
-		
-		ct += utils::bufferWriteU16 (&m.blob[ct], shape_index);
-		ct += utils::bufferWriteU16 (&m.blob[ct], bone_index);
-		ct += utils::bufferWriteU16 (&m.blob[ct], material_index);
+	
+		Model::Mesh mesh {
+            .shape_index = shape_indexIN,
+            .bone_index = bone_indexIN,
+            .material_index = material_indexIN,
+            .pad = 0
+		};
+		memcpy (&m.blob[ct], &mesh, sizeof(Model::Mesh));
 		return true;
 	}
 

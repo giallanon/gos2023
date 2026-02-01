@@ -18,9 +18,8 @@ namespace gos
 	 *	A => con (A>0 && A <= 16) 	=> 2^A e' il num max di handle allocabili 
 	 *	B => con (B>0 && B <= 16)	=> 2^B e' li num di chunck, ovvero quandi handle vengono allocati per ogni chunk (vedi HandleList<>)
 	 *	C => con (C>0 && C <= 16)	=> 2^C e' la dimensione del [counter]. 
-	 *	D => con (D>=0)				=> 2^D per pad fino a raggiungere A+B+C+D = 32 (calcolata automaticamente)
 	 *
-	 *  A + B + C + D == 32
+	 *  A + B + C == 32
 	*/
 	template<int A, int B, int C>
 	struct HandleT
@@ -154,21 +153,32 @@ namespace gos
 	};
 
 
-	#define GOS_DECL_HANDLE(A,B,C, HANDLE_TYPENAME)\
+	//#define GOS_DECL_HANDLE(A,B,C, HANDLE_TYPENAME)
+	#define GOS_DECL_HANDLE(NUM_MAX_HANDLE, NUM_HANDLE_PER_CHUNK, HANDLE_TYPENAME)\
 	struct HANDLE_TYPENAME\
 	{ \
+		static_assert(GOS_IS_POWER_OF_TWO((u32)NUM_MAX_HANDLE));\
+		static_assert(GOS_IS_POWER_OF_TWO((u32)NUM_HANDLE_PER_CHUNK));\
+	\
+	public:\
+		static constexpr u32 A = GOS_NUM_BIT_FOR_POWER_OF_TWO((u32)NUM_MAX_HANDLE);\
+		static constexpr u32 B = GOS_NUM_BIT_FOR_POWER_OF_TWO((u32)(NUM_MAX_HANDLE / NUM_HANDLE_PER_CHUNK));\
+		static constexpr u32 C = GOS_CLAMP((u32)(32 - (A+B)), (u32)16);\
+	\
+		typedef gos::HandleT<A,B,C> MYHANDLE_TYPE;\
+	\
 	public:\
 		static HANDLE_TYPENAME		INVALID()								{ static HANDLE_TYPENAME hINVALID; hINVALID.setInvalid(); return hINVALID; }\
 	\
-		static constexpr u8			getNumBitsIndex()						{ return gos::HandleT<A,B,C>::getNumBitsIndex(); }\
-		static constexpr u8			getNumBitsChunk()						{ return gos::HandleT<A,B,C>::getNumBitsChunk(); }\
-		static constexpr u8			getNumBitsCounter()						{ return gos::HandleT<A,B,C>::getNumBitsCounter(); }\
-		static constexpr u8			getNumBitsUser()						{ return gos::HandleT<A,B,C>::getNumBitsExtra(); }\
+		static constexpr u8			getNumBitsIndex()						{ return MYHANDLE_TYPE::getNumBitsIndex(); }\
+		static constexpr u8			getNumBitsChunk()						{ return MYHANDLE_TYPE::getNumBitsChunk(); }\
+		static constexpr u8			getNumBitsCounter()						{ return MYHANDLE_TYPE::getNumBitsCounter(); }\
+		static constexpr u8			getNumBitsUser()						{ return MYHANDLE_TYPE::getNumBitsExtra(); }\
 	\
-		static constexpr u32		getNumMaxHandle()						{ return gos::HandleT<A,B,C>::getNumMaxHandle(); }\
-		static constexpr u32		getNumMaxChunk()						{ return gos::HandleT<A,B,C>::getNumMaxChunk(); }\
-		static constexpr u32		getNumMaxCounter()						{ return gos::HandleT<A,B,C>::getNumMaxCounter(); }\
-		static constexpr u32		getNumMaxHandlePerChunk()				{ return gos::HandleT<A,B,C>::getNumMaxHandlePerChunk(); }\
+		static constexpr u32		getNumMaxHandle()						{ return MYHANDLE_TYPE::getNumMaxHandle(); }\
+		static constexpr u32		getNumMaxChunk()						{ return MYHANDLE_TYPE::getNumMaxChunk(); }\
+		static constexpr u32		getNumMaxCounter()						{ return MYHANDLE_TYPE::getNumMaxCounter(); }\
+		static constexpr u32		getNumMaxHandlePerChunk()				{ return MYHANDLE_TYPE::getNumMaxHandlePerChunk(); }\
 	\
 	public:\
 		void		setInvalid()											{ _handle.setInvalid(); }\
@@ -183,7 +193,7 @@ namespace gos
 		u32			viewAsU32() const										{ return _handle.viewAsU32(); }\
 	\
 	public:\
-		gos::HandleT<A,B,C> _handle;\
+		MYHANDLE_TYPE _handle;\
 	};\
 
 
@@ -271,7 +281,7 @@ namespace gos
 				if (firstFree[i] != 0xFFFF)
 				{
 					if (NULL == chunkList[i])
-						priv_allocChunk((u8)i);
+						priv_allocChunk(i);
 
 					const u32 indexReturned = firstFree[i];
 					sRecord *ret = &chunkList[i][indexReturned];
@@ -331,7 +341,7 @@ namespace gos
 		};
 
 	private:
-		void		priv_allocChunk(u8 which)
+		void		priv_allocChunk(u32 which)
 					{
 						#ifdef _DEBUG
 							constexpr u32 nChunk = HANDLE::getNumMaxChunk();

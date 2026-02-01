@@ -37,8 +37,8 @@ private:
     gos::FPSMovement				movement;
 
 	
-	gos::Skeleton					*skeleton;
-	gos::model::Model				*model;
+	gos::ENGSkeleton				handle_skeleton;
+	gos::ENGModel3d					handle_model;
 
 	gos::engine::Renderer1			*renderer;
 	u64 nextTimeUpdate_msec;

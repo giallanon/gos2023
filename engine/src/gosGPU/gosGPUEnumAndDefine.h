@@ -19,23 +19,22 @@
 #define 	GOSGPU__NUM_MAX_SHADER_PER_PIPELINE				8
 
 
-//A per "num max di handle", B per "num di chunk", C per "counter"
-GOS_DECL_HANDLE( 5,3,16, GPUZBufferHandle);			//2^5=32 => num totale di oggetti, divisi in chunk da 2^3=8
-GOS_DECL_HANDLE( 5,5,16, GPUViewportHandle);			//2^5=32 => num totale di oggetti, divisi in chunk da 2^5=32
-GOS_DECL_HANDLE( 6,5,16, GPURenderTargetHandle);		//2^6=64 => num totale di oggetti, divisi in chunk da 2^5=32
-GOS_DECL_HANDLE( 6,5,16, GPUDescrPoolHandle);			//2^6=64 => num totale di oggetti, divisi in chunk da 2^5=32
-GOS_DECL_HANDLE( 8,5,16, GPUPipelineHandle);			//2^8=256 => num totale di oggetti, divisi in chunk da 2^5=32
-GOS_DECL_HANDLE( 8,5,15, GPUSamplerHandle);			//2^8=256 => num totale di oggetti, divisi in chunk da 2^5=32
-GOS_DECL_HANDLE( 8,6,16, GPUCmdBufferHandle);			//2^8=256 => num totale di oggetti, divisi in chunk da 2^6=64
-GOS_DECL_HANDLE(10,7,14, GPUVtxBufferHandle);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-GOS_DECL_HANDLE(10,7,14, GPUIdxBufferHandle);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-GOS_DECL_HANDLE(10,7,13, GPUStgBufferHandle);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-GOS_DECL_HANDLE(10,8,12, GPUDescrSetLayoutHandle);	//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-GOS_DECL_HANDLE(10,8,12, GPUDescrSetInstanceHandle);	//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-GOS_DECL_HANDLE(10,8,12, GPUUniformBufferHandle);		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-GOS_DECL_HANDLE(14,8,8,  GPUStorageBufferHandle);		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-GOS_DECL_HANDLE(14,8,10, GPUShaderHandle);			//2^14=16384 => num totale di oggetti, divisi in chunk da 2^8=256
-GOS_DECL_HANDLE(16,10,6, GPUTextureHandle);			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^10=1024
+GOS_DECL_HANDLE( 32,8, GPUZBufferHandle);				//32 => num totale di oggetti, divisi in chunk da 8
+GOS_DECL_HANDLE( 32,16, GPUViewportHandle);				//32 => num totale di oggetti, divisi in chunk da 16
+GOS_DECL_HANDLE( 64,32, GPURenderTargetHandle);			//64 => num totale di oggetti, divisi in chunk da 32
+GOS_DECL_HANDLE( 64,32, GPUDescrPoolHandle);			//64 => num totale di oggetti, divisi in chunk da 32
+GOS_DECL_HANDLE( 256,32, GPUPipelineHandle);			//256 => num totale di oggetti, divisi in chunk da 32
+GOS_DECL_HANDLE( 256,32, GPUSamplerHandle);				//256 => num totale di oggetti, divisi in chunk da 32
+GOS_DECL_HANDLE( 256,64, GPUCmdBufferHandle);			//256 => num totale di oggetti, divisi in chunk da 64
+GOS_DECL_HANDLE(1024,128, GPUVtxBufferHandle);			//1024 => num totale di oggetti, divisi in chunk da 128
+GOS_DECL_HANDLE(1024,128, GPUIdxBufferHandle);			//1024 => num totale di oggetti, divisi in chunk da 128
+GOS_DECL_HANDLE(1024,128, GPUStgBufferHandle);			//1024 => num totale di oggetti, divisi in chunk da 128
+GOS_DECL_HANDLE(1024,256, GPUDescrSetLayoutHandle);		//1024 => num totale di oggetti, divisi in chunk da 256
+GOS_DECL_HANDLE(1024,256, GPUDescrSetInstanceHandle);	//1024 => num totale di oggetti, divisi in chunk da 256
+GOS_DECL_HANDLE(1024,256, GPUUniformBufferHandle);		//1024 => num totale di oggetti, divisi in chunk da 256
+GOS_DECL_HANDLE(16384,256, GPUStorageBufferHandle);		//16384 => num totale di oggetti, divisi in chunk da 256
+GOS_DECL_HANDLE(16384,256, GPUShaderHandle);			//16384 => num totale di oggetti, divisi in chunk da 256
+GOS_DECL_HANDLE(65536,1024, GPUTextureHandle);			//65536 => num totale di oggetti, divisi in chunk da 1024
 
 
 enum class eVtxStreamInputRate : u8

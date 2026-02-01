@@ -172,6 +172,8 @@ namespace test2
 //********************************************
 namespace test3
 {
+	GOS_DECL_HANDLE(65536, 16384, MyHandle);	//65536 risorsa divise in chunk da 16384
+
     int testHandleArray ()
     {
         gos::Allocator *allocator = gos::getSysHeapAllocator();
@@ -183,10 +185,14 @@ namespace test3
             u8 chunk;
         };
 
-        const u8 INDEXbit	= 16;
-        const u8 CHUNKbit	= 2;
-        const u8 COUNTERbit = 3;
-        GOS_DECL_HANDLE(INDEXbit, CHUNKbit, COUNTERbit, MyHandle);
+        // const u8 INDEXbit	= 16;
+        // const u8 CHUNKbit	= 2;
+        // const u8 COUNTERbit = 3;
+        // GOS_DECL_HANDLE(INDEXbit, CHUNKbit, COUNTERbit, MyHandle);
+
+		assert(MyHandle::A == 16);
+		assert(MyHandle::B == 2);
+		assert(MyHandle::C == 14);
 
         gos::HandleList<MyHandle, sMyData> hl;
         const u32 NMAXHANDLE = MyHandle::getNumMaxHandle();

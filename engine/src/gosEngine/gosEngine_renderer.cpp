@@ -304,18 +304,22 @@ void Renderer1::add (const ENGGPUShape shape, const mat4x4f &m, u32 material_ind
 }
 
 //**********************************
-void Renderer1::add (const ent::CompModelInstance *mi)
+void Renderer1::add (const ent::CompModelInstance *comp_mi)
 {
-    const gos::SkeletonInstance *sk = mi->model_instance.skeleton_query();
+	const engine::ResModel3dInst *res_mi;
+	if (engine->get (comp_mi->handle_mi, &res_mi))
+	{
+		const gos::ModelInstance *mi = &res_mi->data.minst;
 
-    const u32 n = mi->model_instance.meshList_getNumElem();
-    for (u32 i=0; i<n; i++)
-    {
-        const model::Mesh *mesh = mi->model_instance.meshList_getByIndex(i);
-        add(	mesh->shape_handle,
-                sk->getBoneByIndex(mesh->bone_index)->matrix,
-                mesh->material_index);
-    }
+		for (u32 i=0; i<mi->num_meshes; i++)
+		{
+			const Model::Mesh *mesh = &mi->listof_meshes[i];
+			
+			add(	mi->listof_gpushapes[mesh->shape_index],
+					mi->listof_bones[mesh->bone_index].matrix,
+					mesh->material_index);
+		}
+	}
 }
 
 //**********************************

@@ -16,8 +16,8 @@ Test1::Test1()
 	entRegistry.addComponentHandler<ent::CompModelInstance>();
 	entRegistry.addComponentHandler<ent::CompScriptable>();
 
-	skeleton = NULL;
-	model = NULL;
+	handle_skeleton.setInvalid();
+	handle_model.setInvalid();
 	renderer = NULL;
 
 	nextTimeUpdate_msec = 0;
@@ -29,8 +29,8 @@ Test1::~Test1()
 {
 	entRegistry.unsetup();
 
-	GOSDELETE(allocator, model);
-	GOSDELETE(allocator, skeleton);
+	engine->release(handle_skeleton);
+	engine->release(handle_model);
 	GOSDELETE(allocator, renderer);
 }
 
@@ -129,6 +129,8 @@ void Test1::priv_model_setup(gos::ENGGPUShape shape_cube, gos::ENGGPUShape shape
 {
 	//skeleton
 	{
+		gos::Skeleton sk;
+		sk.reset();
 		gos::skeleton::Builder builder;
 
 		gos::Bone *bone;
@@ -137,18 +139,58 @@ void Test1::priv_model_setup(gos::ENGGPUShape shape_cube, gos::ENGGPUShape shape
 			bone->matrix.buildTranslation(vec3f(0,  1.3f, 0));
 		builder.addChildTo (iRoot, "down-arm", &bone);
 			bone->matrix.buildTranslation(vec3f(0, -1.3f, 0));
-		skeleton = builder.end (allocator);
+		if (!builder.end (allocator, &sk))
+		{
+			logger::err ("priv_model_setup() => error creating skeleton\n");
+		}
+
+		if (!engine->skeleton_create (sk, &handle_skeleton))
+		{
+			logger::err ("priv_model_setup() => error creating skeleton(2)\n");
+		}
+
+		skeleton::free (sk);
 	}
 
-	//model
+
+	const engine::ResSkeleton *res_skeleton;
+	if (engine->get (handle_skeleton, &res_skeleton))
 	{
-		model::Builder builder;
-		builder.begin(skeleton);
-		builder.addMeshToBone (shape_cylinder, 0, "root");
-		builder.addMeshToBone (shape_cube, 1, "up-arm");
-		builder.addMeshToBone (shape_cube, 2, "down-arm");
-		model = builder.end(allocator);
+		// model::Builder builder;
+		// builder.begin(skeleton);
+		// builder.addMeshToBone (shape_cylinder, 0, "root");
+		// builder.addMeshToBone (shape_cube, 1, "up-arm");
+		// builder.addMeshToBone (shape_cube, 2, "down-arm");
+		// model = builder.end(allocator);
+
+		skeleton::Reader skr(&res_skeleton->data.skeleton);
+		const u32 bone_index__root = skr.bone_get_index_by_name("root");
+		const u32 bone_index__up_arm = skr.bone_get_index_by_name("up-arm");
+		const u32 bone_index__down_arm = skr.bone_get_index_by_name("down-arm");
+
+		const u32 material_0 = 0;
+		const u32 material_1 = 1;
+		const u32 material_2 = 2;
+		
+
+		const u32 NUM_SHAPES = 2;
+		const u32 NUM_MATERIAL = 3;
+		const u32 NUM_MESHES = 3;
+		gos::Model *model = engine->model_create (handle_skeleton, NUM_SHAPES, NUM_MATERIAL, NUM_MESHES, &handle_model);
+		assert (NULL != model);
+
+		model::set_gpushape (*model, 0, shape_cylinder);
+		model::set_gpushape (*model, 1, shape_cube);
+
+		model::set_mesh (*model, 0, 0, bone_index__root, material_0);
+		model::set_mesh (*model, 1, 1, bone_index__up_arm, material_1);
+		model::set_mesh (*model, 2, 1, bone_index__down_arm, material_2);
+		return;
 	}
+
+	//lo skeleton non era 'ready'
+	DBGBREAK;
+
  }
 
 //***************************************
@@ -325,9 +367,9 @@ bool Test1::priv_run4 ()
 				case 3:	scriptable->callback = Test1__entity_script_callback_3; break;
 				}
 
-				//shape
+				//model-instance
 				auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent);
-				cModelInstance->model_instance.setup (model);
+				engine->modelinst_create (handle_model, &cModelInstance->handle_mi);
 
 				scene.add(ent);
 			}
@@ -391,7 +433,7 @@ bool Test1::priv_run4 ()
 			//itero tutte le ent che hanno modificato il proprio componente <position>
 			{
 				auto list = entRegistry.getUpdatedEntityList<ent::CompPos>();
-				list->forEach ( [&entRegistry = entRegistry](u32 index, Entity ent) {
+				list->forEach ( [&entRegistry = entRegistry, engine=this->engine](u32 index, Entity ent) {
 					auto cpos = entRegistry.get<ent::CompPos>(ent, false);
 					auto ctransf = entRegistry.get<ent::CompTransform3>(ent, false);
 					cpos->buildMatrix(&ctransf->matrix);
@@ -400,7 +442,7 @@ bool Test1::priv_run4 ()
 					auto cModelInstance = entRegistry.get<ent::CompModelInstance>(ent, false);
 					if (NULL != cModelInstance)
 					{
-						cModelInstance->model_instance.applyTransform (ctransf->matrix);
+						engine->modelinst_applyTransform (cModelInstance->handle_mi, ctransf->matrix);
 					}
 
 
@@ -462,8 +504,8 @@ bool Test1::priv_run4 ()
 	mainLoop.unsetup();
 
 	//free delle modelInstance
-	entRegistry.getAllEntitiesWith<ent::CompModelInstance>()->forEach ([](ent::CompModelInstance *comp, gos::Entity ent){
-		comp->model_instance.unsetup();
+	entRegistry.getAllEntitiesWith<ent::CompModelInstance>()->forEach ([engine=this->engine](ent::CompModelInstance *comp, gos::Entity ent){
+		engine->release (comp->handle_mi);
 	});
 
 

@@ -94,12 +94,12 @@ namespace gos
 
 		u64	        bufferReadU64(const u8 *buffer);
         u64	        bufferReadU64_LSB_MSB (const u8 *buffer);
-        inline u32	bufferReadU64(const u8 *buffer, u64 *out)                   { *out=bufferReadU64(buffer); return 8; }
+        inline u32	bufferReadU64(const u8 *buffer, u64 *out)                   { assert(NULL!=out); *out=bufferReadU64(buffer); return 8; }
         inline i64	bufferReadI64(const u8 *buffer)				                { return static_cast<i64>(bufferReadU64(buffer)); }
 		inline i64	bufferReadI64_LSB_MSB(const u8 *buffer)		                { return static_cast<i64>(bufferReadU64_LSB_MSB(buffer)); }
 
         inline u32	bufferReadU32(const u8 *buffer)				                { return (((u32)buffer[0]) << 24) | (((u32)buffer[1]) << 16) | (((u32)buffer[2]) << 8) | ((u32)buffer[3]); }
-        inline u32	bufferReadU32(const u8 *buffer, u32 *out)                   { *out=bufferReadU32(buffer); return 4; }
+        inline u32	bufferReadU32(const u8 *buffer, u32 *out)                   { assert(NULL!=out); *out=bufferReadU32(buffer); return 4; }
         inline u32	bufferReadU32_LSB_MSB(const u8 *buffer)                     { return (((u32)buffer[3]) << 24) | (((u32)buffer[2]) << 16) | (((u32)buffer[1]) << 8) | ((u32)buffer[0]); }
         inline i32	bufferReadI32(const u8 *buffer)				                { return static_cast<i32>(bufferReadU32(buffer)); }
 		inline i32	bufferReadI32_LSB_MSB(const u8 *buffer)		                { return static_cast<i32>(bufferReadU32_LSB_MSB(buffer)); }
@@ -108,7 +108,7 @@ namespace gos
         inline u32	bufferReadU24_LSB_MSB(const u8 *buffer)                     { return (((u32)buffer[2]) << 16) | (((u32)buffer[1]) << 8) | ((u32)buffer[0]); }
 
         inline u16	bufferReadU16(const u8 *buffer)				                { return (((u16)buffer[0]) << 8) | ((u16)buffer[1]); }
-        inline u32	bufferReadU16(const u8 *buffer, u16 *out)                   { *out=bufferReadU16(buffer); return 2; }
+        inline u32	bufferReadU16(const u8 *buffer, u16 *out)                   { assert(NULL!=out); *out=bufferReadU16(buffer); return 2; }
 		inline u16	bufferReadU16_LSB_MSB(const u8 *buffer)		                { return (((u16)buffer[1]) << 8) | ((u16)buffer[0]); }
         inline i16	bufferReadI16(const u8 *buffer)				                { return static_cast<i16>(bufferReadU16(buffer)); }
 		inline i16	bufferReadI16_LSB_MSB(const u8 *buffer)		                { return static_cast<i16>(bufferReadU16_LSB_MSB(buffer)); }

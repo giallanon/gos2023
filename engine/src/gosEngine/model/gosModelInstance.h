@@ -12,23 +12,25 @@ namespace gos
 	class ModelInstance
 	{
 	public:
-		void    reset()		{ allocator=NULL; num_shapes=num_bones=0; listof_shapes=NULL; listof_bones=NULL; handle_model.setInvalid(); }
+		void    reset()		{ allocator=NULL; num_gpushapes=num_bones=num_meshes=0; listof_gpushapes=NULL; listof_bones=NULL; listof_meshes=NULL; model_listof_bones=NULL; }
 		void 	free()
 		{
-			GOSFREE(allocator, listof_shapes);
 			GOSFREE(allocator, listof_bones);
-			reset;
+			reset();
 		}
 		
 	public:
-		u32 				num_shapes;
-		ENGGPUShape			*listof_shapes;
+		u32 				num_gpushapes;
+		const ENGGPUShape	*listof_gpushapes;	//punta alla lista di gpushape di <model>
 
 		u32 				num_bones;
 		gos::Bone			*listof_bones;
+		const gos::Bone		*model_listof_bones;	//punta alla lista di mesh di <model::skeleton>
+
+		u32 				num_meshes;
+		const Model::Mesh	*listof_meshes;	//punta alla lista di mesh di <model>
 
 		gos::Allocator		*allocator;
-		const ENGModel3d	handle_model;
 	};
 
 

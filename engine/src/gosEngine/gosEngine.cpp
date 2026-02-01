@@ -42,6 +42,7 @@ void Engine::unsetup()
     handleList_vtxBuffer.unsetup();
     handleList_idxBuffer.unsetup();
     handleList_GPUShape.unsetup();
+	handleList_model3dInst.unsetup();
 	map_of_shape_to_gpushape.unsetup();
     resHandler_texture.unsetup();
     resHandler_pipeline.unsetup();
@@ -50,7 +51,6 @@ void Engine::unsetup()
     resHandler_shape.unsetup();
 	resHandler_skeleton.unsetup();
 	resHandler_model3d.unsetup();
-	resHandler_model3dInst.unsetup();
 
     asset2::dbcontext_close (asset_ctx);
 
@@ -189,6 +189,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     handleList_vtxBuffer.setup (allocator);
     handleList_idxBuffer.setup (allocator);
     handleList_GPUShape.setup (allocator);
+	handleList_model3dInst.setup (allocator);
 	map_of_shape_to_gpushape.setup (allocator, 8192);
     priv_setup_resource_handler(eAssetType::tex2D,      &resHandler_texture);
     priv_setup_resource_handler(eAssetType::pipe,       &resHandler_pipeline);
@@ -197,7 +198,6 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     priv_setup_resource_handler(eAssetType::shape,      &resHandler_shape);
 	priv_setup_resource_handler(eAssetType::skeleton,	&resHandler_skeleton);
 	priv_setup_resource_handler(eAssetType::model3d,	&resHandler_model3d);
-	priv_setup_resource_handler(eAssetType::model3dinst,&resHandler_model3dInst);
     
     //resource manager
     vtxBufferMan.setup (allocator, gpu);
@@ -282,12 +282,12 @@ void Engine::priv_flushLoaderThreadMsg()
 
 
 				//informo tutti quelli che dipendono da questa risorsa del suo cambio di stato
-				engine::ResHandleDepList *p = brh->deplist;
-				while (p)
-				{
-					p->brh->callback_onSubresStateChanged (p->brh, brh);
-					p = p->next;
-				}
+				// engine::ResHandleDepList *p = brh->deplist;
+				// while (p)
+				// {
+				// 	p->brh->callback_onSubresStateChanged (p->brh, brh);
+				// 	p = p->next;
+				// }
             }
             break;
         }
@@ -636,20 +636,20 @@ bool Engine::skeleton_createFromAsset (const char *uid_runtimeName, ENGSkeleton 
     return true;
 }
 
-bool Engine::skeleton_create (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *out_handle)
+bool Engine::skeleton_createFromMemory (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *out_handle)
 {
     assert (NULL != out_handle);
     engine::ResSkeleton *res = resHandler_skeleton.reserveTS(out_handle);
     if (NULL == res)
     {
-        logger::err ("Engine::skeleton_create() => can't create handle\n");
+        logger::err ("Engine::skeleton_createFromMemory() => can't create handle\n");
         return false;
     }
 
 	const u32 n = skeleton::deserialize (buffer, sizeof_buffer, allocator, &res->data.skeleton);
     if (0 == n)
     {
-        logger::err ("Engine::skeleton_create() => error during shapeAlloc\n");
+        logger::err ("Engine::skeleton_createFromMemory() => error during shapeAlloc\n");
         resHandler_skeleton.releaseTS (*out_handle, res);
         return false;
     }
@@ -657,6 +657,16 @@ bool Engine::skeleton_create (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *
     res->brh.status = engine::eResStatus::ready;
     return true;
 }
+
+bool Engine::skeleton_create (const Skeleton &sk, ENGSkeleton *out_handle)
+{
+	if (skeleton_createFromMemory (sk.blob, skeleton::get_blob_size(sk), out_handle))
+		return true;
+
+	logger::err ("Engine::skeleton_create() => error creating skeleton\n");
+	return false;
+}
+
 
 
 /**************************************************************** 
@@ -681,14 +691,14 @@ bool Engine::model_createFromAsset (const char *uid_runtimeName, ENGModel3d *out
     return true;
 }
 
-bool Engine::model_create (u16 num_shape, u16 num_material, u16 num_meshes, ENGModel3d *out_handle)
+gos::Model*	Engine::model_create (ENGSkeleton handle_skeleton, u16 num_shape, u16 num_material, u16 num_meshes, ENGModel3d *out_handle)
 {
     assert (NULL != out_handle);
     engine::ResModel3d *res = resHandler_model3d.reserveTS(out_handle);
     if (NULL == res)
     {
         logger::err ("Engine::model_create() => can't create handle\n");
-        return false;
+        return NULL;
     }
 
 	res->data.model.reset();
@@ -696,11 +706,13 @@ bool Engine::model_create (u16 num_shape, u16 num_material, u16 num_meshes, ENGM
     {
         logger::err ("Engine::model_create() => can't allocate model\n");
 		resHandler_model3d.releaseTS (*out_handle, res);
-        return false;
+        return NULL;
     }
+
+	model::set_skeleton(res->data.model, handle_skeleton);
     
     res->brh.status = engine::eResStatus::ready;
-    return true;
+    return &res->data.model;
 }
 
 
@@ -709,26 +721,92 @@ bool Engine::model_create (u16 num_shape, u16 num_material, u16 num_meshes, ENGM
  *****************************************************************/
 bool Engine::modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_handle)
 {
-    assert (NULL != out_handle);
-    engine::ResModel3dInst *res = resHandler_model3dInst.reserveTS(out_handle);
+	assert (NULL != out_handle);
+
+	const engine::ResModel3d *res_model;
+	if (!get (handle_model, &res_model))
+	{
+		//il modello deve essere "loaded"
+		DBGBREAK;
+		out_handle->setInvalid();
+		return false;
+	}
+
+	model::Reader mr (&res_model->data.model);
+	const engine::ResSkeleton *res_skeleton;
+	if (!get (mr.skeleton_get_handle(), &res_skeleton))
+	{
+		//lo skeleton deve essere "loaded"
+		DBGBREAK;
+		out_handle->setInvalid();
+		return false;
+	}
+	skeleton::Reader sr(&res_skeleton->data.skeleton);
+
+
+
+    engine::ResModel3dInst *res = handleList_model3dInst.reserveTS(out_handle);
     if (NULL == res)
     {
         logger::err ("Engine::modelinst_create() => can't create handle\n");
         return false;
     }
-
 	res->data.minst.reset();
-	if (!model::alloc (allocator, num_shape, num_material, num_meshes, &res->data.model))
-    {
-        logger::err ("Engine::modelinst_create() => can't allocate model\n");
-		resHandler_model3dInst.releaseTS (*out_handle, res);
-        return false;
-    }
-    
     res->brh.status = engine::eResStatus::ready;
-    return true;
+
+	
+	
+	ModelInstance *mi = &res->data.minst;
+	mi->allocator = this->allocator;
+
+	mi->num_bones = sr.bone_get_num();
+	mi->model_listof_bones = sr.bone_get_by_index(0);
+
+	mi->num_meshes = mr.mesh_get_num();
+	mi->listof_meshes = mr.mesh_get_by_index(0);
+	
+	mi->num_gpushapes = mr.gpushape_get_num();
+	mi->listof_gpushapes = mr.gpushape_get_pt_to_list();
+
+	mi->listof_bones = GOSALLOCT(Bone*, allocator, sizeof(Bone) * mi->num_bones);	
+	memcpy (mi->listof_bones, mi->model_listof_bones, sizeof(Bone) * mi->num_bones);
+
+	return true;
 }
 
+void Engine::release (ENGModel3dInst &handle)
+{
+    engine::ResModel3dInst res;
+    if (handleList_model3dInst.releaseTS (handle, &res))
+	{
+		res.data.minst.free();
+	}
+    handle.setInvalid();
+}
+
+
+void Engine::modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &matW)
+{
+	engine::ResModel3dInst *res;
+	if (handleList_model3dInst.fromHandleToPointer (handle, &res))
+		priv_modelinst_applyTransform_ric (res->data.minst.model_listof_bones, res->data.minst.listof_bones, 0, matW);
+
+	//DBGBREAK;
+}
+
+//**********************************************************************
+void Engine::priv_modelinst_applyTransform_ric (const gos::Bone *model_listof_bones, gos::Bone *listof_bones, u32 boneIndex, const mat4x4f &parent_matW) const
+{
+    Bone *bone = &listof_bones[boneIndex];
+    bone->matrix = parent_matW * model_listof_bones[boneIndex].matrix;
+    
+    u32 childrenIndex = bone->firstChildIndex;
+    while (0xFF != childrenIndex)
+    {
+        priv_modelinst_applyTransform_ric (model_listof_bones, listof_bones, childrenIndex, bone->matrix);
+        childrenIndex = listof_bones[childrenIndex].sigblinIndex;
+    }
+}
 
 
 /**************************************************************** 

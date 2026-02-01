@@ -57,6 +57,8 @@ namespace gos
     {
         bool    isValid (const Skeleton &sk);
         void    free (Skeleton &sk);
+
+		u32 	get_blob_size (const Skeleton &sk);
         
 				//se [buffer] == NULL ritorna il num di byte necessari alla serializzazione
 				//se [buffer] != NULL ritorna 0 in caso di errore oppure il num di byte memcpyati in [buffer]
@@ -69,6 +71,7 @@ namespace gos
     
         void    debug__print (const Skeleton &sk, gos::UTF8String &out);
 
+		
 
 
 

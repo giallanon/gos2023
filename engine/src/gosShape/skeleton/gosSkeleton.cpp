@@ -9,7 +9,7 @@ bool skeleton::isValid (const Skeleton &sk)
 {
 	if (NULL == sk.allocator)
 		return false;
-	const u32 magic = utils::bufferReadU32 (sk.blob, 0);
+	const u32 magic = utils::bufferReadU32 (sk.blob);
 	return (GOS_MAGIC__SKELETON == magic);	
 }
 
@@ -23,9 +23,18 @@ void skeleton::free (Skeleton &sk)
 }
 
 //***************************************
+u32  skeleton::get_blob_size (const Skeleton &sk)
+{
+	if (!isValid(sk))
+		return 0;
+	return utils::bufferReadU32 (&sk.blob[4]);
+}
+
+
+//***************************************
 u32  skeleton::serialize (const Skeleton &sk, u8 *buffer, u32 sizeof_buffer)
 {
-	const u32 magic = utils::bufferReadU32 (sk.blob, 0);
+	const u32 magic = utils::bufferReadU32 (sk.blob);
 	if (GOS_MAGIC__SKELETON != magic)
 	{
 		DBGBREAK;

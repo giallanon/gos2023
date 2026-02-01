@@ -24,10 +24,10 @@ Game1::Game1()
 	entRegistry.addComponentHandler<CompMissile>();
 
 	renderer = NULL;
-    skeleton1 = NULL;
-    skeleton2 = NULL;
-    model_player = NULL;
-    model_pavimento = NULL;
+    handle_skeleton1.setInvalid();
+    handle_skeleton2.setInvalid();
+    handle_model_player.setInvalid();
+    handle_model_pavimento.setInvalid();
 
 	num_missile_alive = 0;
 	for (u8 i=0; i<NUM_MAX_MISSILE; i++)
@@ -41,11 +41,12 @@ Game1::Game1()
 Game1::~Game1()
 {
 	entRegistry.unsetup();
+    engine->release(handle_skeleton1);
+    engine->release(handle_skeleton2);
+	engine->release(handle_model_player);
+	engine->release(handle_model_pavimento);
+
 	GOSDELETE(allocator, renderer);
-    GOSDELETE(allocator, skeleton1);
-    GOSDELETE(allocator, skeleton2);
-    GOSDELETE(allocator, model_player);
-    GOSDELETE(allocator, model_pavimento);
 }
 
 //***************************************
@@ -334,6 +335,8 @@ void Game1::priv_createModel_mainPlayer()
 {
 	//skeleton1
 	{
+		gos::Skeleton skeleton1;
+		skeleton1.reset();
 		gos::skeleton::Builder builder;
 
         gos::mat4x4f mT, mS;
@@ -350,17 +353,46 @@ void Game1::priv_createModel_mainPlayer()
             mT.buildTranslation (vec3f(0.8f, 0.05f, 0));
             mS.buildScale  (vec3f(0.1f, 0.1f, 0.1f));
 			bone->matrix = mT * mS;
-		skeleton1 = builder.end (allocator);
+		builder.end (allocator, &skeleton1);
+
+		engine->skeleton_create (skeleton1, &handle_skeleton1);
+		skeleton::free (skeleton1);
+
 	}    
 
 	//model_player
+	const engine::ResSkeleton *res_skeleton;
+	if (engine->get (handle_skeleton1, &res_skeleton))
 	{
-		model::Builder builder;
-		builder.begin(skeleton1);
-		builder.addMeshToBone (handle_gpushape_cyl, material_indices[0], "piedi");
-		builder.addMeshToBone (handle_gpushape_cube, material_indices[1], "occhi");
-		builder.addMeshToBone (handle_gpushape_cube, material_indices[2], "coso-rotante");
-		model_player = builder.end (allocator);
+		// model::Builder builder;
+		// builder.begin(skeleton1);
+		// builder.addMeshToBone (handle_gpushape_cyl, material_indices[0], "piedi");
+		// builder.addMeshToBone (handle_gpushape_cube, material_indices[1], "occhi");
+		// builder.addMeshToBone (handle_gpushape_cube, material_indices[2], "coso-rotante");
+		// model_player = builder.end (allocator);
+
+		skeleton::Reader skr(&res_skeleton->data.skeleton);
+		const u32 bone_index__piedi = skr.bone_get_index_by_name("piedi");
+		const u32 bone_index__occhi = skr.bone_get_index_by_name("occhi");
+		const u32 bone_index__coso_rotante = skr.bone_get_index_by_name("coso-rotante");
+
+		const u32 material_0 = material_indices[0];
+		const u32 material_1 = material_indices[1];
+		const u32 material_2 = material_indices[2];
+		
+
+		const u32 NUM_SHAPES = 2;
+		const u32 NUM_MATERIAL = 3;
+		const u32 NUM_MESHES = 3;
+		gos::Model *model = engine->model_create (handle_skeleton1, NUM_SHAPES, NUM_MATERIAL, NUM_MESHES, &handle_model_player);
+		assert (NULL != model);
+
+		model::set_gpushape (*model, 0, handle_gpushape_cyl);
+		model::set_gpushape (*model, 1, handle_gpushape_cube);
+
+		model::set_mesh (*model, 0, 0, bone_index__piedi, material_0);
+		model::set_mesh (*model, 1, 1, bone_index__occhi, material_1);
+		model::set_mesh (*model, 2, 1, bone_index__coso_rotante, material_2);		
 	}    
 }
 
@@ -369,18 +401,42 @@ void Game1::priv_createModel_pavimento()
 {
 	//skeleton2
 	{
+		gos::Skeleton skeleton2;
+		skeleton2.reset();
         gos::skeleton::Builder builder;
+		
 		builder.begin ("piedi");
-		skeleton2 = builder.end (allocator);
+		builder.end (allocator, &skeleton2);
+
+		engine->skeleton_create (skeleton2, &handle_skeleton2);
+		skeleton::free (skeleton2);
 	}    
 
-	//model_pavimento = GOSNEW(allocator, model::Model)();
+	//model_player
+	const engine::ResSkeleton *res_skeleton;
+	if (engine->get (handle_skeleton2, &res_skeleton))
 	{
-		model::Builder builder;
-		builder.begin(skeleton2);
-		builder.addMeshToBone (handle_gpushape_cube, material_indices[3], "piedi");
-		model_pavimento = builder.end (allocator);
-	}    
+		// model::Builder builder;
+		// builder.begin(skeleton2);
+		// builder.addMeshToBone (handle_gpushape_cube, material_indices[3], "piedi");
+		// model_pavimento = builder.end (allocator);
+
+		skeleton::Reader skr(&res_skeleton->data.skeleton);
+		const u32 bone_index__piedi = skr.bone_get_index_by_name("piedi");
+
+		const u32 material_0 = material_indices[3];
+		
+
+		const u32 NUM_SHAPES = 1;
+		const u32 NUM_MATERIAL = 1;
+		const u32 NUM_MESHES = 1;
+		gos::Model *model = engine->model_create (handle_skeleton2, NUM_SHAPES, NUM_MATERIAL, NUM_MESHES, &handle_model_pavimento);
+		assert (NULL != model);
+
+		model::set_gpushape (*model, 0, handle_gpushape_cube);
+
+		model::set_mesh (*model, 0, 0, bone_index__piedi, material_0);
+	} 
 }
 
 //***************************************
@@ -444,7 +500,7 @@ void Game1::priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir)
 
 	//shape
 	auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent);
-	cModelInstance->model_instance.setup (model_pavimento);
+	engine->modelinst_create (handle_model_pavimento, &cModelInstance->handle_mi);
 
 	//script
     auto cScript = entRegistry.addComponent<ent::CompScriptable>(ent);
@@ -467,7 +523,7 @@ void Game1::priv_loop ()
 
         //shape
         auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent_mainPlayer);
-        cModelInstance->model_instance.setup (model_player);
+		engine->modelinst_create (handle_model_player, &cModelInstance->handle_mi);
 
         auto cScript = entRegistry.addComponent<ent::CompScriptable>(ent_mainPlayer);
         cScript->callback = Game1__entity_script_mainPlayer;
@@ -483,8 +539,8 @@ void Game1::priv_loop ()
 
         //shape
         auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent_pavimento);
-        cModelInstance->model_instance.setup (model_pavimento);
-		cModelInstance->model_instance.applyTransform (mFinal);
+		engine->modelinst_create (handle_model_pavimento, &cModelInstance->handle_mi);
+		engine->modelinst_applyTransform (cModelInstance->handle_mi, mFinal);
     }
 
 
@@ -579,7 +635,7 @@ void Game1::priv_loop ()
             //itero tutte le ent che hanno modificato il proprio componente <position>
             {
                 auto list = entRegistry.getUpdatedEntityList<ent::CompPos>();
-                list->forEach ( [&entRegistry = entRegistry](u32 index, Entity ent) {
+                list->forEach ( [&entRegistry = entRegistry, engine=this->engine](u32 index, Entity ent) {
                     auto cpos = entRegistry.get<ent::CompPos>(ent, false);
 					auto ctransf = entRegistry.get<ent::CompTransform3>(ent, false);
                     cpos->buildMatrix(&ctransf->matrix);
@@ -588,7 +644,7 @@ void Game1::priv_loop ()
                     auto cModelInstance = entRegistry.get<ent::CompModelInstance>(ent, false);
                     if (NULL != cModelInstance)
                     {
-                        cModelInstance->model_instance.applyTransform (ctransf->matrix);
+						engine->modelinst_applyTransform (cModelInstance->handle_mi, ctransf->matrix);
                     }
 
 
@@ -639,13 +695,6 @@ void Game1::priv_loop ()
 
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }
-		
-
-		const engine::ResSkeleton *res_skeleton;
-		if (engine->get (handle_sk1, &res_skeleton))
-		{
-			res_skeleton->data.skeleton->bone_getByName("root");
-		}
 	}
 	engine->release(handle_sk1);
 
@@ -654,8 +703,8 @@ void Game1::priv_loop ()
 	mainLoop.unsetup();
 
 	//free delle modelInstance
-	entRegistry.getAllEntitiesWith<ent::CompModelInstance>()->forEach ([](ent::CompModelInstance *comp, gos::Entity ent){
-		comp->model_instance.unsetup();
+	entRegistry.getAllEntitiesWith<ent::CompModelInstance>()->forEach ([engine=this->engine](ent::CompModelInstance *comp, gos::Entity ent){
+		engine->release (comp->handle_mi);
 	});    
 
 	//free asset

@@ -59,8 +59,6 @@ template<typename UINT_TYPE>
 
 
 
-
-
 /* allinea [num] alla potenza del 2 piu' vicina a [align].
     [align] deve a sua volta essere una potenza del 2.
     Esempio:
@@ -68,6 +66,46 @@ template<typename UINT_TYPE>
         GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(33, 32) => 64
 */
 constexpr inline u32 GOS_ALIGN_NUMBER_TO_POWER_OF_TWO (u32 num, u32 alignPowerOfTwo)         { assert(GOS_IS_POWER_OF_TWO(alignPowerOfTwo)); return (((num) + ((alignPowerOfTwo) - 1)) & ~((alignPowerOfTwo) - 1)); }
+
+
+
+/**
+ * @brief   GOS_NUM_BIT_FOR_POWER_OF_TWO(value)
+ *          <num_power_of_two> deve essere una potenza del 2, nel qual caso ritorno l'esponente tale per cui 2^n=num_power_of_two
+ *          Es:
+ * 				GOS_NUM_BIT_FOR_POWER_OF_TWO(8) = 3
+ *          	GOS_NUM_BIT_FOR_POWER_OF_TWO(1024) = 10
+ */
+template<typename UINT_TYPE>
+[[nodiscard]] constexpr std::enable_if_t<std::is_unsigned_v<UINT_TYPE>, u32> GOS_NUM_BIT_FOR_POWER_OF_TWO (UINT_TYPE num_power_of_two) noexcept 
+{
+    assert(num_power_of_two>0);
+	assert (GOS_IS_POWER_OF_TWO(num_power_of_two));
+
+	UINT_TYPE ret = 1;
+	u32 n = 0;
+	while (1)
+	{
+		if (num_power_of_two & ret) return n;
+		ret<<=1;
+		n++;
+	}
+}
+
+
+/**
+ * @brief   GOS_CLAMP(value)
+ */
+template<typename UINT_TYPE>
+[[nodiscard]] constexpr std::enable_if_t<std::is_unsigned_v<UINT_TYPE>, UINT_TYPE> GOS_CLAMP (UINT_TYPE num, UINT_TYPE max_value) noexcept 
+{
+	if (num > max_value) return max_value;
+	else return num;
+}
+
+
+
+
 
 #define GOSSWAP(a,b)	{auto temp=(a); (a)=(b); (b)=temp;}
 

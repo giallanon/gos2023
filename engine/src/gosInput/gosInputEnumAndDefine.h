@@ -7,7 +7,7 @@
 
 
 //A per "num max di handle", B per "num di chunk", C per "counter"
-GOS_DECL_HANDLE(5,3,4, GOSWinHandle);		//2^5=32 => num totale di oggetti, divisi in chunk da 2^3=8
+GOS_DECL_HANDLE(32,8, GOSWinHandle);		//32 => num totale di oggetti, divisi in chunk da 8
 
 
 typedef void (*GOSWindowCallbackFN_onResize)(int newW, int newH, void *userpt);

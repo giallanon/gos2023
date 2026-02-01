@@ -25,15 +25,9 @@ namespace gos
      *      ..  
      *      ..      u32     ENGGPUShape-N as u32
      * 
-     *      ..      u16     shape_index             //MESH 1    (aka ABS_OFFSET_of_MESH1)
-     *      ..      u16     bone_index
-     *      ..      u16     material_index
-     *      ..      u16     pad
+     *      ..      sizeof(Mesh)	mesh-0     //MESH 1    (aka ABS_OFFSET_of_MESH1)
      *      ..
-     *      ..      u16     shape_index             //MESH N
-     *      ..      u16     bone_index
-     *      ..      u16     material_index
-     *      ..      u16     pad
+     *      ..      sizeof(Mesh)	mesh-N     
      */
     struct Model
     {
@@ -58,14 +52,12 @@ namespace gos
     
     namespace model
     {
-		class Def;	//fwd
-
         bool    isValid (const Model &sk);
 		bool 	alloc (gos::Allocator *allocator, u16 num_shape, u16 num_material, u16 num_meshes, Model *out);
 		void    free (Model &sk);
 
 		bool	set_skeleton (Model &m, ENGSkeleton handle);
-		bool	set_shape (Model &m, u32 shape_num, ENGGPUShape handle);
+		bool	set_gpushape (Model &m, u32 shape_num, ENGGPUShape handle);
 		bool 	set_mesh  (Model &m, u32 mesh_num, u16 shape_index, u16 bone_index, u16 material_index);
 
 
@@ -87,15 +79,16 @@ namespace gos
             u32                 mesh_get_num() const;
             const Model::Mesh*  mesh_get_by_index (u32 index) const;
 
-            u32                 shape_get_num() const;
-            ENGGPUShape         shape_get_by_index (u32 i) const;
+            u32                 gpushape_get_num() const;
+            ENGGPUShape         gpushape_get_by_index (u32 i) const;
+			const ENGGPUShape*  gpushape_get_pt_to_list () const;
 
             u32                 material_get_num() const;
 
         private:
             const Model *m;
         };
-
+	
 
     } //namespace model
 } //namespace gos

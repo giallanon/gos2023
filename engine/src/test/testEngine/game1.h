@@ -56,10 +56,10 @@ private:
 	gos::ENGSkeleton				handle_sk1;
 
 	eCameraMode						cameraMode;
-	gos::Skeleton					*skeleton1;
-	gos::Skeleton					*skeleton2;
-	gos::model::Model				*model_player;
-	gos::model::Model				*model_pavimento;
+	gos::ENGSkeleton				handle_skeleton1;
+	gos::ENGSkeleton				handle_skeleton2;
+	gos::ENGModel3d					handle_model_player;
+	gos::ENGModel3d					handle_model_pavimento;
     gos::FPSMovement				movement;
 	CharacterController				charCtrl;
 	gos::Entity						ent_mainPlayer;

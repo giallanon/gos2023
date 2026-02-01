@@ -97,7 +97,7 @@ namespace gos
 								ret = false;
 								break;
 							}
-							model::set_shape (res_data->data.model, i, handle_gpuShape);
+							model::set_gpushape (res_data->data.model, i, handle_gpuShape);
 						}
 						if (!ret)
 							break;

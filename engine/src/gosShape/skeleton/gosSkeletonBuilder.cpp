@@ -103,10 +103,10 @@ bool Builder::end (gos::Allocator *allocatorIN, Skeleton *out)
         + sizeof(u8)     //pad
         + sizeof(u16);   //abs-offset to START-OF-NAME-TABLE
 
-    assert (sizeof(Bone) % 8 == 0);
-    const u32 sizeof_boneList = GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(sizeof(Bone) * num_bones, 8);
+    assert (sizeof(Bone) % 4 == 0);
+    const u32 sizeof_boneList = GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(sizeof(Bone) * num_bones, 4);
 
-    const u32 sizeof_nameTOC = GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(sizeof(u16) * num_bones, 8);
+    const u32 sizeof_nameTOC = GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(sizeof(u16) * num_bones, 4);
 
     u32 sizeof_allNames = 0;
     u32 iter;
@@ -115,7 +115,7 @@ bool Builder::end (gos::Allocator *allocatorIN, Skeleton *out)
     while (NULL != (s = nameList.next (&iter)))
     {
         const u32 len = string::utf8::lengthInByte(s);
-        sizeof_allNames += GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(len + 1, 8);
+        sizeof_allNames += GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(len + 1, 4);
     }
 
 
@@ -156,7 +156,7 @@ bool Builder::end (gos::Allocator *allocatorIN, Skeleton *out)
 
         assert (ct_name < 0xFFFF);
         gos::utils::bufferWriteU16 (&out->blob[START_OF_NAME_TABLE + sizeof(u16) * i], (u16)ct_name);
-        ct_name += GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(len + 1, 8);
+        ct_name += GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(len + 1, 4);
     }
 
     assert (ct_name == blob_size);

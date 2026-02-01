@@ -88,23 +88,6 @@ namespace gos
         void            release (ENGShape &handle)																	{ priv_asset_release(handle, resHandler_shape); }
         bool            get (ENGShape handle, const engine::ResShape **out, u64 timeout_msec = 0)					{ return priv_resource_get_and_schedule_load_if_needed (handle, resHandler_shape, out, timeout_msec); }
 
-		//============================= skeleton
-        bool            skeleton_createFromAsset (const char *uid_runtimeName, ENGSkeleton *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
-        bool            skeleton_create (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *out_handle);
-        void            release (ENGSkeleton &handle)																{ priv_asset_release(handle, resHandler_skeleton); }
-        bool            get (ENGSkeleton handle, const engine::ResSkeleton **out, u64 timeout_msec = 0)        		{ return priv_resource_get_and_schedule_load_if_needed (handle, resHandler_skeleton, out, timeout_msec); }
-
-		//============================= model3d
-        bool            model_createFromAsset (const char *uid_runtimeName, ENGModel3d *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
-        bool            model_create (u16 num_shape, u16 num_material, u16 num_meshes, ENGModel3d *out_handle);
-        void            release (ENGModel3d &handle)																{ priv_asset_release(handle, resHandler_model3d); }
-        bool            get (ENGModel3d handle, const engine::ResModel3d **out, u64 timeout_msec = 0)        		{ return priv_resource_get_and_schedule_load_if_needed (handle, resHandler_model3d, out, timeout_msec); }
-		
-		//============================= model instance
-        bool            modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_handle);
-        void            release (ENGModel3dInst &handle)															{ priv_asset_release(handle, resHandler_model3dInst); }
-		bool            get (ENGModel3dInst handle, const engine::ResModel3dInst **out, u64 timeout_msec = 0)		{ return priv_resource_get_and_schedule_load_if_needed (handle, resHandler_model3dInst, out, timeout_msec); }
-
         //============================= GPUShape
 		/* 	Le GPUShape create hanno gia' gli handler VB/IB settati correttamente anche se i vtx/idx NON sono ancora stati copiati nei buffer (lo devi fare te).
 			Le GPUShape create a partire da una ENGShape sono mappate internamente in modo che una successiva chiamata a GPUShape_create(ENGShape, ENGGPUShape) ritorni
@@ -128,7 +111,24 @@ namespace gos
         void            release (ENGPipeline &handle)                                                              { priv_asset_release(handle, resHandler_pipeline); }
         bool            get (ENGPipeline handle, const engine::ResPipeline **out, u64 timeout_msec = 0)            { return priv_resource_get_and_schedule_load_if_needed (handle, resHandler_pipeline, out, timeout_msec); }
 
+		//============================= skeleton
+        bool            skeleton_createFromAsset (const char *uid_runtimeName, ENGSkeleton *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
+        bool            skeleton_createFromMemory (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *out_handle);
+		bool            skeleton_create (const Skeleton &sk, ENGSkeleton *out_handle);
+        void            release (ENGSkeleton &handle)																{ priv_asset_release(handle, resHandler_skeleton); }
+        bool            get (ENGSkeleton handle, const engine::ResSkeleton **out, u64 timeout_msec = 0)        		{ return priv_resource_get_and_schedule_load_if_needed (handle, resHandler_skeleton, out, timeout_msec); }
 
+		//============================= model3d
+        bool            model_createFromAsset (const char *uid_runtimeName, ENGModel3d *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
+        gos::Model*		model_create (ENGSkeleton handle_skeleton, u16 num_shape, u16 num_material, u16 num_meshes, ENGModel3d *out_handle);
+        void            release (ENGModel3d &handle)																{ priv_asset_release(handle, resHandler_model3d); }
+        bool            get (ENGModel3d handle, const engine::ResModel3d **out, u64 timeout_msec = 0)        		{ return priv_resource_get_and_schedule_load_if_needed (handle, resHandler_model3d, out, timeout_msec); }
+		
+		//============================= model instance
+        bool            modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_handle);
+        void            release (ENGModel3dInst &handle);
+        bool            get (ENGModel3dInst handle, const engine::ResModel3dInst **out)                           	{ return handleList_model3dInst.queryInfo(handle, out); }
+		void            modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &matW);
 
 
     private:
@@ -195,7 +195,7 @@ namespace gos
 
             bool		    fromHandleToPointer (HANDLE_TYPE h, HANDLE_STRUCT* *out) const          { return list.fromHandleToPointer (h, out); }
             const HANDLE_STRUCT* getInfo (HANDLE_TYPE handle) const                                 { HANDLE_STRUCT *ret = NULL; list.fromHandleToPointer (handle, &ret); return ret; }
-            bool            queryInfo (HANDLE_TYPE h, const HANDLE_STRUCT* *out) const              { *out = getInfo(h); return (NULL != out); }
+            bool            queryInfo (HANDLE_TYPE h, const HANDLE_STRUCT* *out) const              { *out = getInfo(h); return (NULL != (*out)); }
             
             
 
@@ -347,15 +347,16 @@ namespace gos
     private:
                         		template<class HANDLE_TYPE, class HANDLE_STRUCT>
         void            		priv_setup_resource_handler (eAssetType assetType, ResouceHandler<HANDLE_TYPE, HANDLE_STRUCT> *res_handler)
-                        {
-                            res_handler->setup (allocator, assetType);
+								{
+									res_handler->setup (allocator, assetType);
 
-                            const u32 index = (u32)assetType;
-                            assert (index <= (u32)eAssetType::__NUM);
-                            resHandler_list[index] = res_handler;
-                        }
+									const u32 index = (u32)assetType;
+									assert (index <= (u32)eAssetType::__NUM);
+									resHandler_list[index] = res_handler;
+								}
         void            		priv_flushLoaderThreadMsg();
         bool            		asset_bind (asset2::UID uid, u32 handle_asU32);
+		void 					priv_modelinst_applyTransform_ric (const gos::Bone *model_listof_bones, gos::Bone *listof_bones, u32 boneIndex, const mat4x4f &parent_matW) const;
 		engine::ResGPUShape* 	priv_GPUShape_create (const gos::Shape *shape, ENGGPUShape *out_handle);
 
         BaseResourceHandler*    priv_get_baseResourceHandler (eAssetType assetType) const
@@ -540,6 +541,7 @@ namespace gos
         HList<ENGVtxBuffer, engine::ResVtxBuffer>           handleList_vtxBuffer;
         HList<ENGIdxBuffer, engine::ResIdxBuffer>           handleList_idxBuffer;
         HList<ENGGPUShape, engine::ResGPUShape>             handleList_GPUShape;
+		HList<ENGModel3dInst, engine::ResModel3dInst> 		handleList_model3dInst;
 		FastHashMap<ENGShape, ENGGPUShape>					map_of_shape_to_gpushape;
         ResouceHandler<ENGShape, engine::ResShape>          resHandler_shape;
         ResouceHandler<ENGTexture, engine::ResTexture>      resHandler_texture;
@@ -548,7 +550,7 @@ namespace gos
         ResouceHandler<ENGPxlShader, engine::ResShader>     resHandler_pxlShader;
 		ResouceHandler<ENGSkeleton, engine::ResSkeleton>	resHandler_skeleton;
 		ResouceHandler<ENGModel3d, engine::ResModel3d>		resHandler_model3d;
-		ResouceHandler<ENGModel3dInst, engine::ResModel3dInst> resHandler_model3dInst;
+		
 
 
 

@@ -13,8 +13,8 @@
 
 
 //A per "num max di handle", B per "num di chunk", C per "counter"
-GOS_DECL_HANDLE(10,5,10, GOSThreadHandle);		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^5=32
-GOS_DECL_HANDLE(10,6,10, GOSThreadMsgHandle);		//2^10=1024 => num totale di oggetti, divisi in chunk da 2^6=64
+GOS_DECL_HANDLE(1024,32, GOSThreadHandle);			//1024 => num totale di oggetti, divisi in chunk 32
+GOS_DECL_HANDLE(1024,64, GOSThreadMsgHandle);		//1024 => num totale di oggetti, divisi in chunk 64
 
 namespace gos
 {
