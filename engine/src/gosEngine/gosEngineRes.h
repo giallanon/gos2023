@@ -1,7 +1,7 @@
 #ifndef _gosEngineRes_h_
 #define _gosEngineRes_h_
 #include "gosEngineEnumAndDefine.h"
-#include "model/gosModel.h"
+#include "model/gosModelInstance.h"
 
 
 namespace gos
@@ -180,6 +180,27 @@ namespace gos
 			BaseResHandle	brh;
 			Data			data;
 		};
+		
+
+		//************************************
+		struct ResModel3dInst
+		{
+		public:
+			struct Data
+			{
+				void 	reset()													{ minst.reset(); }
+				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ minst.free(); reset(); }
+
+				gos::ModelInstance	minst;
+			};
+
+		public:
+			void reset()		{ brh.reset(); data.reset(); }
+
+		public:
+			BaseResHandle	brh;
+			Data			data;
+		};		
 	} //namespace engine
 
 } //namespace gos

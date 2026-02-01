@@ -18,8 +18,9 @@ namespace gos
         imported_glb    = 6,
 		skeleton    	= 7,
 		model3d			= 8,
+		model3dinst		= 9,
 
-        __NUM           = 8 //questo deve essere sempre uguale all'id + alto
+        __NUM           = 9 //questo deve essere sempre uguale all'id + alto
     };
 
     namespace asset2

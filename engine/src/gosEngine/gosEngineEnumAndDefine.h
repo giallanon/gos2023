@@ -22,7 +22,9 @@ namespace gos
 	GOS_DECL_HANDLE(10,8,14, ENGVtxShader);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
 	GOS_DECL_HANDLE(10,8,14, ENGPxlShader);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
 	GOS_DECL_HANDLE(10,8,14, ENGSkeleton);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-	GOS_DECL_HANDLE(16,12,4, ENGModel3d);			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^12=4096
+	GOS_DECL_HANDLE(12,12,8, ENGModel3d);			//2^12=4096 => num totale di oggetti, divisi in chunk da 2^12=4096
+	GOS_DECL_HANDLE(16,12,4, ENGModel3dInst);		//2^16=65536 => num totale di oggetti, divisi in chunk da 2^12=4096
+	
 	
 	namespace engine
 	{
@@ -39,22 +41,37 @@ namespace gos
 			loading		= 2,		//esiste nell'engine e' ed in fase di caricamente
 			unloading	= 3,		//esiste nell'engine ma la risorsa sta per essere deallocata
 			error 		= 0xff		//errore fatale. Esiste nell'engine ma probabilmente il loader non e' riuscito a caricarla, questo asset e' spacciato per sempre
-		};		
+		};
+		
+
+		struct BaseResHandle; //fwd
+
+		typedef void (*ResCallback_onSubresStateChanged)(BaseResHandle *res, const BaseResHandle *subres);
+		
+		struct ResHandleDepList
+		{
+			ResHandleDepList	*next;
+			BaseResHandle		*brh;
+		};
+
 
 		struct BaseResHandle
 		{
 		public:
-			void reset()			{ refCount = 0; uid.setInvalid(); status=eResStatus::error; }
+			void reset()			{ refCount = 0; uid.setInvalid(); status=eResStatus::error; deplist=NULL; callback_onSubresStateChanged=NULL; }
 			bool isReady() const	{ return status==eResStatus::ready; }
 			bool isError() const	{ return status==eResStatus::error; }
 
 		public:
 			asset2::UID			uid;			//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
-			eResStatus			status;
+			eResStatus			status;			//stato della risorsa dal punto di vista dell'engine
 			u8					_pad0;
 			u8					_pad1;
 			u8					_pad2;
 			i32					refCount;
+			ResHandleDepList	*deplist;		//elenco degli handle che dipendono da me (vengono notificati dei miei cambi di stato)
+
+			ResCallback_onSubresStateChanged	*callback_onSubresStateChanged;
 		};
 
 		

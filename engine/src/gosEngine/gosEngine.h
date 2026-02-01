@@ -100,6 +100,10 @@ namespace gos
         void            release (ENGModel3d &handle)																{ priv_asset_release(handle, resHandler_model3d); }
         bool            get (ENGModel3d handle, const engine::ResModel3d **out, u64 timeout_msec = 0)        		{ return priv_resource_get_and_schedule_load_if_needed (handle, resHandler_model3d, out, timeout_msec); }
 		
+		//============================= model instance
+        bool            modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_handle);
+        void            release (ENGModel3dInst &handle)															{ priv_asset_release(handle, resHandler_model3dInst); }
+		bool            get (ENGModel3dInst handle, const engine::ResModel3dInst **out, u64 timeout_msec = 0)		{ return priv_resource_get_and_schedule_load_if_needed (handle, resHandler_model3dInst, out, timeout_msec); }
 
         //============================= GPUShape
 		/* 	Le GPUShape create hanno gia' gli handler VB/IB settati correttamente anche se i vtx/idx NON sono ancora stati copiati nei buffer (lo devi fare te).
@@ -544,6 +548,7 @@ namespace gos
         ResouceHandler<ENGPxlShader, engine::ResShader>     resHandler_pxlShader;
 		ResouceHandler<ENGSkeleton, engine::ResSkeleton>	resHandler_skeleton;
 		ResouceHandler<ENGModel3d, engine::ResModel3d>		resHandler_model3d;
+		ResouceHandler<ENGModel3dInst, engine::ResModel3dInst> resHandler_model3dInst;
 
 
 

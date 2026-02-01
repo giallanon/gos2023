@@ -1,6 +1,7 @@
 #ifndef _gosEntityDefaultComponents_h_
 #define _gosEntityDefaultComponents_h_
 #include "gosEntityEnumAndDefine.h"
+#include "../model/gosModelInstance.h"
 
 namespace gos
 {
@@ -45,7 +46,7 @@ namespace gos
 		 */
 		struct CompModelInstance
 		{
-			gos::model::ModelInstance	model_instance;
+			gos::ModelInstance	model_instance;
 		};
 
 

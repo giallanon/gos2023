@@ -43,6 +43,7 @@ loaders/gosEngineLoaders.h
 
 model/gosModel.cpp
 model/gosModel.h
+model/gosModelInstance.h
 model/gosModelReader.cpp
 
 

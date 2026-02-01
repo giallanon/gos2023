@@ -15,7 +15,7 @@ Ogni risorsa creata dall'engine è associata ad un Handle sul quale si possono u
 -	handle ha un ResUID che può essere invalido se la risorsa non è stata caricata da un asset
 	
 -	il handle "mappa" una zona di memoria fissa e mai spostabile nella quale ci sono le info della risorsa che handle rappresenta.
-	Ogni risorsa ha un campo "BaseResHandle brh;" (che contiene lo stato della risorsa) ed un campo "data" (che dipende dal tipo di risorsa e contiene in effetti i dati specifici della risorsa=
+	Ogni risorsa ha un campo "BaseResHandle brh;" (che contiene lo stato della risorsa) ed un campo "data" (che dipende dal tipo di risorsa e contiene in effetti i dati specifici della risorsa)
 
 -	dato un ResUID, engine è in grado di ritornare un handle_as_u32 se l'asset è stato già caricato  (vedi internal__from_asset_to_handle())
 	
@@ -28,3 +28,18 @@ Alla richiesta di creazione di una risorsa,
 	- lo stato esterno di handle è notReady
 	- se la risorsa è un asset, passa la palla al loader
 	- se la risorsa non è un asset, la crea e lo stato esterno di handle diventa ready
+
+
+
+========== gestione delle dipendenze per Handle con asset multipli ========
+
+Es:
+	model_instance dipende da un model3d
+
+	model3d dipende da
+		-skeleton
+		-gpushapes
+		-material
+
+Solo quando tutte le dipendenze sono in stato "ready" allora anche il padre e' ready.
+Serve un meccanismo che, al cambiare dello stato di una risorsa, sia in grado di notificare questo cambio a tutte le risorse che dipendono da essa

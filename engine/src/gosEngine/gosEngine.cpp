@@ -50,6 +50,7 @@ void Engine::unsetup()
     resHandler_shape.unsetup();
 	resHandler_skeleton.unsetup();
 	resHandler_model3d.unsetup();
+	resHandler_model3dInst.unsetup();
 
     asset2::dbcontext_close (asset_ctx);
 
@@ -196,6 +197,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     priv_setup_resource_handler(eAssetType::shape,      &resHandler_shape);
 	priv_setup_resource_handler(eAssetType::skeleton,	&resHandler_skeleton);
 	priv_setup_resource_handler(eAssetType::model3d,	&resHandler_model3d);
+	priv_setup_resource_handler(eAssetType::model3dinst,&resHandler_model3dInst);
     
     //resource manager
     vtxBufferMan.setup (allocator, gpu);
@@ -277,6 +279,15 @@ void Engine::priv_flushLoaderThreadMsg()
                     brh->status = engine::eResStatus::ready;
                 else
                     brh->status = engine::eResStatus::error;
+
+
+				//informo tutti quelli che dipendono da questa risorsa del suo cambio di stato
+				engine::ResHandleDepList *p = brh->deplist;
+				while (p)
+				{
+					p->brh->callback_onSubresStateChanged (p->brh, brh);
+					p = p->next;
+				}
             }
             break;
         }
@@ -401,7 +412,9 @@ bool Engine::asset_bind (asset2::UID uid, u32 handle_asU32)
 
 
 
-//******************************** 
+/**************************************************************** 
+ * VTX BUFFER
+ *****************************************************************/
 bool Engine::vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer *out_handle)
 {
     GPUVtxBufferHandle gpuResourceHandle;
@@ -432,7 +445,9 @@ void Engine::release (ENGVtxBuffer &handle)
 }
 
 
-//******************************** 
+/**************************************************************** 
+ * IDX BUFFER
+ *****************************************************************/
 bool Engine::idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGIdxBuffer *out_handle)
 {
     GPUIdxBufferHandle gpuResourceHandle;
@@ -464,7 +479,9 @@ void Engine::release (ENGIdxBuffer &handle)
 
 
 
-//******************************** 
+/**************************************************************** 
+ * GPU SHAPE
+ *****************************************************************/
 bool Engine::GPUShape_create (ENGShape handle_shape, ENGGPUShape *out_handle)
 {
 	assert (NULL != out_handle);
@@ -553,7 +570,9 @@ void Engine::release (ENGGPUShape &handle)
 }
 
 
-//******************************** 
+/**************************************************************** 
+ * SHAPE
+ *****************************************************************/
 bool Engine::shape_createFromAsset (const char *uid_runtimeName, ENGShape *out_handle, engine::eLoadMode loadMode)
 {
     assert (NULL != out_handle);
@@ -595,7 +614,9 @@ bool Engine::shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, E
 }
 
 
-//******************************** 
+/**************************************************************** 
+ * SKELETON
+ *****************************************************************/
 bool Engine::skeleton_createFromAsset (const char *uid_runtimeName, ENGSkeleton *out_handle, engine::eLoadMode loadMode)
 {
     assert (NULL != out_handle);
@@ -637,7 +658,10 @@ bool Engine::skeleton_create (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *
     return true;
 }
 
-//******************************** 
+
+/**************************************************************** 
+ * MODEL 3d
+ *****************************************************************/
 bool Engine::model_createFromAsset (const char *uid_runtimeName, ENGModel3d *out_handle, engine::eLoadMode loadMode)
 {
     assert (NULL != out_handle);
@@ -680,9 +704,36 @@ bool Engine::model_create (u16 num_shape, u16 num_material, u16 num_meshes, ENGM
 }
 
 
+/**************************************************************** 
+ * MODEL INSTANCE
+ *****************************************************************/
+bool Engine::modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_handle)
+{
+    assert (NULL != out_handle);
+    engine::ResModel3dInst *res = resHandler_model3dInst.reserveTS(out_handle);
+    if (NULL == res)
+    {
+        logger::err ("Engine::modelinst_create() => can't create handle\n");
+        return false;
+    }
+
+	res->data.minst.reset();
+	if (!model::alloc (allocator, num_shape, num_material, num_meshes, &res->data.model))
+    {
+        logger::err ("Engine::modelinst_create() => can't allocate model\n");
+		resHandler_model3dInst.releaseTS (*out_handle, res);
+        return false;
+    }
+    
+    res->brh.status = engine::eResStatus::ready;
+    return true;
+}
 
 
-//******************************** 
+
+/**************************************************************** 
+ * TEXTURE 3D
+ *****************************************************************/
 bool Engine::texture2D_createFromAsset (const char *uid_runtimeName, ENGTexture *out_handle, engine::eLoadMode loadMode)
 {
     assert (NULL != out_handle);
@@ -746,7 +797,9 @@ bool Engine::texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAcces
 
 
 
-//******************************** 
+/**************************************************************** 
+ * PIPELIEN
+ *****************************************************************/
 bool Engine::pipeline_createFromAsset (const char *uid_runtimeName, ENGPipeline *out_handle, engine::eLoadMode loadMode)
 {
     assert (NULL != out_handle);
@@ -770,7 +823,9 @@ bool Engine::pipeline_createFromAsset (const char *uid_runtimeName, ENGPipeline 
 
 
 
-//******************************** 
+/**************************************************************** 
+ * VTX SHADER
+ *****************************************************************/
 bool Engine::vtxshader_createFromAsset (const char *uid_runtimeName, ENGVtxShader *out_handle, engine::eLoadMode loadMode)
 {
     assert (NULL != out_handle);
@@ -834,7 +889,9 @@ bool Engine::vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, c
 
 
 
-//******************************** 
+/**************************************************************** 
+ * PXL SHADER
+ *****************************************************************/
 bool Engine::pxlshader_createFromAsset (const char *uid_runtimeName, ENGPxlShader *out_handle, engine::eLoadMode loadMode)
 {
     assert (NULL != out_handle);
@@ -895,6 +952,8 @@ bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, c
     res->data.shaderHandle = gpuResourceHandle;
     return true;
 }
+
+
 
 //*******************************************
 void Engine::utils__quick_and_dirty__create_GPUSHape_and_stageIt_to_VB_IB (const gos::Shape *shapeSRC, ENGGPUShape *out_handle)
