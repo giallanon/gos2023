@@ -82,16 +82,19 @@ namespace gos
 
 							ENGShape handle_shape;
 							ResShape *res_shape;
-							if (!eng->internal__from_asset_to_raw_data (uid_of_skeleton, &handle_shape, &res_shape))
+							if (!eng->internal__from_asset_to_raw_data (uid_shape, &handle_shape, &res_shape))
 							{
 								logger::log (eTextColor::red, "asset::  Loader_model3d::load() => unable to match shape %016" PRIX64 " with raw data\n", uid_shape._uid);
 								ret = false;
 								break;
 							}
+
+							// vec3f bbmin, bbmax;
+							// shape::shapeCalcAABB (&res_shape->data.shape, &bbmin, &bbmax);
 							
 							//creo la GPUshape (se non esise gia')
 							ENGGPUShape handle_gpuShape;
-							if (!eng->GPUShape_create (handle_shape, &handle_gpuShape))
+							if (!eng->GPUShape_create (handle_shape, loaderInfo.stageHelper, &handle_gpuShape))
 							{
 								logger::log (eTextColor::red, "asset::  Loader_model3d::load() => error creating GPUShape from shape %016" PRIX64 "\n", uid_shape._uid);
 								ret = false;
@@ -111,7 +114,8 @@ namespace gos
 							const u32 bone_index = reader.readU32();
 							const u32 my_material_index = reader.readU32();
 
-							model::set_mesh (res_data->data.model, i, (u16)index_of_concrete_shape, (u16)bone_index, (u16)my_material_index);
+							//model::set_mesh (res_data->data.model, i, (u16)index_of_concrete_shape, (u16)bone_index, (u16)my_material_index);
+							model::set_mesh (res_data->data.model, i, (u16)index_of_concrete_shape, (u16)bone_index, 0);
 						}
 
 

@@ -4,7 +4,8 @@
 #include "../../gos/gosUtils.h"
 
 
-#undef GOS__glTF_VERBOSE
+#undef 	GOS__glTF_VERBOSE
+#undef GOS__glTF_SAVE_IMPORTED_INI_FILE
 
 
 using namespace gos;
@@ -786,7 +787,7 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 		ct+=binChunkLen;		
 	}
 
-#ifdef GOS__glTF_VERBOSE
+#ifdef GOS__glTF_SAVE_IMPORTED_INI_FILE
 	{
 		gos::File hFile;
 		fs::fileOpenForW (&hFile, "@w/debug_imported_glTF.json");
@@ -803,7 +804,7 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 		return false;
 	}
 	
-#ifdef GOS__glTF_VERBOSE
+#ifdef GOS__glTF_SAVE_IMPORTED_INI_FILE
 	ini.saveAs ("@w/debug_imported_glTF.ini");
 #endif
 
@@ -917,7 +918,7 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 		}
 
 		priv_resolveSkeleton (&rootBone);
-		priv_applySkeleton (&rootBone);
+		//priv_applySkeleton (&rootBone);
 	}
 
 

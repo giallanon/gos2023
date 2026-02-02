@@ -83,7 +83,7 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
                     {
 						void *res = msgList[i].buffer;
 
-                        const asset2::UID uid = ((engine::BaseResHandle*)res)->uid;
+                        const asset2::UID uid = ((engine::Resource*)res)->uid;
                         loaderInfo.logger->log (eTextColor::darkGreen, "asset::MT  [%s] %016" PRIX64 " do load\n", asset2::enumToString(uid.getAssetType()), uid._uid);
 
                         loaders::BaseLoader *loader = loaderList[(u32)uid.getAssetType()];

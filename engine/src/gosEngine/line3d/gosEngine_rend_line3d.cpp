@@ -87,7 +87,10 @@ bool Rend_line3d::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
         writer.addTris (2, 3, 0);
     }
 
-    engine->utils__quick_and_dirty__create_GPUSHape_and_stageIt_to_VB_IB (&shape, &handle_shape_segmento);
+
+	gpu::StageHelper stageHelper;
+	stageHelper.setup (gpu, 1024);
+	engine->GPUShape_create (&shape, stageHelper, &handle_shape_segmento);
     shape::shapeFree (gos::getScrapAllocator(), &shape);
 
 

@@ -34,7 +34,6 @@ private:
 	bool 			priv_createShapes();
 	void 			priv_createModel_mainPlayer();
 	void 			priv_createModel_pavimento();
-	gos::ENGGPUShape	priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC);
 	void			priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir);
 
 
@@ -53,8 +52,6 @@ private:
 	gos::ENGTexture					handle_texChecker;
     u32								material_indices[4];
 
-	gos::ENGSkeleton				handle_sk1;
-
 	eCameraMode						cameraMode;
 	gos::ENGSkeleton				handle_skeleton1;
 	gos::ENGSkeleton				handle_skeleton2;
@@ -64,9 +61,10 @@ private:
 	CharacterController				charCtrl;
 	gos::Entity						ent_mainPlayer;
 	gos::Entity						ent_missile[NUM_MAX_MISSILE];
+	gos::Entity						ent_cubi[3];
 	u8								num_missile_alive;
 
-
+	gos::ENGModel3d handle_model_albero;
 };
 
 #endif //_game1_h_

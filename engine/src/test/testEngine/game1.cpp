@@ -45,7 +45,7 @@ Game1::~Game1()
     engine->release(handle_skeleton2);
 	engine->release(handle_model_player);
 	engine->release(handle_model_pavimento);
-
+	
 	GOSDELETE(allocator, renderer);
 }
 
@@ -233,44 +233,6 @@ bool Game1::priv_loadAssets()
 }
 
 //***************************************
-gos::ENGGPUShape Game1::priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC)
-{
-	gos::ENGGPUShape handle_shape;
-	handle_shape.setInvalid();
-
-	if (engine->GPUShape_create (shapeSRC, &handle_shape))
-	{
-		const u32 SIZE_OF_IDX = shapeSRC->numIdx * sizeof(u16);
-		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shapeSRC->idxBuffer, SIZE_OF_IDX);
-
-		const u32 SIZE_OF_VTX = shape::calcSizeOfAVertex(shapeSRC->vtxLayout) * shapeSRC->numVtx;
-		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shapeSRC->vtxBuffer, SIZE_OF_VTX);
-
-		//creo un job per pushare lo stage buffer in VB/IB
-		const engine::ResGPUShape *shapeInfo;
-		if (!engine->get (handle_shape, &shapeInfo))
-			DBGBREAK;
-
-
-		gos::gpu::CmdBufferWriter2 cw;
-		cw.begin (engine->gpu, cmdBufferHandle)
-			.copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, shapeInfo->alloc_idxbuf_offset, SIZE_OF_IDX)
-			.copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, shapeInfo->alloc_vtxbuf_offset, SIZE_OF_VTX)
-			.end();
-
-		gpu::TransferJob job;
-		job.setup (engine->gpu);
-		job.submit(cmdBufferHandle);
-
-		while (!job.hasFinished())
-		{
-		}
-	}
-
-	return handle_shape;
-}
-
-//***************************************
 bool Game1::priv_createShapes()
 {
 	//creo una shape
@@ -300,33 +262,15 @@ bool Game1::priv_createShapes()
 			return false;
 	}
 
+	gpu::StageHelper stageHelper;
+	stageHelper.setup (gpu, 8192);
 
-
-	engine->utils__quick_and_dirty__create_GPUSHape_and_stageIt_to_VB_IB (&shape_cube, &handle_gpushape_cube); 
+	engine->GPUShape_create (&shape_cube, stageHelper, &handle_gpushape_cube); 
 	shape::shapeFree (allocator, &shape_cube);
-	engine->utils__quick_and_dirty__create_GPUSHape_and_stageIt_to_VB_IB (&shape_cylinder, &handle_gpushape_cyl); 
+
+	engine->GPUShape_create (&shape_cylinder, stageHelper, &handle_gpushape_cyl); 
 	shape::shapeFree (allocator, &shape_cylinder);
 
-	////staging buffer per la copia di VB/IB in GPU
-	//GPUStgBufferHandle stgBufferHandle;
-	//engine->gpu->stagingBuffer_create (8192, &stgBufferHandle);
-
-	//GPUCmdBufferHandle cmdBufferHandle;
-	//if (!engine->gpu->cmdBuffer_create (eGPUQueueFamily::transfer, &cmdBufferHandle))
-	//	return false;
-
-
-	////creo una engine::shape
-	//handle_gpushape_cube = priv_create_engineShape(stgBufferHandle, cmdBufferHandle, &shape_cube);
-	//shape::shapeFree (allocator, &shape_cube);
-
-
-	//handle_gpushape_cyl = priv_create_engineShape (stgBufferHandle, cmdBufferHandle, &shape_cylinder);
-	//shape::shapeFree (allocator, &shape_cylinder);
-
-
-	//engine->gpu->deleteResource(cmdBufferHandle);
-	//engine->gpu->deleteResource(stgBufferHandle);
 	return true;
 }
 
@@ -491,6 +435,7 @@ void Game1::priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir)
 	entRegistry.addComponent<ent::CompTransform3>(ent);
 	auto cpos = entRegistry.addComponent<ent::CompPos>(ent);
 	cpos->reset();
+	cpos->scale.set (0.5f, 0.5f, 0.5f);
 
 	geom::Pos3 p3;
 	p3.identity();
@@ -500,7 +445,8 @@ void Game1::priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir)
 
 	//shape
 	auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent);
-	engine->modelinst_create (handle_model_pavimento, &cModelInstance->handle_mi);
+	//engine->modelinst_create (handle_model_pavimento, &cModelInstance->handle_mi);
+	engine->modelinst_create (handle_model_albero, &cModelInstance->handle_mi);
 
 	//script
     auto cScript = entRegistry.addComponent<ent::CompScriptable>(ent);
@@ -510,7 +456,26 @@ void Game1::priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir)
 //***************************************
 void Game1::priv_loop ()
 {
-	engine->skeleton_createFromAsset ("glb-albero.skeleton0", &handle_sk1, engine::eLoadMode::asap);
+	engine->model_createFromAsset ("model_albero", &handle_model_albero, engine::eLoadMode::asap);
+
+	const engine::ResModel3d *res_model_albero;
+	engine->get (handle_model_albero, &res_model_albero, 4000);
+
+
+	for (u32 i=0; i<3; i++)
+	{
+		ent_cubi[i] = entRegistry.newEntity();
+
+		entRegistry.addComponent<ent::CompTransform3>(ent_cubi[i]);
+        auto cpos = entRegistry.addComponent<ent::CompPos>(ent_cubi[i]);
+        cpos->reset();
+		cpos->scale.set (1, 0.95f, 1);
+		cpos->pos.set (-5.0, 0.5f + (f32)i, 0);
+		
+
+        auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent_cubi[i]);
+		engine->modelinst_create (handle_model_pavimento, &cModelInstance->handle_mi);
+	}
 
 
 
@@ -523,7 +488,8 @@ void Game1::priv_loop ()
 
         //shape
         auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent_mainPlayer);
-		engine->modelinst_create (handle_model_player, &cModelInstance->handle_mi);
+		//engine->modelinst_create (handle_model_player, &cModelInstance->handle_mi);
+		engine->modelinst_create (handle_model_albero, &cModelInstance->handle_mi);
 
         auto cScript = entRegistry.addComponent<ent::CompScriptable>(ent_mainPlayer);
         cScript->callback = Game1__entity_script_mainPlayer;
@@ -674,6 +640,10 @@ void Game1::priv_loop ()
 				{
                     renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_mainPlayer) );
                     renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_pavimento) );
+					renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[0]) );
+					renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[1]) );
+					renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[2]) );
+						
 
 					for (u8 i = 0; i < NUM_MAX_MISSILE; i++)
 					{
@@ -696,7 +666,7 @@ void Game1::priv_loop ()
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }
 	}
-	engine->release(handle_sk1);
+	engine->release(handle_model_albero);
 
 	//free
 	gpu->waitIdle();

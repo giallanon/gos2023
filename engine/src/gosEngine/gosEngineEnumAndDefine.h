@@ -44,18 +44,18 @@ namespace gos
 		};
 		
 
-		struct BaseResHandle; //fwd
+		struct Resource; //fwd
 
-		typedef void (*ResCallback_onSubresStateChanged)(BaseResHandle *res, const BaseResHandle *subres);
+		typedef void (*ResCallback_onSubresStateChanged)(Resource *res, const Resource *subres);
 		
 		struct ResHandleDepList
 		{
 			ResHandleDepList	*next;
-			BaseResHandle		*brh;
+			Resource		*brh;
 		};
 
 
-		struct BaseResHandle
+		struct Resource
 		{
 		public:
 			void reset()			{ refCount = 0; uid.setInvalid(); status=eResStatus::error; deplist=NULL; callback_onSubresStateChanged=NULL; }

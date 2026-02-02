@@ -54,10 +54,6 @@ namespace gos
         void            toggleVSync();
 
 
-        //=======================
-        void            utils__quick_and_dirty__create_GPUSHape_and_stageIt_to_VB_IB (const gos::Shape *shape, ENGGPUShape *out_handle); 
-
-
         //============================= vtxBuffer
         bool            vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer *out_handle);
         void            release (ENGVtxBuffer &handle);
@@ -93,8 +89,8 @@ namespace gos
 			Le GPUShape create a partire da una ENGShape sono mappate internamente in modo che una successiva chiamata a GPUShape_create(ENGShape, ENGGPUShape) ritorni
 			la ENGGPUShape senza ricrearla (se esisteva gia').
 		*/
-		bool            GPUShape_create (ENGShape handle_shape, ENGGPUShape *out_handle);
-        bool            GPUShape_create (const gos::Shape *shape, ENGGPUShape *out_handle);
+		bool            GPUShape_create (ENGShape handle_shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle);
+        bool            GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle);
         void            release (ENGGPUShape &handle);
         bool            get (ENGGPUShape handle, const engine::ResGPUShape **out)                                  { return handleList_GPUShape.queryInfo(handle, out); }
 		bool            get (ENGShape handle, const engine::ResGPUShape **out);
@@ -357,7 +353,7 @@ namespace gos
         void            		priv_flushLoaderThreadMsg();
         bool            		asset_bind (asset2::UID uid, u32 handle_asU32);
 		void 					priv_modelinst_applyTransform_ric (const gos::Bone *model_listof_bones, gos::Bone *listof_bones, u32 boneIndex, const mat4x4f &parent_matW) const;
-		engine::ResGPUShape* 	priv_GPUShape_create (const gos::Shape *shape, ENGGPUShape *out_handle);
+		engine::ResGPUShape* 	priv_GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle);
 
         BaseResourceHandler*    priv_get_baseResourceHandler (eAssetType assetType) const
                         { 
@@ -519,7 +515,7 @@ namespace gos
 
         void            priv_send_load_msg_to_LoaderThread (void *res)
                         {
-							engine::BaseResHandle *brh = (engine::BaseResHandle*)res;
+							engine::Resource *brh = (engine::Resource*)res;
                             asset_logger->log (eTextColor::darkGreen, "asset::  [%s] %016" PRIX64 " loading\n", asset2::enumToString(brh->uid.getAssetType()), brh->uid._uid);
                             thread::pushMsg (msgq_1W, MSG_FOR_LOADER_THREAD__LOAD, 0, res);
                         }

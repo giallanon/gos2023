@@ -274,7 +274,7 @@ void Engine::priv_flushLoaderThreadMsg()
                     asset_logger->log (eTextColor::red, "asset::  [%s] %016" PRIX64 " FAILED to load\n", asset2::enumToString(uid.getAssetType()), uid._uid);
 
 
-                engine::BaseResHandle *brh = static_cast<engine::BaseResHandle*>(res);
+                engine::Resource *brh = static_cast<engine::Resource*>(res);
                 if (bLoadOK)
                     brh->status = engine::eResStatus::ready;
                 else
@@ -482,7 +482,7 @@ void Engine::release (ENGIdxBuffer &handle)
 /**************************************************************** 
  * GPU SHAPE
  *****************************************************************/
-bool Engine::GPUShape_create (ENGShape handle_shape, ENGGPUShape *out_handle)
+bool Engine::GPUShape_create (ENGShape handle_shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle)
 {
 	assert (NULL != out_handle);
 	if (map_of_shape_to_gpushape.find(handle_shape, out_handle))
@@ -495,7 +495,7 @@ bool Engine::GPUShape_create (ENGShape handle_shape, ENGGPUShape *out_handle)
         return false;
     }
 
-	engine::ResGPUShape *res = priv_GPUShape_create(&res_shape->data.shape, out_handle);
+	engine::ResGPUShape *res = priv_GPUShape_create(&res_shape->data.shape, stageHelper, out_handle);
 	if (NULL == res)
 		return false;
 	res->handle_shape = handle_shape;
@@ -505,7 +505,18 @@ bool Engine::GPUShape_create (ENGShape handle_shape, ENGGPUShape *out_handle)
 	return true;
 }
 
-engine::ResGPUShape* Engine::priv_GPUShape_create (const gos::Shape *shape, ENGGPUShape *out_handle)
+bool Engine::GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle)
+{
+    engine::ResGPUShape *res = priv_GPUShape_create(shape, stageHelper, out_handle);
+    if (NULL == res)
+    {
+        logger::err ("Engine::GPUShape_create() => can't create handle\n");
+        return false;
+    }
+	return true;
+}
+
+engine::ResGPUShape* Engine::priv_GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle)
 {
     assert (NULL != out_handle);
     engine::ResGPUShape *res = handleList_GPUShape.reserveTS(out_handle);
@@ -538,19 +549,15 @@ engine::ResGPUShape* Engine::priv_GPUShape_create (const gos::Shape *shape, ENGG
     }
 
     res->brh.status = engine::eResStatus::ready;
+
+	stageHelper.begin()
+		.mem_to_buffer (shape->vtxBuffer, shape->numVtx * shape::calcSizeOfAVertex(shape->vtxLayout), res->vbHandle, res->alloc_vtxbuf_offset)
+		.mem_to_buffer (shape->idxBuffer, shape->numIdx * sizeof(u16), res->ibHandle, res->alloc_idxbuf_offset)
+		.submit();
     return res;
 }
 
-bool Engine::GPUShape_create (const gos::Shape *shape, ENGGPUShape *out_handle)
-{
-    engine::ResGPUShape *res = priv_GPUShape_create(shape, out_handle);
-    if (NULL == res)
-    {
-        logger::err ("Engine::GPUShape_create() => can't create handle\n");
-        return false;
-    }
-	return true;
-}
+
 
 void Engine::release (ENGGPUShape &handle)
 {
@@ -1029,56 +1036,6 @@ bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, c
     res->brh.status = engine::eResStatus::ready;
     res->data.shaderHandle = gpuResourceHandle;
     return true;
-}
-
-
-
-//*******************************************
-void Engine::utils__quick_and_dirty__create_GPUSHape_and_stageIt_to_VB_IB (const gos::Shape *shapeSRC, ENGGPUShape *out_handle)
-{
-    if (!GPUShape_create (shapeSRC, out_handle))
-    {
-        DBGBREAK;
-        return;
-    }
-
-    const u32 SIZE_OF_IDX = shapeSRC->numIdx * sizeof(u16);
-    const u32 SIZE_OF_VTX = shape::calcSizeOfAVertex(shapeSRC->vtxLayout) * shapeSRC->numVtx;
-    const u32 SIZE_OF_STAGE_BUFFER = SIZE_OF_IDX + SIZE_OF_VTX;
-
-    GPUStgBufferHandle stgBufferHandle;
-    gpu->stagingBuffer_create (SIZE_OF_STAGE_BUFFER, &stgBufferHandle);
-    gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shapeSRC->idxBuffer, SIZE_OF_IDX);
-    gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shapeSRC->vtxBuffer, SIZE_OF_VTX);
-
-    const engine::ResGPUShape *shapeInfo;
-    if (!get (*out_handle, &shapeInfo))
-    {
-        DBGBREAK;
-        return;
-    }
-
-    //creo un job per pushare lo stage buffer in VB/IB
-    GPUCmdBufferHandle cmdBufferHandle;
-    gpu->cmdBuffer_create (eGPUQueueFamily::transfer, &cmdBufferHandle);
-
-    gos::gpu::CmdBufferWriter2 cw;
-    cw.begin (gpu, cmdBufferHandle)
-        .copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, shapeInfo->alloc_idxbuf_offset, SIZE_OF_IDX)
-        .copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, shapeInfo->alloc_vtxbuf_offset, SIZE_OF_VTX)
-        .end();
-
-    gpu::TransferJob job;
-    job.setup (gpu);
-    job.submit(cmdBufferHandle);
-
-    while (!job.hasFinished())
-    {
-    }
-
-	gpu->deleteResource(cmdBufferHandle);
-	gpu->deleteResource(stgBufferHandle);
-
 }
 
 

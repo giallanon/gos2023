@@ -35,43 +35,6 @@ Test1::~Test1()
 }
 
 //***************************************
-gos::ENGGPUShape Test1::priv_create_engineShape (GPUStgBufferHandle stgBufferHandle, GPUCmdBufferHandle cmdBufferHandle, const gos::Shape *shapeSRC)
-{
-	gos::ENGGPUShape handle_shape;
-	handle_shape.setInvalid();
-
-	if (engine->GPUShape_create (shapeSRC, &handle_shape))
-	{
-		const u32 SIZE_OF_IDX = shapeSRC->numIdx * sizeof(u16);
-		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, 0, shapeSRC->idxBuffer, SIZE_OF_IDX);
-
-		const u32 SIZE_OF_VTX = shape::calcSizeOfAVertex(shapeSRC->vtxLayout) * shapeSRC->numVtx;
-		engine->gpu->stagingBuffer_memcpy (stgBufferHandle, SIZE_OF_IDX, shapeSRC->vtxBuffer, SIZE_OF_VTX);
-
-		//creo un job per pushare lo stage buffer in VB/IB
-		const engine::ResGPUShape *shapeInfo;
-		if (!engine->get (handle_shape, &shapeInfo))
-			DBGBREAK;
-
-		gos::gpu::CmdBufferWriter2 cw;
-		cw.begin (engine->gpu, cmdBufferHandle)
-			.copyBuffer (stgBufferHandle, shapeInfo->ibHandle, 0, shapeInfo->alloc_idxbuf_offset, SIZE_OF_IDX)
-			.copyBuffer (stgBufferHandle, shapeInfo->vbHandle, SIZE_OF_IDX, shapeInfo->alloc_vtxbuf_offset, SIZE_OF_VTX)
-			.end();
-
-		gpu::TransferJob job;
-		job.setup (engine->gpu);
-		job.submit(cmdBufferHandle);
-
-		while (!job.hasFinished())
-		{
-		}
-	}
-
-	return handle_shape;
-}
-
-//***************************************
 bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGGPUShape *out_cube, gos::ENGGPUShape *out_cylinder)
 {
 	//creo una shape
@@ -100,27 +63,18 @@ bool Test1::priv_shape_create (gos::Engine *engine, gos::ENGGPUShape *out_cube, 
 	}
 
 	//staging buffer per la copia di VB/IB in GPU
-	GPUStgBufferHandle stgBufferHandle;
-	engine->gpu->stagingBuffer_create (8192, &stgBufferHandle);
-
-	GPUCmdBufferHandle cmdBufferHandle;
-	if (!engine->gpu->cmdBuffer_create (eGPUQueueFamily::transfer, &cmdBufferHandle))
-		return false;
+	gpu::StageHelper stageHelper;
+	stageHelper.setup (gpu, 8192);
 
 
 	//creo una engine::shape
-	gos::ENGGPUShape handle_shapeCube = priv_create_engineShape(stgBufferHandle, cmdBufferHandle, &shape_cube);
+	engine->GPUShape_create (&shape_cube, stageHelper, out_cube);
 	shape::shapeFree (allocator, &shape_cube);
-	*out_cube = handle_shapeCube;
 
 
-	gos::ENGGPUShape handle_shapeCylinder = priv_create_engineShape (stgBufferHandle, cmdBufferHandle, &shape_cylinder);
+	engine->GPUShape_create (&shape_cylinder, stageHelper, out_cylinder);
 	shape::shapeFree (allocator, &shape_cylinder);
-	*out_cylinder = handle_shapeCylinder;
 
-
-	engine->gpu->deleteResource(cmdBufferHandle);
-	engine->gpu->deleteResource(stgBufferHandle);
 	return true;
 }
 
