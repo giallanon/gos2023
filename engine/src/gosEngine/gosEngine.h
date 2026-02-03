@@ -4,7 +4,7 @@
 #include "gosEngine_vtxBufferMan.h"
 #include "gosEngine_idxBufferMan.h"
 #include "gosEngine_scene.h"
-#include "res/gosEngineResList.h"
+#include "res/gosEngineRes2.h"
 #include "../gos/logger/gosLoggerStdout.h"
 #include "../gosAsset2/gosAsset2.h"
 #include "line3d/gosEngine_rend_line3d.h"
@@ -54,6 +54,11 @@ namespace gos
         void            toggleFullscreen()                              { gpu->toggleFullscreen(); }
         void            toggleVSync();
 
+        //============================= pippo
+        bool            pippo_create (u32 sizeInByte, eMemAccessMode mode, ENGPippo *out_handle);
+        void            release (ENGPippo handle);
+
+		void            pippo_on_destroy (void *res);
 
         //============================= vtxBuffer
         bool            vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer *out_handle);
@@ -567,6 +572,7 @@ namespace gos
         HashListOfLoadedUID			                listof_knownUID;	//mappa asset2::uid ad u32 che e' l'handle della risorsa nell'engine
         engine::ResourceList                        *listof_free_resListNode;
 
+		res::Manager resManager;
         BaseResourceHandler                                 *resHandler_list[(u32)eAssetType::__NUM + 1];
         HList<ENGVtxBuffer, engine::ResVtxBuffer>           handleList_vtxBuffer;
         HList<ENGIdxBuffer, engine::ResIdxBuffer>           handleList_idxBuffer;

@@ -34,6 +34,7 @@ void Engine::unsetup()
     thread::deleteMsgQ (msgq_2R, msgq_2W);
 
     //resource manager
+	resManager.unsetup();
     vtxBufferMan.unsetup();
     idxBufferMan.unsetup();
     listof_knownUID.unsetup();
@@ -190,6 +191,8 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 
 
     //handle list
+	resManager.setup (allocator);
+	resManager.addResType<res::Pippo> (res::eType::_unused_zero, 128, 16);
     handleList_vtxBuffer.setup (allocator);
     handleList_idxBuffer.setup (allocator);
     handleList_GPUShape.setup (allocator);
@@ -425,6 +428,39 @@ bool Engine::asset_bind (asset2::UID uid, engine::Resource *resPadre, u32 handle
     }
 }
 
+/**************************************************************** 
+ * PIPPO
+ *****************************************************************/
+bool Engine::pippo_create (u32 sizeInByte, eMemAccessMode mode, ENGPippo *out_handle)
+{
+	res::Pippo *res;
+	if (!resManager.reserve (res::eType::_unused_zero, out_handle, &res))
+    {
+        logger::err ("Engine::pippo_create() => can't create handle\n");
+        return false;
+    }
+	
+	res->_descr.on_destroy = &Engine::pippo_on_destroy;
+
+	return gpu->vertexBuffer_create (sizeInByte, mode, &res->vbHandle);
+}
+
+void Engine::release (ENGPippo handle)
+{
+	res::Pippo *res;
+	if (!resManager.get_data(handle, &res))
+		return;
+	(this->*res->_descr.on_destroy)(res);
+	resManager.release(handle);
+}
+
+void Engine::pippo_on_destroy (void *resIN)
+{
+	printf ("pippo_on_destroy\n");
+	res::Pippo *res = (res::Pippo*)resIN;
+	gpu->deleteResource (res->vbHandle);
+	
+}
 
 
 /**************************************************************** 

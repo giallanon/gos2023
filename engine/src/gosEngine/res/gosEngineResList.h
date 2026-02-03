@@ -14,14 +14,17 @@ namespace gos
 		class List
 		{
 		public:
-					List()		{ allocator = NULL; }
-					~List()		{ unsetup(); }
+					List()						{ allocator = NULL; }
+					~List()						{ unsetup(); }
+
+			bool 	is_already_setup() const 	{ return (NULL != allocator); }
 
 			void 	setup (gos::Allocator *allocator, u8 res_type, u32 num_max_resource, u16 num_res_per_page, u32 sizeof_a_single_res);
 			void 	unsetup();
 
 			void*	reserve (Handle *out_handle);
 			void 	release (Handle handle);
+			void*	get_data (Handle handle);
 
 		private:
 			struct sRecord

@@ -22,10 +22,10 @@ void List::setup (gos::Allocator *allocatorIN, u8 res_typeIN, u32 num_max_resour
 		num_max_pages = 1;
 	assert (num_max_pages<= Handle::MAX_NUM_PAGE);
 
-	real_size_of_a_record = GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(sizeof(sRecord) + sizeof_a_single_resIN, 64);
+	real_size_of_a_record = GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(sizeof(sRecord) + sizeof_a_single_resIN, 8);
 
-	pages = GOSALLOCT(sPage*, allocator, sizeof(sPage*) * num_max_pages);
-	memset (pages, 0, sizeof(sPage*) * num_max_pages);
+	pages = GOSALLOCT(sPage*, allocator, sizeof(sPage) * num_max_pages);
+	memset (pages, 0, sizeof(sPage) * num_max_pages);
 	priv_alloc_page (0);	
 }
 
@@ -166,7 +166,7 @@ void List::release (Handle handle)
 	assert (NULL != p->blob);
 	assert (p->cur_allocated > 0);
 
-	u32 ct = index * real_size_of_a_record;
+	const u32 ct = index * real_size_of_a_record;
 	sRecord *rec = reinterpret_cast<sRecord*>( &p->blob[ct] );
 	if (rec->cur_counter != counter)
 		return;
@@ -175,4 +175,31 @@ void List::release (Handle handle)
 	rec->cur_counter++;
 	rec->next_free = p->first_free;
 	p->first_free = index;
+}
+
+//***********************************
+void* List::get_data (Handle handle)
+{
+	if (handle.is_invalid())
+		return NULL;
+
+	const u32 index = handle.get_value_INDEX();
+	const u32 counter = handle.get_value_COUNTER();
+	const u32 page_index = handle.get_value_PAGE();
+
+	assert (handle.get_value_TYPE() == res_type);
+	assert (index < num_res_per_page);
+	assert (page_index < num_max_pages);
+
+	sPage *p = &pages[page_index];
+	assert (NULL != p->blob);
+	assert (p->cur_allocated > 0);
+
+	const u32 ct = index * real_size_of_a_record;
+	sRecord *rec = reinterpret_cast<sRecord*>( &p->blob[ct] );
+	if (rec->cur_counter != counter)
+		return NULL;
+
+	return &p->blob[ct + sizeof(sRecord)];
+	
 }

@@ -5,6 +5,11 @@
 
 namespace gos
 {
+	class Engine; //fwd
+
+	typedef void (Engine::*FN_destroy)(void *res);
+
+
 	namespace res
 	{
 		enum class eLoadMode : u8
@@ -22,22 +27,23 @@ namespace gos
 			error 		= 0xff		//errore fatale. Esiste nell'engine ma probabilmente il loader non e' riuscito a caricarla, questo asset e' spacciato per sempre
 		};
 
-		enum class eType
+		enum class eType : u8
 		{
-			vtx_buffer = 1,
-			idx_buffer = 2,
-			vtx_shader = 3,
-			pxl_shader = 4,
-			shape = 5,
-			gpu_shape = 6,
-			texture_2d = 7,
-			pipeline = 8,
-			skeleton = 9,
-			model_3d = 10,
-			model_instance = 11,
-			material = 12,
+			_unused_zero 	= 0,
+			vtx_buffer 		= 1,
+			idx_buffer 		= 2,
+			vtx_shader 		= 3,
+			pxl_shader 		= 4,
+			shape 			= 5,
+			gpu_shape 		= 6,
+			texture_2d 		= 7,
+			pipeline 		= 8,
+			skeleton 		= 9,
+			model_3d 		= 10,
+			model_instance 	= 11,
+			material 		= 12,
 
-			unknown = 0xff
+			NUM_MAX 		= 13	//questo deve essre uguale all'ultimo valore +1
 		};
 
 		/******************************
@@ -125,7 +131,7 @@ namespace gos
 		struct Descr
 		{
 		public:
-			void 	reset()			{ refCount = 0; uid.setInvalid(); ext_status=eStatus::error; figli=padri=NULL; }
+			void 	reset()			{ refCount = 0; uid.setInvalid(); ext_status=eStatus::error; figli=padri=NULL; on_destroy=NULL; }
 
 		public:
 			asset2::UID			uid;			//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
@@ -137,6 +143,8 @@ namespace gos
 
 			HandleChain			*figli;		//lista di handle che sono figli miei
 			HandleChain			*padri;		//lista di handle di cui io sono figlio (che vengono notificati ogni volta che io cambio di stato)
+
+			FN_destroy	on_destroy;
 		};
 
 	} //namespace res
