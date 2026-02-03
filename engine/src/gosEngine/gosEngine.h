@@ -4,6 +4,7 @@
 #include "gosEngine_vtxBufferMan.h"
 #include "gosEngine_idxBufferMan.h"
 #include "gosEngine_scene.h"
+#include "res/gosEngineResList.h"
 #include "../gos/logger/gosLoggerStdout.h"
 #include "../gosAsset2/gosAsset2.h"
 #include "line3d/gosEngine_rend_line3d.h"

@@ -46,6 +46,10 @@ model/gosModel.h
 model/gosModelInstance.h
 model/gosModelReader.cpp
 
+res/gosEngineResEnumAndDefine.h
+res/gosEngineResList.cpp
+res/gosEngineResList.h
+
 
 gosEngine_dynTextureArray.cpp
 gosEngine_dynTextureArray.h
