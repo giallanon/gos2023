@@ -43,3 +43,29 @@ Es:
 
 Solo quando tutte le dipendenze sono in stato "ready" allora anche il padre e' ready.
 Serve un meccanismo che, al cambiare dello stato di una risorsa, sia in grado di notificare questo cambio a tutte le risorse che dipendono da essa
+
+
+
+================= flow ==================
+xxx_createFromAsset (uid_runtimeName, out_handle)
+	-asset2::asset_getBy_rtname()	=> verifica se uid_runtimeName e' valido' e ne recupera l'uid
+		=> se non valido, esci con errore
+
+	-resHandler->handle_get_or_create_from_asset (uid, out_handle)
+		- chiama engine->priv_resource_get_or_create_handle_from_asset() la quale:
+			=> se uid e' gia' noto, ritorna l'handle ad esso associato, altrimenti crea un nuovo handle e binda uid al nuovo handle
+
+		- se necessario/richiesto, schedula il load dell'asset
+
+
+		-engine->priv_resource_get_or_create_handle_from_asset
+			internal__from_asset_to_handle(uid, out_handle32):	
+				=> se uid e' gia associato' ad un handle, incRefCount e ritorna l'handle
+				=> se uid non e' gia' associato ad un handle, allora:
+					- crea un nuovo handle
+					- asset_bind (uid, handle):
+						- insert UID nella lista degli UID noti e lo associa all'handle appena creato
+						- recupera elenco di subUID dai cui UID dipende e, per ciascuno, ripete l'operazione di creazione o recupero dell'handle associato a uid (si riparte da resHandler->handle_get_or_create_from_asset() )
+
+
+		-priv_resource_get_and_schedule_load_if_needed

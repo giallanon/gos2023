@@ -208,9 +208,10 @@ namespace gos
                             BaseResourceHandler()   { }
             virtual         ~BaseResourceHandler()  { }
 
-            virtual bool    handle_get_or_create_from_asset (Engine *engine, asset2::UID uid, engine::eLoadMode loadMode, u32 *out_handleAsU32) = 0;
-            virtual void    resource_schedule_load (Engine *engine, u32 handle_asU32) = 0;
-            virtual void    resource_release (Engine *engine, u32 handle_asU32) = 0;
+            virtual bool                handle_get_or_create_from_asset (Engine *engine, asset2::UID uid, engine::eLoadMode loadMode, u32 *out_handleAsU32) = 0;
+            virtual void                resource_schedule_load (Engine *engine, u32 handle_asU32) = 0;
+            virtual void                resource_release (Engine *engine, u32 handle_asU32) = 0;
+            virtual engine::Resource*   from_handle_to_resource (u32 handle_as_u32) = 0;
         };
 
         //====================================================
@@ -233,6 +234,12 @@ namespace gos
             eAssetType      getAssetType() const                                                    { return assetType; }
             const HANDLE_STRUCT* getInfo (HANDLE_TYPE handle) const                                 { HANDLE_STRUCT *ret = NULL; handle_list.fromHandleToPointer (handle, &ret); return ret; }
 
+                            /**
+                            * brief handle_get_or_create_from_asset
+                            *       Se <uid> e' gia' stato associato ad un handle, schedula il load dell'asset (se necessario) e ritorna true.
+                            *       Se <uid> e' nuovo, allora crea un nuovo handle, lo associa a ui, schedula il load dell'asset (se necessario) e ritorna true.
+                            *       Ritorna false solo nel caso in cui non sia stato possibile creare un nuovo handle e associarlo a uid
+                            */
             bool            handle_get_or_create_from_asset (Engine *engine, asset2::UID uid, engine::eLoadMode loadMode, u32 *out_handleAsU32)
                             {
                                 HANDLE_TYPE handle;
@@ -251,6 +258,11 @@ namespace gos
                                 *out_handleAsU32 = handle.viewAsU32();
                                 return true;
                             }
+            
+                            /**
+                            * brief resource_schedule_load
+                            *       Posto che <handle_asU32> sia valido, verifica lo stato della risorsa e, se necessario, ne schedula il load
+                            */            
             void            resource_schedule_load (Engine *engine, u32 handle_asU32)
             {
                 HANDLE_TYPE handle;
@@ -276,6 +288,17 @@ namespace gos
                 HANDLE_TYPE handle;
                 handle.setFromU32 (handle_asU32);
                 engine->priv_asset_release (handle, *this);
+            }
+
+            engine::Resource*   from_handle_to_resource (u32 handle_as_u32)
+            {
+                HANDLE_TYPE h; 
+                h.setFromU32 (handle_as_u32);
+
+                HANDLE_STRUCT *res;
+                if (!fromHandleToPointer(h, &res))
+                    return NULL;
+                return &res->brh;
             }
 
         public:
@@ -351,7 +374,7 @@ namespace gos
 									resHandler_list[index] = res_handler;
 								}
         void            		priv_flushLoaderThreadMsg();
-        bool            		asset_bind (asset2::UID uid, u32 handle_asU32);
+        bool            		asset_bind (asset2::UID uid, engine::Resource *res, u32 handle_asU32);
 		void 					priv_modelinst_applyTransform_ric (const gos::Bone *model_listof_bones, gos::Bone *listof_bones, u32 boneIndex, const mat4x4f &parent_matW) const;
 		engine::ResGPUShape* 	priv_GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle);
 
@@ -362,6 +385,14 @@ namespace gos
                             assert (NULL != resHandler_list[index]);
                             return resHandler_list[index];
                         }
+
+        void                    priv_resList_setup();
+        engine::ResourceList*   priv_resList_new_node (engine::Resource *res);
+        void                    priv_resList_free_node(engine::ResourceList *p);
+        void                    priv_resList_unsetup();
+        void                    priv_resList_add_figlio (engine::Resource *padre, engine::Resource *figlio);
+        void                    priv_resList_add_owner (engine::Resource *me, engine::Resource *my_owner);
+
 
     private:
                         /***
@@ -410,7 +441,7 @@ namespace gos
                                 }
                                 asset_logger->decIndent();                                 
                                 
-                                //schedolo il load di me stesso
+                                //schedulo il load di me stesso
                                 res_handler.resource_schedule_load (this, handle.viewAsU32());
 
                                 if (0 == timeout_msec)
@@ -436,6 +467,7 @@ namespace gos
                          * @brief   priv_resource_get_or_create_handle_from_asset
                          *          Crea una associazione tra <uid> e <handle> e filla <out_handle> con le opportune informazione
                          *          Se la <uid> e' un asset gia noto, allora recupera il relativo <handle> e ne incrementa il recCount
+                         *          altrimenti crea un nuovo handle e lo associa a uid
                          */
                         template<class HANDLE_TYPE, class HANDLE_STRUCT>
         bool            priv_resource_get_or_create_handle_from_asset (asset2::UID uid, ResouceHandler<HANDLE_TYPE,HANDLE_STRUCT> &res_handler, HANDLE_TYPE *out_handle)
@@ -461,7 +493,7 @@ namespace gos
                             //..bindarlo all'asset uid
                             res->brh.uid = uid;
                             res->brh.status = engine::eResStatus::notLoaded;
-                            asset_bind (uid, out_handle->viewAsU32());
+                            asset_bind (uid, &res->brh, out_handle->viewAsU32());
                             return true;
                         }                        
 
@@ -532,6 +564,7 @@ namespace gos
         gos::Logger                                 *asset_logger;
         asset2::DBContext                           asset_ctx;
         HashListOfLoadedUID			                listof_knownUID;	//mappa asset2::uid ad u32 che e' l'handle della risorsa nell'engine
+        engine::ResourceList                        *listof_free_resListNode;
 
         BaseResourceHandler                                 *resHandler_list[(u32)eAssetType::__NUM + 1];
         HList<ENGVtxBuffer, engine::ResVtxBuffer>           handleList_vtxBuffer;

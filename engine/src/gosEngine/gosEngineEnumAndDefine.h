@@ -48,9 +48,9 @@ namespace gos
 
 		typedef void (*ResCallback_onSubresStateChanged)(Resource *res, const Resource *subres);
 		
-		struct ResHandleDepList
+		struct ResourceList
 		{
-			ResHandleDepList	*next;
+			ResourceList	*next;
 			Resource		*brh;
 		};
 
@@ -58,7 +58,7 @@ namespace gos
 		struct Resource
 		{
 		public:
-			void reset()			{ refCount = 0; uid.setInvalid(); status=eResStatus::error; deplist=NULL; callback_onSubresStateChanged=NULL; }
+			void reset()			{ refCount = 0; uid.setInvalid(); status=eResStatus::error; deplist=figli=NULL; callback_onSubresStateChanged=NULL; }
 			bool isReady() const	{ return status==eResStatus::ready; }
 			bool isError() const	{ return status==eResStatus::error; }
 
@@ -69,7 +69,8 @@ namespace gos
 			u8					_pad1;
 			u8					_pad2;
 			i32					refCount;
-			ResHandleDepList	*deplist;		//elenco degli handle che dipendono da me (vengono notificati dei miei cambi di stato)
+			ResourceList		*figli;			//elenco delle subresource da cui dipendo
+			ResourceList		*deplist;		//elenco delle risorse che dipendono da me (vengono notificati dei miei cambi di stato)
 
 			ResCallback_onSubresStateChanged	*callback_onSubresStateChanged;
 		};

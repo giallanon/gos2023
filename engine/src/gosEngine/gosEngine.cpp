@@ -16,6 +16,7 @@ Engine::Engine()
     inputCtx = NULL;
     bQuitEngine = false;
     asset_logger = NULL;
+    listof_free_resListNode = NULL;
     memset (resHandler_list, 0, sizeof(resHandler_list));
 }
 
@@ -67,6 +68,8 @@ void Engine::unsetup()
     gos::input::window_destroy (mainWin);
     gos::input::deinit();
 
+    priv_resList_unsetup();
+
     GOSDELETE(allocator, asset_logger);
 
     //engine allocator
@@ -105,6 +108,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     engAllocator->setup (1024 * 1024 * 128); //128MB
     this->allocator = engAllocator;
 
+    priv_resList_setup();
 
     //asset
     {
@@ -369,7 +373,7 @@ bool Engine::asset_build()
 }
 
 //*****************************************
-bool Engine::asset_bind (asset2::UID uid, u32 handle_asU32)
+bool Engine::asset_bind (asset2::UID uid, engine::Resource *resPadre, u32 handle_asU32)
 {
     if (listof_knownUID.insertIfNotExists (uid, handle_asU32))
     {
@@ -387,16 +391,27 @@ bool Engine::asset_bind (asset2::UID uid, u32 handle_asU32)
         for (u32 i=0; i<fastUIDList.getNElem(); i++)
         {
             const asset2::UID uid_child = fastUIDList(i);
-            u32 handleAsU32;
-            if (!internal__from_asset_to_handle (uid_child, &handleAsU32))
+            BaseResourceHandler *base_resHandler = priv_get_baseResourceHandler(uid_child.getAssetType());
+
+
+            u32 subres_handleAsU32;
+            if (!internal__from_asset_to_handle (uid_child, &subres_handleAsU32))
             {
                 //devo creare un handle appropriato per l'asset in questione
-                BaseResourceHandler *base_resHandler = priv_get_baseResourceHandler(uid_child.getAssetType());
-
-                u32 handle_asU32;
-                if (!base_resHandler->handle_get_or_create_from_asset (this, uid_child, engine::eLoadMode::onDemand, &handle_asU32))
+                if (!base_resHandler->handle_get_or_create_from_asset (this, uid_child, engine::eLoadMode::onDemand, &subres_handleAsU32))
                     ret = false;
             }
+
+            //uid_child e' un mio figlio, quindi mi segno che fa parte delle mie sub-resource
+            engine::Resource *subres = base_resHandler->from_handle_to_resource(subres_handleAsU32);
+            assert (NULL != subres);
+            priv_resList_add_figlio (resPadre, subres);
+
+            //quando subres cambia stato, resPadre vuole esserne informato
+            priv_resList_add_owner (subres, resPadre);
+            
+
+
         }
         asset_logger->decIndent();
         
@@ -1039,5 +1054,63 @@ bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, c
 }
 
 
+/**********************************************************************************************
+* 
+* RES LIST
+* 
+**********************************************************************************************/
+void Engine::priv_resList_setup()
+{
+    assert (NULL == listof_free_resListNode);
 
+    const u32 N = 8192;
+    listof_free_resListNode = GOSALLOCT(engine::ResourceList*, allocator, sizeof(engine::ResourceList) * N);
+
+    for (u32 i=0; i<N-1; i++)
+        listof_free_resListNode[i].next = &listof_free_resListNode[i+1];
+    listof_free_resListNode[N-1].next = NULL;
+}
+
+void Engine::priv_resList_unsetup()
+{
+    if (NULL != listof_free_resListNode)
+    {
+        GOSFREE(allocator, listof_free_resListNode);
+        listof_free_resListNode = NULL;
+    }
+}
+
+engine::ResourceList* Engine::priv_resList_new_node (engine::Resource *res)
+{
+    assert (NULL != listof_free_resListNode);
+    engine::ResourceList *ret = listof_free_resListNode;
+    listof_free_resListNode = listof_free_resListNode->next;
+    
+    ret->brh = res;
+    ret->next = NULL;
+    return ret;
+}
+
+void Engine::priv_resList_free_node(engine::ResourceList *p)
+{
+    p->brh = NULL;
+    p->next = listof_free_resListNode;
+    listof_free_resListNode= p;
+}
+
+void Engine::priv_resList_add_figlio (engine::Resource *padre, engine::Resource *figlio)
+{
+    //<figlio> e' una subresource di padre
+    engine::ResourceList *p = priv_resList_new_node(figlio);
+    p->next = padre->figli;
+    padre->figli = p;
+}
+
+void Engine::priv_resList_add_owner (engine::Resource *me, engine::Resource *my_owner)
+{
+    //<me> e' una subresource di <my_owner> il quale vuole essere notificato quando <me> cambia di stato
+    engine::ResourceList *p = priv_resList_new_node(my_owner);
+    p->next = me->deplist;
+    me->deplist = p;
+}
 
