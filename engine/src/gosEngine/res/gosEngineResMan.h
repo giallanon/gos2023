@@ -29,7 +29,7 @@ namespace gos
 					template<class RES, class RES_HANDLE>
 			bool	reserve (res::eType type, RES_HANDLE *out_handle, RES **out_resource)
 					{
-						void *res = priv_reserve (type, &out_handle->res_handle);
+						void *res = raw_reserve (type, &out_handle->res_handle);
 						if (NULL == res)
 							return false;
 
@@ -41,27 +41,30 @@ namespace gos
 					template<class RES>
 			void 	release (RES handle)
 					{
-						priv_release (handle.res_handle);
+						raw_release (handle.res_handle);
 					}
 
 					template<class RES, class RES_HANDLE>
 			bool	get_data (RES_HANDLE handle, RES **out_resource)
 					{
-						void *res = priv_get_data(handle.res_handle);
+						void *res = raw_get_data(handle.res_handle);
 						if (NULL == res)
 							return false;
 						(*out_resource) = reinterpret_cast<RES*> (res);
 						return true;
 					}
 
+
+			void*	raw_reserve (res::eType type, Handle *out_handle);
+			void*	raw_get_data (Handle handle);
+			void 	raw_release (Handle handle);
+
+
 		private:
 			static constexpr u32 NUM_MAX_LIST = (u32)res::eType::NUM_MAX;
 
 		private:
 			void 	priv_addResType (res::eType type, u32 num_max_resource, u16 num_res_per_page, u32 sizeof_a_single_res);
-			void*	priv_reserve (res::eType type, Handle *out_handle);
-			void*	priv_get_data (Handle handle);
-			void 	priv_release (Handle handle);
 
 		private:
 			gos::Allocator 	*allocator;

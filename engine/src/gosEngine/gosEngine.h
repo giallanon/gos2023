@@ -49,10 +49,15 @@ namespace gos
         input::eMouseMode   getMouseMode() const;
         void			    setMouseMode (input::eMouseMode mode);
         
-        
         //=============================
         void            toggleFullscreen()                              { gpu->toggleFullscreen(); }
         void            toggleVSync();
+
+
+        void*           res__get_or_create_handle (const char *uid_runtimeName, res::eType res_type, res::Handle *out_handle);
+        void*           res__get (res::Handle handle);
+        void            res__release (res::Handle handle);
+        void            res__do_destroy (res::Handle handle);
 
         //============================= pippo
         bool            pippo_create (u32 sizeInByte, eMemAccessMode mode, ENGPippo *out_handle);
@@ -573,6 +578,7 @@ namespace gos
         engine::ResourceList                        *listof_free_resListNode;
 
 		res::Manager resManager;
+
         BaseResourceHandler                                 *resHandler_list[(u32)eAssetType::__NUM + 1];
         HList<ENGVtxBuffer, engine::ResVtxBuffer>           handleList_vtxBuffer;
         HList<ENGIdxBuffer, engine::ResIdxBuffer>           handleList_idxBuffer;

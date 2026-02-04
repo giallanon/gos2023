@@ -49,7 +49,7 @@ int main()
 	if (!gos::init (init, "gosEngine"))
 		return -1;
 
-	//test_res_handle_1(); return 0;
+	test_res_handle_1(); return 0;
 
     {
         gos::Engine engine;

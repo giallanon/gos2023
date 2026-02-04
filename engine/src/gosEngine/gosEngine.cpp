@@ -429,6 +429,110 @@ bool Engine::asset_bind (asset2::UID uid, engine::Resource *resPadre, u32 handle
 }
 
 /**************************************************************** 
+ * RES
+ *****************************************************************/
+void* Engine::res__get_or_create_handle (const char *uid_runtimeName, res::eType res_type, res::Handle *out_handle)
+{
+    if (NULL == uid_runtimeName)
+    {
+        //risorsa non bindata ad un asset
+        res::Descr *res = (res::Descr*)resManager.raw_reserve (res_type, out_handle);
+        if (NULL == res)
+        {
+            logger::err ("Engine::res__get_or_create_handle() => can't create handle for res type=%d\n", (u8)res_type);
+            return NULL;
+        }
+
+        res->reset();
+        res->refCount = 1;
+        res->status = res::eStatus::ready;
+
+        return res;
+    }
+    else
+    {
+        //risorsa bindata ad un asset
+    }
+
+
+    DBGBREAK;
+    return NULL;
+}
+
+void* Engine::res__get (res::Handle handle)
+{
+    return resManager.raw_get_data (handle);
+}
+
+void Engine::res__do_destroy (res::Handle handle)
+{
+    res::Descr *res = (res::Descr*)res__get(handle);
+    if (NULL == res)
+        return;
+
+    assert (res->status != res::eStatus::loading);
+    //chiamo il "distruttore" di me stesso solo se la risorsa era stata effettivamente caricata
+    if (res::eStatus::ready == res->status)
+    {
+        (this->*res->on_destroy)(res);
+    }
+    res->status = res::eStatus::notLoaded;
+
+    //se ho dei figli, faccio il release
+    res::HandleChain *p = res->figli;
+    while (p)
+    {
+        res__release (p->handle);
+        p = p->next;
+    }
+
+    //se ho dei padri, li notifico del mio cambio di stato
+    p = res->padri;
+    while (p)
+    {
+        //TODO
+        p = p->next;
+    }
+
+    //libero l'handle
+    resManager.raw_release(handle);
+}
+
+void Engine::res__release (res::Handle handle)
+{
+    res::Descr *res = (res::Descr*)res__get(handle);
+    if (NULL == res)
+        return;
+
+    assert (res->refCount > 0);
+    if (1 == res->refCount)
+    {
+        //dobbiamo effettivamente fare il free della risorsa
+        switch (res->status)
+        {
+        case res::eStatus::loading:
+            //anche questo non dovrebbe succedere perche' quando la risorsa viene passata
+            //al loader, il suo ref-count viene incrementato
+            DBGBREAK;
+            break;
+
+        case res::eStatus::ready:
+            res__do_destroy(handle);
+            break;
+
+        case res::eStatus::notLoaded:
+        case res::eStatus::error:
+            //la risorsa non e' stata nemmeno caricata, non c'e' da preoccuparsene, posso fare il "free" immediatamente
+            res__do_destroy(handle);
+            break;
+
+        }
+    }
+    else
+        res->refCount--;
+}
+
+/**************************************************************** 
  * PIPPO
  *****************************************************************/
 bool Engine::pippo_create (u32 sizeInByte, eMemAccessMode mode, ENGPippo *out_handle)

@@ -39,7 +39,7 @@ void Manager::priv_addResType (res::eType type, u32 num_max_resource, u16 num_re
 }
 
 //*******************************
-void* Manager::priv_reserve (res::eType type, Handle *out_handle)
+void* Manager::raw_reserve (res::eType type, Handle *out_handle)
 {
 	const u8 index = (u8)type;
 	assert (index < NUM_MAX_LIST);
@@ -48,7 +48,7 @@ void* Manager::priv_reserve (res::eType type, Handle *out_handle)
 }
 
 //*******************************
-void Manager::priv_release (Handle handle)
+void Manager::raw_release (Handle handle)
 {
 	if (handle.is_invalid())
 		return;
@@ -60,7 +60,7 @@ void Manager::priv_release (Handle handle)
 }
 
 //*******************************
-void* Manager::priv_get_data (Handle handle)
+void* Manager::raw_get_data (Handle handle)
 {
 	if (handle.is_invalid())
 		return NULL;

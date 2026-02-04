@@ -20,11 +20,10 @@ namespace gos
 
 		enum class eStatus : u8
 		{
-			ready		= 0,
-			notLoaded	= 1,		//esiste nell'engine ma non e' stata ancora caricata
-			loading		= 2,		//esiste nell'engine e' ed in fase di caricamente
-			unloading	= 3,		//esiste nell'engine ma la risorsa sta per essere deallocata
-			error 		= 0xff		//errore fatale. Esiste nell'engine ma probabilmente il loader non e' riuscito a caricarla, questo asset e' spacciato per sempre
+			ready			= 0,
+			notLoaded		= 1,		//esiste nell'engine ma non e' stata ancora caricata
+			loading			= 2,		//esiste nell'engine e' ed in fase di caricamento
+			error 			= 0xff		//errore fatale. Esiste nell'engine ma probabilmente il loader non e' riuscito a caricarla, questo asset e' spacciato per sempre
 		};
 
 		enum class eType : u8
@@ -131,11 +130,11 @@ namespace gos
 		struct Descr
 		{
 		public:
-			void 	reset()			{ refCount = 0; uid.setInvalid(); ext_status=eStatus::error; figli=padri=NULL; on_destroy=NULL; }
+			void 	reset()			{ uid.setInvalid(); status=eStatus::error; refCount = 0; figli=padri=NULL; on_destroy=NULL; }
 
 		public:
-			asset2::UID			uid;			//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
-			res::eStatus		ext_status;		//stato della risorsa dal punto di vista dell'engine
+			asset2::UID			uid;		//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
+			res::eStatus		status;		//stato della risorsa dal punto di vista dell'engine
 			u8					_pad0;
 			u8					_pad1;
 			u8					_pad2;
@@ -144,7 +143,7 @@ namespace gos
 			HandleChain			*figli;		//lista di handle che sono figli miei
 			HandleChain			*padri;		//lista di handle di cui io sono figlio (che vengono notificati ogni volta che io cambio di stato)
 
-			FN_destroy	on_destroy;
+			FN_destroy			on_destroy;
 		};
 
 	} //namespace res
