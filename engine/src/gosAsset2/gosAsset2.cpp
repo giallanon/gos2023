@@ -35,7 +35,6 @@ const char* asset2::enumToString (eAssetType s)
     case eAssetType::imported_glb:      return "imported_glb";
 	case eAssetType::skeleton:      	return "skeleton";
 	case eAssetType::model3d:      		return "model3d";
-	case eAssetType::model3dinst:		return "model3dinst";
 	}
 }
 

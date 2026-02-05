@@ -354,6 +354,7 @@ bool Engine::inputEvent_getNext (InputEvent *out)
     }
 }
 
+
 //******************************** 
 bool Engine::asset_rebuildAll()
 {
@@ -428,11 +429,53 @@ bool Engine::asset_bind (asset2::UID uid, engine::Resource *resPadre, u32 handle
     }
 }
 
-/**************************************************************** 
- * RES
- *****************************************************************/
+
+
+//******************************** 
+bool Engine::res__assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) const
+{
+    assert (uid.isAnAsset());
+    switch (uid.getAssetType())
+    {
+    default:
+        DBGBREAK;
+        return false;
+    case eAssetType::vtx_shader:    *out_res_type =  res::eType::vtx_shader; return true;
+    case eAssetType::pxl_shader:    *out_res_type =  res::eType::pxl_shader; return true;
+    case eAssetType::pipe:          *out_res_type =  res::eType::pipeline; return true;
+    case eAssetType::tex2D:         *out_res_type =  res::eType::texture_2d; return true;
+    case eAssetType::shape:         *out_res_type =  res::eType::shape;     return true;
+    case eAssetType::skeleton:      *out_res_type =  res::eType::skeleton;  return true;
+    case eAssetType::model3d:       *out_res_type =  res::eType::model_3d;  return true;
+    }
+}
+
+//**************************************************************** 
+void Engine::res__add_child (res::Descr *resPadre, res::Handle child_handle)
+{
+    res::HandleChain *chain = GOSALLOCT(res::HandleChain*, allocator, sizeof(res::HandleChain));
+    chain->handle = child_handle;
+
+    chain->next = resPadre->figli;
+    resPadre->figli = chain;
+}
+
+//**************************************************************** 
+void Engine::res__add_padre (res::Descr *res, res::Handle padre_handle)
+{
+    res::HandleChain *chain = GOSALLOCT(res::HandleChain*, allocator, sizeof(res::HandleChain));
+    chain->handle = padre_handle;
+
+    chain->next = res->padri;
+    res->padri = chain;
+}
+
+
+//**************************************************************** 
 void* Engine::res__get_or_create_handle (const char *uid_runtimeName, res::eType res_type, res::Handle *out_handle)
 {
+    assert (NULL != out_handle);
+
     if (NULL == uid_runtimeName)
     {
         //risorsa non bindata ad un asset
@@ -446,24 +489,94 @@ void* Engine::res__get_or_create_handle (const char *uid_runtimeName, res::eType
         res->reset();
         res->refCount = 1;
         res->status = res::eStatus::ready;
-
         return res;
     }
-    else
+
+    //risorsa bindata ad un asset
+    asset2::UID uid;
+    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
     {
-        //risorsa bindata ad un asset
+        logger::err ("Engine::res__get_or_create_handle(%s) => invalid runtime name\n", uid_runtimeName);
+        return NULL;
     }
 
-
-    DBGBREAK;
-    return NULL;
+    return res__get_or_create_handle (uid, res_type, out_handle);
 }
 
+//**************************************************************** 
+void* Engine::res__get_or_create_handle (asset2::UID uid, res::eType res_type, res::Handle *out_handle)
+{
+    assert (uid.isValid());
+    assert (NULL != out_handle);
+
+    HashListOfLoadedUID::Position pos;
+    u32 handle_asU32;
+    if (listof_knownUID.findWithPos (uid, &handle_asU32, &pos))
+    {
+        //l'asset e' gia' noto e quindi e' gia' stato associato ad un handle.
+        //Ritorno quell'handle stesso
+        out_handle->set_fromU32(handle_asU32);
+        assert (out_handle->get_value_TYPE() == (u32)res_type);
+
+        //incremento il ref count
+        res::Descr *res = (res::Descr*)res__get(*out_handle);
+        res->refCount++;
+        return res;
+    }
+
+    //l'asset e' nuovo, devo quindi creare un nuovo handle
+    res::Descr *res = (res::Descr*)resManager.raw_reserve (res_type, out_handle);
+    if (NULL == res)
+    {
+        logger::err ("Engine::res__get_or_create_handle() => can't create handle for res type=%d and asset uid=%016" PRIX64 "\n", (u8)res_type, uid._uid);
+        return NULL;
+    }
+    res->reset();
+    res->refCount = 1;
+    res->status = res::eStatus::notLoaded;
+
+    //inserisco la coppia <uid, handle> in hashlist
+    listof_knownUID.insertInPosition (pos, out_handle->view_as_U32());
+
+    asset_logger->log ("res::    new handle [%08X] for asset uid [%016" PRIX64 "]\n", out_handle->view_as_U32(), uid._uid);
+
+
+    //se questo asset ha delle dipendenze runtime, recupero/creo i relativi handle
+    u8 memblock[256];
+    asset2::FastUIDList fastUIDList;
+    fastUIDList.setupWithBase (memblock, sizeof(memblock), gos::getScrapAllocator());
+
+    asset_logger->incIndent();
+    asset2::asset_get_runtime_dependecies_list (asset_ctx, uid, false, &fastUIDList);
+    for (u32 i=0; i<fastUIDList.getNElem(); i++)
+    {
+        const asset2::UID child_uid = fastUIDList(i);
+           
+        res::eType child_res_type;
+        res__assetUID_to_resUID (child_uid, &child_res_type);
+
+        res::Handle child_handle;
+        res::Descr *child_res = (res::Descr*)res__get_or_create_handle (child_uid, child_res_type, &child_handle);
+
+        //child_handle diventa uno dei miei figli
+        res__add_child (res, child_handle);
+        asset_logger->log ("res::    new child [%08X] for [%08X]\n", child_handle.view_as_U32(), out_handle->view_as_U32());
+
+        //io divento uno dei padri di child_handle
+        res__add_padre (child_res, *out_handle);
+    }
+    asset_logger->decIndent();
+
+    return res;
+}
+
+//**************************************************************** 
 void* Engine::res__get (res::Handle handle)
 {
     return resManager.raw_get_data (handle);
 }
 
+//**************************************************************** 
 void Engine::res__do_destroy (res::Handle handle)
 {
     res::Descr *res = (res::Descr*)res__get(handle);
@@ -474,7 +587,8 @@ void Engine::res__do_destroy (res::Handle handle)
     //chiamo il "distruttore" di me stesso solo se la risorsa era stata effettivamente caricata
     if (res::eStatus::ready == res->status)
     {
-        (this->*res->on_destroy)(res);
+        if (NULL != res->on_destroy)
+            (this->*res->on_destroy)(res);
     }
     res->status = res::eStatus::notLoaded;
 
@@ -498,11 +612,15 @@ void Engine::res__do_destroy (res::Handle handle)
     resManager.raw_release(handle);
 }
 
-void Engine::res__release (res::Handle handle)
+//**************************************************************** 
+void Engine::res__release (res::Handle &handle)
 {
     res::Descr *res = (res::Descr*)res__get(handle);
     if (NULL == res)
+    {
+        handle.set_invalid();
         return;
+    }
 
     assert (res->refCount > 0);
     if (1 == res->refCount)
@@ -530,40 +648,48 @@ void Engine::res__release (res::Handle handle)
     }
     else
         res->refCount--;
+    
+    handle.set_invalid();
 }
+
+
 
 /**************************************************************** 
  * PIPPO
  *****************************************************************/
 bool Engine::pippo_create (u32 sizeInByte, eMemAccessMode mode, ENGPippo *out_handle)
 {
-	res::Pippo *res;
-	if (!resManager.reserve (res::eType::_unused_zero, out_handle, &res))
+    res::Pippo *res = (res::Pippo*)res__get_or_create_handle (NULL, res::eType::_unused_zero, &out_handle->res_handle);
+	if (NULL == res)
     {
         logger::err ("Engine::pippo_create() => can't create handle\n");
         return false;
     }
-	
-	res->_descr.on_destroy = &Engine::pippo_on_destroy;
+    
+    if (!gpu->vertexBuffer_create (sizeInByte, mode, &res->vbHandle))
+    {
+        logger::err ("Engine::pippo_create() => can't create vtx buffer\n");
+        res->_descr.status = res::eStatus::error;
+        release(*out_handle);
+        return false;
+    }
 
-	return gpu->vertexBuffer_create (sizeInByte, mode, &res->vbHandle);
+    //bind degli eventi
+	res->_descr.on_destroy = &Engine::pippo_on_destroy;
+    return true;
 }
 
-void Engine::release (ENGPippo handle)
+void Engine::release (ENGPippo &handle)
 {
-	res::Pippo *res;
-	if (!resManager.get_data(handle, &res))
-		return;
-	(this->*res->_descr.on_destroy)(res);
-	resManager.release(handle);
+    res__release (handle.res_handle);
 }
 
 void Engine::pippo_on_destroy (void *resIN)
 {
 	printf ("pippo_on_destroy\n");
 	res::Pippo *res = (res::Pippo*)resIN;
-	gpu->deleteResource (res->vbHandle);
-	
+    assert (res->_descr.status == res::eStatus::ready);
+	gpu->deleteResource (res->vbHandle);	
 }
 
 

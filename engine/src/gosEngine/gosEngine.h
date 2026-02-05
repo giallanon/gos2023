@@ -55,13 +55,18 @@ namespace gos
 
 
         void*           res__get_or_create_handle (const char *uid_runtimeName, res::eType res_type, res::Handle *out_handle);
+        void*           res__get_or_create_handle (asset2::UID uid, res::eType res_type, res::Handle *out_handle);
         void*           res__get (res::Handle handle);
-        void            res__release (res::Handle handle);
+        void            res__release (res::Handle &handle);
         void            res__do_destroy (res::Handle handle);
+        
+        bool            res__assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) const;
+        void            res__add_child (res::Descr *resPadre, res::Handle child_handle);
+        void            res__add_padre (res::Descr *res, res::Handle padre_handle);
 
         //============================= pippo
         bool            pippo_create (u32 sizeInByte, eMemAccessMode mode, ENGPippo *out_handle);
-        void            release (ENGPippo handle);
+        void            release (ENGPippo &handle);
 
 		void            pippo_on_destroy (void *res);
 
