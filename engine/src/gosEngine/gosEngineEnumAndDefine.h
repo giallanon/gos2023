@@ -13,14 +13,14 @@
 namespace gos
 {
 	//A per "num max di handle", B per "num di chunk", C per "counter"
-	GOS_DECL_HANDLE(1024, 128, ENGVtxBuffer);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-	GOS_DECL_HANDLE(1024, 128, ENGIdxBuffer);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
+	//GOS_DECL_HANDLE(1024, 128, ENGVtxBuffer);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
+	//GOS_DECL_HANDLE(1024, 128, ENGIdxBuffer);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
 	GOS_DECL_HANDLE(65536, 1024, ENGTexture);			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^10=1024
 	GOS_DECL_HANDLE(65536, 4096, ENGShape);				//2^16=65536 => num totale di oggetti, divisi in chunk da 2^12=4096
 	GOS_DECL_HANDLE(65536, 4096, ENGGPUShape);			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^12=4096
 	GOS_DECL_HANDLE(1024, 128, ENGPipeline);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-	GOS_DECL_HANDLE(1024, 256, ENGVtxShader);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-	GOS_DECL_HANDLE(1024, 256, ENGPxlShader);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
+	//GOS_DECL_HANDLE(1024, 256, ENGVtxShader);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
+	//GOS_DECL_HANDLE(1024, 256, ENGPxlShader);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
 	GOS_DECL_HANDLE(1024, 256, ENGSkeleton);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
 	GOS_DECL_HANDLE(32768, 4096, ENGModel3d);			//32768 => num totale di oggetti, divisi in chunk da 2^12=4096
 	GOS_DECL_HANDLE(65536, 4096, ENGModel3dInst);		//2^16=65536 => num totale di oggetti, divisi in chunk da 2^12=4096

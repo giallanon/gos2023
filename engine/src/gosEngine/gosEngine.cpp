@@ -16,7 +16,6 @@ Engine::Engine()
     inputCtx = NULL;
     bQuitEngine = false;
     asset_logger = NULL;
-    listof_free_resListNode = NULL;
     memset (resHandler_list, 0, sizeof(resHandler_list));
 }
 
@@ -41,15 +40,11 @@ void Engine::unsetup()
 
     
     //handle lists
-    handleList_vtxBuffer.unsetup();
-    handleList_idxBuffer.unsetup();
     handleList_GPUShape.unsetup();
 	handleList_model3dInst.unsetup();
 	map_of_shape_to_gpushape.unsetup();
     resHandler_texture.unsetup();
     resHandler_pipeline.unsetup();
-    resHandler_vtxShader.unsetup();
-    resHandler_pxlShader.unsetup();
     resHandler_shape.unsetup();
 	resHandler_skeleton.unsetup();
 	resHandler_model3d.unsetup();
@@ -192,16 +187,17 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 
     //handle list
 	resManager.setup (allocator);
-	resManager.addResType<res::Pippo> (res::eType::_unused_zero, 128, 16);
-    handleList_vtxBuffer.setup (allocator);
-    handleList_idxBuffer.setup (allocator);
+	resManager.addResType<res::VtxBuffer> (res::eType::vtx_buffer, 1024, 128);
+	resManager.addResType<res::IdxBuffer> (res::eType::idx_buffer, 1024, 128);
+	resManager.addResType<res::Shader>	  (res::eType::vtx_shader, 1024, 256);
+	resManager.addResType<res::Shader>	  (res::eType::pxl_shader, 1024, 256);
+
+
     handleList_GPUShape.setup (allocator);
 	handleList_model3dInst.setup (allocator);
 	map_of_shape_to_gpushape.setup (allocator, 8192);
     priv_setup_resource_handler(eAssetType::tex2D,      &resHandler_texture);
     priv_setup_resource_handler(eAssetType::pipe,       &resHandler_pipeline);
-    priv_setup_resource_handler(eAssetType::vtx_shader, &resHandler_vtxShader);
-    priv_setup_resource_handler(eAssetType::pxl_shader, &resHandler_pxlShader);
     priv_setup_resource_handler(eAssetType::shape,      &resHandler_shape);
 	priv_setup_resource_handler(eAssetType::skeleton,	&resHandler_skeleton);
 	priv_setup_resource_handler(eAssetType::model3d,	&resHandler_model3d);
@@ -354,7 +350,6 @@ bool Engine::inputEvent_getNext (InputEvent *out)
     }
 }
 
-
 //******************************** 
 bool Engine::asset_rebuildAll()
 {
@@ -429,10 +424,10 @@ bool Engine::asset_bind (asset2::UID uid, engine::Resource *resPadre, u32 handle
     }
 }
 
-
-
-//******************************** 
-bool Engine::res__assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) const
+/**************************************************************** 
+ * RES
+ *****************************************************************/
+bool Engine::res_assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) const
 {
     assert (uid.isAnAsset());
     switch (uid.getAssetType())
@@ -451,9 +446,9 @@ bool Engine::res__assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type)
 }
 
 //**************************************************************** 
-void Engine::res__add_child (res::Descr *resPadre, res::Handle child_handle)
+void Engine::res_addChild (res::Descr *resPadre, res::Handle child_handle)
 {
-    res::HandleChain *chain = GOSALLOCT(res::HandleChain*, allocator, sizeof(res::HandleChain));
+    res::HandleChain *chain = res_newHandleChain();
     chain->handle = child_handle;
 
     chain->next = resPadre->figli;
@@ -461,55 +456,75 @@ void Engine::res__add_child (res::Descr *resPadre, res::Handle child_handle)
 }
 
 //**************************************************************** 
-void Engine::res__add_padre (res::Descr *res, res::Handle padre_handle)
+void Engine::res_addPadre (res::Descr *res, res::Handle padre_handle)
 {
-    res::HandleChain *chain = GOSALLOCT(res::HandleChain*, allocator, sizeof(res::HandleChain));
+    res::HandleChain *chain = res_newHandleChain();
     chain->handle = padre_handle;
 
     chain->next = res->padri;
     res->padri = chain;
 }
 
+res::HandleChain* Engine::res_newHandleChain ()
+{
+	res::HandleChain *ret = GOSALLOCT(res::HandleChain*, allocator, sizeof(res::HandleChain));
+	return ret;
+}
 
-//**************************************************************** 
-void* Engine::res__get_or_create_handle (const char *uid_runtimeName, res::eType res_type, res::Handle *out_handle)
+void Engine::res_freeHandleChain (res::HandleChain *p)
+{
+	p->handle.set_invalid();
+	p->next = NULL;
+	GOSFREE(allocator, p);
+}
+
+void* Engine::res_createHandle (res::eType res_type, res::Handle *out_handle)
+{
+	assert (NULL != out_handle);
+
+	//risorsa non bindata ad un asset
+	res::Descr *res = (res::Descr*)resManager.raw_reserve (res_type, out_handle);
+	if (NULL == res)
+	{
+		logger::err ("Engine::res_createHandle() => can't create handle for res type=%d\n", (u8)res_type);
+		return NULL;
+	}
+
+	res->reset();
+	res->refCount = 1;
+	res->status = res::eStatus::ready;
+
+	return res;
+}
+
+void* Engine::res_getOrCreateHandleFromAsset (const char *uid_runtimeName, res::Handle *out_handle)
 {
     assert (NULL != out_handle);
-
-    if (NULL == uid_runtimeName)
-    {
-        //risorsa non bindata ad un asset
-        res::Descr *res = (res::Descr*)resManager.raw_reserve (res_type, out_handle);
-        if (NULL == res)
-        {
-            logger::err ("Engine::res__get_or_create_handle() => can't create handle for res type=%d\n", (u8)res_type);
-            return NULL;
-        }
-
-        res->reset();
-        res->refCount = 1;
-        res->status = res::eStatus::ready;
-        return res;
-    }
-
-    //risorsa bindata ad un asset
     asset2::UID uid;
     if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
     {
-        logger::err ("Engine::res__get_or_create_handle(%s) => invalid runtime name\n", uid_runtimeName);
+        logger::err ("Engine::res_getOrCreateHandleFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
         return NULL;
     }
 
-    return res__get_or_create_handle (uid, res_type, out_handle);
+	return res_getOrCreateHandleFromAsset (uid, out_handle);
 }
 
 //**************************************************************** 
-void* Engine::res__get_or_create_handle (asset2::UID uid, res::eType res_type, res::Handle *out_handle)
+void* Engine::res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle *out_handle)
 {
     assert (uid.isValid());
     assert (NULL != out_handle);
 
-    HashListOfLoadedUID::Position pos;
+	res::eType res_type;
+	if (!res_assetUID_to_resUID (uid, &res_type))
+    {
+        logger::err ("Engine::res_getOrCreateHandleFromAsset() => can't deduct res_type frome assert uid [%016]" PRIX64 "\n", uid._uid);
+        return NULL;
+    }
+
+
+	HashListOfLoadedUID::Position pos;
     u32 handle_asU32;
     if (listof_knownUID.findWithPos (uid, &handle_asU32, &pos))
     {
@@ -519,7 +534,7 @@ void* Engine::res__get_or_create_handle (asset2::UID uid, res::eType res_type, r
         assert (out_handle->get_value_TYPE() == (u32)res_type);
 
         //incremento il ref count
-        res::Descr *res = (res::Descr*)res__get(*out_handle);
+        res::Descr *res = (res::Descr*)res_get(*out_handle);
         res->refCount++;
         return res;
     }
@@ -528,7 +543,7 @@ void* Engine::res__get_or_create_handle (asset2::UID uid, res::eType res_type, r
     res::Descr *res = (res::Descr*)resManager.raw_reserve (res_type, out_handle);
     if (NULL == res)
     {
-        logger::err ("Engine::res__get_or_create_handle() => can't create handle for res type=%d and asset uid=%016" PRIX64 "\n", (u8)res_type, uid._uid);
+        logger::err ("Engine::res_getOrCreateHandleFromAsset() => can't create handle for res type=%d and asset uid=%016" PRIX64 "\n", (u8)res_type, uid._uid);
         return NULL;
     }
     res->reset();
@@ -552,34 +567,29 @@ void* Engine::res__get_or_create_handle (asset2::UID uid, res::eType res_type, r
     {
         const asset2::UID child_uid = fastUIDList(i);
            
-        res::eType child_res_type;
-        res__assetUID_to_resUID (child_uid, &child_res_type);
-
         res::Handle child_handle;
-        res::Descr *child_res = (res::Descr*)res__get_or_create_handle (child_uid, child_res_type, &child_handle);
+        res::Descr *child_res = (res::Descr*)res_getOrCreateHandleFromAsset (child_uid, &child_handle);
 
         //child_handle diventa uno dei miei figli
-        res__add_child (res, child_handle);
+        res_addChild (res, child_handle);
         asset_logger->log ("res::    new child [%08X] for [%08X]\n", child_handle.view_as_U32(), out_handle->view_as_U32());
 
         //io divento uno dei padri di child_handle
-        res__add_padre (child_res, *out_handle);
+        res_addPadre (child_res, *out_handle);
     }
     asset_logger->decIndent();
 
     return res;
 }
 
-//**************************************************************** 
-void* Engine::res__get (res::Handle handle)
+void* Engine::res_get (res::Handle handle)
 {
     return resManager.raw_get_data (handle);
 }
 
-//**************************************************************** 
-void Engine::res__do_destroy (res::Handle handle)
+void Engine::res_do_destroy (res::Handle handle)
 {
-    res::Descr *res = (res::Descr*)res__get(handle);
+    res::Descr *res = (res::Descr*)res_get(handle);
     if (NULL == res)
         return;
 
@@ -587,8 +597,7 @@ void Engine::res__do_destroy (res::Handle handle)
     //chiamo il "distruttore" di me stesso solo se la risorsa era stata effettivamente caricata
     if (res::eStatus::ready == res->status)
     {
-        if (NULL != res->on_destroy)
-            (this->*res->on_destroy)(res);
+        (this->*res->on_destroy)(res);
     }
     res->status = res::eStatus::notLoaded;
 
@@ -596,31 +605,32 @@ void Engine::res__do_destroy (res::Handle handle)
     res::HandleChain *p = res->figli;
     while (p)
     {
-        res__release (p->handle);
-        p = p->next;
+		res::HandleChain *next = p->next;
+        res_release (p->handle);
+        res_freeHandleChain(p);
+		p = next;
     }
 
-    //se ho dei padri, li notifico del mio cambio di stato
+    //elimino la lista dei miei padri, ma non c'e' bisogno di notificarli
+	//o di rimuovermi dalla lista dei loro figli perche' essendo io refCountato,
+	//io posso essere distrutto solo se tutti i miei padri sono a loro volta stati distrutti
+	//nel qual caso la loro lista dei figli e' gia' stata pulita
     p = res->padri;
     while (p)
     {
-        //TODO
-        p = p->next;
+		res_freeHandleChain(p);
+		p = p->next;
     }
 
     //libero l'handle
     resManager.raw_release(handle);
 }
 
-//**************************************************************** 
-void Engine::res__release (res::Handle &handle)
+void Engine::res_release (res::Handle handle)
 {
-    res::Descr *res = (res::Descr*)res__get(handle);
+    res::Descr *res = (res::Descr*)res_get(handle);
     if (NULL == res)
-    {
-        handle.set_invalid();
         return;
-    }
 
     assert (res->refCount > 0);
     if (1 == res->refCount)
@@ -635,61 +645,19 @@ void Engine::res__release (res::Handle &handle)
             break;
 
         case res::eStatus::ready:
-            res__do_destroy(handle);
+            res_do_destroy(handle);
             break;
 
         case res::eStatus::notLoaded:
         case res::eStatus::error:
             //la risorsa non e' stata nemmeno caricata, non c'e' da preoccuparsene, posso fare il "free" immediatamente
-            res__do_destroy(handle);
+            res_do_destroy(handle);
             break;
 
         }
     }
     else
         res->refCount--;
-    
-    handle.set_invalid();
-}
-
-
-
-/**************************************************************** 
- * PIPPO
- *****************************************************************/
-bool Engine::pippo_create (u32 sizeInByte, eMemAccessMode mode, ENGPippo *out_handle)
-{
-    res::Pippo *res = (res::Pippo*)res__get_or_create_handle (NULL, res::eType::_unused_zero, &out_handle->res_handle);
-	if (NULL == res)
-    {
-        logger::err ("Engine::pippo_create() => can't create handle\n");
-        return false;
-    }
-    
-    if (!gpu->vertexBuffer_create (sizeInByte, mode, &res->vbHandle))
-    {
-        logger::err ("Engine::pippo_create() => can't create vtx buffer\n");
-        res->_descr.status = res::eStatus::error;
-        release(*out_handle);
-        return false;
-    }
-
-    //bind degli eventi
-	res->_descr.on_destroy = &Engine::pippo_on_destroy;
-    return true;
-}
-
-void Engine::release (ENGPippo &handle)
-{
-    res__release (handle.res_handle);
-}
-
-void Engine::pippo_on_destroy (void *resIN)
-{
-	printf ("pippo_on_destroy\n");
-	res::Pippo *res = (res::Pippo*)resIN;
-    assert (res->_descr.status == res::eStatus::ready);
-	gpu->deleteResource (res->vbHandle);	
 }
 
 
@@ -698,31 +666,23 @@ void Engine::pippo_on_destroy (void *resIN)
  *****************************************************************/
 bool Engine::vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer *out_handle)
 {
-    GPUVtxBufferHandle gpuResourceHandle;
-    if (!gpu->vertexBuffer_create (sizeInByte, mode, &gpuResourceHandle))
-    {
-        return false;
-    }
-
-    assert (NULL != out_handle);
-    engine::ResVtxBuffer *s = handleList_vtxBuffer.reserveTS(out_handle);
-    if (NULL == s)
+	res::VtxBuffer *res = (res::VtxBuffer*)res_createHandle(res::eType::vtx_buffer, &out_handle->res_handle);
+	if (NULL == res)
     {
         logger::err ("Engine::vtxBuffer_create() => can't create handle\n");
         return false;
     }
+	
+	res->_descr.on_destroy = &Engine::vtxBuffer_on_destroy;
 
-    s->brh.status = engine::eResStatus::ready;
-    s->vbHandle = gpuResourceHandle;
-    return true;
+	return gpu->vertexBuffer_create (sizeInByte, mode, &res->vbHandle);
 }
 
-void Engine::release (ENGVtxBuffer &handle)
+void Engine::vtxBuffer_on_destroy (void *resIN)
 {
-    engine::ResVtxBuffer res;
-    if (handleList_vtxBuffer.releaseTS (handle, &res))
-        gpu->deleteResource (res.vbHandle);
-    handle.setInvalid();
+	res::VtxBuffer *res = (res::VtxBuffer*)resIN;
+	gpu->deleteResource (res->vbHandle);
+	
 }
 
 
@@ -731,33 +691,104 @@ void Engine::release (ENGVtxBuffer &handle)
  *****************************************************************/
 bool Engine::idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGIdxBuffer *out_handle)
 {
-    GPUIdxBufferHandle gpuResourceHandle;
-    if (!gpu->indexBuffer_create (sizeInByte, mode, &gpuResourceHandle))
-    {
-        return false;
-    }
-
-    assert (NULL != out_handle);
-    engine::ResIdxBuffer *s = handleList_idxBuffer.reserveTS(out_handle);
-    if (NULL == s)
+	res::IdxBuffer *res = (res::IdxBuffer*)res_createHandle(res::eType::idx_buffer, &out_handle->res_handle);
+	if (NULL == res)
     {
         logger::err ("Engine::idxBuffer_create() => can't create handle\n");
         return false;
     }
+	
+	res->_descr.on_destroy = &Engine::idxBuffer_on_destroy;
 
-    s->brh.status = engine::eResStatus::ready;
-    s->ibHandle = gpuResourceHandle;
-    return true;
+	return gpu->indexBuffer_create (sizeInByte, mode, &res->ibHandle);
 }
 
-void Engine::release (ENGIdxBuffer &handle)
+void Engine::idxBuffer_on_destroy (void *resIN)
 {
-    engine::ResIdxBuffer res;
-    if (handleList_idxBuffer.releaseTS (handle, &res))
-        gpu->deleteResource (res.ibHandle);
-    handle.setInvalid();
+	res::VtxBuffer *res = (res::VtxBuffer*)resIN;
+	gpu->deleteResource (res->vbHandle);
 }
 
+/**************************************************************** 
+ * VTX SHADER
+ *****************************************************************/
+bool Engine::vtxshader_createFromAsset (const char *uid_runtimeName, ENGVtxShader *out_handle, engine::eLoadMode loadMode)
+{
+    return res_getOrCreateHandleFromAsset (uid_runtimeName, &out_handle->res_handle);
+}
+
+bool Engine::vtxshader_createFromFile (const char *filename, const char *mainFnName, ENGVtxShader *out_handle)
+{
+	res::Shader *res = (res::Shader*)res_createHandle(res::eType::vtx_shader, &out_handle->res_handle);
+	if (NULL == res)
+    {
+        logger::err ("Engine::vtxshader_createFromFile() => can't create handle\n");
+        return false;
+    }
+	res->_descr.on_destroy = &Engine::vtxshader_on_destroy;
+
+    return gpu->vtxshader_createFromFile (filename, mainFnName, &res->shaderHandle);
+}
+
+bool Engine::vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGVtxShader *out_handle)
+{
+	res::Shader *res = (res::Shader*)res_createHandle(res::eType::vtx_shader, &out_handle->res_handle);
+	if (NULL == res)
+    {
+        logger::err ("Engine::vtxshader_createFromMemory() => can't create handle\n");
+        return false;
+    }
+	res->_descr.on_destroy = &Engine::vtxshader_on_destroy;
+
+    return gpu->vtxshader_createFromMemory (bufferIN, bufferSize, mainFnName, &res->shaderHandle);
+}
+
+void Engine::vtxshader_on_destroy (void *resIN)
+{
+	res::Shader *res = (res::Shader*)resIN;
+	gpu->deleteResource (res->shaderHandle);
+}
+
+
+/**************************************************************** 
+ * PXL SHADER
+ *****************************************************************/
+bool Engine::pxlshader_createFromAsset (const char *uid_runtimeName, ENGPxlShader *out_handle, engine::eLoadMode loadMode)
+{
+    return res_getOrCreateHandleFromAsset (uid_runtimeName, &out_handle->res_handle);
+}
+
+bool Engine::pxlshader_createFromFile (const char *filename, const char *mainFnName, ENGPxlShader *out_handle)
+{
+	res::Shader *res = (res::Shader*)res_createHandle(res::eType::pxl_shader, &out_handle->res_handle);
+	if (NULL == res)
+    {
+        logger::err ("Engine::pxlshader_createFromFile() => can't create handle\n");
+        return false;
+    }
+	res->_descr.on_destroy = &Engine::pxlshader_on_destroy;
+
+    return gpu->pxlshader_createFromFile (filename, mainFnName, &res->shaderHandle);
+}
+
+bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGPxlShader *out_handle)
+{
+	res::Shader *res = (res::Shader*)res_createHandle(res::eType::pxl_shader, &out_handle->res_handle);
+	if (NULL == res)
+    {
+        logger::err ("Engine::pxlshader_createFromMemory() => can't create handle\n");
+        return false;
+    }
+	res->_descr.on_destroy = &Engine::pxlshader_on_destroy;
+
+    return gpu->pxlshader_createFromMemory (bufferIN, bufferSize, mainFnName, &res->shaderHandle);
+}
+
+void Engine::pxlshader_on_destroy (void *resIN)
+{
+	res::Shader *res = (res::Shader*)resIN;
+	gpu->deleteResource (res->shaderHandle);
+}
 
 
 /**************************************************************** 
@@ -837,8 +868,6 @@ engine::ResGPUShape* Engine::priv_GPUShape_create (const gos::Shape *shape, gpu:
 		.submit();
     return res;
 }
-
-
 
 void Engine::release (ENGGPUShape &handle)
 {
@@ -1189,135 +1218,7 @@ bool Engine::pipeline_createFromAsset (const char *uid_runtimeName, ENGPipeline 
 
 
 
-/**************************************************************** 
- * VTX SHADER
- *****************************************************************/
-bool Engine::vtxshader_createFromAsset (const char *uid_runtimeName, ENGVtxShader *out_handle, engine::eLoadMode loadMode)
-{
-    assert (NULL != out_handle);
-    
-    asset2::UID uid;
-    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
-    {
-        logger::err ("Engine::vtxshader_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
-        return false;
-    }
-    u32 handle_asU32;
-    if (!resHandler_vtxShader.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
-        return false;
 
-    out_handle->setFromU32(handle_asU32);
-    return true;
-}
-
-bool Engine::vtxshader_createFromFile (const char *filename, const char *mainFnName, ENGVtxShader *out_handle)
-{
-    GPUShaderHandle gpuResourceHandle;
-    if (!gpu->vtxshader_createFromFile (filename, mainFnName, &gpuResourceHandle))
-    {
-        return false;
-    }
-
-    assert (NULL != out_handle);
-    engine::ResShader *res = resHandler_vtxShader.reserveTS(out_handle);
-    if (NULL == res)
-    {
-        logger::err ("Engine::vtxshader_createFromFile() => can't create handle\n");
-        return false;
-    }
-
-    res->brh.status = engine::eResStatus::ready;
-    res->data.shaderHandle = gpuResourceHandle;
-    return true;
-}
-
-bool Engine::vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGVtxShader *out_handle)
-{
-    GPUShaderHandle gpuResourceHandle;
-    if (!gpu->vtxshader_createFromMemory (bufferIN, bufferSize, mainFnName, &gpuResourceHandle))
-    {
-        return false;
-    }
-
-    assert (NULL != out_handle);
-    engine::ResShader *res = resHandler_vtxShader.reserveTS(out_handle);
-    if (NULL == res)
-    {
-        logger::err ("Engine::vtxshader_createFromMemory() => can't create handle\n");
-        return false;
-    }
-
-    res->brh.status = engine::eResStatus::ready;
-    res->data.shaderHandle = gpuResourceHandle;
-    return true;
-}
-
-
-
-
-/**************************************************************** 
- * PXL SHADER
- *****************************************************************/
-bool Engine::pxlshader_createFromAsset (const char *uid_runtimeName, ENGPxlShader *out_handle, engine::eLoadMode loadMode)
-{
-    assert (NULL != out_handle);
-    
-    asset2::UID uid;
-    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
-    {
-        logger::err ("Engine::pxlshader_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
-        return false;
-    }
-
-    u32 handle_asU32;
-    if (!resHandler_pxlShader.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
-        return false;
-
-    out_handle->setFromU32(handle_asU32);
-    return true;
-}
-
-bool Engine::pxlshader_createFromFile (const char *filename, const char *mainFnName, ENGPxlShader *out_handle)
-{
-    GPUShaderHandle gpuResourceHandle;
-    if (!gpu->pxlshader_createFromFile (filename, mainFnName, &gpuResourceHandle))
-    {
-        return false;
-    }
-
-    assert (NULL != out_handle);
-    engine::ResShader *res = resHandler_pxlShader.reserveTS(out_handle);
-    if (NULL == res)
-    {
-        logger::err ("Engine::pxlshader_createFromFile() => can't create handle\n");
-        return false;
-    }
-
-    res->brh.status = engine::eResStatus::ready;
-    res->data.shaderHandle = gpuResourceHandle;
-    return true;
-}
-
-bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGPxlShader *out_handle)
-{
-    GPUShaderHandle gpuResourceHandle;
-    if (!gpu->pxlshader_createFromMemory (bufferIN, bufferSize, mainFnName, &gpuResourceHandle))
-    {
-        return false;
-    }
-
-    assert (NULL != out_handle);
-    engine::ResShader *res = resHandler_pxlShader.reserveTS(out_handle);
-    if (NULL == res)
-    {
-        logger::err ("Engine::pxlshader_createFromMemory() => can't create handle\n");
-        return false;
-    }
-
-    res->brh.status = engine::eResStatus::ready;
-    res->data.shaderHandle = gpuResourceHandle;
-    return true;
-}
 
 
 /**********************************************************************************************
@@ -1327,41 +1228,23 @@ bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, c
 **********************************************************************************************/
 void Engine::priv_resList_setup()
 {
-    assert (NULL == listof_free_resListNode);
-
-    const u32 N = 8192;
-    listof_free_resListNode = GOSALLOCT(engine::ResourceList*, allocator, sizeof(engine::ResourceList) * N);
-
-    for (u32 i=0; i<N-1; i++)
-        listof_free_resListNode[i].next = &listof_free_resListNode[i+1];
-    listof_free_resListNode[N-1].next = NULL;
 }
 
 void Engine::priv_resList_unsetup()
 {
-    if (NULL != listof_free_resListNode)
-    {
-        GOSFREE(allocator, listof_free_resListNode);
-        listof_free_resListNode = NULL;
-    }
 }
 
 engine::ResourceList* Engine::priv_resList_new_node (engine::Resource *res)
 {
-    assert (NULL != listof_free_resListNode);
-    engine::ResourceList *ret = listof_free_resListNode;
-    listof_free_resListNode = listof_free_resListNode->next;
-    
-    ret->brh = res;
-    ret->next = NULL;
-    return ret;
+    engine::ResourceList *ret = GOSALLOCT(engine::ResourceList*, allocator, sizeof(engine::ResourceList));
+	ret->brh = res;
+	ret->next = NULL;
+	return ret;
 }
 
 void Engine::priv_resList_free_node(engine::ResourceList *p)
 {
-    p->brh = NULL;
-    p->next = listof_free_resListNode;
-    listof_free_resListNode= p;
+	GOSFREE(allocator, p);
 }
 
 void Engine::priv_resList_add_figlio (engine::Resource *padre, engine::Resource *figlio)

@@ -47,6 +47,10 @@ namespace gos
                                 else
                                     p8[4] = 0x02;
 
+								p8[5] = 0xAC;	//marcatori di debug
+								p8[6] = 0xCA;	//marcatori di debug
+								p8[7] = 0x03;	//marcatori di debug
+
                                 p8 += DEBUG_HEADER_SIZE;
 
                                 return p8;
@@ -66,6 +70,10 @@ namespace gos
                                     assert (p8[4] == 0x01);
                                 else
                                     assert (p8[4] == 0x02);
+
+								assert (p8[5] == 0xAC);
+								assert (p8[6] == 0xCA);
+								assert (p8[7] == 0x03);
 
                                 virt_do_dealloc(p8); 
                             }

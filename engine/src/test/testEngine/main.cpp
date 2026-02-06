@@ -59,12 +59,12 @@ int main()
         if (!engine.asset_build())  return -3;
         //if (!engine.asset_rebuildAll())  return -3;
         {
-			gos::ENGPippo handle_pippo;
-			engine.pippo_create (128, eMemAccessMode::onGPU, &handle_pippo);
-			engine.release (handle_pippo);
+			// gos::ENGVtxBuffer handle_pippo;
+			// engine.vtxBuffer_create (128, eMemAccessMode::onGPU, &handle_pippo);
+			// engine.release (handle_pippo);
 
 
-            //Test1 test;		test.run (&engine);
+            Test1 test;		test.run (&engine);
             //Game1 game;		game.run (&engine);
 			//Test_exa1 test;		test.run(&engine);
         }

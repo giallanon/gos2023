@@ -53,46 +53,48 @@ namespace gos
         void            toggleFullscreen()                              { gpu->toggleFullscreen(); }
         void            toggleVSync();
 
+	private:
+		void*           res_createHandle (res::eType res_type, res::Handle *out_handle);
+        void*           res_getOrCreateHandleFromAsset (const char *uid_runtimeName, res::Handle *out_handle);
+		void* 			res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle *out_handle);
+        void*           res_get (res::Handle handle);
+        void            res_release (res::Handle handle);
+        void            res_do_destroy (res::Handle handle);
+		
+		bool 			res_assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) const;
+		res::HandleChain*	res_newHandleChain ();
+		void 			res_freeHandleChain (res::HandleChain *p);
+		void 			res_addChild (res::Descr *resPadre, res::Handle child_handle);
+		void 			res_addPadre (res::Descr *res, res::Handle padre_handle);
 
-        void*           res__get_or_create_handle (const char *uid_runtimeName, res::eType res_type, res::Handle *out_handle);
-        void*           res__get_or_create_handle (asset2::UID uid, res::eType res_type, res::Handle *out_handle);
-        void*           res__get (res::Handle handle);
-        void            res__release (res::Handle &handle);
-        void            res__do_destroy (res::Handle handle);
-        
-        bool            res__assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) const;
-        void            res__add_child (res::Descr *resPadre, res::Handle child_handle);
-        void            res__add_padre (res::Descr *res, res::Handle padre_handle);
-
-        //============================= pippo
-        bool            pippo_create (u32 sizeInByte, eMemAccessMode mode, ENGPippo *out_handle);
-        void            release (ENGPippo &handle);
-
-		void            pippo_on_destroy (void *res);
-
+	public:
         //============================= vtxBuffer
         bool            vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer *out_handle);
-        void            release (ENGVtxBuffer &handle);
-        bool            get (ENGVtxBuffer handle, const engine::ResVtxBuffer **out)                               { return handleList_vtxBuffer.queryInfo(handle, out); }
+        void            release (ENGVtxBuffer &handle)																{ res_release(handle.res_handle); handle.res_handle.set_invalid(); }
+        bool            get (ENGVtxBuffer handle, const res::VtxBuffer **out)										{ (*out) = (const res::VtxBuffer*)res_get(handle.res_handle); return (NULL != (*out)); }
+		void            vtxBuffer_on_destroy (void *res);
 
         //============================= idxBuffer
         bool            idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGIdxBuffer *out_handle);
-        void            release (ENGIdxBuffer &handle);
-        bool            get (ENGIdxBuffer handle, const engine::ResIdxBuffer **out)                               { return handleList_idxBuffer.queryInfo(handle, out); }
+        void            release (ENGIdxBuffer &handle)																{ res_release(handle.res_handle); handle.res_handle.set_invalid(); }
+        bool            get (ENGIdxBuffer handle, const res::IdxBuffer **out)										{ (*out) = (const res::IdxBuffer*)res_get(handle.res_handle); return (NULL != (*out)); }
+		void            idxBuffer_on_destroy (void *res);
 
         //============================= vtxshader
         bool            vtxshader_createFromAsset (const char *uid_runtimeName, ENGVtxShader *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
         bool            vtxshader_createFromFile (const char *filename, const char *mainFnName, ENGVtxShader *out_handle);
         bool            vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGVtxShader *out_handle);
-        void            release (ENGVtxShader &handle)                                                            	{ priv_asset_release(handle, resHandler_vtxShader); }
-        bool            get (ENGVtxShader handle, const engine::ResShader **out, u64 timeout_msec = 0)            	{ return priv_resource_get_and_schedule_load_if_needed (handle, resHandler_vtxShader, out, timeout_msec); }
+        void            release (ENGVtxShader &handle)                                                            	{ res_release(handle.res_handle); handle.res_handle.set_invalid(); }
+        bool            get (ENGVtxShader handle, const res::Shader **out, u64 timeout_msec = 0)            		{ (*out) = (const res::Shader*)res_get(handle.res_handle); return (NULL != (*out)); }
+		void            vtxshader_on_destroy (void *res);
 
         //============================= pxlshader
         bool            pxlshader_createFromAsset (const char *uid_runtimeName, ENGPxlShader *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
         bool            pxlshader_createFromFile (const char *filename, const char *mainFnName, ENGPxlShader *out_handle);
         bool            pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGPxlShader *out_handle);
-        void            release (ENGPxlShader &handle)                                                            	{ priv_asset_release(handle, resHandler_pxlShader); }
-        bool            get (ENGPxlShader handle, const engine::ResShader **out, u64 timeout_msec = 0)            	{ return priv_resource_get_and_schedule_load_if_needed (handle, resHandler_pxlShader, out, timeout_msec); }
+        void            release (ENGPxlShader &handle)                                                            	{ res_release(handle.res_handle); handle.res_handle.set_invalid(); }
+        bool            get (ENGPxlShader handle, const res::Shader **out, u64 timeout_msec = 0)            		{ (*out) = (const res::Shader*)res_get(handle.res_handle); return (NULL != (*out)); }
+		void            pxlshader_on_destroy (void *res);
 
         //============================= shape
         bool            shape_createFromAsset (const char *uid_runtimeName, ENGShape *out_handle, engine::eLoadMode loadMode = engine::eLoadMode::onDemand);
@@ -346,11 +348,7 @@ namespace gos
                         template<class HANDLE_TYPE, class RESOURCE_TYPE>
         bool            internal__get_raw_data (HANDLE_TYPE handle, RESOURCE_TYPE **out_resPt)
                         {
-                            if constexpr (std::is_same<HANDLE_TYPE, ENGVtxShader>::value)
-								return resHandler_vtxShader.fromHandleToPointer(handle, out_resPt);
-                            else if constexpr (std::is_same<HANDLE_TYPE, ENGPxlShader>::value)
-								return resHandler_pxlShader.fromHandleToPointer(handle, out_resPt);
-                            else if constexpr (std::is_same<HANDLE_TYPE, ENGShape>::value)
+                            if constexpr (std::is_same<HANDLE_TYPE, ENGShape>::value)
 								return resHandler_shape.fromHandleToPointer(handle, out_resPt);
                             else if constexpr (std::is_same<HANDLE_TYPE, ENGSkeleton>::value)
 								return resHandler_skeleton.fromHandleToPointer(handle, out_resPt);
@@ -580,21 +578,16 @@ namespace gos
         gos::Logger                                 *asset_logger;
         asset2::DBContext                           asset_ctx;
         HashListOfLoadedUID			                listof_knownUID;	//mappa asset2::uid ad u32 che e' l'handle della risorsa nell'engine
-        engine::ResourceList                        *listof_free_resListNode;
 
 		res::Manager resManager;
 
         BaseResourceHandler                                 *resHandler_list[(u32)eAssetType::__NUM + 1];
-        HList<ENGVtxBuffer, engine::ResVtxBuffer>           handleList_vtxBuffer;
-        HList<ENGIdxBuffer, engine::ResIdxBuffer>           handleList_idxBuffer;
         HList<ENGGPUShape, engine::ResGPUShape>             handleList_GPUShape;
 		HList<ENGModel3dInst, engine::ResModel3dInst> 		handleList_model3dInst;
 		FastHashMap<ENGShape, ENGGPUShape>					map_of_shape_to_gpushape;
         ResouceHandler<ENGShape, engine::ResShape>          resHandler_shape;
         ResouceHandler<ENGTexture, engine::ResTexture>      resHandler_texture;
         ResouceHandler<ENGPipeline, engine::ResPipeline>    resHandler_pipeline;
-        ResouceHandler<ENGVtxShader, engine::ResShader>     resHandler_vtxShader;
-        ResouceHandler<ENGPxlShader, engine::ResShader>     resHandler_pxlShader;
 		ResouceHandler<ENGSkeleton, engine::ResSkeleton>	resHandler_skeleton;
 		ResouceHandler<ENGModel3d, engine::ResModel3d>		resHandler_model3d;
 		

@@ -9,51 +9,6 @@ namespace gos
 	namespace engine
 	{
 		//************************************
-		struct ResVtxBuffer
-		{
-		public:
-			void reset()		{ brh.reset(); vbHandle.setInvalid(); }
-
-		public:
-			Resource		brh;
-			GPUVtxBufferHandle	vbHandle;
-		};
-
-
-		//************************************
-		struct ResIdxBuffer
-		{
-		public:
-			void reset()		{ brh.reset(); ibHandle.setInvalid(); }
-
-		public:
-			Resource		brh;
-			GPUIdxBufferHandle	ibHandle;
-		};
-
-
-		//************************************
-		struct ResShader
-		{
-		public:
-			struct Data
-			{
-				GPUShaderHandle	shaderHandle;
-				
-				void 	reset()													{ shaderHandle.setInvalid(); }
-				void 	destroy (gos::Allocator *allocator, gos::GPU *gpu)		{ gpu->deleteResource (shaderHandle); reset(); }
-			};
-
-		public:
-			void reset()		{ brh.reset(); data.reset(); }
-
-		public:
-			Resource		brh;
-			Data				data;
-		};	
-
-
-		//************************************
 		struct ResTexture
 		{
 		public:
