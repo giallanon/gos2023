@@ -56,7 +56,7 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
     gpu = engine->gpu;
 
     //load degli assets
-    if (!engine->pipeline_createFromAsset ("gosengine_pipe3", &handle_pipeline, engine::eLoadMode::asap))
+    if (!engine->pipeline_createFromAsset ("gosengine_pipe3", &handle_pipeline, res::eLoadMode::asap))
         return false;    
 
 
@@ -132,14 +132,14 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
     }
 
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
-    const engine::ResPipeline *res_pipeline;
+    const res::Pipeline *res_pipeline;
     if (engine->get (handle_pipeline, &res_pipeline, 5000))
     {
         //alloco una istanza dei descriptor-set
         gos::gpu::DescrSetInstanceWriter dsw;
 
         //descriptor set 0
-        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->data.pipeHandle, 0, &handle_descrSet0))
+        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->pipeHandle, 0, &handle_descrSet0))
         {
             gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_0\n");
             return false;
@@ -154,7 +154,7 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
         
 
         //descriptor set 1
-        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->data.pipeHandle, 1, &handle_descrSet1))
+        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->pipeHandle, 1, &handle_descrSet1))
         {
             gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_0\n");
             return false;
@@ -168,7 +168,7 @@ bool Renderer1::setup (gos::Allocator *allocator, gos::Engine *engineIN)
 
 
         //descriptor set 2        
-        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->data.pipeHandle, 2, &handle_descrSet2))
+        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->pipeHandle, 2, &handle_descrSet2))
         {
             gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_0\n");
             return false;
@@ -306,10 +306,10 @@ void Renderer1::add (const ENGGPUShape shape, const mat4x4f &m, u32 material_ind
 //**********************************
 void Renderer1::add (const ent::CompModelInstance *comp_mi)
 {
-	const engine::ResModel3dInst *res_mi;
+	const res::Model3dInst *res_mi;
 	if (engine->get (comp_mi->handle_mi, &res_mi))
 	{
-		const gos::ModelInstance *mi = &res_mi->data.minst;
+		const gos::ModelInstance *mi = &res_mi->minst;
 
 		for (u32 i=0; i<mi->num_meshes; i++)
 		{
@@ -345,7 +345,7 @@ void Renderer1::priv_do_render (gpu::RenderCtx &rctx)
     if (0 == nRenderable)
         return;
 
-    const engine::ResPipeline *res_pipeline;
+    const res::Pipeline *res_pipeline;
     if (!engine->get (handle_pipeline, &res_pipeline))
     {
         return;
@@ -380,7 +380,7 @@ void Renderer1::priv_do_render (gpu::RenderCtx &rctx)
 
 
     //command
-    rctx.bindPipeline (res_pipeline->data.pipeHandle)
+    rctx.bindPipeline (res_pipeline->pipeHandle)
         .bindDescriptorSet (handle_descrSet0, 0)
         .bindDescriptorSet (handle_descrSet1, 1)
         .bindDescriptorSet (handle_descrSet2, 2);
@@ -412,7 +412,7 @@ void Renderer1::priv_do_render (gpu::RenderCtx &rctx)
         }
 
 
-        const engine::ResGPUShape *cur_shape_info;
+        const res::GPUShape *cur_shape_info;
         if (engine->get (cur_shape, &cur_shape_info))
         {
             rctx.bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)

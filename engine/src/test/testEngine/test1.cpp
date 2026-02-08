@@ -107,7 +107,7 @@ void Test1::priv_model_setup(gos::ENGGPUShape shape_cube, gos::ENGGPUShape shape
 	}
 
 
-	const engine::ResSkeleton *res_skeleton;
+	const res::Skeleton *res_skeleton;
 	if (engine->get (handle_skeleton, &res_skeleton))
 	{
 		// model::Builder builder;
@@ -117,7 +117,7 @@ void Test1::priv_model_setup(gos::ENGGPUShape shape_cube, gos::ENGGPUShape shape
 		// builder.addMeshToBone (shape_cube, 2, "down-arm");
 		// model = builder.end(allocator);
 
-		skeleton::Reader skr(&res_skeleton->data.skeleton);
+		skeleton::Reader skr(&res_skeleton->skeleton);
 		const u32 bone_index__root = skr.bone_get_index_by_name("root");
 		const u32 bone_index__up_arm = skr.bone_get_index_by_name("up-arm");
 		const u32 bone_index__down_arm = skr.bone_get_index_by_name("down-arm");
@@ -246,21 +246,21 @@ bool Test1::priv_run4 ()
 	gos::ENGTexture	handle_texBianca;
 	gos::ENGTexture	handle_texChecker;
 	engine->texture2D_createFromAsset ("tex_bianca", &handle_texBianca);
-	engine->texture2D_createFromAsset ("tex_checker", &handle_texChecker, engine::eLoadMode::asap);
+	engine->texture2D_createFromAsset ("tex_checker", &handle_texChecker, res::eLoadMode::asap);
 
 	//binding di materiali al renderer
 	{
-		const gos::engine::ResTexture *tex;
+		const gos::res::Texture2d *tex;
 		u32	texture_index__texBianca = u32MAX;
 		u32	texture_index__texChecker = u32MAX;
 
 		if (!engine->get (handle_texBianca, &tex, 5000))
 			return false;
-		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->data.texHandle);
+		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->texHandle);
 
 		if (!engine->get (handle_texChecker, &tex, 5000))
 			return false;
-		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->data.texHandle);
+		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->texHandle);
 
 		renderer->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
 		renderer->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));

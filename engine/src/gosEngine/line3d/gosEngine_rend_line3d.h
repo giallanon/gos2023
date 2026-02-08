@@ -1,6 +1,6 @@
 #ifndef _gosEngine_rend_line3d_h_
 #define _gosEngine_rend_line3d_h_
-#include "../gosEngineRes.h"
+#include "../res/gosEngineRes.h"
 #include "dataTypes/gosColorU32.h"
 
 namespace gos
@@ -143,7 +143,7 @@ namespace gos
 			u32 						num_seg_in_buffer;
 			sState 						state;
 			gpu::RenderCtx 				*rctx;
-			const engine::ResGPUShape 	*res_shape_segmento;
+			const res::GPUShape 		*res_shape_segmento;
 
 
 

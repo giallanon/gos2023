@@ -7,7 +7,7 @@
 void test_res_handle_1()
 {
 	gos::res::Handle h;
-	h.set_invalid();
+	h.setInvalid();
 
 	printf ("MAX_NUM_TYPE = %d\n", gos::res::Handle::MAX_NUM_TYPE);
 	printf ("MAX_NUM_INDEX = %d\n", gos::res::Handle::MAX_NUM_INDEX);
@@ -64,8 +64,8 @@ int main()
 			// engine.release (handle_pippo);
 
 
-            Test1 test;		test.run (&engine);
-            //Game1 game;		game.run (&engine);
+            //Test1 test;		test.run (&engine);
+            Game1 game;		game.run (&engine);
 			//Test_exa1 test;		test.run(&engine);
         }
     }

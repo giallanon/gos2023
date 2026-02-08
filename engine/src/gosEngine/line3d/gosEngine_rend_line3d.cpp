@@ -53,7 +53,7 @@ bool Rend_line3d::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
     gpu = engine->gpu;
 
     //load degli assets
-    if (!engine->pipeline_createFromAsset ("gosengine_line3d", &handle_pipeline, engine::eLoadMode::asap))
+    if (!engine->pipeline_createFromAsset ("gosengine_line3d", &handle_pipeline, res::eLoadMode::asap))
         return false;    
 
     //creo la shape del singolo segmento
@@ -126,14 +126,14 @@ bool Rend_line3d::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
 
 
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
-    const engine::ResPipeline *res_pipeline;
+    const res::Pipeline *res_pipeline;
     if (engine->get (handle_pipeline, &res_pipeline, 5000))
     {
         //alloco una istanza dei descriptor-set
         gos::gpu::DescrSetInstanceWriter dsw;
 
         //descriptor set 0
-        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->data.pipeHandle, 0, &handle_descrSet0))
+        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->pipeHandle, 0, &handle_descrSet0))
         {
             gos::logger::err ("Rend_line3d::setup() => can't create an instance of descriptorSet_0\n");
             return false;
@@ -147,7 +147,7 @@ bool Rend_line3d::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
         
 
         //descriptor set 1
-        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->data.pipeHandle, 1, &handle_descrSet1))
+        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->pipeHandle, 1, &handle_descrSet1))
         {
             gos::logger::err ("Rend_line3d::setup() => can't create an instance of descriptorSet_0\n");
             return false;
@@ -174,7 +174,7 @@ void Rend_line3d::begin (gos::geom::Camera3 *cam, gpu::RenderCtx *rctxIN)
         return;
     }
 
-    const engine::ResPipeline *res_pipeline;
+    const res::Pipeline *res_pipeline;
     if (!engine->get (handle_pipeline, &res_pipeline))
         return;
 
@@ -197,7 +197,7 @@ void Rend_line3d::begin (gos::geom::Camera3 *cam, gpu::RenderCtx *rctxIN)
 
 
     (*rctx)
-		.bindPipeline (res_pipeline->data.pipeHandle)
+		.bindPipeline (res_pipeline->pipeHandle)
 		.bindDescriptorSet (handle_descrSet0, 0)
 		.bindDescriptorSet (handle_descrSet1, 1)
         .bindVtxIdxBuffer (res_shape_segmento->vbHandle, 0, res_shape_segmento->ibHandle, 0);

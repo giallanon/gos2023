@@ -12,17 +12,18 @@ namespace gos
             class Loader_pipeline : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *res_dataIN)
+                bool    load (LoaderInfo &loaderInfo, void *resIN)
                 {
-                    ResPipeline *res_data = static_cast<ResPipeline*>(res_dataIN);
-                    gos::GPU *gpu = loaderInfo.gpu;
-					Engine *eng = loaderInfo.engine;
+                    res::Pipeline *res = static_cast<res::Pipeline*>(resIN);
+                    gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
+					gos::GPU *gpu = loaderInfo.gpu;
+					Engine *engine = loaderInfo.engine;
 
                     char s[1024];
-                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, uid, s, sizeof(s));
+                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
 
                     u32 fsize;
-                    u8 *buffer = fs::fileLoadInMemory (gos::getScrapAllocator(), s, &fsize);
+                    u8 *buffer = fs::fileLoadInMemory (thread_allocator, s, &fsize);
                     if (NULL == buffer)
                     {
                         logger::err ("Loader_pipeline::load() => file not found %s\n", s);
@@ -51,29 +52,26 @@ namespace gos
                         asset2::UID uid;
                         uid._uid = reader.readU64 ();
                         {
-                            ENGVtxShader handle_vtxShader;
-                            ResShader *res;
-							if (!eng->internal__from_asset_to_raw_data (uid, &handle_vtxShader, &res))
+							const res::Shader *shader;
+							if (!engine->internal__getResFromUID(uid, &shader))
                             {
                                 logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => unable to match vtx_shader %016" PRIX64 " with raw data\n");
                                 break;
-                            }
-                            
-                            def.shader_add (res->data.shaderHandle);
+                            }                            
+                            def.shader_add (shader->shaderHandle);
                         }
                         
 
                         //uid pxl shader
                         uid._uid = reader.readU64 ();
                         {
-                            ENGPxlShader handle_pxlShader;
-                            ResShader *res;
-                            if (!eng->internal__from_asset_to_raw_data (uid, &handle_pxlShader, &res))
+							const res::Shader *shader;
+							if (!engine->internal__getResFromUID(uid, &shader))
                             {
                                 logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => unable to match pxl_shader %016" PRIX64 " with raw data\n");
                                 break;
-                            }
-                            def.shader_add (res->data.shaderHandle);
+                            }                            
+                            def.shader_add (shader->shaderHandle);
                         }
 
                         //cull/draw
@@ -173,7 +171,7 @@ namespace gos
                         }        
 
                         //creo la pipe
-                        if (!gpu->pipeline_createNew (def, &res_data->data.pipeHandle))
+                        if (!gpu->pipeline_createNew (def, &res->pipeHandle))
                             break;
 
 
@@ -182,7 +180,7 @@ namespace gos
                         ret = true;
                         break;
                     }
-                    GOSFREE_SCRAP(buffer);
+                    GOSFREE(thread_allocator, buffer);
 
                     return ret;        
                 }

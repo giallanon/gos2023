@@ -81,7 +81,7 @@ namespace gos
         };
 
     private:
-        void*			virt_do_alloc (size_t sizeIN, u8 alignPowerOfTwo)
+        void*			virt_do_alloc (size_t sizeIN, u8 alignPowerOfTwo, UNUSED_PARAM(const char *debug_filename))
                         {
                             thread.lock();
                             if (align==0)

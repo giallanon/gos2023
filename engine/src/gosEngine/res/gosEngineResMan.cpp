@@ -50,7 +50,7 @@ void* Manager::raw_reserve (res::eType type, Handle *out_handle)
 //*******************************
 void Manager::raw_release (Handle handle)
 {
-	if (handle.is_invalid())
+	if (handle.isInvalid())
 		return;
 	
 	const u8 index = handle.get_value_TYPE();
@@ -62,7 +62,7 @@ void Manager::raw_release (Handle handle)
 //*******************************
 void* Manager::raw_get_data (Handle handle)
 {
-	if (handle.is_invalid())
+	if (handle.isInvalid())
 		return NULL;
 	
 	const u8 index = handle.get_value_TYPE();

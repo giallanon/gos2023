@@ -46,7 +46,8 @@ model/gosModel.h
 model/gosModelInstance.h
 model/gosModelReader.cpp
 
-res/gosEngineRes2.h
+res/gosEngineRes.cpp
+res/gosEngineRes.h
 res/gosEngineResEnumAndDefine.h
 res/gosEngineResList.cpp
 res/gosEngineResList.h
@@ -63,13 +64,11 @@ gosEngine_renderer.cpp
 gosEngine_renderer.h
 gosEngine_scene.cpp
 gosEngine_scene.h
-gosEngine_utils.cpp
 gosEngine_vtxBufferMan.cpp
 gosEngine_vtxBufferMan.h
 gosEngine.cpp
 gosEngine.h
 gosEngineEnumAndDefine.h
-gosEngineRes.h
 )
 
 #====================================================

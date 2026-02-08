@@ -151,7 +151,7 @@ void* List::priv_do_reserve_from_page (u32 page_index, Handle *out_handle)
 //***********************************
 void List::release (Handle handle)
 {
-	if (handle.is_invalid())
+	if (handle.isInvalid())
 		return;
 
 	const u32 index = handle.get_value_INDEX();
@@ -180,7 +180,7 @@ void List::release (Handle handle)
 //***********************************
 void* List::get_data (Handle handle)
 {
-	if (handle.is_invalid())
+	if (handle.isInvalid())
 		return NULL;
 
 	const u32 index = handle.get_value_INDEX();

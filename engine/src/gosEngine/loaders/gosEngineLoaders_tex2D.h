@@ -12,14 +12,14 @@ namespace gos
             class Loader_tex2D : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *res_dataIN)
+                bool    load (LoaderInfo &loaderInfo, void *resIN)
                 {
-                    ResTexture *res_data = static_cast<ResTexture*>(res_dataIN);
+                    res::Texture2d *res = static_cast<res::Texture2d*>(resIN);
                     gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
                     gos::GPU *gpu = loaderInfo.gpu;
 
                     char s[1024];
-                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, uid, s, sizeof(s));
+                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
 
                     gos::Image image;
                     if (!image::load (thread_allocator, s, &image))
@@ -28,7 +28,7 @@ namespace gos
                         return false;
                     }
                     
-                    const bool ret = gpu->texture_create2D (&image, 0, eMemAccessMode::onGPU, &res_data->data.texHandle, loaderInfo.stageHelper);
+                    const bool ret = gpu->texture_create2D (&image, 0, eMemAccessMode::onGPU, &res->texHandle, loaderInfo.stageHelper);
                     image::free (thread_allocator, image);
 
                     return ret;           

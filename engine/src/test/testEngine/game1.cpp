@@ -199,12 +199,12 @@ void Game1::doCPUStuff ()
 bool Game1::priv_loadAssets()
 {
 	engine->texture2D_createFromAsset ("tex_bianca", &handle_texBianca);
-	engine->texture2D_createFromAsset ("tex_checker", &handle_texChecker, engine::eLoadMode::asap);
+	engine->texture2D_createFromAsset ("tex_checker", &handle_texChecker, res::eLoadMode::asap);
 
 
 	//binding di materiali al renderer
 	{
-		const gos::engine::ResTexture *tex;
+		const gos::res::Texture2d *tex;
 		u32	texture_index__texBianca = u32MAX;
 		u32	texture_index__texChecker = u32MAX;
 
@@ -214,14 +214,14 @@ bool Game1::priv_loadAssets()
 			DBGBREAK;
 			return false;
 		}
-		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->data.texHandle);
+		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->texHandle);
 
 		if (!engine->get (handle_texChecker, &tex, 5000))
 		{
 			DBGBREAK;
 			return false;
 		}
-		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->data.texHandle);
+		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->texHandle);
 
 		material_indices[0] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
 		material_indices[1] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 0.0f, 0.0f));
@@ -305,7 +305,7 @@ void Game1::priv_createModel_mainPlayer()
 	}    
 
 	//model_player
-	const engine::ResSkeleton *res_skeleton;
+	const res::Skeleton *res_skeleton;
 	if (engine->get (handle_skeleton1, &res_skeleton))
 	{
 		// model::Builder builder;
@@ -315,7 +315,7 @@ void Game1::priv_createModel_mainPlayer()
 		// builder.addMeshToBone (handle_gpushape_cube, material_indices[2], "coso-rotante");
 		// model_player = builder.end (allocator);
 
-		skeleton::Reader skr(&res_skeleton->data.skeleton);
+		skeleton::Reader skr(&res_skeleton->skeleton);
 		const u32 bone_index__piedi = skr.bone_get_index_by_name("piedi");
 		const u32 bone_index__occhi = skr.bone_get_index_by_name("occhi");
 		const u32 bone_index__coso_rotante = skr.bone_get_index_by_name("coso-rotante");
@@ -357,7 +357,7 @@ void Game1::priv_createModel_pavimento()
 	}    
 
 	//model_player
-	const engine::ResSkeleton *res_skeleton;
+	const res::Skeleton *res_skeleton;
 	if (engine->get (handle_skeleton2, &res_skeleton))
 	{
 		// model::Builder builder;
@@ -365,7 +365,7 @@ void Game1::priv_createModel_pavimento()
 		// builder.addMeshToBone (handle_gpushape_cube, material_indices[3], "piedi");
 		// model_pavimento = builder.end (allocator);
 
-		skeleton::Reader skr(&res_skeleton->data.skeleton);
+		skeleton::Reader skr(&res_skeleton->skeleton);
 		const u32 bone_index__piedi = skr.bone_get_index_by_name("piedi");
 
 		const u32 material_0 = material_indices[3];
@@ -456,9 +456,9 @@ void Game1::priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir)
 //***************************************
 void Game1::priv_loop ()
 {
-	engine->model_createFromAsset ("model_albero", &handle_model_albero, engine::eLoadMode::asap);
+	engine->model_createFromAsset ("model_albero", &handle_model_albero, res::eLoadMode::asap);
 
-	const engine::ResModel3d *res_model_albero;
+	const res::Model3d *res_model_albero;
 	engine->get (handle_model_albero, &res_model_albero, 4000);
 
 

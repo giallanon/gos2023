@@ -3,7 +3,6 @@
 #include "../../gosAsset2/gosAsset2.h"
 #include "../../gos/gosBufferReader.h"
 #include "../../gos/gosDataBlob.h"
-#include "../gosEngineRes.h"
 #include "../gosGPU/GOSGPUStageHelper.h"
 
 namespace gos
@@ -33,7 +32,7 @@ namespace gos
             public:
                                 BaseLoader()        { } 
                 virtual         ~BaseLoader()       { }
-                virtual bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *res_data) = 0;
+                virtual bool    load (LoaderInfo &loaderInfo, void *res) = 0;
             };
         } //namespace loaders
     } //namespace engine

@@ -12,17 +12,27 @@ namespace gos
             class Loader_vtxShader : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *res_dataIN)
+                bool    load (LoaderInfo &loaderInfo,void *resIN)
                 {
-                    ResShader *res_data = static_cast<ResShader*>(res_dataIN);
+                    res::Shader *res = static_cast<res::Shader*>(resIN);
+					gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
                     gos::GPU *gpu = loaderInfo.gpu;
 
                     char s[1024];
-                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, uid, s, sizeof(s));
-                    if (!gpu->vtxshader_createFromFile (s, "main", &res_data->data.shaderHandle))
-                        return false;
+                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
 
-                    return true;
+                    u32 fsize;
+                    u8 *buffer = fs::fileLoadInMemory (thread_allocator, s, &fsize);
+                    if (NULL == buffer)
+                    {
+                        logger::err ("Loader_vtxShader::load() => file not found %s\n", s);
+                        return false;
+                    }
+
+                    const bool ret = gpu->vtxshader_createFromMemory (buffer, fsize, "main", &res->shaderHandle);
+                    GOSFREE(thread_allocator, buffer);
+
+                    return ret;
                 }
             };
 
@@ -31,17 +41,27 @@ namespace gos
             class Loader_pxlShader : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *res_dataIN)
+                bool    load (LoaderInfo &loaderInfo, void *resIN)
                 {
-                    ResShader *res_data = static_cast<ResShader*>(res_dataIN);
+                    res::Shader *res = static_cast<res::Shader*>(resIN);
+					gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
                     gos::GPU *gpu = loaderInfo.gpu;
 
                     char s[1024];
-                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, uid, s, sizeof(s));
-                    if (!gpu->pxlshader_createFromFile (s, "main", &res_data->data.shaderHandle))
+                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
+                    
+					u32 fsize;
+                    u8 *buffer = fs::fileLoadInMemory (thread_allocator, s, &fsize);
+                    if (NULL == buffer)
+                    {
+                        logger::err ("Loader_pxlShader::load() => file not found %s\n", s);
                         return false;
+                    }
 
-                    return true;
+                    const bool ret = gpu->pxlshader_createFromMemory (buffer, fsize, "main", &res->shaderHandle);
+                    GOSFREE(thread_allocator, buffer);
+
+                    return ret;
 
                 }
             };

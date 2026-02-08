@@ -60,6 +60,7 @@ memory/gosAllocatorFixedHeap.h
 memory/gosAllocatorHeap.h
 memory/gosAllocatorPolicy_Thread.h
 memory/gosAllocatorPolicy_Track.h
+memory/gosAllocatorPolicy_TrackHard.cpp
 memory/gosMemory.h
 memory/gosMemory.cpp
 

@@ -13,13 +13,13 @@ namespace gos
             class Loader_shape : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *res_dataIN)
+                bool    load (LoaderInfo &loaderInfo, void *resIN)
                 {
-                    ResShape *res_data = static_cast<ResShape*>(res_dataIN);
+                    res::Shape *res = static_cast<res::Shape*>(resIN);
 					gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
 
                     char s[1024];
-                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, uid, s, sizeof(s));
+                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
 
                     u32 fsize;
                     u8 *buffer = fs::fileLoadInMemory (thread_allocator, s, &fsize);
@@ -29,7 +29,7 @@ namespace gos
                         return false;
                     }
 
-					if (!shape::deserialize (buffer, fsize, loaderInfo.engine_allocator, &res_data->data.shape))
+					if (!shape::deserialize (buffer, fsize, loaderInfo.engine_allocator, &res->shape))
                     {
 						GOSFREE(thread_allocator, buffer);
                         logger::err ("Loader_shape::load() => error creating shape from %s\n", s);

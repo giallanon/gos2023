@@ -5,6 +5,7 @@
 u16 gos::Allocator::allocatorID = 1;
 
 typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Safe>		GOSMemGlobalHeapAllocatorTS;
+//typedef gos::AllocatorHeap<gos::AllocPolicy_Track_hard, gos::AllocPolicy_Thread_Safe>		GOSMemGlobalHeapAllocatorTS;
 static GOSMemGlobalHeapAllocatorTS	*systemHeapAllocator = NULL;
 static GOSMemGlobalHeapAllocatorTS	*systemScrapAllocator = NULL;
 

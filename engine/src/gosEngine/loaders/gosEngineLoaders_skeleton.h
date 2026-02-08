@@ -13,13 +13,13 @@ namespace gos
             class Loader_skeleton : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, asset2::UID uid, void *res_dataIN)
+                bool    load (LoaderInfo &loaderInfo, void *resIN)
                 {
-                    ResSkeleton *res_data = static_cast<ResSkeleton*>(res_dataIN);
+                    res::Skeleton *res = static_cast<res::Skeleton*>(resIN);
 					gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
 
                     char s[1024];
-                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, uid, s, sizeof(s));
+                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
 
                     u32 fsize;
                     u8 *buffer = fs::fileLoadInMemory (thread_allocator, s, &fsize);
@@ -29,7 +29,7 @@ namespace gos
                         return false;
                     }
 
-					u32 n = skeleton::deserialize (buffer, fsize, loaderInfo.engine_allocator, &res_data->data.skeleton);
+					u32 n = skeleton::deserialize (buffer, fsize, loaderInfo.engine_allocator, &res->skeleton);
                     GOSFREE(thread_allocator, buffer);
 
 					if (0 == n)

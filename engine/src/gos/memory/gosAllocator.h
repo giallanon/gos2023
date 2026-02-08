@@ -30,11 +30,11 @@ namespace gos
         //invece con GOSFREE
         static constexpr u8	DEBUG_HEADER_SIZE = 8;
 
-        void*				alloc (size_t sizeInBytes, u8 alignPowerOfTwo, UNUSED_PARAM(const char *debug_filename), u32 debug_lineNumber, bool debug_bPlacementNew)					
+        void*				alloc (size_t sizeInBytes, u8 alignPowerOfTwo, const char *debug_filename, u32 debug_lineNumber, bool debug_bPlacementNew)					
                             { 
                                 assert(GOS_IS_POWER_OF_TWO(alignPowerOfTwo));
                                 sizeInBytes += DEBUG_HEADER_SIZE;
-                                void *ret = virt_do_alloc(sizeInBytes, alignPowerOfTwo);
+                                void *ret = virt_do_alloc(sizeInBytes, alignPowerOfTwo, debug_filename);
                                 if (ret)
                                     memset(ret, 0xCA, sizeInBytes);
 
@@ -79,7 +79,7 @@ namespace gos
                             }
 
 #else
-        void*				alloc (size_t sizeInBytes, u8 alignPowerOfTwo)      { return virt_do_alloc(sizeInBytes, alignPowerOfTwo); }									
+        void*				alloc (size_t sizeInBytes, u8 alignPowerOfTwo)      { return virt_do_alloc(sizeInBytes, alignPowerOfTwo, NULL); }									
         void				dealloc (void *p)                                   { virt_do_dealloc(p); }
 
 #endif
@@ -92,7 +92,7 @@ namespace gos
 
 
     protected:
-        virtual void*		virt_do_alloc (size_t sizeInBytes, u8 alignPowerOfTwo) = 0;
+        virtual void*		virt_do_alloc (size_t sizeInBytes, u8 alignPowerOfTwo, const char *debug_filename) = 0;
         virtual void		virt_do_dealloc (void *p) = 0;
 
     private:

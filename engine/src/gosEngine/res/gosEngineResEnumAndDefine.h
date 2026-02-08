@@ -7,6 +7,7 @@ namespace gos
 {
 	class Engine; //fwd
 
+	typedef void (Engine::*FN_afterCreate)(void *res);
 	typedef void (Engine::*FN_destroy)(void *res);
 
 
@@ -81,21 +82,21 @@ namespace gos
 			typedef HandleT<A, B, C, D> ThisHandle;
 
 		public:
-			static ThisHandle			INVALID()				{ static ThisHandle hINVALID; hINVALID.set_invalid(); return hINVALID; }
+			static ThisHandle			INVALID()				{ static ThisHandle hINVALID; hINVALID.setInvalid(); return hINVALID; }
 
 		public:
-						HandleT()								{ set_invalid(); }
+						HandleT()								{ setInvalid(); }
 
 			bool		operator== (const ThisHandle b) const  	{ return (id == b.id); }
 			bool		operator!= (const ThisHandle b) const  	{ return (id != b.id); }
 			int			compare (const ThisHandle b) const 		{ if (id==b.id) return 0; if (id>b.id) return 1; return -1; }
 						
-			void		set_invalid()							{ id = u32MAX; }
-			bool		is_invalid() const						{ return (id == u32MAX); }
-			bool		is_valid() const						{ return (id != u32MAX); }
+			void		setInvalid()							{ id = u32MAX; }
+			bool		isInvalid() const						{ return (id == u32MAX); }
+			bool		isValid() const							{ return (id != u32MAX); }
 
-			void		set_fromU32 (u32 u)						{ id = u; }
-			u32			view_as_U32() const						{ return id; }
+			void		setFromU32 (u32 u)						{ id = u; }
+			u32			viewAsU32() const						{ return id; }
 
 			u32			get_value_TYPE() const					{ return ((id & MASK_0) >> MASKSHIFT_0); }
 			u32			get_value_COUNTER() const				{ return ((id & MASK_1) >> MASKSHIFT_1); }
@@ -114,11 +115,12 @@ namespace gos
 
 		typedef struct HandleT<8,6,5,13> Handle;	//2^13=8192 risorse per pagina, 2^5=32 pagine, counter=2^6
 
-
+		
+		struct Descr; //fwd
 
 		struct HandleChain
 		{
-			Handle		handle;
+			Descr		*res;
 			HandleChain	*next;
 		};
 
@@ -130,10 +132,11 @@ namespace gos
 		struct Descr
 		{
 		public:
-			void 	reset()			{ uid.setInvalid(); status=eStatus::error; refCount = 0; figli=padri=NULL; on_destroy=NULL; }
+			void 	reset()			{ uid.setInvalid(); status=eStatus::error; refCount = 0; figli=padri=NULL; on_afterCreate=NULL; on_destroy=NULL; }
 
 		public:
 			asset2::UID			uid;		//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
+			Handle				handle;
 			res::eStatus		status;		//stato della risorsa dal punto di vista dell'engine
 			u8					_pad0;
 			u8					_pad1;
@@ -143,8 +146,15 @@ namespace gos
 			HandleChain			*figli;		//lista di handle che sono figli miei
 			HandleChain			*padri;		//lista di handle di cui io sono figlio (che vengono notificati ogni volta che io cambio di stato)
 
+			FN_afterCreate		on_afterCreate;
 			FN_destroy			on_destroy;
 		};
+
+
+
+		const char* 	enumToString (res::eLoadMode s);
+		const char* 	enumToString (res::eType s);
+		const char* 	enumToString (res::eStatus s);
 
 	} //namespace res
 } //namespace gos

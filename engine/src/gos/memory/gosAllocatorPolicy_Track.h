@@ -12,11 +12,11 @@ namespace gos
     class AllocPolicy_Track_none
     {
     public:
-                    AllocPolicy_Track_none (UNUSED_PARAM(const char *nameIN))                       { }
-        void        printReport (UNUSED_PARAM(u64 totMemoryReserved))                               { }
-        bool		anyMemLeaks()                                                                   { return false; }
-        void		onAlloc (UNUSED_PARAM(const void *p), UNUSED_PARAM(size_t size))                { }
-        void		onDealloc (UNUSED_PARAM(const void *p), UNUSED_PARAM(size_t size))              { }
+                    AllocPolicy_Track_none (UNUSED_PARAM(const char *nameIN))                       							{ }
+        void        printReport (UNUSED_PARAM(u64 totMemoryReserved))                               							{ }
+        bool		anyMemLeaks() const                                                                							{ return false; }
+        void		onAlloc (UNUSED_PARAM(const void *p), UNUSED_PARAM(size_t size), UNUSED_PARAM(const char *debug_filename))	{ }
+        void		onDealloc (UNUSED_PARAM(const void *p), UNUSED_PARAM(size_t size))              							{ }
     };
 
 
@@ -39,15 +39,12 @@ namespace gos
                             char sMaxUsed[16];
                             gos::string::format::memoryToKB_MB_GB (maxMemalloc, sMaxUsed, sizeof(sMaxUsed));
 
-                            gos::logger::log (eTextColor::blue, "AllocatorTrakSimple: final report for [%s] => max mem allocated: %s/%s, num tot allocation: %d\n", allocatorName, sMaxUsed, sTotAllocated, nTotAlloc);
+                            gos::logger::log (eTextColor::blue, "AllocatorTrackSimple: final report for [%s] => max mem allocated: %s/%s, num tot allocation: %d\n", allocatorName, sMaxUsed, sTotAllocated, nTotAlloc);
         }
 
-        bool			anyMemLeaks()
-                        {
-                            return !(nCurAlloc==0 && curMemalloc==0); 
-                        }
+        bool			anyMemLeaks() const						{ return !(nCurAlloc==0 && curMemalloc==0); }
 
-        void			onAlloc (UNUSED_PARAM(const void *p), size_t size)
+        void			onAlloc (UNUSED_PARAM(const void *p), size_t size, UNUSED_PARAM(const char *debug_filename))
                         {
                             ++nCurAlloc;
                             ++nTotAlloc;
@@ -73,7 +70,30 @@ namespace gos
         u32				nTotAlloc;          //numero totale di volte che e' stata richiesta una allocazione
         u64				curMemalloc;        //memoria allocata al momento
         u64				maxMemalloc;        //massimo picco della memoria allocata
-    };    
+    };
+
+
+    /***********************************************************************
+     * AllocPolicy_Track_hard
+     */
+    class AllocPolicy_Track_hard
+    {
+    public:
+                        AllocPolicy_Track_hard (const char *nameIN);
+
+        void            printReport (u64 totMemoryReserved);
+        bool			anyMemLeaks() const			{ return !(nCurAlloc==0 && curMemalloc==0); }
+
+        void			onAlloc (const void *p, size_t size, const char *debug_filename);
+        void			onDealloc (const void *p, size_t size);
+
+    public:
+        const char*     allocatorName;
+        u32				nCurAlloc;          //numero di allocazioni vive al momento
+        u32				nTotAlloc;          //numero totale di volte che e' stata richiesta una allocazione
+        u64				curMemalloc;        //memoria allocata al momento
+        u64				maxMemalloc;        //massimo picco della memoria allocata
+    };
 } //namespace gos
 
 #endif //_gosAllocatorPolicy_Track_h_

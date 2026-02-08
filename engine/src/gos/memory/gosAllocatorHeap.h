@@ -61,13 +61,13 @@ namespace gos
 
 
     private:
-        void*			virt_do_alloc (size_t sizeInBytes, u8 align)
+        void*			virt_do_alloc (size_t sizeInBytes, u8 align, const char *debug_filename)
                         {
                             assert (NULL != ms);
                             thread.lock();
                             void *ret = mspace_memalign (ms, align, sizeInBytes);
                             assert (ret);
-                            track.onAlloc (ret, getAllocatedSize(ret));
+                            track.onAlloc (ret, getAllocatedSize(ret), debug_filename);
                             thread.unlock();
                             return ret;
                         }

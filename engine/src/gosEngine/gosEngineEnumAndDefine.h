@@ -5,82 +5,44 @@
 #include "../gosInput/gosInput.h"
 #include "../gosAsset2/gosAsset2EnumAndDefine.h"
 #include "../gosAsset2/gosAsset2Hub.h"
+#include "../gosGeom/gosGeomCamera3.h"
 #include "../gosShape/gosShape.h"
 #include "../gosShape/skeleton/gosSkeleton.h"
-#include "../gosGeom/gosGeomCamera3.h"
+#include "res/gosEngineResEnumAndDefine.h"
+
+
+#define GOS_DECL_RES_HANDLE(HANDLE_TYPE)\
+struct HANDLE_TYPE\
+{\
+	gos::res::Handle res_handle;\
+\
+	void	setInvalid()							{ res_handle.setInvalid(); }\
+	bool	isInvalid() const						{ return res_handle.isInvalid(); }\
+	bool	isValid() const							{ return res_handle.isValid(); }\
+\
+	int		compare (const HANDLE_TYPE b) const		{ return res_handle.compare(b.res_handle); }\
+	bool	operator== (const HANDLE_TYPE b) const	{ return (res_handle == b.res_handle); }\
+	bool	operator!= (const HANDLE_TYPE b) const	{ return (res_handle != b.res_handle); }\
+\
+	void	setFromU32 (u32 u)						{ res_handle.setFromU32(u); }\
+	u32		viewAsU32() const						{ return res_handle.viewAsU32(); }\
+};\
 
 
 namespace gos
 {
-	//A per "num max di handle", B per "num di chunk", C per "counter"
-	//GOS_DECL_HANDLE(1024, 128, ENGVtxBuffer);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-	//GOS_DECL_HANDLE(1024, 128, ENGIdxBuffer);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-	GOS_DECL_HANDLE(65536, 1024, ENGTexture);			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^10=1024
-	GOS_DECL_HANDLE(65536, 4096, ENGShape);				//2^16=65536 => num totale di oggetti, divisi in chunk da 2^12=4096
-	GOS_DECL_HANDLE(65536, 4096, ENGGPUShape);			//2^16=65536 => num totale di oggetti, divisi in chunk da 2^12=4096
-	GOS_DECL_HANDLE(1024, 128, ENGPipeline);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^7=128
-	//GOS_DECL_HANDLE(1024, 256, ENGVtxShader);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-	//GOS_DECL_HANDLE(1024, 256, ENGPxlShader);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-	GOS_DECL_HANDLE(1024, 256, ENGSkeleton);			//2^10=1024 => num totale di oggetti, divisi in chunk da 2^8=256
-	GOS_DECL_HANDLE(32768, 4096, ENGModel3d);			//32768 => num totale di oggetti, divisi in chunk da 2^12=4096
-	GOS_DECL_HANDLE(65536, 4096, ENGModel3dInst);		//2^16=65536 => num totale di oggetti, divisi in chunk da 2^12=4096
+	GOS_DECL_RES_HANDLE(ENGVtxBuffer);
+	GOS_DECL_RES_HANDLE(ENGIdxBuffer);
+	GOS_DECL_RES_HANDLE(ENGVtxShader);
+	GOS_DECL_RES_HANDLE(ENGPxlShader);
+	GOS_DECL_RES_HANDLE(ENGPipeline);
+	GOS_DECL_RES_HANDLE(ENGTexture);
+	GOS_DECL_RES_HANDLE(ENGShape);
+	GOS_DECL_RES_HANDLE(ENGGPUShape);
+	GOS_DECL_RES_HANDLE(ENGSkeleton);
+	GOS_DECL_RES_HANDLE(ENGModel3d);
+	GOS_DECL_RES_HANDLE(ENGModel3dInst);
 	
-	
-	namespace engine
-	{
-		enum class eLoadMode : u8
-		{
-			asap = 0,
-			onDemand = 1
-		};
-
-		enum class eResStatus : u8
-		{
-			ready		= 0,
-			notLoaded	= 1,		//esiste nell'engine ma non e' stata ancora caricata
-			loading		= 2,		//esiste nell'engine e' ed in fase di caricamente
-			unloading	= 3,		//esiste nell'engine ma la risorsa sta per essere deallocata
-			error 		= 0xff		//errore fatale. Esiste nell'engine ma probabilmente il loader non e' riuscito a caricarla, questo asset e' spacciato per sempre
-		};
-		
-
-		struct Resource; //fwd
-
-		typedef void (*ResCallback_onSubresStateChanged)(Resource *res, const Resource *subres);
-		
-		struct ResourceList
-		{
-			ResourceList	*next;
-			Resource		*brh;
-		};
-
-
-		struct Resource
-		{
-		public:
-			void reset()			{ refCount = 0; uid.setInvalid(); status=eResStatus::error; deplist=figli=NULL; callback_onSubresStateChanged=NULL; }
-			bool isReady() const	{ return status==eResStatus::ready; }
-			bool isError() const	{ return status==eResStatus::error; }
-
-		public:
-			asset2::UID			uid;			//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
-			eResStatus			status;			//stato della risorsa dal punto di vista dell'engine
-			u8					_pad0;
-			u8					_pad1;
-			u8					_pad2;
-			i32					refCount;
-			ResourceList		*figli;			//elenco delle subresource da cui dipendo
-			ResourceList		*deplist;		//elenco delle risorse che dipendono da me (vengono notificati dei miei cambi di stato)
-
-			ResCallback_onSubresStateChanged	*callback_onSubresStateChanged;
-		};
-
-		
-
-		const char*		enumToString (engine::eLoadMode s);
-
-	} //namespace engine
-
 } //namespace gos
 
 

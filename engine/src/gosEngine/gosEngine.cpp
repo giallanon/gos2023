@@ -5,6 +5,7 @@
 using namespace gos;
 
 typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Safe>		GOSENGINEMemAllocatorTS;
+//typedef gos::AllocatorHeap<gos::AllocPolicy_Track_hard, gos::AllocPolicy_Thread_Safe>		GOSENGINEMemAllocatorTS;
 
 #define GOS_ENGINE__ASSET_HUB_PATH "@w/assets"
 
@@ -16,7 +17,6 @@ Engine::Engine()
     inputCtx = NULL;
     bQuitEngine = false;
     asset_logger = NULL;
-    memset (resHandler_list, 0, sizeof(resHandler_list));
 }
 
 //******************************** 
@@ -40,14 +40,7 @@ void Engine::unsetup()
 
     
     //handle lists
-    handleList_GPUShape.unsetup();
-	handleList_model3dInst.unsetup();
 	map_of_shape_to_gpushape.unsetup();
-    resHandler_texture.unsetup();
-    resHandler_pipeline.unsetup();
-    resHandler_shape.unsetup();
-	resHandler_skeleton.unsetup();
-	resHandler_model3d.unsetup();
 
     asset2::dbcontext_close (asset_ctx);
 
@@ -63,8 +56,6 @@ void Engine::unsetup()
 
     gos::input::window_destroy (mainWin);
     gos::input::deinit();
-
-    priv_resList_unsetup();
 
     GOSDELETE(allocator, asset_logger);
 
@@ -104,12 +95,12 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     engAllocator->setup (1024 * 1024 * 128); //128MB
     this->allocator = engAllocator;
 
-    priv_resList_setup();
 
     //asset
     {
         gos::LoggerStdout *ll = GOSNEW(allocator,gos::LoggerStdout)();
         ll->enableStdouLogging();
+		ll->enableFileLogging("@w/log_res");
         asset_logger = ll;
         if (!asset2::dbcontext_open (GOS_ENGINE__ASSET_HUB_PATH, true, &asset_ctx))
         {
@@ -191,16 +182,15 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 	resManager.addResType<res::IdxBuffer> (res::eType::idx_buffer, 1024, 128);
 	resManager.addResType<res::Shader>	  (res::eType::vtx_shader, 1024, 256);
 	resManager.addResType<res::Shader>	  (res::eType::pxl_shader, 1024, 256);
+	resManager.addResType<res::Pipeline>  (res::eType::pipeline, 1024, 128);
+	resManager.addResType<res::Texture2d> (res::eType::texture_2d, 65536, 4096);
+	resManager.addResType<res::Shape> 	  (res::eType::shape, 65536, 4096);
+	resManager.addResType<res::GPUShape>  (res::eType::gpu_shape, 65536, 4096);
+	resManager.addResType<res::Skeleton>  (res::eType::skeleton, 1024, 256);
+	resManager.addResType<res::Model3d>   (res::eType::model_3d, 32768, 4096);
+	resManager.addResType<res::Model3dInst> (res::eType::model_instance, 65536, 4096);
 
-
-    handleList_GPUShape.setup (allocator);
-	handleList_model3dInst.setup (allocator);
 	map_of_shape_to_gpushape.setup (allocator, 8192);
-    priv_setup_resource_handler(eAssetType::tex2D,      &resHandler_texture);
-    priv_setup_resource_handler(eAssetType::pipe,       &resHandler_pipeline);
-    priv_setup_resource_handler(eAssetType::shape,      &resHandler_shape);
-	priv_setup_resource_handler(eAssetType::skeleton,	&resHandler_skeleton);
-	priv_setup_resource_handler(eAssetType::model3d,	&resHandler_model3d);
     
     //resource manager
     vtxBufferMan.setup (allocator, gpu);
@@ -267,22 +257,14 @@ void Engine::priv_flushLoaderThreadMsg()
             {
                 const bool bLoadOK = (MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK == loaderMsgList[i].what);
 
-                asset2::UID uid;
-                uid._uid = loaderMsgList[i].paramU64;
-                void *res = loaderMsgList[i].buffer;
-
+                res::Descr *res = (res::Descr*)loaderMsgList[i].buffer;
                 if (bLoadOK)
-                    asset_logger->log (eTextColor::darkGreen, "asset::  [%s] %016" PRIX64 " loaded\n", asset2::enumToString(uid.getAssetType()), uid._uid);
+                    res->status = res::eStatus::ready;
                 else
-                    asset_logger->log (eTextColor::red, "asset::  [%s] %016" PRIX64 " FAILED to load\n", asset2::enumToString(uid.getAssetType()), uid._uid);
+                    res->status = res::eStatus::error;
 
-
-                engine::Resource *brh = static_cast<engine::Resource*>(res);
-                if (bLoadOK)
-                    brh->status = engine::eResStatus::ready;
-                else
-                    brh->status = engine::eResStatus::error;
-
+				//chi ha chiamato il load, ha anche incrementato il refCount..ora lo decremoento
+				res_release(res);
 
 				//informo tutti quelli che dipendono da questa risorsa del suo cambio di stato
 				// engine::ResHandleDepList *p = brh->deplist;
@@ -371,62 +353,7 @@ bool Engine::asset_build()
 
 }
 
-//*****************************************
-bool Engine::asset_bind (asset2::UID uid, engine::Resource *resPadre, u32 handle_asU32)
-{
-    if (listof_knownUID.insertIfNotExists (uid, handle_asU32))
-    {
-        asset_logger->log (eTextColor::darkGreen, "asset::  [%s] %016" PRIX64 " bind to handle %08X\n", asset2::enumToString(uid.getAssetType()), uid._uid, handle_asU32);
-
-        bool ret = true;
-
-        //gestisco le dipendenze di questo asset. Se lui dipende da altri, prima creare anche quelli
-        u8 memblock[1024];
-        asset2::FastUIDList fastUIDList;
-        fastUIDList.setupWithBase (memblock, sizeof(memblock), gos::getScrapAllocator());
-
-        asset_logger->incIndent();
-        asset2::asset_get_runtime_dependecies_list (asset_ctx, uid, false, &fastUIDList);
-        for (u32 i=0; i<fastUIDList.getNElem(); i++)
-        {
-            const asset2::UID uid_child = fastUIDList(i);
-            BaseResourceHandler *base_resHandler = priv_get_baseResourceHandler(uid_child.getAssetType());
-
-
-            u32 subres_handleAsU32;
-            if (!internal__from_asset_to_handle (uid_child, &subres_handleAsU32))
-            {
-                //devo creare un handle appropriato per l'asset in questione
-                if (!base_resHandler->handle_get_or_create_from_asset (this, uid_child, engine::eLoadMode::onDemand, &subres_handleAsU32))
-                    ret = false;
-            }
-
-            //uid_child e' un mio figlio, quindi mi segno che fa parte delle mie sub-resource
-            engine::Resource *subres = base_resHandler->from_handle_to_resource(subres_handleAsU32);
-            assert (NULL != subres);
-            priv_resList_add_figlio (resPadre, subres);
-
-            //quando subres cambia stato, resPadre vuole esserne informato
-            priv_resList_add_owner (subres, resPadre);
-            
-
-
-        }
-        asset_logger->decIndent();
-        
-        return ret;
-    }
-    else
-    {
-        //uid era gia' nella lista degli asset bindati.. e' un errore
-        DBGBREAK;
-        return true;
-    }
-}
-
-/**************************************************************** 
- * RES
- *****************************************************************/
+//**************************************************************** 
 bool Engine::res_assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) const
 {
     assert (uid.isAnAsset());
@@ -446,39 +373,124 @@ bool Engine::res_assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) 
 }
 
 //**************************************************************** 
-void Engine::res_addChild (res::Descr *resPadre, res::Handle child_handle)
+void Engine::res_printInfo (const void *resIN) const
 {
-    res::HandleChain *chain = res_newHandleChain();
-    chain->handle = child_handle;
+	const res::Descr *res = (const res::Descr*)resIN;
 
-    chain->next = resPadre->figli;
-    resPadre->figli = chain;
+	asset_logger->log ("res::    [%08X] [%04d] [%-12s] [%-12s] [uid: %016" PRIX64 "]\n",
+		res->handle.viewAsU32(),
+		res->refCount,
+		res::enumToString((res::eType)res->handle.get_value_TYPE()),
+		res::enumToString(res->status),
+		res->uid._uid);
 }
 
 //**************************************************************** 
-void Engine::res_addPadre (res::Descr *res, res::Handle padre_handle)
+void Engine::res_addChild (res::Descr *padre_res, res::Descr *child_res)
 {
+	//child diventa figlio di padre
     res::HandleChain *chain = res_newHandleChain();
-    chain->handle = padre_handle;
+    chain->res = child_res;
 
-    chain->next = res->padri;
-    res->padri = chain;
+    chain->next = padre_res->figli;
+    padre_res->figli = chain;
+
+	//padre diventa "padre" di child
+    chain = res_newHandleChain();
+    chain->res = padre_res;
+    chain->next = child_res->padri;
+    child_res->padri = chain;	
 }
 
+//**************************************************************** 
 res::HandleChain* Engine::res_newHandleChain ()
 {
 	res::HandleChain *ret = GOSALLOCT(res::HandleChain*, allocator, sizeof(res::HandleChain));
 	return ret;
 }
 
+//**************************************************************** 
 void Engine::res_freeHandleChain (res::HandleChain *p)
 {
-	p->handle.set_invalid();
+	p->res = NULL;
 	p->next = NULL;
 	GOSFREE(allocator, p);
 }
 
-void* Engine::res_createHandle (res::eType res_type, res::Handle *out_handle)
+//**************************************************************** 
+void Engine::res_bindEvents (res::Handle handle, res::Descr *res)
+{
+	assert (NULL != res);
+	assert (handle.isValid());
+	switch ((res::eType)handle.get_value_TYPE())
+	{
+	default:
+		DBGBREAK;
+		return;
+
+	case res::eType::_unused_zero:
+		DBGBREAK;
+		return;
+
+	case res::eType::vtx_buffer:	
+		res->on_afterCreate = &Engine::vtxBuffer_on_afterCreate;
+		res->on_destroy = &Engine::vtxBuffer_on_destroy;
+		return;
+
+	case res::eType::idx_buffer:
+		res->on_afterCreate = &Engine::idxBuffer_on_afterCreate;
+		res->on_destroy = &Engine::idxBuffer_on_destroy;
+		return;
+
+	case res::eType::vtx_shader:
+		res->on_afterCreate = &Engine::vtxshader_on_afterCreate;
+		res->on_destroy = &Engine::vtxshader_on_destroy;
+		return;
+
+	case res::eType::pxl_shader:
+		res->on_afterCreate = &Engine::pxlshader_on_afterCreate;
+		res->on_destroy = &Engine::pxlshader_on_destroy;
+		return;
+
+	case res::eType::pipeline:
+		res->on_afterCreate = &Engine::pipeline_on_afterCreate;
+		res->on_destroy = &Engine::pipeline_on_destroy;
+		return;
+
+	case res::eType::texture_2d:
+		res->on_afterCreate = &Engine::texture2D_on_afterCreate;
+		res->on_destroy = &Engine::texture2D_on_destroy;
+		return;
+
+	case res::eType::shape:
+		res->on_afterCreate = &Engine::shape_on_afterCreate;
+		res->on_destroy = &Engine::shape_on_destroy;
+		return;
+
+	case res::eType::gpu_shape:
+		res->on_afterCreate = &Engine::GPUShape_on_afterCreate;
+		res->on_destroy = &Engine::GPUShape_on_destroy;
+		return;
+
+	case res::eType::skeleton:
+		res->on_afterCreate = &Engine::skeleton_on_afterCreate;
+		res->on_destroy = &Engine::skeleton_on_destroy;
+		return;
+
+	case res::eType::model_3d:
+		res->on_afterCreate = &Engine::model_on_afterCreate;
+		res->on_destroy = &Engine::model_on_destroy;
+		return;
+
+	case res::eType::model_instance:
+		res->on_afterCreate = &Engine::modelinst_on_afterCreate;
+		res->on_destroy = &Engine::modelinst_on_destroy;
+		return;
+	}
+}
+
+//**************************************************************** 
+res::Descr* Engine::res_createHandle (res::eType res_type, res::Handle *out_handle)
 {
 	assert (NULL != out_handle);
 
@@ -491,13 +503,20 @@ void* Engine::res_createHandle (res::eType res_type, res::Handle *out_handle)
 	}
 
 	res->reset();
+	res->handle = *out_handle;
 	res->refCount = 1;
 	res->status = res::eStatus::ready;
+	res_bindEvents (*out_handle, res);
+	
+	if (NULL != res->on_afterCreate)
+		(this->*res->on_afterCreate)(res);
 
+	res_printInfo(res);
 	return res;
 }
 
-void* Engine::res_getOrCreateHandleFromAsset (const char *uid_runtimeName, res::Handle *out_handle)
+//**************************************************************** 
+res::Descr* Engine::res_getOrCreateHandleFromAsset (const char *uid_runtimeName, res::Handle *out_handle, bool *out_bWasNew)
 {
     assert (NULL != out_handle);
     asset2::UID uid;
@@ -507,14 +526,15 @@ void* Engine::res_getOrCreateHandleFromAsset (const char *uid_runtimeName, res::
         return NULL;
     }
 
-	return res_getOrCreateHandleFromAsset (uid, out_handle);
+	return res_getOrCreateHandleFromAsset (uid, out_handle, out_bWasNew);
 }
 
 //**************************************************************** 
-void* Engine::res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle *out_handle)
+res::Descr* Engine::res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle *out_handle, bool *out_bWasNew)
 {
     assert (uid.isValid());
     assert (NULL != out_handle);
+	assert (NULL != out_bWasNew);
 
 	res::eType res_type;
 	if (!res_assetUID_to_resUID (uid, &res_type))
@@ -530,16 +550,19 @@ void* Engine::res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle *out_
     {
         //l'asset e' gia' noto e quindi e' gia' stato associato ad un handle.
         //Ritorno quell'handle stesso
-        out_handle->set_fromU32(handle_asU32);
+		*out_bWasNew = false;
+        out_handle->setFromU32(handle_asU32);
         assert (out_handle->get_value_TYPE() == (u32)res_type);
 
         //incremento il ref count
-        res::Descr *res = (res::Descr*)res_get(*out_handle);
+        res::Descr *res = res_getDescriptor(*out_handle);
         res->refCount++;
-        return res;
+        res_printInfo(res);
+		return res;
     }
 
     //l'asset e' nuovo, devo quindi creare un nuovo handle
+	*out_bWasNew = true;
     res::Descr *res = (res::Descr*)resManager.raw_reserve (res_type, out_handle);
     if (NULL == res)
     {
@@ -547,52 +570,117 @@ void* Engine::res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle *out_
         return NULL;
     }
     res->reset();
+	res->handle = *out_handle;
     res->refCount = 1;
     res->status = res::eStatus::notLoaded;
+	res->uid = uid;
+	res_bindEvents (*out_handle, res);
+	if (NULL != res->on_afterCreate)
+		(this->*res->on_afterCreate)(res);
+	res_printInfo(res);
 
     //inserisco la coppia <uid, handle> in hashlist
-    listof_knownUID.insertInPosition (pos, out_handle->view_as_U32());
-
-    asset_logger->log ("res::    new handle [%08X] for asset uid [%016" PRIX64 "]\n", out_handle->view_as_U32(), uid._uid);
-
+    listof_knownUID.insertInPosition (pos, out_handle->viewAsU32());
 
     //se questo asset ha delle dipendenze runtime, recupero/creo i relativi handle
     u8 memblock[256];
     asset2::FastUIDList fastUIDList;
     fastUIDList.setupWithBase (memblock, sizeof(memblock), gos::getScrapAllocator());
 
-    asset_logger->incIndent();
-    asset2::asset_get_runtime_dependecies_list (asset_ctx, uid, false, &fastUIDList);
+	asset_logger->incIndent();
+	asset2::asset_get_runtime_dependecies_list (asset_ctx, uid, false, &fastUIDList);
     for (u32 i=0; i<fastUIDList.getNElem(); i++)
     {
         const asset2::UID child_uid = fastUIDList(i);
            
+		bool bWasNew;
         res::Handle child_handle;
-        res::Descr *child_res = (res::Descr*)res_getOrCreateHandleFromAsset (child_uid, &child_handle);
+        res::Descr *child_res = res_getOrCreateHandleFromAsset (child_uid, &child_handle, &bWasNew);
+		if (bWasNew)
+		{
+			res_bindEvents (child_handle, child_res);
+		}
+		else
+		{
+			child_res->refCount++;
+			res_printInfo(res);
+		}
 
         //child_handle diventa uno dei miei figli
-        res_addChild (res, child_handle);
-        asset_logger->log ("res::    new child [%08X] for [%08X]\n", child_handle.view_as_U32(), out_handle->view_as_U32());
-
-        //io divento uno dei padri di child_handle
-        res_addPadre (child_res, *out_handle);
+        res_addChild (res, child_res);
     }
-    asset_logger->decIndent();
-
+	asset_logger->decIndent();
     return res;
 }
 
-void* Engine::res_get (res::Handle handle)
+//**************************************************************** 
+res::Descr* Engine::res_getDescriptor (res::Handle handle)
 {
-    return resManager.raw_get_data (handle);
+    return (res::Descr*)resManager.raw_get_data (handle);
 }
 
-void Engine::res_do_destroy (res::Handle handle)
+//**************************************************************** 
+bool Engine::res_getOrScheduleLoad (res::Handle handle, const res::Descr **out, u64 timeout_msec)
 {
-    res::Descr *res = (res::Descr*)res_get(handle);
-    if (NULL == res)
-        return;
+	res::Descr *res= res_getDescriptor(handle);
+	if (NULL == res)
+	{
+		(*out) = NULL;
+		return false;
+	}
 
+	(*out) = res;
+	if (res::eStatus::ready == res->status)
+	{
+		return true;
+	}
+
+	assert (res->uid.isValid());
+	if (res::eStatus::notLoaded == res->status)
+	{
+		//dato che l'asset e' notLoaded, schedulo il suo load (e degli asset da cui dipende)
+		//Incremento il ref count perche' sto passando la risorsa al loader-thread e questo garantisce che 
+		//la risorsa non verra' eliminata da eventuali release()
+		res->status = res::eStatus::loading;
+		res->refCount++;
+		res_printInfo(res);
+
+		asset_logger->incIndent();
+		res::HandleChain *p = res->figli;
+		while (p)
+		{
+			const res::Descr *descr;
+			res_getOrScheduleLoad(p->res->handle, &descr);
+			p = p->next;
+		}
+		asset_logger->decIndent();
+
+		
+		//schedulo il load di me stesso
+		thread::pushMsg (msgq_1W, MSG_FOR_LOADER_THREAD__LOAD, 0, res);
+
+		if (0 == timeout_msec)
+			return false;		
+	}
+
+	//se richiesto, attendo per un po' nella speranza di vedere l'asset "ready"
+	if (timeout_msec > 0 && res::eStatus::error != res->status)
+	{
+		u64 time_to_exit_msec = gos::getTimeSinceStart_msec() + timeout_msec;
+		while (gos::getTimeSinceStart_msec() < time_to_exit_msec)
+		{
+			priv_flushLoaderThreadMsg();
+			if (res::eStatus::ready == res->status) return true;
+			if (res::eStatus::error == res->status) return false;
+		}
+	}
+	return false;
+}
+
+//**************************************************************** 
+void Engine::res_do_destroy (res::Descr *res)
+{
+    assert (NULL != res);
     assert (res->status != res::eStatus::loading);
     //chiamo il "distruttore" di me stesso solo se la risorsa era stata effettivamente caricata
     if (res::eStatus::ready == res->status)
@@ -600,16 +688,19 @@ void Engine::res_do_destroy (res::Handle handle)
         (this->*res->on_destroy)(res);
     }
     res->status = res::eStatus::notLoaded;
+	res_printInfo(res);
 
     //se ho dei figli, faccio il release
+	asset_logger->incIndent();
     res::HandleChain *p = res->figli;
     while (p)
     {
 		res::HandleChain *next = p->next;
-        res_release (p->handle);
+        res_release (p->res);
         res_freeHandleChain(p);
 		p = next;
     }
+	asset_logger->decIndent();
 
     //elimino la lista dei miei padri, ma non c'e' bisogno di notificarli
 	//o di rimuovermi dalla lista dei loro figli perche' essendo io refCountato,
@@ -618,20 +709,29 @@ void Engine::res_do_destroy (res::Handle handle)
     p = res->padri;
     while (p)
     {
+		res::HandleChain *next = p->next;
 		res_freeHandleChain(p);
-		p = p->next;
+		p = next;
     }
 
     //libero l'handle
-    resManager.raw_release(handle);
+    resManager.raw_release(res->handle);
 }
 
+//**************************************************************** 
 void Engine::res_release (res::Handle handle)
 {
-    res::Descr *res = (res::Descr*)res_get(handle);
-    if (NULL == res)
-        return;
+    res::Descr *res = res_getDescriptor(handle);
+    if (NULL != res)
+	{
+		res_release(res);
+	}
+}
 
+//**************************************************************** 
+void Engine::res_release (res::Descr *res)
+{
+	assert (NULL != res);
     assert (res->refCount > 0);
     if (1 == res->refCount)
     {
@@ -645,19 +745,22 @@ void Engine::res_release (res::Handle handle)
             break;
 
         case res::eStatus::ready:
-            res_do_destroy(handle);
+            res_do_destroy(res);
             break;
 
         case res::eStatus::notLoaded:
         case res::eStatus::error:
             //la risorsa non e' stata nemmeno caricata, non c'e' da preoccuparsene, posso fare il "free" immediatamente
-            res_do_destroy(handle);
+            res_do_destroy(res);
             break;
 
         }
     }
     else
+	{
         res->refCount--;
+		res_printInfo(res);
+	}
 }
 
 
@@ -672,17 +775,22 @@ bool Engine::vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer
         logger::err ("Engine::vtxBuffer_create() => can't create handle\n");
         return false;
     }
-	
-	res->_descr.on_destroy = &Engine::vtxBuffer_on_destroy;
 
 	return gpu->vertexBuffer_create (sizeInByte, mode, &res->vbHandle);
 }
 
+void Engine::vtxBuffer_on_afterCreate (void *resIN)
+{
+	asset_logger->log ("vtxBuffer_on_afterCreate\n");
+	res::VtxBuffer *res = (res::VtxBuffer*)resIN;
+	res->vbHandle.setInvalid();
+}
+
 void Engine::vtxBuffer_on_destroy (void *resIN)
 {
+	asset_logger->log ("vtxBuffer_on_destroy\n");
 	res::VtxBuffer *res = (res::VtxBuffer*)resIN;
 	gpu->deleteResource (res->vbHandle);
-	
 }
 
 
@@ -698,25 +806,27 @@ bool Engine::idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGIdxBuffer
         return false;
     }
 	
-	res->_descr.on_destroy = &Engine::idxBuffer_on_destroy;
-
 	return gpu->indexBuffer_create (sizeInByte, mode, &res->ibHandle);
+}
+
+void Engine::idxBuffer_on_afterCreate (void *resIN)
+{
+	asset_logger->log ("idxBuffer_on_afterCreate\n");
+	res::IdxBuffer *res = (res::IdxBuffer*)resIN;
+	res->ibHandle.setInvalid();
 }
 
 void Engine::idxBuffer_on_destroy (void *resIN)
 {
-	res::VtxBuffer *res = (res::VtxBuffer*)resIN;
-	gpu->deleteResource (res->vbHandle);
+	asset_logger->log ("idxBuffer_on_destroy\n");
+	res::IdxBuffer *res = (res::IdxBuffer*)resIN;
+	gpu->deleteResource (res->ibHandle);
 }
+
 
 /**************************************************************** 
  * VTX SHADER
  *****************************************************************/
-bool Engine::vtxshader_createFromAsset (const char *uid_runtimeName, ENGVtxShader *out_handle, engine::eLoadMode loadMode)
-{
-    return res_getOrCreateHandleFromAsset (uid_runtimeName, &out_handle->res_handle);
-}
-
 bool Engine::vtxshader_createFromFile (const char *filename, const char *mainFnName, ENGVtxShader *out_handle)
 {
 	res::Shader *res = (res::Shader*)res_createHandle(res::eType::vtx_shader, &out_handle->res_handle);
@@ -725,7 +835,6 @@ bool Engine::vtxshader_createFromFile (const char *filename, const char *mainFnN
         logger::err ("Engine::vtxshader_createFromFile() => can't create handle\n");
         return false;
     }
-	res->_descr.on_destroy = &Engine::vtxshader_on_destroy;
 
     return gpu->vtxshader_createFromFile (filename, mainFnName, &res->shaderHandle);
 }
@@ -738,13 +847,20 @@ bool Engine::vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, c
         logger::err ("Engine::vtxshader_createFromMemory() => can't create handle\n");
         return false;
     }
-	res->_descr.on_destroy = &Engine::vtxshader_on_destroy;
 
     return gpu->vtxshader_createFromMemory (bufferIN, bufferSize, mainFnName, &res->shaderHandle);
 }
 
+void Engine::vtxshader_on_afterCreate (void *resIN)
+{
+	asset_logger->log ("vtxshader_on_afterCreate\n");
+	res::Shader *res = (res::Shader*)resIN;
+	res->shaderHandle.setInvalid();
+}
+
 void Engine::vtxshader_on_destroy (void *resIN)
 {
+	asset_logger->log ("vtxshader_on_destroy\n");
 	res::Shader *res = (res::Shader*)resIN;
 	gpu->deleteResource (res->shaderHandle);
 }
@@ -753,11 +869,6 @@ void Engine::vtxshader_on_destroy (void *resIN)
 /**************************************************************** 
  * PXL SHADER
  *****************************************************************/
-bool Engine::pxlshader_createFromAsset (const char *uid_runtimeName, ENGPxlShader *out_handle, engine::eLoadMode loadMode)
-{
-    return res_getOrCreateHandleFromAsset (uid_runtimeName, &out_handle->res_handle);
-}
-
 bool Engine::pxlshader_createFromFile (const char *filename, const char *mainFnName, ENGPxlShader *out_handle)
 {
 	res::Shader *res = (res::Shader*)res_createHandle(res::eType::pxl_shader, &out_handle->res_handle);
@@ -766,7 +877,6 @@ bool Engine::pxlshader_createFromFile (const char *filename, const char *mainFnN
         logger::err ("Engine::pxlshader_createFromFile() => can't create handle\n");
         return false;
     }
-	res->_descr.on_destroy = &Engine::pxlshader_on_destroy;
 
     return gpu->pxlshader_createFromFile (filename, mainFnName, &res->shaderHandle);
 }
@@ -779,15 +889,119 @@ bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, c
         logger::err ("Engine::pxlshader_createFromMemory() => can't create handle\n");
         return false;
     }
-	res->_descr.on_destroy = &Engine::pxlshader_on_destroy;
 
     return gpu->pxlshader_createFromMemory (bufferIN, bufferSize, mainFnName, &res->shaderHandle);
 }
 
+void Engine::pxlshader_on_afterCreate (void *resIN)
+{
+	asset_logger->log ("pxlshader_on_afterCreate\n");
+	res::Shader *res = (res::Shader*)resIN;
+	res->shaderHandle.setInvalid();
+}
+
 void Engine::pxlshader_on_destroy (void *resIN)
 {
+	asset_logger->log ("pxlshader_on_destroy\n");
 	res::Shader *res = (res::Shader*)resIN;
 	gpu->deleteResource (res->shaderHandle);
+}
+
+
+/**************************************************************** 
+ * PIPELINE
+ *****************************************************************/
+void Engine::pipeline_on_afterCreate (void *resIN)
+{
+	asset_logger->log ("pipeline_on_afterCreate\n");
+	res::Pipeline *res = (res::Pipeline*)resIN;
+	res->pipeHandle.setInvalid();
+}
+
+ void Engine::pipeline_on_destroy (void *resIN)
+{
+	asset_logger->log ("pipeline_on_destroy\n");
+	res::Pipeline *res = (res::Pipeline*)resIN;
+	gpu->deleteResource (res->pipeHandle);
+}
+
+
+/**************************************************************** 
+ * TEXTURE 2D
+ *****************************************************************/
+bool Engine::texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle, gpu::StageHelper &stageHelper)
+{
+	res::Texture2d *res = (res::Texture2d*)res_createHandle(res::eType::texture_2d, &out_handle->res_handle);
+	if (NULL == res)
+    {
+        logger::err ("Engine::texture2D_create() => can't create handle\n");
+        return false;
+    }
+
+    return gpu->texture_create2D (dimx, dimy, nMipMap, fmt, memAccessMode, srcDATA, &res->texHandle, stageHelper);
+}
+
+bool Engine::texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture *out_handle, gpu::StageHelper &stageHelper)
+{
+	res::Texture2d *res = (res::Texture2d*)res_createHandle(res::eType::texture_2d, &out_handle->res_handle);
+	if (NULL == res)
+    {
+        logger::err ("Engine::texture2D_create() => can't create handle\n");
+        return false;
+    }
+
+    return gpu->texture_create2D (im, srcTextureNum, memAccessMode, &res->texHandle, stageHelper);
+}
+
+void Engine::texture2D_on_afterCreate (void *resIN)
+{
+	asset_logger->log ("texture2D_on_afterCreate\n");
+	res::Texture2d *res = (res::Texture2d*)resIN;
+	res->texHandle.setInvalid();
+}
+
+void Engine::texture2D_on_destroy (void *resIN)
+{
+	asset_logger->log ("texture2D_on_destroy\n");
+	res::Texture2d *res = (res::Texture2d*)resIN;
+	gpu->deleteResource (res->texHandle);
+}
+
+
+
+/**************************************************************** 
+ * SHAPE
+ *****************************************************************/
+bool Engine::shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, ENGShape *out_handle)
+{
+	res::Shape *res = (res::Shape*)res_createHandle(res::eType::shape, &out_handle->res_handle);
+	if (NULL == res)
+    {
+        logger::err ("Engine::shape_create() => can't create handle\n");
+        return false;
+    }
+
+	if (!shape::shapeAlloc (allocator, vtxLayout, numVtx, numIdx, &res->shape))
+    {
+        logger::err ("Engine::shape_create() => error during shapeAlloc\n");
+        return false;
+    }
+
+    return true;
+}
+
+void Engine::shape_on_afterCreate (void *resIN)
+{
+	asset_logger->log ("shape_on_afterCreate\n");
+	res::Shape *res = (res::Shape*)resIN;
+	res->shape.reset();
+}
+
+void Engine::shape_on_destroy (void *resIN)
+{
+	asset_logger->log ("shape_on_destroy\n");
+	res::Shape *res = (res::Shape*)resIN;
+	shape::shapeFree (allocator, &res->shape);
 }
 
 
@@ -796,21 +1010,32 @@ void Engine::pxlshader_on_destroy (void *resIN)
  *****************************************************************/
 bool Engine::GPUShape_create (ENGShape handle_shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle)
 {
+	//se la shapeSRC e' stata gia' mappata in una GPU shape...
 	assert (NULL != out_handle);
 	if (map_of_shape_to_gpushape.find(handle_shape, out_handle))
+	{
+        res::Descr *res = res_getDescriptor(out_handle->res_handle);
+        res->refCount++;
 		return true;
+	}
 
-	const engine::ResShape *res_shape;
-	if (!get (handle_shape, &res_shape))
+	//recupero le info sulla shaperSRC
+	res::Shape *res_shape = (res::Shape*)res_getDescriptor(handle_shape.res_handle);
+	if (NULL == res_shape)
+	{
+		logger::err ("Engine::GPUShape_create() => src shape does not exists\n");
+		return false;
+	}
+
+	//Creo una nuova GPUShape
+	res::GPUShape *res = (res::GPUShape*)res_createHandle(res::eType::gpu_shape, &out_handle->res_handle);
+	if (NULL == res)
     {
-        logger::err ("Engine::GPUShape_create() => invalid handle_shape\n");
+        logger::err ("Engine::GPUShape_create() => can't create handle\n");
         return false;
     }
 
-	engine::ResGPUShape *res = priv_GPUShape_create(&res_shape->data.shape, stageHelper, out_handle);
-	if (NULL == res)
-		return false;
-	res->handle_shape = handle_shape;
+	priv_GPUShape_create (&res_shape->shape, stageHelper, res);
 
 	//mappo la coppia <shape, gpu_shape>
 	map_of_shape_to_gpushape.insertIfNotExists (handle_shape, *out_handle);
@@ -819,25 +1044,19 @@ bool Engine::GPUShape_create (ENGShape handle_shape, gpu::StageHelper &stageHelp
 
 bool Engine::GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle)
 {
-    engine::ResGPUShape *res = priv_GPUShape_create(shape, stageHelper, out_handle);
-    if (NULL == res)
+	res::GPUShape *res = (res::GPUShape*)res_createHandle(res::eType::gpu_shape, &out_handle->res_handle);
+	if (NULL == res)
     {
         logger::err ("Engine::GPUShape_create() => can't create handle\n");
         return false;
     }
-	return true;
+
+	return priv_GPUShape_create (shape, stageHelper, res);;
 }
 
-engine::ResGPUShape* Engine::priv_GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle)
+bool Engine::priv_GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, res::GPUShape *res)
 {
-    assert (NULL != out_handle);
-    engine::ResGPUShape *res = handleList_GPUShape.reserveTS(out_handle);
-    if (NULL == res)
-    {
-        logger::err ("Engine::priv_GPUShape_create() => can't create handle\n");
-        return NULL;
-    }
-
+	assert (NULL != res);
     u32 byteNeeded;
 
     //vtxbuffer
@@ -860,121 +1079,48 @@ engine::ResGPUShape* Engine::priv_GPUShape_create (const gos::Shape *shape, gpu:
         res->numIndices = shape->numIdx;
     }
 
-    res->brh.status = engine::eResStatus::ready;
-
 	stageHelper.begin()
 		.mem_to_buffer (shape->vtxBuffer, shape->numVtx * shape::calcSizeOfAVertex(shape->vtxLayout), res->vbHandle, res->alloc_vtxbuf_offset)
 		.mem_to_buffer (shape->idxBuffer, shape->numIdx * sizeof(u16), res->ibHandle, res->alloc_idxbuf_offset)
 		.submit();
-    return res;
-}
-
-void Engine::release (ENGGPUShape &handle)
-{
-    engine::ResGPUShape res;
-    if (handleList_GPUShape.releaseTS (handle, &res))
-    {
-        if (res.numVertex)
-            vtxBufferMan.release (res.vbHandle, res.alloc_vtxbuf_offset, res.alloc_vtxbuf_size);
-
-        if (res.numIndices)
-            idxBufferMan.release (res.ibHandle, res.alloc_idxbuf_offset, res.alloc_idxbuf_size);
-
-		//unmappo la coppia <shape, gpu_shape>
-		map_of_shape_to_gpushape.remove(res.handle_shape);
-    }    
-    handle.setInvalid();
-}
-
-
-/**************************************************************** 
- * SHAPE
- *****************************************************************/
-bool Engine::shape_createFromAsset (const char *uid_runtimeName, ENGShape *out_handle, engine::eLoadMode loadMode)
-{
-    assert (NULL != out_handle);
-    
-    asset2::UID uid;
-    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
-    {
-        logger::err ("Engine::shape_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
-        return false;
-    }
-
-    u32 handle_asU32;
-    if (!resHandler_shape.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
-        return false;
-
-    out_handle->setFromU32(handle_asU32);
     return true;
 }
 
-bool Engine::shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, ENGShape *out_handle)
+void Engine::GPUShape_on_afterCreate (void *resIN)
 {
-    assert (NULL != out_handle);
-    engine::ResShape *res = resHandler_shape.reserveTS(out_handle);
-    if (NULL == res)
-    {
-        logger::err ("Engine::shape_create() => can't create handle\n");
-        return false;
-    }
-
-    if (!shape::shapeAlloc (allocator, vtxLayout, numVtx, numIdx, &res->data.shape))
-    {
-        logger::err ("Engine::shape_create() => error during shapeAlloc\n");
-        resHandler_shape.releaseTS (*out_handle, res);
-        return false;
-    }
-    
-    res->brh.status = engine::eResStatus::ready;
-    return true;
+	asset_logger->log ("GPUShape_on_afterCreate\n");
+	res::GPUShape *res = (res::GPUShape*)resIN;
+	res->handle_shape.setInvalid();
+	res->vbHandle.setInvalid();
+	res->ibHandle.setInvalid();
+	res->numIndices = 0;
+	res->numVertex=0;
+	res->alloc_vtxbuf_offset = 0;
+	res->alloc_vtxbuf_size = 0;
+	res->alloc_idxbuf_offset = 0;
+	res->alloc_idxbuf_size = 0;	
 }
+
+void Engine::GPUShape_on_destroy (void *resIN)
+{
+	asset_logger->log ("GPUShape_on_destroy\n");
+	res::GPUShape *res = (res::GPUShape*)resIN;
+	if (res->numVertex)
+		vtxBufferMan.release (res->vbHandle, res->alloc_vtxbuf_offset, res->alloc_vtxbuf_size);
+
+	if (res->numIndices)
+		idxBufferMan.release (res->ibHandle, res->alloc_idxbuf_offset, res->alloc_idxbuf_size);
+
+	//unmappo la coppia <shape, gpu_shape>
+	if (res->handle_shape.isValid())
+		map_of_shape_to_gpushape.remove (res->handle_shape);
+}
+
 
 
 /**************************************************************** 
  * SKELETON
  *****************************************************************/
-bool Engine::skeleton_createFromAsset (const char *uid_runtimeName, ENGSkeleton *out_handle, engine::eLoadMode loadMode)
-{
-    assert (NULL != out_handle);
-    
-    asset2::UID uid;
-    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
-    {
-        logger::err ("Engine::skeleton_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
-        return false;
-    }
-
-    u32 handle_asU32;
-    if (!resHandler_skeleton.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
-        return false;
-
-    out_handle->setFromU32(handle_asU32);
-    return true;
-}
-
-bool Engine::skeleton_createFromMemory (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *out_handle)
-{
-    assert (NULL != out_handle);
-    engine::ResSkeleton *res = resHandler_skeleton.reserveTS(out_handle);
-    if (NULL == res)
-    {
-        logger::err ("Engine::skeleton_createFromMemory() => can't create handle\n");
-        return false;
-    }
-
-	const u32 n = skeleton::deserialize (buffer, sizeof_buffer, allocator, &res->data.skeleton);
-    if (0 == n)
-    {
-        logger::err ("Engine::skeleton_createFromMemory() => error during shapeAlloc\n");
-        resHandler_skeleton.releaseTS (*out_handle, res);
-        return false;
-    }
-    
-    res->brh.status = engine::eResStatus::ready;
-    return true;
-}
-
 bool Engine::skeleton_create (const Skeleton &sk, ENGSkeleton *out_handle)
 {
 	if (skeleton_createFromMemory (sk.blob, skeleton::get_blob_size(sk), out_handle))
@@ -984,73 +1130,96 @@ bool Engine::skeleton_create (const Skeleton &sk, ENGSkeleton *out_handle)
 	return false;
 }
 
+bool Engine::skeleton_createFromMemory (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *out_handle)
+{
+	res::Skeleton *res = (res::Skeleton*)res_createHandle(res::eType::skeleton, &out_handle->res_handle);
+	if (NULL == res)
+    {
+        logger::err ("Engine::skeleton_createFromMemory() => can't create handle\n");
+        return false;
+    }
+
+	const u32 n = skeleton::deserialize (buffer, sizeof_buffer, allocator, &res->skeleton);
+    if (0 == n)
+    {
+        logger::err ("Engine::skeleton_createFromMemory() => error during shapeAlloc\n");
+        return false;
+    }
+    return true;
+}
+
+void Engine::skeleton_on_afterCreate (void *resIN)
+{
+	asset_logger->log ("skeleton_on_afterCreate\n");
+	res::Skeleton *res = (res::Skeleton*)resIN;
+	res->skeleton.reset();
+}
+
+void Engine::skeleton_on_destroy (void *resIN)
+{
+	asset_logger->log ("skeleton_on_destroy\n");
+	res::Skeleton *res = (res::Skeleton*)resIN;
+	skeleton::free (res->skeleton);
+}
+
 
 
 /**************************************************************** 
  * MODEL 3d
  *****************************************************************/
-bool Engine::model_createFromAsset (const char *uid_runtimeName, ENGModel3d *out_handle, engine::eLoadMode loadMode)
-{
-    assert (NULL != out_handle);
-    
-    asset2::UID uid;
-    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
-    {
-        logger::err ("Engine::model_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
-        return false;
-    }
-
-    u32 handle_asU32;
-    if (!resHandler_model3d.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
-        return false;
-
-    out_handle->setFromU32(handle_asU32);
-    return true;
-}
-
 gos::Model*	Engine::model_create (ENGSkeleton handle_skeleton, u16 num_shape, u16 num_material, u16 num_meshes, ENGModel3d *out_handle)
 {
-    assert (NULL != out_handle);
-    engine::ResModel3d *res = resHandler_model3d.reserveTS(out_handle);
-    if (NULL == res)
+	res::Model3d *res = (res::Model3d*)res_createHandle(res::eType::model_3d, &out_handle->res_handle);
+	if (NULL == res)
     {
         logger::err ("Engine::model_create() => can't create handle\n");
         return NULL;
     }
 
-	res->data.model.reset();
-	if (!model::alloc (allocator, num_shape, num_material, num_meshes, &res->data.model))
+	if (!model::alloc (allocator, num_shape, num_material, num_meshes, &res->model))
     {
         logger::err ("Engine::model_create() => can't allocate model\n");
-		resHandler_model3d.releaseTS (*out_handle, res);
         return NULL;
     }
 
-	model::set_skeleton(res->data.model, handle_skeleton);
-    
-    res->brh.status = engine::eResStatus::ready;
-    return &res->data.model;
+	model::set_skeleton(res->model, handle_skeleton);
+    return &res->model;
 }
 
+void Engine::model_on_afterCreate (void *resIN)
+{
+	asset_logger->log ("model_on_afterCreate\n");
+	res::Model3d *res = (res::Model3d*)resIN;
+	res->model.reset();
+}
+
+void Engine::model_on_destroy (void *resIN)
+{
+	asset_logger->log ("model_on_destroy\n");
+	res::Model3d *res = (res::Model3d*)resIN;
+	model::free(res->model);
+}
 
 /**************************************************************** 
  * MODEL INSTANCE
  *****************************************************************/
 bool Engine::modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_handle)
 {
-	assert (NULL != out_handle);
-
-	const engine::ResModel3d *res_model;
-	if (!get (handle_model, &res_model))
+	//il modelSRC deve esistere e deve anche essere in stato loaded
+	res::Model3d *res_model = (res::Model3d*)res_getDescriptor (handle_model.res_handle);
+	if (NULL == res_model)
 	{
-		//il modello deve essere "loaded"
-		DBGBREAK;
-		out_handle->setInvalid();
+		logger::err ("Engine::modelinst_create() => invalid handle_model\n");
+		return false;
+	}
+	if (res_model->_descr.status != res::eStatus::ready)
+	{
+		logger::err ("Engine::modelinst_create() => src model is not in LOADED status\n");
 		return false;
 	}
 
-	model::Reader mr (&res_model->data.model);
-	const engine::ResSkeleton *res_skeleton;
+	model::Reader mr (&res_model->model);
+	const res::Skeleton *res_skeleton;
 	if (!get (mr.skeleton_get_handle(), &res_skeleton))
 	{
 		//lo skeleton deve essere "loaded"
@@ -1058,22 +1227,27 @@ bool Engine::modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_hand
 		out_handle->setInvalid();
 		return false;
 	}
-	skeleton::Reader sr(&res_skeleton->data.skeleton);
+	skeleton::Reader sr(&res_skeleton->skeleton);
 
 
 
-    engine::ResModel3dInst *res = handleList_model3dInst.reserveTS(out_handle);
-    if (NULL == res)
+	//creo istanza
+	res::Model3dInst *res = (res::Model3dInst*)res_createHandle(res::eType::model_instance, &out_handle->res_handle);
+	if (NULL == res)
     {
         logger::err ("Engine::modelinst_create() => can't create handle\n");
         return false;
     }
-	res->data.minst.reset();
-    res->brh.status = engine::eResStatus::ready;
+
+	//model diventa mio figlio e io divento uno dei suoi padri
+	asset_logger->incIndent();
+		res_addChild (&res->_descr, &res_model->_descr);
+		res_model->_descr.refCount++;
+		res_printInfo(res_model);
+	asset_logger->decIndent();
 
 	
-	
-	ModelInstance *mi = &res->data.minst;
+	ModelInstance *mi = &res->minst;
 	mi->allocator = this->allocator;
 
 	mi->num_bones = sr.bone_get_num();
@@ -1091,27 +1265,31 @@ bool Engine::modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_hand
 	return true;
 }
 
-void Engine::release (ENGModel3dInst &handle)
-{
-    engine::ResModel3dInst res;
-    if (handleList_model3dInst.releaseTS (handle, &res))
-	{
-		res.data.minst.free();
-	}
-    handle.setInvalid();
-}
-
-
 void Engine::modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &matW)
 {
-	engine::ResModel3dInst *res;
-	if (handleList_model3dInst.fromHandleToPointer (handle, &res))
-		priv_modelinst_applyTransform_ric (res->data.minst.model_listof_bones, res->data.minst.listof_bones, 0, matW);
-
-	//DBGBREAK;
+	res::Model3dInst *res = (res::Model3dInst*)res_getDescriptor(handle.res_handle);
+	if (NULL == res)
+		return;
+	if (res::eStatus::ready == res->_descr.status)
+	{
+		priv_modelinst_applyTransform_ric (res->minst.model_listof_bones, res->minst.listof_bones, 0, matW);
+	}
 }
 
-//**********************************************************************
+void Engine::modelinst_on_afterCreate (void *resIN)
+{
+	asset_logger->log ("modelinst_on_afterCreate\n");
+	res::Model3dInst *res = (res::Model3dInst*)resIN;
+	res->minst.reset();
+}
+
+void Engine::modelinst_on_destroy (void *resIN)
+{
+	asset_logger->log ("modelinst_on_destroy\n");
+	res::Model3dInst *res = (res::Model3dInst*)resIN;
+	res->minst.free();
+}
+
 void Engine::priv_modelinst_applyTransform_ric (const gos::Bone *model_listof_bones, gos::Bone *listof_bones, u32 boneIndex, const mat4x4f &parent_matW) const
 {
     Bone *bone = &listof_bones[boneIndex];
@@ -1126,140 +1304,9 @@ void Engine::priv_modelinst_applyTransform_ric (const gos::Bone *model_listof_bo
 }
 
 
-/**************************************************************** 
- * TEXTURE 3D
- *****************************************************************/
-bool Engine::texture2D_createFromAsset (const char *uid_runtimeName, ENGTexture *out_handle, engine::eLoadMode loadMode)
-{
-    assert (NULL != out_handle);
-    
-    asset2::UID uid;
-    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
-    {
-        logger::err ("Engine::texture_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
-        return false;
-    }
-
-    u32 handle_asU32;
-    if (!resHandler_texture.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
-        return false;
-
-    out_handle->setFromU32(handle_asU32);
-    return true;
-}
-
-bool Engine::texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle, gpu::StageHelper &stageHelper)
-{
-    GPUTextureHandle gpuResourceHandle;
-    if (!gpu->texture_create2D (dimx, dimy, nMipMap, fmt, memAccessMode, srcDATA, &gpuResourceHandle, stageHelper))
-    {
-        return false;
-    }
-
-    assert (NULL != out_handle);
-    engine::ResTexture *res = resHandler_texture.reserveTS(out_handle);
-    if (NULL == res)
-    {
-        logger::err ("Engine::texture_create2D() => can't create handle\n");
-        return false;
-    }
-
-    res->brh.status = engine::eResStatus::ready;
-    res->data.texHandle = gpuResourceHandle;
-    return true;
-}
-
-bool Engine::texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture *out_handle, gpu::StageHelper &stageHelper)
-{
-    GPUTextureHandle gpuResourceHandle;
-    if (!gpu->texture_create2D (im, srcTextureNum, memAccessMode, &gpuResourceHandle, stageHelper))
-    {
-        return false;
-    }
-
-    assert (NULL != out_handle);
-    engine::ResTexture *res = resHandler_texture.reserveTS(out_handle);
-    if (NULL == res)
-    {
-        logger::err ("Engine::texture_create2D() => can't create handle\n");
-        return false;
-    }
-
-    res->brh.status = engine::eResStatus::ready;
-    res->data.texHandle = gpuResourceHandle;
-    return true;
-}
-
-
-
-/**************************************************************** 
- * PIPELIEN
- *****************************************************************/
-bool Engine::pipeline_createFromAsset (const char *uid_runtimeName, ENGPipeline *out_handle, engine::eLoadMode loadMode)
-{
-    assert (NULL != out_handle);
-    
-    asset2::UID uid;
-    if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
-    {
-        logger::err ("Engine::pipeline_createFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
-        return false;
-    }
-
-    u32 handle_asU32;
-    if (!resHandler_pipeline.handle_get_or_create_from_asset (this, uid, loadMode, &handle_asU32))
-        return false;
-
-    out_handle->setFromU32(handle_asU32);
-    return true;
-
-    return true;
-}
 
 
 
 
 
-
-/**********************************************************************************************
-* 
-* RES LIST
-* 
-**********************************************************************************************/
-void Engine::priv_resList_setup()
-{
-}
-
-void Engine::priv_resList_unsetup()
-{
-}
-
-engine::ResourceList* Engine::priv_resList_new_node (engine::Resource *res)
-{
-    engine::ResourceList *ret = GOSALLOCT(engine::ResourceList*, allocator, sizeof(engine::ResourceList));
-	ret->brh = res;
-	ret->next = NULL;
-	return ret;
-}
-
-void Engine::priv_resList_free_node(engine::ResourceList *p)
-{
-	GOSFREE(allocator, p);
-}
-
-void Engine::priv_resList_add_figlio (engine::Resource *padre, engine::Resource *figlio)
-{
-    //<figlio> e' una subresource di padre
-    engine::ResourceList *p = priv_resList_new_node(figlio);
-    p->next = padre->figli;
-    padre->figli = p;
-}
-
-void Engine::priv_resList_add_owner (engine::Resource *me, engine::Resource *my_owner)
-{
-    //<me> e' una subresource di <my_owner> il quale vuole essere notificato quando <me> cambia di stato
-    engine::ResourceList *p = priv_resList_new_node(my_owner);
-    p->next = me->deplist;
-    me->deplist = p;
-}
 
