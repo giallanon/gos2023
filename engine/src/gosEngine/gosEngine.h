@@ -6,6 +6,7 @@
 #include "gosEngine_scene.h"
 #include "res/gosEngineRes.h"
 #include "../gos/logger/gosLoggerStdout.h"
+#include "../gos/gosObjectPool.h"
 #include "../gosAsset2/gosAsset2.h"
 #include "line3d/gosEngine_rend_line3d.h"
 
@@ -250,6 +251,7 @@ namespace gos
 
 		res::Manager 								resManager;
 		FastHashMap<ENGShape, ENGGPUShape>			map_of_shape_to_gpushape;
+		gos::ObjectPool<res::HandleChain>			resHandleChainPool;
 		
 
 

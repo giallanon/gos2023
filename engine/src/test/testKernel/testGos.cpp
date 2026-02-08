@@ -6,6 +6,7 @@
 #include "gosImage.h"
 #include "gosHashMap.h"
 #include "gosUniqueSortedList.h"
+#include "gosObjectPool.h"
 
 namespace test_gos
 {
@@ -1167,6 +1168,96 @@ namespace test12_hash_map
     }
 }
 
+//********************************************
+namespace test_objectPool
+{
+	struct OBJ
+	{
+		u32	pippo;
+		f32	pluto;
+		u8	paperino;
+	};
+
+    int run()
+    {
+		static constexpr u32 NUM_PER_PAGE = 4;
+        gos::ObjectPool<OBJ> pool;
+		pool.setup (gos::getSysHeapAllocator(), NUM_PER_PAGE);
+
+		//page 1
+		OBJ *objs_p1[NUM_PER_PAGE];
+		for (u32 i=0; i<NUM_PER_PAGE; i++)
+		{
+			objs_p1[i] = pool.alloc();
+			TEST_ASSERT(NULL != objs_p1[i]);
+		}
+
+		const void *start_of_page1 = objs_p1[0];
+		const void *end_of_page1 = objs_p1[NUM_PER_PAGE-1];
+		TEST_ASSERT(start_of_page1 < end_of_page1);
+
+		for (u32 i=0; i<NUM_PER_PAGE; i++)
+		{
+			pool.free(objs_p1[NUM_PER_PAGE -i -1]);
+		}
+
+		objs_p1[0] = pool.alloc();	TEST_ASSERT((uiPtr)objs_p1[0] == (uiPtr)start_of_page1);
+		objs_p1[1] = pool.alloc();	TEST_ASSERT((uiPtr)objs_p1[1] == (uiPtr)start_of_page1 + sizeof(OBJ));
+		objs_p1[2] = pool.alloc();	TEST_ASSERT((uiPtr)objs_p1[2] == (uiPtr)start_of_page1 + sizeof(OBJ) *2);
+		objs_p1[3] = pool.alloc();	TEST_ASSERT((uiPtr)objs_p1[3] == (uiPtr)start_of_page1 + sizeof(OBJ) *3);
+
+
+		//page 2
+		OBJ *objs_p2[NUM_PER_PAGE];
+		for (u32 i=0; i<NUM_PER_PAGE; i++)
+		{
+			objs_p2[i] = pool.alloc();
+			TEST_ASSERT(NULL != objs_p2[i]);
+		}
+
+		const void *start_of_page2 = objs_p2[0];
+		const void *end_of_page2 = objs_p2[NUM_PER_PAGE-1];
+		TEST_ASSERT(start_of_page2 < end_of_page2);
+
+		for (u32 i=0; i<NUM_PER_PAGE; i++)
+		{
+			pool.free(objs_p2[NUM_PER_PAGE -i -1]);
+		}
+
+		objs_p2[0] = pool.alloc();	TEST_ASSERT((uiPtr)objs_p2[0] == (uiPtr)start_of_page2);
+		objs_p2[1] = pool.alloc();	TEST_ASSERT((uiPtr)objs_p2[1] == (uiPtr)start_of_page2 + sizeof(OBJ));
+		objs_p2[2] = pool.alloc();	TEST_ASSERT((uiPtr)objs_p2[2] == (uiPtr)start_of_page2 + sizeof(OBJ) *2);
+		objs_p2[3] = pool.alloc();	TEST_ASSERT((uiPtr)objs_p2[3] == (uiPtr)start_of_page2 + sizeof(OBJ) *3);
+
+
+		//free
+		for (u32 i=0; i<NUM_PER_PAGE; i++)
+		{
+			pool.free (objs_p1[NUM_PER_PAGE -i -1]);
+			pool.free (objs_p2[NUM_PER_PAGE -i -1]);
+		}
+
+		for (u32 i=0; i<NUM_PER_PAGE; i++)
+		{
+			OBJ *o = pool.alloc();
+			TEST_ASSERT(o == objs_p1[i]);
+		}
+
+		for (u32 i=0; i<NUM_PER_PAGE; i++)
+		{
+			OBJ *o = pool.alloc();
+			TEST_ASSERT(o == objs_p2[i]);
+		}
+
+		for (u32 i=0; i<NUM_PER_PAGE; i++)
+		{
+			pool.free (objs_p1[NUM_PER_PAGE -i -1]);
+			pool.free (objs_p2[NUM_PER_PAGE -i -1]);
+		}
+		return 0;
+    }    
+} //namespace test_objectPool
+
 
 } //namespace test_gos
 
@@ -1187,4 +1278,5 @@ void testGos (Tester &tester)
     tester.run("test10 eImageFormat", test_gos::test10_eImageFormat::run);
     tester.run("test11 enum-bitmask", test_gos::test11_enum_bitmask::run);
     tester.run("test12_hash_map", test_gos::test12_hash_map::run);
+	tester.run("test_objectPool", test_gos::test_objectPool::run);
 }

@@ -146,7 +146,7 @@ bool Builder_glb::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out
 			
 			gos::File f;
 			fs::fileOpenForW (&f, filenameDST);
-			fs::fileWrite (f, params.src, sizeof(params.src)+1);
+			fs::fileWrite (f, params.src, sizeof(params.src));
 			fs::fileClose(f);
 
 			priv_print_report (filenameDST);

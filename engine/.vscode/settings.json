@@ -93,5 +93,6 @@
 		"stdfloat": "cpp"
 	},
     "C_Cpp.errorSquiggles": "disabled",
-    "C_Cpp.default.compilerPath": ""
+    "C_Cpp.default.compilerPath": "",
+	"cmake.buildDirectory": "${workspaceRoot}/build/${buildKit}/${buildType}"
 }

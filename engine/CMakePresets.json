@@ -7,7 +7,7 @@
       "displayName": "Windows x64 Debug",
       "description": "Target Windows with the Visual Studio development environment.",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "binaryDir": "${sourceDir}/out/build_deb/${presetName}",
       "architecture": {
         "value": "x64",
         "strategy": "external"
@@ -29,7 +29,7 @@
       "displayName": "Windows x64 Release",
       "description": "Target Windows with the Visual Studio development environment.",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "binaryDir": "${sourceDir}/out/build_rel/${presetName}",
       "architecture": {
         "value": "x64",
         "strategy": "external"

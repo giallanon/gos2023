@@ -19,7 +19,7 @@ namespace gos
 
 			bool 	is_already_setup() const 	{ return (NULL != allocator); }
 
-			void 	setup (gos::Allocator *allocator, u8 res_type, u32 num_max_resource, u16 num_res_per_page, u32 sizeof_a_single_res);
+			void 	setup (gos::Allocator *allocator, u8 res_type, u32 num_res_per_page, u16 num_pages, u32 sizeof_a_single_res);
 			void 	unsetup();
 
 			void*	reserve (Handle *out_handle);
@@ -48,12 +48,13 @@ namespace gos
 
 		private:
 			gos::Allocator *allocator;
+			sPage			*pages;
 			u32 			num_res_per_page;
 			u32 			real_size_of_a_record;
+			u16 			num_max_pages;
 			u8 				res_type;
-			u8 				num_max_pages;
 			u8 				_pad0;
-			sPage			*pages;
+			
 		};
 
 	} //namespace res

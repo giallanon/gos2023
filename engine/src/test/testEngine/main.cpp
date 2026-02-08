@@ -64,8 +64,8 @@ int main()
 			// engine.release (handle_pippo);
 
 
-            //Test1 test;		test.run (&engine);
-            Game1 game;		game.run (&engine);
+            Test1 test;		test.run (&engine);
+            //Game1 game;		game.run (&engine);
 			//Test_exa1 test;		test.run(&engine);
         }
     }

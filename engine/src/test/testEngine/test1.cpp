@@ -281,7 +281,7 @@ bool Test1::priv_run4 ()
 		const u32 NUM_ENTITIES_Z = 100;
 #else
 		const u32 NUM_ENTITIES_X = 1000;
-		const u32 NUM_ENTITIES_Z = 100;
+		const u32 NUM_ENTITIES_Z = 177;
 #endif		
 		const f32 ENTITY_GRID_X = 2.5f * SCALE;
 		const f32 ENTITY_GRID_Z = 2.5f * SCALE;

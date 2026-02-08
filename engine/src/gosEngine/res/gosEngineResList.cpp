@@ -6,21 +6,19 @@ using namespace gos::res;
 
 
 //***********************************
-void List::setup (gos::Allocator *allocatorIN, u8 res_typeIN, u32 num_max_resourceIN, u16 num_res_per_pageIN, u32 sizeof_a_single_resIN)
+void List::setup (gos::Allocator *allocatorIN, u8 res_typeIN, u32 num_res_per_pageIN, u16 num_pagesIN, u32 sizeof_a_single_resIN)
 {
+	assert (num_res_per_pageIN <= res::Handle::MAX_NUM_INDEX);
+	assert (num_pagesIN <= res::Handle::MAX_NUM_PAGE);
+
 	assert (NULL == allocator);
-	assert (GOS_IS_POWER_OF_TWO(num_max_resourceIN));
 	assert (GOS_IS_POWER_OF_TWO(num_res_per_pageIN));
-	assert (num_res_per_pageIN <= Handle::MAX_NUM_INDEX);
+	assert (GOS_IS_POWER_OF_TWO(num_pagesIN));
 	
 	allocator = allocatorIN;
 	res_type = res_typeIN;
 	num_res_per_page = num_res_per_pageIN;
-	
-	num_max_pages = (u8) (num_max_resourceIN / num_res_per_pageIN);
-	if (num_max_pages < 1)
-		num_max_pages = 1;
-	assert (num_max_pages<= Handle::MAX_NUM_PAGE);
+	num_max_pages = num_pagesIN;
 
 	real_size_of_a_record = GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(sizeof(sRecord) + sizeof_a_single_resIN, 8);
 
@@ -104,7 +102,7 @@ void* List::reserve (Handle *out_handle)
 {
 	assert (NULL != out_handle);
 
-	for (u8 i=0; i<num_max_pages; i++)
+	for (u32 i=0; i<num_max_pages; i++)
 	{
 		if (NULL == pages[i].blob)
 			continue;
@@ -114,7 +112,7 @@ void* List::reserve (Handle *out_handle)
 		return priv_do_reserve_from_page(i, out_handle);
 	}
 
-	for (u8 i=0; i<num_max_pages; i++)
+	for (u32 i=0; i<num_max_pages; i++)
 	{
 		if (NULL == pages[i].blob)
 		{

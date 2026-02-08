@@ -21,9 +21,9 @@ namespace gos
 			void 	unsetup();
 
 					template<class RES>
-			void 	addResType (res::eType type, u32 num_max_resource, u16 num_res_per_page)
+			void 	addResType (res::eType type, u32 num_res_per_page, u16 num_pages)
 					{
-						priv_addResType (type, num_max_resource, num_res_per_page, sizeof(RES));
+						priv_addResType (type, num_res_per_page, num_pages, sizeof(RES));
 					}
 
 					template<class RES, class RES_HANDLE>
@@ -64,7 +64,7 @@ namespace gos
 			static constexpr u32 NUM_MAX_LIST = (u32)res::eType::NUM_MAX;
 
 		private:
-			void 	priv_addResType (res::eType type, u32 num_max_resource, u16 num_res_per_page, u32 sizeof_a_single_res);
+			void 	priv_addResType (res::eType type, u32 num_res_per_page, u16 num_pages, u32 sizeof_a_single_res);
 
 		private:
 			gos::Allocator 	*allocator;

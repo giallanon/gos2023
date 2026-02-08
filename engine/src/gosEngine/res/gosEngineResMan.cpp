@@ -29,13 +29,15 @@ void Manager::unsetup()
 }
 
 //*******************************
-void Manager::priv_addResType (res::eType type, u32 num_max_resource, u16 num_res_per_page, u32 sizeof_a_single_res)
+void Manager::priv_addResType (res::eType type, u32 num_res_per_page, u16 num_pages, u32 sizeof_a_single_res)
 {
 	const u8 index = (u8)type;
 	assert (index < NUM_MAX_LIST);
+	assert (index < res::Handle::MAX_NUM_TYPE);
+
 	assert (!lists[index]->is_already_setup());
 
-	lists[index]->setup (allocator, index, num_max_resource, num_res_per_page, sizeof_a_single_res);
+	lists[index]->setup (allocator, index, num_res_per_page, num_pages, sizeof_a_single_res);
 }
 
 //*******************************

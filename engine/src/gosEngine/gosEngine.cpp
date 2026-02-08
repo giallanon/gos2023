@@ -34,6 +34,7 @@ void Engine::unsetup()
 
     //resource manager
 	resManager.unsetup();
+	resHandleChainPool.unsetup();
     vtxBufferMan.unsetup();
     idxBufferMan.unsetup();
     listof_knownUID.unsetup();
@@ -178,19 +179,20 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 
     //handle list
 	resManager.setup (allocator);
-	resManager.addResType<res::VtxBuffer> (res::eType::vtx_buffer, 1024, 128);
-	resManager.addResType<res::IdxBuffer> (res::eType::idx_buffer, 1024, 128);
-	resManager.addResType<res::Shader>	  (res::eType::vtx_shader, 1024, 256);
-	resManager.addResType<res::Shader>	  (res::eType::pxl_shader, 1024, 256);
-	resManager.addResType<res::Pipeline>  (res::eType::pipeline, 1024, 128);
-	resManager.addResType<res::Texture2d> (res::eType::texture_2d, 65536, 4096);
-	resManager.addResType<res::Shape> 	  (res::eType::shape, 65536, 4096);
-	resManager.addResType<res::GPUShape>  (res::eType::gpu_shape, 65536, 4096);
-	resManager.addResType<res::Skeleton>  (res::eType::skeleton, 1024, 256);
-	resManager.addResType<res::Model3d>   (res::eType::model_3d, 32768, 4096);
-	resManager.addResType<res::Model3dInst> (res::eType::model_instance, 65536, 4096);
+	resManager.addResType<res::VtxBuffer> (res::eType::vtx_buffer, 128, 8);	//8 pagine da 128 = 1024
+	resManager.addResType<res::IdxBuffer> (res::eType::idx_buffer, 128, 8);
+	resManager.addResType<res::Shader>	  (res::eType::vtx_shader, 128, 8);
+	resManager.addResType<res::Shader>	  (res::eType::pxl_shader, 128, 8);
+	resManager.addResType<res::Pipeline>  (res::eType::pipeline, 128, 8);
+	resManager.addResType<res::Texture2d> (res::eType::texture_2d, 1024, 64);			//64 page da 1024 = 65.536
+	resManager.addResType<res::Shape> 	  (res::eType::shape, 1024, 128);				//128 page da 1024 = 131.072
+	resManager.addResType<res::GPUShape>  (res::eType::gpu_shape, 4096, 64);			//64 page da 4096 = 262.144
+	resManager.addResType<res::Skeleton>  (res::eType::skeleton, 1024, 64);				//64 page da 1024 = 65.536
+	resManager.addResType<res::Model3d>   (res::eType::model_3d, 4096, 64);				//64 page da 4096 = 262.144
+	resManager.addResType<res::Model3dInst> (res::eType::model_instance, 8192, 256);	//256 page da 8192 = 2.097.152
 
 	map_of_shape_to_gpushape.setup (allocator, 8192);
+	resHandleChainPool.setup (allocator, 8192);
     
     //resource manager
     vtxBufferMan.setup (allocator, gpu);
@@ -375,14 +377,15 @@ bool Engine::res_assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) 
 //**************************************************************** 
 void Engine::res_printInfo (const void *resIN) const
 {
-	const res::Descr *res = (const res::Descr*)resIN;
+	return;
+	// const res::Descr *res = (const res::Descr*)resIN;
 
-	asset_logger->log ("res::    [%08X] [%04d] [%-12s] [%-12s] [uid: %016" PRIX64 "]\n",
-		res->handle.viewAsU32(),
-		res->refCount,
-		res::enumToString((res::eType)res->handle.get_value_TYPE()),
-		res::enumToString(res->status),
-		res->uid._uid);
+	// asset_logger->log ("res::    [%08X] [%04d] [%-12s] [%-12s] [uid: %016" PRIX64 "]\n",
+	// 	res->handle.viewAsU32(),
+	// 	res->refCount,
+	// 	res::enumToString((res::eType)res->handle.get_value_TYPE()),
+	// 	res::enumToString(res->status),
+	// 	res->uid._uid);
 }
 
 //**************************************************************** 
@@ -405,16 +408,17 @@ void Engine::res_addChild (res::Descr *padre_res, res::Descr *child_res)
 //**************************************************************** 
 res::HandleChain* Engine::res_newHandleChain ()
 {
-	res::HandleChain *ret = GOSALLOCT(res::HandleChain*, allocator, sizeof(res::HandleChain));
-	return ret;
+	return resHandleChainPool.alloc();
+	//return GOSALLOCT(res::HandleChain*, allocator, sizeof(res::HandleChain));
 }
 
 //**************************************************************** 
 void Engine::res_freeHandleChain (res::HandleChain *p)
 {
-	p->res = NULL;
-	p->next = NULL;
-	GOSFREE(allocator, p);
+	resHandleChainPool.free(p);
+	// p->res = NULL;
+	// p->next = NULL;
+	// GOSFREE(allocator, p);
 }
 
 //**************************************************************** 
@@ -781,14 +785,14 @@ bool Engine::vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer
 
 void Engine::vtxBuffer_on_afterCreate (void *resIN)
 {
-	asset_logger->log ("vtxBuffer_on_afterCreate\n");
+	//asset_logger->log ("vtxBuffer_on_afterCreate\n");
 	res::VtxBuffer *res = (res::VtxBuffer*)resIN;
 	res->vbHandle.setInvalid();
 }
 
 void Engine::vtxBuffer_on_destroy (void *resIN)
 {
-	asset_logger->log ("vtxBuffer_on_destroy\n");
+	//asset_logger->log ("vtxBuffer_on_destroy\n");
 	res::VtxBuffer *res = (res::VtxBuffer*)resIN;
 	gpu->deleteResource (res->vbHandle);
 }
@@ -818,7 +822,7 @@ void Engine::idxBuffer_on_afterCreate (void *resIN)
 
 void Engine::idxBuffer_on_destroy (void *resIN)
 {
-	asset_logger->log ("idxBuffer_on_destroy\n");
+	//asset_logger->log ("idxBuffer_on_destroy\n");
 	res::IdxBuffer *res = (res::IdxBuffer*)resIN;
 	gpu->deleteResource (res->ibHandle);
 }
@@ -853,14 +857,14 @@ bool Engine::vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, c
 
 void Engine::vtxshader_on_afterCreate (void *resIN)
 {
-	asset_logger->log ("vtxshader_on_afterCreate\n");
+	//asset_logger->log ("vtxshader_on_afterCreate\n");
 	res::Shader *res = (res::Shader*)resIN;
 	res->shaderHandle.setInvalid();
 }
 
 void Engine::vtxshader_on_destroy (void *resIN)
 {
-	asset_logger->log ("vtxshader_on_destroy\n");
+	//asset_logger->log ("vtxshader_on_destroy\n");
 	res::Shader *res = (res::Shader*)resIN;
 	gpu->deleteResource (res->shaderHandle);
 }
@@ -895,14 +899,14 @@ bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, c
 
 void Engine::pxlshader_on_afterCreate (void *resIN)
 {
-	asset_logger->log ("pxlshader_on_afterCreate\n");
+	//asset_logger->log ("pxlshader_on_afterCreate\n");
 	res::Shader *res = (res::Shader*)resIN;
 	res->shaderHandle.setInvalid();
 }
 
 void Engine::pxlshader_on_destroy (void *resIN)
 {
-	asset_logger->log ("pxlshader_on_destroy\n");
+	//asset_logger->log ("pxlshader_on_destroy\n");
 	res::Shader *res = (res::Shader*)resIN;
 	gpu->deleteResource (res->shaderHandle);
 }
@@ -913,14 +917,14 @@ void Engine::pxlshader_on_destroy (void *resIN)
  *****************************************************************/
 void Engine::pipeline_on_afterCreate (void *resIN)
 {
-	asset_logger->log ("pipeline_on_afterCreate\n");
+	//asset_logger->log ("pipeline_on_afterCreate\n");
 	res::Pipeline *res = (res::Pipeline*)resIN;
 	res->pipeHandle.setInvalid();
 }
 
  void Engine::pipeline_on_destroy (void *resIN)
 {
-	asset_logger->log ("pipeline_on_destroy\n");
+	//asset_logger->log ("pipeline_on_destroy\n");
 	res::Pipeline *res = (res::Pipeline*)resIN;
 	gpu->deleteResource (res->pipeHandle);
 }
@@ -955,14 +959,14 @@ bool Engine::texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAcces
 
 void Engine::texture2D_on_afterCreate (void *resIN)
 {
-	asset_logger->log ("texture2D_on_afterCreate\n");
+	//asset_logger->log ("texture2D_on_afterCreate\n");
 	res::Texture2d *res = (res::Texture2d*)resIN;
 	res->texHandle.setInvalid();
 }
 
 void Engine::texture2D_on_destroy (void *resIN)
 {
-	asset_logger->log ("texture2D_on_destroy\n");
+	//asset_logger->log ("texture2D_on_destroy\n");
 	res::Texture2d *res = (res::Texture2d*)resIN;
 	gpu->deleteResource (res->texHandle);
 }
@@ -992,14 +996,14 @@ bool Engine::shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, E
 
 void Engine::shape_on_afterCreate (void *resIN)
 {
-	asset_logger->log ("shape_on_afterCreate\n");
+	//asset_logger->log ("shape_on_afterCreate\n");
 	res::Shape *res = (res::Shape*)resIN;
 	res->shape.reset();
 }
 
 void Engine::shape_on_destroy (void *resIN)
 {
-	asset_logger->log ("shape_on_destroy\n");
+	//asset_logger->log ("shape_on_destroy\n");
 	res::Shape *res = (res::Shape*)resIN;
 	shape::shapeFree (allocator, &res->shape);
 }
@@ -1088,7 +1092,7 @@ bool Engine::priv_GPUShape_create (const gos::Shape *shape, gpu::StageHelper &st
 
 void Engine::GPUShape_on_afterCreate (void *resIN)
 {
-	asset_logger->log ("GPUShape_on_afterCreate\n");
+	//asset_logger->log ("GPUShape_on_afterCreate\n");
 	res::GPUShape *res = (res::GPUShape*)resIN;
 	res->handle_shape.setInvalid();
 	res->vbHandle.setInvalid();
@@ -1103,7 +1107,7 @@ void Engine::GPUShape_on_afterCreate (void *resIN)
 
 void Engine::GPUShape_on_destroy (void *resIN)
 {
-	asset_logger->log ("GPUShape_on_destroy\n");
+	//asset_logger->log ("GPUShape_on_destroy\n");
 	res::GPUShape *res = (res::GPUShape*)resIN;
 	if (res->numVertex)
 		vtxBufferMan.release (res->vbHandle, res->alloc_vtxbuf_offset, res->alloc_vtxbuf_size);
@@ -1150,14 +1154,14 @@ bool Engine::skeleton_createFromMemory (const u8 *buffer, u32 sizeof_buffer, ENG
 
 void Engine::skeleton_on_afterCreate (void *resIN)
 {
-	asset_logger->log ("skeleton_on_afterCreate\n");
+	//asset_logger->log ("skeleton_on_afterCreate\n");
 	res::Skeleton *res = (res::Skeleton*)resIN;
 	res->skeleton.reset();
 }
 
 void Engine::skeleton_on_destroy (void *resIN)
 {
-	asset_logger->log ("skeleton_on_destroy\n");
+	//asset_logger->log ("skeleton_on_destroy\n");
 	res::Skeleton *res = (res::Skeleton*)resIN;
 	skeleton::free (res->skeleton);
 }
@@ -1188,14 +1192,14 @@ gos::Model*	Engine::model_create (ENGSkeleton handle_skeleton, u16 num_shape, u1
 
 void Engine::model_on_afterCreate (void *resIN)
 {
-	asset_logger->log ("model_on_afterCreate\n");
+	//asset_logger->log ("model_on_afterCreate\n");
 	res::Model3d *res = (res::Model3d*)resIN;
 	res->model.reset();
 }
 
 void Engine::model_on_destroy (void *resIN)
 {
-	asset_logger->log ("model_on_destroy\n");
+	//asset_logger->log ("model_on_destroy\n");
 	res::Model3d *res = (res::Model3d*)resIN;
 	model::free(res->model);
 }
@@ -1278,14 +1282,14 @@ void Engine::modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &mat
 
 void Engine::modelinst_on_afterCreate (void *resIN)
 {
-	asset_logger->log ("modelinst_on_afterCreate\n");
+	//asset_logger->log ("modelinst_on_afterCreate\n");
 	res::Model3dInst *res = (res::Model3dInst*)resIN;
 	res->minst.reset();
 }
 
 void Engine::modelinst_on_destroy (void *resIN)
 {
-	asset_logger->log ("modelinst_on_destroy\n");
+	//asset_logger->log ("modelinst_on_destroy\n");
 	res::Model3dInst *res = (res::Model3dInst*)resIN;
 	res->minst.free();
 }

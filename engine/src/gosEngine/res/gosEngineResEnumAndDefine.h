@@ -113,7 +113,7 @@ namespace gos
 		};
 
 
-		typedef struct HandleT<8,6,5,13> Handle;	//2^13=8192 risorse per pagina, 2^5=32 pagine, counter=2^6
+		typedef struct HandleT<7,4,8,13> Handle;	//2^13=8192 risorse per pagina, 2^8=256 pagine, counter=2^4  => max 2.097.152 handler
 
 		
 		struct Descr; //fwd

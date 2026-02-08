@@ -159,6 +159,7 @@ gosIniFile.cpp
 gosIniFile.h
 gosLIFOFixedSize.h
 gosMagicUID.h
+gosObjectPool.h
 gosRandom.h
 gosServerTCP.cpp
 gosServerTCP.h
