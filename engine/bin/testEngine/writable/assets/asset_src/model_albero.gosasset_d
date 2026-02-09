@@ -8,14 +8,24 @@
 
 @model3d: model_albero
 {
-	[shape]: sh-tronco; glb-albero.Cylinder
-	[shape]: sh-foglie; glb-albero.Icosphere
+	[shape]: glb-albero.*
 
 	skeleton: glb-albero
 
-	[mesh]: sh-tronco; default; tronco; identity
-	[mesh]: sh-foglie; default; foglie; identity
+	[mesh]: Cylinder; default; tronco; identity
+	[mesh]: Icosphere; default; foglie; identity
 }
+
+// @model3d: model_albero
+// {
+// 	[shape]: sh-tronco; glb-albero.Cylinder
+// 	[shape]: sh-foglie; glb-albero.Icosphere
+//
+// 	skeleton: glb-albero
+//
+// 	[mesh]: sh-tronco; default; tronco; identity
+// 	[mesh]: sh-foglie; default; foglie; identity
+// }
 
 
 // @imported_glb: glb-sponza

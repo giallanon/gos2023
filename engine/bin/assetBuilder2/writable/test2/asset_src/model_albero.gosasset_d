@@ -2,8 +2,8 @@
 
 @model3d: model_albero
 {
-	[shape]: sh-tronco; glb-albero.Cylinder
-	[shape]: sh-foglie; glb-albero.Icosphere
+	[shape]: glb-albero.Cylinder as sh-tronco
+	[shape]: glb-albero.Icosphere as sh-foglie
 
 	skeleton: glb-albero
 

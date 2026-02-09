@@ -71,7 +71,7 @@ namespace gos
 
             bool        isVirtualAsset() const                                  { return ((_uid & 0x0100000000000000) != 0); }
             eAssetType  getVirtualAssetType() const                             { assert(isVirtualAsset()); return static_cast<eAssetType>(priv_extractAssetType()); }
-            bool        isAVirtualAssetOfType(eAssetType s) const               { assert(isVirtualAsset()); return (getAssetType() == s); }
+            bool        isAVirtualAssetOfType(eAssetType s) const               { assert(isVirtualAsset()); return (getVirtualAssetType() == s); }
 
             int         compare (const UID &b) const                            { if (_uid == b._uid) return 0; if (_uid > b._uid) return 1; return -1; }
             bool        operator== (const asset2::UID &b) const                 { return _uid == b._uid; }

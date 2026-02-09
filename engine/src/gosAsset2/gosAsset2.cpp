@@ -246,6 +246,17 @@ void asset2::dbcontext_close (DBContext &ctx)
     db::close (ctx.db);
 }
 
+//*******************************************************
+bool asset2::dbcontext_query  (DBContext &ctx, const char *query, db::RST &in_out_rst)
+{
+    if (!ctx.isValid())
+    {
+        logger::err ("dbcontext_query (%s) => invalid ctx\n", query);
+        return false;
+    }
+
+    return db::query (ctx.db, query, &in_out_rst);
+}
 
 
 //********************************************************** 
@@ -577,6 +588,7 @@ bool asset2::virtasset_delete (DBContext &ctx, const UID &uid)
 
     return true;
 }
+
 
 //*******************************************************
 bool asset2::virtasset_rtname_exists (DBContext &ctx, const char *rtname, UID *out__virtual_uid, UID *out_CAN_BE_NULL_uid_of_inifile, UID *out_CAN_BE_NULL_uid_of_concrete_asset)

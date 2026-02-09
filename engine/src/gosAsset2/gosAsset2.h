@@ -23,7 +23,7 @@ namespace gos
         bool        dbcontext_open_ex (const char *baseFolder, const char *dbName, bool bCreateANewDBIfNotExists, DBContext *out);
         inline bool dbcontext_open (const char *baseFolder, bool bCreateANewDBIfNotExists, DBContext *out)                             { return dbcontext_open_ex (baseFolder, GOS_ASSET2__DEFAULT_DB_NAME, bCreateANewDBIfNotExists, out); }
         void        dbcontext_close (DBContext &ctx);
-
+		bool        dbcontext_query  (DBContext &ctx, const char *query, db::RST &in_out_rst);
 
         //================ resources
         bool        res_createUID (eResType resType, const char *absFilenameIN, UID *out);
@@ -42,6 +42,7 @@ namespace gos
         bool        virtasset_get_info (DBContext &ctx, UID uid, UID *out_CAN_BE_NULL_uid_ini, UID *out_CAN_BE_NULL_uid_concrete_asset);
         bool        virtasset_delete (DBContext &ctx, const UID &uid);
         bool        virtasset_rtname_exists (DBContext &ctx, const char *rtname, UID *out__virtual_uid, UID *out_CAN_BE_NULL_uid_of_inifile = NULL, UID *out_CAN_BE_NULL_uid_of_concrete_asset = NULL);
+		
 
 
         //================ asset

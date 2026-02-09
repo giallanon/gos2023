@@ -82,23 +82,120 @@ bool Builder_model3d::priv_extractParams (DBContext &ctx, const UniqueUIDList &l
 			break;
 
 		sShapeInfo shapeInfo;
+		shapeInfo.my_shape_name = NULL;
 
-		sp.toStart (s, ';');
-		if (!sp.next(s2, sizeof(s2)))
+		//La sintassi accettata e'
+		//	<rtname-of-imported-3dmodel>.<name>
+		//	oppure
+		//	<rtname-of-imported-3dmodel>.<name> as <my-shape-name>
+		//
+		// Nel primo caso, creo uno shape di nome <name> basata sulla shape importata di nome <name>
+		// Nel 2nd0 caso, creo uno shape di nome <my-shape-name> basata sulla shape importata di nome <name>
+		string::utf8::Iter iter;
+		string::utf8::Iter iter2;
+		iter.setup (s);
+
+		if (!string::utf8::extractValue (iter, &iter2))
 		{
-			logger->log (eTextColor::red, "line %d, parsing [shape] => expected 2 values separated by ;\n", sec->getLineStarted());
+			logger->log (eTextColor::red, "line %d, parsing [shape] =>  expected at least one values, found none\n", sec->getLineStarted());
 			return false;
 		}
-		shapeInfo.my_shape_name = string::utf8::allocStr (localAllocator, s2);
-
-		if (!sp.next(s2, sizeof(s2)))
-		{
-			logger->log (eTextColor::red, "line %d, parsing [shape] =>  expected 2 values separated by ;\n", sec->getLineStarted());
-			return false;
-		}
+		iter2.copyAllStr(s2, sizeof(s2));
 		shapeInfo.src_shape_name = string::utf8::allocStr (localAllocator, s2);
 
-		parsed_params.listof_shapeInfo.append(shapeInfo);
+		//questo primo parametro deve essere nella forma <rtname-of-imported-3dmodel>.<name>
+		char firstparam_part1[256];
+		char firstparam_part2[256];
+		sp.toStart (shapeInfo.src_shape_name, '.');
+		sp.next(firstparam_part1, sizeof(firstparam_part1));
+		if (!sp.next(firstparam_part2, sizeof(firstparam_part2)))
+		{
+			logger->log (eTextColor::red, "line %d, parsing [shape] =>  first params must be in the <rtname-of-imported-3dmodel>.<name>\n", sec->getLineStarted());
+			return false;
+		}
+		
+		//a seguire, potrebbe esserci " as <my-shape-name>"
+		iter.toNextValidChar();
+
+		if (firstparam_part2[0] == '*')
+		{
+			if (!iter.getCurChar().isEOF())
+			{
+				logger->log (eTextColor::red, "line %d, parsing [shape] => invalid token after %s\n", sec->getLineStarted(), shapeInfo.src_shape_name);
+				return false;
+			}
+		}
+		else
+		{
+			if (!iter.getCurChar().isEOF())
+			{
+				if (string::utf8::extractValue (iter, &iter2))
+				{
+					if (!iter2.cmp("as", false))
+					{
+						logger->log (eTextColor::red, "line %d, parsing [shape] =>  expected ' as ' after '%s'\n", sec->getLineStarted(), shapeInfo.src_shape_name);
+						return false;
+					}					
+					iter.toNextValidChar();
+					
+					if (!string::utf8::extractValue (iter, &iter2))
+					{
+						logger->log (eTextColor::red, "line %d, parsing [shape] =>  expected <my-shape-name>>  after ' as '\n", sec->getLineStarted());
+						return false;
+					}
+					if (0 == iter2.totalLenghtInBytes())
+					{
+						logger->log (eTextColor::red, "line %d, parsing [shape] =>  expected <my-shape-name>>  after ' as '\n", sec->getLineStarted());
+						return false;
+					}
+
+					iter2.copyAllStr(s2, sizeof(s2));
+					shapeInfo.my_shape_name = string::utf8::allocStr (localAllocator, s2);
+				}
+			}
+
+			//se non e' stato specificato un nome per <my-shape-name>, gli assegno il nome <name> derivato dal primo parametro
+			if (NULL == shapeInfo.my_shape_name)
+			{
+				shapeInfo.my_shape_name = string::utf8::allocStr (localAllocator, firstparam_part2);
+			}
+		}
+
+		//se il primo parametro ha un asterisco come nome della shape, allora vuol dire
+		//che devo includere tutte le shape del modello importato
+		if (firstparam_part2[0] == '*')
+		{
+			assert (NULL == shapeInfo.my_shape_name);
+			sprintf_s (s, sizeof(s), "SELECT UID,rtname FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE rtname LIKE '%s.%%'", firstparam_part1);
+			GOSFREE(localAllocator, shapeInfo.src_shape_name);
+
+			db::RST rst;
+			if (asset2::dbcontext_query (ctx, s, rst))
+			{
+				while (rst.fetchRow())
+				{
+					UID uid;
+					uid._uid = rst.getValAsU64(0);
+
+					if (uid.isAVirtualAssetOfType(eAssetType::shape))
+					{
+						sShapeInfo info;
+						info.src_shape_name = string::utf8::allocStr (localAllocator, rst.getVal(1));
+
+						sp.toStart(info.src_shape_name, '.');
+						sp.next(s2, sizeof(s2));
+						sp.next(s2, sizeof(s2));
+						info.my_shape_name = string::utf8::allocStr (localAllocator, s2);
+
+						parsed_params.listof_shapeInfo.append(info);
+					}
+				}
+			}
+		}
+		else
+		{
+			parsed_params.listof_shapeInfo.append(shapeInfo);
+		}
 
 		n++;
     }

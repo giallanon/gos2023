@@ -9,12 +9,17 @@
 
 @model3d: <rtname>    => il runtimeName e' opzionale come sempre
 {
-    [shape]:  <my-shape-name>;<rtname-of-imported-3dmodel>.<name>    => definisce una shape di nome <my-shape-name> presa dalla shape di nome <name> di un determinato <imported-3dmodel>
-    ...
+	[shape]: <rtname-of-imported-3dmodel>.*		=> importa tutte le shape del modello src
+
+		OPPURE
+
+    [shape]:  <rtname-of-imported-3dmodel>.<name> as <my-shape-name>    => definisce una shape di nome <my-shape-name> presa dalla shape di nome <name> di un determinato <imported-3dmodel>
+	...																   <my-shape-name> e' opzionale e, se manca, la shape assume il nome <name>
     [shape]: ...
 
 
-    [material]: <my-material-name>;<rtname-of-imported-3dmodel>.<material-name>
+
+    [material]: <rtname-of-imported-3dmodel>.<material-name> as <my-material-name>
     ...
     [material]: ...
 
