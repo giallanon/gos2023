@@ -59,7 +59,7 @@ void AllocPolicy_Track_hard::onAlloc (const void *p, size_t size, const char *de
 		maxMemalloc = curMemalloc;
 
 	//cerco <debug_filename> e, se non esiste, lo creo nuovo
-	const u32 len = strlen(debug_filename);
+	const u32 len = (u32) strlen(debug_filename);
 	const u32 key = utils::crc32 (debug_filename, len);
 
 	const char *out;

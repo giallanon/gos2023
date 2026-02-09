@@ -57,7 +57,7 @@ namespace gos
 				if (obj >= page->blob && obj < &page->blob[num_per_page])
 				{
 #ifdef _DEBUG
-					const u32 index =  ((uiPtr)obj - (uiPtr)page->blob) / sizeof(OBJ);
+					const u32 index = (u32) ( ((uiPtr)obj - (uiPtr)page->blob) / sizeof(OBJ) );
 					assert (index * sizeof(OBJ) + (uiPtr)page->blob == (uiPtr)obj);
 #endif
 					page->num_free++;
