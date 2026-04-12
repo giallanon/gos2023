@@ -27,4 +27,5 @@ layout(push_constant) uniform PushConstantData
 {
     vec4    color_RGBA;
     uint    line_width;
+    uint    point_radius;
 } pc;

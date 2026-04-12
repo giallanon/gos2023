@@ -76,6 +76,13 @@ bool Rend_line3d::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
         gos::shape::VtxArrayWriter writer;
         writer.setup (&shape);
 
+
+		/*
+			(0.0, 0.5)               (1.0, 0.5)
+
+
+			(0.0, -0.5)              (1.0, -0.5)
+		*/
         gos::shape::VtxArrayWriter::Elem<vec2f> vtx;
         writer.getPos2 (&vtx);
         vtx().set(0, 0.5f);	    vtx.next();
@@ -191,6 +198,7 @@ void Rend_line3d::begin (gos::geom::Camera3 *cam, gpu::RenderCtx *rctxIN)
     state.num_seg_to_draw = 0;
     state.first_instance_index = 0;
     state.cur_line_width = 3;
+	state.cur_point_radius = 2;
     state.cur_color_ARGB = 0xFFFF00FF;
     state.bDepthTestEnabled = false;
     state.bDepthWriteEnabled = false;
@@ -238,6 +246,7 @@ void Rend_line3d::priv_flushProgram (sState &state)
         .setDepthWriteEnable(state.bDepthWriteEnabled)
         .pushConstant (0, &col_RGBA.col.rgba, sizeof(col_RGBA.col.rgba))
         .pushConstant (1, &state.cur_line_width, sizeof(state.cur_line_width))
+		.pushConstant (2, &state.cur_point_radius, sizeof(state.cur_point_radius))
         .drawIndexed (res_shape_segmento->numIndices, state.num_seg_to_draw, res_shape_segmento->indexStart, res_shape_segmento->vtxStart, state.first_instance_index);
 
     state.first_instance_index += state.num_seg_to_draw;
@@ -366,6 +375,29 @@ void Rend_line3d::appendToCommandBuffer (const Ctx &ctx)
                 }
 
                 assert (num_seg_in_buffer <= NUM_MAX_SEGMENT_IN_BUFFER);
+            }
+            break;
+
+		case Ctx::eCMD::set_point_radius:
+            {
+                const u16 w = ctx.program(i++);
+                if (w != state.cur_point_radius)
+                {
+                    priv_flushProgram (state);
+                    state.cur_point_radius = w;
+                }
+            }
+            break;		
+
+		case Ctx::eCMD::point_def:
+            {
+                const u16 vtx_index_2 = ctx.program(i++);
+
+				const u32 packed_idx_1_2 = 0xFFFF0000 | (first_vtx_index + vtx_index_2);
+				pt_segment_buffer[num_seg_in_buffer++] = packed_idx_1_2;
+
+				state.num_seg_to_draw++;
+				assert (num_seg_in_buffer <= NUM_MAX_SEGMENT_IN_BUFFER);
             }
             break;
         }

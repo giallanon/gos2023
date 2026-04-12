@@ -54,6 +54,9 @@ namespace gos
 				void	line (u16 vtx_index1, u16 vtx_index2)									{ line_begin(); line_add_vtx(vtx_index1); line_add_vtx(vtx_index2); line_end(); }
 				void	closed_line (const FastArray<vec3f> &vtxList, u32 num_vtx);
 
+				void	point_set_radius (u16 radius);
+				void 	point (u16 vtx_index);
+
 			private:
 				enum class eCMD : u16
 				{
@@ -64,6 +67,9 @@ namespace gos
 					enable_depth_write	= 0x0005,
 					disable_depth_write	= 0x0006,
 					set_line_width		= 0x0007,
+
+					point_def			= 0x0008,
+					set_point_radius	= 0x0009,
 				};
 
 			private:
@@ -118,6 +124,7 @@ namespace gos
 				bool 	bDepthTestEnabled;
 				bool 	bDepthWriteEnabled;
 				u32		cur_line_width;
+				u32		cur_point_radius;
 
 				u32 	first_instance_index;
 				u32 	num_seg_to_draw;

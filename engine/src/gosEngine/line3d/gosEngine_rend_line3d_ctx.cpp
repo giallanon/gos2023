@@ -120,3 +120,17 @@ void Rend_line3d::Ctx::closed_line (const FastArray<vec3f> &vtxList, u32 num_vtx
 	line_add_vtx (first_vtx_index - num_vtx);
 	line_end();
 }
+
+//********************************************* 
+void Rend_line3d::Ctx::point_set_radius (u16 radius)
+{
+	program.append ((u16)eCMD::set_point_radius);
+	program.append (radius);
+}
+
+//********************************************* 
+void Rend_line3d::Ctx::point (u16 vtx_index)
+{
+	program.append ((u16)eCMD::point_def);
+	program.append (vtx_index);
+}

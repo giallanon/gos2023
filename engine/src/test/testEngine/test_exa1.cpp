@@ -13,6 +13,7 @@ Test_exa1::Test_exa1()
 	vtxList.setup (allocator, 1024);
 	trisList.setup (allocator, 1024);
 	quadList.setup (allocator, 1024);
+	listOfBorderVtxIndex.setup (allocator, 1024);
 
 	line_ctx1.setup (allocator, 512);
 	line_ctx2.setup (allocator, 16);
@@ -29,6 +30,7 @@ Test_exa1::~Test_exa1()
 	vtxList.unsetup ();
 	trisList.unsetup ();
 	quadList.unsetup ();
+	listOfBorderVtxIndex.unsetup();
 }
 
 //***************************************
@@ -133,7 +135,7 @@ void Test_exa1::doCPUStuff ()
 		case COMPILE_TIME_STR_CRC32("simplify_90"):
 			{
 				logger::log ("tris:%d, quad:%d\n", trisList.getNElem(), quadList.getNElem());
-				const u32 tris_limit = (trisList.getNElem() * 15) / 100;
+				const u32 tris_limit = (trisList.getNElem() * 20) / 60;
 				const u32 max_consecutive_fail = trisList.getNElem() / 2;
 
 				u32 numFail = 0;
@@ -188,6 +190,7 @@ void Test_exa1::build_exa ()
 	vtxList.reset();
 	trisList.reset();
 	quadList.reset();
+	listOfBorderVtxIndex.reset();
 
 	static constexpr u32 NUM_RINGS = 5; //16
 	f32 radius = 1;
@@ -224,8 +227,10 @@ void Test_exa1::build_exa ()
 		}
 		else
 		{
+			const bool isLastRingLevel = (ringLevel == NUM_RINGS);
 			const sRing *internal_ring_info = &ringIndexStartList(ringLevel-1);
 			const sRing *external_ring_info = &ringIndexStartList(ringLevel);
+			
 			exaVtx.append (exaVtx(0));
 			for (u32 i=0; i<6; i++)
 			{
@@ -234,6 +239,9 @@ void Test_exa1::build_exa ()
 				const vec3f vtx2 = exaVtx(i+1);
 
 				vtxList.append(vtx1);
+				if (isLastRingLevel)
+					listOfBorderVtxIndex.insertIfNotExists (vtxList.getNElem()-1);
+
 				{
 					const f32 tIncr = 1.0f / (f32)ringLevel;
 					f32 t = 0;
@@ -242,6 +250,9 @@ void Test_exa1::build_exa ()
 						t+=tIncr;
 						const vec3f mid = vtx1 + (vtx2-vtx1) * t;
 						vtxList.append(mid);
+						if (isLastRingLevel)
+							listOfBorderVtxIndex.insertIfNotExists (vtxList.getNElem()-1);
+
 					}
 				}
 			}
@@ -508,9 +519,12 @@ void Test_exa1::subdivide()
 	u32 n = trisList.getNElem();
 	for (u32 i=0; i<n; i++)
 	{
-		const vec3f v0 = vtxList(trisList(i).vtx_idx0);
-		const vec3f v1 = vtxList(trisList(i).vtx_idx1);
-		const vec3f v2 = vtxList(trisList(i).vtx_idx2);
+		const u16 idx0 = trisList(i).vtx_idx0;
+		const u16 idx1 = trisList(i).vtx_idx1;
+		const u16 idx2 = trisList(i).vtx_idx2;
+		const vec3f v0 = vtxList(idx0);
+		const vec3f v1 = vtxList(idx1);
+		const vec3f v2 = vtxList(idx2);
 
 		const vec3f v_center = (v0 + v1 + v2) / 3.0f;
 		const vec3f v_01 = v0 + (v1-v0) * 0.5f;
@@ -526,6 +540,11 @@ void Test_exa1::subdivide()
 		{
 			idx_v01 = vtxList.getNElem();
 			vtxList.append(v_01);
+
+			if (listOfBorderVtxIndex.exists(idx0) && listOfBorderVtxIndex.exists(idx1))
+			{
+				listOfBorderVtxIndex.insertIfNotExists(idx_v01);
+			}
 		}
 
 		u32 idx_v12 = find_in_pointList (vtxList, num_vtx_before_subdivide, v_12);
@@ -533,6 +552,11 @@ void Test_exa1::subdivide()
 		{
 			idx_v12 = vtxList.getNElem();
 			vtxList.append(v_12);
+
+			if (listOfBorderVtxIndex.exists(idx1) && listOfBorderVtxIndex.exists(idx2))
+			{
+				listOfBorderVtxIndex.insertIfNotExists(idx_v12);
+			}
 		}
 		
 		u32 idx_v20 = find_in_pointList (vtxList, num_vtx_before_subdivide, v_20);
@@ -540,6 +564,11 @@ void Test_exa1::subdivide()
 		{
 			idx_v20 = vtxList.getNElem();
 			vtxList.append(v_20);
+
+			if (listOfBorderVtxIndex.exists(idx2) && listOfBorderVtxIndex.exists(idx0))
+			{
+				listOfBorderVtxIndex.insertIfNotExists(idx_v20);
+			}
 		}
 
 		newQuadList.append ( sQuad{
@@ -570,10 +599,15 @@ void Test_exa1::subdivide()
 	n = quadList.getNElem();
 	for (u32 i=0; i<n; i++)
 	{
-		const vec3f v0 = vtxList(quadList(i).vtx_idx0);
-		const vec3f v1 = vtxList(quadList(i).vtx_idx1);
-		const vec3f v2 = vtxList(quadList(i).vtx_idx2);
-		const vec3f v3 = vtxList(quadList(i).vtx_idx3);
+		const u16 idx0 = quadList(i).vtx_idx0;
+		const u16 idx1 = quadList(i).vtx_idx1;
+		const u16 idx2 = quadList(i).vtx_idx2;
+		const u16 idx3 = quadList(i).vtx_idx3;
+
+		const vec3f v0 = vtxList(idx0);
+		const vec3f v1 = vtxList(idx1);
+		const vec3f v2 = vtxList(idx2);
+		const vec3f v3 = vtxList(idx3);
 
 		const vec3f v_center = (v0 + v1 + v2 + v3) / 4.0f;
 		const vec3f v_01 = v0 + (v1-v0) * 0.5f;
@@ -590,6 +624,11 @@ void Test_exa1::subdivide()
 		{
 			idx_v01 = vtxList.getNElem();
 			vtxList.append(v_01);
+
+			if (listOfBorderVtxIndex.exists(idx0) && listOfBorderVtxIndex.exists(idx1))
+			{
+				listOfBorderVtxIndex.insertIfNotExists(idx_v01);
+			}			
 		}
 
 		u32 idx_v12 = find_in_pointList (vtxList, num_vtx_before_subdivide, v_12);
@@ -597,6 +636,11 @@ void Test_exa1::subdivide()
 		{
 			idx_v12 = vtxList.getNElem();
 			vtxList.append(v_12);
+
+			if (listOfBorderVtxIndex.exists(idx1) && listOfBorderVtxIndex.exists(idx2))
+			{
+				listOfBorderVtxIndex.insertIfNotExists(idx_v12);
+			}				
 		}
 		
 		u32 idx_v23 = find_in_pointList (vtxList, num_vtx_before_subdivide, v_23);
@@ -604,6 +648,11 @@ void Test_exa1::subdivide()
 		{
 			idx_v23 = vtxList.getNElem();
 			vtxList.append(v_23);
+
+			if (listOfBorderVtxIndex.exists(idx2) && listOfBorderVtxIndex.exists(idx3))
+			{
+				listOfBorderVtxIndex.insertIfNotExists(idx_v23);
+			}				
 		}
 
 		u32 idx_v30 = find_in_pointList (vtxList, num_vtx_before_subdivide, v_30);
@@ -611,6 +660,11 @@ void Test_exa1::subdivide()
 		{
 			idx_v30 = vtxList.getNElem();
 			vtxList.append(v_30);
+
+			if (listOfBorderVtxIndex.exists(idx3) && listOfBorderVtxIndex.exists(idx0))
+			{
+				listOfBorderVtxIndex.insertIfNotExists(idx_v30);
+			}				
 		}		
 
 		newQuadList.append ( sQuad{
@@ -661,7 +715,29 @@ void Test_exa1::quad_get_vertex (u32 quadIndex, vec3f *out) const
 }
 
 //***************************************
+f32 Test_exa1::quad_calc_area (const vec3f *vtx) const
+{
+	f32 a = 0.5f * (   vtx[0].x * vtx[1].y 
+					- vtx[0].y * vtx[1].x
+					+ vtx[1].x * vtx[2].y 
+					- vtx[1].y * vtx[2].x 
+					+ vtx[2].x * vtx[3].y 
+					- vtx[2].y * vtx[3].x 
+					+ vtx[3].x * vtx[0].y 
+					- vtx[3].y * vtx[0].x);
+	if (a < 0)
+		return -a;
+	return a;
+}
+
+//***************************************
 void Test_exa1::relax()
+{
+	relax_2();
+}
+
+//***************************************
+void Test_exa1::relax_1()
 {
 	logger::log (eTextColor::white, "relaxing...\n");
 	struct Info
@@ -764,6 +840,14 @@ void Test_exa1::relax()
 		case 3:	idx_vtx_centrale = 1; idx_vtx_da_muovere1=0; idx_vtx_da_muovere2 = 2; break;
 		}
 
+
+		//non muovo i vtx del bordo
+		if (listOfBorderVtxIndex.exists(info->vtx_index[idx_vtx_da_muovere1]))
+			continue;
+		if (listOfBorderVtxIndex.exists(info->vtx_index[idx_vtx_da_muovere2]))
+			continue;
+
+
 		const vec3f vv0 = vtxList(info->vtx_index[idx_vtx_centrale]);
 		const vec3f vv1 = vtxList(info->vtx_index[idx_vtx_da_muovere1]);
 		const vec3f vv2 = vtxList(info->vtx_index[idx_vtx_da_muovere2]);
@@ -784,6 +868,85 @@ void Test_exa1::relax()
 	logger::log ("done\n");
 }
 
+
+/***************************************
+ * https://www.youtube.com/watch?v=Jm3pLya3d9c
+ * per ogni quad
+ * 	calcolare AREA del quad
+ * 	in base a AREA, calcolare il lato L e la diagnole D del quadrato che avrebbe la stessa area
+ * 
+ *  per ogni vertice:
+ * 		linea dal centro del quad verso verice i; muoviti di distanza D. Questo punto e' l'ipotetico vertice
+ * 		dal quale disegnare un quad di lato L
+ * 		Calcola la distanza dei vtx del quad dai vertici dell'ipotetico quadrato e memorizzare
+ * 
+ *  scegliere il quadrato che minimizza il movimento dei vertici.
+ * 	muovere "un po'" i vertici in direzione del quadrato
+ */
+void Test_exa1::relax_2()
+{
+	const u32 n = 1; //quadList.getNElem();
+	for (u32 i=0; i<n; i++)
+	{
+		vec3f	vtx[4];
+		quad_get_vertex (i, vtx);
+
+		const f32 area = quad_calc_area (vtx);
+		const f32 lato = sqrtf(area);
+		const f32 diag = lato * 1.4f;
+
+		const vec3f center = (vtx[0] + vtx[1] + vtx[2] + vtx[3]) / 4.0f;
+
+		vec3f p[4][4];
+		f32   best_dist = 1e36f;
+		u32	  best = 0;
+		for (u32 i2=0; i2<4; i2++)
+		{
+			vec3f dir = vtx[i2] - center;
+			dir.normalize();
+
+			vec3f dir2(-dir.y, dir.x, 0);
+			dir2.normalize();
+
+			//calcolo il quadratro ipotetico costruito sul vtx i2-esimo
+			p[i2][0] = center + (dir * diag);
+			p[i2][1] = p[i2][0] + dir2 * lato;
+			p[i2][2] = p[i2][1] - dir * lato;
+			p[i2][3] = p[i2][2] - dir2 * lato;
+		
+			//distanza media dei vtx del quadrato ipotetico rispetto ai vtx originali
+			f32 avg_dist = 0;
+			for (u32 i3=0; i3<4; i3++)
+			{
+				vec3f v = vtx[i3] - p[i2][i3];
+				avg_dist += v.length2();
+			}
+
+			if (avg_dist < best_dist)
+			{
+				avg_dist = best_dist;
+				best = i2;
+			}
+		}
+
+		//in "best" ho l'indice del miglior quadrato ipotetico.
+		//Sposto i vertici "un po'" in quella direzione
+		for (u32 i2=0; i2<4; i2++)
+		{
+			const f32 t = 0.01f;
+			const vec3f v = vtx[i2] + (p[best][i2] - vtx[i2]) * t;
+
+			switch (i2)
+			{
+			case 0:	vtxList[quadList(i).vtx_idx0] = v; break;
+			case 1:	vtxList[quadList(i).vtx_idx1] = v; break;
+			case 2:	vtxList[quadList(i).vtx_idx2] = v; break;
+			case 3:	vtxList[quadList(i).vtx_idx3] = v; break;
+			}
+		}
+	}
+}
+
 //***************************************
 void Test_exa1::build_line_ctx ()
 {
@@ -794,6 +957,7 @@ void Test_exa1::build_line_ctx ()
 		return true;
 	});
 
+	
 	line_ctx1.set_line_width(2);
 	trisList.forEach ( [&line_ctx1=this->line_ctx1, &vtxList=this->vtxList](u32 index, const sTris &tris){
 		line_ctx1.line_begin();
@@ -817,6 +981,17 @@ void Test_exa1::build_line_ctx ()
 		line_ctx1.line_end();
 		return true;
 	});
+
+
+	line_ctx1.point_set_radius(10);
+	line_ctx1.set_color_ARGB (0xFFFFFF00);
+	listOfBorderVtxIndex.forEach( [&line_ctx1=this->line_ctx1, &vtxList=this->vtxList](u32 index, const u32 vtx_index)
+	{
+		line_ctx1.point (vtx_index);
+		return true;
+	});
+
+	
 
 
 	logger::log (eTextColor::white, "cur graph: vtx=%d, tris=%d, quad=%d\n", vtxList.getNElem(), trisList.getNElem(), quadList.getNElem());

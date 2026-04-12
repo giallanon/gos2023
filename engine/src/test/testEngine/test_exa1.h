@@ -4,6 +4,7 @@
 #include "gosEngine_renderer.h"
 #include "../gosGPU/utils/gosFreeMovement.h"
 #include "../gosGPU/utils/gosFPSMovement.h"
+#include "gosUniqueSortedList.h"
 
 class Test_exa1
 {
@@ -60,8 +61,11 @@ private:
 	void 			subdivide();
 	u32 			find_in_pointList (const PointList &list, u32 index_start, const gos::vec3f &v_to_be_found) const;
 	void 			relax();
+	void 			relax_1();
+	void 			relax_2();
 
 	void 			quad_get_vertex (u32 quadIndex, gos::vec3f *out) const;
+	f32 			quad_calc_area (const gos::vec3f *vtx) const;
 
 private:
 	gos::Allocator					*allocator;
@@ -77,6 +81,7 @@ private:
 	PointList						vtxList;
 	TrisList						trisList;
 	QuadList						quadList;
+	gos::UniqueSortedList<u32>		listOfBorderVtxIndex;	//elenco degli indici dei vtx che rappresentano il bordo dell'exa
 	gos::engine::Rend_line3d::Ctx 	line_ctx1;
 	gos::engine::Rend_line3d::Ctx 	line_ctx2;
 	gos::engine::Rend_line3d::Ctx 	line_ctx3;
