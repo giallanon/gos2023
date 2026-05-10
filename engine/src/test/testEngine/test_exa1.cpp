@@ -168,8 +168,11 @@ void Test_exa1::doCPUStuff ()
 			break;			
 
 		case COMPILE_TIME_STR_CRC32("relax"):
-			relax();
-			build_line_ctx();
+			for (u32 i=0;i<10; i++)
+			{
+				relax();
+				build_line_ctx();
+			}
 			break;
 
 		}
@@ -179,7 +182,12 @@ void Test_exa1::doCPUStuff ()
     cam.markUpdated();
 }
 
-//***************************************
+/***************************************
+ * output di questa fn sono gli array
+ * 	vtxList, trisList, quadList, listOfBorderVtxIndex
+ * 
+ * fillati a dovere
+ */
 void Test_exa1::build_exa ()
 {
 	const vec3f	center(0,0,0);
@@ -191,6 +199,27 @@ void Test_exa1::build_exa ()
 	trisList.reset();
 	quadList.reset();
 	listOfBorderVtxIndex.reset();
+
+
+	// vtxList.append (vec3f(-3, 3, 0));
+	// vtxList.append (vec3f( 3, 3.5f, 0));
+	// vtxList.append (vec3f( 4,-3, 0));
+	// vtxList.append (vec3f(-3.4f,-3.2f, 0));
+
+	// vtxList.append (vec3f( 0, 3, 0));
+	// vtxList.append (vec3f( 3, 0, 0));
+	// vtxList.append (vec3f( 0,-3, 0));
+	// vtxList.append (vec3f(-3, 0, 0));
+
+	// trisList.append (sTris { .vtx_idx0=0, .vtx_idx1=1, .vtx_idx2=2 } );
+	// trisList.append (sTris { .vtx_idx0=2, .vtx_idx1=3, .vtx_idx2=0 } );
+
+	// quadList.append (sQuad { .vtx_idx0=0, .vtx_idx1=1, .vtx_idx2=2, .vtx_idx3=3 } );
+
+	// return;
+
+
+
 
 	static constexpr u32 NUM_RINGS = 5; //16
 	f32 radius = 1;
@@ -876,7 +905,7 @@ void Test_exa1::relax_1()
  * 	in base a AREA, calcolare il lato L e la diagnole D del quadrato che avrebbe la stessa area
  * 
  *  per ogni vertice:
- * 		linea dal centro del quad verso verice i; muoviti di distanza D. Questo punto e' l'ipotetico vertice
+ * 		linea dal centro del quad verso verice i; muoviti di distanza (D/2). Questo punto e' l'ipotetico vertice
  * 		dal quale disegnare un quad di lato L
  * 		Calcola la distanza dei vtx del quad dai vertici dell'ipotetico quadrato e memorizzare
  * 
@@ -885,35 +914,107 @@ void Test_exa1::relax_1()
  */
 void Test_exa1::relax_2()
 {
-	const u32 n = 1; //quadList.getNElem();
+	struct sAdjust
+	{
+		vec3f	sum;
+		u32 	n;
+	};
+
+	gos::FastArray<sAdjust> adj;
+	adj.setup (gos::getScrapAllocator(), vtxList.getNElem());
+	for (u32 i=0; i<vtxList.getNElem(); i++)
+	{
+		adj[i].sum.set(0,0,0);
+		adj[i].n = 0;
+	}
+
+
+
+	line_ctx2.clear();
+
+	const u32 n = quadList.getNElem();
 	for (u32 i=0; i<n; i++)
 	{
 		vec3f	vtx[4];
 		quad_get_vertex (i, vtx);
 
-		const f32 area = quad_calc_area (vtx);
-		const f32 lato = sqrtf(area);
-		const f32 diag = lato * 1.4f;
+
+		//angoli del quad
+		bool bSkip = true;
+		{
+			vec3f lato[4];
+			lato[0] = vtx[1] - vtx[0];
+			lato[1] = vtx[2] - vtx[1];
+			lato[2] = vtx[3] - vtx[2];
+			lato[3] = vtx[0] - vtx[3];
+
+			for (u32 i2=0; i2<4; i2++)
+				lato[i2].normalize();
+
+			f32 alfa[4];
+			alfa[0] = acosf(math::dot (lato[0], lato[1]));
+			alfa[1] = acosf(math::dot (lato[1], lato[2]));
+			alfa[2] = acosf(math::dot (lato[2], lato[3]));
+			alfa[3] = acosf(math::dot (lato[3], lato[0]));
+
+			const f32 A_MIN = math::gradToRad(-70);
+			const f32 A_MAX = math::gradToRad(110);
+			for (u32 i2=0; i2<4; i2++)
+			{
+				if (alfa[i2] < A_MIN || alfa[i2] > A_MAX)
+					bSkip = false;
+			}
+		}
+
+		if (bSkip)
+			continue;
+
+
+
+
+		//const f32 area = quad_calc_area (vtx);
+		//const f32 lato = sqrtf(area);
+		
+		const f32 lato = 0.4f;
+		const f32 diag_full = lato * 1.4f;
+		const f32 diag_half = diag_full * 0.5f;
+
+
+		// const f32 area_desiderata = lato*lato;
+		// const f32 area = quad_calc_area (vtx);
+		// if (fabsf(area - area_desiderata) < 0.05f)
+		// 	continue;
+
 
 		const vec3f center = (vtx[0] + vtx[1] + vtx[2] + vtx[3]) / 4.0f;
-
 		vec3f p[4][4];
 		f32   best_dist = 1e36f;
 		u32	  best = 0;
 		for (u32 i2=0; i2<4; i2++)
 		{
-			vec3f dir = vtx[i2] - center;
-			dir.normalize();
+			vec3f dir_center_to_vtx = vtx[i2] - center;
+			dir_center_to_vtx.normalize();
 
-			vec3f dir2(-dir.y, dir.x, 0);
+			u32 i3 = i2+1;
+			if (i3 == 4) i3=0;
+			vec3f dir_vtx_to_vtx = vtx[i3] - vtx[i2];
+			dir_vtx_to_vtx.normalize();
+			if (fabsf(dir_vtx_to_vtx.x) > fabsf(dir_vtx_to_vtx.y))
+				dir_vtx_to_vtx.y = 0;
+			else
+				dir_vtx_to_vtx.x = 0;
+			dir_vtx_to_vtx.normalize();
+
+			
+			vec3f dir2(-dir_vtx_to_vtx.y, dir_vtx_to_vtx.x, 0);
 			dir2.normalize();
 
 			//calcolo il quadratro ipotetico costruito sul vtx i2-esimo
-			p[i2][0] = center + (dir * diag);
-			p[i2][1] = p[i2][0] + dir2 * lato;
-			p[i2][2] = p[i2][1] - dir * lato;
-			p[i2][3] = p[i2][2] - dir2 * lato;
-		
+			p[i2][0] = center + (dir_center_to_vtx * diag_half);
+			p[i2][1] = p[i2][0] + dir_vtx_to_vtx * lato;
+			p[i2][2] = p[i2][1] - dir2 * lato;
+			p[i2][3] = p[i2][2] - dir_vtx_to_vtx * lato;
+
 			//distanza media dei vtx del quadrato ipotetico rispetto ai vtx originali
 			f32 avg_dist = 0;
 			for (u32 i3=0; i3<4; i3++)
@@ -927,22 +1028,64 @@ void Test_exa1::relax_2()
 				avg_dist = best_dist;
 				best = i2;
 			}
+
 		}
 
-		//in "best" ho l'indice del miglior quadrato ipotetico.
-		//Sposto i vertici "un po'" in quella direzione
+		// {
+		// 	const u16 ii = line_ctx2.vtx_add(p[best][0]);
+		// 	line_ctx2.vtx_add(p[best][1]);
+		// 	line_ctx2.vtx_add(p[best][2]);
+		// 	line_ctx2.vtx_add(p[best][3]);
+
+		// 	line_ctx2.set_line_width(1);
+		// 	line_ctx2.set_color_ARGB(0xffff0000);
+		// 	line_ctx2.line_begin();
+		// 	line_ctx2.line_add_vtx(ii);
+		// 	line_ctx2.line_add_vtx(ii+1);
+		// 	line_ctx2.line_add_vtx(ii+2);
+		// 	line_ctx2.line_add_vtx(ii+3);
+		// 	line_ctx2.line_add_vtx(ii);
+		// 	line_ctx2.line_end();
+		// }		
+			
+			// in "best" ho l'indice del miglior quadrato ipotetico.
+		// Sposto i vertici "un po'" in quella direzione
+		u32 best_start_vtx = best;
 		for (u32 i2=0; i2<4; i2++)
 		{
-			const f32 t = 0.01f;
-			const vec3f v = vtx[i2] + (p[best][i2] - vtx[i2]) * t;
+			const f32 t = 0.03f;
+			const vec3f v = vtx[best_start_vtx] + (p[best][i2] - vtx[best_start_vtx]) * t;
 
-			switch (i2)
+			u32 vtx_index;
+			switch (best_start_vtx)
 			{
-			case 0:	vtxList[quadList(i).vtx_idx0] = v; break;
-			case 1:	vtxList[quadList(i).vtx_idx1] = v; break;
-			case 2:	vtxList[quadList(i).vtx_idx2] = v; break;
-			case 3:	vtxList[quadList(i).vtx_idx3] = v; break;
+			case 0:	vtx_index = quadList(i).vtx_idx0; break;
+			case 1:	vtx_index = quadList(i).vtx_idx1; break;
+			case 2:	vtx_index = quadList(i).vtx_idx2; break;
+			case 3:	vtx_index = quadList(i).vtx_idx3; break;
 			}
+
+
+			if (!listOfBorderVtxIndex.exists(vtx_index))
+			{
+				//vtxList[vtx_index] = v;
+				adj[vtx_index].n++;
+				adj[vtx_index].sum += v;
+			}
+			
+
+			best_start_vtx++;
+			if (best_start_vtx >= 4)
+				best_start_vtx = 0;
+		}
+	}
+
+	for (u32 i=0; i<vtxList.getNElem(); i++)
+	{
+		if (0 != adj(i).n)
+		{
+			vec3f sum = adj(i).sum / (f32)adj(i).n;
+			vtxList[i] = sum;
 		}
 	}
 }

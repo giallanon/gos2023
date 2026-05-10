@@ -82,6 +82,7 @@ private:
 	TrisList						trisList;
 	QuadList						quadList;
 	gos::UniqueSortedList<u32>		listOfBorderVtxIndex;	//elenco degli indici dei vtx che rappresentano il bordo dell'exa
+	
 	gos::engine::Rend_line3d::Ctx 	line_ctx1;
 	gos::engine::Rend_line3d::Ctx 	line_ctx2;
 	gos::engine::Rend_line3d::Ctx 	line_ctx3;

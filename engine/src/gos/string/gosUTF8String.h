@@ -60,8 +60,8 @@ namespace gos
 #else
 		void				append (u64 i)																{ char buf[64]; sprintf_s (buf, sizeof(buf),"%" PRIu64,i); append (buf, (u32)strlen(buf)); }
 		void				append (i64 i)																{ char buf[64]; sprintf_s (buf, sizeof(buf),"%" PRIi64,i); append (buf, (u32)strlen(buf)); }
-		void 				append (const STRFMT &num)													{ append (num.temp); }
 #endif
+		void 				append (const STRFMT &num)													{ append (num.temp); }
 
 		friend	UTF8String&		operator<<  (UTF8String &me, const UTF8String &b)								{ me.append (b); return me; }
 		friend	UTF8String&		operator<<  (UTF8String &me, const char *b)										{ me.append (b); return me; }

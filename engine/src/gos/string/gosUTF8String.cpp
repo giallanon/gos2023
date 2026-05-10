@@ -270,14 +270,14 @@ void UTF8String::escape()
 	if (0 == curSize)
 		return;
 
-	const u32 newSize = 4 + gos::string::utf8::calcEscapedSeqLength (buffer, curSize);
-	if (NULL == allocator)
-		allocator =  gos::getSysHeapAllocator();
-
-	char *newBuffer = GOSALLOCT(char*, allocator, newSize);
-	curSize = gos::string::utf8::escape (newBuffer, newSize, buffer, curSize);
-	GOSFREE(allocator, buffer);
-	buffer = newBuffer;
+	const u32 temp_size = 4 + gos::string::utf8::calcEscapedSeqLength (buffer, curSize);
+	char *temp = GOSALLOC_SCRAPT(char*, temp_size);
+	gos::string::utf8::escape (temp, temp_size, buffer, curSize);
+	
+	clear();
+	append(temp);
+	
+	GOSFREE_SCRAP(temp);
 }
 
 //*******************************
@@ -285,15 +285,7 @@ void UTF8String::unescape()
 {
 	if (0 == curSize)
 		return;
-
-	const u32 newSize = curSize;
-	if (NULL == allocator)
-		allocator =  gos::getSysHeapAllocator();
-
-	char *newBuffer = GOSALLOCT(char*, allocator, newSize);
-	curSize = gos::string::utf8::unescape (newBuffer, newSize, buffer, curSize);
-	GOSFREE(allocator, buffer);
-	buffer = newBuffer;
+	curSize = gos::string::utf8::unescapeInPlace(buffer, curSize);
 }
 
 //*******************************
