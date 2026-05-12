@@ -6,8 +6,8 @@ using namespace gos;
 //******************************************
 void BufferLinear::priv_FreeCurBuffer ()
 {
-	if (bFreeMemBlock)
-		GOSFREE(allocator, mem);
+	if (bFreeMemBlock && mem)
+		GOSFREE_AND_NULL(allocator, mem);
 }
 
 //******************************************
