@@ -4,7 +4,6 @@
 #include "../gosGPU/gosGPU.h"
 #include "../gosInput/gosInput.h"
 #include "../gosAsset2/gosAsset2EnumAndDefine.h"
-#include "../gosAsset2/gosAsset2Hub.h"
 #include "../gosGeom/gosGeomCamera3.h"
 #include "../gosShape/gosShape.h"
 #include "../gosShape/skeleton/gosSkeleton.h"

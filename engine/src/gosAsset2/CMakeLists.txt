@@ -38,14 +38,6 @@ builders/gosAsset2Builder_tex2D_shaders.h
 builders/gosAsset2BuilderInterface.cpp
 builders/gosAsset2BuilderInterface.h
 
-loaders/gosAsset2Loader_pipe.cpp
-loaders/gosAsset2Loader_pipe.h
-loaders/gosAsset2Loader_shader.cpp
-loaders/gosAsset2Loader_shader.h
-loaders/gosAsset2Loader_tex2D.cpp
-loaders/gosAsset2Loader_tex2D.h
-loaders/gosAsset2LoaderInterface.h
-
 shader_reflect/spirv_reflect.c
 shader_reflect/spirv_reflect.h
 shader_reflect/spirv.h
@@ -58,11 +50,11 @@ gosAsset2Builder_report.cpp
 gosAsset2Builder.cpp
 gosAsset2Builder.h
 gosAsset2EnumAndDefine.h
-gosAsset2Hub_mainThread.cpp
-gosAsset2Hub.cpp
-gosAsset2Hub.h
-gosAsset2Loader.cpp
-gosAsset2Loader.h
+
+
+
+
+
 )
 
 

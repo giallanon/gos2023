@@ -1,5 +1,4 @@
 #include "gosEngine.h"
-#include "../gos/memory/gosAllocatorHeap.h"
 #include "../gosAsset2/gosAsset2Builder.h"
 
 using namespace gos;

@@ -1,8 +1,12 @@
 #ifndef _VulkanExample6_h_
 #define _VulkanExample6_h_
 #include "VulkanApp.h"
-#include "gosAsset2Hub.h"
 
+
+//esempio deprecato perche' faceva uso di "asset::Hub" che non ha senso di esistere
+//gosAsset si limita a buildare gli asset.
+//I loader sono definiti nell'engine
+#if 0   
 
 /************************************
  *  VulkanExample6
@@ -72,5 +76,6 @@ private:
     gos::asset2::Handle     assetPipe2;
 };
 
+#endif //#ifdef 0
 
 #endif //_VulkanExample6_h_

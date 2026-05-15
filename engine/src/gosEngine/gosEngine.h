@@ -8,6 +8,8 @@
 #include "../gos/logger/gosLoggerStdout.h"
 #include "../gos/gosObjectPool.h"
 #include "../gosAsset2/gosAsset2.h"
+#include "../gos/gosThreadMsgQ.h"
+#include "../gos/memory/gosAllocatorHeap.h"
 #include "line3d/gosEngine_rend_line3d.h"
 
 

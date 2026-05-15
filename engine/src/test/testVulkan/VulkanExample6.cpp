@@ -1,4 +1,6 @@
 #include "VulkanExample6.h"
+
+#if 0
 #include "../gosShape/gosShapeImport.h"
 #include "../gos/gosFIFOFixedSize.h"
 #include "gosAsset2Loader.h"
@@ -406,3 +408,6 @@ void VulkanExample6::mainLoop()
     //free
     gpu->deleteResource (cmdBufferHandle);
 }
+
+#endif //if 0
+
