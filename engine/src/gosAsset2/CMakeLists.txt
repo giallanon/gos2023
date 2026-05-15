@@ -44,16 +44,15 @@ shader_reflect/spirv.h
 shader_reflect/SPVReflect.cpp
 shader_reflect/SPVReflect.h
 
+assetFile/gosAssetFile_model3D.cpp
+assetFile/gosAssetFile_model3D.h
+
 gosAsset2.cpp
 gosAsset2.h
 gosAsset2Builder_report.cpp
 gosAsset2Builder.cpp
 gosAsset2Builder.h
 gosAsset2EnumAndDefine.h
-
-
-
-
 
 )
 

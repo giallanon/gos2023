@@ -5,7 +5,7 @@
 #include "../gosAsset2Builder.h"
 #include "../gos/gosBufferWriter.h"
 #include "../gos/gosDataBlob.h"
-
+#include "../assetFile//gosAssetFile_model3D.h"
 
 using namespace gos;
 using namespace gos::asset2;
@@ -538,34 +538,24 @@ bool Builder_model3d::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool 
 	return true;
 }
 
-
 //************************************
 bool Builder_model3d::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const char *filenameDST, const FastArray<sFinalMeshInfo> &listof_final_meshes) const
 {
-    u8 stackBuffer[2048];
-	gos::BufferW_linear buffer;
-	buffer.setupWithBase (stackBuffer, sizeof(stackBuffer), gos::getScrapAllocator(), eEndianess::big);
+	AssetFile_model3D	assetFile;
 
-	//magic
-	buffer.writeU32 (GOS_MAGIC__ASSET_MODEL3D);
+	assetFile.begin (localAllocator);
 
-	//skeleton (concrete asset UID)
-	buffer.writeU64 (uid_of_concrete_skeleton._uid);
+	//skeleton
+	assetFile.skeleton_set (uid_of_concrete_skeleton);
 
-
-	//num shape e relativi UID concreti
-	buffer.writeU32 (listof_UID_of_concrete_shape_that_I_need.getNElem());
+	//shapes
 	for (u32 i=0; i<listof_UID_of_concrete_shape_that_I_need.getNElem(); i++)
-	{
-		assert (listof_UID_of_concrete_shape_that_I_need(i).isAnAssetOfType(eAssetType::shape));
-		buffer.writeU64 (listof_UID_of_concrete_shape_that_I_need(i)._uid);
-	}
+		assetFile.shape_add (listof_UID_of_concrete_shape_that_I_need(i));
 
-	//num materiali e relativi UID concreti
-	buffer.writeU32 (0);
+	//material
+	//TODO
 
-	//num meshes e relative info
-	buffer.writeU32 (listof_final_meshes.getNElem());
+	//meshes
 	for (u32 i=0; i<listof_final_meshes.getNElem(); i++)
 	{
 		//faccio il match tra "my-shape-index" e la lista delle shape concrete che ho appena salvato
@@ -573,17 +563,13 @@ bool Builder_model3d::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete
 		UID uid = parsed_params.listof_shapeInfo(k).uid_of_concrete_shape_asset;
 		u32 index_of_concrete_shape = listof_UID_of_concrete_shape_that_I_need.simpleSearch (uid);
 
-		assert (u32MAX != index_of_concrete_shape);
-		buffer.writeU32 (index_of_concrete_shape);
-
-		//bone index
-		buffer.writeU32 (listof_final_meshes(i).bone_index);
-
-		//material index
-		buffer.writeU32 (listof_final_meshes(i).my_material_index);
+		assetFile.mesh_add (index_of_concrete_shape, listof_final_meshes(i).bone_index, listof_final_meshes(i).my_material_index);
 		
 	}
 
-	//salvo il file asset
-	return fs::fileSaveBuffer (filenameDST, stackBuffer, buffer.tell());
+	return assetFile.save (filenameDST);
 }
+
+
+
+
