@@ -1,6 +1,12 @@
 @include: common.gosasset_d
 
 
+@model3d: model_albero
+{
+	import: <common_assets>/model3d/albero/albero.glb
+}
+
+/*
 @imported_glb: glb-albero
 {
     src: <common_assets>/model3d/albero/albero.glb
@@ -15,6 +21,7 @@
 	[mesh]: Cylinder; default; tronco; identity
 	[mesh]: Icosphere; default; foglie; identity
 }
+*/
 
 // @model3d: model_albero
 // {

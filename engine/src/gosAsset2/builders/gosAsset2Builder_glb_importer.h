@@ -32,7 +32,7 @@ namespace gos
 			public:
 						Result()		{ reset(); }
 						~Result()		{ free(); }
-				void 	reset()			{ allocator=NULL; numShapes=0; shapeList=NULL; skeleton.reset(); shapeNameList=NULL; }
+				void 	reset()			{ allocator=NULL; numShapes=0; shapeList=NULL; shape_vs_bone_list=NULL; skeleton.reset(); shapeNameList=NULL; }
 				void 	free()			{ 
 					if (NULL == allocator) return;
 					if (shapeList)
@@ -44,6 +44,7 @@ namespace gos
 						}
 						GOSFREE(allocator, shapeList);
 						GOSFREE(allocator, shapeNameList);
+						GOSFREE(allocator, shape_vs_bone_list);
 					}
 					gos::skeleton::free(skeleton);
 					reset();
@@ -53,8 +54,10 @@ namespace gos
 				VtxLayout				vtxLayot;
 				u32 					numShapes;
 				gos::Shape 				*shapeList;
+				u32						*shape_vs_bone_list;	//per ogni shape, indica a quale bone e' associata
 				char					**shapeNameList;
 				gos::Skeleton			skeleton;
+				
 
 			private:
 				gos::Allocator 			*allocator;
@@ -223,6 +226,7 @@ namespace gos
 			void 	priv_resolveSkeleton (Bone *rootBone);
 			void 	priv_resolveSkeletonChildren (Bone *bone, const Bone *father);
 			void 	priv_applySkeleton (Bone *rootBone);
+			void	priv_build_shape_vs_bone_list (Bone *me, Result *out_results);
 			
 			void 	priv_printStatistics() const;
 			void 	priv_printSkeleton() const;

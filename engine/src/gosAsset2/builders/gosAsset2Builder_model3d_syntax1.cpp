@@ -1,16 +1,32 @@
-#include "gosAsset2Builder_glb.h"
+#include "gosAsset2Builder_model3d.h"
 #include "gos.h"
 #include "../gos/gosString.h"
+#include "../gos/gosUtils.h"
 #include "../gosAsset2Builder.h"
 #include "../gos/gosBufferWriter.h"
 #include "../gos/gosDataBlob.h"
+#include "../assetFile//gosAssetFile_model3D.h"
 
 using namespace gos;
 using namespace gos::asset2;
 
 
 //************************************
-bool Builder_glb::priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename)
+Builder_model3d::Syntax1::Syntax1 () : BuilderInterface (eAssetType::model3d)
+{
+	localAllocator = gos::getSysHeapAllocator();
+
+	listof_uid_of_concreste_shape.setup (localAllocator, 64);
+    buildCtx.bAModelWasImported = false;
+}
+
+//************************************
+Builder_model3d::Syntax1::~Syntax1 ()
+{
+}
+
+//************************************
+bool Builder_model3d::Syntax1::priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename)
 {
     //setto i default
     memset (&params, 0, sizeof(Params));
@@ -18,26 +34,31 @@ bool Builder_glb::priv_extractParams (DBContext &ctx, const UniqueUIDList &listo
     //parse della section
     char s[1024];
 
-    //param:src         e' mandatorio ed indica il nome del file .glb da importare
-    if (!sec->get("src", s, sizeof(s)))
+    //import:src         e' mandatorio ed indica il nome del file .glb da importare
+    if (!sec->get("import", s, sizeof(s)))
     {
-        logger->log(eTextColor::red, "line %d => can't find param <src>\n", sec->getLineStarted());
+        logger->log(eTextColor::red, "line %d => can't find param <import>\n", sec->getLineStarted());
         return false;
     }
-    if (!asset2::Builder::makeABSPathFromFilename (ctx, logger, listof_UID_of_known_ini_file, absFilename, s, params.src, sizeof(params.src)))
+    if (!asset2::Builder::makeABSPathFromFilename (ctx, logger, listof_UID_of_known_ini_file, absFilename, s, params.import_name, sizeof(params.import_name)))
         return false;
 
     return true;
 }
 
 //************************************
-bool Builder_glb::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
+bool Builder_model3d::Syntax1::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
 {
 	assert (false == buildCtx.bAModelWasImported);
     assert (ctx.isValid());
 	assert (NULL != secIN);
 	uid_of_iniFile = uid_of_iniFileIN;
 	sec = secIN;
+
+
+	uid_of_concrete_model3d.setInvalid();
+	uid_of_concrete_skeleton.setInvalid();
+	listof_uid_of_concreste_shape.reset();
     
     //parse della sezione
     if (!priv_extractParams(ctx, listof_UID_of_known_ini_file, absFilename))
@@ -46,11 +67,11 @@ bool Builder_glb::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_o
         return false;
     }
 
-    //il parametro src indica una risorsa eResType::model_glb da cui io dipendo
+    //il parametro <import_name> indica una risorsa eResType::model_glb da cui io dipendo
     //La risorsa deve esistere nel DB
-    if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::model_glb, params.src, &params.uid__resource_file_glb))
+    if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::model_glb, params.import_name, &params.uid__resource_file_glb))
     {
-        logger->log (eTextColor::red, "resource [%s] '%s' not found in DB\n", asset2::enumToString(eResType::model_glb), params.src);
+        logger->log (eTextColor::red, "resource [%s] '%s' not found in DB\n", asset2::enumToString(eResType::model_glb), params.import_name);
         return false;
     }     
 
@@ -71,7 +92,7 @@ bool Builder_glb::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_o
 }
 
 //************************************
-void Builder_glb::build_end()
+void Builder_model3d::Syntax1::build_end()
 {
 	if (buildCtx.bAModelWasImported)
 	{
@@ -81,7 +102,7 @@ void Builder_glb::build_end()
 }
 
 //************************************
-bool Builder_glb::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out_bCallMeAgain, sBuildResult *out_result)
+bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out_bCallMeAgain, sBuildResult *out_result)
 {
 	assert (NULL != out_bCallMeAgain);
     assert (NULL != out_result);
@@ -101,6 +122,9 @@ bool Builder_glb::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out
 		//  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
 		if (!prot_setupVirtualAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
 			return false;
+
+		//mi salvo UID del model3D
+		uid_of_concrete_model3d = out_result->uid_concrete_asset;
 
 		//aggiungo le dipendenze di virtual-asset dalla risorsa model_glb
 		if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__resource_file_glb)) return false;
@@ -124,33 +148,20 @@ bool Builder_glb::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out
 			.end();
 
 			Importer_glb imp;
-			if (!imp.importFromFile (params.src, buildCtx.vtxLayout, gos::getSysHeapAllocator(), &buildCtx.imported))
+			if (!imp.importFromFile (params.import_name, buildCtx.vtxLayout, gos::getSysHeapAllocator(), &buildCtx.imported))
 			{
-				logger->log (eTextColor::red, "error importing model form %s\n", params.src);
+				logger->log (eTextColor::red, "error importing model form %s\n", params.import_name);
 				return false;        
 			}
-		}
+		}		
+
+
 		buildCtx.bAModelWasImported = true;
 		buildCtx.whatToBuild = eWhatToBuild::shapes;
 		buildCtx.iToBuild = 0;
 		*out_bCallMeAgain= true;
 
-
-		//a questo punto devo davvero creare il file dell'asset
-		if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
-		{
-			//l'asset file per questo asset e' sostanzialmente un fake, non contiene nulla.
-			//Quello che mi interessa sono i "sub asset" che verranno creati alle prossime chiamate a build_exe()
-			char filenameDST[1024];
-			asset_manufacture_fullFilename (ctx, out_result->uid_concrete_asset, filenameDST, sizeof(filenameDST));
-			
-			gos::File f;
-			fs::fileOpenForW (&f, filenameDST);
-			fs::fileWrite (f, params.src, sizeof(params.src));
-			fs::fileClose(f);
-
-			priv_print_report (filenameDST);
-		}
+		
 
 		return true;
 	}
@@ -183,9 +194,55 @@ bool Builder_glb::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out
 		{
 			if (!priv_build_skeleton(ctx, doCreateAnAssetFile, out_result))
 				return false;
-
+			
+			//passo alla fase finale
+			buildCtx.whatToBuild = eWhatToBuild::end;
+			*out_bCallMeAgain = true;
+			return true;
+		}
+		else if (eWhatToBuild::end == buildCtx.whatToBuild)
+		{
 			//ho importato tutte le shape e anche lo skeletro, non c'e' altro da fare, ho finito
 			*out_bCallMeAgain = false;
+
+			//a questo punto devo davvero creare il file dell'asset
+			if (doCreateAnAssetFile)
+			{
+				char filenameDST[1024];
+				asset_manufacture_fullFilename (ctx, uid_of_concrete_model3d, filenameDST, sizeof(filenameDST));
+
+				priv_print_report (filenameDST);
+
+				AssetFile_model3D	assetFile;
+				assetFile.begin (localAllocator);
+
+				//skeleton
+				if (uid_of_concrete_skeleton.isValid())
+					assetFile.skeleton_set (uid_of_concrete_skeleton);
+
+				//shapes
+				for (u32 i = 0; i < listof_uid_of_concreste_shape.getNElem(); i++)
+				{
+					assetFile.shape_add (listof_uid_of_concreste_shape(i));
+				}
+
+				//material
+				//TODO
+
+				//meshes
+				for (u32 i = 0; i < buildCtx.imported.numShapes; i++)
+				{
+					const u32 shape_index = i;
+					const u32 bone_index = buildCtx.imported.shape_vs_bone_list[i];
+					const u32 material_index = 0;
+
+					assetFile.mesh_add (shape_index, bone_index, material_index);
+				}
+
+				return assetFile.save (filenameDST);
+				
+			}
+
 			return true;
 		}
 	}
@@ -193,8 +250,9 @@ bool Builder_glb::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out
 	return false;
 }
 
+
 //************************************
-bool Builder_glb::priv_build_shape (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result)
+bool Builder_model3d::Syntax1::priv_build_shape (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result)
 {
 	assert (buildCtx.bAModelWasImported);
 	assert (buildCtx.whatToBuild == eWhatToBuild::shapes);
@@ -217,6 +275,11 @@ bool Builder_glb::priv_build_shape (DBContext &ctx, bool doCreateAnAssetFile, sB
 	//aggiungo le dipendenze di virtual-asset dalla risorsa model_glb
 	if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__resource_file_glb)) return false;
 
+	listof_uid_of_concreste_shape.append (out_result->uid_concrete_asset);
+
+	//il model3d che sto costruendo, dipende da questa shape
+	if (!dependency_add (ctx, uid_of_concrete_model3d, out_result->uid_virtual_asset))		return false;
+	if (!dependencyRT_add (ctx, uid_of_concrete_model3d, out_result->uid_concrete_asset))	return false;
 
 	if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
 	{
@@ -235,7 +298,7 @@ bool Builder_glb::priv_build_shape (DBContext &ctx, bool doCreateAnAssetFile, sB
 }
 
 //************************************
-bool Builder_glb::priv_build_skeleton (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result)
+bool Builder_model3d::Syntax1::priv_build_skeleton (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result)
 {
 	assert (buildCtx.bAModelWasImported);
 	assert (buildCtx.whatToBuild == eWhatToBuild::skeleton);
@@ -259,6 +322,13 @@ bool Builder_glb::priv_build_skeleton (DBContext &ctx, bool doCreateAnAssetFile,
 	if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__resource_file_glb)) return false;
 
 
+	uid_of_concrete_skeleton = out_result->uid_concrete_asset;
+
+	//il model3d che sto costruendo, dipende da questo skeleton
+	if (!dependency_add (ctx, uid_of_concrete_model3d, out_result->uid_virtual_asset))		return false;
+	if (!dependencyRT_add (ctx, uid_of_concrete_model3d, out_result->uid_concrete_asset))	return false;
+
+
 	if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
 	{
 		char filenameDST[1024];
@@ -275,12 +345,12 @@ bool Builder_glb::priv_build_skeleton (DBContext &ctx, bool doCreateAnAssetFile,
 }
 
 //************************************
-void Builder_glb::priv_print_report(const char *filenameDST) const
+void Builder_model3d::Syntax1::priv_print_report(const char *filenameDST) const
 {
 	gos::UTF8String out;
 	out.prealloc (1024);
 	
-	out << "src: " << params.src << "\n";
+	out << "src: " << params.import_name << "\n";
 
 	out << "\n\n============= VTX LAYOUT ==============\n";
 	{
@@ -355,3 +425,6 @@ void Builder_glb::priv_print_report(const char *filenameDST) const
 	sprintf_s (s, sizeof(s), "%s.model_info.txt", filenameDST);
 	fs::fileSaveBuffer (s, out.getBuffer(), out.lengthInByte());
 }	
+
+
+

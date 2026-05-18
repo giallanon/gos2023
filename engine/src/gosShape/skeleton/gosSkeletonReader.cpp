@@ -17,11 +17,11 @@ u32 Reader::bone_get_num() const
 }
 
 //***********************************************
-const Bone* Reader::bone_get_by_index (u32 i) const
+const Bone* Reader::bone_get_by_index (u32 bone_index) const
 {
-	assert (i < bone_get_num());
+	assert (bone_index < bone_get_num());
 
-	u32 ct = 12 + sizeof(Bone) * i;
+	u32 ct = 12 + sizeof(Bone) * bone_index;
 	return reinterpret_cast <const Bone*>(&sk->blob[ct]);
 }
 
@@ -54,13 +54,17 @@ u32 Reader::bone_get_index_by_name (const char *s) const
 }
 
 //***********************************************
-const char* Reader::name_get_by_index (u32 i) const
+const char* Reader::name_get_by_index (u32 bone_index) const
 {
-	assert (i < bone_get_num());
+	assert (bone_index < bone_get_num());
 
 	const u32 start_of_name_table = utils::bufferReadU16 (&sk->blob[10]);
-	const u32 str_offset = utils::bufferReadU16 (&sk->blob[start_of_name_table + i * sizeof(u16)]);
-
+	const u32 str_offset = utils::bufferReadU16 (&sk->blob[start_of_name_table + bone_index * sizeof(u16)]);
 	return reinterpret_cast<const char*>(&sk->blob[str_offset]);
 }
 
+//***********************************************
+const char* Reader::name_get_by_bone (const Bone *bone) const
+{
+	return name_get_by_index (bone->bone_index);
+}

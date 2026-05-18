@@ -28,7 +28,9 @@ u32 Builder::priv_newBone (const char *name)
     Bone bone;
     bone.matrix.identity();
     bone.firstChildIndex = bone.sigblinIndex = 0xFF;
-    bone.nameIndex = static_cast<u16>( nameList.add(name));
+    bone.bone_index = (u16)ret;
+    
+    nameList.add(name);
 
     boneList.append(bone);
     return ret;

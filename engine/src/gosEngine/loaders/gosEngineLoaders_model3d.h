@@ -67,7 +67,7 @@ namespace gos
 						res::Skeleton *res_skeleton;
 						if (!eng->internal__getResFromUID (uid_of_skeleton, &res_skeleton, &handle_skeleton))
 						{
-							logger::log (eTextColor::red, "resMT::  Loader_model3d::load() => unable to match skeleton_shader %016" PRIX64 " with raw data\n", uid_of_skeleton._uid);
+							logger::log (eTextColor::red, "resMT::  Loader_model3d::load() => unable to match skeleton %016" PRIX64 " with raw data\n", uid_of_skeleton._uid);
 							break;
 						}
 						model::set_skeleton (res_model->model, handle_skeleton);

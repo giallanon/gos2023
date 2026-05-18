@@ -28,6 +28,8 @@ builders/gosAsset2Builder_glb.h
 builders/gosAsset2Builder_glb.cpp
 builders/gosAsset2Builder_model3d.cpp
 builders/gosAsset2Builder_model3d.h
+builders/gosAsset2Builder_model3d_syntax1.cpp
+builders/gosAsset2Builder_model3d_syntax2.cpp
 builders/gosAsset2Builder_pipe.cpp
 builders/gosAsset2Builder_pipe.h
 builders/gosAsset2Builder_shader.cpp

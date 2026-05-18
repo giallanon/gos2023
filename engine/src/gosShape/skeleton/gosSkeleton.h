@@ -49,7 +49,7 @@ namespace gos
         mat4x4f matrix;
         u8      firstChildIndex;
         u8      sigblinIndex;
-        u16     nameIndex;
+        u16     bone_index; //index di questa bone all'interno del suo skeleton
     };
 
 
@@ -120,10 +120,11 @@ namespace gos
 
             void        setup (const Skeleton *sk);
             u32         bone_get_num() const;
-            const Bone* bone_get_by_index (u32 i) const;
+            const Bone* bone_get_by_index (u32 bone_index) const;
             const Bone* bone_get_by_name (const char *s) const;
             u32         bone_get_index_by_name (const char *s) const;
-            const char* name_get_by_index (u32 i) const;
+            const char* name_get_by_index (u32 bone_index) const;
+            const char* name_get_by_bone (const Bone *bone) const;
 
         private:
             const Skeleton *sk;

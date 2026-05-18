@@ -698,7 +698,39 @@ void Importer_glb::priv_applySkeleton (Bone *me)
 		priv_applySkeleton (b);
 		b = b->nextSibling;
 	}
+}
 
+//********************************************
+void Importer_glb::priv_build_shape_vs_bone_list (Bone *me, Result *out_results)
+{
+	if (u32MAX != me->nodeIndex)
+	{
+		const u32 ii = nodesList(me->nodeIndex).meshIndex;
+		if (u32MAX != ii)
+		{
+			const char *bone_name = nodesList(me->nodeIndex).name;
+
+			gos::skeleton::Reader reader;
+			reader.setup (&out_results->skeleton);
+			const u32 bone_index = reader.bone_get_index_by_name (bone_name);
+
+			
+			//il nodo di questa scena si applica alla mesh ii
+			//La mesh ii a sua volta e' composta da n shapes
+			for (u32 i=0; i<meshesList(ii).getNumShapes(); i++)
+			{
+				const u16 shapeIdx = meshesList(ii).getShapeIndex(i);
+				out_results->shape_vs_bone_list[shapeIdx] = bone_index;
+			}
+		}
+	}
+
+	Bone *b = me->firstChild;
+	while (b)
+	{
+		priv_build_shape_vs_bone_list (b, out_results);
+		b = b->nextSibling;
+	}
 }
 
 //********************************************
@@ -921,6 +953,9 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 		//priv_applySkeleton (&rootBone);
 	}
 
+	//creo lo skeleton
+	priv_build_gosSkeleton (out_results->allocator, &out_results->skeleton);
+
 
 	//copio le shape in out_result
 	{
@@ -930,6 +965,7 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 			out_results->numShapes = n;
 			out_results->shapeList = GOSALLOCT(gos::Shape*, out_results->allocator, sizeof(gos::Shape) * n);
 			out_results->shapeNameList = GOSALLOCT(char**, out_results->allocator, sizeof(char*) * n);
+			out_results->shape_vs_bone_list = GOSALLOCT(u32*, out_results->allocator, sizeof(u32) * n);
 			memcpy (out_results->shapeList, shapeList._queryPointer(), sizeof(gos::Shape) * n);
 
 			for (u32 i = 0; i < n; i++)
@@ -938,13 +974,14 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 				out_results->shapeNameList[i] = GOSALLOCT(char*, out_results->allocator, sizeof(char) * (str_len+1));
 				memcpy (out_results->shapeNameList[i], shapeNameList(i).getBuffer(), str_len);
 				out_results->shapeNameList[i][str_len] = 0x00;
+
+				out_results->shape_vs_bone_list[i] = u32MAX;
 			}
+
+
+			priv_build_shape_vs_bone_list (&rootBone, out_results);
 		}
 	}
-
-
-	//creo lo skeleton
-	priv_build_gosSkeleton (out_results->allocator, &out_results->skeleton);
 
 
 
