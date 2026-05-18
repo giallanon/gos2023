@@ -136,6 +136,7 @@ namespace gos
 				sBuildCtx					buildCtx;
 
 				UID 						uid_of_concrete_model3d;
+				UID 						uid_of_virtual_model3d;
 				UID							uid_of_concrete_skeleton;
 				FastArray<UID>				listof_uid_of_concreste_shape;
 

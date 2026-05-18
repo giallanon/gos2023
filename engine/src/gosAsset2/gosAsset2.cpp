@@ -32,7 +32,7 @@ const char* asset2::enumToString (eAssetType s)
     case eAssetType::pipe:              return "pipe";
     case eAssetType::tex2D:             return "tex2D";
     case eAssetType::shape:             return "shape";
-    case eAssetType::imported_glb:      return "imported_glb";
+    //case eAssetType::imported_glb:      return "imported_glb";
 	case eAssetType::skeleton:      	return "skeleton";
 	case eAssetType::model3d:      		return "model3d";
 	}
@@ -805,7 +805,7 @@ bool asset2::asset_delete (DBContext &ctx, const UID &uid)
 		fs::fileDelete(s2);
 	}
 
-    if (uid.isAnAssetOfType(eAssetType::imported_glb))
+    if (uid.isAnAssetOfType(eAssetType::model3d))
     {
         sprintf_s (s2, sizeof(s2), "%s.model_info.txt", s);
 		fs::fileDelete(s2);

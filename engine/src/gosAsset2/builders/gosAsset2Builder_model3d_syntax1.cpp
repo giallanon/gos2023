@@ -57,6 +57,7 @@ bool Builder_model3d::Syntax1::build_begin (DBContext &ctx, const UniqueUIDList 
 
 
 	uid_of_concrete_model3d.setInvalid();
+	uid_of_virtual_model3d.setInvalid();
 	uid_of_concrete_skeleton.setInvalid();
 	listof_uid_of_concreste_shape.reset();
     
@@ -125,6 +126,7 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 
 		//mi salvo UID del model3D
 		uid_of_concrete_model3d = out_result->uid_concrete_asset;
+		uid_of_virtual_model3d = out_result->uid_virtual_asset;
 
 		//aggiungo le dipendenze di virtual-asset dalla risorsa model_glb
 		if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__resource_file_glb)) return false;
@@ -204,6 +206,9 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 		{
 			//ho importato tutte le shape e anche lo skeletro, non c'e' altro da fare, ho finito
 			*out_bCallMeAgain = false;
+			out_result->result = eBuildResult::was_already_built;
+			out_result->uid_concrete_asset = uid_of_concrete_model3d;
+			out_result->uid_virtual_asset = uid_of_virtual_model3d;
 
 			//a questo punto devo davvero creare il file dell'asset
 			if (doCreateAnAssetFile)
@@ -278,7 +283,7 @@ bool Builder_model3d::Syntax1::priv_build_shape (DBContext &ctx, bool doCreateAn
 	listof_uid_of_concreste_shape.append (out_result->uid_concrete_asset);
 
 	//il model3d che sto costruendo, dipende da questa shape
-	if (!dependency_add (ctx, uid_of_concrete_model3d, out_result->uid_virtual_asset))		return false;
+	if (!dependency_add (ctx, uid_of_virtual_model3d, out_result->uid_virtual_asset))		return false;
 	if (!dependencyRT_add (ctx, uid_of_concrete_model3d, out_result->uid_concrete_asset))	return false;
 
 	if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
@@ -325,7 +330,7 @@ bool Builder_model3d::Syntax1::priv_build_skeleton (DBContext &ctx, bool doCreat
 	uid_of_concrete_skeleton = out_result->uid_concrete_asset;
 
 	//il model3d che sto costruendo, dipende da questo skeleton
-	if (!dependency_add (ctx, uid_of_concrete_model3d, out_result->uid_virtual_asset))		return false;
+	if (!dependency_add (ctx, uid_of_virtual_model3d, out_result->uid_virtual_asset))		return false;
 	if (!dependencyRT_add (ctx, uid_of_concrete_model3d, out_result->uid_concrete_asset))	return false;
 
 

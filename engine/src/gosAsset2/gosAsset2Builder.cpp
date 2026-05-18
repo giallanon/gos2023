@@ -5,7 +5,6 @@
 #include "builders/gosAsset2Builder_shader.h"
 #include "builders/gosAsset2Builder_pipe.h"
 #include "builders/gosAsset2Builder_tex2D.h"
-#include "builders/gosAsset2Builder_glb.h"
 #include "builders/gosAsset2Builder_model3d.h"
 
 using namespace gos;
@@ -23,7 +22,7 @@ Builder::Builder(gos::GPU *gpuIN)
 	addBuilder<Builder_pxlShader>();
 	addBuilder<Builder_pipe>();
 	addBuilder<Builder_tex2D>();
-	addBuilder<Builder_glb>();
+	//addBuilder<Builder_glb>();
 	addBuilder<Builder_model3d>();
 }
 

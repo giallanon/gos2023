@@ -15,7 +15,7 @@ namespace gos
         pipe            = 3,
         tex2D           = 4,
         shape           = 5,
-        imported_glb    = 6,
+        //imported_glb    = 6,
 		skeleton    	= 7,
 		model3d			= 8,
 
