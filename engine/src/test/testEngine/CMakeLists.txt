@@ -22,6 +22,7 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 add_executable(${BINARY_OUTPUT_FILENAME}
 characterController.cpp
 characterController.h
+ExaGenerator.cpp
 game1.cpp
 game1.h
 main.cpp
