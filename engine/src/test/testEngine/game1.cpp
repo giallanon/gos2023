@@ -556,6 +556,7 @@ void Game1::priv_loop ()
 	// line_ctx2.line (vec3f(1,1,1), vec3f(5,5,5));
 
 
+	
     //loop
     u64 nextTimeUpdate_msec = 0;
     gpu::MainLoop2 mainLoop;

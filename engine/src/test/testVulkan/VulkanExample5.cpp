@@ -465,7 +465,7 @@ bool VulkanExample5::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
         .imageTransition (zbufferHandle, eImageLayout::undefined, eImageLayout::depth_attachment_optimal)
         .renderCtx_define_begin(&rctx)
             .withRenderArea (gpu->swapChain_getWidth(), gpu->swapChain_getHeight())
-            .withRT (swapChainImage.imageView, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0, 0))
+            .withRT (swapChainImage.imageView, eAttachmentLoadOp::clear, eAttachmentStoreOp::store, gos::ColorHDR(0, 0, 0))
             .withZB (zbufferHandle, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, 1.0f, 0)
         .define_end();
 

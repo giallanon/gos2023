@@ -305,7 +305,7 @@ void Test_exa1::priv_loop ()
 				gpu::RenderCtx rctx;
 				cw	.renderCtx_define_begin(&rctx)
 					.withRenderArea (handle_rt0)
-					.withRT (handle_rt0, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care, gos::ColorHDR(0, 0.1f, 0.1f))
+					.withRT (handle_rt0, eAttachmentLoadOp::clear, eAttachmentStoreOp::store, gos::ColorHDR(0, 0.1f, 0.1f))
 					.withZB (handle_zb, eAttachmentLoadOp::clear, eAttachmentStoreOp::dont_care)
 					.define_end();
 			
