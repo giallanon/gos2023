@@ -96,6 +96,26 @@ void AABB3::matrixTransform (const AABB3 &aabb, const mat4x4f &b, AABB3 *out)
 }
 
 //*******************************************************************
+void AABB3::matrixTransform (const mat4x4f &b)
+{
+	vec3f	p8[8];
+	get8Point (p8);
+	for (u8 i=0; i<8; i++)
+		p8[i] = math::vecTransform (b, p8[i]);
+
+	vmin = vmax = p8[0];
+	for (u8 i=1; i<8; i++)
+	{
+		if (p8[i].x < vmin.x)	vmin.x = p8[i].x;
+		if (p8[i].x > vmax.x)	vmax.x = p8[i].x;
+		if (p8[i].y < vmin.y)	vmin.y = p8[i].y;
+		if (p8[i].y > vmax.y)	vmax.y = p8[i].y;
+		if (p8[i].z < vmin.z)	vmin.z = p8[i].z;
+		if (p8[i].z > vmax.z)	vmax.z = p8[i].z;
+	}
+}
+
+//*******************************************************************
 void AABB3::matrixTransform (const AABB3 &aabb, const mat3x4f &b, AABB3 *out)
 {
 	vec3f	p8[8];

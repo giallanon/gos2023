@@ -1,7 +1,7 @@
 #include "test1.h"
 #include "game1.h"
 #include "test_exa1.h"
-
+#include "Land1/Land1.h"
 
 //******************************** 
 void test_res_handle_1()
@@ -65,8 +65,9 @@ int main()
 
 
             //Test1 test;		test.run (&engine);
-            Game1 game;		game.run (&engine);
+            //Game1 game;		game.run (&engine);
 			//Test_exa1 test;		test.run(&engine);
+			Land1 app;		app.run (&engine);
         }
     }
     

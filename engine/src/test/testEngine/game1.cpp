@@ -498,7 +498,7 @@ void Game1::priv_loop ()
     Entity ent_pavimento = entRegistry.newEntity();
     {
 		gos::mat4x4f mTR;
-		mTR.buildTranslation (vec3f(0, -0.1f, 0));
+		mTR.buildTranslation (vec3f(0, 0, 0));
 		gos::mat4x4f mSC;
 		mSC.buildScale(100.0f, 0.1f, 100.0f);
 		gos::mat4x4f mFinal =  mTR * mSC;

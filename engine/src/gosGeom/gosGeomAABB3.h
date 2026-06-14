@@ -24,6 +24,7 @@ namespace gos
 
 									//=========================== transform 
 			static	void			quatTransform (const AABB3 &aabb, const Quat &b, AABB3 *out);
+					void 			matrixTransform (const mat4x4f &b);
 			static	void			matrixTransform (const AABB3 &aabb, const mat4x4f &b, AABB3 *out);
 			static	void			matrixTransform (const AABB3 &aabb, const mat3x4f &b, AABB3 *out);
 

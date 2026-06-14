@@ -31,6 +31,7 @@ namespace gos
 
             void    begin (gos::geom::Camera3 *cam);
             void    add (const ENGGPUShape shape, const mat4x4f &m, u32 material_index);
+			void 	add (gos::ENGModel3dInst handle);
             void    add (const ent::CompModelInstance *mi);
             void    end (gos::gpu::CmdBufferWriter2 &cw);
 

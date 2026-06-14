@@ -4,13 +4,111 @@
 #include "../../gos/gosUtils.h"
 
 
-#undef 	GOS__glTF_VERBOSE
+#undef	GOS__glTF_VERBOSE
 #undef GOS__glTF_SAVE_IMPORTED_INI_FILE
 
 
 using namespace gos;
 using namespace gos::asset2;
 using namespace gos::shape;
+
+
+
+/************************************************************************************************************************************
+ * 
+ * Result
+ * 
+ * 
+ *************************************************************************************************************************************/
+const gos::Bone* Importer_glb::Result::priv_skeleton_clone_and_resolve (gos::Skeleton *out) const
+{
+	assert (NULL != out);
+	skeleton::clone (skeleton, gos::getScrapAllocator(), out);
+
+	mat4x4f matW;
+	matW.identity();
+	skeleton::resolve (skeleton, matW, out);
+	return skeleton::get_bone_list(*out);
+}
+
+void Importer_glb::Result::calc_AABB (geom::AABB3 *out) const
+{
+	assert (NULL != out);
+
+	gos::Skeleton sk;
+	const gos::Bone *boneList = priv_skeleton_clone_and_resolve (&sk);
+
+	vec3f vmin, vmax;
+	shape::shapeCalcAABB (&shapeList[0], &vmin, &vmax);
+	out->setByMinMax (vmin, vmax);
+	out->matrixTransform (boneList[shape_vs_bone_list[0]].matrix);
+
+	for (u32 i=1; i<numShapes; i++)
+	{
+		shape::shapeCalcAABB (&shapeList[i], &vmin, &vmax);
+
+		geom::AABB3 aabb2;
+		aabb2.setByMinMax (vmin, vmax);
+		aabb2.matrixTransform (boneList[shape_vs_bone_list[i]].matrix);
+
+
+		(*out) += aabb2;
+	}
+
+	skeleton::free (sk);
+}
+
+void Importer_glb::Result::scale (const vec3f &s)
+{
+	for (u32 i=0; i<numShapes; i++)
+	{
+		shape::shapeScale (&shapeList[i], s);
+	}
+
+	if (!priv_is_skeleton_resolved())
+		skeleton::scale (skeleton, s);
+}
+
+void Importer_glb::Result::translate (const vec3f &tr)
+{
+	if (priv_is_skeleton_resolved())
+	{
+		for (u32 i=0; i<numShapes; i++)
+		{
+			shape::shapeTranslate (&shapeList[i], tr);
+		}
+	}
+	else
+	{
+		skeleton::translate (skeleton, tr);
+	}
+}
+
+void Importer_glb::Result::skeleton_resolve()
+{
+	if (priv_is_skeleton_resolved())
+		return;
+
+	//risolvo le shape 
+	gos::Skeleton sk;
+	const gos::Bone *boneList = priv_skeleton_clone_and_resolve (&sk);
+
+	for (u32 i=0; i<numShapes; i++)
+	{
+		shape::shapeTransformPos (&shapeList[i], boneList[shape_vs_bone_list[i]].matrix);
+		shape_vs_bone_list[i] = 0;
+	}
+	skeleton::free (sk);
+
+
+	//elimino il vecchio sk e ne creo uno nuovo con solo root
+	gos::Allocator *allocator = skeleton.allocator;
+	skeleton::free (skeleton);
+
+	skeleton::Builder skb;
+	skb.begin ("root", NULL);
+	skb.end (allocator, &skeleton);
+}
 
 
 /************************************************************************************************************************************
@@ -659,11 +757,11 @@ void Importer_glb::priv_resolveSkeletonChildren (Bone *me, const Bone *father)
 	if (u32MAX != me->nodeIndex)
 	{
 		me->globalTRS = nodesList(me->nodeIndex).localTRS;
-		me->globalRot = nodesList(me->nodeIndex).localRot;;
+		me->globalRot = nodesList(me->nodeIndex).localRot;
 	}
 	
-	me->globalTRS = father->globalTRS * me->globalTRS;
-	me->globalRot = father->globalRot * me->globalRot;
+	//me->globalTRS = father->globalTRS * me->globalTRS;
+	//me->globalRot = father->globalRot * me->globalRot;
 
 	Bone *b = me->firstChild;
 	while (b)
@@ -1108,3 +1206,4 @@ void Importer_glb::priv_printSkeleton_rec(const Bone *bone) const
 		bone = bone->nextSibling;
 	}
 }
+

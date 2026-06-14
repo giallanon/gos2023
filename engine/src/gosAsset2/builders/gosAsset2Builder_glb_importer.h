@@ -4,6 +4,7 @@
 #include "../../gosShape/skeleton/gosSkeleton.h"
 #include "../../gos/gosFastArray.h"
 #include "../../gos/gosIniFile.h"
+#include "../../gosGeom/gosGeomAABB3.h"
 
 
 namespace gos
@@ -50,6 +51,12 @@ namespace gos
 					reset();
 				}
 
+				//============== utils ============
+				void	calc_AABB (geom::AABB3 *out) const;
+				void 	scale (const vec3f &s);
+				void 	translate (const vec3f &tr);
+				void 	skeleton_resolve();
+
 			public:
 				VtxLayout				vtxLayot;
 				u32 					numShapes;
@@ -58,6 +65,9 @@ namespace gos
 				char					**shapeNameList;
 				gos::Skeleton			skeleton;
 				
+			private:
+				bool					priv_is_skeleton_resolved() const { return skeleton::get_bone_num(skeleton) == 1; }
+				const gos::Bone*		priv_skeleton_clone_and_resolve (gos::Skeleton *out) const;
 
 			private:
 				gos::Allocator 			*allocator;

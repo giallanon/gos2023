@@ -547,6 +547,23 @@ void shape::shapeTranslate (Shape *shape, const vec3f &tr)
 }
 
 //********************************************************
+void shape::shapeScale (Shape *shape, const vec3f &s)
+{
+	VtxArrayWriter writer;
+	writer.setup (shape);
+
+	VtxArrayWriter::Elem<vec3f> elem;
+	if (!writer.getPos3(&elem))
+		return;
+
+	for (u32 i=0; i<shape->numVtx; i++)
+	{
+		elem() *= s;
+		elem.next();
+	}
+}
+
+//********************************************************
 void shape::shapeTransformPos (Shape *shape, const mat4x4f &mat)
 {
 	VtxArrayWriter writer;

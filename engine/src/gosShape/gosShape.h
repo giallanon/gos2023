@@ -63,6 +63,7 @@ namespace gos
 
 		void 	shapeRightHandedToLeftHanded (Shape *shape);
 		void 	shapeTranslate (Shape *shape, const vec3f &tr);
+		void 	shapeScale (Shape *shape, const vec3f &s);
 		void 	shapeTransformPos (Shape *shape, const mat4x4f &mat);
 		void 	shapeTransformPos (Shape *shape, const mat3x3f &mat);
 		

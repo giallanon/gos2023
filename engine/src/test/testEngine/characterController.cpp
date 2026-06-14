@@ -72,8 +72,8 @@ void CharacterController::camera_adjust_distance (bool bIncreaseDistance)
     else
         camera_distance_m -= 0.5f;
 
-    if (camera_distance_m < 10.0f)
-        camera_distance_m = 10.0f;
+    if (camera_distance_m < 2.0f)
+        camera_distance_m = 2.0f;
     if (camera_distance_m > 80.0f)
         camera_distance_m = 80.0f;
 }

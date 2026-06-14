@@ -20,6 +20,12 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 #nome del file generato, elenco dei src
 add_executable(${BINARY_OUTPUT_FILENAME}
+DefaultApp/DefaultApp.cpp
+DefaultApp/DefaultApp.h
+
+Land1/Land1.cpp
+Land1/Land1.h
+
 characterController.cpp
 characterController.h
 ExaGenerator.cpp

@@ -14,16 +14,21 @@
 {
 	import: ...xxx.glb                         => il modello 3d da importare
 
-	TODO:
-	(optional)	scale: [varie opzioni]
-						uniform-resize-y; <number>      => dato AABB del modello, riscala il modello in maniera uniforme affinche' la dimy di AABB sia esattamente uguale a <number>
-						uniform-resize-x; <number>
-						uniform-resize-z; <number>
-		 
-	TODO:
-	(optional)	translate: [varie opzioni]
-							center-at; <x>; <y>; <z>            => dato AABB del modello, muove il centro dell'AABB alle coordinate x,y,z
-							bottom-center-at; <x>; <y>; <z>     => dato AABB del modello, muove il centro della faccia bottom dell'AABB alle coordinate x,y,z
+	(optional) post_op:  <operation>,<param1>, ... , <paramN> ;		=> un elenco di <operation> da eseguire post importazione
+						 ....										=> le <operation> sono separate da ;  i parametri di una <operation>
+						 <operation>,<param1>, ... , <paramN>		=> sono separti da ,
+
+		Le <operation> supportate sono:
+			skeleton-resolve			=> risolve lo skeleton riposizionando tutte le shape. Lo skeleton viene eliminato (consiste della solla root bone)
+
+			uniform-resize-x, <val>		=> scala uniformemente in modo che AABB.dimx == <val>
+			uniform-resize-y, <val>		=> scala uniformemente in modo che AABB.dimy == <val>
+			uniform-resize-z, <val>		=> scala uniformemente in modo che AABB.dimz == <val>
+	
+			center-at, <x>, <y>, <z>					=> trasla affinche' il centro dell'AABB sia in <x,y,z>
+			top-center-at, <x>, <y>, <z>
+			bottom-center-at, <x>, <y>, <z>
+			top-bottom-left-corner-at, <x>, <y>, <z>	=> il vtx in basso a sx della faccia top viene posizionato in <x,y,z>
 }
 
 Questo genera:
@@ -126,6 +131,7 @@ namespace gos
 				bool 	priv_build_shape (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result);
 				bool 	priv_build_skeleton (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result);
 				void 	priv_print_report(const char *filenameDST) const;
+				bool 	priv_apply_post_op();
 
 			private:
 				gos::Allocator				*localAllocator;

@@ -1217,7 +1217,7 @@ bool Engine::modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_hand
 	}
 	if (res_model->_descr.status != res::eStatus::ready)
 	{
-		logger::err ("Engine::modelinst_create() => src model is not in LOADED status\n");
+		logger::err ("Engine::modelinst_create() => src model is not in READY status\n");
 		return false;
 	}
 
@@ -1268,17 +1268,6 @@ bool Engine::modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_hand
 	return true;
 }
 
-void Engine::modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &matW)
-{
-	res::Model3dInst *res = (res::Model3dInst*)res_getDescriptor(handle.res_handle);
-	if (NULL == res)
-		return;
-	if (res::eStatus::ready == res->_descr.status)
-	{
-		priv_modelinst_applyTransform_ric (res->minst.model_listof_bones, res->minst.listof_bones, 0, matW);
-	}
-}
-
 void Engine::modelinst_on_afterCreate (void *resIN)
 {
 	//asset_logger->log ("modelinst_on_afterCreate\n");
@@ -1291,6 +1280,17 @@ void Engine::modelinst_on_destroy (void *resIN)
 	//asset_logger->log ("modelinst_on_destroy\n");
 	res::Model3dInst *res = (res::Model3dInst*)resIN;
 	res->minst.free();
+}
+
+void Engine::modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &matW)
+{
+	res::Model3dInst *res = (res::Model3dInst*)res_getDescriptor(handle.res_handle);
+	if (NULL == res)
+		return;
+	if (res::eStatus::ready == res->_descr.status)
+	{
+		priv_modelinst_applyTransform_ric (res->minst.model_listof_bones, res->minst.listof_bones, 0, matW);
+	}
 }
 
 void Engine::priv_modelinst_applyTransform_ric (const gos::Bone *model_listof_bones, gos::Bone *listof_bones, u32 boneIndex, const mat4x4f &parent_matW) const

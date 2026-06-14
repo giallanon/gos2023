@@ -285,6 +285,7 @@ void Renderer1::begin (gos::geom::Camera3 *cam)
     //aggiorno UBO descrittore scena
 	scene.matVP = cam->getMatVP();
 	scene.lightDir = vec4f (cam->pos.getAsseZ(), 0);
+	scene.lightDir.set (-0.3f, -1.0f, 0.3f, 0);
 	scene.lightDir.normalize();
 	gpu->writeAndSync (handle_ubo_scene, 0, &scene, sizeof(scene));
 }
@@ -306,19 +307,24 @@ void Renderer1::add (const ENGGPUShape shape, const mat4x4f &m, u32 material_ind
 //**********************************
 void Renderer1::add (const ent::CompModelInstance *comp_mi)
 {
-	const res::Model3dInst *res_mi;
-	if (engine->get (comp_mi->handle_mi, &res_mi))
-	{
-		const gos::ModelInstance *mi = &res_mi->minst;
+	add (comp_mi->handle_mi);
+}
 
-		for (u32 i=0; i<mi->num_meshes; i++)
-		{
-			const Model::Mesh *mesh = &mi->listof_meshes[i];
-			
-			add(	mi->listof_gpushapes[mesh->shape_index],
-					mi->listof_bones[mesh->bone_index].matrix,
-					mesh->material_index);
-		}
+//**********************************
+void Renderer1::add (gos::ENGModel3dInst handle)
+{
+	const res::Model3dInst *res_mi;
+	if (!engine->get (handle, &res_mi))
+		return;
+
+	const gos::ModelInstance *mi = &res_mi->minst;
+	for (u32 i=0; i<mi->num_meshes; i++)
+	{
+		const Model::Mesh *mesh = &mi->listof_meshes[i];
+		
+		add(	mi->listof_gpushapes[mesh->shape_index],
+				mi->listof_bones[mesh->bone_index].matrix,
+				mesh->material_index);
 	}
 }
 

@@ -6,6 +6,7 @@
 #include "../gos/gosBufferWriter.h"
 #include "../gos/gosDataBlob.h"
 #include "../assetFile//gosAssetFile_model3D.h"
+#include "../gosGeom/gosGeomAABB3.h"
 
 using namespace gos;
 using namespace gos::asset2;
@@ -163,9 +164,9 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 		buildCtx.iToBuild = 0;
 		*out_bCallMeAgain= true;
 
-		
 
-		return true;
+		//applico le trasformazioni se necessario
+		return priv_apply_post_op();
 	}
 	else
 	{
@@ -372,15 +373,19 @@ void Builder_model3d::Syntax1::priv_print_report(const char *filenameDST) const
 		}
 	}
 
-	out << "\n\n============= SHAPE ===============\n";
+	out << "\n\n=============================== SHAPE =====================================\n";
 	{
-		out << "#   | num-vertex | num-index | name\n"
-			<< "-----------------------------------\n";
+		out << "#   | num-vertex | num-index | bbox                                  | name\n"
+			<< "---------------------------------------------------------------------------\n";
 		for (u32 i=0; i<buildCtx.imported.numShapes; i++)
 		{
+			vec3f vmin, vmax;
+			shape::shapeCalcAABB (&buildCtx.imported.shapeList[i], &vmin, &vmax);
+
 			out << STRFMT("%03d", i)
 				<< " | " << STRFMT("% 10d", buildCtx.imported.shapeList[i].numVtx)
 				<< " | " << STRFMT("% 9d", buildCtx.imported.shapeList[i].numIdx)
+				<< " | (" << STRFMT("%.02f, %.02f, %.02f", vmin.x, vmin.y, vmin.z) << ") (" << STRFMT("%.02f, %.02f, %.02f", vmax.x, vmax.y, vmax.z) << ")"
 				<< " | " << buildCtx.imported.shapeNameList[i]
 				<< "\n";
 		}
@@ -431,5 +436,117 @@ void Builder_model3d::Syntax1::priv_print_report(const char *filenameDST) const
 	fs::fileSaveBuffer (s, out.getBuffer(), out.lengthInByte());
 }	
 
+//************************************
+bool Builder_model3d::Syntax1::priv_apply_post_op()
+{
+	char post_op[4096];
+	if (!sec->get ("post_op", post_op, sizeof(post_op)))
+		return true;
+
+	string::utf8::StringListParser sp;
+	string::utf8::StringListParser sp_params;
+	sp.toStart (post_op, ';');
+
+	
+	geom::AABB3 aabb;
+	char op[256];
+	while (sp.next(op, sizeof(op)))
+	{
+		char command[128];
+		sp_params.toStart (op, ',');
+		if (!sp_params.next(command, sizeof(command)))
+			continue;
+
+		if (string::utf8::areEqual(command, "uniform-resize-x", true))
+		{
+			f32 s;
+			if (!sp_params.extract_f32 (&s))	{ logger->log (eTextColor::red, "line %d, parsing [%s] => missing param\n", sec->getLineStarted(), op); return false; }
+
+			buildCtx.imported.calc_AABB (&aabb);
+			s /= aabb.calcDimX();
+			buildCtx.imported.scale (vec3f(s, s, s));
+		}
+		else if (string::utf8::areEqual(command, "uniform-resize-y", true))
+		{
+			f32 s;
+			if (!sp_params.extract_f32 (&s))	{ logger->log (eTextColor::red, "line %d, parsing [%s] => missing param\n", sec->getLineStarted(), op); return false; }
+
+			buildCtx.imported.calc_AABB (&aabb);
+			s /= aabb.calcDimY();
+			buildCtx.imported.scale (vec3f(s, s, s));
+		}
+		else if (string::utf8::areEqual(command, "uniform-resize-z", true))
+		{
+			f32 s;
+			if (!sp_params.extract_f32 (&s))	{ logger->log (eTextColor::red, "line %d, parsing [%s] => missing param\n", sec->getLineStarted(), op); return false; }
+
+			buildCtx.imported.calc_AABB (&aabb);
+			s /= aabb.calcDimZ();
+			buildCtx.imported.scale (vec3f(s, s, s));
+		}
+		else if (string::utf8::areEqual(command, "center-at", true))
+		{
+			vec3f dst;
+			if (!sp_params.extract_vec3f (&dst))	{ logger->log (eTextColor::red, "line %d, parsing [%s] => missing param\n", sec->getLineStarted(), op); return false; }
+			
+			vec3f aabb_center;
+			buildCtx.imported.calc_AABB (&aabb);
+			aabb.calcCenter(&aabb_center);
+			buildCtx.imported.translate (dst - aabb_center);
+		}
+		else if (string::utf8::areEqual(command, "top-center-at", true))
+		{
+			vec3f dst;
+			if (!sp_params.extract_vec3f (&dst))	{ logger->log (eTextColor::red, "line %d, parsing [%s] => missing param\n", sec->getLineStarted(), op); return false; }
+			
+			vec3f aabb_center;
+			buildCtx.imported.calc_AABB (&aabb);
+			aabb.calcCenter(&aabb_center);
+
+			aabb_center.y += (aabb.calcDimY() * 0.5f);
+			vec3f tr = dst - aabb_center;
+			buildCtx.imported.translate (tr);
+		}
+		else if (string::utf8::areEqual(command, "bottom-center-at", true))
+		{
+			vec3f dst;
+			if (!sp_params.extract_vec3f (&dst))	{ logger->log (eTextColor::red, "line %d, parsing [%s] => missing param\n", sec->getLineStarted(), op); return false; }
+			
+			vec3f aabb_center;
+			buildCtx.imported.calc_AABB (&aabb);
+			aabb.calcCenter(&aabb_center);
+
+			aabb_center.y -= (aabb.calcDimY() * 0.5f);
+			vec3f tr = dst - aabb_center;
+			buildCtx.imported.translate (tr);
+		}
+		else if (string::utf8::areEqual(command, "top-bottom-left-corner-at", true))
+		{
+			vec3f dst;
+			if (!sp_params.extract_vec3f (&dst))	{ logger->log (eTextColor::red, "line %d, parsing [%s] => missing param\n", sec->getLineStarted(), op); return false; }
+			
+			vec3f aabb_center;
+			buildCtx.imported.calc_AABB (&aabb);
+			aabb.calcCenter(&aabb_center);
+
+			aabb_center.y += (aabb.calcDimY() * 0.5f);
+			aabb_center.x -= (aabb.calcDimX() * 0.5f);
+			aabb_center.z -= (aabb.calcDimZ() * 0.5f);
+			vec3f tr = dst - aabb_center;
+			buildCtx.imported.translate (tr);
+		}
+		else if (string::utf8::areEqual(command, "skeleton-resolve", true))
+		{
+			buildCtx.imported.skeleton_resolve ();
+		}
+		else
+		{
+			logger->log (eTextColor::red, "line %d, invalid operation: %s\n", sec->getLineStarted(), command);
+			return false;        
+		}		
+	}
 
 
+
+	return true;
+}

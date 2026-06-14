@@ -25,7 +25,7 @@ namespace gos
 
 		u32 				num_bones;
 		gos::Bone			*listof_bones;
-		const gos::Bone		*model_listof_bones;	//punta alla lista di mesh di <model::skeleton>
+		const gos::Bone		*model_listof_bones;	//punta alla lista di bones di <model::skeleton>
 
 		u32 				num_meshes;
 		const Model::Mesh	*listof_meshes;	//punta alla lista di mesh di <model>

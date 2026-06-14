@@ -605,7 +605,7 @@ bool string::utf8::extractValue (string::utf8::Iter &srcIN, string::utf8::Iter *
 	string::utf8::Iter src = srcIN;
 	if (src.getCurChar()=='"' || src.getCurChar()=='\'')
 	{
-		//il value � racchiuso tra apici. Prendo tutto fino a che non trovo un'altro apice uguale all'apice di apertura
+		//il value e' racchiuso tra apici. Prendo tutto fino a che non trovo un'altro apice uguale all'apice di apertura
 		UTF8Char opening = src.getCurChar();
 		src.advanceOneChar();
 

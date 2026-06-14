@@ -36,6 +36,28 @@ void Test_exa1::ExaGenerator::build()
 
 	for (u32 i=0;i<10; i++)
 		relax();
+	
+
+	//bbox
+	const u32 n = vtxList.getNElem();
+	vec3f vmin = vtxList(0);
+	vec3f vmax = vtxList(0);
+	for (u32 i=1; i<n; i++)
+	{
+		if (vtxList(i).x < vmin.x) vmin.x = vtxList(i).x;
+		if (vtxList(i).x > vmax.x) vmax.x = vtxList(i).x;
+
+		if (vtxList(i).z < vmin.z) vmin.z = vtxList(i).z;
+		if (vtxList(i).z > vmax.z) vmax.z = vtxList(i).z;
+	}		
+
+	logger::log (eTextColor::cyan, "INFO\n");
+	logger::incIndent();
+		logger::log ("BBOX: (%.2f, %.2f, %.2f)  (%.2f, %.2f, %.2f)\n", vmin.x, vmin.y, vmin.z, vmax.x, vmax.y, vmax.z);
+		logger::log ("num vtx=%d\n", vtxList.getNElem());
+		logger::log ("num quad=%d\n", quadList.getNElem());
+		logger::log ("num tris=%d\n", trisList.getNElem());
+	logger::decIndent();
 }
 
 //***************************************
@@ -46,7 +68,7 @@ void Test_exa1::ExaGenerator::create_default_exa()
 	quadList.reset();
 	listOfBorderVtxIndex.reset();
 
-	static constexpr u32 NUM_RINGS = 5; //16
+	static constexpr u32 NUM_RINGS = 4; //16
 	
 	const vec3f	center(0,0,0);
 	f32 radius = 1;
@@ -157,6 +179,14 @@ void Test_exa1::ExaGenerator::create_default_exa()
 
 		radius += 1.0f;
 	}
+
+	//swappo y con z
+	const u32 n = vtxList.getNElem();
+	for (u32 i=0; i<n; i++)
+	{
+		vtxList[i].z = vtxList[i].y;
+		vtxList[i].y = 0;
+	}	
 }
 
 //***************************************
@@ -300,9 +330,9 @@ bool Test_exa1::ExaGenerator::try_remove_edge (const sEdgeToRemove &edge)
 //***************************************
 void Test_exa1::ExaGenerator::simplify_90()
 {
-	logger::log ("simplify_90\n");
-	logger::incIndent();
-	logger::log ("tris:%d, quad:%d\n", trisList.getNElem(), quadList.getNElem());
+	// logger::log ("simplify_90\n");
+	// logger::incIndent();
+	// logger::log ("tris:%d, quad:%d\n", trisList.getNElem(), quadList.getNElem());
 	const u32 tris_limit = (trisList.getNElem() * 20) / 60;
 	const u32 max_consecutive_fail = trisList.getNElem() / 2;
 
@@ -320,8 +350,8 @@ void Test_exa1::ExaGenerator::simplify_90()
 			break;
 	}
 
-	logger::log ("tris:%d, quad:%d\n", trisList.getNElem(), quadList.getNElem());
-	logger::decIndent();
+	// logger::log ("tris:%d, quad:%d\n", trisList.getNElem(), quadList.getNElem());
+	// logger::decIndent();
 }
 
 //***************************************
@@ -554,21 +584,21 @@ void Test_exa1::ExaGenerator::quad_get_vertex (u32 quadIndex, vec3f *out) const
 //***************************************
 f32 Test_exa1::ExaGenerator::quad_calc_area (const vec3f *vtx) const
 {
-	f32 a = 0.5f * (   vtx[0].x * vtx[1].y 
-					- vtx[0].y * vtx[1].x
-					+ vtx[1].x * vtx[2].y 
-					- vtx[1].y * vtx[2].x 
-					+ vtx[2].x * vtx[3].y 
-					- vtx[2].y * vtx[3].x 
-					+ vtx[3].x * vtx[0].y 
-					- vtx[3].y * vtx[0].x);
+	f32 a = 0.5f * (   vtx[0].x * vtx[1].z 
+					- vtx[0].z * vtx[1].x
+					+ vtx[1].x * vtx[2].z 
+					- vtx[1].z * vtx[2].x 
+					+ vtx[2].x * vtx[3].z 
+					- vtx[2].z * vtx[3].x 
+					+ vtx[3].x * vtx[0].z 
+					- vtx[3].z * vtx[0].x);
 	if (a < 0)
 		return -a;
 	return a;
 }
 
 /***************************************
- * https://www.youtube.com/watch?v=Jm3pLya3d9c
+ * https://www.zoutube.com/watch?v=Jm3pLya3d9c
  * per ogni quad
  * 	calcolare AREA del quad
  * 	in base a AREA, calcolare il lato L e la diagnole D del quadrato che avrebbe la stessa area
@@ -664,14 +694,14 @@ void Test_exa1::ExaGenerator::relax_2()
 			if (i3 == 4) i3=0;
 			vec3f dir_vtx_to_vtx = vtx[i3] - vtx[i2];
 			dir_vtx_to_vtx.normalize();
-			if (fabsf(dir_vtx_to_vtx.x) > fabsf(dir_vtx_to_vtx.y))
-				dir_vtx_to_vtx.y = 0;
+			if (fabsf(dir_vtx_to_vtx.x) > fabsf(dir_vtx_to_vtx.z))
+				dir_vtx_to_vtx.z = 0;
 			else
 				dir_vtx_to_vtx.x = 0;
 			dir_vtx_to_vtx.normalize();
 
 			
-			vec3f dir2(-dir_vtx_to_vtx.y, dir_vtx_to_vtx.x, 0);
+			vec3f dir2(-dir_vtx_to_vtx.z, dir_vtx_to_vtx.x, 0);
 			dir2.normalize();
 
 			//calcolo il quadratro ipotetico costruito sul vtx i2-esimo

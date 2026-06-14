@@ -2,6 +2,7 @@
 #define _gosString_h_
 #include "string/gosStringEnumAndDefine.h"
 #include "string/gosCompileTimeHashedString.h"
+#include "../gosMath/gosMath.h"
 
 namespace gos
 {
@@ -350,6 +351,7 @@ namespace gos
 				bool	next (char *out, u32 sizeof_out)
 				{
 					assert(out && sizeof_out);
+					string::utf8::toNextValidChar(iter);
 					if (iter.getCurChar().isEOF())
 					{
 						out[0] = 0;
@@ -370,6 +372,15 @@ namespace gos
 					return true;
 				}
 
+
+				bool 	extract_f32 (f32 *out)			{ char s[32]; if (!next(s, sizeof(s)))	return false; *out = string::utf8::toF32(s); return true; }
+				bool 	extract_vec3f (gos::vec3f *out)
+				{
+					if (!extract_f32(&out->x)) return false;
+					if (!extract_f32(&out->y)) return false;
+					if (!extract_f32(&out->z)) return false;
+					return true;
+				}
 
 			private:
 				Iter		iter;

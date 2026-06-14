@@ -71,6 +71,19 @@ namespace gos
     
         void    debug__print (const Skeleton &sk, gos::UTF8String &out);
 
+		void	clone (const Skeleton &sk, gos::Allocator *allocator, Skeleton *out);
+
+		u8		get_bone_num (const Skeleton &sk);
+		const Bone* get_bone_list (const Skeleton &sk);
+
+		void	translate (Skeleton &sk, const vec3f &s);
+		void	scale (Skeleton &sk, const vec3f &s);
+
+				//La matrice matW viene applicata ricorsivamente su tutte le bone di <sk> e il risultato viene ritornato in <out>
+				//Le bone risultanti sono "risolte" nel senso che le relative matrici sono gia' state moltiplicate per le matrici delle bone padre
+				//NB: <out> deve avere lo stessa struttura di <sk> (in sostanza, deve essere un duplicato di <sk>)
+		void 	resolve (const Skeleton &sk, const mat4x4f &matW, Skeleton *out);
+
 		
 
 

@@ -30,7 +30,6 @@ u32  skeleton::get_blob_size (const Skeleton &sk)
 	return utils::bufferReadU32 (&sk.blob[4]);
 }
 
-
 //***************************************
 u32  skeleton::serialize (const Skeleton &sk, u8 *buffer, u32 sizeof_buffer)
 {
@@ -126,4 +125,77 @@ void skeleton::debug__print (const Skeleton &sk, gos::UTF8String &out)
 
     out << "Num bones: "<< STRFMT("%d", reader.bone_get_num()) << "\n";
     skeleton_debug__print_rec (out, 0, reader, 0);
+}
+
+//***************************************
+u8	skeleton::get_bone_num (const Skeleton &sk)
+{
+	return sk.blob[8];
+}
+
+//***************************************
+const Bone* skeleton::get_bone_list (const Skeleton &sk)
+{
+	return reinterpret_cast <const Bone*>(&sk.blob[12]);	
+}
+Bone* skeleton__get_bone_list__no_const (const Skeleton &sk)
+{
+	return reinterpret_cast <Bone*>(&sk.blob[12]);	
+}
+
+
+//***************************************
+void skeleton::clone (const Skeleton &sk, gos::Allocator *allocatorIN, Skeleton *out)
+{
+	assert (NULL != out);
+	out->allocator = allocatorIN;
+	out->blob = NULL;
+	
+	const u32 size = get_blob_size(sk);
+	out->blob = GOSALLOCT(u8*, allocatorIN, size);
+	memcpy (out->blob, sk.blob, size);
+}
+
+//***************************************
+void skeleton__resolve_ric (const gos::Bone *sk_boneList, u32 boneIndex, const mat4x4f &parent_matW, gos::Bone *out_boneList)
+{
+    Bone *bone = &out_boneList[boneIndex];
+    bone->matrix = parent_matW * sk_boneList[boneIndex].matrix;
+    
+    u32 childrenIndex = bone->firstChildIndex;
+    while (0xFF != childrenIndex)
+    {
+        skeleton__resolve_ric (sk_boneList, childrenIndex, bone->matrix, out_boneList);
+        childrenIndex = out_boneList[childrenIndex].sigblinIndex;
+    }
+}
+void skeleton::resolve (const Skeleton &sk, const mat4x4f &matW, Skeleton *out)
+{
+	skeleton__resolve_ric (get_bone_list(sk), 0, matW, skeleton__get_bone_list__no_const(*out));
+}
+
+//***************************************
+void skeleton::translate (Skeleton &sk, const vec3f &s)
+{
+	Bone *boneList = skeleton__get_bone_list__no_const (sk);
+
+	//mi basta traslare root
+	boneList[0].matrix(0,3) = boneList[0].matrix(0,3) + s.x;
+	boneList[0].matrix(1,3) = boneList[0].matrix(1,3) + s.y;
+	boneList[0].matrix(2,3) = boneList[0].matrix(2,3) + s.z;
+}
+
+//***************************************
+void skeleton::scale (Skeleton &sk, const vec3f &s)
+{
+	Bone *boneList = skeleton__get_bone_list__no_const (sk);
+	
+	const u8 n = get_bone_num(sk);
+	for (u8 i=0; i<n; i++)
+	{
+		//scalo solo il posizione della matrice
+		boneList[i].matrix(0,3) = boneList[i].matrix(0,3) * s.x;
+		boneList[i].matrix(1,3) = boneList[i].matrix(1,3) * s.y;
+		boneList[i].matrix(2,3) = boneList[i].matrix(2,3) * s.z;
+	}
 }
