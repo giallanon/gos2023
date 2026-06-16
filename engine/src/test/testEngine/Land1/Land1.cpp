@@ -7,6 +7,9 @@ using namespace gos;
 //***************************************
 Land1::Land1()
 {
+	engine = NULL;
+	gpu = NULL;
+	renderer = NULL;
 }
 
 //***************************************
@@ -15,12 +18,15 @@ Land1::~Land1()
 }
 
 //***************************************
-void Land1::on__handle_input ()
+void Land1::setup (gos::Engine *engineIN, gos::GPU *gpuIN, gos::engine::Renderer1 *rendererIN)
 {
+	engine = engineIN;
+	gpu = gpuIN;
+	renderer = rendererIN;
 }
 
 //***************************************
-void Land1::on__load_assets ()
+void Land1::load_assets ()
 {
 	engine->model_createFromAsset ("model_tile1", &handle__model_tile1, res::eLoadMode::asap);
 
@@ -28,49 +34,36 @@ void Land1::on__load_assets ()
 	const res::Model3d *res_model;
 	engine->get (handle__model_tile1, &res_model, 4000);
 
-	for (u32 i=0; i<SQUARE_SIZE*SQUARE_SIZE; i++)
-		engine->modelinst_create (handle__model_tile1, &handle__modelinst_tile1[i]);
-
-
-	u32 ct = 0;
-	f32 zz = 1.0f * (SQUARE_SIZE/2);
-	for (u32 z=0; z<SQUARE_SIZE; z++)
-	{
-		f32 xx = -1.0f * (SQUARE_SIZE/2);
-		for (u32 x=0; x<SQUARE_SIZE; x++)
-		{
-			f32 yy = 0;
-			switch (gos::randomU32(2))
-			{
-			default: break;
-			case 1: yy = 0.04f; break;
-			case 2: yy = -0.04f; break;
-			}
-
-			mat4x4f matW;
-			matW.buildTranslation (vec3f(xx, yy, zz));
-			engine->modelinst_applyTransform (handle__modelinst_tile1[ct++], matW);
-			xx += 1.0f;
-		}
-		zz -= 1.0f;
-	}
+	//il modello ha delle shape, voglio sapere quali
+	//queste shape sono gia' bindata a VB/IB
+	gos::model::Reader mr;
+	mr.setup (&res_model->model);
+	shape_list = mr.gpushape_get_pt_to_list();
 
 
 
+
+
+	
+}
+
+//***************************************
+void Land1::cleanup()
+{
 	engine->release(handle__model_tile1);
 }
 
 //***************************************
-void Land1::on__cleanup()
+void Land1::render()
 {
-	for (u32 i=0; i<SQUARE_SIZE*SQUARE_SIZE; i++)
-		engine->release(handle__modelinst_tile1[i]);
-}
+	mat4x4f matW;
 
-//***************************************
-void Land1::on__render()
-{
-	for (u32 i=0; i<SQUARE_SIZE*SQUARE_SIZE; i++)
-		renderer->add (handle__modelinst_tile1[i]);
+	matW.identity();
+	renderer->add (shape_list[0], matW, 0);
+	renderer->add (shape_list[1], matW, 0);
+
+	matW.buildTranslation (0, 3, 0);
+	renderer->add (shape_list[0], matW, 0);
+	renderer->add (shape_list[1], matW, 0);
 }
 
