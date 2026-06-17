@@ -1,5 +1,5 @@
 #version 450
-#include "common3.shader"
+#include "descriptor.shader"
 
 
 //input
@@ -10,10 +10,26 @@ layout(location = 1) in vec2 in_texCoord;
 layout(location = 0) out vec4 out_colorRGBA;
 //layout(location = 1) out vec4 out_color2RGBA;
 
+
+
+float calcLight (vec3 norm)
+{
+    //sun light
+    float c = max(-dot(scene.lightDir.xyz, norm), 0);
+
+    //ambient light
+    c += scene.lightDir.w;
+
+    //clamp
+    return min(max(c, 0), 1);
+}
+
+
+
 void main() 
 {
     vec3 normal = normalize(in_normal);
-    const float sunLight = PIPE_calcLight_01 (normal);
+    const float sunLight = calcLight (normal);
 
 	const uint texture_index = 0;
 	const vec3 diffuse_col = vec3(1,1,1);

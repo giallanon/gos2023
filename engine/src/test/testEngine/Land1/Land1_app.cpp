@@ -22,14 +22,13 @@ void Land1_app::on__handle_input ()
 //***************************************
 void Land1_app::on__load_assets ()
 {
-	land.setup (engine, gpu, renderer);
-	land.load_assets();
+	land.setup (gos::getSysHeapAllocator(), engine);
 }
 
 //***************************************
 void Land1_app::on__cleanup()
 {
-	land.cleanup();
+	land.unsetup();
 }
 
 //***************************************

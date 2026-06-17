@@ -62,6 +62,8 @@ gosEngine_idxBufferMan.h
 gosEngine_loaderThread_mainFN.cpp
 gosEngine_renderer.cpp
 gosEngine_renderer.h
+gosEngine_renderer1.h
+gosEngine_renderer1.cpp
 gosEngine_scene.cpp
 gosEngine_scene.h
 gosEngine_vtxBufferMan.cpp
@@ -69,7 +71,7 @@ gosEngine_vtxBufferMan.h
 gosEngine.cpp
 gosEngine.h
 gosEngineEnumAndDefine.h
-)
+ "gosEngine_renderer1.h")
 
 #====================================================
 # info a video

@@ -9,25 +9,28 @@ Land1::Land1()
 {
 	engine = NULL;
 	gpu = NULL;
-	renderer = NULL;
 }
 
 //***************************************
-Land1::~Land1()
+void Land1::unsetup()
 {
+	if (NULL == engine)
+		return;
+
+	common.unsetup();
+	engine->release(handle__model_tile1);
 }
 
 //***************************************
-void Land1::setup (gos::Engine *engineIN, gos::GPU *gpuIN, gos::engine::Renderer1 *rendererIN)
+bool Land1::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
 {
+	if (!common.setup(allocatorIN, engineIN, "land1_pipe"))
+		return false;
+
 	engine = engineIN;
-	gpu = gpuIN;
-	renderer = rendererIN;
-}
+	gpu = engine->gpu;
 
-//***************************************
-void Land1::load_assets ()
-{
+	//risorse
 	engine->model_createFromAsset ("model_tile1", &handle__model_tile1, res::eLoadMode::asap);
 
 	//aspetto che sia caricato
@@ -41,29 +44,13 @@ void Land1::load_assets ()
 	shape_list = mr.gpushape_get_pt_to_list();
 
 
-
-
-
-	
+	return true;	
 }
 
-//***************************************
-void Land1::cleanup()
-{
-	engine->release(handle__model_tile1);
-}
 
 //***************************************
 void Land1::render()
 {
-	mat4x4f matW;
 
-	matW.identity();
-	renderer->add (shape_list[0], matW, 0);
-	renderer->add (shape_list[1], matW, 0);
-
-	matW.buildTranslation (0, 3, 0);
-	renderer->add (shape_list[0], matW, 0);
-	renderer->add (shape_list[1], matW, 0);
 }
 

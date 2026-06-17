@@ -215,7 +215,7 @@ namespace gos
 
 		u8*				fileLoadInMemory (Allocator *allocator, const char* utf8_filePathAndNameRESOLVABLE, u32 *out_fileSize=NULL);
 		bool 			fileSaveBuffer (const char* utf8_filePathAndNameRESOLVABLE, const void *buffer, u32 sizeof_buffer);
-		inline bool		fileCopy (const char *src, const char *dst)															{ return platform::FS_fileCopy (src, dst); }
+		bool			fileCopy (const char *src, const char *dst);
 
 		bool			findFirst (gos::FileFind *ff, const char *utf8_pathRESOLVABLE, const char *utf8_jolly, eFileFindMode ffmode = eFileFindMode::both_file_and_folder);
 		inline bool     findNext (gos::FileFind &ff)																		{ return platform::FS_findNext(ff.osFF); }

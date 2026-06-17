@@ -895,3 +895,14 @@ void fs::fileGetLastTimeModified_LocalTime (const char *utf8_filePathAndNameRESO
 	platform::FS_fileGetLastTimeModified_LocalTime (utf8_filePathAndName, out_dt); 
 }
 
+//**************************************************************************
+bool fs::fileCopy (const char *src, const char *dst)
+{
+	char resolved_src[1024];
+	char resolved_dst[1024];
+	pathResolver.resolve (src, resolved_src, sizeof(resolved_src));
+	pathResolver.resolve (dst, resolved_dst, sizeof(resolved_dst));
+	return platform::FS_fileCopy (resolved_src, resolved_dst);
+}
+
+

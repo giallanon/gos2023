@@ -1,4 +1,4 @@
-@pipe : gosengine_pipe3
+@pipe : gosengine_renderer1
 {
     rt0: U8_RGBA
     zb: _DEPTH_BEST, 1, LESS

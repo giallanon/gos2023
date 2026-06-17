@@ -1,3 +1,5 @@
+@include: ../common.gosasset_d
+
 @pipe : land1_pipe
 {
     rt0: U8_RGBA

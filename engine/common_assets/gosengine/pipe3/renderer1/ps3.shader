@@ -1,5 +1,5 @@
 #version 450
-#include "common3.shader"
+#include "descriptor.shader"
 
 
 //input

@@ -1,5 +1,5 @@
 #include "gosEngine.h"
-#include "gosEngine_renderer.h"
+#include "gosEngine_renderer1.h"
 #include "entity/gosEntity.h"
 #include "model/gosModel.h"
 #include "../gosGPU/utils/gosFreeMovement.h"

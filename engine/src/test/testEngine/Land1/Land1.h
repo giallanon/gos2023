@@ -10,13 +10,12 @@ class Land1
 {
 public:
 			Land1();
-			~Land1();
+			~Land1()																			{ unsetup(); }
 
-	void	setup (gos::Engine *engine, gos::GPU *gpu, gos::engine::Renderer1 *renderer);
+	bool	setup (gos::Allocator *allocator, gos::Engine *engine);
+	void	unsetup();
 
-	void	load_assets ();
 	void	render();
-	void 	cleanup();
 
 
 private:
@@ -105,7 +104,7 @@ private:
 private:
 	gos::Engine						*engine;
 	gos::GPU						*gpu;
-	gos::engine::Renderer1			*renderer;
+	gos::engine::RendererCommon		common;
 
 	gos::ENGModel3d 		handle__model_tile1;
 	const gos::ENGGPUShape	*shape_list;

@@ -1,5 +1,5 @@
 #version 450
-#include "common3.shader"
+#include "descriptor.shader"
 
 //Input
 layout(location = 0) in vec3 in_position;
