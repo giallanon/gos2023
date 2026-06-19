@@ -1,11 +1,11 @@
-#include "../common3.shader"
+#include "../PIPE3__common.shader"
 
 
 //////////////////// descr-set 1
 layout(set = 1, binding = 0) uniform UBO_1_0
 {
     mat4 camVP;
-    vec4 lightDir;
+    vec4 lightDir_and_ambient;
 } scene;
 
 
@@ -39,15 +39,4 @@ layout(set = 2, binding = 2) readonly buffer SBO_2_2
 } instanceData;
 
 
-//**** semplice calcolo luce
-float PIPE_calcLight_01 (vec3 norm)
-{
-    //sun light
-    float c = max(-dot(scene.lightDir.xyz, norm), 0);
 
-    //ambient light
-    c += scene.lightDir.w;
-
-    //clamp
-    return min(max(c, 0), 1);
-}

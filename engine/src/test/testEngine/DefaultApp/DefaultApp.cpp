@@ -10,18 +10,12 @@ using namespace gos;
 DefaultApp::DefaultApp()
 {
 	allocator = gos::getSysHeapAllocator();
-
-	renderer = NULL;
-
 	camera_mode = eCameraMode::move_free;
 }
 
 //***************************************
 DefaultApp::~DefaultApp()
 {
-	if (NULL != renderer)
-		GOSDELETE(allocator, renderer);
-
 }
 
 //***************************************
@@ -35,11 +29,6 @@ void DefaultApp::run (gos::Engine *engineIN)
 		action_add ("toggle_cam_mode");
 
 	engine->inputCtx->action_bindToBtn ("toggle_cam_mode", input::eOrigin::keyboard, GLFW_KEY_TAB, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LSHIFT));
-
-	//renderer
-	renderer = GOSNEW(allocator, gos::engine::Renderer1)();
-	renderer->setup (allocator, engine);
-
 
 	//setup camera
     cam.setPerspectiveFovLH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 250.0f);
@@ -71,24 +60,6 @@ const char* DefaultApp::enum_to_string (eCameraMode m) const
 //**********************************
 bool DefaultApp::default_load_material()
 {
-	memset (default_material_indices, 0, sizeof(default_material_indices));
-	engine->texture2D_createFromAsset ("tex_bianca", &handle_texBianca);
-
-	//binding di materiali al renderer
-	{
-		const gos::res::Texture2d *tex;
-		u32	texture_index__texBianca = u32MAX;
-		
-		if (!engine->get (handle_texBianca, &tex, 5000))
-		{
-			DBGBREAK;
-			return false;
-		}
-		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->texHandle);
-
-		default_material_indices[0] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
-	}
-
     return true;
 }
 
@@ -219,28 +190,11 @@ void DefaultApp::priv_loop ()
         gpu::SwapchainImg swapchainImg;
         if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
-			gos::gpu::CmdBufferWriter2 cw;
-			cw	.begin (gpu, cmdBufferHandle)
-				.setViewport (gpu->viewport_getDefault());
-
 			mainLoop.stat_onCommandBufferBegin();
 			{
-				renderer->begin(&cam);
-				{
-					on__render();
-                    //renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_mainPlayer) );
-				}
-				renderer->end (cw);
+				on__render(swapchainImg, cmdBufferHandle, &cam);
 			}
 			mainLoop.stat_onCommandBufferEnd();
-
-			//present
-			cw	.imageTransition (renderer->getHandle_rt0(), eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
-				.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)
-				.copyImageToImage (renderer->getHandle_rt0(), swapchainImg.image, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
-				.imageTransition (swapchainImg.image, eImageLayout::transfer_dst, eImageLayout::presentation)
-				.end();
-
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }
 	}

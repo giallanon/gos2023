@@ -17,11 +17,12 @@ public:
 protected:
 	void	on__load_assets () final;
 	void	on__handle_input () final;
-	void	on__render() final;
+	void	on__render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle cmdBufferHandle, gos::geom::Camera3 *cam) final;
 	void 	on__cleanup() final;
 
 private:
 	Land1	land;
+	gos::vec3f	last_cam_pos;
 };
 
 #endif //_Land1_app_h_

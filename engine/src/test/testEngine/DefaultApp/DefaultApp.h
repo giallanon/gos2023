@@ -26,7 +26,7 @@ protected:
 protected:
 	virtual void	on__load_assets() = 0;
 	virtual void	on__handle_input () = 0;
-	virtual void	on__render() = 0;
+	virtual void	on__render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle cmdBufferHandle, gos::geom::Camera3 *cam) = 0;
 	virtual void	on__cleanup() = 0;
 
 protected:
@@ -34,7 +34,6 @@ protected:
 	gos::Engine						*engine;
 	gos::GPU						*gpu;
     gos::geom::Camera3				cam;
-	gos::engine::Renderer1			*renderer;
 
 	eCameraMode						camera_mode;
     gos::FPSMovement				move_fps;

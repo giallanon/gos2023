@@ -15,7 +15,11 @@ public:
 	bool	setup (gos::Allocator *allocator, gos::Engine *engine);
 	void	unsetup();
 
-	void	render();
+	void 	render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle cmdBufferHandle, gos::geom::Camera3 *cam);
+
+	void    begin (gos::geom::Camera3 *cam);
+	void	add__test1();
+	void    end (gos::gpu::CmdBufferWriter2 &cw);
 
 
 private:
@@ -47,7 +51,7 @@ private:
 
 		//build e' una standalone, fa tutto quello che deve fare e filla vtxList, trisList, quadList, listOfBorderVtxIndex
 		//con i dati rilevanti
-		void	build (f32 radius);
+		void	build (f32 radius, const gos::vec3f &center);
 		void	translate (const gos::vec3f &tr);
 
 	public:
@@ -81,7 +85,7 @@ private:
 		typedef gos::FastArray<sTris>		TrisList;
 
 	private:
-		void	create_default_exa(f32 radius);
+		void	create_default_exa(f32 radius, const gos::vec3f &center);
 		void	simplify_90();
 		void	subdivide();
 		void	relax();
@@ -100,14 +104,64 @@ private:
 	}; //class ExaGenerator
 
 
+private:
+	static const u32 NUM_MAX_EXA = 256;
+	static const u32 HEXA__NUM_VTX = 256;
+	static const u32 HEXA__AVG_NUM_QUAD = 256;
+	
+	
 
 private:
+	struct SceneData
+	{
+		gos::mat4x4f    matVP;
+		gos::vec4f      lightDir;
+	};
+
+	struct sExaVtxList
+	{
+		GPUStorageBufferHandle	handle_sbo;
+		gos::gpu::sMappedBuffer	mapped_buffer;
+		u32						sizeof_buffer;
+	};
+	
+	struct sPackedInstanceData
+	{
+		GPUStorageBufferHandle	handle_sbo;
+		gos::gpu::sMappedBuffer	mapped_buffer;
+		u32						sizeof_buffer;
+	};
+
+
+private:
+	void	priv_do_render(gos::gpu::RenderCtx &rctx);
+	void	priv_add_vtx (const gos::vec3f &v);
+	void	priv_add_quad (u16 idx1, u16 idx2, u16 idx3, u16 idx4);
+	void	add__exa(ExaGenerator &exa);
+
+
+private:
+	gos::Allocator					*localAllocator;
 	gos::Engine						*engine;
 	gos::GPU						*gpu;
 	gos::engine::RendererCommon		common;
 
-	gos::ENGModel3d 		handle__model_tile1;
-	const gos::ENGGPUShape	*shape_list;
+	GPUDescrSetInstanceHandle   	handle_descrSet1;
+	GPUDescrSetInstanceHandle   	handle_descrSet2;
+	GPUUniformBufferHandle      	handle_ubo_scene;
+	
+	sExaVtxList						exaVtxList;
+	sPackedInstanceData				packedInstanceData;
+
+	gos::ENGModel3d 				handle__model_tile1;
+	const gos::ENGGPUShape			*shape_list;
+
+	SceneData	scene;
+	u32 		num_vtx;
+	u32 		num_quad;
+
+	ExaGenerator exagen;
+	ExaGenerator exagen2;
 };
 
 #endif //_Land1_h_

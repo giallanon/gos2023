@@ -40,11 +40,11 @@ void Land1::ExaGenerator::translate (const gos::vec3f &tr)
 }
 
 //***************************************
-void Land1::ExaGenerator::build (f32 radius)
+void Land1::ExaGenerator::build (f32 radius, const gos::vec3f &center)
 {
 	assert (NULL != allocator);
 
-	create_default_exa(radius);
+	create_default_exa(radius, center);
 
 	simplify_90();
 
@@ -77,7 +77,7 @@ void Land1::ExaGenerator::build (f32 radius)
 }
 
 //***************************************
-void Land1::ExaGenerator::create_default_exa(f32 radius)
+void Land1::ExaGenerator::create_default_exa(f32 radiusIN, const gos::vec3f &centerIN)
 {
 	vtxList.reset();
 	trisList.reset();
@@ -95,6 +95,7 @@ void Land1::ExaGenerator::create_default_exa(f32 radius)
 	ringIndexStartList.append(sRing{ 0, 1 });
 
 	//gli altri ring..
+	f32 radius = 1;
 	for (u32 ringLevel = 1; ringLevel <= NUM_RINGS; ringLevel++)
 	{
 		//creo un anello di vertixi
@@ -195,12 +196,19 @@ void Land1::ExaGenerator::create_default_exa(f32 radius)
 		radius += 1.0f;
 	}
 
-	//swappo y con z
+	//swappo y con z e scalo per fittare "radiusIN"
+	const f32 s = radiusIN / (radius-1.0f);
 	const u32 n = vtxList.getNElem();
 	for (u32 i=0; i<n; i++)
 	{
 		vtxList[i].z = vtxList[i].y;
 		vtxList[i].y = 0;
+
+		vtxList[i].x *= s;
+		vtxList[i].z *= s;
+
+		vtxList[i] += centerIN;
+		
 	}	
 }
 

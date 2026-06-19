@@ -1,11 +1,11 @@
-@include: ../common.gosasset_d
 
 @pipe : land1_pipe
 {
     rt0: U8_RGBA
     zb: _DEPTH_BEST, 1, LESS
 
-	cullMode: CCW
+    //cullMode: CCW
+	cullMode: none
 	drawPrimitive: trisList
     wireframe: 0
 

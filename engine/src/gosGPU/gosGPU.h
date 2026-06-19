@@ -136,6 +136,7 @@ namespace gos
         u32                 limits_get_minStorageBufferOffsetAlignment() const          { return vulkan.limits_get_minStorageBufferOffsetAlignment(); }
         u32                 limits_get_maxStorageBufferRange() const                    { return vulkan.limits_get_maxStorageBufferRange(); }
 
+		u32                 limits_get_nonCoherentAtomSize() const                    	{ return vulkan.limits_get_nonCoherentAtomSize(); }
         
         //================ window stuff
         GOSWinHandle        getWindow()                                     { return mainWindow.winHandle; }

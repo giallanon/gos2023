@@ -88,7 +88,7 @@ bool Renderer1::setup (gos::Allocator *allocatorIN, Engine *engineIN)
         //descriptor set 1
         if (!gpu->descrSetInstance_create (common.handle_descrPool, res_pipeline->pipeHandle, 1, &handle_descrSet1))
         {
-            gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_0\n");
+            gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_1\n");
             return false;
         }
         else
@@ -102,7 +102,7 @@ bool Renderer1::setup (gos::Allocator *allocatorIN, Engine *engineIN)
         //descriptor set 2        
         if (!gpu->descrSetInstance_create (common.handle_descrPool, res_pipeline->pipeHandle, 2, &handle_descrSet2))
         {
-            gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_0\n");
+            gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_2\n");
             return false;
         }
         else

@@ -7,3 +7,4 @@
 //renderer per gos-engine
 @include: <common_assets>/gosengine/pipe3/renderer1/main.gosasset_d
 @include: <common_assets>/gosengine/line3d/main.gosasset_d
+@include: <common_assets>/gosengine/pipe3/land1/main.gosasset_d
