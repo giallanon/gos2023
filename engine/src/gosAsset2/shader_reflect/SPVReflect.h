@@ -327,9 +327,9 @@ namespace gos
                             list[i] = list[i + 1];
                             list[i + 1] = swap;
 
-                            auto swap2 = dsOptionList[i];
-                            dsOptionList[i] = dsOptionList[i+1];
-                            dsOptionList[i+1] = swap2;
+                            // auto swap2 = dsOptionList[i];
+                            // dsOptionList[i] = dsOptionList[i+1];
+                            // dsOptionList[i+1] = swap2;
                         }
                     }
                 }

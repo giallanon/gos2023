@@ -189,7 +189,7 @@ void Camera3::projectF (f32 viewportDimx, f32 viewportDimy, const vec3f *points3
 }
 
 //*************************************************************
-void Camera3::unproject (f32 viewportDimx, f32 viewportDimy, const vec2f *points2D, vec3f *points3D, u32 nPoints)
+void Camera3::unproject (f32 viewportDimx, f32 viewportDimy, const vec2f *points2D, vec3f *out_direction3D, u32 nPoints)
 {
 	getFrustumWC();
 	const vec3f	nearCenter = frustumWC.getNearCenter();
@@ -197,23 +197,24 @@ void Camera3::unproject (f32 viewportDimx, f32 viewportDimy, const vec2f *points
 	const vec3f	nearHalfAsseY = frustumWC.getNearPlaneHalfAsseY();
 	const vec3f	camO = pos.o;
 
-	f32 vpHalfDimx = viewportDimx * 0.5f;
-	f32 vpHalfDimy = viewportDimy * 0.5f;
+	const f32 vpHalfDimx = viewportDimx * 0.5f;
+	const f32 vpHalfDimy = viewportDimy * 0.5f;
 	for (u32 i=0; i<nPoints; i++)
 	{
 		/* screen to device coord
-		 * in device coordinate,  l'angolo in alto a sx e' definito come -1,1 mentre l'angolo in basso a dx e' definito come 1,-1
+		 * in device coordinate,  l'angolo in alto a sx e' definito come -1,-1 mentre l'angolo in basso a dx e' definito come 1,1
 		 */
-		vec2f pointDevCoord (points2D[i].x / vpHalfDimx -1.0f, 1.0f - points2D[i].y / vpHalfDimy);
+
+		vec2f pointDevCoord (points2D[i].x / vpHalfDimx -1.0f,  points2D[i].y / vpHalfDimy -1.0f);
 		
 		if (!bIsPerspective)
 			pointDevCoord *= 0.005f; //boh, numero magico venuto fuori da vari debuggamenti
  
 		/* il punto in 3D giace sul near plane */
-		vec3f p3D = nearCenter + nearHalfAsseX*pointDevCoord.x +nearHalfAsseY*pointDevCoord.y;
+		vec3f p3D = nearCenter + nearHalfAsseX*pointDevCoord.x -nearHalfAsseY*pointDevCoord.y;
 
 		/* quello che ritorno, e' una direzione di un ipotetico ray che parte dall'origine della cam e interseca il punto 2D sul near plane */
-		points3D[i] = p3D - camO;
-		points3D[i].normalize();
+		out_direction3D[i] = p3D - camO;
+		out_direction3D[i].normalize();
 	}
 }

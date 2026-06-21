@@ -39,7 +39,10 @@ namespace gos
 					
 	//ritorna un num compreso tra 0 e 1 inclusi
 	f32					random01();
-							
+
+	//ritorna un u32 compreso tra vMin e vMax inclusi
+	f32					random (f32 vMin, f32 vMax);
+
 	//ritorna un u32 compreso tra 0 e iMax incluso							
 	u32					randomU32(u32 iMax);
 

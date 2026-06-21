@@ -176,6 +176,7 @@ u64 gos::getTimeSinceStart_msec()					{ return (platform::getTimeNow_usec() - go
 u64 gos::getTimeSinceStart_usec()					{ return platform::getTimeNow_usec() - gosGlobals.timeStarted_usec; }
 f32 gos::random01()									{ return gosGlobalsRnd.get01(); }
 u32 gos::randomU32(u32 iMax)						{ return gosGlobalsRnd.getU32(iMax); }
+f32 gos::random (f32 vMin, f32 vMax)				{ const f32 t = gosGlobalsRnd.get01(); return vMin + (vMax-vMin) * t; }
 
 //******************************************
 gos::Logger* gos::logger::getSystemLogger()																{ return gosGlobals.logger; }

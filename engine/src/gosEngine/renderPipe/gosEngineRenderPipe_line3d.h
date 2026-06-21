@@ -1,7 +1,8 @@
-#ifndef _gosEngine_rend_line3d_h_
-#define _gosEngine_rend_line3d_h_
+#ifndef gosEngineRenderPipe_line3d
+#define gosEngineRenderPipe_line3d
 #include "../res/gosEngineRes.h"
 #include "dataTypes/gosColorU32.h"
+#include "../renderPipe/gosEngineRenderPipe.h"
 
 namespace gos
 {
@@ -10,52 +11,51 @@ namespace gos
 	namespace engine
 	{
 		/**************
-		* @brief	Rend_line3d
+		* @brief	Renderer_line3d
 		* 			Renderer per il rendering di line in 3d
 		* 
 		*/
-		class Rend_line3d
+		class Renderer_line3d : public gos::engine::RenderPipe::Renderer
 		{
 		public:
 			/*****************
 			 * @brief	Ctx
 			 * 			un contex contiene un elenco di punti, linee, colori e settaggi vari
-			 * 			Per renderizzare un ctx, utilizzare Rend_line3d->appendToCommandBuffer()
+			 * 			Per renderizzare un ctx, utilizzare Renderer_line3d->appendToCommandBuffer()
 			 */
 			class Ctx
 			{
 			public:
-						Ctx();
-						~Ctx()																	{ unsetup(); }
+						~Ctx()																	{ }
 
 				void	setup (gos::Allocator *allocator, u16 estimated_num_vtx);
 				void	unsetup ();
 
-				void	clear();
+				Ctx&	clear();
 
-				void	set_color_ARGB (const gos::ColorU32 &col)								{ set_color_ARGB (col.argb); }
-				void	set_color_ARGB (u32 argb);
-				void	set_line_width (u16 w);
+				Ctx&	set_color_ARGB (const gos::ColorU32 &col)								{ set_color_ARGB (col.argb); return *this; }
+				Ctx&	set_color_ARGB (u32 argb);
+				Ctx&	set_line_width (u16 w);
 				
-				void 	enable_depth_test(bool b);
-				void 	enable_depth_write(bool b);
+				Ctx& 	enable_depth_test(bool b);
+				Ctx& 	enable_depth_write(bool b);
 
 				u16		vtx_add (const vec3f &p);
 				u16		vtx_add (f32 x, f32 y, f32 z)											{ return vtx_add (vec3f(x, y, z)); }
 
-				void	line_begin();
-				void	line_add_vtx (f32 x, f32 y, f32 z)										{ line_add_vtx (vec3f(x, y, z)); }
-				void	line_add_vtx (const vec3f &p)											{ const u16 vtx_index = vtx_add(p); line_add_vtx(vtx_index); }
-				void	line_add_vtx (u16 vtx_index);
-				void	line_end();
+				Ctx&	line_begin();
+				Ctx&	line_add_vtx (f32 x, f32 y, f32 z)										{ line_add_vtx (vec3f(x, y, z)); return *this; }
+				Ctx&	line_add_vtx (const vec3f &p)											{ const u16 vtx_index = vtx_add(p); line_add_vtx(vtx_index); return *this; }
+				Ctx&	line_add_vtx (u16 vtx_index);
+				Ctx&	line_end();
 
-				void	line (f32 p1x, f32 p1y, f32 p1z, f32 p2x, f32 p2y, f32 p2z)				{ line_begin(); line_add_vtx(p1x, p1y, p1z); line_add_vtx(p2x, p2y, p2z); line_end(); }
-				void	line (const vec3f &p1, const vec3f &p2)									{ line (p1.x, p1.y, p1.z, p2.x, p2.y, p2.z); }
-				void	line (u16 vtx_index1, u16 vtx_index2)									{ line_begin(); line_add_vtx(vtx_index1); line_add_vtx(vtx_index2); line_end(); }
-				void	closed_line (const FastArray<vec3f> &vtxList, u32 num_vtx);
+				Ctx&	line (f32 p1x, f32 p1y, f32 p1z, f32 p2x, f32 p2y, f32 p2z)				{ line_begin(); line_add_vtx(p1x, p1y, p1z); line_add_vtx(p2x, p2y, p2z); line_end(); return *this; }
+				Ctx&	line (const vec3f &p1, const vec3f &p2)									{ line (p1.x, p1.y, p1.z, p2.x, p2.y, p2.z); return *this; }
+				Ctx&	line (u16 vtx_index1, u16 vtx_index2)									{ line_begin(); line_add_vtx(vtx_index1); line_add_vtx(vtx_index2); line_end(); return *this; }
+				Ctx&	closed_line (const FastArray<vec3f> &vtxList, u32 num_vtx);
 
-				void	point_set_radius (u16 radius);
-				void 	point (u16 vtx_index);
+				Ctx&	point_set_radius (u16 radius);
+				Ctx& 	point (u16 vtx_index);
 
 			private:
 				enum class eCMD : u16
@@ -73,23 +73,34 @@ namespace gos
 				};
 
 			private:
+						Ctx();
+
+			private:
 				FastArray<vec3f>	vtxList;
 				FastArray<u16>		program;
 				u32					line_started_at;			
 
-			friend Rend_line3d;
+			friend Renderer_line3d;
 			};
 
 		public:
-					Rend_line3d();
-					~Rend_line3d();
+			using RPIPE = gos::engine::RenderPipe;
 
-			bool	setup (gos::Allocator *allocator, gos::Engine *engineIN);
-			void	unsetup();
+		public:
+					Renderer_line3d();
+					~Renderer_line3d();
 
-			void	begin(gos::geom::Camera3 *cam, gpu::RenderCtx *rctx);
-			void	appendToCommandBuffer (const Ctx &ctx);
-			void	end();
+
+			bool 	on__attach (const RPIPE::Context &ctx) final;
+			void 	on__detach (const RPIPE::Context &ctx) final;
+			void 	on__render (const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx) final;
+
+
+			//=============== gestione dei ctx
+			Ctx*	ctx__crete_new (const char *name, u16 estimated_num_vtx);
+			void	ctx__delete (const char *name);
+			Ctx*	ctx__get (const char *name);
+
 
 		private:
             struct SceneData
@@ -130,8 +141,19 @@ namespace gos
 				u32 	num_seg_to_draw;
 			};
 
+			struct sCtxEntry
+			{
+				Ctx		*ctx;
+				char 	name[32];
+			};
+
 		private:
+			void 	priv_unsetup();
 			void 	priv_flushProgram(sState &state);
+			u32		priv_ctx__get (const char *name) const;
+			void	priv_begin(gos::geom::Camera3 *cam, gpu::RenderCtx *rctx);
+			void	priv_appendToCommandBuffer (const Ctx *ctx);
+			void	priv_end();
 
 		private:
             gos::Allocator              *localAllocator;
@@ -152,15 +174,13 @@ namespace gos
 			gpu::RenderCtx 				*rctx;
 			const res::GPUShape 		*res_shape_segmento;
 
-
-
-
+			gos::FastArray<sCtxEntry>	ctx_list;
 		};
 
 	} //namespace engine
 } //namespace gos
 
 
-#endif //_gosEngine_rend_line3d_h_
+#endif //gosEngineRenderPipe_line3d
 
 

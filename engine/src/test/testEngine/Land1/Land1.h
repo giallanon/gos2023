@@ -1,26 +1,27 @@
 #ifndef _Land1_h_
 #define _Land1_h_
 #include "../DefaultApp/DefaultApp.h"
+#include "../gosGameUtils/hexmap/gosHexMap.h"
 
 /******************************************
 * Land1 
 *
 */
-class Land1
+class Land1 : public gos::engine::RenderPipe::Renderer
 {
 public:
+	static constexpr f32 HEX_RADIUS = 3.0f;
+
+public:
+	using RPIPE = gos::engine::RenderPipe;
+
+public:
 			Land1();
-			~Land1()																			{ unsetup(); }
+			~Land1()										{ priv_unsetup(); }
 
-	bool	setup (gos::Allocator *allocator, gos::Engine *engine);
-	void	unsetup();
-
-	void 	render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle cmdBufferHandle, gos::geom::Camera3 *cam);
-
-	void    begin (gos::geom::Camera3 *cam);
-	void	add__test1();
-	void    end (gos::gpu::CmdBufferWriter2 &cw);
-
+	bool 	on__attach (const RPIPE::Context &ctx) final;
+	void 	on__detach (const RPIPE::Context &ctx) final;
+	void 	on__render (const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx) final;
 
 private:
 	/******************************************
@@ -36,6 +37,8 @@ private:
 			u16	vtx_idx1;
 			u16	vtx_idx2;
 			u16	vtx_idx3;
+			f32 height;
+			u32 material_index;
 		};
 
 	public:
@@ -53,6 +56,8 @@ private:
 		//con i dati rilevanti
 		void	build (f32 radius, const gos::vec3f &center);
 		void	translate (const gos::vec3f &tr);
+
+		gos::vec3f	quad_center (u32 quad_number) const;
 
 	public:
 		PointList						vtxList;
@@ -112,12 +117,6 @@ private:
 	
 
 private:
-	struct SceneData
-	{
-		gos::mat4x4f    matVP;
-		gos::vec4f      lightDir;
-	};
-
 	struct sExaVtxList
 	{
 		GPUStorageBufferHandle	handle_sbo;
@@ -125,6 +124,14 @@ private:
 		u32						sizeof_buffer;
 	};
 	
+	struct sInstanceData
+	{
+		u32 quad_indices_0_1;	//2 indici da 16 bit
+		u32 quad_indices_2_3;	//altri 2 indici da 16 bit
+		u32 material_index;
+		f32	height;		
+	};
+
 	struct sPackedInstanceData
 	{
 		GPUStorageBufferHandle	handle_sbo;
@@ -134,21 +141,21 @@ private:
 
 
 private:
-	void	priv_do_render(gos::gpu::RenderCtx &rctx);
+	void	priv_unsetup();
+	void	priv_do_render(const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx);
 	void	priv_add_vtx (const gos::vec3f &v);
-	void	priv_add_quad (u16 idx1, u16 idx2, u16 idx3, u16 idx4);
-	void	add__exa(ExaGenerator &exa);
+	void	priv_add_quad (u32 idx1, u32 idx2, u32 idx3, u32 idx4, f32 height, u32 material_index);
+	void	add__exa(const ExaGenerator *exa);
+	void 	priv_generate_terrain();
 
 
 private:
 	gos::Allocator					*localAllocator;
 	gos::Engine						*engine;
 	gos::GPU						*gpu;
-	gos::engine::RendererCommon		common;
 
-	GPUDescrSetInstanceHandle   	handle_descrSet1;
+	gos::ENGPipeline 				handle_pipeline;
 	GPUDescrSetInstanceHandle   	handle_descrSet2;
-	GPUUniformBufferHandle      	handle_ubo_scene;
 	
 	sExaVtxList						exaVtxList;
 	sPackedInstanceData				packedInstanceData;
@@ -156,12 +163,10 @@ private:
 	gos::ENGModel3d 				handle__model_tile1;
 	const gos::ENGGPUShape			*shape_list;
 
-	SceneData	scene;
 	u32 		num_vtx;
 	u32 		num_quad;
 
-	ExaGenerator exagen;
-	ExaGenerator exagen2;
+	gos::FastArray<ExaGenerator*>	exagenList;
 };
 
 #endif //_Land1_h_

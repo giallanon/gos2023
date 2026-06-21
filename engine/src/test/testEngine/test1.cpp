@@ -18,7 +18,7 @@ Test1::Test1()
 
 	handle_skeleton.setInvalid();
 	handle_model.setInvalid();
-	renderer = NULL;
+	renderer1 = NULL;
 
 	nextTimeUpdate_msec = 0;
 }
@@ -31,7 +31,8 @@ Test1::~Test1()
 
 	engine->release(handle_skeleton);
 	engine->release(handle_model);
-	GOSDELETE(allocator, renderer);
+
+	renderPipe.unsetup();
 }
 
 //***************************************
@@ -162,6 +163,9 @@ void Test1::run (gos::Engine *engineIN)
 
 	//e movement
     movement.bind (&cam.pos);
+
+
+	renderPipe.setup (gos::getSysHeapAllocator(), engineIN);
 	priv_run4();
 }
 
@@ -238,8 +242,7 @@ bool Test1::priv_run4 ()
 
 
 	//creo il renderer
-	renderer = GOSNEW(allocator, gos::engine::Renderer1)();
-	renderer->setup (allocator, engine);
+	renderer1 = renderPipe.add_renderer<engine::Renderer1>();
 
 
     //load degli assets
@@ -256,16 +259,16 @@ bool Test1::priv_run4 ()
 
 		if (!engine->get (handle_texBianca, &tex, 5000))
 			return false;
-		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->texHandle);
+		texture_index__texBianca = renderPipe.texture_addIfNotExitst(tex->texHandle);
 
 		if (!engine->get (handle_texChecker, &tex, 5000))
 			return false;
-		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->texHandle);
+		texture_index__texChecker = renderPipe.texture_addIfNotExitst(tex->texHandle);
 
-		renderer->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
-		renderer->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
-		renderer->material_create (texture_index__texBianca, vec3f(1.0f, 0.2f, 0.2f));
-		renderer->material_create (texture_index__texChecker, vec3f(0.2f, 1.0f, 0.2f));
+		renderer1->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
+		renderer1->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
+		renderer1->material_create (texture_index__texBianca, vec3f(1.0f, 0.2f, 0.2f));
+		renderer1->material_create (texture_index__texChecker, vec3f(0.2f, 1.0f, 0.2f));
 	}
 
 
@@ -422,32 +425,21 @@ bool Test1::priv_run4 ()
         {
 			mainLoop.stat_onCommandBufferBegin();
 			{
-				gos::gpu::CmdBufferWriter2 cw;
-				cw	.begin (gpu, cmdBufferHandle)
-					.setViewport (gpu->viewport_getDefault());
-
-				renderer->begin(&cam);
+				renderer1->begin();
 				{
 					scene.query (cam, &ent_uniqueList, true);
 
-					ent_uniqueList.forEach ( [&entRegistry = entRegistry, &renderer = renderer](u32 index, gos::Entity ent) {
+					ent_uniqueList.forEach ( [&entRegistry = entRegistry, &renderer1 = renderer1](u32 index, gos::Entity ent) {
 						auto cModelInstance = entRegistry.query<ent::CompModelInstance>(ent);
-						renderer->add (cModelInstance);
+						renderer1->add (cModelInstance);
 						return true;
 					});
 				}
-				renderer->end (cw);
-
-
-				cw	.imageTransition (renderer->getHandle_rt0(), eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
-					.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)
-					.copyImageToImage (renderer->getHandle_rt0(), swapchainImg.image, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
-					.imageTransition (swapchainImg.image, eImageLayout::transfer_dst, eImageLayout::presentation)
-					.end();
+				renderer1->end ();
 			}
+
+			renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
 			mainLoop.stat_onCommandBufferEnd();
-
-
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }		
 	}
@@ -472,10 +464,6 @@ bool Test1::priv_run4 ()
 	for (u8 i=0; i<4; i++)
 		engine->release(handle_shape_list[i]);
 	
-	GOSDELETE(allocator, renderer);
-	renderer = NULL;
-
-
 	gpu->deleteResource (cmdBufferHandle);
 	return true;
 }

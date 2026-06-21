@@ -4,14 +4,6 @@
 #include "../PIPE3__common.shader"
 
 
-//////////////////// descr-set 1
-layout(set = 1, binding = 0) uniform UBO_1_0
-{
-    mat4 camVP;
-    vec4 lightDir_and_ambient;
-} scene;
-
-
 
 //////////////////// descr-set 2
 //elenco dei vertici degli exa da renderizzare
@@ -22,12 +14,20 @@ layout(set = 2, binding = 0) readonly buffer SBO_2_0
 
 struct sPackedInstanceData
 {
-	uint	quad_indices_0_1;	//2 indici da 16 bit
-	uint	quad_indices_2_3;	//altri 2 indici da 16 bit
+	uint   quad_indices_0_1;	//2 indici da 16 bit
+	uint   quad_indices_2_3;	//altri 2 indici da 16 bit
+	uint   material_index;
+	float  height;
 };
+
 layout(set = 2, binding = 1) readonly buffer SBO_2_1
 {
     sPackedInstanceData	data[];
 } instanceData;
 
 
+//////////////////// push constant
+layout(push_constant) uniform PushConstantData
+{
+    uint    is_basetta;
+} pc;

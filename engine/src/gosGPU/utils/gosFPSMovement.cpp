@@ -73,7 +73,7 @@ void FPSMovement::mouseRotateY (i32 num_pixel_mouse_was_moved)
 //**************************************
 void FPSMovement::mouseRotateX (i32 num_pixel_mouse_was_moved)
 {
-    printf ("%d\n", num_pixel_mouse_was_moved);
+    //printf ("%d\n", num_pixel_mouse_was_moved);
     if (num_pixel_mouse_was_moved < 0)
     {
         //clockwise

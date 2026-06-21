@@ -2,7 +2,8 @@
 #define _game1_h_
 
 #include "gosEngine.h"
-#include "gosEngine_renderer1.h"
+#include "renderPipe/gosEngine_renderer1.h"
+#include "renderPipe/gosEngineRenderPipe_line3d.h"
 #include "entity/gosEntity.h"
 #include "model/gosModel.h"
 #include "../gosGPU/utils/gosFreeMovement.h"
@@ -43,8 +44,10 @@ private:
 	gos::GPU						*gpu;
 	gos::ent::Registry				entRegistry;
     gos::geom::Camera3				cam;
-	gos::engine::Renderer1			*renderer;
-	gos::engine::Rend_line3d		*rend_line3d;
+
+	gos::engine::RenderPipe			renderPipe;
+	gos::engine::Renderer1			*renderer1;
+	gos::engine::Renderer_line3d	*renderer_line3d;
 
 	gos::ENGGPUShape				handle_gpushape_cube;
 	gos::ENGGPUShape				handle_gpushape_cyl;

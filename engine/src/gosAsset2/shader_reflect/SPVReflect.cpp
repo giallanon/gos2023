@@ -833,13 +833,17 @@ void SPVReflect::priv_descriptor_parseVar (const SpvReflectShaderModule *module,
     DescrSetElem e;
     e.set = var->set;
     e.binding = var->binding;
-    if (0 != var->accessed)
-    {
-        if (SPV_REFLECT_SHADER_STAGE_VERTEX_BIT == module->shader_stage)
-            e.usage.set (USAGE__USED_IN_VTX_SHADER);
-        if (SPV_REFLECT_SHADER_STAGE_FRAGMENT_BIT == module->shader_stage)
-            e.usage.set (USAGE__USED_IN_FRAG_SHADER);
-    }
+
+	//2020-06-20
+    // if (0 != var->accessed)
+    // {
+    //     if (SPV_REFLECT_SHADER_STAGE_VERTEX_BIT == module->shader_stage)
+    //         e.usage.set (USAGE__USED_IN_VTX_SHADER);
+    //     if (SPV_REFLECT_SHADER_STAGE_FRAGMENT_BIT == module->shader_stage)
+    //         e.usage.set (USAGE__USED_IN_FRAG_SHADER);
+    // }
+	e.usage.set (USAGE__USED_IN_VTX_SHADER);
+	e.usage.set (USAGE__USED_IN_FRAG_SHADER);
 
     //tipo (vulkan) di descriptor
     switch (var->descriptor_type)
@@ -1039,7 +1043,7 @@ eGPUDescriptrorSetOptionBitmask SPVReflect::descrset_getOptionsPerSet(u32 set) c
     for (u32 i = 0; i < descrSetList.getNElem(); i++)
     {
         if (descrSetList(i).set == set)
-            return descrSetList.getOptions(i);
+            return descrSetList.getOptions(set);
     }
     return eGPUDescriptrorSetOption::none;
 }
@@ -1173,14 +1177,14 @@ void SPVReflect::printInfo (gos::UTF8String &out) const
             eGPUDescriptrorUsageBitmask usage;
             priv_descrset_getElemInfo  (i, &binding, &vktype, &arraySize, &usage);
 
+			const u8 descriptor_set = descrSetList(i).set;
 
             out << "\n----------------------------------------------------------------\n";
-            out << "set=" << descrSetList(i).set << ", binding=" << binding << ", vktype=" << utils::enumToString(vktype)
-                << ", numElem=" << arraySize <<", usage=" << STRFMT("%08X", usage);
-
-            out << ", bindless=";
+            out << "set=" << descriptor_set << ", binding=" << binding << ", vktype=" << utils::enumToString(vktype)
+                << ", numElem=" << arraySize <<", usage=0x" << STRFMT("%08X", usage)
+            	<< ", options=0x" << STRFMT("%08X", descrSetList.getOptions(descriptor_set).asU32())
+				<< ", bindless=";
             descrSetList(i).root->isType_bindlessArray() ? out << "Y" : out << "N";
-
             out << "\n";
                 
             

@@ -1,7 +1,8 @@
 #ifndef _test_exa1_h_
 #define _test_exa1_h_
 #include "gosEngine.h"
-#include "gosEngine_renderer.h"
+#include "renderPipe/gosEngine_renderer1.h"
+#include "renderPipe/gosEngineRenderPipe_line3d.h"
 #include "../gosGPU/utils/gosFreeMovement.h"
 #include "../gosGPU/utils/gosFPSMovement.h"
 #include "gosUniqueSortedList.h"
@@ -109,12 +110,14 @@ private:
 	GPUZBufferHandle				handle_zb;
 
 	gos::geom::Camera3				cam;
-	gos::engine::Rend_line3d		*rend_line3d;
     gos::FreeMovement				movement;
 
-	gos::engine::Rend_line3d::Ctx 	line_ctx1;
-	gos::engine::Rend_line3d::Ctx 	line_ctx2;
-	gos::engine::Rend_line3d::Ctx 	line_ctx3;
+
+	gos::engine::RenderPipe				renderPipe;
+	gos::engine::Renderer_line3d		*renderer_line3d;
+	gos::engine::Renderer_line3d::Ctx 	*line_ctx1;
+	gos::engine::Renderer_line3d::Ctx 	*line_ctx2;
+	gos::engine::Renderer_line3d::Ctx 	*line_ctx3;
 	
 	ExaGenerator					exagen;
 	ExaGenerator::sEdgeToRemove 	edge_to_remove;

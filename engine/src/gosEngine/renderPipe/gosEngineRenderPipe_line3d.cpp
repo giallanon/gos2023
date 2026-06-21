@@ -1,4 +1,4 @@
-#include "gosEngine_rend_line3d.h"
+#include "gosEngineRenderPipe_line3d.h"
 #include "../gosShape/gosShapeVtxArrayWriter.h"
 #include "../gosEngine.h"
 
@@ -7,7 +7,7 @@ using namespace gos::engine;
 
 
 //********************************************* 
-Rend_line3d::Rend_line3d()
+Renderer_line3d::Renderer_line3d()
 {
 	engine = NULL;
     localAllocator = NULL;
@@ -15,16 +15,33 @@ Rend_line3d::Rend_line3d()
 }
 
 //********************************************* 
-Rend_line3d::~Rend_line3d()
+Renderer_line3d::~Renderer_line3d()
 {
-	unsetup();
+	priv_unsetup();
 }
 
 //********************************************* 
-void Rend_line3d::unsetup()
+void Renderer_line3d::on__detach (const RPIPE::Context &ctx)
+{
+	priv_unsetup();
+}
+
+//********************************************* 
+void Renderer_line3d::priv_unsetup()
 {
     if (NULL == engine)
+	{
         return;
+	}
+
+	u32 n = ctx_list.getNElem();
+	for (u32 i=0; i<n; i++)
+	{
+		ctx_list[i].ctx->unsetup();
+		GOSDELETE(localAllocator, ctx_list[i].ctx);
+	}
+	ctx_list.unsetup();
+
 
     gpu->buffer_unmap (sbo_segment.mapped);
     gpu->buffer_unmap (sbo_vtx.mapped);
@@ -46,10 +63,10 @@ void Rend_line3d::unsetup()
 }
 
 //********************************************* 
-bool Rend_line3d::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
+bool Renderer_line3d::on__attach (const RPIPE::Context &ctx)
 {
-    localAllocator = allocatorIN;
-    engine = engineIN;
+    localAllocator = ctx.allocator;
+    engine = ctx.engine;
     gpu = engine->gpu;
 
     //load degli assets
@@ -110,7 +127,7 @@ bool Rend_line3d::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
         .end();
     if (handle_descrPool.isInvalid())
     {
-        gos::logger::err ("Rend_line3d::setup() => can't create descriptor pool\n");
+        gos::logger::err ("Renderer_line3d::setup() => can't create descriptor pool\n");
         return false;
     }    
 
@@ -142,7 +159,7 @@ bool Rend_line3d::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
         //descriptor set 0
         if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->pipeHandle, 0, &handle_descrSet0))
         {
-            gos::logger::err ("Rend_line3d::setup() => can't create an instance of descriptorSet_0\n");
+            gos::logger::err ("Renderer_line3d::setup() => can't create an instance of descriptorSet_0\n");
             return false;
         }
         else
@@ -156,7 +173,7 @@ bool Rend_line3d::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
         //descriptor set 1
         if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->pipeHandle, 1, &handle_descrSet1))
         {
-            gos::logger::err ("Rend_line3d::setup() => can't create an instance of descriptorSet_0\n");
+            gos::logger::err ("Renderer_line3d::setup() => can't create an instance of descriptorSet_0\n");
             return false;
         }
         else
@@ -168,12 +185,85 @@ bool Rend_line3d::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
         }    
     }
 
+
+	ctx_list.setup (localAllocator, 16);
 	return true;
+}
+
+//********************************************* 
+Renderer_line3d::Ctx* Renderer_line3d::ctx__crete_new (const char *name, u16 estimated_num_vtx)
+{
+	if (u32MAX != priv_ctx__get(name))
+	{
+		logger::err ("Renderer_line3d::ctx__crete_new() => %s already exists\n");
+		return NULL;
+	}
+
+	Renderer_line3d::Ctx *ctx = GOSNEW(localAllocator, Renderer_line3d::Ctx)();
+	ctx->setup (localAllocator, estimated_num_vtx);
+
+	const u32 n = ctx_list.getNElem();
+	ctx_list[n].ctx = ctx;
+	sprintf_s (ctx_list[n].name, sizeof(ctx_list[n].name), "%s", name);
+	return ctx;
+}
+
+//********************************************* 
+void Renderer_line3d::ctx__delete (const char *name)
+{
+	const u32 n = priv_ctx__get(name);
+	if (u32MAX == n)
+		return;
+
+	ctx_list[n].ctx->unsetup();
+	GOSDELETE(localAllocator, ctx_list[n].ctx);
+	ctx_list.removeAndSwapWithLast(n);
+}
+
+//********************************************* 
+u32 Renderer_line3d::priv_ctx__get (const char *name) const
+{
+	const u32 n = ctx_list.getNElem();
+	for (u32 i=0; i<n; i++)
+	{
+		if (string::utf8::areEqual (name, ctx_list(i).name, true))
+			return i;
+	}
+	return u32MAX;
+}
+
+//********************************************* 
+Renderer_line3d::Ctx* Renderer_line3d::ctx__get (const char *name)
+{
+	const u32 i = priv_ctx__get(name);
+	if (u32MAX == i)
+	{
+		DBGBREAK;
+		return NULL;
+	}
+	return ctx_list(i).ctx;
 }
 
 
 //********************************************* 
-void Rend_line3d::begin (gos::geom::Camera3 *cam, gpu::RenderCtx *rctxIN)
+void Renderer_line3d::on__render (const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx)
+{
+	const u32 n = ctx_list.getNElem();
+	if (0 == n)
+	{
+		return;
+	}
+
+	priv_begin (ctx.cam, &rctx);
+	for (u32 i=0; i<n; i++)
+	{
+		priv_appendToCommandBuffer (ctx_list(i).ctx);
+	}
+	priv_end();
+}
+
+//********************************************* 
+void Renderer_line3d::priv_begin (gos::geom::Camera3 *cam, gpu::RenderCtx *rctxIN)
 {
     if (flag.isBitSet(FLAG__BEGIN_INVOKED))
     {
@@ -219,21 +309,23 @@ void Rend_line3d::begin (gos::geom::Camera3 *cam, gpu::RenderCtx *rctxIN)
 }
 
 //********************************************* 
-void Rend_line3d::end()
+void Renderer_line3d::priv_end()
 {
     if (!flag.isBitSet(FLAG__BEGIN_INVOKED))
-    return;
+	{
+    	return;
+	}
 
     flag.clear(FLAG__BEGIN_INVOKED);
     gpu->buffer_manualSync_cpuWrite (sbo_vtx.mapped, 0, u32MAX);
     gpu->buffer_manualSync_cpuWrite (sbo_segment.mapped, 0, u32MAX);
-	gpu->waitIdle();
+	//gpu->waitIdle();
     rctx = NULL;
     res_shape_segmento = NULL;
 }
 
 //********************************************* 
-void Rend_line3d::priv_flushProgram (sState &state)
+void Renderer_line3d::priv_flushProgram (sState &state)
 {
     if (0 == state.num_seg_to_draw)
         return;
@@ -254,7 +346,7 @@ void Rend_line3d::priv_flushProgram (sState &state)
 }
 
 //********************************************* 
-void Rend_line3d::appendToCommandBuffer (const Ctx &ctx)
+void Renderer_line3d::priv_appendToCommandBuffer (const Ctx *ctx)
 {
     if (!flag.isBitSet(FLAG__BEGIN_INVOKED))
     {
@@ -268,7 +360,7 @@ void Rend_line3d::appendToCommandBuffer (const Ctx &ctx)
 
     //copio tutti i vtx di questo ctx in SBO
     const u32 first_vtx_index = num_vtx_in_buffer;
-    const u32 num_vtx = ctx.vtxList.getNElem();
+    const u32 num_vtx = ctx->vtxList.getNElem();
     if (0 == num_vtx)
         return;
     else
@@ -277,7 +369,7 @@ void Rend_line3d::appendToCommandBuffer (const Ctx &ctx)
         const u32 size =  sizeof(vec3f) * num_vtx;
 
         u8 *pt = static_cast<u8*>(sbo_vtx.mapped.host_pt);
-        memcpy (&pt[offset], ctx.vtxList._queryPointer(), size);
+        memcpy (&pt[offset], ctx->vtxList._queryPointer(), size);
         //gpu->buffer_manualSync_cpuWrite (sbo_vtx.mapped, offset, size);
 
         num_vtx_in_buffer += num_vtx;
@@ -288,11 +380,11 @@ void Rend_line3d::appendToCommandBuffer (const Ctx &ctx)
     //parse del program di ctx
     u32 *pt_segment_buffer = static_cast<u32*>(sbo_segment.mapped.host_pt);
     
-    const u32 n = ctx.program.getNElem();
+    const u32 n = ctx->program.getNElem();
     u32 i = 0;
     while (i < n)
     {
-        const Ctx::eCMD cmd = (Ctx::eCMD)ctx.program(i++);
+        const Ctx::eCMD cmd = (Ctx::eCMD)ctx->program(i++);
         switch (cmd)
         {
         default:
@@ -301,8 +393,8 @@ void Rend_line3d::appendToCommandBuffer (const Ctx &ctx)
 
         case Ctx::eCMD::set_color_ARGB:
             {
-                u32 argb = (u32) (ctx.program(i++) << 16);
-                argb |= (u32) (ctx.program(i++));;
+                u32 argb = (u32) (ctx->program(i++) << 16);
+                argb |= (u32) (ctx->program(i++));;
 
                 if (argb != state.cur_color_ARGB)
                 {
@@ -346,7 +438,7 @@ void Rend_line3d::appendToCommandBuffer (const Ctx &ctx)
         
         case Ctx::eCMD::set_line_width:
             {
-                const u16 w = ctx.program(i++);
+                const u16 w = ctx->program(i++);
                 if (w != state.cur_line_width)
                 {
                     priv_flushProgram (state);
@@ -358,13 +450,13 @@ void Rend_line3d::appendToCommandBuffer (const Ctx &ctx)
         case Ctx::eCMD::line_def:
             //inizio di una linea
             {
-                u16 num_vtx_in_linea = ctx.program(i++);
-                u16 vtx_index_1 = ctx.program(i++);
+                u16 num_vtx_in_linea = ctx->program(i++);
+                u16 vtx_index_1 = ctx->program(i++);
 
                 num_vtx_in_linea--;
                 while (num_vtx_in_linea--)
                 {
-                    const u16 vtx_index_2 = ctx.program(i++);
+                    const u16 vtx_index_2 = ctx->program(i++);
 
                     const u32 packed_idx_1_2 = (u32)(first_vtx_index + vtx_index_1) << 16 | (first_vtx_index + vtx_index_2);
                     pt_segment_buffer[num_seg_in_buffer++] = packed_idx_1_2;
@@ -380,7 +472,7 @@ void Rend_line3d::appendToCommandBuffer (const Ctx &ctx)
 
 		case Ctx::eCMD::set_point_radius:
             {
-                const u16 w = ctx.program(i++);
+                const u16 w = ctx->program(i++);
                 if (w != state.cur_point_radius)
                 {
                     priv_flushProgram (state);
@@ -391,7 +483,7 @@ void Rend_line3d::appendToCommandBuffer (const Ctx &ctx)
 
 		case Ctx::eCMD::point_def:
             {
-                const u16 vtx_index_2 = ctx.program(i++);
+                const u16 vtx_index_2 = ctx->program(i++);
 
 				const u32 packed_idx_1_2 = 0xFFFF0000 | (first_vtx_index + vtx_index_2);
 				pt_segment_buffer[num_seg_in_buffer++] = packed_idx_1_2;

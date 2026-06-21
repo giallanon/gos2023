@@ -11,6 +11,8 @@ DefaultApp::DefaultApp()
 {
 	allocator = gos::getSysHeapAllocator();
 	camera_mode = eCameraMode::move_free;
+	engine = NULL;
+	gpu = NULL;
 }
 
 //***************************************
@@ -37,12 +39,15 @@ void DefaultApp::run (gos::Engine *engineIN)
 	cam.pos.lookAt (vec3f(0,0,0));
 	cam.markUpdated();
 
-	//e movement
+	//setup movement
     move_fps.bind (&cam.pos);
 	move_free.bind (&cam.pos);
-	
 
-	default_load_material();
+	//render pipe
+	if (!renderPipe.setup (gos::getSysHeapAllocator(), engine))
+		return;
+
+
     priv_loop();
 }
 
@@ -58,12 +63,6 @@ const char* DefaultApp::enum_to_string (eCameraMode m) const
 }
 
 //**********************************
-bool DefaultApp::default_load_material()
-{
-    return true;
-}
-
-//**********************************
 void DefaultApp::default_handle_input ()
 {
     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
@@ -73,6 +72,10 @@ void DefaultApp::default_handle_input ()
 	{
 		switch (ev.actionID)
 		{
+		default:
+			on__handle_input(ev);
+			break;
+
 		case COMPILE_TIME_STR_CRC32("toggle_cam_mode"):
 			if (eCameraMode::move_free == camera_mode)
 				camera_mode = eCameraMode::move_fps;
@@ -114,14 +117,14 @@ void DefaultApp::default_handle_input ()
 			if (eCameraMode::move_free == camera_mode)
 				move_free.rotateY ((ev.value < 0));
 			else
-				move_fps.mouseRotateY (ev.value);
+				move_fps.mouseRotateY (-ev.value);
 			break;
 
 		case COMPILE_TIME_STR_CRC32("rotateX"):
 			if (eCameraMode::move_free == camera_mode)
 				move_free.rotateX ((ev.value < 0));
 			else
-				move_fps.mouseRotateX (ev.value);
+				move_fps.mouseRotateX (-ev.value);
 			break;
 
 		case COMPILE_TIME_STR_CRC32("strafe_up"):
@@ -156,13 +159,16 @@ void DefaultApp::priv_loop ()
 {
 	on__load_assets();
 
+
     gpu::MainLoop2 mainLoop;
     mainLoop.setup (gpu);
+	mainLoop.stat_setPrintReportEvery (5000);
 
     GPUCmdBufferHandle  cmdBufferHandle;
     gpu->cmdBuffer_create (eGPUQueueFamily::gfx, &cmdBufferHandle);
 	
 	bool bQuit = false;
+	vec3f last_cam_pos;
 	while (false == bQuit)
 	{
 		if (!engine->update())
@@ -177,7 +183,12 @@ void DefaultApp::priv_loop ()
 		mainLoop.stat_onCPUFrameBegin();
 		{
 			default_handle_input();
-			on__handle_input();
+
+			if (last_cam_pos != cam.pos.o)
+			{
+				last_cam_pos = cam.pos.o;
+				//logger::log (eTextColor::white, "CAM: %.2f, %.2f, %.2f\n", last_cam_pos.x, last_cam_pos.y, last_cam_pos.z);
+			}			
         }
 		mainLoop.stat_onCPUFrameEnd();		
 
@@ -192,7 +203,7 @@ void DefaultApp::priv_loop ()
         {
 			mainLoop.stat_onCommandBufferBegin();
 			{
-				on__render(swapchainImg, cmdBufferHandle, &cam);
+				renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
 			}
 			mainLoop.stat_onCommandBufferEnd();
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
@@ -204,7 +215,8 @@ void DefaultApp::priv_loop ()
 	mainLoop.unsetup();
 	gpu->deleteResource (cmdBufferHandle);
 
-	engine->release (handle_texBianca);
 	on__cleanup();
+
+	renderPipe.unsetup();
 }
 

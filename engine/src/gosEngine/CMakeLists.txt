@@ -29,10 +29,6 @@ entity/gosEntityRegistry.cpp
 entity/gosEntityRegistry.h
 entity/gosEntityUniqueList.h
 
-line3d/gosEngine_rend_line3d.cpp
-line3d/gosEngine_rend_line3d.h
-line3d/gosEngine_rend_line3d_ctx.cpp
-
 loaders/gosEngineLoaders_model3d.h
 loaders/gosEngineLoaders_pipe.h
 loaders/gosEngineLoaders_shader.h
@@ -45,6 +41,14 @@ model/gosModel.cpp
 model/gosModel.h
 model/gosModelInstance.h
 model/gosModelReader.cpp
+
+renderPipe/gosEngine_renderer1.cpp
+renderPipe/gosEngine_renderer1.h
+renderPipe/gosEngineRenderPipe_line3d.cpp
+renderPipe/gosEngineRenderPipe_line3d.h
+renderPipe/gosEngineRenderPipe_line3d_ctx.cpp
+renderPipe/gosEngineRenderPipe.cpp
+renderPipe/gosEngineRenderPipe.h
 
 res/gosEngineRes.cpp
 res/gosEngineRes.h
@@ -60,10 +64,6 @@ gosEngine_dynTextureArray.h
 gosEngine_idxBufferMan.cpp
 gosEngine_idxBufferMan.h
 gosEngine_loaderThread_mainFN.cpp
-gosEngine_renderer.cpp
-gosEngine_renderer.h
-gosEngine_renderer1.h
-gosEngine_renderer1.cpp
 gosEngine_scene.cpp
 gosEngine_scene.h
 gosEngine_vtxBufferMan.cpp
@@ -71,7 +71,7 @@ gosEngine_vtxBufferMan.h
 gosEngine.cpp
 gosEngine.h
 gosEngineEnumAndDefine.h
- "gosEngine_renderer1.h")
+)
 
 #====================================================
 # info a video

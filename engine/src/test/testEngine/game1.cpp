@@ -23,7 +23,8 @@ Game1::Game1()
 	entRegistry.addComponentHandler<ent::CompScriptable>();
 	entRegistry.addComponentHandler<CompMissile>();
 
-	renderer = NULL;
+	renderer1 = NULL;
+	renderer_line3d = NULL;
     handle_skeleton1.setInvalid();
     handle_skeleton2.setInvalid();
     handle_model_player.setInvalid();
@@ -46,7 +47,7 @@ Game1::~Game1()
 	engine->release(handle_model_player);
 	engine->release(handle_model_pavimento);
 	
-	GOSDELETE(allocator, renderer);
+	renderPipe.unsetup();
 }
 
 //***************************************
@@ -65,9 +66,13 @@ void Game1::run (gos::Engine *engineIN)
 	engine->inputCtx->action_bindToBtn ("mouse-LB", input::eOrigin::mouse, 0, input::eButtonStatus::pressed);
 	engine->inputCtx->action_bindToBtn ("toggle_cam_mode", input::eOrigin::keyboard, GLFW_KEY_TAB, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LSHIFT));
 
+
+
 	//renderer
-	renderer = GOSNEW(allocator, gos::engine::Renderer1)();
-	renderer->setup (allocator, engine);
+	renderPipe.setup (allocator, engine);
+		renderer1 = renderPipe.add_renderer<engine::Renderer1>();
+		renderer_line3d = renderPipe.add_renderer<engine::Renderer_line3d>();
+		
 
 
 	//setup camera
@@ -214,19 +219,19 @@ bool Game1::priv_loadAssets()
 			DBGBREAK;
 			return false;
 		}
-		texture_index__texBianca = renderer->texture_addIfNotExitst(tex->texHandle);
+		texture_index__texBianca = renderPipe.texture_addIfNotExitst(tex->texHandle);
 
 		if (!engine->get (handle_texChecker, &tex, 5000))
 		{
 			DBGBREAK;
 			return false;
 		}
-		texture_index__texChecker = renderer->texture_addIfNotExitst(tex->texHandle);
+		texture_index__texChecker = renderPipe.texture_addIfNotExitst(tex->texHandle);
 
-		material_indices[0] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
-		material_indices[1] = renderer->material_create (texture_index__texBianca, vec3f(1.0f, 0.0f, 0.0f));
-		material_indices[2] = renderer->material_create (texture_index__texBianca, vec3f(0.0f, 1.0f, 0.0f));
-		material_indices[3] = renderer->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
+		material_indices[0] = renderer1->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
+		material_indices[1] = renderer1->material_create (texture_index__texBianca, vec3f(1.0f, 0.0f, 0.0f));
+		material_indices[2] = renderer1->material_create (texture_index__texBianca, vec3f(0.0f, 1.0f, 0.0f));
+		material_indices[3] = renderer1->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
 	}
 
     return true;
@@ -456,7 +461,8 @@ void Game1::priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir)
 //***************************************
 void Game1::priv_loop ()
 {
-	engine->model_createFromAsset ("model_albero", &handle_model_albero, res::eLoadMode::asap);
+	//engine->model_createFromAsset ("model_albero", &handle_model_albero, res::eLoadMode::asap);
+	engine->model_createFromAsset ("model_LowPolyTree", &handle_model_albero, res::eLoadMode::asap);
 
 	const res::Model3d *res_model_albero;
 	engine->get (handle_model_albero, &res_model_albero, 4000);
@@ -515,45 +521,42 @@ void Game1::priv_loop ()
 
 
 	//line3d
-	gos::engine::Rend_line3d::Ctx line_ctx1;
-	line_ctx1.setup (allocator, 32);
+	gos::engine::Renderer_line3d::Ctx *line_ctx1 = renderer_line3d->ctx__crete_new("ctx1", 32);
+		line_ctx1->clear();
+		line_ctx1->vtx_add (0,0,0);
+		line_ctx1->vtx_add (10,0,0);
+		line_ctx1->vtx_add (0,10,0);
+		line_ctx1->vtx_add (0,0,10);
+		
+		line_ctx1->set_color_ARGB (0xFFFF0000); 	line_ctx1->line (0, 1);
+		line_ctx1->set_color_ARGB (0xFF00FF00); 	line_ctx1->line (0, 2);
+		line_ctx1->set_color_ARGB (0xFF0000FF); 	line_ctx1->line (0, 3);
 
-	line_ctx1.clear();
-	line_ctx1.vtx_add (0,0,0);
-	line_ctx1.vtx_add (10,0,0);
-	line_ctx1.vtx_add (0,10,0);
-	line_ctx1.vtx_add (0,0,10);
-	
-	line_ctx1.set_color_ARGB (0xFFFF0000); 	line_ctx1.line (0, 1);
-	line_ctx1.set_color_ARGB (0xFF00FF00); 	line_ctx1.line (0, 2);
-	line_ctx1.set_color_ARGB (0xFF0000FF); 	line_ctx1.line (0, 3);
-
-	gos::engine::Rend_line3d::Ctx line_ctx2;
-	line_ctx2.setup (allocator, 32);
+	gos::engine::Renderer_line3d::Ctx *line_ctx2 = renderer_line3d->ctx__crete_new("ctx2", 32);
 	{
 		FastArray<vec3f> vtxList (gos::getScrapAllocator(), 64);
 
 		static constexpr u8 NUM_POINT = 6;
 		geom::circle (&vtxList, vec3f(0,0,0), 4.0f, NUM_POINT, -90.0f);
-		line_ctx2.set_color_ARGB (0xFFFF00FF);
-		line_ctx2.enable_depth_test(true);
-		line_ctx2.closed_line (vtxList, NUM_POINT);
+		line_ctx2->set_color_ARGB (0xFFFF00FF);
+		line_ctx2->enable_depth_test(true);
+		line_ctx2->closed_line (vtxList, NUM_POINT);
 
 		vtxList.reset();
 		geom::circle (&vtxList, vec3f(0.3f + 8 * cosf(math::gradToRad(30)),0,0), 4.0f, NUM_POINT, -90.0f);
-		line_ctx2.set_color_ARGB (0xFF00FFFF); 
-		line_ctx2.enable_depth_test(false);
-		line_ctx2.closed_line (vtxList, NUM_POINT);
+		line_ctx2->set_color_ARGB (0xFF00FFFF); 
+		line_ctx2->enable_depth_test(false);
+		line_ctx2->closed_line (vtxList, NUM_POINT);
 
 	}
 
 	// gos::engine::Rend_line3d::Ctx line_ctx1;
-	// line_ctx1.setup (allocator, 32);
-	// line_ctx1.line (vec3f(0,0,0), vec3f(10,0,0));
+	// line_ctx1->setup (allocator, 32);
+	// line_ctx1->line (vec3f(0,0,0), vec3f(10,0,0));
 
 	// gos::engine::Rend_line3d::Ctx line_ctx2;
-	// line_ctx2.setup (allocator, 32);
-	// line_ctx2.line (vec3f(1,1,1), vec3f(5,5,5));
+	// line_ctx2->setup (allocator, 32);
+	// line_ctx2->line (vec3f(1,1,1), vec3f(5,5,5));
 
 
 	
@@ -631,39 +634,28 @@ void Game1::priv_loop ()
         gpu::SwapchainImg swapchainImg;
         if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
-			gos::gpu::CmdBufferWriter2 cw;
-			cw	.begin (gpu, cmdBufferHandle)
-				.setViewport (gpu->viewport_getDefault());
-
 			mainLoop.stat_onCommandBufferBegin();
 			{
-				renderer->begin(&cam);
+				renderer1->begin();
 				{
-                    renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_mainPlayer) );
-                    renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_pavimento) );
-					renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[0]) );
-					renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[1]) );
-					renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[2]) );
+                    renderer1->add ( entRegistry.query<ent::CompModelInstance>(ent_mainPlayer) );
+                    renderer1->add ( entRegistry.query<ent::CompModelInstance>(ent_pavimento) );
+					renderer1->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[0]) );
+					renderer1->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[1]) );
+					renderer1->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[2]) );
 						
 
 					for (u8 i = 0; i < NUM_MAX_MISSILE; i++)
 					{
 						if (ent_missile[i].isValid())
-							renderer->add ( entRegistry.query<ent::CompModelInstance>(ent_missile[i]) );
+							renderer1->add ( entRegistry.query<ent::CompModelInstance>(ent_missile[i]) );
 					}
 		
 				}
-				renderer->end (cw);
+				renderer1->end ();
 			}
+			renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
 			mainLoop.stat_onCommandBufferEnd();
-
-			//present
-			cw	.imageTransition (renderer->getHandle_rt0(), eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
-				.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)
-				.copyImageToImage (renderer->getHandle_rt0(), swapchainImg.image, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
-				.imageTransition (swapchainImg.image, eImageLayout::transfer_dst, eImageLayout::presentation)
-				.end();
-
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }
 	}

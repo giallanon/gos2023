@@ -1,4 +1,5 @@
 #include "Land1.h"
+#include "../PerlinNoise.hpp"
 
 using namespace gos;
 
@@ -13,18 +14,21 @@ Land1::Land1()
 }
 
 //***************************************
-void Land1::unsetup()
+void Land1::priv_unsetup()
 {
 	if (NULL == engine)
 		return;
 
-	common.unsetup();
+	for (u32 i=0; i<exagenList.getNElem(); i++)
+	{
+		GOSDELETE(localAllocator, exagenList[i]);
+	}
+
+	engine->release(handle_pipeline);
 
 	gpu->buffer_unmap (exaVtxList.mapped_buffer);
 	gpu->buffer_unmap (packedInstanceData.mapped_buffer);
 
-    gpu->deleteResource(handle_ubo_scene);
-    gpu->deleteResource(handle_descrSet1);
     gpu->deleteResource(handle_descrSet2);
 	gpu->deleteResource(exaVtxList.handle_sbo);
 	gpu->deleteResource(packedInstanceData.handle_sbo);
@@ -38,19 +42,19 @@ void Land1::unsetup()
 }
 
 //***************************************
-bool Land1::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
+bool Land1::on__attach (const RPIPE::Context &ctx)
 {
 	//load pipe
-	if (!common.setup(allocatorIN, engineIN, "land1_pipe"))
-		return false;
+	if (!ctx.engine->pipeline_createFromAsset ("land1_pipe", &handle_pipeline, res::eLoadMode::asap))
+	{
+        return false; 
+	}	
 
-	localAllocator = allocatorIN;
-	engine = engineIN;
+
+	localAllocator = ctx.allocator;
+	engine = ctx.engine;
 	gpu = engine->gpu;
 
-
-    //UBO "scene"
-    gpu->uniformBuffer_create (sizeof(SceneData), eMemAccessMode::shared_cpuW_autoSync, &handle_ubo_scene);
 
     //SBO hexaVtxList
 	{
@@ -61,7 +65,7 @@ bool Land1::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
 
     //SBO instance data
 	{
-    	packedInstanceData.sizeof_buffer = NUM_MAX_EXA * HEXA__AVG_NUM_QUAD * sizeof(u64);
+    	packedInstanceData.sizeof_buffer = NUM_MAX_EXA * HEXA__AVG_NUM_QUAD * sizeof(sInstanceData);
     	gpu->storageBuffer_create (packedInstanceData.sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &packedInstanceData.handle_sbo);
     	gpu->map (packedInstanceData.handle_sbo, 0, u32MAX, &packedInstanceData.mapped_buffer);
 	}
@@ -69,27 +73,13 @@ bool Land1::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
 
 	//mi serve che la pipe sia loaded
     const res::Pipeline *res_pipeline;
-    if (engine->get (common.handle_pipeline, &res_pipeline, 5000))
+    if (engine->get (handle_pipeline, &res_pipeline, 5000))
     {
 		//creo i descriptor set
 		gos::gpu::DescrSetInstanceWriter dsw;
 
-		//descriptor set 1
-		if (!gpu->descrSetInstance_create (common.handle_descrPool, res_pipeline->pipeHandle, 1, &handle_descrSet1))
-		{
-			gos::logger::err ("Land1::setup() => can't create an instance of descriptorSet_1\n");
-			return false;
-		}
-		else
-		{
-			dsw.begin (gpu, handle_descrSet1)
-				.bindUniformBuffer (0, handle_ubo_scene, 0)
-				.end();
-		}
-
-
 		//descriptor set 2        
-		if (!gpu->descrSetInstance_create (common.handle_descrPool, res_pipeline->pipeHandle, 2, &handle_descrSet2))
+		if (!gpu->descrSetInstance_create (ctx.handle_descrPool, res_pipeline->pipeHandle, 2, &handle_descrSet2))
 		{
 			gos::logger::err ("Land1::setup() => can't create an instance of descriptorSet_2\n");
 			return false;
@@ -118,50 +108,67 @@ bool Land1::setup (gos::Allocator *allocatorIN, gos::Engine *engineIN)
 	mr.setup (&res_model->model);
 	shape_list = mr.gpushape_get_pt_to_list();
 
-
-
-
-	const f32 RADIUS = 5.0f;
-
-	exagen.setup (localAllocator);
-	exagen.build (RADIUS, vec3f(0,0,0));
-
-	exagen2.setup (localAllocator);
-	exagen2.build (RADIUS, vec3f(RADIUS*2,0,0));
-
-
-	return true;	
+	priv_generate_terrain();
+	return true;
 }
 
 //***************************************
-void Land1::begin (gos::geom::Camera3 *cam)
+void Land1::priv_generate_terrain()
 {
-	num_vtx = 0;
-	num_quad = 0;
+	const vec3f CENTER(0,0,0);
+	const u32 NUM_RINGS = 3;
 
-    //aggiorno UBO descrittore scena
-	scene.matVP = cam->getMatVP();
-	scene.lightDir = vec4f (cam->pos.getAsseZ(), 0);
-	scene.lightDir.set (-0.3f, -1.0f, 0.3f, 0);
-	scene.lightDir.normalize();
-	gpu->writeAndSync (handle_ubo_scene, 0, &scene, sizeof(scene));
+	siv::PerlinNoise perlin {1234}; //gos::randomU32(u32MAX)};
+
+	gos::HexMap hexmap;
+	HexMap::Coord coord_center(0,0);
+	HexMap::Coord coordList[64];
+	hexmap.world__set_information (vec3f(0,0,0), HEX_RADIUS);
+
+	u32 ct = 0;
+	exagenList.setup (localAllocator, 128);
+
+	exagenList[ct] = GOSNEW(localAllocator, ExaGenerator); exagenList[ct]->setup(localAllocator);
+	exagenList[ct]->build (HEX_RADIUS, hexmap.hex_coord_to_world (coord_center));
+	ct++;
+
+	for (u32 ring=0; ring<NUM_RINGS; ring++)
+	{
+		const u32 radius = ring+1;
+		u32 n = hexmap.coord_ring (coord_center, radius, coordList, 64);
+		for (u32 i=0; i<n; i++)
+		{
+			exagenList[ct] = GOSNEW(localAllocator, ExaGenerator); exagenList[ct]->setup(localAllocator);
+			exagenList[ct]->build (HEX_RADIUS, hexmap.hex_coord_to_world (coordList[i]));
+			ct++;
+		}
+	}
+
+	for (u32 nn=0; nn<exagenList.getNElem(); nn++)
+	{
+		ExaGenerator *exa = exagenList[nn];
+		for (u32 i=0; i<exa->quadList.getNElem(); i++)
+		{
+			vec3f c = exa->quad_center(i);
+			c /= (HEX_RADIUS);
+
+			f32 h = perlin.octave2D_01( c.x, c.z, 2);
+			//h*= 4.0f;
+			if (h > 0.8)	h = 4.0f;
+			else if (h > 0.5)	h = 2.0f;
+			else h = 0;
+
+			h=0;
+			exa->quadList[i].height = h;
+			exa->quadList[i].material_index = gos::randomU32(2);
+		}
+	}
 }
 
 //***************************************
-void Land1::end (gos::gpu::CmdBufferWriter2 &cw)
+void Land1::on__detach (const RPIPE::Context &ctx)
 {
-	cw  .imageTransition (common.handle_rt0, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
-		.imageTransition (common.handle_zbuffer, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
-
-    gpu::RenderCtx rctx;
-    cw  .renderCtx_define_begin(&rctx)
-            .withRenderArea (common.handle_rt0)
-            .withRT (common.handle_rt0, eAttachmentLoadOp::clear, eAttachmentStoreOp::store, gos::ColorHDR(0, 0.0f, 0.1f))
-            .withZB (common.handle_zbuffer, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
-        .define_end();
-
-    priv_do_render (rctx);
-    rctx.end_render_ctx();
+	priv_unsetup();
 }
 
 //***************************************
@@ -184,7 +191,7 @@ void Land1::priv_add_vtx (const gos::vec3f &v)
 }
 
 //***************************************
-void Land1::priv_add_quad (u16 idx1, u16 idx2, u16 idx3, u16 idx4)
+void Land1::priv_add_quad (u32 idx1, u32 idx2, u32 idx3, u32 idx4, f32 height, u32 material_index)
 {
 	if (num_quad >= NUM_MAX_EXA * HEXA__AVG_NUM_QUAD)
 	{
@@ -192,58 +199,43 @@ void Land1::priv_add_quad (u16 idx1, u16 idx2, u16 idx3, u16 idx4)
 		return;
 	}
 
-	//idealmente:  idx1 | idx2 | idx3 | idx4  ma nello shader u32 LSB e u32 MSB sono inveriti
-	//quindi:  idx3 | idx4 | idx1 | idx2
-	u64 packed = ((u64)idx3) << 48;
-	packed |= ((u64)idx4) << 32;
-	packed |= ((u64)idx1) << 16;
-	packed |= ((u64)idx2);
+	assert (idx1 < u16MAX);
+	assert (idx2 < u16MAX);
+	assert (idx3 < u16MAX);
+	assert (idx4 < u16MAX);
 
-
-	u64 *p = reinterpret_cast<u64*>( packedInstanceData.mapped_buffer.host_pt );
-	p[num_quad++] = packed;
+	sInstanceData *p = reinterpret_cast<sInstanceData*>( packedInstanceData.mapped_buffer.host_pt );
+	p[num_quad].quad_indices_0_1 = (((u32)idx1) << 16) | (u32)idx2;
+	p[num_quad].quad_indices_2_3 = (((u32)idx3) << 16) | (u32)idx4;
+	p[num_quad].height = height;
+	p[num_quad].material_index = material_index;
+	num_quad++;
 }
 
 //***************************************
-void Land1::add__test1()
-{
-	priv_add_vtx ( vec3f(0.0f, 0, 5.0f) );
-	priv_add_vtx ( vec3f(4.0f, 0, 5.0f) );
-	priv_add_vtx ( vec3f(4.0f, 0, 0.0f) );
-	priv_add_vtx ( vec3f(0.0f, 0, 0.0f) );
-
-	priv_add_quad (0,1,2,3);
-
-	priv_add_vtx ( vec3f(4.2f, 0, 5.0f) );
-	priv_add_vtx ( vec3f(8.2f, 0, 5.0f) );
-	priv_add_vtx ( vec3f(8.2f, 0, 0.0f) );
-	priv_add_vtx ( vec3f(4.2f, 0, 0.0f) );
-
-	priv_add_quad (4,5,6,7);
-}
-
-//***************************************
-void Land1::add__exa (ExaGenerator &exa)
+void Land1::add__exa (const ExaGenerator *exa)
 {
 	u32 starting_vtx = num_vtx;
-	for (u32 i=0; i<exa.vtxList.getNElem(); i++)
-		priv_add_vtx ( exa.vtxList(i) );
+	for (u32 i=0; i<exa->vtxList.getNElem(); i++)
+		priv_add_vtx ( exa->vtxList(i) );
 
-	for (u32 i=0; i<exa.quadList.getNElem(); i++)
-		priv_add_quad ( starting_vtx + exa.quadList(i).vtx_idx0,
-						starting_vtx + exa.quadList(i).vtx_idx1,
-						starting_vtx + exa.quadList(i).vtx_idx2,
-						starting_vtx + exa.quadList(i).vtx_idx3);
+	for (u32 i=0; i<exa->quadList.getNElem(); i++)
+		priv_add_quad ( starting_vtx + exa->quadList(i).vtx_idx0,
+						starting_vtx + exa->quadList(i).vtx_idx1,
+						starting_vtx + exa->quadList(i).vtx_idx2,
+						starting_vtx + exa->quadList(i).vtx_idx3,
+						exa->quadList(i).height,
+						exa->quadList(i).material_index);
 }
 
 //***************************************
-void Land1::priv_do_render (gpu::RenderCtx &rctx)
+void Land1::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 {
     if (0 == num_quad)
         return;
 
     const res::Pipeline *res_pipeline;
-    if (!engine->get (common.handle_pipeline, &res_pipeline))
+    if (!engine->get (handle_pipeline, &res_pipeline))
     {
         return;
     }
@@ -255,6 +247,7 @@ void Land1::priv_do_render (gpu::RenderCtx &rctx)
 		if (r)
 			size += gpu->limits_get_nonCoherentAtomSize() - r;
 		
+		assert (size <= exaVtxList.sizeof_buffer);
         gpu->buffer_manualSync_cpuWrite (exaVtxList.mapped_buffer, 0, size);
     }
 
@@ -265,14 +258,15 @@ void Land1::priv_do_render (gpu::RenderCtx &rctx)
 		if (r)
 			size += gpu->limits_get_nonCoherentAtomSize() - r;
 
+		assert (size <= packedInstanceData.sizeof_buffer);
 		gpu->buffer_manualSync_cpuWrite (packedInstanceData.mapped_buffer, 0, size);
     }    
 
     
     //command
     rctx.bindPipeline (res_pipeline->pipeHandle)
-        .bindDescriptorSet (common.handle_descrSet0, 0)
-        .bindDescriptorSet (handle_descrSet1, 1)
+        .bindDescriptorSet (ctx.handle_descrSet0, 0)
+        .bindDescriptorSet (ctx.handle_descrSet1, 1)
         .bindDescriptorSet (handle_descrSet2, 2);
 
     //render delle shape
@@ -280,14 +274,22 @@ void Land1::priv_do_render (gpu::RenderCtx &rctx)
 	u32 first_instance_index = 0;
 
 	const res::GPUShape *cur_shape_info;
-	if (engine->get (shape_list[0], &cur_shape_info))
-	{
-		rctx.bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
-			.drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index);
-	}
+
+	//prato
 	if (engine->get (shape_list[1], &cur_shape_info))
 	{
+		u32 is_basetta = 0;
 		rctx.bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
+			.pushConstant (0, &is_basetta, sizeof(is_basetta))
+			.drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index);
+	}
+
+	//basetta
+	if (engine->get (shape_list[0], &cur_shape_info))
+	{
+		u32 is_basetta = 1;
+		rctx.bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
+			.pushConstant (0, &is_basetta, sizeof(is_basetta))
 			.drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index);
 	}
 
@@ -296,23 +298,14 @@ void Land1::priv_do_render (gpu::RenderCtx &rctx)
 
 
 //***************************************
-void Land1::render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle cmdBufferHandle, gos::geom::Camera3 *cam)
+void Land1::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 {
-	gos::gpu::CmdBufferWriter2 cw;
-	cw	.begin (gpu, cmdBufferHandle)
-		.setViewport (gpu->viewport_getDefault());
+	num_vtx = 0;
+	num_quad = 0;
+	for (u32 nn=0; nn<exagenList.getNElem(); nn++)
+	{
+		add__exa (exagenList(nn));
+	}	
 
-	begin (cam);
-	//add__test1();
-	add__exa (exagen);
-	add__exa (exagen2);
-
-	end(cw);	
-
-	//present
-	cw	.imageTransition (common.handle_rt0, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
-		.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)
-		.copyImageToImage (common.handle_rt0, swapchainImg.image, gpu->swapChain_getImageExten2D(), gpu->swapChain_getImageExten2D())
-		.imageTransition (swapchainImg.image, eImageLayout::transfer_dst, eImageLayout::presentation)
-		.end();	
+	priv_do_render (ctx, rctx);
 }

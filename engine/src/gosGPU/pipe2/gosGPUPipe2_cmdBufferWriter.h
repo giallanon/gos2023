@@ -156,6 +156,8 @@ namespace gos
             CmdBufferWriter2&   copyBuffer (GPUStgBufferHandle srcStageBufferHandle, GPUVtxBufferHandle dstVtxBufferHandle, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
             CmdBufferWriter2&   copyBuffer (GPUStgBufferHandle srcStageBufferHandle, GPUIdxBufferHandle dstIdxBufferHandle, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy);
 
+			CmdBufferWriter2&   pipelineBarrier();
+
 
             SetupRenderCtx&     renderCtx_define_begin (RenderCtx *out_renderCtx);
             bool                end();    

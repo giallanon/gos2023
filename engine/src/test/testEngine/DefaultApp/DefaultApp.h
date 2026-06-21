@@ -2,7 +2,7 @@
 #define _DefaultApp_h_
 
 #include "gosEngine.h"
-#include "gosEngine_renderer1.h"
+#include "renderPipe/gosEngine_renderer1.h"
 #include "entity/gosEntity.h"
 #include "model/gosModel.h"
 #include "../gosGPU/utils/gosFreeMovement.h"
@@ -25,8 +25,7 @@ protected:
 
 protected:
 	virtual void	on__load_assets() = 0;
-	virtual void	on__handle_input () = 0;
-	virtual void	on__render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle cmdBufferHandle, gos::geom::Camera3 *cam) = 0;
+	virtual void	on__handle_input (const gos::Engine::InputEvent &ev) = 0;
 	virtual void	on__cleanup() = 0;
 
 protected:
@@ -39,15 +38,14 @@ protected:
     gos::FPSMovement				move_fps;
 	gos::FreeMovement				move_free;
 
-	gos::ENGTexture					handle_texBianca;
-	u32								default_material_indices[4];
+	gos::engine::RenderPipe 		renderPipe;
 
 
 private:
 	const char*		enum_to_string (eCameraMode m) const;
 	void			default_handle_input ();
-	bool			default_load_material();
     void    		priv_loop();
+
 };
 
 #endif //_DefaultApp_h_

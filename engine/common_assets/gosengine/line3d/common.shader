@@ -22,7 +22,7 @@ layout(set = 1, binding = 1) readonly buffer SBO_1_1
 } indexList;
 
 
-//////////////////// psu constant
+//////////////////// push constant
 layout(push_constant) uniform PushConstantData
 {
     vec4    color_RGBA;

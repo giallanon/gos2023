@@ -1,5 +1,5 @@
 #include "gosEngine_renderer1.h"
-#include "gosEngine.h"
+#include "../gosEngine.h"
 #include <algorithm>
 
 using namespace gos;
@@ -19,41 +19,48 @@ Renderer1::Renderer1()
 }
 
 //**********************************
-void Renderer1::unsetup()
+void Renderer1::priv_unsetup()
 {
-    if (NULL == engine)
-        return;
+	if (NULL == engine)
+	{
+		return;
+	}
 
-    common.unsetup ();
+	engine->release (handle_pipeline);
 
     gpu->buffer_unmap (matrix_buffer);
     GOSFREE(localAllocator, material_buffer);
     GOSFREE(localAllocator, pRenderableList);
     material_bitmask.unsetup (localAllocator);
     
-    gpu->deleteResource(handle_ubo_scene);
     gpu->deleteResource(handle_sbo_matrixList);
     gpu->deleteResource(handle_sbo_materiaList);
     gpu->deleteResource(handle_sbo_instanceData);
-    gpu->deleteResource(handle_descrSet1);
     gpu->deleteResource(handle_descrSet2);
 
     engine = NULL;
     gpu = NULL;
 }
 
-//**********************************
-bool Renderer1::setup (gos::Allocator *allocatorIN, Engine *engineIN)
+//***************************************
+void Renderer1::on__detach (const RPIPE::Context &ctx)
 {
-    if (!common.setup (allocatorIN, engineIN, "gosengine_renderer1"))
-        return false;
+	priv_unsetup();
+}
 
-    localAllocator = allocatorIN;
-    engine = engineIN;
-    gpu = engine->gpu;
+//**********************************
+bool Renderer1::on__attach (const RPIPE::Context &ctx)
+{
+	//load pipe
+	if (!ctx.engine->pipeline_createFromAsset ("gosengine_renderer1", &handle_pipeline, res::eLoadMode::asap))
+	{
+        return false; 
+	}	
 
-    //UBO "scene"
-    gpu->uniformBuffer_create (sizeof(SceneData), eMemAccessMode::shared_cpuW_autoSync, &handle_ubo_scene);
+	localAllocator = ctx.allocator;
+	engine = ctx.engine;
+	gpu = engine->gpu;
+
 
     //SBO matrici
     matrix_sizeof_buffer = NUM_MAX_MATRIX * sizeof(mat4x4f);
@@ -80,27 +87,13 @@ bool Renderer1::setup (gos::Allocator *allocatorIN, Engine *engineIN)
 
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
     const res::Pipeline *res_pipeline;
-    if (engine->get (common.handle_pipeline, &res_pipeline, 5000))
+    if (engine->get (handle_pipeline, &res_pipeline, 5000))
     {
         //alloco una istanza dei descriptor-set
         gos::gpu::DescrSetInstanceWriter dsw;
 
-        //descriptor set 1
-        if (!gpu->descrSetInstance_create (common.handle_descrPool, res_pipeline->pipeHandle, 1, &handle_descrSet1))
-        {
-            gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_1\n");
-            return false;
-        }
-        else
-        {
-            dsw.begin (gpu, handle_descrSet1)
-                .bindUniformBuffer (0, handle_ubo_scene, 0)
-                .end();
-        }
-
-
         //descriptor set 2        
-        if (!gpu->descrSetInstance_create (common.handle_descrPool, res_pipeline->pipeHandle, 2, &handle_descrSet2))
+        if (!gpu->descrSetInstance_create (ctx.handle_descrPool, res_pipeline->pipeHandle, 2, &handle_descrSet2))
         {
             gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_2\n");
             return false;
@@ -167,8 +160,6 @@ const Renderer1::Material* Renderer1::material_query (u32 material_index) const
     return &material_default;
 }
 
-
-
 //**********************************
 u64 Renderer1::priv_pack_renderable (ENGGPUShape shape, u32 material_index, u32 matrix_index) const
 {
@@ -193,17 +184,10 @@ void Renderer1::priv_unpack_renderable (u64 packed, ENGGPUShape *out_shape, u32 
 }
 
 //**********************************
-void Renderer1::begin (gos::geom::Camera3 *cam)
+void Renderer1::begin ()
 {
     matrix_nextIndex = 0;
     nRenderable = 0;
-
-    //aggiorno UBO descrittore scena
-	scene.matVP = cam->getMatVP();
-	scene.lightDir = vec4f (cam->pos.getAsseZ(), 0);
-	scene.lightDir.set (-0.3f, -1.0f, 0.3f, 0);
-	scene.lightDir.normalize();
-	gpu->writeAndSync (handle_ubo_scene, 0, &scene, sizeof(scene));
 }
 
 //**********************************
@@ -245,30 +229,20 @@ void Renderer1::add (gos::ENGModel3dInst handle)
 }
 
 //**********************************
-void Renderer1::end (gos::gpu::CmdBufferWriter2 &cw)
+void Renderer1::end ()
 {
-	cw  .imageTransition (common.handle_rt0, eImageLayout::undefined, eImageLayout::color_attachment_optimal)
-		.imageTransition (common.handle_zbuffer, eImageLayout::undefined, eImageLayout::depth_attachment_optimal);
-
-    gpu::RenderCtx rctx;
-    cw  .renderCtx_define_begin(&rctx)
-            .withRenderArea (common.handle_rt0)
-            .withRT (common.handle_rt0, eAttachmentLoadOp::clear, eAttachmentStoreOp::store, gos::ColorHDR(0, 0.0f, 0.1f))
-            .withZB (common.handle_zbuffer, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
-        .define_end();
-
-    priv_do_render (rctx);
-    rctx.end_render_ctx();
 }
 
 //**********************************
-void Renderer1::priv_do_render (gpu::RenderCtx &rctx)
+void Renderer1::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 {
     if (0 == nRenderable)
-        return;
-
+	{
+		return;
+	}
+	
     const res::Pipeline *res_pipeline;
-    if (!engine->get (common.handle_pipeline, &res_pipeline))
+    if (!engine->get (handle_pipeline, &res_pipeline))
     {
         return;
     }
@@ -303,9 +277,10 @@ void Renderer1::priv_do_render (gpu::RenderCtx &rctx)
 
     //command
     rctx.bindPipeline (res_pipeline->pipeHandle)
-        .bindDescriptorSet (common.handle_descrSet0, 0)
-        .bindDescriptorSet (handle_descrSet1, 1)
+        .bindDescriptorSet (ctx.handle_descrSet0, 0)
+        .bindDescriptorSet (ctx.handle_descrSet1, 1)
         .bindDescriptorSet (handle_descrSet2, 2);
+
 
     //render delle shape
     u32 cur_index = 0;
@@ -343,4 +318,10 @@ void Renderer1::priv_do_render (gpu::RenderCtx &rctx)
             first_instance_index += numInstances;
         }
     }
+}
+
+//**********************************
+void Renderer1::on__render (const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx)
+{
+	priv_do_render (ctx, rctx);
 }

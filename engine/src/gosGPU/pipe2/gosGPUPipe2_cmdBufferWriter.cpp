@@ -221,6 +221,26 @@ CmdBufferWriter2& CmdBufferWriter2::copyImageToImage (const GPURenderTargetHandl
 }
 
 //***********************************************
+CmdBufferWriter2& CmdBufferWriter2::pipelineBarrier()
+{
+    VkPipelineStageFlags	srcStageMask; //blocca fino a quando questa stage non e' terminata
+    VkPipelineStageFlags	dstStageMask; //questa stage inizia solo dopo che <srcStageMask> e' terminata
+	VkDependencyFlags		dependencyFlags {0};
+
+	srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	vkCmdPipelineBarrier (vkCommandBuffer,
+			srcStageMask,
+			dstStageMask,
+    		dependencyFlags,
+    		0, NULL,
+			0, NULL,
+			0, NULL);
+	
+	return *this;
+}
+
+//***********************************************
 bool CmdBufferWriter2::end()
 {
     while (1)

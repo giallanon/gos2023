@@ -791,3 +791,15 @@ void Land1::ExaGenerator::relax_2()
 		}
 	}
 }
+
+//*************************************
+gos::vec3f Land1::ExaGenerator::quad_center (u32 quad_number) const
+{
+	vec3f ret = vtxList(quadList(quad_number).vtx_idx0)
+		+vtxList(quadList(quad_number).vtx_idx1)
+		+vtxList(quadList(quad_number).vtx_idx2)
+		+vtxList(quadList(quad_number).vtx_idx3);
+
+	ret /= 4.0f;
+	return ret;
+}

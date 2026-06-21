@@ -2,6 +2,7 @@
 #define _Land1_app_h_
 #include "../DefaultApp/DefaultApp.h"
 #include "Land1.h"
+#include "renderPipe/gosEngineRenderPipe_line3d.h"
 
 
 /******************************************
@@ -16,13 +17,24 @@ public:
 
 protected:
 	void	on__load_assets () final;
-	void	on__handle_input () final;
-	void	on__render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle cmdBufferHandle, gos::geom::Camera3 *cam) final;
+	void	on__handle_input (const gos::Engine::InputEvent &ev) final;
 	void 	on__cleanup() final;
 
 private:
-	Land1	land;
-	gos::vec3f	last_cam_pos;
+	static const u32 NUM_ALBERI = 0; //128;
+
+private:
+	i16	mouse_x;
+	i16	mouse_y;
+
+	gos::engine::Renderer1			*renderer1;
+	gos::engine::Renderer_line3d	*renderer_line3d;
+	gos::engine::Renderer_line3d::Ctx	*line_ctx1;
+	Land1							*renderer_land;
+	
+	gos::ENGTexture			handle_texBianca;
+	gos::ENGModel3d 		handle_model_albero;
+	gos::ENGModel3dInst		modelinst_albero[NUM_ALBERI];
 };
 
 #endif //_Land1_app_h_

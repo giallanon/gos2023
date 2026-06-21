@@ -1,5 +1,5 @@
 #include "gosEngine.h"
-#include "gosEngine_renderer1.h"
+#include "renderPipe/gosEngine_renderer1.h"
 #include "entity/gosEntity.h"
 #include "model/gosModel.h"
 #include "../gosGPU/utils/gosFreeMovement.h"
@@ -39,7 +39,8 @@ private:
 	gos::ENGSkeleton				handle_skeleton;
 	gos::ENGModel3d					handle_model;
 
-	gos::engine::Renderer1			*renderer;
+	gos::engine::RenderPipe			renderPipe;
+	gos::engine::Renderer1			*renderer1;
 	u64 nextTimeUpdate_msec;
 
 };

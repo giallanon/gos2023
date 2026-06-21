@@ -145,6 +145,9 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
             .action_add ("show_all_actions")
 
             .action_add ("toggle_mouse_mode")
+			.action_add ("mouse_move_x")
+			.action_add ("mouse_move_y")
+
             .action_add ("move_forward")
             .action_add ("move_backward")
             .action_add ("strafe_left")
@@ -172,6 +175,8 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 
         inputCtx->action_bindToAxleREL ("rotateX",  input::eOrigin::mouse, input::eAxle::y, input::eAxleDirection::both);
         inputCtx->action_bindToAxleREL ("rotateY",  input::eOrigin::mouse, input::eAxle::x, input::eAxleDirection::both);    
+		inputCtx->action_bindToAxleABS ("mouse_move_x", input::eOrigin::mouse, input::eAxle::x);
+		inputCtx->action_bindToAxleABS ("mouse_move_y", input::eOrigin::mouse, input::eAxle::y);
 
     }
 

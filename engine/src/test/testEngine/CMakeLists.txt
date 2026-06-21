@@ -35,6 +35,7 @@ ExaGenerator.cpp
 game1.cpp
 game1.h
 main.cpp
+PerlinNoise.hpp
 test_exa1.cpp
 test_exa1.h
 test1.cpp
@@ -69,7 +70,7 @@ include_directories(${PROJECT_SOURCE_DIR}/../../gosEngine)
 
 #====================================================
 # additional library to be linked
-set(LIBRARY_LIST "gosEngine;gosAsset2;gosGPU;gosDB;gosImage;gosInput;gosShape;gosGeom;gosMath;gos")
+set(LIBRARY_LIST "gosGameUtils;gosEngine;gosAsset2;gosGPU;gosDB;gosImage;gosInput;gosShape;gosGeom;gosMath;gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
     message("         linkling additional libray [${libName}] => ${finalLibNameAndPath}")

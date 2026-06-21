@@ -123,7 +123,7 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosImage)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosAsset2)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGPU)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosEngine)
-
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosGameUtils)
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)

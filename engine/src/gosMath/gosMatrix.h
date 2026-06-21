@@ -110,6 +110,21 @@ namespace gos
 								values[ADDR(1, 0)] = sina;		values[ADDR(1, 1)] = cosa;
 							}
 
+			T				determinant() const																
+							{ 
+								return	  (values[ADDR(0,0)] * values[ADDR(1,1)]) - (values[ADDR(0,1)] * values[ADDR(1,0)]);
+							}
+							
+			void			calcInverse (my_type *out) const
+							{
+								T det = determinant();
+								if (0 == det)
+									return;
+								(*out)(0,0) =  values[ADDR(1,1)] / det;
+								(*out)(0,1) = -values[ADDR(0,1)] / det;
+								(*out)(1,0) = -values[ADDR(1,0)] / det;
+								(*out)(1,1) =  values[ADDR(0,0)] / det;
+							}							
 		private:
 			T	values[4];
 #undef ADDR
