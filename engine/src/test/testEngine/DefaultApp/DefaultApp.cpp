@@ -157,7 +157,7 @@ void DefaultApp::default_handle_input ()
 //***************************************
 void DefaultApp::priv_loop ()
 {
-	on__load_assets();
+	on__setup();
 
 
     gpu::MainLoop2 mainLoop;
@@ -215,7 +215,7 @@ void DefaultApp::priv_loop ()
 	mainLoop.unsetup();
 	gpu->deleteResource (cmdBufferHandle);
 
-	on__cleanup();
+	on__unsetup();
 
 	renderPipe.unsetup();
 }

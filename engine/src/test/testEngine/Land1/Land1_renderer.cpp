@@ -1,28 +1,25 @@
-#include "Land1.h"
-#include "../PerlinNoise.hpp"
+#include "Land1_Renderer.h"
+#include "Land1_exaGenerator.h"
 
 using namespace gos;
-
+using namespace Land1;
 
 
 //***************************************
-Land1::Land1()
+Renderer::Renderer()
 {
 	localAllocator = NULL;
 	engine = NULL;
 	gpu = NULL;
+	num_vtx = 0;
+	num_quad = 0;
 }
 
 //***************************************
-void Land1::priv_unsetup()
+void Renderer::priv_unsetup()
 {
 	if (NULL == engine)
 		return;
-
-	for (u32 i=0; i<exagenList.getNElem(); i++)
-	{
-		GOSDELETE(localAllocator, exagenList[i]);
-	}
 
 	engine->release(handle_pipeline);
 
@@ -42,7 +39,7 @@ void Land1::priv_unsetup()
 }
 
 //***************************************
-bool Land1::on__attach (const RPIPE::Context &ctx)
+bool Renderer::on__attach (const RPIPE::Context &ctx)
 {
 	//load pipe
 	if (!ctx.engine->pipeline_createFromAsset ("land1_pipe", &handle_pipeline, res::eLoadMode::asap))
@@ -81,7 +78,7 @@ bool Land1::on__attach (const RPIPE::Context &ctx)
 		//descriptor set 2        
 		if (!gpu->descrSetInstance_create (ctx.handle_descrPool, res_pipeline->pipeHandle, 2, &handle_descrSet2))
 		{
-			gos::logger::err ("Land1::setup() => can't create an instance of descriptorSet_2\n");
+			gos::logger::err ("Renderer::setup() => can't create an instance of descriptorSet_2\n");
 			return false;
 		}
 		else
@@ -108,71 +105,18 @@ bool Land1::on__attach (const RPIPE::Context &ctx)
 	mr.setup (&res_model->model);
 	shape_list = mr.gpushape_get_pt_to_list();
 
-	priv_generate_terrain();
+
 	return true;
 }
 
 //***************************************
-void Land1::priv_generate_terrain()
-{
-	const vec3f CENTER(0,0,0);
-	const u32 NUM_RINGS = 3;
-
-	siv::PerlinNoise perlin {1234}; //gos::randomU32(u32MAX)};
-
-	gos::HexMap hexmap;
-	HexMap::Coord coord_center(0,0);
-	HexMap::Coord coordList[64];
-	hexmap.world__set_information (vec3f(0,0,0), HEX_RADIUS);
-
-	u32 ct = 0;
-	exagenList.setup (localAllocator, 128);
-
-	exagenList[ct] = GOSNEW(localAllocator, ExaGenerator); exagenList[ct]->setup(localAllocator);
-	exagenList[ct]->build (HEX_RADIUS, hexmap.hex_coord_to_world (coord_center));
-	ct++;
-
-	for (u32 ring=0; ring<NUM_RINGS; ring++)
-	{
-		const u32 radius = ring+1;
-		u32 n = hexmap.coord_ring (coord_center, radius, coordList, 64);
-		for (u32 i=0; i<n; i++)
-		{
-			exagenList[ct] = GOSNEW(localAllocator, ExaGenerator); exagenList[ct]->setup(localAllocator);
-			exagenList[ct]->build (HEX_RADIUS, hexmap.hex_coord_to_world (coordList[i]));
-			ct++;
-		}
-	}
-
-	for (u32 nn=0; nn<exagenList.getNElem(); nn++)
-	{
-		ExaGenerator *exa = exagenList[nn];
-		for (u32 i=0; i<exa->quadList.getNElem(); i++)
-		{
-			vec3f c = exa->quad_center(i);
-			c /= (HEX_RADIUS);
-
-			f32 h = perlin.octave2D_01( c.x, c.z, 2);
-			//h*= 4.0f;
-			if (h > 0.8)	h = 4.0f;
-			else if (h > 0.5)	h = 2.0f;
-			else h = 0;
-
-			h=0;
-			exa->quadList[i].height = h;
-			exa->quadList[i].material_index = gos::randomU32(2);
-		}
-	}
-}
-
-//***************************************
-void Land1::on__detach (const RPIPE::Context &ctx)
+void Renderer::on__detach (const RPIPE::Context &ctx)
 {
 	priv_unsetup();
 }
 
 //***************************************
-void Land1::priv_add_vtx (const gos::vec3f &v)
+void Renderer::priv_add_vtx (const gos::vec3f &v)
 {
 	if (num_vtx >= NUM_MAX_EXA * HEXA__NUM_VTX)
 	{
@@ -191,7 +135,7 @@ void Land1::priv_add_vtx (const gos::vec3f &v)
 }
 
 //***************************************
-void Land1::priv_add_quad (u32 idx1, u32 idx2, u32 idx3, u32 idx4, f32 height, u32 material_index)
+void Renderer::priv_add_quad (u32 idx1, u32 idx2, u32 idx3, u32 idx4, f32 height, u32 material_index)
 {
 	if (num_quad >= NUM_MAX_EXA * HEXA__AVG_NUM_QUAD)
 	{
@@ -213,23 +157,38 @@ void Land1::priv_add_quad (u32 idx1, u32 idx2, u32 idx3, u32 idx4, f32 height, u
 }
 
 //***************************************
-void Land1::add__exa (const ExaGenerator *exa)
+void Renderer::begin()
 {
-	u32 starting_vtx = num_vtx;
-	for (u32 i=0; i<exa->vtxList.getNElem(); i++)
-		priv_add_vtx ( exa->vtxList(i) );
-
-	for (u32 i=0; i<exa->quadList.getNElem(); i++)
-		priv_add_quad ( starting_vtx + exa->quadList(i).vtx_idx0,
-						starting_vtx + exa->quadList(i).vtx_idx1,
-						starting_vtx + exa->quadList(i).vtx_idx2,
-						starting_vtx + exa->quadList(i).vtx_idx3,
-						exa->quadList(i).height,
-						exa->quadList(i).material_index);
+	num_vtx = 0;
+	num_quad = 0;
 }
 
 //***************************************
-void Land1::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
+void Renderer::add_exa (const Land1::Exa *exa)
+{
+	u32 starting_vtx = num_vtx;
+	for (u32 i = 0; i < exa->num_vtx; i++)
+	{
+		priv_add_vtx (vec3f(exa->vtxList[i].x, 0, exa->vtxList[i].y) );
+	}
+
+	for (u32 i=0; i<exa->num_quad; i++)
+		priv_add_quad ( starting_vtx + exa->quadList[i].idx[0],
+						starting_vtx + exa->quadList[i].idx[1],
+						starting_vtx + exa->quadList[i].idx[2],
+						starting_vtx + exa->quadList[i].idx[3],
+						exa->quadList[i].height,
+						exa->quadList[i].material_index);
+}
+
+//***************************************
+void Renderer::end()
+{
+}
+
+
+//***************************************
+void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 {
     if (0 == num_quad)
         return;
@@ -298,14 +257,9 @@ void Land1::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 
 
 //***************************************
-void Land1::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
+void Renderer::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 {
-	num_vtx = 0;
-	num_quad = 0;
-	for (u32 nn=0; nn<exagenList.getNElem(); nn++)
-	{
-		add__exa (exagenList(nn));
-	}	
-
+	if (0 == num_quad)
+		return;
 	priv_do_render (ctx, rctx);
 }

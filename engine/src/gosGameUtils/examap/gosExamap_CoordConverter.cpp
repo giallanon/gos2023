@@ -1,51 +1,30 @@
-#include "gosHexMap.h"
+#include "gosExamap.h"
 
 using namespace gos;
+using namespace gos::examap;
 
-//*********************************************
-void HexMap::coord_hexagon (const vec3f &world_center, u32 radius, vec3f *out_word_point, u32 sizeof__out_word_point)
-{
-	//servono 6 punti
-	assert (sizeof__out_word_point >= sizeof(vec3f) * 6);
-
-    const f32 rad_incr = 1.0471975512f; //math::DUEPI / 6
-    f32 rad = 0;
-
-    for (u32 i=0; i<6; i++)
-    {
-        vec3f v;
-
-        v.x = cosf(rad) * radius;
-        v.y = 0;
-        v.z = sinf(rad) * radius;
-        v += world_center;
-
-        out_word_point[i] = v;
-        rad += rad_incr;
-    }    
-}
 
 //*************************************
-void HexMap::world__set_information (const vec3f &world_centerIN, f32 world_radiusIN)
+void CoordConverter::world__set_information (const vec3f &map_world_centerIN, f32 exa_world_radiusIN)
 {
-	world_center = world_centerIN;
-	world_radius = world_radiusIN;
+	map_world_center = map_world_centerIN;
+	exa_world_radius = exa_world_radiusIN;
 
-	x_spacing = (3.0f * world_radius) / 2.0f;
-	z_spacing = 1.732f * world_radius;
+	x_spacing = (3.0f * exa_world_radius) / 2.0f;
+	z_spacing = 1.732f * exa_world_radius;
 
 	//x_spacing += world_radius/10.0f; z_spacing += world_radius/10.0f;
 
 	z_spacing_half = z_spacing * 0.5f;
-	x_spacing_half = world_radius / 2.0f;
+	x_spacing_half = exa_world_radius / 2.0f;
 }
 
 //*************************************
-vec3f HexMap::hex_coord_to_world (const Coord &hex_coord) const
+vec3f CoordConverter::exa_coord_to_world (const Coord &hex_coord) const
 {
 	assert (x_spacing > 0 && z_spacing > 0);
 
-	vec3f ret = world_center;
+	vec3f ret = map_world_center;
 	ret.z += z_spacing * (f32)hex_coord.z;
 
 	ret.x += x_spacing * (f32)hex_coord.x;
@@ -53,17 +32,15 @@ vec3f HexMap::hex_coord_to_world (const Coord &hex_coord) const
 	return ret;
 }
 
-
-
 static bool HexMap__line_isRight (const gos::vec2f &a, const gos::vec2f &b, const gos::vec2f &c)
 {
 	return (b.x - a.x)*(c.y - a.y) - (b.y - a.y)*(c.x - a.x) > 0;
 }
 
 //*************************************
-bool HexMap::world_is_inside_hex (const vec2f &world_coord, const Coord &hex_coord) const
+bool CoordConverter::world_is_inside_hex (const vec2f &world_coord, const Coord &hex_coord) const
 {
-	const vec3f v3 = hex_coord_to_world(hex_coord);
+	const vec3f v3 = exa_coord_to_world(hex_coord);
 
 	//v in coordinate locali dell'hex
 	const f32 qx = world_coord.x - v3.x;
@@ -84,7 +61,7 @@ bool HexMap::world_is_inside_hex (const vec2f &world_coord, const Coord &hex_coo
 		{
 			//top right
 			const vec2f a (x_spacing_half, z_spacing_half);
-			const vec2f b (world_radius, 0);
+			const vec2f b (exa_world_radius, 0);
 			
 			if (!HexMap__line_isRight(a, b, vec2f(qx,qz)))
 				return true;
@@ -92,7 +69,7 @@ bool HexMap::world_is_inside_hex (const vec2f &world_coord, const Coord &hex_coo
 		else
 		{
 			//top left
-			const vec2f a (-world_radius, 0);
+			const vec2f a (-exa_world_radius, 0);
 			const vec2f b (-x_spacing_half, z_spacing_half);
 			if (!HexMap__line_isRight(a, b, vec2f(qx,qz)))
 				return true;
@@ -107,7 +84,7 @@ bool HexMap::world_is_inside_hex (const vec2f &world_coord, const Coord &hex_coo
 		if (qx > 0)
 		{
 			//bottom right
-			const vec2f a ( world_radius, 0);
+			const vec2f a ( exa_world_radius, 0);
 			const vec2f b ( x_spacing_half, -z_spacing_half);
 			if (!HexMap__line_isRight(a, b, vec2f(qx,qz)))
 				return true;
@@ -118,7 +95,7 @@ bool HexMap::world_is_inside_hex (const vec2f &world_coord, const Coord &hex_coo
 
 			//il bordo e' definito dalla seguente linea
 			const vec2f a (-x_spacing_half, -z_spacing_half);
-			const vec2f b (-world_radius, 0);
+			const vec2f b (-exa_world_radius, 0);
 			if (!HexMap__line_isRight(a, b, vec2f(qx,qz)))
 				return true;
 		}
@@ -128,16 +105,16 @@ bool HexMap::world_is_inside_hex (const vec2f &world_coord, const Coord &hex_coo
 }
 
 //*************************************
-HexMap::Coord HexMap::world_coord_to_hex (f32 xIN, f32 zIN) const
+Coord CoordConverter::world_coord_to_exa (f32 xIN, f32 zIN) const
 {
-	const vec2f v (xIN - world_center.x, zIN - world_center.z);
+	const vec2f v (xIN - map_world_center.x, zIN - map_world_center.z);
 
 	//x puo' essere x1 oppure x2
-	const i32 x1 = floorf(v.x / x_spacing);
+	const i32 x1 = (i32)floorf(v.x / x_spacing);
 	const i32 x2 = x1 +1;
 
 	//z puo' essere z1 oppure z2
-	i32 z1 = floorf(v.y / z_spacing);
+	i32 z1 = (i32)floorf(v.y / z_spacing);
 	if (x1 % 2 == 0)
 		z1 -= x1/2;
 	else

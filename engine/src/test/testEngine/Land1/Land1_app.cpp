@@ -12,20 +12,23 @@ Land1_app::Land1_app()
 }
 
 //***************************************
-Land1_app::~Land1_app()
+void Land1_app::on__unsetup()
 {
+	engine->release (handle_texBianca);
+	engine->release (handle_model_albero);
+
+	for (u32 i=0; i<NUM_ALBERI; i++)
+		engine->release (modelinst_albero[i]);
 }
 
 //***************************************
-void Land1_app::on__load_assets ()
+void Land1_app::on__setup ()
 {
 	engine->inputCtx->
 		action_add ("mouse_LB")
 		.action_bindToBtn ("mouse_LB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
 
-
-
-	renderer_land = renderPipe.add_renderer<Land1>();
+	renderer_land = renderPipe.add_renderer<Land1::Renderer>();
 	renderer1 = renderPipe.add_renderer<engine::Renderer1>();
 	renderer_line3d = renderPipe.add_renderer<engine::Renderer_line3d>();
 		line_ctx1 = renderer_line3d->ctx__crete_new("ctx1", 32);
@@ -67,11 +70,29 @@ void Land1_app::on__load_assets ()
 		
 	}
 
-
 	cam.pos.warp (0, 20, 0);
 	cam.pos.lookAt(vec3f(0,0,0));
 	cam.markUpdated();
 	move_free.bind (&cam.pos);
+
+
+	//creo una mappa
+	const f32 EXA_WORLD_RADIUS = 3.0f;
+	const u32 NUM_RINGS = 3;
+	map.setup (gos::getSysHeapAllocator());
+	map.map_create (EXA_WORLD_RADIUS, NUM_RINGS);
+
+	//aggiungo un po' di exa al renderer
+	{
+		Land1::Map::Result r;
+		r.setup (gos::getScrapAllocator());
+		map.query_visible_exa (&r);
+
+		renderer_land->begin();
+		for (u32 i=0; i<r.get_num(); i++)
+			renderer_land->add_exa (r.get_exa_by_index(i));
+		renderer_land->end();
+	}
 }
 
 
@@ -103,14 +124,14 @@ void Land1_app::on__handle_input (const Engine::InputEvent &ev)
 			line_ctx1->enable_depth_write(false);
 			line_ctx1->set_line_width(2);
 
-			u32 v0 = line_ctx1->vtx_add (cam.pos.o);
-			u32 v1 = line_ctx1->vtx_add (cam.pos.o + cam.pos.getAsseZ() * 100.0f);
-			u32 v2 = line_ctx1->vtx_add (cam.pos.o - cam.pos.getAsseY() * 100.0f);
-			u32 v3 = line_ctx1->vtx_add (cam.pos.o + world_dir * 100.0f);
+			const u32 v0 = line_ctx1->vtx_add (cam.pos.o);
+			//u32 v1 = line_ctx1->vtx_add (cam.pos.o + cam.pos.getAsseZ() * 100.0f);
+			//u32 v2 = line_ctx1->vtx_add (cam.pos.o - cam.pos.getAsseY() * 100.0f);
+			const u32 v3 = line_ctx1->vtx_add (cam.pos.o + world_dir * 100.0f);
 
-			line_ctx1->set_color_ARGB (0xFFFF00FF);
-			line_ctx1->line (v0, v1);
-			line_ctx1->line (v0, v2);
+			//line_ctx1->set_color_ARGB (0xFFFF00FF);
+			//line_ctx1->line (v0, v1);
+			//line_ctx1->line (v0, v2);
 
 			line_ctx1->set_color_ARGB (0xFFFFFF00);
 			line_ctx1->line (v0, v3);
@@ -119,26 +140,21 @@ void Land1_app::on__handle_input (const Engine::InputEvent &ev)
 			const f32 t = -cam.pos.o.y / world_dir.y;
 			vec3f point_on_hex = cam.pos.o + world_dir * t;
 
-			u32 v4 = line_ctx1->vtx_add (point_on_hex);
+			const u32 v4 = line_ctx1->vtx_add (point_on_hex);
 			line_ctx1->point_set_radius(6);
 			line_ctx1->enable_depth_test(false);
 			line_ctx1->point (v4);
 
 			logger::log (eTextColor::white, "coord on hex: %.2f, %.2f, %.2f\n", point_on_hex.x, point_on_hex.y, point_on_hex.z);
 
-			HexMap hexmap;
 			{
-				hexmap.world__set_information (vec3f(0,0,0), Land1::HEX_RADIUS);
-			
-				HexMap::Coord c = hexmap.world_coord_to_hex (point_on_hex);
-
+				examap::Coord c = map.world_coord_to_exa (point_on_hex);
 				logger::log (eTextColor::white, "hex: %d, %d\n", c.x, c.z);
 
 
-				vec3f vv1 = hexmap.hex_coord_to_world (c);
-
+				vec3f vv1 = map.exa_coord_to_world (c);
 				vec3f vv6[6];
-				hexmap.coord_hexagon (vv1, Land1::HEX_RADIUS, vv6, sizeof(vv6));
+				examap::coord_hexagon (vv1, map.get_exa_world_radius(), vv6, sizeof(vv6));
 
 				line_ctx1->
 					set_color_ARGB (0xFFFF00)
@@ -159,12 +175,4 @@ void Land1_app::on__handle_input (const Engine::InputEvent &ev)
 }
 
 
-//***************************************
-void Land1_app::on__cleanup()
-{
-	engine->release (handle_texBianca);
-	engine->release (handle_model_albero);
 
-	for (u32 i=0; i<NUM_ALBERI; i++)
-		engine->release (modelinst_albero[i]);
-}

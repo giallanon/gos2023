@@ -24,9 +24,9 @@ protected:
 	};
 
 protected:
-	virtual void	on__load_assets() = 0;
+	virtual void	on__setup() = 0;
 	virtual void	on__handle_input (const gos::Engine::InputEvent &ev) = 0;
-	virtual void	on__cleanup() = 0;
+	virtual void	on__unsetup() = 0;
 
 protected:
 	gos::Allocator					*allocator;

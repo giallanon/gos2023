@@ -1,11 +1,12 @@
-#include "Land1.h"
+#include "Land1_exaGenerator.h"
+#include "gos.h"
 #include "gosGeomUtils.h"
 
 using namespace gos;
-
+using namespace Land1;
 
 //***************************************
-void Land1::ExaGenerator::unsetup ()
+void ExaGenerator::ExaGenerator::unsetup ()
 {
 	if (NULL == allocator)
 		return;
@@ -17,9 +18,8 @@ void Land1::ExaGenerator::unsetup ()
 	allocator = NULL;
 }
 
-
 //***************************************
-void Land1::ExaGenerator::setup (gos::Allocator *allocatorIN)
+void ExaGenerator::setup (gos::Allocator *allocatorIN)
 {
 	if (NULL != allocator)
 		unsetup();
@@ -32,7 +32,7 @@ void Land1::ExaGenerator::setup (gos::Allocator *allocatorIN)
 }
 
 //***************************************
-void Land1::ExaGenerator::translate (const gos::vec3f &tr)
+void ExaGenerator::translate (const gos::vec3f &tr)
 {
 	const u32 n = vtxList.getNElem();
 	for (u32 i=0; i<n; i++)
@@ -40,11 +40,11 @@ void Land1::ExaGenerator::translate (const gos::vec3f &tr)
 }
 
 //***************************************
-void Land1::ExaGenerator::build (f32 radius, const gos::vec3f &center)
+void ExaGenerator::build (f32 hex_radius, const gos::vec3f &world_center)
 {
 	assert (NULL != allocator);
 
-	create_default_exa(radius, center);
+	create_default_exa(hex_radius, world_center);
 
 	simplify_90();
 
@@ -52,32 +52,10 @@ void Land1::ExaGenerator::build (f32 radius, const gos::vec3f &center)
 
 	for (u32 i=0;i<10; i++)
 		relax();
-	
-
-	//bbox
-	const u32 n = vtxList.getNElem();
-	vec3f vmin = vtxList(0);
-	vec3f vmax = vtxList(0);
-	for (u32 i=1; i<n; i++)
-	{
-		if (vtxList(i).x < vmin.x) vmin.x = vtxList(i).x;
-		if (vtxList(i).x > vmax.x) vmax.x = vtxList(i).x;
-
-		if (vtxList(i).z < vmin.z) vmin.z = vtxList(i).z;
-		if (vtxList(i).z > vmax.z) vmax.z = vtxList(i).z;
-	}		
-
-	//logger::log (eTextColor::cyan, "INFO\n");
-	//logger::incIndent();
-	//	logger::log ("BBOX: (%.2f, %.2f, %.2f)  (%.2f, %.2f, %.2f)\n", vmin.x, vmin.y, vmin.z, vmax.x, vmax.y, vmax.z);
-	//	logger::log ("num vtx=%d\n", vtxList.getNElem());
-	//	logger::log ("num quad=%d\n", quadList.getNElem());
-	//	logger::log ("num tris=%d\n", trisList.getNElem());
-	//logger::decIndent();
 }
 
 //***************************************
-void Land1::ExaGenerator::create_default_exa(f32 radiusIN, const gos::vec3f &centerIN)
+void ExaGenerator::create_default_exa(f32 radiusIN, const gos::vec3f &centerIN)
 {
 	vtxList.reset();
 	trisList.reset();
@@ -213,7 +191,7 @@ void Land1::ExaGenerator::create_default_exa(f32 radiusIN, const gos::vec3f &cen
 }
 
 //***************************************
-void Land1::ExaGenerator::select_edge_to_remove (sEdgeToRemove *out)
+void ExaGenerator::select_edge_to_remove (sEdgeToRemove *out)
 {
 	//logger::log (eTextColor::grey, "select_edge_to_remove... ");
 
@@ -250,7 +228,7 @@ void Land1::ExaGenerator::select_edge_to_remove (sEdgeToRemove *out)
 }
 
 //***************************************
-bool Land1::ExaGenerator::try_remove_edge (const sEdgeToRemove &edge)
+bool ExaGenerator::try_remove_edge (const sEdgeToRemove &edge)
 {
 	//logger::log (eTextColor::grey, "try_remove_edge...\n");
 
@@ -351,7 +329,7 @@ bool Land1::ExaGenerator::try_remove_edge (const sEdgeToRemove &edge)
 }
 
 //***************************************
-void Land1::ExaGenerator::simplify_90()
+void ExaGenerator::simplify_90()
 {
 	// logger::log ("simplify_90\n");
 	// logger::incIndent();
@@ -378,7 +356,7 @@ void Land1::ExaGenerator::simplify_90()
 }
 
 //***************************************
-u32 Land1::ExaGenerator::find_in_pointList (const PointList &list, u32 index_start, const vec3f &v_to_be_found) const
+u32 ExaGenerator::find_in_pointList (const PointList &list, u32 index_start, const vec3f &v_to_be_found) const
 {
 	static constexpr f32 MAX_DIST = 0.1f * 0.1f;
 	const u32 n = list.getNElem();
@@ -393,7 +371,7 @@ u32 Land1::ExaGenerator::find_in_pointList (const PointList &list, u32 index_sta
 }
 
 //***************************************
-void Land1::ExaGenerator::subdivide()
+void ExaGenerator::subdivide()
 {
 	if (0 == trisList.getNElem())
 		return;
@@ -590,13 +568,13 @@ void Land1::ExaGenerator::subdivide()
 }
 
 //***************************************
-void Land1::ExaGenerator::relax()
+void ExaGenerator::relax()
 {
 	relax_2();
 }
 
 //***************************************
-void Land1::ExaGenerator::quad_get_vertex (u32 quadIndex, vec3f *out) const
+void ExaGenerator::quad_get_vertex (u32 quadIndex, vec3f *out) const
 {
 	out[0] = vtxList(quadList(quadIndex).vtx_idx0);
 	out[1] = vtxList(quadList(quadIndex).vtx_idx1);
@@ -605,7 +583,7 @@ void Land1::ExaGenerator::quad_get_vertex (u32 quadIndex, vec3f *out) const
 }
 
 //***************************************
-f32 Land1::ExaGenerator::quad_calc_area (const vec3f *vtx) const
+f32 ExaGenerator::quad_calc_area (const vec3f *vtx) const
 {
 	f32 a = 0.5f * (   vtx[0].x * vtx[1].z 
 					- vtx[0].z * vtx[1].x
@@ -634,7 +612,7 @@ f32 Land1::ExaGenerator::quad_calc_area (const vec3f *vtx) const
  *  scegliere il quadrato che minimizza il movimento dei vertici.
  * 	muovere "un po'" i vertici in direzione del quadrato
  */
-void Land1::ExaGenerator::relax_2()
+void ExaGenerator::relax_2()
 {
 	struct sAdjust
 	{
@@ -792,14 +770,3 @@ void Land1::ExaGenerator::relax_2()
 	}
 }
 
-//*************************************
-gos::vec3f Land1::ExaGenerator::quad_center (u32 quad_number) const
-{
-	vec3f ret = vtxList(quadList(quad_number).vtx_idx0)
-		+vtxList(quadList(quad_number).vtx_idx1)
-		+vtxList(quadList(quad_number).vtx_idx2)
-		+vtxList(quadList(quad_number).vtx_idx3);
-
-	ret /= 4.0f;
-	return ret;
-}
