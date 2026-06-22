@@ -1,4 +1,4 @@
-#include "Land1_Renderer.h"
+#include "Land1_renderer.h"
 #include "Land1_exaGenerator.h"
 
 using namespace gos;

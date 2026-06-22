@@ -2,7 +2,7 @@
 #define _Land1_map_h_
 #include "Land1_enumAndDefine.h"
 #include "Land1_exaGenerator.h"
-#include "../gosGameUtils/examap/gosExaMap.h"
+#include "../gosGameUtils/examap/gosExamap.h"
 #include "gosHashMap.h"
 
 namespace Land1
