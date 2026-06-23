@@ -16,21 +16,18 @@ namespace Land1
 		};
 
 	public:
+		gos::vec2f	calc_quad_center (u32 quad_index) const;
+		bool		get_quad_from_point (const gos::vec3f &world_point, u32 *out__quad_index) const;
+
+	public:
 		u16			num_vtx;
 		u16			num_quad;
 		gos::vec2f	*vtxList;
 		Quad		*quadList;
 
-	public:
-		gos::vec2f	calc_quad_center (u32 quad_number) const
-		{
-			gos::vec2f ret = vtxList[quadList[quad_number].idx[0]]
-				+ vtxList[quadList[quad_number].idx[1]]
-				+ vtxList[quadList[quad_number].idx[2]]
-				+ vtxList[quadList[quad_number].idx[3]];
-			ret /= 4.0f;
-			return ret;
-		}
+
+	private:
+		bool		priv_is_point_in_quad (const gos::vec3f &world_point, u32 quad_index) const;
 	};
 
 

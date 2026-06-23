@@ -1,4 +1,5 @@
 #include "gosExamap.h"
+#include "../gosGeom/gosGeomUtils.h"
 
 using namespace gos;
 using namespace gos::examap;
@@ -32,10 +33,10 @@ vec3f CoordConverter::exa_coord_to_world (const Coord &hex_coord) const
 	return ret;
 }
 
-static bool HexMap__line_isRight (const gos::vec2f &a, const gos::vec2f &b, const gos::vec2f &c)
-{
-	return (b.x - a.x)*(c.y - a.y) - (b.y - a.y)*(c.x - a.x) > 0;
-}
+//static bool HexMap__line_isRight (const gos::vec2f &a, const gos::vec2f &b, const gos::vec2f &c)
+//{
+//	return (b.x - a.x)*(c.y - a.y) - (b.y - a.y)*(c.x - a.x) > 0;
+//}
 
 //*************************************
 bool CoordConverter::world_is_inside_hex (const vec2f &world_coord, const Coord &hex_coord) const
@@ -63,7 +64,7 @@ bool CoordConverter::world_is_inside_hex (const vec2f &world_coord, const Coord 
 			const vec2f a (x_spacing_half, z_spacing_half);
 			const vec2f b (exa_world_radius, 0);
 			
-			if (!HexMap__line_isRight(a, b, vec2f(qx,qz)))
+			if (geom::which_side_of_line2D(a, b, vec2f(qx,qz)) > 0)
 				return true;
 		}
 		else
@@ -71,7 +72,7 @@ bool CoordConverter::world_is_inside_hex (const vec2f &world_coord, const Coord 
 			//top left
 			const vec2f a (-exa_world_radius, 0);
 			const vec2f b (-x_spacing_half, z_spacing_half);
-			if (!HexMap__line_isRight(a, b, vec2f(qx,qz)))
+			if (geom::which_side_of_line2D(a, b, vec2f(qx,qz)) > 0)
 				return true;
 		}
 	}
@@ -86,7 +87,7 @@ bool CoordConverter::world_is_inside_hex (const vec2f &world_coord, const Coord 
 			//bottom right
 			const vec2f a ( exa_world_radius, 0);
 			const vec2f b ( x_spacing_half, -z_spacing_half);
-			if (!HexMap__line_isRight(a, b, vec2f(qx,qz)))
+			if (geom::which_side_of_line2D(a, b, vec2f(qx,qz)) > 0)
 				return true;
 		}
 		else
@@ -96,7 +97,7 @@ bool CoordConverter::world_is_inside_hex (const vec2f &world_coord, const Coord 
 			//il bordo e' definito dalla seguente linea
 			const vec2f a (-x_spacing_half, -z_spacing_half);
 			const vec2f b (-exa_world_radius, 0);
-			if (!HexMap__line_isRight(a, b, vec2f(qx,qz)))
+			if (geom::which_side_of_line2D(a, b, vec2f(qx,qz)) > 0)
 				return true;
 		}
 	}

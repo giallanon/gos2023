@@ -42,6 +42,7 @@ namespace gos
 
 				u16		vtx_add (const vec3f &p);
 				u16		vtx_add (f32 x, f32 y, f32 z)											{ return vtx_add (vec3f(x, y, z)); }
+				u32		vtx_get_num() const														{ return vtxList.getNElem(); }
 
 				Ctx&	line_begin();
 				Ctx&	line_add_vtx (f32 x, f32 y, f32 z)										{ line_add_vtx (vec3f(x, y, z)); return *this; }

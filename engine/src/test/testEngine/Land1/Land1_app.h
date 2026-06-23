@@ -25,6 +25,9 @@ private:
 	static const u32 NUM_ALBERI = 1; //128;
 
 private:
+	void	priv_draw_exa (const gos::vec3f &world_point);
+
+private:
 	i16	mouse_x;
 	i16	mouse_y;
 

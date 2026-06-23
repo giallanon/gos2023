@@ -119,56 +119,10 @@ void Land1_app::on__handle_input (const Engine::InputEvent &ev)
 			vec3f world_dir;
 			cam.unproject (vp->getW_f32(), vp->getH_f32(), &m , &world_dir, 1);
 
-			line_ctx1->clear();
-			line_ctx1->enable_depth_test(true);
-			line_ctx1->enable_depth_write(false);
-			line_ctx1->set_line_width(2);
-
-			const u32 v0 = line_ctx1->vtx_add (cam.pos.o);
-			//u32 v1 = line_ctx1->vtx_add (cam.pos.o + cam.pos.getAsseZ() * 100.0f);
-			//u32 v2 = line_ctx1->vtx_add (cam.pos.o - cam.pos.getAsseY() * 100.0f);
-			const u32 v3 = line_ctx1->vtx_add (cam.pos.o + world_dir * 100.0f);
-
-			//line_ctx1->set_color_ARGB (0xFFFF00FF);
-			//line_ctx1->line (v0, v1);
-			//line_ctx1->line (v0, v2);
-
-			line_ctx1->set_color_ARGB (0xFFFFFF00);
-			line_ctx1->line (v0, v3);
-
 			//supponendo che hex sia sempre ad altezza y=0...
 			const f32 t = -cam.pos.o.y / world_dir.y;
-			vec3f point_on_hex = cam.pos.o + world_dir * t;
-
-			const u32 v4 = line_ctx1->vtx_add (point_on_hex);
-			line_ctx1->point_set_radius(6);
-			line_ctx1->enable_depth_test(false);
-			line_ctx1->point (v4);
-
-			logger::log (eTextColor::white, "coord on hex: %.2f, %.2f, %.2f\n", point_on_hex.x, point_on_hex.y, point_on_hex.z);
-
-			{
-				examap::Coord c = map.world_coord_to_exa (point_on_hex);
-				logger::log (eTextColor::white, "hex: %d, %d\n", c.x, c.z);
-
-
-				vec3f vv1 = map.exa_coord_to_world (c);
-				vec3f vv6[6];
-				examap::coord_hexagon (vv1, map.get_exa_world_radius(), vv6, sizeof(vv6));
-
-				line_ctx1->
-					set_color_ARGB (0xFFFF00)
-					.line_begin()
-						.line_add_vtx(vv6[0])
-						.line_add_vtx(vv6[1])
-						.line_add_vtx(vv6[2])
-						.line_add_vtx(vv6[3])
-						.line_add_vtx(vv6[4])
-						.line_add_vtx(vv6[5])
-						.line_add_vtx(vv6[0])
-					.line_end();
-
-			}
+			const vec3f point_on_hex = cam.pos.o + world_dir * t;
+			priv_draw_exa (point_on_hex);
 		}
 		break;
 	}
@@ -176,3 +130,72 @@ void Land1_app::on__handle_input (const Engine::InputEvent &ev)
 
 
 
+//***************************************
+void Land1_app::priv_draw_exa (const gos::vec3f &world_point)
+{
+	const examap::Coord coord = map.world_coord_to_exa (world_point);
+	logger::log ("hex @ (%d, %d)\n", coord.x, coord.z);
+	
+
+	line_ctx1->clear();
+	line_ctx1->enable_depth_test(false);
+	line_ctx1->enable_depth_write(false);
+	line_ctx1->set_line_width(2);
+
+	//disegno tutti i quad dell'exa <coord>
+	const Land1::Exa *exa;
+	if (map.exa_query(coord, &exa))
+	{
+		line_ctx1->set_color_ARGB (0xFF000000);
+		const u32 first_vtx = line_ctx1->vtx_get_num();
+		for (u32 i = 0; i < exa->num_vtx; i++)
+			line_ctx1->vtx_add (vec3f(exa->vtxList[i].x, 0, exa->vtxList[i].y));
+		for (u32 i = 0; i < exa->num_quad; i++)
+		{
+			line_ctx1->
+				set_line_width(2)
+				.line_begin()
+				.line_add_vtx (first_vtx + exa->quadList[i].idx[0])
+				.line_add_vtx (first_vtx + exa->quadList[i].idx[1])
+				.line_add_vtx (first_vtx + exa->quadList[i].idx[2])
+				.line_add_vtx (first_vtx + exa->quadList[i].idx[3])
+				.line_add_vtx (first_vtx + exa->quadList[i].idx[0])
+				.line_end();
+		}
+
+		//evidenzio il quad selezionato
+		u32 quad_index;
+		if (exa->get_quad_from_point (world_point, &quad_index))
+		{
+			line_ctx1->
+				set_line_width (4)
+				.set_color_ARGB (0xFFFF0000)
+				.line_begin()
+				.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[0])
+				.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[1])
+				.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[2])
+				.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[3])
+				.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[0])
+				.line_end();
+		}
+	}
+
+	//disegno il perimetro dell'esagono centrato su <coord>
+	vec3f vv1 = map.exa_coord_to_world (coord);
+	vec3f vv6[6];
+	examap::coord_hexagon (vv1, map.get_exa_world_radius(), vv6, sizeof(vv6));
+
+	line_ctx1->
+		set_color_ARGB (0xFFFFFF80)
+		.set_line_width(2)
+		.line_begin()
+			.line_add_vtx(vv6[0])
+			.line_add_vtx(vv6[1])
+			.line_add_vtx(vv6[2])
+			.line_add_vtx(vv6[3])
+			.line_add_vtx(vv6[4])
+			.line_add_vtx(vv6[5])
+			.line_add_vtx(vv6[0])
+		.line_end();
+
+}

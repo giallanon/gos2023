@@ -7,6 +7,6 @@
 
 	post_op: "	skeleton-resolve;
 				uniform-resize-x, 1.0;
-				top-bottom-left-corner-at, 0, 0.1, 0
+				top-bottom-left-corner-at, 0, 0, 0
 			"
 }
