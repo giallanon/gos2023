@@ -163,21 +163,41 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point)
 				.line_end();
 		}
 
-		//evidenzio il quad selezionato
-		u32 quad_index;
-		if (exa->get_quad_from_point (world_point, &quad_index))
+		////evidenzio il quad selezionato
+		//u32 quad_index;
+		//if (exa->get_quad_from_point (world_point, &quad_index))
+		//{
+		//	line_ctx1->
+		//		set_line_width (4)
+		//		.set_color_ARGB (0xFFFF0000)
+		//		.line_begin()
+		//		.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[0])
+		//		.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[1])
+		//		.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[2])
+		//		.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[3])
+		//		.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[0])
+		//		.line_end();
+		//}
+
+		//cerco il vtx + vicino
+		u32 vtx_index;
+		if (exa->get_closest_vtx_from_point(world_point, &vtx_index))
 		{
+			const u32 i = line_ctx1->vtx_add (vec3f (exa->vtxList[vtx_index].x, 0, exa->vtxList[vtx_index].y) );
 			line_ctx1->
-				set_line_width (4)
-				.set_color_ARGB (0xFFFF0000)
-				.line_begin()
-				.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[0])
-				.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[1])
-				.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[2])
-				.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[3])
-				.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[0])
-				.line_end();
+				set_color_ARGB (0xFFFFFFFF)
+				.point_set_radius(8)
+				.point (i);
+
+			//renderizzo i quad che sharano il vtx
+			u32 quads[8];
+			u32 nquad = exa->get_quad_from_vtx (vtx_index, quads, 8);
+			for (u32 i = 0; i < nquad; i++)
+			{
+
+			}
 		}
+
 	}
 
 	//disegno il perimetro dell'esagono centrato su <coord>

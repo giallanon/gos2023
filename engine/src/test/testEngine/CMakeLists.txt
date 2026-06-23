@@ -27,6 +27,7 @@ Land1/Land1_app.cpp
 Land1/Land1_app.h
 Land1/Land1_enumAndDefine.h
 Land1/Land1_Exa.cpp
+Land1/Land1_Exa.h
 Land1/Land1_exaGenerator.cpp
 Land1/Land1_exaGenerator.h
 Land1/Land1_map.cpp
@@ -46,7 +47,7 @@ test_exa1.cpp
 test_exa1.h
 test1.cpp
 test1.h
- )
+)
 
 
  #====================================================

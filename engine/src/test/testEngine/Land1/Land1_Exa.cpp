@@ -1,4 +1,4 @@
-#include "Land1_enumAndDefine.h"
+#include "Land1_Exa.h"
 #include "../gosGeom/gosGeomUtils.h"
 
 using namespace gos;
@@ -56,4 +56,50 @@ bool Exa::get_quad_from_point (const gos::vec3f &world_point, u32 *out__quad_ind
 	}
 
 	return false;
+}
+
+//************************************************
+bool Exa::get_closest_vtx_from_point (const gos::vec3f &world_point, u32 *out__vtx_index) const
+{
+	u32 quad_index;
+	if (!get_quad_from_point (world_point, &quad_index))
+		return false;
+
+	//so che <world_point> e' all'interno di <quad_index>
+	//A questo punto il closest vtx e' uno dei 4 vtx del quad
+	vec2f p (world_point.x, world_point.z);
+	f32 min_dist = 1e36f;
+	for (u32 i = 0; i < 4; i++)
+	{
+		u32 vtx_index = quadList[quad_index].idx[i];
+		const f32 d = (p - vtxList[vtx_index] ).length2();
+		if (d < min_dist)
+		{
+			min_dist = d;
+			*out__vtx_index = vtx_index;
+		}
+	}
+
+	return true;
+}
+
+//************************************************
+u32 Exa::get_quad_from_vtx (u32 vtx_index, u32 *out__quadList, u32 num_elem_in_quad_list) const
+{
+	assert (vtx_index < num_vtx);
+
+	u32 ret = 0;
+	for (u32 i = 0; i < num_quad; i++)
+	{
+		for (u8 i2 = 0; i2 < 4; i2++)
+		{
+			if (vtx_index == quadList[i].idx[i2])
+			{
+				if (ret < num_elem_in_quad_list)
+					out__quadList[ret++] = i;
+			}
+		}
+	}
+
+	return ret;
 }

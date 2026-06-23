@@ -1,6 +1,6 @@
 #ifndef _Land1_map_h_
 #define _Land1_map_h_
-#include "Land1_enumAndDefine.h"
+#include "Land1_Exa.h"
 #include "Land1_exaGenerator.h"
 #include "../gosGameUtils/examap/gosExamap.h"
 #include "gosHashMap.h"

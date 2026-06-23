@@ -1,6 +1,6 @@
 #ifndef _Land1_renderer_h_
 #define _Land1_renderer_h_
-#include "Land1_enumAndDefine.h"
+#include "Land1_Exa.h"
 #include "../DefaultApp/DefaultApp.h"
 #include "../gosGameUtils/examap/gosExamap.h"
 
