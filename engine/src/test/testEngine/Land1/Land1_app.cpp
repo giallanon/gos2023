@@ -27,11 +27,13 @@ void Land1_app::on__setup ()
 {
 	engine->inputCtx->
 		action_add ("mouse_LB")
+		.action_add ("mouse_LB+SHIFT")
 		.action_add ("KB_1")
 		.action_add ("KB_2")
 		.action_add ("KB_3");
 		
 	engine->inputCtx->action_bindToBtn ("mouse_LB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
+	engine->inputCtx->action_bindToBtn ("mouse_LB+SHIFT", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed, input::eButtonModifier::LSHIFT);
 	engine->inputCtx->action_bindToBtn ("KB_1", input::eOrigin::keyboard, GLFW_KEY_1, input::eButtonStatus::pressed);
 	engine->inputCtx->action_add ("KB_2").action_bindToBtn ("KB_2", input::eOrigin::keyboard, GLFW_KEY_2, input::eButtonStatus::pressed);
 	engine->inputCtx->action_add ("KB_3").action_bindToBtn ("KB_3", input::eOrigin::keyboard, GLFW_KEY_3, input::eButtonStatus::pressed);
@@ -125,6 +127,7 @@ void Land1_app::on__handle_input (const Engine::InputEvent &ev)
 	case COMPILE_TIME_STR_CRC32("KB_3"):	material_index_to_apply = 3; break;
 		
 	case COMPILE_TIME_STR_CRC32("mouse_LB"):
+	case COMPILE_TIME_STR_CRC32("mouse_LB+SHIFT"):
 		{
 			const gpu::Viewport *vp = gpu->getInfo (gpu->viewport_getDefault());
 			vec2f m(mouse_x, mouse_y);
