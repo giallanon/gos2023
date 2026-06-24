@@ -301,7 +301,7 @@ void Renderer::priv_add_exa2 (const Land1::Exa *exa)
 		if (4 == nquad)
 		{
 			//aggiungo un quad composto dai quad-center dei 4 quad trovati
-			priv_add_quad ( starting_vtx + quads[0], starting_vtx + quads[1], starting_vtx + quads[2], starting_vtx + quads[3], 0, 1);
+			priv_add_quad ( starting_vtx + quads[0], starting_vtx + quads[1], starting_vtx + quads[2], starting_vtx + quads[3], 0, exa->vtxInfoList[i].material_index);
 		}
 
 	}

@@ -9,6 +9,7 @@ Land1_app::Land1_app()
 {
 	renderer1 = NULL;
 	mouse_x = mouse_y = 0;
+	material_index_to_apply = 1;
 }
 
 //***************************************
@@ -26,7 +27,14 @@ void Land1_app::on__setup ()
 {
 	engine->inputCtx->
 		action_add ("mouse_LB")
-		.action_bindToBtn ("mouse_LB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
+		.action_add ("KB_1")
+		.action_add ("KB_2")
+		.action_add ("KB_3");
+		
+	engine->inputCtx->action_bindToBtn ("mouse_LB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
+	engine->inputCtx->action_bindToBtn ("KB_1", input::eOrigin::keyboard, GLFW_KEY_1, input::eButtonStatus::pressed);
+	engine->inputCtx->action_add ("KB_2").action_bindToBtn ("KB_2", input::eOrigin::keyboard, GLFW_KEY_2, input::eButtonStatus::pressed);
+	engine->inputCtx->action_add ("KB_3").action_bindToBtn ("KB_3", input::eOrigin::keyboard, GLFW_KEY_3, input::eButtonStatus::pressed);
 
 	renderer_land = renderPipe.add_renderer<Land1::Renderer>();
 	renderer1 = renderPipe.add_renderer<engine::Renderer1>();
@@ -112,6 +120,10 @@ void Land1_app::on__handle_input (const Engine::InputEvent &ev)
 		mouse_y = ev.value;
 		break;	
 
+	case COMPILE_TIME_STR_CRC32("KB_1"):	material_index_to_apply = 1; break;
+	case COMPILE_TIME_STR_CRC32("KB_2"):	material_index_to_apply = 2; break;
+	case COMPILE_TIME_STR_CRC32("KB_3"):	material_index_to_apply = 3; break;
+		
 	case COMPILE_TIME_STR_CRC32("mouse_LB"):
 		{
 			const gpu::Viewport *vp = gpu->getInfo (gpu->viewport_getDefault());
@@ -137,7 +149,7 @@ void Land1_app::on__handle_input (const Engine::InputEvent &ev)
 void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bToggle)
 {
 	const examap::Coord coord = map.world_coord_to_exa (world_point);
-	logger::log ("hex @ (%d, %d)\n", coord.x, coord.z);
+	logger::log ("hex @ (%d, %d)  toggle=%c\n", coord.x, coord.z, bToggle?'Y':'N');
 	
 
 	line_ctx1->clear();
@@ -216,7 +228,7 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bToggle)
 			if (bToggle && 4 == nquad)
 			{
 				if (0 == exa->vtxInfoList[vtx_index].material_index)
-					exa->vtxInfoList[vtx_index].material_index = 1;
+					exa->vtxInfoList[vtx_index].material_index = material_index_to_apply;
 				else
 					exa->vtxInfoList[vtx_index].material_index = 0;
 			}

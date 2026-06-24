@@ -42,6 +42,8 @@ private:
 	gos::ENGTexture			handle_texBianca;
 	gos::ENGModel3d 		handle_model_albero;
 	gos::ENGModel3dInst		modelinst_albero[NUM_ALBERI];
+
+	u8	material_index_to_apply;
 };
 
 #endif //_Land1_app_h_
