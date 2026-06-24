@@ -19,13 +19,14 @@ public:
 protected:
 	void	on__setup () final;
 	void	on__handle_input (const gos::Engine::InputEvent &ev) final;
+	void	on__prepare_render() final;
 	void 	on__unsetup() final;
 
 private:
 	static const u32 NUM_ALBERI = 1; //128;
 
 private:
-	void	priv_draw_exa (const gos::vec3f &world_point);
+	void	priv_draw_exa (const gos::vec3f &world_point, bool bToggle);
 
 private:
 	i16	mouse_x;

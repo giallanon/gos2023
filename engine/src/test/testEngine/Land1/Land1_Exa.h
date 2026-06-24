@@ -15,8 +15,16 @@ namespace Land1
 			u32 material_index;
 		};
 
+		struct VtxInfo
+		{
+			u32 material_index;
+		};
+
 	public:
-		gos::vec2f	calc_quad_center (u32 quad_index) const;
+		gos::vec2f	utils__calc_quad_center (u32 quad_index) const;
+		void		utils__get_quad_vertex (u32 quad_index, gos::vec2f *out__vtx4) const;
+		
+					//dato un punto in world coordinate, ritorna (se esiste) l'indice del quad a cui appartiene
 		bool		get_quad_from_point (const gos::vec3f &world_point, u32 *out__quad_index) const;
 
 					//dato un punto in world coordinate, ritorna (se esiste) l'indice del vtx + vicino
@@ -24,6 +32,7 @@ namespace Land1
 		
 					//dato un vtx_index, ritorna l'elenco dei quad che sharano lo stesso vtx
 					//Ritorna il num di quad_index inseriti in <out__quadList>
+					//I quad sono ordinati in senso orario
 		u32			get_quad_from_vtx (u32 vtx_index, u32 *out__quadList, u32 num_elem_in_quad_list) const;
 
 	public:
@@ -31,6 +40,8 @@ namespace Land1
 		u16			num_quad;
 		gos::vec2f	*vtxList;
 		Quad		*quadList;
+		gos::vec2f	*quadCenterList;
+		VtxInfo		*vtxInfoList;
 
 
 	private:

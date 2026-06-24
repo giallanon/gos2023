@@ -65,7 +65,14 @@ namespace Land1
 		void	priv_do_render(const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx);
 		void	priv_add_vtx (const gos::vec3f &v);
 		void	priv_add_quad (u32 idx1, u32 idx2, u32 idx3, u32 idx4, f32 height, u32 material_index);
-		void	priv_add_exa (const Exa *exa);
+
+		void	priv_begin1();
+		void	priv_add_exa1 (const Exa *exa);
+		void	priv_end1();
+
+		void	priv_begin2();
+		void	priv_add_exa2 (const Exa *exa);
+		void	priv_end2();
 
 
 	private:

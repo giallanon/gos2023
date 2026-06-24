@@ -43,14 +43,27 @@ Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world
 
 	u32 to_alloc = sizeof(Exa);
 	
+	//vtx list
 	to_alloc = utils::calcNextMultipleOf8(to_alloc);
 	const u32 offset_to_vtx_list = to_alloc;
 	to_alloc += sizeof(vec2f) * num_vtx;
 
+	//quad list
 	to_alloc = utils::calcNextMultipleOf8(to_alloc);
 	const u32 offset_to_quad_list = to_alloc;
 	to_alloc += sizeof(Exa::Quad) * num_quad;
 
+	//quadCenterList
+	to_alloc = utils::calcNextMultipleOf8(to_alloc);
+	const u32 offset_to_quadCenter_list = to_alloc;
+	to_alloc += sizeof(vec2f) * num_quad;
+
+	//vtxInfoList
+	to_alloc = utils::calcNextMultipleOf8(to_alloc);
+	const u32 offset_to_vtxInfo_list = to_alloc;
+	to_alloc += sizeof(Exa::VtxInfo) * num_vtx;
+
+	//alloco
 	u8 *p = GOSALLOCT(u8*, localAllocator, to_alloc);
 	ret = reinterpret_cast<Exa*>(p);
 	memset (ret, 0, to_alloc);
@@ -58,11 +71,16 @@ Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world
 	ret->num_quad= (u16)num_quad;
 	ret->vtxList = reinterpret_cast<vec2f*>( &p[offset_to_vtx_list] );
 	ret->quadList = reinterpret_cast<Exa::Quad*>( &p[offset_to_quad_list] );
+	ret->quadCenterList = reinterpret_cast<vec2f*>( &p[offset_to_quadCenter_list] );
+	ret->vtxInfoList = reinterpret_cast<Exa::VtxInfo*>( &p[offset_to_vtxInfo_list] );
 
 
 	//ora copio vtx e quadlist
-	for (u32 i=0; i<num_vtx; i++)
+	for (u32 i = 0; i < num_vtx; i++)
+	{
 		ret->vtxList[i].set (exagen.vtxList(i).x, exagen.vtxList(i).z);
+		ret->vtxInfoList[i].material_index = 0;
+	}
 
 	for (u32 i = 0; i < num_quad; i++)
 	{
@@ -72,6 +90,16 @@ Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world
 		ret->quadList[i].idx[1] = (u8)exagen.quadList(i).vtx_idx1;
 		ret->quadList[i].idx[2] = (u8)exagen.quadList(i).vtx_idx2;
 		ret->quadList[i].idx[3] = (u8)exagen.quadList(i).vtx_idx3;
+	}
+
+	//calcolo il centro di ogni quad
+	for (u32 i = 0; i < num_quad; i++)
+	{
+		ret->quadCenterList[i] = ret->vtxList[ ret->quadList[i].idx[0] ]
+			+ ret->vtxList[ ret->quadList[i].idx[1] ]
+			+ ret->vtxList[ ret->quadList[i].idx[2] ]
+			+ ret->vtxList[ ret->quadList[i].idx[3] ];
+		ret->quadCenterList[i] /= 4.0f;
 	}
 
 	return ret;
@@ -146,7 +174,7 @@ void Map::map_create (f32 exa_radius_world, u32 map_radius)
 		exaList.forEach ([&perlin, exa_radius_world] (u32 key, Exa *exa) {
 			for (u32 i = 0; i < exa->num_quad; i++)
 			{
-				vec2f c = exa->calc_quad_center(i);
+				vec2f c = exa->utils__calc_quad_center(i);
 				c /= (exa_radius_world);
 
 				f32 h = (f32)perlin.octave2D_01(c.x, c.y, 2);

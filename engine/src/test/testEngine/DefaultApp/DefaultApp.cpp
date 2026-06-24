@@ -203,6 +203,7 @@ void DefaultApp::priv_loop ()
         {
 			mainLoop.stat_onCommandBufferBegin();
 			{
+				on__prepare_render();
 				renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
 			}
 			mainLoop.stat_onCommandBufferEnd();

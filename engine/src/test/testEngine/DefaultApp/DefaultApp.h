@@ -26,6 +26,7 @@ protected:
 protected:
 	virtual void	on__setup() = 0;
 	virtual void	on__handle_input (const gos::Engine::InputEvent &ev) = 0;
+	virtual void	on__prepare_render() = 0;
 	virtual void	on__unsetup() = 0;
 
 protected:

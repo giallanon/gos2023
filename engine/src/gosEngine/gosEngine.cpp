@@ -300,6 +300,18 @@ void Engine::setMouseMode (input::eMouseMode mode)
 }
 
 //******************************** 
+const input::MouseStatus* Engine::inputEvent_getMouseStatus() const
+{
+    return &evtList.getMouseStatus();
+}
+
+//******************************** 
+const input::sButtonModifier* Engine::inputEvent_getBtnModifier() const
+{
+    return &evtList.getBtnModifier();
+}
+
+//******************************** 
 bool Engine::inputEvent_getNext (InputEvent *out)
 {
     while (1)

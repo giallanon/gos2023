@@ -6,7 +6,7 @@ using namespace Land1;
 
 
 //************************************************
-gos::vec2f Exa::calc_quad_center (u32 quad_index) const
+gos::vec2f Exa::utils__calc_quad_center (u32 quad_index) const
 {
 	assert (quad_index < num_quad);
 	gos::vec2f ret = vtxList[quadList[quad_index].idx[0]]
@@ -15,6 +15,16 @@ gos::vec2f Exa::calc_quad_center (u32 quad_index) const
 		+ vtxList[quadList[quad_index].idx[3]];
 	ret /= 4.0f;
 	return ret;
+}
+
+//************************************************
+void Exa::utils__get_quad_vertex (u32 quad_index, gos::vec2f *out__vtx4) const
+{
+	assert (quad_index < num_quad);
+	out__vtx4[0] = vtxList[quadList[quad_index].idx[0]];
+	out__vtx4[1] = vtxList[quadList[quad_index].idx[1]];
+	out__vtx4[2] = vtxList[quadList[quad_index].idx[2]];
+	out__vtx4[3] = vtxList[quadList[quad_index].idx[3]];
 }
 
 //************************************************
@@ -99,6 +109,40 @@ u32 Exa::get_quad_from_vtx (u32 vtx_index, u32 *out__quadList, u32 num_elem_in_q
 					out__quadList[ret++] = i;
 			}
 		}
+	}
+
+	//ordino il risulato in senso orario
+	if (ret > 1)
+	{
+		assert (ret <=8);
+		const vec2f center = vtxList[vtx_index];
+		
+		f32 angle_list[8];
+		for (u32 i = 0; i < ret; i++)
+		{
+			const vec2f  quad_center = quadCenterList[out__quadList[i]];
+			const vec2f p = quad_center - center;
+			angle_list[i] = atan2f (p.y, p.x);
+		}
+
+		bool bEsci = false;
+		u32 n = ret;
+		while (bEsci == false)
+		{
+			bEsci = true;
+			n--;
+			
+			for (u32 i = 0; i < n; i++)
+			{
+				if (angle_list[i] < angle_list[i + 1])
+				{
+					bEsci = false;
+					GOSSWAP(angle_list[i], angle_list[i + 1]);
+					GOSSWAP(out__quadList[i], out__quadList[i + 1]);
+				}
+			}
+		}
+
 	}
 
 	return ret;

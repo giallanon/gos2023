@@ -81,20 +81,20 @@ void Land1_app::on__setup ()
 	const u32 NUM_RINGS = 3;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, NUM_RINGS);
-
-	//aggiungo un po' di exa al renderer
-	{
-		Land1::Map::Result r;
-		r.setup (gos::getScrapAllocator());
-		map.query_visible_exa (&r);
-
-		renderer_land->begin();
-		for (u32 i=0; i<r.get_num(); i++)
-			renderer_land->add_exa (r.get_exa_by_index(i));
-		renderer_land->end();
-	}
 }
 
+//***************************************
+void Land1_app::on__prepare_render()
+{
+	Land1::Map::Result r;
+	r.setup (gos::getScrapAllocator());
+	map.query_visible_exa (&r);
+
+	renderer_land->begin();
+	for (u32 i = 0; i < r.get_num(); i++)
+		renderer_land->add_exa (r.get_exa_by_index(i));
+	renderer_land->end();
+}
 
 //***************************************
 void Land1_app::on__handle_input (const Engine::InputEvent &ev)
@@ -122,16 +122,19 @@ void Land1_app::on__handle_input (const Engine::InputEvent &ev)
 			//supponendo che hex sia sempre ad altezza y=0...
 			const f32 t = -cam.pos.o.y / world_dir.y;
 			const vec3f point_on_hex = cam.pos.o + world_dir * t;
-			priv_draw_exa (point_on_hex);
+
+			bool bToggle=false;
+			if (engine->inputEvent_getBtnModifier()->isLSHIFT())
+				bToggle=true;
+
+			priv_draw_exa (point_on_hex, bToggle);
 		}
 		break;
 	}
 }
 
-
-
 //***************************************
-void Land1_app::priv_draw_exa (const gos::vec3f &world_point)
+void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bToggle)
 {
 	const examap::Coord coord = map.world_coord_to_exa (world_point);
 	logger::log ("hex @ (%d, %d)\n", coord.x, coord.z);
@@ -190,11 +193,32 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point)
 				.point (i);
 
 			//renderizzo i quad che sharano il vtx
+			line_ctx1->
+				set_color_ARGB (0xFF00FF00)
+				.set_line_width(2);
+
 			u32 quads[8];
-			u32 nquad = exa->get_quad_from_vtx (vtx_index, quads, 8);
+			const u32 nquad = exa->get_quad_from_vtx (vtx_index, quads, 8);
 			for (u32 i = 0; i < nquad; i++)
 			{
+				const Land1::Exa::Quad *q = &exa->quadList[quads[i]];
 
+				line_ctx1->
+					line_begin()
+						.line_add_vtx(first_vtx + q->idx[0])
+						.line_add_vtx(first_vtx + q->idx[1])
+						.line_add_vtx(first_vtx + q->idx[2])
+						.line_add_vtx(first_vtx + q->idx[3])
+						.line_add_vtx(first_vtx + q->idx[0])
+					.line_end();
+			}
+
+			if (bToggle && 4 == nquad)
+			{
+				if (0 == exa->vtxInfoList[vtx_index].material_index)
+					exa->vtxInfoList[vtx_index].material_index = 1;
+				else
+					exa->vtxInfoList[vtx_index].material_index = 0;
 			}
 		}
 

@@ -157,37 +157,6 @@ void Renderer::priv_add_quad (u32 idx1, u32 idx2, u32 idx3, u32 idx4, f32 height
 }
 
 //***************************************
-void Renderer::begin()
-{
-	num_vtx = 0;
-	num_quad = 0;
-}
-
-//***************************************
-void Renderer::add_exa (const Land1::Exa *exa)
-{
-	u32 starting_vtx = num_vtx;
-	for (u32 i = 0; i < exa->num_vtx; i++)
-	{
-		priv_add_vtx (vec3f(exa->vtxList[i].x, 0, exa->vtxList[i].y) );
-	}
-
-	for (u32 i=0; i<exa->num_quad; i++)
-		priv_add_quad ( starting_vtx + exa->quadList[i].idx[0],
-						starting_vtx + exa->quadList[i].idx[1],
-						starting_vtx + exa->quadList[i].idx[2],
-						starting_vtx + exa->quadList[i].idx[3],
-						exa->quadList[i].height,
-						exa->quadList[i].material_index);
-}
-
-//***************************************
-void Renderer::end()
-{
-}
-
-
-//***************************************
 void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 {
     if (0 == num_quad)
@@ -255,7 +224,6 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 	first_instance_index += numInstances;
 }
 
-
 //***************************************
 void Renderer::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 {
@@ -263,3 +231,85 @@ void Renderer::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 		return;
 	priv_do_render (ctx, rctx);
 }
+
+
+//***************************************
+void Renderer::begin()						{ priv_begin2(); }
+void Renderer::add_exa (const Exa *exa)		{ priv_add_exa2 (exa); }
+void Renderer::end()						{ priv_end2(); }
+
+
+
+
+//***************************************
+void Renderer::priv_begin1()
+{
+	num_vtx = 0;
+	num_quad = 0;
+}
+
+//***************************************
+void Renderer::priv_add_exa1 (const Land1::Exa *exa)
+{
+	u32 starting_vtx = num_vtx;
+	for (u32 i = 0; i < exa->num_vtx; i++)
+	{
+		priv_add_vtx (vec3f(exa->vtxList[i].x, 0, exa->vtxList[i].y) );
+	}
+
+	for (u32 i=0; i<exa->num_quad; i++)
+		priv_add_quad ( starting_vtx + exa->quadList[i].idx[0],
+						starting_vtx + exa->quadList[i].idx[1],
+						starting_vtx + exa->quadList[i].idx[2],
+						starting_vtx + exa->quadList[i].idx[3],
+						exa->quadList[i].height,
+						exa->quadList[i].material_index);
+}
+
+//***************************************
+void Renderer::priv_end1()
+{
+}
+
+
+
+
+//***************************************
+void Renderer::priv_begin2()
+{
+	num_vtx = 0;
+	num_quad = 0;
+}
+
+//***************************************
+void Renderer::priv_add_exa2 (const Land1::Exa *exa)
+{
+	u32 starting_vtx = num_vtx;
+	for (u32 i = 0; i < exa->num_quad; i++)
+	{
+		priv_add_vtx (vec3f(exa->quadCenterList[i].x, 0, exa->quadCenterList[i].y) );
+	}
+
+	for (u32 i = 0; i < exa->num_vtx; i++)
+	{
+		if (0 == exa->vtxInfoList[i].material_index)
+			continue;
+
+		//recupero i quad che sharano il vtx i-esimo
+		u32 quads[8];
+		const u32 nquad = exa->get_quad_from_vtx (i, quads, 8);
+		if (4 == nquad)
+		{
+			//aggiungo un quad composto dai quad-center dei 4 quad trovati
+			priv_add_quad ( starting_vtx + quads[0], starting_vtx + quads[1], starting_vtx + quads[2], starting_vtx + quads[3], 0, 1);
+		}
+
+	}
+}
+
+//***************************************
+void Renderer::priv_end2()
+{
+}
+
+

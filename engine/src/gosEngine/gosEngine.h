@@ -27,8 +27,6 @@ namespace gos
         {
             u32 actionID;
             i16 value;
-            const gos::input::MouseStatus *mouseStatus;
-            const gos::input::sButtonModifier *btnModifier;
         };
 
     public:
@@ -46,8 +44,11 @@ namespace gos
         bool                asset_build();
 
             /* update:  ritorna false se la mainwin e' stata chiusa */
-        bool                update();
-        bool                inputEvent_getNext (InputEvent *out);
+        bool                            update();
+        bool                            inputEvent_getNext (InputEvent *out);
+        const input::MouseStatus*       inputEvent_getMouseStatus() const;
+        const input::sButtonModifier*   inputEvent_getBtnModifier() const;
+
         input::eMouseMode   getMouseMode() const;
         void			    setMouseMode (input::eMouseMode mode);
         
