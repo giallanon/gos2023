@@ -1,6 +1,5 @@
 @include: common.gosasset_d
 
-
 @model3d: model_albero
 {
 	import: <common_assets>/model3d/albero/albero.glb

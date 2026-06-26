@@ -33,7 +33,7 @@ namespace gos
 			public:
 						Result()		{ reset(); }
 						~Result()		{ free(); }
-				void 	reset()			{ allocator=NULL; numShapes=0; shapeList=NULL; shape_vs_bone_list=NULL; skeleton.reset(); shapeNameList=NULL; }
+				void 	reset()			{ allocator=NULL; numShapes=0; shapeList=NULL; shape_vs_bone_list=NULL; skeleton.reset(); shapeNameList=NULL; bSkeletonIsResolved=false; }
 				void 	free()			{ 
 					if (NULL == allocator) return;
 					if (shapeList)
@@ -66,11 +66,12 @@ namespace gos
 				gos::Skeleton			skeleton;
 				
 			private:
-				bool					priv_is_skeleton_resolved() const { return skeleton::get_bone_num(skeleton) == 1; }
+				bool					priv_is_skeleton_resolved() const { return bSkeletonIsResolved; }
 				const gos::Bone*		priv_skeleton_clone_and_resolve (gos::Skeleton *out) const;
 
 			private:
 				gos::Allocator 			*allocator;
+				bool					bSkeletonIsResolved;
 
 			friend Importer_glb;
 			};
@@ -259,6 +260,7 @@ namespace gos
 			gos::FastArray<Shape> 			shapeList;
 			gos::Array<gos::UTF8String>		shapeNameList;
 			Bone							rootBone;
+			bool							bSkeletonIsResolved;
 		};
 		
 	} //namespace model

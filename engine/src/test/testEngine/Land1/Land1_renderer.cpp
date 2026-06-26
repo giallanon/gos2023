@@ -213,13 +213,13 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 	}
 
 	//basetta
-	if (engine->get (shape_list[0], &cur_shape_info))
-	{
-		u32 is_basetta = 1;
-		rctx.bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
-			.pushConstant (0, &is_basetta, sizeof(is_basetta))
-			.drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index);
-	}
+	//if (engine->get (shape_list[0], &cur_shape_info))
+	//{
+	//	u32 is_basetta = 1;
+	//	rctx.bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
+	//		.pushConstant (0, &is_basetta, sizeof(is_basetta))
+	//		.drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index);
+	//}
 
 	first_instance_index += numInstances;
 }
@@ -298,10 +298,33 @@ void Renderer::priv_add_exa2 (const Land1::Exa *exa)
 		//recupero i quad che sharano il vtx i-esimo
 		u32 quads[8];
 		const u32 nquad = exa->get_quad_from_vtx (i, quads, 8);
-		if (4 == nquad)
+		switch (nquad)
 		{
+		default:
+			break;
+
+		case 3:
+			//aggiungo un quad composto dai quad-center dei 4 quad trovati
+			priv_add_quad ( starting_vtx + quads[0], starting_vtx + quads[1], starting_vtx + quads[2], starting_vtx + quads[0], 0, exa->vtxInfoList[i].material_index);
+			break;
+
+		case 4:
 			//aggiungo un quad composto dai quad-center dei 4 quad trovati
 			priv_add_quad ( starting_vtx + quads[0], starting_vtx + quads[1], starting_vtx + quads[2], starting_vtx + quads[3], 0, exa->vtxInfoList[i].material_index);
+			break;
+
+		case 5:
+			//aggiungo un quad composto dai quad-center dei 4 quad trovati
+			priv_add_quad ( starting_vtx + quads[0], starting_vtx + quads[1], starting_vtx + quads[2], starting_vtx + quads[3], 0, exa->vtxInfoList[i].material_index);
+			priv_add_quad ( starting_vtx + quads[3], starting_vtx + quads[4], starting_vtx + quads[0], starting_vtx + quads[3], 0, exa->vtxInfoList[i].material_index);
+			break;
+
+		case 6:
+			//aggiungo un quad composto dai quad-center dei 4 quad trovati
+			priv_add_quad ( starting_vtx + quads[0], starting_vtx + quads[1], starting_vtx + quads[2], starting_vtx + quads[3], 0, exa->vtxInfoList[i].material_index);
+			priv_add_quad ( starting_vtx + quads[3], starting_vtx + quads[4], starting_vtx + quads[5], starting_vtx + quads[0], 0, exa->vtxInfoList[i].material_index);
+			break;
+
 		}
 
 	}

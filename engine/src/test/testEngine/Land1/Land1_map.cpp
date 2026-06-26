@@ -186,8 +186,18 @@ void Map::map_create (f32 exa_radius_world, u32 map_radius)
 				exa->quadList[i].height = h;
 				exa->quadList[i].material_index = gos::randomU32(2);
 			}
+
+			for (u32 i = 0; i < exa->num_vtx; i++)
+			{
+				const u32 r = gos::randomU32(100);
+				if (r < 70)			exa->vtxInfoList[i].material_index = 1; 
+				else if (r < 90)	exa->vtxInfoList[i].material_index = 2; 
+				else				exa->vtxInfoList[i].material_index = 3; 
+			}
 			return true;
 		});
+
+		
 	}
 }
 

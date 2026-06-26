@@ -88,6 +88,7 @@ void Importer_glb::Result::skeleton_resolve()
 {
 	if (priv_is_skeleton_resolved())
 		return;
+	bSkeletonIsResolved = true;
 
 	//risolvo le shape 
 	gos::Skeleton sk;
@@ -96,6 +97,11 @@ void Importer_glb::Result::skeleton_resolve()
 	for (u32 i=0; i<numShapes; i++)
 	{
 		shape::shapeTransformPos (&shapeList[i], boneList[shape_vs_bone_list[i]].matrix);
+		
+		mat3x3f matRot;
+		boneList[shape_vs_bone_list[i]].matrix.extractRotationMatrix (&matRot);
+		shape::shapeRotateNormals (&shapeList[i], matRot);
+
 		shape_vs_bone_list[i] = 0;
 	}
 	skeleton::free (sk);

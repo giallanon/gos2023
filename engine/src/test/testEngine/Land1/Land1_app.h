@@ -23,10 +23,11 @@ protected:
 	void 	on__unsetup() final;
 
 private:
-	static const u32 NUM_ALBERI = 1; //128;
+	static const u32 NUM_MAX_ALBERI = 128;
 
 private:
-	void	priv_draw_exa (const gos::vec3f &world_point, bool bToggle);
+	void	priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT);
+	void	priv_new_albero (const gos::vec3f &world_point);
 
 private:
 	i16	mouse_x;
@@ -41,7 +42,8 @@ private:
 	
 	gos::ENGTexture			handle_texBianca;
 	gos::ENGModel3d 		handle_model_albero;
-	gos::ENGModel3dInst		modelinst_albero[NUM_ALBERI];
+	gos::ENGModel3dInst		modelinst_albero[NUM_MAX_ALBERI];
+	u32						num_alberi;
 
 	u8	material_index_to_apply;
 };

@@ -10,6 +10,7 @@ Land1_app::Land1_app()
 	renderer1 = NULL;
 	mouse_x = mouse_y = 0;
 	material_index_to_apply = 1;
+	num_alberi = 0;
 }
 
 //***************************************
@@ -18,7 +19,7 @@ void Land1_app::on__unsetup()
 	engine->release (handle_texBianca);
 	engine->release (handle_model_albero);
 
-	for (u32 i=0; i<NUM_ALBERI; i++)
+	for (u32 i=0; i<num_alberi; i++)
 		engine->release (modelinst_albero[i]);
 }
 
@@ -30,13 +31,15 @@ void Land1_app::on__setup ()
 		.action_add ("mouse_LB+SHIFT")
 		.action_add ("KB_1")
 		.action_add ("KB_2")
-		.action_add ("KB_3");
+		.action_add ("KB_3")
+		.action_add ("KB_0");
 		
 	engine->inputCtx->action_bindToBtn ("mouse_LB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
 	engine->inputCtx->action_bindToBtn ("mouse_LB+SHIFT", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed, input::eButtonModifier::LSHIFT);
 	engine->inputCtx->action_bindToBtn ("KB_1", input::eOrigin::keyboard, GLFW_KEY_1, input::eButtonStatus::pressed);
-	engine->inputCtx->action_add ("KB_2").action_bindToBtn ("KB_2", input::eOrigin::keyboard, GLFW_KEY_2, input::eButtonStatus::pressed);
-	engine->inputCtx->action_add ("KB_3").action_bindToBtn ("KB_3", input::eOrigin::keyboard, GLFW_KEY_3, input::eButtonStatus::pressed);
+	engine->inputCtx->action_bindToBtn ("KB_2", input::eOrigin::keyboard, GLFW_KEY_2, input::eButtonStatus::pressed);
+	engine->inputCtx->action_bindToBtn ("KB_3", input::eOrigin::keyboard, GLFW_KEY_3, input::eButtonStatus::pressed);
+	engine->inputCtx->action_bindToBtn ("KB_0", input::eOrigin::keyboard, GLFW_KEY_0, input::eButtonStatus::pressed);
 
 	renderer_land = renderPipe.add_renderer<Land1::Renderer>();
 	renderer1 = renderPipe.add_renderer<engine::Renderer1>();
@@ -54,31 +57,6 @@ void Land1_app::on__setup ()
 	}
 
 	engine->model_createFromAsset ("model_LowPolyTree", &handle_model_albero, res::eLoadMode::asap);
-	{
-		const res::Model3d *res_model_albero;
-		if (!engine->get (handle_model_albero, &res_model_albero, 4000))
-		{
-			DBGBREAK;
-			return;
-		}
-
-		renderer1->begin();
-		{
-			for (u32 i=0; i<NUM_ALBERI; i++)
-			{
-				engine->modelinst_create (handle_model_albero, &modelinst_albero[i]);
-
-				mat4x4f matW;
-
-				const f32 AA = 60.0f;
-				matW.buildTranslation ( gos::random(-AA, AA), 0, gos::random(-AA, AA));
-				engine->modelinst_applyTransform (modelinst_albero[i], matW);
-				renderer1->add (modelinst_albero[i]);
-			}
-		}
-		renderer1->end();
-		
-	}
 
 	cam.pos.warp (0, 20, 0);
 	cam.pos.lookAt(vec3f(0,0,0));
@@ -87,15 +65,43 @@ void Land1_app::on__setup ()
 
 
 	//creo una mappa
-	const f32 EXA_WORLD_RADIUS = 3.0f;
+	const f32 EXA_WORLD_RADIUS = 20.0f;
 	const u32 NUM_RINGS = 3;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, NUM_RINGS);
 }
 
 //***************************************
+void Land1_app::priv_new_albero (const gos::vec3f &world_point)
+{
+	if (num_alberi >= NUM_MAX_ALBERI)
+		return;
+
+	const res::Model3d *res_model_albero;
+	if (!engine->get (handle_model_albero, &res_model_albero, 4000))
+	{
+		DBGBREAK;
+		return;
+	}
+
+	engine->modelinst_create (handle_model_albero, &modelinst_albero[num_alberi]);
+
+	mat4x4f matW;
+	const f32 AA = 60.0f;
+	matW.buildTranslation ( world_point );
+	engine->modelinst_applyTransform (modelinst_albero[num_alberi], matW);
+
+	num_alberi++;
+}
+
+//***************************************
 void Land1_app::on__prepare_render()
 {
+	//static u8 ok = 0;
+	//if (1 == ok)
+	//	return;
+	//ok = 1;
+
 	Land1::Map::Result r;
 	r.setup (gos::getScrapAllocator());
 	map.query_visible_exa (&r);
@@ -104,6 +110,14 @@ void Land1_app::on__prepare_render()
 	for (u32 i = 0; i < r.get_num(); i++)
 		renderer_land->add_exa (r.get_exa_by_index(i));
 	renderer_land->end();
+
+
+
+	//alberi
+	renderer1->begin();
+	for (u32 i=0; i<num_alberi; i++)
+		renderer1->add (modelinst_albero[i]);
+	renderer1->end();
 }
 
 //***************************************
@@ -122,6 +136,7 @@ void Land1_app::on__handle_input (const Engine::InputEvent &ev)
 		mouse_y = ev.value;
 		break;	
 
+	case COMPILE_TIME_STR_CRC32("KB_0"):	material_index_to_apply = 0xFF; break;
 	case COMPILE_TIME_STR_CRC32("KB_1"):	material_index_to_apply = 1; break;
 	case COMPILE_TIME_STR_CRC32("KB_2"):	material_index_to_apply = 2; break;
 	case COMPILE_TIME_STR_CRC32("KB_3"):	material_index_to_apply = 3; break;
@@ -138,21 +153,17 @@ void Land1_app::on__handle_input (const Engine::InputEvent &ev)
 			const f32 t = -cam.pos.o.y / world_dir.y;
 			const vec3f point_on_hex = cam.pos.o + world_dir * t;
 
-			bool bToggle=false;
-			if (engine->inputEvent_getBtnModifier()->isLSHIFT())
-				bToggle=true;
-
-			priv_draw_exa (point_on_hex, bToggle);
+			priv_draw_exa (point_on_hex, engine->inputEvent_getBtnModifier()->isLSHIFT());
 		}
 		break;
 	}
 }
 
 //***************************************
-void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bToggle)
+void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 {
 	const examap::Coord coord = map.world_coord_to_exa (world_point);
-	logger::log ("hex @ (%d, %d)  toggle=%c\n", coord.x, coord.z, bToggle?'Y':'N');
+	logger::log ("hex @ (%d, %d)  LSHIFT=%c\n", coord.x, coord.z, bLSHIFT?'Y':'N');
 	
 
 	line_ctx1->clear();
@@ -164,6 +175,7 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bToggle)
 	const Land1::Exa *exa;
 	if (map.exa_query(coord, &exa))
 	{
+		//disegno il reticolo dell'exa
 		line_ctx1->set_color_ARGB (0xFF000000);
 		const u32 first_vtx = line_ctx1->vtx_get_num();
 		for (u32 i = 0; i < exa->num_vtx; i++)
@@ -181,7 +193,7 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bToggle)
 				.line_end();
 		}
 
-		////evidenzio il quad selezionato
+		//evidenzio il quad selezionato
 		//u32 quad_index;
 		//if (exa->get_quad_from_point (world_point, &quad_index))
 		//{
@@ -195,6 +207,16 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bToggle)
 		//		.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[3])
 		//		.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[0])
 		//		.line_end();
+
+		//	if (0xFF == material_index_to_apply)
+		//	{
+		//		const vec2f v = exa->utils__calc_quad_center (quad_index);
+		//		priv_new_albero( vec3f(v.x, 0, v.y) );
+		//	}
+		//	else
+		//	{
+		//		exa->quadList[quad_index].material_index = material_index_to_apply;
+		//	}
 		//}
 
 		//cerco il vtx + vicino
@@ -228,12 +250,19 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bToggle)
 					.line_end();
 			}
 
-			if (bToggle && 4 == nquad)
+			if (bLSHIFT)
 			{
-				if (0 == exa->vtxInfoList[vtx_index].material_index)
-					exa->vtxInfoList[vtx_index].material_index = material_index_to_apply;
+				if (0xFF == material_index_to_apply)
+				{
+					priv_new_albero( vec3f(exa->vtxList[vtx_index].x, 0, exa->vtxList[vtx_index].y) );
+				}
 				else
-					exa->vtxInfoList[vtx_index].material_index = 0;
+				{
+					if (0 == exa->vtxInfoList[vtx_index].material_index)
+						exa->vtxInfoList[vtx_index].material_index = material_index_to_apply;
+					else
+						exa->vtxInfoList[vtx_index].material_index = 0;
+				}
 			}
 		}
 
