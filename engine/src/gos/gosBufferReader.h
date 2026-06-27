@@ -24,6 +24,7 @@ namespace gos
         u16     readU16 ()                                              { u16 ret; if (priv_readU16At(cursor, &ret)) { cursor += sizeof(ret); return ret; } DBGBREAK; return 0; }
         u32     readU32 ()                                              { u32 ret; if (priv_readU32At(cursor, &ret)) { cursor += sizeof(ret); return ret; } DBGBREAK; return 0; }
         u64     readU64 ()                                              { u64 ret; if (priv_readU64At(cursor, &ret)) { cursor += sizeof(ret); return ret; } DBGBREAK; return 0; }
+		f32     readF32 ()                                              { f32 ret; if (priv_readF32At(cursor, &ret)) { cursor += sizeof(ret); return ret; } DBGBREAK; return 0; }
 
                 //readAt: legge nella posizione <offset> lasciando inalterato <cursor>
         bool    readAtAndCopyHere (u32 offset, void *dst, u32 howManyByte) const    { const u32 finalOffset = offset + howManyByte; if (finalOffset > bufferSize) return false; memcpy (dst, &buffer[offset], howManyByte); return true; }
@@ -32,6 +33,7 @@ namespace gos
         u16     readU16At (u32 offset) const                                        { u16 ret; if (priv_readU16At(offset, &ret)) return ret; DBGBREAK; return 0; }
         u32     readU32At (u32 offset) const                                        { u32 ret; if (priv_readU32At(offset, &ret)) return ret; DBGBREAK; return 0; }
         u64     readU64At (u32 offset) const                                        { u64 ret; if (priv_readU64At(offset, &ret)) return ret; DBGBREAK; return 0; }
+		f32     readF32At (u32 offset) const                                        { f32 ret; if (priv_readF32At(offset, &ret)) return ret; DBGBREAK; return 0; }
 
     protected:
                 BufferR_interface()                                     { }
@@ -94,6 +96,18 @@ namespace gos
                         *out = gos::utils::bufferReadU64_LSB_MSB (&buffer[offset]);
                     return true;
                 }
+
+		bool	priv_readF32At (u32 offset, f32 *out) const
+                {
+                    assert (NULL != out);
+                    const u32 finalOffset = offset + sizeof(f32);
+                    if (finalOffset > bufferSize)
+                        return false;
+
+					*out = gos::utils::bufferReadF32 (&buffer[offset]);
+                    return true;
+                }
+
     };
 
     /**

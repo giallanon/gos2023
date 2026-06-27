@@ -41,7 +41,7 @@ namespace gos
 			skeleton 		= 9,
 			model_3d 		= 10,
 			model_instance 	= 11,
-			material 		= 12,
+			materialPBR		= 12,
 
 			NUM_MAX 		= 13	//questo deve essre uguale all'ultimo valore +1
 		};

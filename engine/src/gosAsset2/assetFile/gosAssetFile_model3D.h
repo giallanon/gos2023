@@ -24,6 +24,7 @@ namespace gos
 
                     //ritorna l'index della shape addata  (eventuali shape duplicate vengono gestite evitando la duplicazione)
             u32     shape_add (UID uid_of_concrete_shape);
+			u32     material_add (UID uid_of_concrete_material);
 
             bool    mesh_add (u32 shape_index, u32 bone_index, u32 material_index);
 
@@ -46,8 +47,9 @@ namespace gos
         private:
             gos::Allocator          *localAllocator;
             UID                     uid_of_concrete_skeleton;
-            FastArray<UID>          listof_shape;          
+            FastArray<UID>          listof_shape;
             FastArray<sMeshInfo>    listof_mesh;
+			FastArray<UID>          listof_material;
             
         };
     } //namespace asset2

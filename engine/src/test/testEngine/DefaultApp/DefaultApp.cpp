@@ -13,6 +13,7 @@ DefaultApp::DefaultApp()
 	camera_mode = eCameraMode::move_free;
 	engine = NULL;
 	gpu = NULL;
+	bShowCamPos = 0;
 }
 
 //***************************************
@@ -28,9 +29,11 @@ void DefaultApp::run (gos::Engine *engineIN)
 
 	//input
 	engine->inputCtx->
-		action_add ("toggle_cam_mode");
+		action_add ("toggle_cam_mode")
+		.action_add ("toggle_show_cam_pos");
 
 	engine->inputCtx->action_bindToBtn ("toggle_cam_mode", input::eOrigin::keyboard, GLFW_KEY_TAB, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LSHIFT));
+	engine->inputCtx->action_bindToBtn ("toggle_show_cam_pos", input::eOrigin::keyboard, GLFW_KEY_C, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LALT));
 
 	//setup camera
     cam.setPerspectiveFovLH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 250.0f);
@@ -83,6 +86,10 @@ void DefaultApp::default_handle_input ()
 				camera_mode = eCameraMode::move_free;
 
 			logger::log ("Cam mode: %s\n", enum_to_string(camera_mode));
+			break;
+
+		case COMPILE_TIME_STR_CRC32("toggle_show_cam_pos"):
+			bShowCamPos = 1 - bShowCamPos;
 			break;
 
 		case COMPILE_TIME_STR_CRC32("move_forward"):
@@ -187,7 +194,8 @@ void DefaultApp::priv_loop ()
 			if (last_cam_pos != cam.pos.o)
 			{
 				last_cam_pos = cam.pos.o;
-				//logger::log (eTextColor::white, "CAM: %.2f, %.2f, %.2f\n", last_cam_pos.x, last_cam_pos.y, last_cam_pos.z);
+				if (bShowCamPos)
+					logger::log (eTextColor::white, "CAM: %.2f, %.2f, %.2f\n", last_cam_pos.x, last_cam_pos.y, last_cam_pos.z);
 			}			
         }
 		mainLoop.stat_onCPUFrameEnd();		

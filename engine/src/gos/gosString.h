@@ -382,6 +382,16 @@ namespace gos
 					return true;
 				}
 
+				bool 	extract_f32Array (f32 *out, u32 num_float_to_extract)
+				{
+					for (u32 i=0; i<num_float_to_extract; i++)
+					{
+						if (!extract_f32(&out[i]))
+							return false;
+					}
+					return true;
+				}				
+
 			private:
 				Iter		iter;
 				UTF8Char 	separatore;		

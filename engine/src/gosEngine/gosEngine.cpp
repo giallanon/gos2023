@@ -194,6 +194,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 	resManager.addResType<res::Skeleton>  (res::eType::skeleton, 1024, 64);				//64 page da 1024 = 65.536
 	resManager.addResType<res::Model3d>   (res::eType::model_3d, 4096, 64);				//64 page da 4096 = 262.144
 	resManager.addResType<res::Model3dInst> (res::eType::model_instance, 8192, 256);	//256 page da 8192 = 2.097.152
+	resManager.addResType<res::MaterialPBR>  (res::eType::materialPBR, 1024, 64);		//64 page da 1024 = 65.536
 
 	map_of_shape_to_gpushape.setup (allocator, 8192);
 	resHandleChainPool.setup (allocator, 8192);
@@ -387,6 +388,7 @@ bool Engine::res_assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) 
     case eAssetType::shape:         *out_res_type =  res::eType::shape;     return true;
     case eAssetType::skeleton:      *out_res_type =  res::eType::skeleton;  return true;
     case eAssetType::model3d:       *out_res_type =  res::eType::model_3d;  return true;
+	case eAssetType::materialPBR:	*out_res_type =  res::eType::materialPBR;  return true;
     }
 }
 
@@ -506,6 +508,12 @@ void Engine::res_bindEvents (res::Handle handle, res::Descr *res)
 		res->on_afterCreate = &Engine::modelinst_on_afterCreate;
 		res->on_destroy = &Engine::modelinst_on_destroy;
 		return;
+	
+	case res::eType::materialPBR:
+		res->on_afterCreate = &Engine::materialPBR_on_afterCreate;
+		res->on_destroy = &Engine::materialPBR_on_destroy;
+		return;
+	
 	}
 }
 
@@ -1310,20 +1318,51 @@ void Engine::modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &mat
 	}
 }
 
-void Engine::priv_modelinst_applyTransform_ric (const gos::Bone *model_listof_bones, gos::Bone *listof_bones, u32 boneIndex, const mat4x4f &parent_matW) const
+void Engine::priv_modelinst_applyTransform_ric (const gos::Bone *model__listof_bones, gos::Bone *instance__listof_bones, u32 boneIndex, const mat4x4f &parent_matW) const
 {
-    Bone *bone = &listof_bones[boneIndex];
-    bone->matrix = parent_matW * model_listof_bones[boneIndex].matrix;
+    Bone *instance_bone = &instance__listof_bones[boneIndex];
+    instance_bone->matrix = parent_matW * model__listof_bones[boneIndex].matrix;
     
-    u32 childrenIndex = bone->firstChildIndex;
+    u32 childrenIndex = instance_bone->firstChildIndex;
     while (0xFF != childrenIndex)
     {
-        priv_modelinst_applyTransform_ric (model_listof_bones, listof_bones, childrenIndex, bone->matrix);
-        childrenIndex = listof_bones[childrenIndex].sigblinIndex;
+        priv_modelinst_applyTransform_ric (model__listof_bones, instance__listof_bones, childrenIndex, instance_bone->matrix);
+        childrenIndex = instance__listof_bones[childrenIndex].sigblinIndex;
     }
 }
 
 
+
+
+/**************************************************************** 
+ * MATERIAL PBR
+ *****************************************************************/
+bool Engine::materialPBR_create (ENGMaterialPBR *out_handle)
+{
+	res::MaterialPBR *res = (res::MaterialPBR*)res_createHandle(res::eType::materialPBR, &out_handle->res_handle);
+	if (NULL == res)
+    {
+        logger::err ("Engine::materialPBR_create() => can't create handle\n");
+        return false;
+    }
+
+    return true;
+}
+
+void Engine::materialPBR_on_afterCreate (void *resIN)
+{
+	//asset_logger->log ("materialPBR_on_afterCreate\n");
+	res::MaterialPBR *res = (res::MaterialPBR*)resIN;
+	res->diffuse_col_HDR_RGBA.set (1,1,1,1);
+	res->diffuse_texture_index = 0;
+}
+
+void Engine::materialPBR_on_destroy (void *resIN)
+{
+	//asset_logger->log ("materialPBR_on_destroy\n");
+	//res::MaterialPBR *res = (res::MaterialPBR*)resIN;
+
+}
 
 
 

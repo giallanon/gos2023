@@ -18,6 +18,7 @@ Builder_model3d::Syntax1::Syntax1 () : BuilderInterface (eAssetType::model3d)
 	localAllocator = gos::getSysHeapAllocator();
 
 	listof_uid_of_concreste_shape.setup (localAllocator, 64);
+	listof_uid_of_concrete_material.setup (localAllocator, 64);
     buildCtx.bAModelWasImported = false;
 }
 
@@ -61,6 +62,7 @@ bool Builder_model3d::Syntax1::build_begin (DBContext &ctx, const UniqueUIDList 
 	uid_of_virtual_model3d.setInvalid();
 	uid_of_concrete_skeleton.setInvalid();
 	listof_uid_of_concreste_shape.reset();
+	listof_uid_of_concrete_material.reset();
     
     //parse della sezione
     if (!priv_extractParams(ctx, listof_UID_of_known_ini_file, absFilename))
@@ -171,84 +173,116 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 	else
 	{
 		//chiamate successive alla prima
-		if (eWhatToBuild::shapes == buildCtx.whatToBuild)
+		switch (buildCtx.whatToBuild)
 		{
-			if (!priv_build_shape(ctx, doCreateAnAssetFile, out_result))
-				return false;
+		default:
+			DBGBREAK;
+			return false;
 
-			buildCtx.iToBuild++;
-			if (buildCtx.iToBuild < buildCtx.imported.numShapes)
+		case eWhatToBuild::shapes:
 			{
-				*out_bCallMeAgain = true;
-				return true;
-			}
+				if (!priv_build_shape(ctx, doCreateAnAssetFile, out_result))
+					return false;
 
-			//passiamo a buildare lo scheletro (se esiste)
-			if (skeleton::isValid(buildCtx.imported.skeleton))
-			{
+				buildCtx.iToBuild++;
+				if (buildCtx.iToBuild < buildCtx.imported.numShapes)
+				{
+					*out_bCallMeAgain = true;
+					return true;
+				}
+
+				//passiamo a buildare lo scheletro (se esiste)
 				buildCtx.whatToBuild = eWhatToBuild::skeleton;
 				buildCtx.iToBuild = 0;
 				*out_bCallMeAgain = true;
+				return true;
 			}
+			break;
 
-			return true;
-		}
-		else if (eWhatToBuild::skeleton == buildCtx.whatToBuild)		
-		{
-			if (!priv_build_skeleton(ctx, doCreateAnAssetFile, out_result))
-				return false;
-			
-			//passo alla fase finale
-			buildCtx.whatToBuild = eWhatToBuild::end;
-			*out_bCallMeAgain = true;
-			return true;
-		}
-		else if (eWhatToBuild::end == buildCtx.whatToBuild)
-		{
-			//ho importato tutte le shape e anche lo skeletro, non c'e' altro da fare, ho finito
-			*out_bCallMeAgain = false;
-			out_result->result = eBuildResult::was_already_built;
-			out_result->uid_concrete_asset = uid_of_concrete_model3d;
-			out_result->uid_virtual_asset = uid_of_virtual_model3d;
-
-			//a questo punto devo davvero creare il file dell'asset
-			if (doCreateAnAssetFile)
+		case eWhatToBuild::skeleton:
 			{
-				char filenameDST[1024];
-				asset_manufacture_fullFilename (ctx, uid_of_concrete_model3d, filenameDST, sizeof(filenameDST));
-
-				priv_print_report (filenameDST);
-
-				AssetFile_model3D	assetFile;
-				assetFile.begin (localAllocator);
-
-				//skeleton
-				if (uid_of_concrete_skeleton.isValid())
-					assetFile.skeleton_set (uid_of_concrete_skeleton);
-
-				//shapes
-				for (u32 i = 0; i < listof_uid_of_concreste_shape.getNElem(); i++)
+				if (skeleton::isValid(buildCtx.imported.skeleton))
 				{
-					assetFile.shape_add (listof_uid_of_concreste_shape(i));
+					if (!priv_build_skeleton(ctx, doCreateAnAssetFile, out_result))
+						return false;
 				}
-
-				//material
-				//TODO
-
-				//meshes
-				for (u32 i = 0; i < buildCtx.imported.numShapes; i++)
-				{
-					const u32 shape_index = i;
-					const u32 bone_index = buildCtx.imported.shape_vs_bone_list[i];
-					const u32 material_index = 0;
-
-					assetFile.mesh_add (shape_index, bone_index, material_index);
-				}
-
-				return assetFile.save (filenameDST);
 				
+				//passiamo a buildare i materiali
+				buildCtx.whatToBuild = eWhatToBuild::materials;
+				buildCtx.iToBuild = 0;
+				*out_bCallMeAgain = true;
+				return true;
 			}
+			break;
 
+		case eWhatToBuild::materials:
+			{
+				if (!priv_build_material(ctx, doCreateAnAssetFile, out_result))
+					return false;
+
+				buildCtx.iToBuild++;
+				if (buildCtx.iToBuild < buildCtx.imported.num_material)
+				{
+					*out_bCallMeAgain = true;
+					return true;
+				}
+
+				//passo alla fase finale
+				buildCtx.whatToBuild = eWhatToBuild::end;
+				*out_bCallMeAgain = true;
+				return true;
+			}
+			break;
+
+		case eWhatToBuild::end:
+			{
+				//ho importato tutte le shape e anche lo skeletro, non c'e' altro da fare, ho finito
+				*out_bCallMeAgain = false;
+				out_result->result = eBuildResult::was_already_built;
+				out_result->uid_concrete_asset = uid_of_concrete_model3d;
+				out_result->uid_virtual_asset = uid_of_virtual_model3d;
+
+				//a questo punto devo davvero creare il file dell'asset
+				if (doCreateAnAssetFile)
+				{
+					char filenameDST[1024];
+					asset_manufacture_fullFilename (ctx, uid_of_concrete_model3d, filenameDST, sizeof(filenameDST));
+
+					priv_print_report (filenameDST);
+
+					AssetFile_model3D	assetFile;
+					assetFile.begin (localAllocator);
+
+					//skeleton
+					if (uid_of_concrete_skeleton.isValid())
+						assetFile.skeleton_set (uid_of_concrete_skeleton);
+
+					//shapes
+					for (u32 i = 0; i < listof_uid_of_concreste_shape.getNElem(); i++)
+					{
+						assetFile.shape_add (listof_uid_of_concreste_shape(i));
+					}
+
+					//material
+					for (u32 i = 0; i < listof_uid_of_concrete_material.getNElem(); i++)
+					{
+						assetFile.material_add (listof_uid_of_concrete_material(i));
+					}
+
+					//meshes
+					for (u32 i = 0; i < buildCtx.imported.num_mesh; i++)
+					{
+						const u32 shape_index = buildCtx.imported.mesh_list[i].shape_index;
+						const u32 bone_index = buildCtx.imported.mesh_list[i].bone_index;
+						const u32 material_index = 0;
+
+						assetFile.mesh_add (shape_index, bone_index, material_index);
+					}
+
+					return assetFile.save (filenameDST);
+					
+				}
+			}
 			return true;
 		}
 	}
@@ -351,6 +385,55 @@ bool Builder_model3d::Syntax1::priv_build_skeleton (DBContext &ctx, bool doCreat
 }
 
 //************************************
+bool Builder_model3d::Syntax1::priv_build_material (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result)
+{
+	assert (buildCtx.bAModelWasImported);
+	assert (buildCtx.whatToBuild == eWhatToBuild::materials);
+	assert (buildCtx.iToBuild < buildCtx.imported.num_material);
+
+
+	//setup di virtual-asset
+	//All'uscita da questa fn:
+	//  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
+	//  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
+	//  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
+	params.subresource_type = eAssetType::materialPBR;
+	params.subresource_index = buildCtx.iToBuild;
+
+	char material_rtName[256];
+	sprintf_s (material_rtName, sizeof(material_rtName), "%s.%s", glb_rtname, buildCtx.imported.materialNameList[buildCtx.iToBuild]);
+	if (!prot_setupVirtualAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), material_rtName, uid_of_iniFile, sec->getLineStarted(), out_result))
+		return false;
+
+	//aggiungo le dipendenze di virtual-asset dalla risorsa model_glb
+	if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__resource_file_glb)) return false;
+
+	listof_uid_of_concrete_material.append (out_result->uid_concrete_asset);
+
+	//il model3d che sto costruendo, dipende da questo material
+	if (!dependency_add (ctx, uid_of_virtual_model3d, out_result->uid_virtual_asset))		return false;
+	if (!dependencyRT_add (ctx, uid_of_concrete_model3d, out_result->uid_concrete_asset))	return false;
+
+	if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
+	{
+		char filenameDST[1024];
+		asset_manufacture_fullFilename (ctx, out_result->uid_concrete_asset, filenameDST, sizeof(filenameDST));
+		
+		const u32 i = buildCtx.iToBuild;
+
+		AssetFile_materialPBR assetFile;
+		assetFile.begin();
+		assetFile.set_from_materialPBR (buildCtx.imported.material_list[i]);
+		assetFile.end();
+		return assetFile.save (filenameDST);
+	}
+
+	return true;
+}
+
+
+
+//************************************
 void Builder_model3d::Syntax1::priv_print_report(const char *filenameDST) const
 {
 	gos::UTF8String out;
@@ -396,6 +479,19 @@ void Builder_model3d::Syntax1::priv_print_report(const char *filenameDST) const
 		skeleton::debug__print (buildCtx.imported.skeleton, out);
 	}
 
+	out << "\n\n=============================== MATERIALS =====================================\n";
+	{
+		out << "#   | name | diffuse color HDR\n"
+			<< "---------------------------------------------------------------------------\n";
+		for (u32 i=0; i<buildCtx.imported.num_material; i++)
+		{
+			const MaterialPBR *mat = &buildCtx.imported.material_list[i];
+			out << STRFMT("%03d", i)
+				<< " | " << buildCtx.imported.materialNameList[i]
+				<< " | " << STRFMT("%.02f, %.02f, %.02f, %.02f", mat->diffuse_col_RGBA_HDR[0], mat->diffuse_col_RGBA_HDR[1], mat->diffuse_col_RGBA_HDR[2], mat->diffuse_col_RGBA_HDR[3])
+				<< "\n";
+		}
+	}	
 
 	out << "\n\n======== GOS-MODEL ==========\n";
 	out << "@model3d: " << glb_rtname << "\n"
@@ -413,18 +509,20 @@ void Builder_model3d::Syntax1::priv_print_report(const char *filenameDST) const
 
 	//mesh
 	out << "\n";
-	for (u32 i = 0; i < buildCtx.imported.numShapes; i++)
+	for (u32 i = 0; i < buildCtx.imported.num_mesh; i++)
 	{
-		const char *shape_name = buildCtx.imported.shapeNameList[i];
-		const u32 bone_index = buildCtx.imported.shape_vs_bone_list[i];
-
+		const u32 shape_index = buildCtx.imported.mesh_list[i].shape_index;
+		const u32 bone_index = buildCtx.imported.mesh_list[i].bone_index;
+		const u32 material_index = buildCtx.imported.mesh_list[i].material_index;
+		const char *shape_name = buildCtx.imported.shapeNameList[shape_index];
+		
 		skeleton::Reader skr;
 		skr.setup (&buildCtx.imported.skeleton);
 		//const gos::Bone *bone = skr.bone_get_by_index(bone_index);
 		const char *bone_name = skr.name_get_by_index (bone_index);
 
 		//[mesh]: <my-shape-name>;<my-material-name>;<bone-name>;<local-transform-matrix3x3>
-		out << "\t[mesh]: " << shape_name << "; default; " << bone_name << "; identity\n";
+		out << "\t[mesh]: " << shape_name << "; " << buildCtx.imported.materialNameList[material_index] << "; " << bone_name << "; identity\n";
 	}
 	
 	out << "}\n\n";

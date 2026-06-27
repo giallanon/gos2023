@@ -56,7 +56,11 @@ void Land1_app::on__setup ()
 		renderer1->material_create (0, vec3f(0.3f, 1 , 0.3f));
 	}
 
-	engine->model_createFromAsset ("model_LowPolyTree", &handle_model_albero, res::eLoadMode::asap);
+	//engine->model_createFromAsset ("model_LowPolyTree", &handle_model_albero, res::eLoadMode::asap);
+	engine->model_createFromAsset ("model_gix_tree_1", &handle_model_albero, res::eLoadMode::asap);
+	//engine->model_createFromAsset ("model_albero", &handle_model_albero, res::eLoadMode::asap);
+	//engine->model_createFromAsset ("model_omino", &handle_model_albero, res::eLoadMode::asap);
+	
 
 	cam.pos.warp (0, 20, 0);
 	cam.pos.lookAt(vec3f(0,0,0));
@@ -87,8 +91,11 @@ void Land1_app::priv_new_albero (const gos::vec3f &world_point)
 	engine->modelinst_create (handle_model_albero, &modelinst_albero[num_alberi]);
 
 	mat4x4f matW;
-	const f32 AA = 60.0f;
-	matW.buildTranslation ( world_point );
+	mat4x4f matTr;
+	mat4x4f matRot;
+	matRot.buildRotationAboutY ( math::gradToRad(gos::random01()*360.0f ));
+	matTr.buildTranslation ( world_point );
+	matW = matTr * matRot;
 	engine->modelinst_applyTransform (modelinst_albero[num_alberi], matW);
 
 	num_alberi++;

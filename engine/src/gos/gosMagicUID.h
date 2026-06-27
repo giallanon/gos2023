@@ -39,7 +39,11 @@ static constexpr u32 GOS_MAGIC__SKELETON            = gos::magic::_makeID (0xA70
 
 //i magic definiti nel modulo gos::Asset con 0xA90000
 static constexpr u32 GOS_MAGIC__ASSET_PIPELINE_DEF  = gos::magic::_makeID (0xA90000, 0x04);
-static constexpr u32 GOS_MAGIC__ASSET_MODEL3D     	= gos::magic::_makeID (0xA90001, 0x04);
+static constexpr u32 GOS_MAGIC__ASSET_MODEL3D     	= gos::magic::_makeID (0xA90001, 0x05);
+static constexpr u32 GOS_MAGIC__ASSET_MATERIAL_PBR	= gos::magic::_makeID (0xA90002, 0x01);
+
+//i magic definiti nel modulo gos::material con 0xAA0000
+//static constexpr u32 GOS_MAGIC__MATERIAL_PBR		= gos::magic::_makeID (0xAA0000, 0x01);
 
 
 

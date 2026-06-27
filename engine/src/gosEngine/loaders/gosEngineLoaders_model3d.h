@@ -51,8 +51,9 @@ namespace gos
                         const u32 start_of_list_of_shape_uid = reader.tell();
                         reader.advanceCursor (sizeof(u64) * num_shapes);
 
+
                         const u32 num_materials = reader.readU32();
-                        //const u32 start_of_list_of_material_uid = reader.tell();
+                        const u32 start_of_list_of_material_uid = reader.tell();
                         reader.advanceCursor (sizeof(u64) * num_materials);
 
 
@@ -112,6 +113,26 @@ namespace gos
 							break;
 						ret = false;
 
+
+						//materials
+						reader.moveCursorTo(start_of_list_of_material_uid);
+						for (u32 i=0; i<num_materials; i++)
+						{
+							asset2::UID uid_materialPBR;
+							uid_materialPBR._uid = reader.readU64();
+
+							ENGMaterialPBR handle_materialPBR;
+							res::MaterialPBR *res_materialPBR;
+							if (!eng->internal__getResFromUID(uid_materialPBR, &res_materialPBR, &handle_materialPBR))
+							{
+								logger::log (eTextColor::red, "resMT::  Loader_model3d::load() => unable to match material %016" PRIX64 " with raw data\n", uid_materialPBR._uid);
+								ret = false;
+								break;
+							}
+						}
+
+
+
 						//meshes
 						reader.moveCursorTo(start_of_list_of_mesh_uid);
 						for (u32 i=0; i<num_meshes; i++)
@@ -119,7 +140,8 @@ namespace gos
 							const u32 index_of_concrete_shape = reader.readU32();
 							const u32 bone_index = reader.readU32();
 							
-							reader.readU32(); //const u32 my_material_index = reader.readU32();
+							reader.readU32();
+							//const u32 local_material_index = reader.readU32();
 
 							//model::set_mesh (res_data->data.model, i, (u16)index_of_concrete_shape, (u16)bone_index, (u16)my_material_index);
 							model::set_mesh (res_model->model, i, (u16)index_of_concrete_shape, (u16)bone_index, 0);

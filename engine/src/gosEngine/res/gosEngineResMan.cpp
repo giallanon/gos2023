@@ -45,7 +45,7 @@ void* Manager::raw_reserve (res::eType type, Handle *out_handle)
 {
 	const u8 index = (u8)type;
 	assert (index < NUM_MAX_LIST);
-	assert (lists[index]->is_already_setup());
+	assert (lists[index]->is_already_setup()); //vuol dire che non hai addato la res_type
 	return lists[index]->reserve (out_handle);
 }
 

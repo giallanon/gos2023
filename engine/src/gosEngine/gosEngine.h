@@ -132,6 +132,15 @@ namespace gos
 		void 			skeleton_on_afterCreate (void *res);
 		void            skeleton_on_destroy (void *res);
 
+        //============================= shape
+        bool            materialPBR_createFromAsset (const char *uid_runtimeName, ENGMaterialPBR *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)		{ return res_createFromAssetT (uid_runtimeName, out_handle, loadMode); }
+        bool            materialPBR_create (ENGMaterialPBR *out_handle);
+        void			release (ENGMaterialPBR &handle)															{ res_release(handle.res_handle); handle.res_handle.setInvalid(); }
+        bool            get (ENGMaterialPBR handle, const res::MaterialPBR **out, u64 timeout_msec = 0)				{ return res_getOrScheduleLoadT(handle, out, timeout_msec); }
+		void 			materialPBR_on_afterCreate (void *res);
+		void            materialPBR_on_destroy (void *res);
+
+
 		//============================= model3d
         bool            model_createFromAsset (const char *uid_runtimeName, ENGModel3d *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)	{ return res_createFromAssetT (uid_runtimeName, out_handle, loadMode); }
         gos::Model*		model_create (ENGSkeleton handle_skeleton, u16 num_shape, u16 num_material, u16 num_meshes, ENGModel3d *out_handle);

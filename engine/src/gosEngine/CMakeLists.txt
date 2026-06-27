@@ -29,6 +29,7 @@ entity/gosEntityRegistry.cpp
 entity/gosEntityRegistry.h
 entity/gosEntityUniqueList.h
 
+loaders/gosEngineLoaders_materialPBR.h
 loaders/gosEngineLoaders_model3d.h
 loaders/gosEngineLoaders_pipe.h
 loaders/gosEngineLoaders_shader.h

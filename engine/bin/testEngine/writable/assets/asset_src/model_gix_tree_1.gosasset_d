@@ -1,0 +1,14 @@
+@include: common.gosasset_d
+
+
+@model3d: model_gix_tree_1
+{
+	import: <common_assets>/model3d/albero/gix_tree_1.glb
+
+	post_op: "	skeleton-resolve;
+				uniform-resize-y, 9.0;
+				bottom-center-at, 0, 0, 0
+			"
+
+}
+

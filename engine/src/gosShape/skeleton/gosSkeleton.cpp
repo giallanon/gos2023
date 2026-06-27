@@ -190,12 +190,16 @@ void skeleton::scale (Skeleton &sk, const vec3f &s)
 {
 	Bone *boneList = skeleton__get_bone_list__no_const (sk);
 	
-	const u8 n = get_bone_num(sk);
-	for (u8 i=0; i<n; i++)
-	{
-		//scalo solo il posizione della matrice
-		boneList[i].matrix(0,3) = boneList[i].matrix(0,3) * s.x;
-		boneList[i].matrix(1,3) = boneList[i].matrix(1,3) * s.y;
-		boneList[i].matrix(2,3) = boneList[i].matrix(2,3) * s.z;
-	}
+	const vec3f tr (boneList[0].matrix(0,3), boneList[0].matrix(1,3), boneList[0].matrix(2,3) );
+	
+	
+	boneList[0].matrix(0,3) = boneList[0].matrix(1,3) = boneList[0].matrix(2,3) = 0;
+
+	mat4x4f matS;
+	matS.buildScale (s);
+	boneList[0].matrix = boneList[0].matrix * matS;
+
+	boneList[0].matrix(0,3) = tr.x;
+	boneList[0].matrix(1,3) = tr.y;
+	boneList[0].matrix(2,3) = tr.z;
 }

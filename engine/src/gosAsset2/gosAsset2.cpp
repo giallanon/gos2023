@@ -32,7 +32,7 @@ const char* asset2::enumToString (eAssetType s)
     case eAssetType::pipe:              return "pipe";
     case eAssetType::tex2D:             return "tex2D";
     case eAssetType::shape:             return "shape";
-    //case eAssetType::imported_glb:      return "imported_glb";
+    case eAssetType::materialPBR:      	return "materialPBR";
 	case eAssetType::skeleton:      	return "skeleton";
 	case eAssetType::model3d:      		return "model3d";
 	}

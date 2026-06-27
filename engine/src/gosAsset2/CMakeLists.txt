@@ -22,8 +22,15 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC
+assetFile/gosAssetFile_materialPBR.cpp
+assetFile/gosAssetFile_materialPBR.h
+assetFile/gosAssetFile_model3D.cpp
+assetFile/gosAssetFile_model3D.h
+
 builders/gosAsset2Builder_glb_importer.cpp
 builders/gosAsset2Builder_glb_importer.h
+builders/gosAsset2Builder_materialPBR.cpp
+builders/gosAsset2Builder_materialPBR.h
 builders/gosAsset2Builder_model3d.cpp
 builders/gosAsset2Builder_model3d.h
 builders/gosAsset2Builder_model3d_syntax1.cpp
@@ -43,9 +50,6 @@ shader_reflect/spirv_reflect.h
 shader_reflect/spirv.h
 shader_reflect/SPVReflect.cpp
 shader_reflect/SPVReflect.h
-
-assetFile/gosAssetFile_model3D.cpp
-assetFile/gosAssetFile_model3D.h
 
 gosAsset2.cpp
 gosAsset2.h
@@ -75,6 +79,7 @@ include_directories(${PROJECT_SOURCE_DIR}/../gos)
 include_directories(${PROJECT_SOURCE_DIR}/../gosDB)
 include_directories(${PROJECT_SOURCE_DIR}/../gosGPU)
 include_directories(${PROJECT_SOURCE_DIR}/../gosImage)
+include_directories(${PROJECT_SOURCE_DIR}/../gosMaterial)
 
 
 #====================================================

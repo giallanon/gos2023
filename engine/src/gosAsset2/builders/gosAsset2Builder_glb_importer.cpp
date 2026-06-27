@@ -5,7 +5,7 @@
 
 
 #undef	GOS__glTF_VERBOSE
-#undef GOS__glTF_SAVE_IMPORTED_INI_FILE
+#define GOS__glTF_SAVE_IMPORTED_INI_FILE
 
 
 using namespace gos;
@@ -38,21 +38,22 @@ void Importer_glb::Result::calc_AABB (geom::AABB3 *out) const
 	gos::Skeleton sk;
 	const gos::Bone *boneList = priv_skeleton_clone_and_resolve (&sk);
 
-	vec3f vmin, vmax;
-	shape::shapeCalcAABB (&shapeList[0], &vmin, &vmax);
-	out->setByMinMax (vmin, vmax);
-	out->matrixTransform (boneList[shape_vs_bone_list[0]].matrix);
-
-	for (u32 i=1; i<numShapes; i++)
+	for (u32 i=0; i<num_mesh; i++)
 	{
-		shape::shapeCalcAABB (&shapeList[i], &vmin, &vmax);
+		const u32 shape_index = mesh_list[i].shape_index;
+		const u32 bone_index = mesh_list[i].bone_index;
+
+		vec3f vmin, vmax;
+		shape::shapeCalcAABB (&shapeList[shape_index], &vmin, &vmax);
 
 		geom::AABB3 aabb2;
 		aabb2.setByMinMax (vmin, vmax);
-		aabb2.matrixTransform (boneList[shape_vs_bone_list[i]].matrix);
+		aabb2.matrixTransform (boneList[bone_index].matrix);
 
-
-		(*out) += aabb2;
+		if (0 == i)
+			(*out) = aabb2;
+		else
+			(*out) += aabb2;
 	}
 
 	skeleton::free (sk);
@@ -60,13 +61,17 @@ void Importer_glb::Result::calc_AABB (geom::AABB3 *out) const
 
 void Importer_glb::Result::scale (const vec3f &s)
 {
-	for (u32 i=0; i<numShapes; i++)
+	if (priv_is_skeleton_resolved())
 	{
-		shape::shapeScale (&shapeList[i], s);
+		for (u32 i=0; i<numShapes; i++)
+		{
+			shape::shapeScale (&shapeList[i], s);
+		}
 	}
-
-	if (!priv_is_skeleton_resolved())
+	else
+	{
 		skeleton::scale (skeleton, s);
+	}
 }
 
 void Importer_glb::Result::translate (const vec3f &tr)
@@ -88,23 +93,41 @@ void Importer_glb::Result::skeleton_resolve()
 {
 	if (priv_is_skeleton_resolved())
 		return;
+
+	//posso risolvere lo sk solo se non esistono mesh che referenziano
+	//la stessa shape (se 2 o + mesh referenziano la stessa shape, vuol dire
+	//che devo mantenere le matrici delle bone per trasformare la shape)
+	for (u32 i=0; i<num_mesh; i++)
+	{
+		if (mesh_list[i].shape_instance_index > 0)
+			return;
+	}
+
 	bSkeletonIsResolved = true;
 
 	//risolvo le shape 
 	gos::Skeleton sk;
 	const gos::Bone *boneList = priv_skeleton_clone_and_resolve (&sk);
 
-	for (u32 i=0; i<numShapes; i++)
+	for (u32 i=0; i<num_mesh; i++)
 	{
-		shape::shapeTransformPos (&shapeList[i], boneList[shape_vs_bone_list[i]].matrix);
+		const u16 shape_index = mesh_list[i].shape_index;
+		const u16 bone_index = mesh_list[i].bone_index;
+		
+		shape::shapeTransformPos (&shapeList[shape_index], boneList[bone_index].matrix);
 		
 		mat3x3f matRot;
-		boneList[shape_vs_bone_list[i]].matrix.extractRotationMatrix (&matRot);
-		shape::shapeRotateNormals (&shapeList[i], matRot);
-
-		shape_vs_bone_list[i] = 0;
+		boneList[bone_index].matrix.extractRotationMatrix (&matRot);
+		shape::shapeRotateNormals (&shapeList[shape_index], matRot);
 	}
 	skeleton::free (sk);
+	
+	//tutte le mesh puntano a root
+	for (u32 i=0; i<num_mesh; i++)
+	{
+		mesh_list[i].bone_index = 0;
+		mesh_list[i].shape_instance_index = 0;
+	}
 
 
 	//elimino il vecchio sk e ne creo uno nuovo con solo root
@@ -289,6 +312,8 @@ Importer_glb::Importer_glb()
 	meshesList.setup (localAllocator, 1024);
 	shapeList.setup (localAllocator, 1024);
 	shapeNameList.setup (localAllocator, 1024);
+	materialNameList.setup (localAllocator, 256);
+	materialList.setup (localAllocator, 1024);
 }
 
 //********************************************
@@ -301,6 +326,8 @@ Importer_glb::~Importer_glb()
 	meshesList.unsetup ();
 	shapeList.unsetup ();
 	shapeNameList.unsetup();
+	materialNameList.unsetup();
+	materialList.unsetup();
 	priv_free();
 }
 
@@ -316,6 +343,8 @@ void Importer_glb::priv_free()
 	meshesList.reset ();
 	shapeList.reset();
 	shapeNameList.reset();
+	materialNameList.reset();
+	materialList.reset();
 	
 	rootBone.deleteAllChildren (localAllocator);
 	rootBone.reset();
@@ -564,7 +593,7 @@ bool Importer_glb::priv_parseMesh (const gos::IniFileSection *sec, const VtxLayo
 		
 
 		//materiale
-		const u32 material_index = prim->getOrDefaultAsU32 ("material", u32MAX);
+		const u32 material_index = prim->getOrDefaultAsU32 ("material", 0);
 
 		//registro la primitiva nella mesh
 		meshesList[meshNum].addShape (shapeList.getNElem() -1, material_index);
@@ -588,6 +617,10 @@ bool Importer_glb::priv_parseNodes (const gos::IniFileSection *sec)
 
 	if (sec->exists ("matrix[0]"))
 	{
+		//NB: 2026-06-27
+		//Essendo glTF right handed, la matrice qui e' probabilmente tutta da sistemare...
+		//Nel caso in cui ci sia una quat/tr/scale separati (vedi else), le conversioni da RH a LH
+		//gia' le faccio, ma nel caso di una matrice gia' composta, la vedo dura
 		nodesList[n].localTRS(0,0) = sec->getOrDefaultAsF32 ("matrix[0]", 0);
 		nodesList[n].localTRS(0,1) = sec->getOrDefaultAsF32 ("matrix[1]", 0);
 		nodesList[n].localTRS(0,2) = sec->getOrDefaultAsF32 ("matrix[2]", 0);
@@ -611,27 +644,6 @@ bool Importer_glb::priv_parseNodes (const gos::IniFileSection *sec)
 		mat3x3f matRot;
 		nodesList[n].localTRS.extractRotationMatrix(&matRot);
 		nodesList[n].localRot.buildFromMatrix3x3(matRot);
-
-/*		nodesList[n].localTRS(0,0) = sec->getOrDefaultAsF32 ("matrix[0]", 0);
-		nodesList[n].localTRS(1,0) = sec->getOrDefaultAsF32 ("matrix[1]", 0);
-		nodesList[n].localTRS(2,0) = sec->getOrDefaultAsF32 ("matrix[2]", 0);
-		nodesList[n].localTRS(3,0) = sec->getOrDefaultAsF32 ("matrix[3]", 0);
-
-		nodesList[n].localTRS(0,1) = sec->getOrDefaultAsF32 ("matrix[4]", 0);
-		nodesList[n].localTRS(1,1) = sec->getOrDefaultAsF32 ("matrix[5]", 0);
-		nodesList[n].localTRS(2,1) = sec->getOrDefaultAsF32 ("matrix[6]", 0);
-		nodesList[n].localTRS(3,1) = sec->getOrDefaultAsF32 ("matrix[7]", 0);
-
-		nodesList[n].localTRS(0,2) = sec->getOrDefaultAsF32 ("matrix[8]", 0);
-		nodesList[n].localTRS(1,2) = sec->getOrDefaultAsF32 ("matrix[9]", 0);
-		nodesList[n].localTRS(2,2) = sec->getOrDefaultAsF32 ("matrix[10]", 0);
-		nodesList[n].localTRS(3,2) = sec->getOrDefaultAsF32 ("matrix[11]", 0);
-
-		nodesList[n].localTRS(0,3) = sec->getOrDefaultAsF32 ("matrix[12]", 0);
-		nodesList[n].localTRS(1,3) = sec->getOrDefaultAsF32 ("matrix[13]", 0);
-		nodesList[n].localTRS(2,3) = sec->getOrDefaultAsF32 ("matrix[14]", 0);
-		nodesList[n].localTRS(3,3) = sec->getOrDefaultAsF32 ("matrix[15]", 0);
-*/		
 	}
 	else
 	{
@@ -644,7 +656,7 @@ bool Importer_glb::priv_parseNodes (const gos::IniFileSection *sec)
 		{
 			v.x = sec->getOrDefaultAsF32 ("translation[0]", 0);
 			v.y = sec->getOrDefaultAsF32 ("translation[1]", 0);
-			v.z = sec->getOrDefaultAsF32 ("translation[2]", 0);
+			v.z = -sec->getOrDefaultAsF32 ("translation[2]", 0); //perche' gltf e' right handed
 		}
 		matT.buildTranslation (v);
 
@@ -652,20 +664,29 @@ bool Importer_glb::priv_parseNodes (const gos::IniFileSection *sec)
 		v.set (1,1,1);
 		if (sec->exists ("scale[0]"))
 		{
-			v.x = sec->getOrDefaultAsF32 ("scale[0]", 1);
-			v.y = sec->getOrDefaultAsF32 ("scale[1]", 1);
-			v.z = sec->getOrDefaultAsF32 ("scale[2]", 1);
+			v.x = fabsf(sec->getOrDefaultAsF32 ("scale[0]", 1));
+			v.y = fabsf(sec->getOrDefaultAsF32 ("scale[1]", 1));
+			v.z = fabsf(sec->getOrDefaultAsF32 ("scale[2]", 1));
 		}
 		matS.buildScale (v);
+		
 
 		
 		mat4x4f matR;
 		if (sec->exists ("rotation[0]"))
 		{
-			nodesList[n].localRot.x = sec->getOrDefaultAsF32 ("rotation[0]", 0);
-			nodesList[n].localRot.y = sec->getOrDefaultAsF32 ("rotation[1]", 0);
-			nodesList[n].localRot.z = sec->getOrDefaultAsF32 ("rotation[2]", 0);
-			nodesList[n].localRot.w = sec->getOrDefaultAsF32 ("rotation[3]", 1);
+			gos::Quat quat_right_handed;
+			quat_right_handed.x = sec->getOrDefaultAsF32 ("rotation[0]", 0);
+			quat_right_handed.y = sec->getOrDefaultAsF32 ("rotation[1]", 0);
+			quat_right_handed.z = sec->getOrDefaultAsF32 ("rotation[2]", 0);
+			quat_right_handed.w = sec->getOrDefaultAsF32 ("rotation[3]", 1);
+			quat_right_handed.normalize();
+
+			//perche' gltf e' right handed...
+			nodesList[n].localRot.x = -quat_right_handed.x;
+			nodesList[n].localRot.y = -quat_right_handed.y;
+			nodesList[n].localRot.z = -quat_right_handed.z;
+			nodesList[n].localRot.w = quat_right_handed.w;
 		}
 		nodesList[n].localRot.toMatrix4x4 (&matR);
 
@@ -717,6 +738,39 @@ bool Importer_glb::priv_parseScene (const gos::IniFileSection *sec, Bone *me)
 		priv_resolveNodesHierarcy(bone);
 		bone = bone->nextSibling;
 	}
+
+	return true;
+}
+
+//********************************************
+bool Importer_glb::priv_parseMaterial (const gos::IniFileSection *sec)
+{
+	const u32 material_num = materialList.getNElem();
+
+	char name[256];
+	if (!sec->get("name", name, sizeof(name)))
+	{
+		sprintf_s (name, sizeof(name), "mat_noname_%04d", material_num);
+	}
+	materialNameList.append (name);
+
+	//material default
+	materialList[material_num].reset();
+
+
+	gos::IniFileSection *pbr = sec->getSubsection("pbrMetallicRoughness");
+	if (NULL != pbr)
+	{
+		MaterialPBR *mat = &materialList[material_num];
+
+		mat->diffuse_col_RGBA_HDR[0] = pbr->getOrDefaultAsF32("baseColorFactor[0]", 1.0f);
+		mat->diffuse_col_RGBA_HDR[1] = pbr->getOrDefaultAsF32("baseColorFactor[1]", 1.0f);
+		mat->diffuse_col_RGBA_HDR[2] = pbr->getOrDefaultAsF32("baseColorFactor[2]", 1.0f);
+		mat->diffuse_col_RGBA_HDR[3] = pbr->getOrDefaultAsF32("baseColorFactor[3]", 1.0f);
+
+		mat->metallic_factor = pbr->getOrDefaultAsF32("metallicFactor", 0.0f);
+	}
+
 
 	return true;
 }
@@ -777,35 +831,9 @@ void Importer_glb::priv_resolveSkeletonChildren (Bone *me, const Bone *father)
 	}
 }
 
-//********************************************
-void Importer_glb::priv_applySkeleton (Bone *me)
-{
-	if (u32MAX != me->nodeIndex)
-	{
-		const u32 ii = nodesList(me->nodeIndex).meshIndex;
-		if (u32MAX != ii)
-		{
-			//il nodo di questa scena si applica alla mesh ii
-			//La mesh ii a sua volta e' composta da n shapes
-			for (u32 i=0; i<meshesList(ii).getNumShapes(); i++)
-			{
-				const u16 shapeIdx = meshesList(ii).getShapeIndex(i);
-				shape::shapeTransformPos (&shapeList.getElem(shapeIdx), me->globalTRS);
-				shape::shapeRotateNormals (&shapeList.getElem(shapeIdx), me->globalRot);
-			}
-		}
-	}
-
-	Bone *b = me->firstChild;
-	while (b)
-	{
-		priv_applySkeleton (b);
-		b = b->nextSibling;
-	}
-}
 
 //********************************************
-void Importer_glb::priv_build_shape_vs_bone_list (Bone *me, Result *out_results)
+void Importer_glb::priv_build_mesh_list (Bone *me, const gos::Skeleton *sk, gos::FastArray<Result::sMesh> *out_list)
 {
 	if (u32MAX != me->nodeIndex)
 	{
@@ -815,7 +843,7 @@ void Importer_glb::priv_build_shape_vs_bone_list (Bone *me, Result *out_results)
 			const char *bone_name = nodesList(me->nodeIndex).name;
 
 			gos::skeleton::Reader reader;
-			reader.setup (&out_results->skeleton);
+			reader.setup (sk);
 			const u32 bone_index = reader.bone_get_index_by_name (bone_name);
 
 			
@@ -823,8 +851,14 @@ void Importer_glb::priv_build_shape_vs_bone_list (Bone *me, Result *out_results)
 			//La mesh ii a sua volta e' composta da n shapes
 			for (u32 i=0; i<meshesList(ii).getNumShapes(); i++)
 			{
-				const u16 shapeIdx = meshesList(ii).getShapeIndex(i);
-				out_results->shape_vs_bone_list[shapeIdx] = bone_index;
+				const u16 shape_index = (u16)meshesList(ii).getShapeIndex(i);
+				const u16 material_index = (u16)meshesList(ii).getMaterialIndex(i);
+				
+				const u32 mesh_num = out_list->getNElem();
+				(*out_list)[mesh_num].shape_index = shape_index;
+				(*out_list)[mesh_num].bone_index = bone_index;
+				(*out_list)[mesh_num].shape_instance_index = 0;
+				(*out_list)[mesh_num].material_index = material_index;
 			}
 		}
 	}
@@ -832,7 +866,7 @@ void Importer_glb::priv_build_shape_vs_bone_list (Bone *me, Result *out_results)
 	Bone *b = me->firstChild;
 	while (b)
 	{
-		priv_build_shape_vs_bone_list (b, out_results);
+		priv_build_mesh_list (b, sk, out_list);
 		b = b->nextSibling;
 	}
 }
@@ -1019,6 +1053,32 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 		}
 	}
 
+	//parsing dei materiali
+	index = 0;
+	{
+		while (1)
+		{
+			sprintf_s (s, sizeof(s), "materials[%d]", index);
+			const gos::IniFileSection *sec = ini.getSubsection (s);
+			if (NULL == sec)
+				break;
+			
+			if (!priv_parseMaterial (sec))
+			{
+				gos::logger::err ("Importer_glb::importFromMemory() => error parsing 'material[%d]\n", index);
+				return false;
+			}		
+			++index;
+		}
+
+		//se non ci sono material, creo il default
+		if (0 == materialList.getNElem())
+		{
+			materialList[0].reset();
+			materialNameList.append ("gosengine_default_material");
+		}
+	}	
+
 	//parsing dei nodes
 	index = 0;
 	{
@@ -1054,7 +1114,6 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 		}
 
 		priv_resolveSkeleton (&rootBone);
-		//priv_applySkeleton (&rootBone);
 	}
 
 	//creo lo skeleton
@@ -1063,27 +1122,65 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 
 	//copio le shape in out_result
 	{
-		const u32 n = shapeList.getNElem();
-		if (n)
+		const u32 num_shape = shapeList.getNElem();
+		const u32 num_material = materialList.getNElem();
+		if (num_shape)
 		{
-			out_results->numShapes = n;
-			out_results->shapeList = GOSALLOCT(gos::Shape*, out_results->allocator, sizeof(gos::Shape) * n);
-			out_results->shapeNameList = GOSALLOCT(char**, out_results->allocator, sizeof(char*) * n);
-			out_results->shape_vs_bone_list = GOSALLOCT(u32*, out_results->allocator, sizeof(u32) * n);
-			memcpy (out_results->shapeList, shapeList._queryPointer(), sizeof(gos::Shape) * n);
+			out_results->numShapes = num_shape;
+			out_results->shapeList = GOSALLOCT(gos::Shape*, out_results->allocator, sizeof(gos::Shape) * num_shape);
+			out_results->shapeNameList = GOSALLOCT(char**, out_results->allocator, sizeof(char*) * num_shape);
+			
 
-			for (u32 i = 0; i < n; i++)
+			out_results->num_material = num_material;
+			out_results->material_list = GOSALLOCT(MaterialPBR*, out_results->allocator, sizeof(MaterialPBR) * num_material);
+			out_results->materialNameList = GOSALLOCT(char**, out_results->allocator, sizeof(char*) * num_material);
+			
+			memcpy (out_results->shapeList, shapeList._queryPointer(), sizeof(gos::Shape) * num_shape);
+			for (u32 i = 0; i < num_shape; i++)
 			{
-				u32 str_len = shapeNameList(i).lengthInByte();
+				const u32 str_len = shapeNameList(i).lengthInByte();
 				out_results->shapeNameList[i] = GOSALLOCT(char*, out_results->allocator, sizeof(char) * (str_len+1));
 				memcpy (out_results->shapeNameList[i], shapeNameList(i).getBuffer(), str_len);
 				out_results->shapeNameList[i][str_len] = 0x00;
-
-				out_results->shape_vs_bone_list[i] = u32MAX;
 			}
 
 
-			priv_build_shape_vs_bone_list (&rootBone, out_results);
+			memcpy (out_results->material_list, materialList._queryPointer(), sizeof(MaterialPBR) * num_material);
+			for (u32 i = 0; i < num_material; i++)
+			{
+				const u32 str_len = materialNameList(i).lengthInByte();
+				out_results->materialNameList[i] = GOSALLOCT(char*, out_results->allocator, sizeof(char) * (str_len+1));
+				memcpy (out_results->materialNameList[i], materialNameList(i).getBuffer(), str_len);
+				out_results->materialNameList[i][str_len] = 0x00;
+			}
+
+			//calcolo le mesh
+			gos::FastArray<Result::sMesh> mesh_list (gos::getScrapAllocator(), num_shape*2);
+			priv_build_mesh_list (&rootBone, &out_results->skeleton, &mesh_list);
+
+			const u32 num_mesh = mesh_list.getNElem();
+			out_results->num_mesh = num_mesh;
+			out_results->mesh_list = GOSALLOCT(Result::sMesh*, out_results->allocator, sizeof(Result::sMesh) * num_mesh);
+			for (u32 i=0; i<num_mesh; i++)
+			{
+				out_results->mesh_list[i] = mesh_list(i);
+			}
+
+			for (u32 i=0; i<num_shape; i++)
+			{
+				u16 instance_index = 0;
+				for (u32 i2=0; i2<num_mesh; i2++)
+				{
+					if (out_results->mesh_list[i2].shape_index == i)
+					{
+						out_results->mesh_list[i2].shape_instance_index = instance_index;
+						instance_index++;
+					}
+				}
+			}
+
+			mesh_list.unsetup();
+			
 		}
 	}
 

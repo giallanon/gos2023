@@ -5,7 +5,6 @@
 #include "../model/gosModelInstance.h"
 
 
-
 namespace gos
 {
 	namespace res
@@ -81,6 +80,21 @@ namespace gos
 			res::Descr		_descr;
 			gos::Skeleton	skeleton;
 		};
+
+		//************************************
+		struct MaterialPBR
+		{
+		public:
+			res::Descr			_descr;
+			gos::vec4f			diffuse_col_HDR_RGBA;
+			u32					diffuse_texture_index;
+
+			void 	set_default_material_params() {
+				diffuse_col_HDR_RGBA.set (1,1,1,1);
+				diffuse_texture_index = 0;
+
+			}
+		};		
 
 		//************************************
 		struct Model3d

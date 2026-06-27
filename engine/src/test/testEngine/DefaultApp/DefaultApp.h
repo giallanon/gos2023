@@ -36,6 +36,7 @@ protected:
     gos::geom::Camera3				cam;
 
 	eCameraMode						camera_mode;
+	u8 								bShowCamPos;
     gos::FPSMovement				move_fps;
 	gos::FreeMovement				move_free;
 

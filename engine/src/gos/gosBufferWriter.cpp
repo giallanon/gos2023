@@ -139,3 +139,4 @@ bool BufferW_interface::priv_writeU64At (u32 offset, u64 data, bool bMoveCursor)
     
     return priv_writeAt (offset, temp, 8, bMoveCursor);
 }
+

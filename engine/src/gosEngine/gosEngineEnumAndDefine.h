@@ -41,6 +41,7 @@ namespace gos
 	GOS_DECL_RES_HANDLE(ENGSkeleton);
 	GOS_DECL_RES_HANDLE(ENGModel3d);
 	GOS_DECL_RES_HANDLE(ENGModel3dInst);
+	GOS_DECL_RES_HANDLE(ENGMaterialPBR);
 	
 } //namespace gos
 

@@ -30,6 +30,7 @@ namespace gos
         bool    writeU16 (u16 data)                                     { return priv_writeU16At (cursor, data, true); }
         bool    writeU32 (u32 data)                                     { return priv_writeU32At (cursor, data, true); }
         bool    writeU64 (u64 data)                                     { return priv_writeU64At (cursor, data, true); }
+		bool    writeF32 (f32 data)                                     { return priv_writeF32At (cursor, data, true); }
 
 				//avanza il cursore di <howManyByte> ridimensionando il buffer se necessario e ritorna il pt
 				//alla zona di memoria appena riservata (ci puoi memcpyare dentro)
@@ -43,6 +44,7 @@ namespace gos
         bool    writeU16At (u32 offset, u16 data)                       { return priv_writeU16At (offset, data, false); }
         bool    writeU32At (u32 offset, u32 data)                       { return priv_writeU32At (offset, data, false); }
         bool    writeU64At (u32 offset, u64 data)                       { return priv_writeU64At (offset, data, false); }
+		bool    writeF32At (u32 offset, f32 data)                       { return priv_writeF32At (cursor, data, false); }
 
                 //inseriscono degli 0 fino a che <cursor> non diventa un multiplo di 4 o 8
         bool    writePadUntilMultiplo4();
@@ -69,6 +71,7 @@ namespace gos
         bool    priv_writeU16At (u32 offset, u16 data, bool bMoveCursor);
         bool    priv_writeU32At (u32 offset, u32 data, bool bMoveCursor);
         bool    priv_writeU64At (u32 offset, u64 data, bool bMoveCursor);
+		bool    priv_writeF32At (u32 offset, f32 data, bool bMoveCursor)		{ return priv_writeAt (offset, &data, sizeof(f32), bMoveCursor);}
 
     private:
         u32     maxWritePos;

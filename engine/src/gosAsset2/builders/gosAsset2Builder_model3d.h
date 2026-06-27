@@ -106,6 +106,7 @@ namespace gos
 				{
 					shapes = 0,
 					skeleton = 1,
+					materials = 2,
 					end = 0xff
 				};
 
@@ -130,6 +131,7 @@ namespace gos
 				bool	priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename);
 				bool 	priv_build_shape (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result);
 				bool 	priv_build_skeleton (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result);
+				bool 	priv_build_material (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result);
 				void 	priv_print_report(const char *filenameDST) const;
 				bool 	priv_apply_post_op();
 
@@ -145,6 +147,7 @@ namespace gos
 				UID 						uid_of_virtual_model3d;
 				UID							uid_of_concrete_skeleton;
 				FastArray<UID>				listof_uid_of_concreste_shape;
+				FastArray<UID>				listof_uid_of_concrete_material;
 
 			}; //class Sintax1
 

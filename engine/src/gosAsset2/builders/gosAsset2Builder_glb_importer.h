@@ -5,7 +5,7 @@
 #include "../../gos/gosFastArray.h"
 #include "../../gos/gosIniFile.h"
 #include "../../gosGeom/gosGeomAABB3.h"
-
+#include "../assetFile/gosAssetFile_materialPBR.h"
 
 namespace gos
 { 
@@ -31,9 +31,20 @@ namespace gos
 			struct Result
 			{
 			public:
+				struct sMesh
+				{
+					u16	shape_index;
+					u16 bone_index;
+					u16 material_index;
+					u16 shape_instance_index;	//==0 => <shape_index> e' usata da 1 sola mesh.
+												//==N => <shape_index> e' usata da (N+1) mesh.
+				};
+
+
+			public:
 						Result()		{ reset(); }
 						~Result()		{ free(); }
-				void 	reset()			{ allocator=NULL; numShapes=0; shapeList=NULL; shape_vs_bone_list=NULL; skeleton.reset(); shapeNameList=NULL; bSkeletonIsResolved=false; }
+				void 	reset()			{ allocator=NULL; numShapes=0; shapeList=NULL; skeleton.reset(); shapeNameList=NULL; bSkeletonIsResolved=false; num_mesh=0; mesh_list=NULL; num_material=0; materialNameList=NULL; material_list=NULL; }
 				void 	free()			{ 
 					if (NULL == allocator) return;
 					if (shapeList)
@@ -43,9 +54,17 @@ namespace gos
 							shape::shapeFree(allocator, &shapeList[i]);
 							GOSFREE(allocator, shapeNameList[i]);
 						}
+						for (u32 i = 0; i < num_material; i++)
+						{
+							GOSFREE(allocator, materialNameList[i]);
+						}
+
 						GOSFREE(allocator, shapeList);
 						GOSFREE(allocator, shapeNameList);
-						GOSFREE(allocator, shape_vs_bone_list);
+						GOSFREE(allocator, mesh_list);
+						GOSFREE(allocator, materialNameList);
+						GOSFREE(allocator, material_list);
+						numShapes = num_mesh = num_material = 0;
 					}
 					gos::skeleton::free(skeleton);
 					reset();
@@ -61,9 +80,15 @@ namespace gos
 				VtxLayout				vtxLayot;
 				u32 					numShapes;
 				gos::Shape 				*shapeList;
-				u32						*shape_vs_bone_list;	//per ogni shape, indica a quale bone e' associata
 				char					**shapeNameList;
 				gos::Skeleton			skeleton;
+
+				u32						num_mesh;
+				sMesh					*mesh_list;
+
+				u32						num_material;
+				MaterialPBR				*material_list;
+				char					**materialNameList;
 				
 			private:
 				bool					priv_is_skeleton_resolved() const { return bSkeletonIsResolved; }
@@ -197,7 +222,6 @@ namespace gos
 				Bone 	*nextSibling;
 				u32 	nodeIndex;
 			};
-
 		
 			struct sMeshInfo
 			{
@@ -224,6 +248,8 @@ namespace gos
 				u32 					offsettInGlobalBuffer;
 			};
 		
+
+
 		private:
 			void 	priv_free();
 			bool 	priv_parseBufferView (const gos::IniFileSection *sec);
@@ -232,12 +258,12 @@ namespace gos
 			void 	priv_parseMeshAttributes (const gos::IniFileSection *sec, AvailVtxChannel *out) const;
 			bool 	priv_parseNodes (const gos::IniFileSection *sec);
 			bool 	priv_parseScene (const gos::IniFileSection *sec, Bone *bone);
+			bool 	priv_parseMaterial (const gos::IniFileSection *sec);
 			void 	priv_resolveNodesHierarcy (Bone *me);
 
 			void 	priv_resolveSkeleton (Bone *rootBone);
 			void 	priv_resolveSkeletonChildren (Bone *bone, const Bone *father);
-			void 	priv_applySkeleton (Bone *rootBone);
-			void	priv_build_shape_vs_bone_list (Bone *me, Result *out_results);
+			void	priv_build_mesh_list (Bone *me, const gos::Skeleton *sk, gos::FastArray<Result::sMesh> *out_list);
 			
 			void 	priv_printStatistics() const;
 			void 	priv_printSkeleton() const;
@@ -259,6 +285,9 @@ namespace gos
 			gos::FastArray<sMesh>			meshesList;
 			gos::FastArray<Shape> 			shapeList;
 			gos::Array<gos::UTF8String>		shapeNameList;
+
+			gos::Array<gos::UTF8String>		materialNameList;
+			gos::FastArray<MaterialPBR> 	materialList;
 			Bone							rootBone;
 			bool							bSkeletonIsResolved;
 		};

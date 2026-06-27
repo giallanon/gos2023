@@ -32,7 +32,7 @@ const char* res::enumToString (res::eType s)
 	case res::eType::skeleton:			return "skeleton";
 	case res::eType::model_3d:			return "model_3d";
 	case res::eType::model_instance:	return "model_inst";
-	case res::eType::material:			return "material";
+	case res::eType::materialPBR:		return "materialPBR";
 	}
 }
 

@@ -5,6 +5,10 @@
 	import: <common_assets>/model3d/albero/albero.glb
 }
 
+@model3d: model_omino
+{
+	import: <common_assets>/model3d/omino/omino.glb
+}
 
 // @model3d: model_albero
 // {

@@ -5,6 +5,7 @@
 #include "loaders/gosEngineLoaders_shape.h"
 #include "loaders/gosEngineLoaders_skeleton.h"
 #include "loaders/gosEngineLoaders_model3d.h"
+#include "loaders/gosEngineLoaders_materialPBR.h"
 
 
 
@@ -53,6 +54,7 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
 		loaderList[(u32)eAssetType::shape] = GOSNEW(localAllocator, loaders::Loader_shape)();
 		loaderList[(u32)eAssetType::skeleton] = GOSNEW(localAllocator, loaders::Loader_skeleton)();
 		loaderList[(u32)eAssetType::model3d] = GOSNEW(localAllocator, loaders::Loader_model3d)();
+		loaderList[(u32)eAssetType::materialPBR] = GOSNEW(localAllocator, loaders::Loader_materialPBR)();
     }
 
     //loop
