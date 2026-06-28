@@ -14,7 +14,6 @@ Test_exa1::Test_exa1()
 //***************************************
 Test_exa1::~Test_exa1()
 {
-	renderPipe.unsetup();
 	gpu->deleteResource (handle_rt0);
 	gpu->deleteResource (handle_zb);
 
@@ -55,11 +54,10 @@ void Test_exa1::run (gos::Engine *engineIN)
 
 
 	//renderer
-	renderPipe.setup (allocator, engine);
-		renderer_line3d = renderPipe.add_renderer<engine::Renderer_line3d>();
-			line_ctx1 = renderer_line3d->ctx__crete_new ("ctx1", 512);
-			line_ctx2 = renderer_line3d->ctx__crete_new ("ctx2", 16);
-			line_ctx3 = renderer_line3d->ctx__crete_new ("ctx3", 16);
+	renderer_line3d = engine->renderPipe.add_renderer<engine::Renderer_line3d>();
+		line_ctx1 = renderer_line3d->ctx__crete_new ("ctx1", 512);
+		line_ctx2 = renderer_line3d->ctx__crete_new ("ctx2", 16);
+		line_ctx3 = renderer_line3d->ctx__crete_new ("ctx3", 16);
 
 
 
@@ -297,7 +295,7 @@ void Test_exa1::priv_loop ()
         {
 			mainLoop.stat_onCommandBufferBegin();
 			{
-				renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
+				engine->renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
 			}
 			mainLoop.stat_onCommandBufferEnd();
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);

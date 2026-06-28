@@ -82,8 +82,8 @@ namespace gos
         private:
             enum class eStato : u8
             {
-                idle,
-                jobInProgress
+                idle = 0,
+                jobInProgress = 1
             };
 
         private:
@@ -120,8 +120,8 @@ namespace gos
         private:
             enum class eStato : u8
             {
-                idle,
-                jobInProgress
+                idle = 0,
+                jobInProgress = 1
             };
 
         private:

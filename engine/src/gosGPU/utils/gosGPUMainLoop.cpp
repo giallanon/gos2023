@@ -67,23 +67,18 @@ void GFXJob::priv_submit (const GPUCmdBufferHandle &cmdBufferHandle, u32 swapCha
     const gpu::CommandBuffer *cmdBuffer = gpu->getInfo(cmdBufferHandle);
 
 
-    VkPipelineStageFlags waitStages[] = { 0 }; //{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    VkPipelineStageFlags semaphore_waitStages = { 0 };
 
     //dico a GPU di eseguire <cmdBufferHandle>
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.waitSemaphoreCount = 0; //1;
-    submitInfo.pWaitSemaphores = NULL; //semaphoresToBeWaitedBeforeStarting;
-    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.waitSemaphoreCount = 0;
+    submitInfo.pWaitSemaphores = NULL;
+    submitInfo.pWaitDstStageMask = &semaphore_waitStages;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &cmdBuffer->vkHandle;
 
-    //semaforo che GPU segnalera' al termine dell'esecuzione di questo batch di lavoro
-    //submitInfo.signalSemaphoreCount = 0; //1;
-    //submitInfo.pSignalSemaphores = &semaphore;
-
     //submitto il batch a GPU e indico che deve segnalare <fence> quando ha finito 
-    //VkResult result = vkQueueSubmit (gpu->getSubmitQ(cmdBuffer->whichQ), 1, &submitInfo, fence);
     VkResult result = gpu->queue_submit (cmdBuffer->whichQ, 1, &submitInfo, fence);
     if (VK_SUCCESS != result)
     {
@@ -126,14 +121,15 @@ void TransferJob::submit (const GPUCmdBufferHandle &cmdBufferHandle)
 
     const gpu::CommandBuffer *cmdBuffer = gpu->getInfo(cmdBufferHandle);
 
-    VkPipelineStageFlags waitStages[] = { 0 }; //{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    VkPipelineStageFlags semaphore_waitStages = { 0 };
+	semaphore_waitStages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
     //dico a GPU di eseguire <cmdBufferHandle>
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.waitSemaphoreCount = 0;
     submitInfo.pWaitSemaphores = NULL;
-    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.pWaitDstStageMask = &semaphore_waitStages;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &cmdBuffer->vkHandle;
 

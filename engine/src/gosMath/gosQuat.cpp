@@ -4,101 +4,6 @@
 using namespace gos;
 
 
-//*******************************************************************
-void Quat::buildFromEuler_YXZ (f32 rad_ay, f32 rad_ax, f32 rad_az)
-{
-	Quat qx, qy, qz;
-	qx.buildRotationAboutAsseX(rad_ax);
-	qy.buildRotationAboutAsseY(rad_ay);
-	qz.buildRotationAboutAsseZ(rad_az);
-	*this = qz*qx*qy;
-	normalize();
-}
-
-//*******************************************************************
-void Quat::toEuler (f32 *rad_ax, f32 *rad_ay, f32 *rad_az) const
-{
-	f32 test = x*y + z*w;
-	if (test > 0.499f)
-	{ 
-		// singularity at north pole
-		(*rad_ay) = 2.0f * atan2f(x,w);
-		(*rad_az) = math::PIMEZZI;
-		(*rad_ax) = 0;
-		return;
-	}
-	if (test < -0.499f)
-	{ 
-		// singularity at south pole
-		(*rad_ay) = -2.0f * atan2f(x,w);
-		(*rad_az) = -math::PIMEZZI;
-		(*rad_ax) = 0;
-		return;
-	}
-    
-	f32 sqx = 2.0f *x *x;
-    f32 sqy = 2.0f *y *y;
-    f32 sqz = 2.0f *z *z;
-    (*rad_ay) = atan2f (2.0f *y *w - 2.0f *x *z , 1.0f - sqy - sqz);
-	(*rad_az) = asinf (2.0f *test);
-	(*rad_ax) = atan2f (2.0f *x *w - 2.0f *y *z , 1.0f - sqx - sqz);
-}
-
-//*******************************************************************
-void Quat::buildFromMatrix3x3(const mat3x3f &m)
-{
-	f32 trace = m(0,0) + m(1,1) + m(2,2);
-	if( trace > 0 )
-	{
-		f32 s = 0.5f / sqrtf(trace+ 1.0f);
-		w = 0.25f / s;
-		x = -( m(2,1) - m(1,2) ) * s;
-		y = -( m(0,2) - m(2,0) ) * s;
-		z = -( m(1,0) - m(0,1) ) * s;
-	} 
-	else 
-	{
-		if ( m(0,0) > m(1,1) && m(0,0) > m(2,2) ) 
-		{
-			f32 s = 2.0f * sqrtf( 1.0f + m(0,0) - m(1,1) - m(2,2));
-			w = -(m(2,1) - m(1,2) ) / s;
-			x = 0.25f * s;
-			y = (m(0,1) + m(1,0) ) / s;
-			z = (m(0,2) + m(2,0) ) / s;
-		} 
-		else if (m(1,1) > m(2,2)) 
-		{
-			f32 s = 2.0f * sqrtf( 1.0f + m(1,1) - m(0,0) - m(2,2));
-			w = -(m(0,2) - m(2,0) ) / s;
-			x =  (m(0,1) + m(1,0) ) / s;
-			y = 0.25f * s;
-			z =  (m(1,2) + m(2,1) ) / s;
-		} 
-		else 
-		{
-			f32 s = 2.0f * sqrtf( 1.0f + m(2,2) - m(0,0) - m(1,1) );
-			w = -(m(1,0) - m(0,1) ) / s;
-			x =  (m(0,2) + m(2,0) ) / s;
-			y =  (m(1,2) + m(2,1) ) / s;
-			z = 0.25f * s;
-		}
-	}
-
-	normalize();
-}
-
-
-
-
-//*******************************************************************
-void Quat::buildFromXYZAxes (const vec3f &xaxis, const vec3f &yaxis, const vec3f &zaxis)
-{
-    mat3x3f	kRot;
-	kRot.buildFromXYZAxes (xaxis, yaxis, zaxis);
-    buildFromMatrix3x3 (kRot);
-
-}
-
 #define QUAT_TO_ROT3x3_v1(out_mat)\
     const f32 fTx  = 2.0f*x;\
     const f32 fTy  = 2.0f*y;\
@@ -151,6 +56,116 @@ void Quat::buildFromXYZAxes (const vec3f &xaxis, const vec3f &yaxis, const vec3f
 	
 
 //*******************************************************************
+void Quat::buildFromEuler_YXZ (f32 rad_ay, f32 rad_ax, f32 rad_az)
+{
+	Quat qx, qy, qz;
+	qx.buildRotationAboutAsseX(rad_ax);
+	qy.buildRotationAboutAsseY(rad_ay);
+	qz.buildRotationAboutAsseZ(rad_az);
+	*this = qz*qx*qy;
+	normalize();
+}
+
+//*******************************************************************
+void Quat::toEuler (f32 *rad_ax, f32 *rad_ay, f32 *rad_az) const
+{
+	f32 test = x*y + z*w;
+	if (test > 0.499f)
+	{ 
+		// singularity at north pole
+		(*rad_ay) = 2.0f * atan2f(x,w);
+		(*rad_az) = math::PIMEZZI;
+		(*rad_ax) = 0;
+		return;
+	}
+	if (test < -0.499f)
+	{ 
+		// singularity at south pole
+		(*rad_ay) = -2.0f * atan2f(x,w);
+		(*rad_az) = -math::PIMEZZI;
+		(*rad_ax) = 0;
+		return;
+	}
+    
+	f32 sqx = 2.0f *x *x;
+    f32 sqy = 2.0f *y *y;
+    f32 sqz = 2.0f *z *z;
+    (*rad_ay) = atan2f (2.0f *y *w - 2.0f *x *z , 1.0f - sqy - sqz);
+	(*rad_az) = asinf (2.0f *test);
+	(*rad_ax) = atan2f (2.0f *x *w - 2.0f *y *z , 1.0f - sqx - sqz);
+}
+
+//*******************************************************************
+void Quat::buildFromMatrix3x3(const mat3x3f &m)
+{
+	f32 trace = m(0,0) + m(1,1) + m(2,2);
+	if( trace > 0 )
+	{
+		const f32 s = 0.5f / sqrtf(trace+ 1.0f);
+		// w = 0.25f / s;
+		// x = -( m(2,1) - m(1,2) ) * s;
+		// y = -( m(0,2) - m(2,0) ) * s;
+		// z = -( m(1,0) - m(0,1) ) * s;
+
+		w = 0.25f / s;
+		x = -( m(1,2) - m(2,1) ) * s;
+		y = -( m(2,0) - m(0,2) ) * s;
+		z = -( m(0,1) - m(1,0) ) * s;		
+	} 
+	else 
+	{
+		if ( m(0,0) > m(1,1) && m(0,0) > m(2,2) ) 
+		{
+			const f32 s = 2.0f * sqrtf( 1.0f + m(0,0) - m(1,1) - m(2,2));
+			// w = -(m(2,1) - m(1,2) ) / s;
+			// x = 0.25f * s;
+			// y = (m(0,1) + m(1,0) ) / s;
+			// z = (m(0,2) + m(2,0) ) / s;
+			w = -(m(1,2) - m(2,1) ) / s;
+			x = 0.25f * s;
+			y = (m(1,0) + m(0,1) ) / s;
+			z = (m(2,0) + m(0,2) ) / s;			
+		} 
+		else if (m(1,1) > m(2,2)) 
+		{
+			const f32 s = 2.0f * sqrtf( 1.0f + m(1,1) - m(0,0) - m(2,2));
+			// w = -(m(0,2) - m(2,0) ) / s;
+			// x =  (m(0,1) + m(1,0) ) / s;
+			// y = 0.25f * s;
+			// z =  (m(1,2) + m(2,1) ) / s;
+			w = -(m(2,0) - m(0,2) ) / s;
+			x =  (m(1,0) + m(0,1) ) / s;
+			y = 0.25f * s;
+			z =  (m(2,1) + m(1,2) ) / s;
+		} 
+		else 
+		{
+			const f32 s = 2.0f * sqrtf( 1.0f + m(2,2) - m(0,0) - m(1,1) );
+			// w = -(m(1,0) - m(0,1) ) / s;
+			// x =  (m(0,2) + m(2,0) ) / s;
+			// y =  (m(1,2) + m(2,1) ) / s;
+			// z = 0.25f * s;
+			w = -(m(0,1) - m(1,0) ) / s;
+			x =  (m(2,0) + m(0,2) ) / s;
+			y =  (m(2,1) + m(1,2) ) / s;
+			z = 0.25f * s;
+
+		}
+	}
+
+	normalize();
+}
+
+//*******************************************************************
+void Quat::buildFromXYZAxes (const vec3f &xaxis, const vec3f &yaxis, const vec3f &zaxis)
+{
+    mat3x3f	kRot;
+	kRot.buildFromXYZAxes (xaxis, yaxis, zaxis);
+    buildFromMatrix3x3 (kRot);
+
+}
+
+//*******************************************************************
 void Quat::toMatrix3x3 (mat3x3f *out_m) const
 {
     QUAT_TO_ROT3x3_v2(out_m);
@@ -167,6 +182,7 @@ void Quat::toMatrix4x4 (mat4x4f *out_m) const
 	// (*out_m)(3,3) = 1;
 
     QUAT_TO_ROT3x3_v2(out_m);
+	(*out_m)(0,3) = (*out_m)(1,3) = (*out_m)(2,3) = 0;
 	(*out_m)(3,0) = 0;
 	(*out_m)(3,1) = 0;
 	(*out_m)(3,2) = 0;

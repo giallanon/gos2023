@@ -46,8 +46,6 @@ Game1::~Game1()
     engine->release(handle_skeleton2);
 	engine->release(handle_model_player);
 	engine->release(handle_model_pavimento);
-	
-	renderPipe.unsetup();
 }
 
 //***************************************
@@ -69,9 +67,8 @@ void Game1::run (gos::Engine *engineIN)
 
 
 	//renderer
-	renderPipe.setup (allocator, engine);
-		renderer1 = renderPipe.add_renderer<engine::Renderer1>();
-		renderer_line3d = renderPipe.add_renderer<engine::Renderer_line3d>();
+	renderer1 = engine->renderPipe.add_renderer<engine::Renderer1>();
+	renderer_line3d = engine->renderPipe.add_renderer<engine::Renderer_line3d>();
 		
 
 
@@ -163,7 +160,7 @@ void Game1::doCPUStuff ()
 			if (eCameraMode::free_cam == cameraMode)
 				movement.rotateY ((ev.value < 0));
 			else
-				charCtrl.camera_rotate_aboutY ((ev.value > 0));
+				charCtrl.camera_rotate_aboutY ((ev.value < 0));
 			break;
 
 		case COMPILE_TIME_STR_CRC32("rotateX"):
@@ -203,7 +200,6 @@ void Game1::doCPUStuff ()
 //***************************************
 bool Game1::priv_loadAssets()
 {
-	engine->texture2D_createFromAsset ("tex_bianca", &handle_texBianca);
 	engine->texture2D_createFromAsset ("tex_checker", &handle_texChecker, res::eLoadMode::asap);
 
 
@@ -214,19 +210,19 @@ bool Game1::priv_loadAssets()
 		u32	texture_index__texChecker = u32MAX;
 
 		
-		if (!engine->get (handle_texBianca, &tex, 5000))
+		if (!engine->get_texture_bianca (&tex))
 		{
 			DBGBREAK;
 			return false;
 		}
-		texture_index__texBianca = renderPipe.texture_addIfNotExitst(tex->texHandle);
+		texture_index__texBianca = engine->renderPipe.texture_addIfNotExitst(tex->texHandle);
 
 		if (!engine->get (handle_texChecker, &tex, 5000))
 		{
 			DBGBREAK;
 			return false;
 		}
-		texture_index__texChecker = renderPipe.texture_addIfNotExitst(tex->texHandle);
+		texture_index__texChecker = engine->renderPipe.texture_addIfNotExitst(tex->texHandle);
 
 		material_indices[0] = renderer1->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
 		material_indices[1] = renderer1->material_create (texture_index__texBianca, vec3f(1.0f, 0.0f, 0.0f));
@@ -448,6 +444,9 @@ void Game1::priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir)
 	cpos->quat.buildFromMatrix3x3 (p3.rot);
 	cpos->pos = o;
 
+	vec3f aax, aay, aaz;
+	cpos->quat.toAxis (&aax, &aay, &aaz);
+
 	//shape
 	auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent);
 	//engine->modelinst_create (handle_model_pavimento, &cModelInstance->handle_mi);
@@ -494,8 +493,8 @@ void Game1::priv_loop ()
 
         //shape
         auto cModelInstance = entRegistry.addComponent<ent::CompModelInstance>(ent_mainPlayer);
-		//engine->modelinst_create (handle_model_player, &cModelInstance->handle_mi);
-		engine->modelinst_create (handle_model_albero, &cModelInstance->handle_mi);
+		engine->modelinst_create (handle_model_player, &cModelInstance->handle_mi);
+		//engine->modelinst_create (handle_model_albero, &cModelInstance->handle_mi);
 
         auto cScript = entRegistry.addComponent<ent::CompScriptable>(ent_mainPlayer);
         cScript->callback = Game1__entity_script_mainPlayer;
@@ -654,7 +653,7 @@ void Game1::priv_loop ()
 				}
 				renderer1->end ();
 			}
-			renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
+			engine->renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
 			mainLoop.stat_onCommandBufferEnd();
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }
@@ -673,7 +672,6 @@ void Game1::priv_loop ()
 	//free asset
     engine->release(handle_gpushape_cube);
     engine->release(handle_gpushape_cyl);
-	engine->release (handle_texBianca);
 	engine->release (handle_texChecker);
 	
 

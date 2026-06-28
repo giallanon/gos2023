@@ -40,9 +40,6 @@ protected:
     gos::FPSMovement				move_fps;
 	gos::FreeMovement				move_free;
 
-	gos::engine::RenderPipe 		renderPipe;
-
-
 private:
 	const char*		enum_to_string (eCameraMode m) const;
 	void			default_handle_input ();

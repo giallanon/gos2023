@@ -24,7 +24,7 @@ namespace gos
 static constexpr u32 GOS_MAGIC__DATA_BLOB_DEF       = gos::magic::_makeID (0xA10000, 0x01);
 
 //i magic definiti nel modulo gos::Engine con 0xA20000
-static constexpr u32 GOS_MAGIC__ENGINE_MODEL        = gos::magic::_makeID (0xA20000, 0x01);
+static constexpr u32 GOS_MAGIC__ENGINE_MODEL        = gos::magic::_makeID (0xA20000, 0x02);
 
 
 

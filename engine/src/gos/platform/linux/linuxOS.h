@@ -52,7 +52,7 @@ namespace platform
      */
     inline void     mutexCreate (OSMutex *m)                                            { pthread_mutex_init (m, NULL); }
     inline void     mutexDestroy (OSMutex *m)                                           { pthread_mutex_destroy(m); }
-    inline bool     mutexLock (OSMutex *m)                                              { return (pthread_mutex_lock(m) == 0); }
+	bool     		mutexLock (OSMutex *m);
     inline void     mutexUnlock (OSMutex *m)                                            { pthread_mutex_unlock(m); }
     inline bool     mutexTryLock (OSMutex *m)                                           { return (pthread_mutex_trylock(m) == 0); }
 

@@ -32,7 +32,6 @@ Test1::~Test1()
 	engine->release(handle_skeleton);
 	engine->release(handle_model);
 
-	renderPipe.unsetup();
 }
 
 //***************************************
@@ -165,7 +164,6 @@ void Test1::run (gos::Engine *engineIN)
     movement.bind (&cam.pos);
 
 
-	renderPipe.setup (gos::getSysHeapAllocator(), engineIN);
 	priv_run4();
 }
 
@@ -242,13 +240,11 @@ bool Test1::priv_run4 ()
 
 
 	//creo il renderer
-	renderer1 = renderPipe.add_renderer<engine::Renderer1>();
+	renderer1 = engine->renderPipe.add_renderer<engine::Renderer1>();
 
 
     //load degli assets
-	gos::ENGTexture	handle_texBianca;
 	gos::ENGTexture	handle_texChecker;
-	engine->texture2D_createFromAsset ("tex_bianca", &handle_texBianca);
 	engine->texture2D_createFromAsset ("tex_checker", &handle_texChecker, res::eLoadMode::asap);
 
 	//binding di materiali al renderer
@@ -257,13 +253,19 @@ bool Test1::priv_run4 ()
 		u32	texture_index__texBianca = u32MAX;
 		u32	texture_index__texChecker = u32MAX;
 
-		if (!engine->get (handle_texBianca, &tex, 5000))
+		if (!engine->get_texture_bianca (&tex))
+		{
+			DBGBREAK;
 			return false;
-		texture_index__texBianca = renderPipe.texture_addIfNotExitst(tex->texHandle);
+		}
+		texture_index__texBianca = engine->renderPipe.texture_addIfNotExitst(tex->texHandle);
 
 		if (!engine->get (handle_texChecker, &tex, 5000))
+		{
+			DBGBREAK;
 			return false;
-		texture_index__texChecker = renderPipe.texture_addIfNotExitst(tex->texHandle);
+		}
+		texture_index__texChecker = engine->renderPipe.texture_addIfNotExitst(tex->texHandle);
 
 		renderer1->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
 		renderer1->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
@@ -402,7 +404,6 @@ bool Test1::priv_run4 ()
 						engine->modelinst_applyTransform (cModelInstance->handle_mi, ctransf->matrix);
 					}
 
-
 					return true;
 				});
 				list->reset();
@@ -438,7 +439,7 @@ bool Test1::priv_run4 ()
 				renderer1->end ();
 			}
 
-			renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
+			engine->renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
 			mainLoop.stat_onCommandBufferEnd();
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }		
@@ -457,7 +458,6 @@ bool Test1::priv_run4 ()
 
 
 	scene.unsetup();
-	engine->release (handle_texBianca);
 	engine->release (handle_texChecker);
 
 	

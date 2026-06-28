@@ -46,10 +46,6 @@ void DefaultApp::run (gos::Engine *engineIN)
     move_fps.bind (&cam.pos);
 	move_free.bind (&cam.pos);
 
-	//render pipe
-	if (!renderPipe.setup (gos::getSysHeapAllocator(), engine))
-		return;
-
 
     priv_loop();
 }
@@ -212,7 +208,7 @@ void DefaultApp::priv_loop ()
 			mainLoop.stat_onCommandBufferBegin();
 			{
 				on__prepare_render();
-				renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
+				engine->renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
 			}
 			mainLoop.stat_onCommandBufferEnd();
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
@@ -225,7 +221,5 @@ void DefaultApp::priv_loop ()
 	gpu->deleteResource (cmdBufferHandle);
 
 	on__unsetup();
-
-	renderPipe.unsetup();
 }
 

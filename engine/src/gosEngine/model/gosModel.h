@@ -19,13 +19,18 @@ namespace gos
      *      10      u16     num_material
      *      12      u16     num_meshes
      *      14      u16     abs-offset-to MESH 1
+	 *      16      u16     abs-offset-to MATERIAL 1
      * 
-     *      16      u32     ENGSkeleton as u32
-     *      20      u32     ENGGPUShape-1 as u32
+     *      18      u32     ENGSkeleton as u32
+     *      22      u32     ENGGPUShape-1 as u32
      *      ..  
      *      ..      u32     ENGGPUShape-N as u32
+	 * 
+	 * 		..		u32		ENGMaterialPBR-1 as u32		//MATERIAL 1 (aka ABS_OFFSET_of_MATERIAL)
+	 * 		..
+	 * 		..		u32		ENGMaterialPBR-N as u32
      * 
-     *      ..      sizeof(Mesh)	mesh-0     //MESH 1    (aka ABS_OFFSET_of_MESH1)
+     *      ..      sizeof(Mesh)	mesh-0     			//MESH 1    (aka ABS_OFFSET_of_MESH1)
      *      ..
      *      ..      sizeof(Mesh)	mesh-N     
      */
@@ -59,6 +64,7 @@ namespace gos
 		bool	set_skeleton (Model &m, ENGSkeleton handle);
 		bool	set_gpushape (Model &m, u32 shape_num, ENGGPUShape handle);
 		bool 	set_mesh  (Model &m, u32 mesh_num, u16 shape_index, u16 bone_index, u16 material_index);
+		bool 	set_material (Model &m, u32 material_num, ENGMaterialPBR handle);
 
 
         /*******************************
@@ -67,6 +73,15 @@ namespace gos
          */
         class Reader
         {
+		public:
+			static constexpr u32 OFFSET_TO_NUM_SHAPES = 8;
+			static constexpr u32 OFFSET_TO_NUM_MATERIAL = 10;
+			static constexpr u32 OFFSET_TO_NUM_MESHES = 12;
+			static constexpr u32 OFFSET_TO_START_OF_MESHES = 14;
+			static constexpr u32 OFFSET_TO_START_OF_MATERIALS = 16;
+			static constexpr u32 OFFSET_TO_SKELETON	= 18;
+			static constexpr u32 OFFSET_TO_ENGSHAPE = 22;
+
         public:
                                 Reader()                        { m = NULL; }
                                 Reader(const Model *m)          { setup(m); }
@@ -84,6 +99,8 @@ namespace gos
 			const ENGGPUShape*  gpushape_get_pt_to_list () const;
 
             u32                 material_get_num() const;
+            ENGMaterialPBR         material_get_by_index (u32 i) const;
+			const ENGMaterialPBR*  material_get_pt_to_list () const;
 
         private:
             const Model *m;

@@ -111,7 +111,6 @@ namespace gos
 						}
 						if (!ret)
 							break;
-						ret = false;
 
 
 						//materials
@@ -129,8 +128,11 @@ namespace gos
 								ret = false;
 								break;
 							}
-						}
 
+							model::set_material (res_model->model, i, handle_materialPBR);
+						}
+						if (!ret)
+							break;
 
 
 						//meshes
@@ -149,7 +151,6 @@ namespace gos
 
 
 						//fine di while(1)
-						ret = true;
 						break;
                     }
 

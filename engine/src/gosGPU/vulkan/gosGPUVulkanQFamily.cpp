@@ -143,7 +143,7 @@ void VulkanQFamily::waitIdle ()
 VkResult VulkanQFamily::submit(u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence)
 {
     thread::mutexLock (mutex);
-    const VkResult ret = vkQueueSubmit (vkQueueHandle, submitCount, submitInfo, fence);
+	const VkResult ret = vkQueueSubmit (vkQueueHandle, submitCount, submitInfo, fence);
     thread::mutexUnlock (mutex);
     return ret;
 }

@@ -16,7 +16,6 @@ Land1_app::Land1_app()
 //***************************************
 void Land1_app::on__unsetup()
 {
-	engine->release (handle_texBianca);
 	engine->release (handle_model_albero);
 
 	for (u32 i=0; i<num_alberi; i++)
@@ -41,18 +40,17 @@ void Land1_app::on__setup ()
 	engine->inputCtx->action_bindToBtn ("KB_3", input::eOrigin::keyboard, GLFW_KEY_3, input::eButtonStatus::pressed);
 	engine->inputCtx->action_bindToBtn ("KB_0", input::eOrigin::keyboard, GLFW_KEY_0, input::eButtonStatus::pressed);
 
-	renderer_land = renderPipe.add_renderer<Land1::Renderer>();
-	renderer1 = renderPipe.add_renderer<engine::Renderer1>();
-	renderer_line3d = renderPipe.add_renderer<engine::Renderer_line3d>();
+	renderer_land = engine->renderPipe.add_renderer<Land1::Renderer>();
+	renderer1 = engine->renderPipe.add_renderer<engine::Renderer1>();
+	renderer_line3d = engine->renderPipe.add_renderer<engine::Renderer_line3d>();
 		line_ctx1 = renderer_line3d->ctx__crete_new("ctx1", 32);
 
 	//carico un po' di texture
-	engine->texture2D_createFromAsset ("tex_bianca", &handle_texBianca);
 	{
 		const gos::res::Texture2d *tex;
-		engine->get (handle_texBianca, &tex, 5000);
+		engine->get_texture_bianca (&tex);
 
-		renderPipe.texture_addIfNotExitst (tex->texHandle);
+		engine->renderPipe.texture_addIfNotExitst (tex->texHandle);
 		renderer1->material_create (0, vec3f(0.3f, 1 , 0.3f));
 	}
 

@@ -54,6 +54,7 @@ bool Renderer1::on__attach (const RPIPE::Context &ctx)
 	//load pipe
 	if (!ctx.engine->pipeline_createFromAsset ("gosengine_renderer1", &handle_pipeline, res::eLoadMode::asap))
 	{
+		DBGBREAK;
         return false; 
 	}	
 
@@ -87,26 +88,30 @@ bool Renderer1::on__attach (const RPIPE::Context &ctx)
 
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
     const res::Pipeline *res_pipeline;
-    if (engine->get (handle_pipeline, &res_pipeline, 5000))
-    {
-        //alloco una istanza dei descriptor-set
-        gos::gpu::DescrSetInstanceWriter dsw;
+    if (!engine->get (handle_pipeline, &res_pipeline, 5000))
+	{
+		DBGBREAK;
+		return false;
+	}
 
-        //descriptor set 2        
-        if (!gpu->descrSetInstance_create (ctx.handle_descrPool, res_pipeline->pipeHandle, 2, &handle_descrSet2))
-        {
-            gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_2\n");
-            return false;
-        }
-        else
-        {
-			dsw.begin (gpu, handle_descrSet2)
-				.bindStorageBuffer (0, handle_sbo_matrixList, 0)
-				.bindStorageBuffer (1, handle_sbo_materiaList, 0)
-                .bindStorageBuffer (2, handle_sbo_instanceData)
-				.end();
-        }
-    }
+	//alloco una istanza dei descriptor-set
+	gos::gpu::DescrSetInstanceWriter dsw;
+
+	//descriptor set 2        
+	if (!gpu->descrSetInstance_create (ctx.handle_descrPool, res_pipeline->pipeHandle, 2, &handle_descrSet2))
+	{
+		gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_2\n");
+		return false;
+	}
+	else
+	{
+		dsw.begin (gpu, handle_descrSet2)
+			.bindStorageBuffer (0, handle_sbo_matrixList, 0)
+			.bindStorageBuffer (1, handle_sbo_materiaList, 0)
+			.bindStorageBuffer (2, handle_sbo_instanceData)
+			.end();
+	}
+
 
     return true;
 }

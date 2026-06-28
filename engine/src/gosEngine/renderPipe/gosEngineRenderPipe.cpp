@@ -57,6 +57,7 @@ bool RenderPipe::setup (gos::Allocator *allocatorIN, Engine *engineIN)
 	//Questa mi serve soltanto per tirare fuori il descriptor-set0. E' una pipeline fake
 	if (!engineIN->pipeline_createFromAsset ("gosengine_PIPE3", &handle_pipeline, res::eLoadMode::asap))
 	{
+		DBGBREAK;
 		return false;
 	}
 
@@ -122,47 +123,47 @@ bool RenderPipe::setup (gos::Allocator *allocatorIN, Engine *engineIN)
 
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
     const res::Pipeline *res_pipeline;
-    if (engine->get (handle_pipeline, &res_pipeline, 5000))
-    {
-        //alloco una istanza dei descriptor-set
-        gos::gpu::DescrSetInstanceWriter dsw;
+    if (!engine->get (handle_pipeline, &res_pipeline, 5000))
+	{
+		DBGBREAK;
+		return false;
+	}
 
-        //descriptor set 0
-        if (!gpu->descrSetInstance_create (ctx.handle_descrPool, res_pipeline->pipeHandle, 0, &ctx.handle_descrSet0))
-        {
-            gos::logger::err ("RenderPipe::setup() => can't create an instance of descriptorSet_0\n");
-            return false;
-        }
-        else
-        {
-            dsw.begin (gpu, ctx.handle_descrSet0)
-                .bindSamplerInArray  (0, handle_samplers[0], 0)             //bindo in samplerList[0] il sampler "bilinear"
-                .bindSamplerInArray  (0, handle_samplers[1], 1)             //bindo in samplerList[1] il sampler "point"
-                .end();
-        }
+	//alloco una istanza dei descriptor-set
+	gos::gpu::DescrSetInstanceWriter dsw;
 
-		//descriptor set 1
-		if (!gpu->descrSetInstance_create (ctx.handle_descrPool, res_pipeline->pipeHandle, 1, &ctx.handle_descrSet1))
-		{
-			gos::logger::err ("RenderPipe::setup() => can't create an instance of descriptorSet_1\n");
-			return false;
-		}
-		else
-		{
-			dsw.begin (gpu, ctx.handle_descrSet1)
-				.bindUniformBuffer (0, ctx.handle_ubo_scene, 0)
-				.end();
-		}		
-    }	
+	//descriptor set 0
+	if (!gpu->descrSetInstance_create (ctx.handle_descrPool, res_pipeline->pipeHandle, 0, &ctx.handle_descrSet0))
+	{
+		gos::logger::err ("RenderPipe::setup() => can't create an instance of descriptorSet_0\n");
+		return false;
+	}
+	else
+	{
+		dsw.begin (gpu, ctx.handle_descrSet0)
+			.bindSamplerInArray  (0, handle_samplers[0], 0)             //bindo in samplerList[0] il sampler "bilinear"
+			.bindSamplerInArray  (0, handle_samplers[1], 1)             //bindo in samplerList[1] il sampler "point"
+			.end();
+	}
+
+	//descriptor set 1
+	if (!gpu->descrSetInstance_create (ctx.handle_descrPool, res_pipeline->pipeHandle, 1, &ctx.handle_descrSet1))
+	{
+		gos::logger::err ("RenderPipe::setup() => can't create an instance of descriptorSet_1\n");
+		return false;
+	}
+	else
+	{
+		dsw.begin (gpu, ctx.handle_descrSet1)
+			.bindUniformBuffer (0, ctx.handle_ubo_scene, 0)
+			.end();
+	}		
 
 	//la pipe non mi serve +
 	//engine->release(handle_pipeline);
-
-
-
-
 	return true;
 }
+
 
 //*******************************************
 u32	RenderPipe::texture_addIfNotExitst (GPUTextureHandle texHandle)
@@ -226,7 +227,6 @@ void RenderPipe::render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle
 	//bakcground color
 	gos::ColorHDR bgcol(0xFF6ec8d4);
 	bgcol.sRGBToLinear();
-
 
 	//cmd buffer
 	gos::gpu::CmdBufferWriter2 cw;

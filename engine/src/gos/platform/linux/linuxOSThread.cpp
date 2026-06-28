@@ -66,6 +66,19 @@ void platform::waitThreadEnd (OSThread &handle)
 }
 
 
+//*******************************************************************
+bool platform::mutexLock (OSMutex *m)
+{
+#ifdef _DEBUG
+	const int err = pthread_mutex_lock(m);
+	if (err == 0)
+		return true;
+	DBGBREAK;
+	return false;
+#else
+	return (pthread_mutex_lock(m) == 0); 
+#endif
+}
 
 
 

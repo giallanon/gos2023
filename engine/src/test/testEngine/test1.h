@@ -39,7 +39,6 @@ private:
 	gos::ENGSkeleton				handle_skeleton;
 	gos::ENGModel3d					handle_model;
 
-	gos::engine::RenderPipe			renderPipe;
 	gos::engine::Renderer1			*renderer1;
 	u64 nextTimeUpdate_msec;
 

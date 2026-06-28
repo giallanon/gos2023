@@ -113,7 +113,6 @@ private:
     gos::FreeMovement				movement;
 
 
-	gos::engine::RenderPipe				renderPipe;
 	gos::engine::Renderer_line3d		*renderer_line3d;
 	gos::engine::Renderer_line3d::Ctx 	*line_ctx1;
 	gos::engine::Renderer_line3d::Ctx 	*line_ctx2;

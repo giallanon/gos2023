@@ -18,7 +18,11 @@ void VulkanDevice::priv_reset()
 void VulkanDevice::unsetup()
 {
     if (VK_NULL_HANDLE == vkDev)
-        return;
+	{
+		return;
+	}
+
+	thread::mutexDestroy(mutex_memAlloc);
 
     for (u8 i=0; i<numQFamily; i++)
         qfamilyList[i].unsetup();
@@ -49,6 +53,8 @@ void VulkanDevice::priv_addNativeQFamily (eGPUQueueFamily familyType, u32 family
 //*******************************************
 bool VulkanDevice::setup (const sPhyDeviceInfo &phyInfo, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion)
 {
+	thread::mutexCreate(&mutex_memAlloc);
+
     assert (VK_NULL_HANDLE == vkDev);
     this->phyDevInfo = phyInfo;
 
@@ -574,7 +580,14 @@ bool VulkanDevice::priv_getMemoryType (uint32_t typeBits, VkMemoryPropertyFlags 
 }
 
 //*******************************************
-bool VulkanDevice::priv_allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory)
+bool VulkanDevice::priv_allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory, const char *debug_from_who)
+{
+	thread::mutexLock(mutex_memAlloc);
+	const bool ret = priv__do_allocMemory (pAllocateInfo,pMemory, debug_from_who);
+	thread::mutexUnlock(mutex_memAlloc);
+	return ret;
+}
+bool VulkanDevice::priv__do_allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory, const char *debug_from_who)
 {
     const VkResult result = vkAllocateMemory (vkDev, pAllocateInfo, nullptr, pMemory);
     if (VK_SUCCESS == result)
@@ -588,7 +601,7 @@ bool VulkanDevice::priv_allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, 
         char debug_m2[32];
         gos::string::format::memoryToKB_MB_GB(pAllocateInfo->allocationSize, debug_m1, sizeof(debug_m1));
         gos::string::format::memoryToKB_MB_GB(memory_curAllocated, debug_m2, sizeof(debug_m2));
-        gos::logger::log (eTextColor::cyan, "VulkanDevice::allocMemory(%s), cur allocated:%s\n", debug_m1, debug_m2);
+        gos::logger::log (eTextColor::cyan, "VulkanDevice::allocMemory(%s) [%s], cur allocated:%s\n", debug_m1, debug_from_who, debug_m2);
 #endif
         return true;
     }
@@ -599,6 +612,12 @@ bool VulkanDevice::priv_allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, 
 
 //*********************************************
 void VulkanDevice::priv_freeMemory (VkDeviceMemory memory, u64 memSize)
+{
+	thread::mutexLock(mutex_memAlloc);
+	priv__do_freeMemory (memory, memSize);
+	thread::mutexUnlock(mutex_memAlloc);
+}
+void VulkanDevice::priv__do_freeMemory (VkDeviceMemory memory, u64 memSize)
 {
     if (memory_curAllocated >= memSize)
         memory_curAllocated -= memSize;
@@ -724,7 +743,7 @@ bool VulkanDevice::image_create2D (u32 dimx, u32 dimy, u8 nMipMap, VkFormat fmt,
 	memAllloc.allocationSize = memReqs.size;
     priv_getMemoryType (memReqs.memoryTypeBits, vkMemProperties, &memAllloc.memoryTypeIndex);
 
-    if (!priv_allocMemory (&memAllloc, out_vkMemHandle))
+    if (!priv_allocMemory (&memAllloc, out_vkMemHandle, "image_create2D"))
     {
         gos::logger::err ("VulkanDevice::image_create2D() => error allocating memory\n");
         return false;
@@ -852,7 +871,7 @@ bool VulkanDevice::buffer_create (u32 sizeInByte, VkBufferUsageFlags usage, VkMe
 	memAllloc.allocationSize = memReqs.size;
     priv_getMemoryType (memReqs.memoryTypeBits, memProperties, &memAllloc.memoryTypeIndex);
 
-    if (!priv_allocMemory (&memAllloc, out_vkMemHandle))
+    if (!priv_allocMemory (&memAllloc, out_vkMemHandle, "buffer_create"))
     {
         gos::logger::err ("VulkanDevice::buffer_create() => error allocating memory\n");
         return false;
@@ -932,7 +951,7 @@ void VulkanDevice::descriptorSet_delete (VkDescriptorPool vkPoolHandle, VkDescri
 }
 
 //*********************************************
-void VulkanDevice::descriptorSet_update (u32 descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites, u32 descriptorCopyCount, const VkCopyDescriptorSet *pDescriptorCopies) const
+void VulkanDevice:: descriptorSet_update (u32 descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites, u32 descriptorCopyCount, const VkCopyDescriptorSet *pDescriptorCopies) const
 {
     vkUpdateDescriptorSets (vkDev, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
 }

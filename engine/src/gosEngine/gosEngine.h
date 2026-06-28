@@ -4,6 +4,7 @@
 #include "gosEngine_vtxBufferMan.h"
 #include "gosEngine_idxBufferMan.h"
 #include "gosEngine_scene.h"
+#include "renderPipe/gosEngineRenderPipe.h"
 #include "res/gosEngineRes.h"
 #include "../gos/logger/gosLoggerStdout.h"
 #include "../gos/gosObjectPool.h"
@@ -32,6 +33,7 @@ namespace gos
     public:
         gos::GPU                *gpu;
         gos::input::Context     *inputCtx;
+		engine::RenderPipe		renderPipe;
 
     public:
                             Engine();
@@ -61,15 +63,15 @@ namespace gos
         bool            vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer *out_handle);
         void            release (ENGVtxBuffer &handle)																{ res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGVtxBuffer handle, const res::VtxBuffer **out)										{ return res_getOrScheduleLoadT(handle, out, 0); }
-		void            vtxBuffer_on_afterCreate (void *res);
-		void            vtxBuffer_on_destroy (void *res);
+		void            internal__vtxBuffer_on_afterCreate (void *res);
+		void            internal__vtxBuffer_on_destroy (void *res);
 
         //============================= idxBuffer
         bool            idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGIdxBuffer *out_handle);
         void            release (ENGIdxBuffer &handle)																{ res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGIdxBuffer handle, const res::IdxBuffer **out)										{ return res_getOrScheduleLoadT(handle, out, 0); }
-		void 			idxBuffer_on_afterCreate (void *res);
-		void            idxBuffer_on_destroy (void *res);
+		void 			internal__idxBuffer_on_afterCreate (void *res);
+		void            internal__idxBuffer_on_destroy (void *res);
 
         //============================= vtxshader
         bool            vtxshader_createFromAsset (const char *uid_runtimeName, ENGVtxShader *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)	{ return res_createFromAssetT (uid_runtimeName, out_handle, loadMode); }
@@ -77,8 +79,8 @@ namespace gos
         bool            vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGVtxShader *out_handle);
         void            release (ENGVtxShader &handle)                                                            	{ res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGVtxShader handle, const res::Shader **out, u64 timeout_msec = 0)            		{ return res_getOrScheduleLoadT(handle, out, timeout_msec); }
-		void 			vtxshader_on_afterCreate (void *res);
-		void            vtxshader_on_destroy (void *res);
+		void 			internal__vtxshader_on_afterCreate (void *res);
+		void            internal__vtxshader_on_destroy (void *res);
 
         //============================= pxlshader
         bool            pxlshader_createFromAsset (const char *uid_runtimeName, ENGPxlShader *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)	{ return res_createFromAssetT (uid_runtimeName, out_handle, loadMode); }
@@ -86,15 +88,15 @@ namespace gos
         bool            pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGPxlShader *out_handle);
         void            release (ENGPxlShader &handle)                                                            	{ res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGPxlShader handle, const res::Shader **out, u64 timeout_msec = 0)            		{ return res_getOrScheduleLoadT(handle, out, timeout_msec); }
-		void 			pxlshader_on_afterCreate (void *res);
-		void            pxlshader_on_destroy (void *res);
+		void 			internal__pxlshader_on_afterCreate (void *res);
+		void            internal__pxlshader_on_destroy (void *res);
 
         //============================= pipeline
         bool            pipeline_createFromAsset (const char *uid_runtimeName, ENGPipeline *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)	{ return res_createFromAssetT (uid_runtimeName, out_handle, loadMode); }
         void            release (ENGPipeline &handle)                                                              	{ res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGPipeline handle, const res::Pipeline **out, u64 timeout_msec = 0)            		{ return res_getOrScheduleLoadT(handle, out, timeout_msec); }
-		void 			pipeline_on_afterCreate (void *res);
-		void            pipeline_on_destroy (void *res);
+		void 			internal__pipeline_on_afterCreate (void *res);
+		void            internal__pipeline_on_destroy (void *res);
 
         //============================= texture2D
         bool            texture2D_createFromAsset (const char *uid_runtimeName, ENGTexture *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)	{ return res_createFromAssetT (uid_runtimeName, out_handle, loadMode); }
@@ -102,16 +104,19 @@ namespace gos
         bool            texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture *out_handle, gpu::StageHelper &stageHelper);
         void            release (ENGTexture &handle)                                                                { res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGTexture handle, const res::Texture2d **out, u64 timeout_msec = 0)               	{ return res_getOrScheduleLoadT(handle, out, timeout_msec); }
-		void 			texture2D_on_afterCreate (void *res);
-		void            texture2D_on_destroy (void *res);
+		void 			internal__texture2D_on_afterCreate (void *res);
+		void            internal__texture2D_on_destroy (void *res);
+
+		ENGTexture		handle_texture_bianca;
+		bool            get_texture_bianca (const res::Texture2d **out)               								{ return res_getOrScheduleLoadT(handle_texture_bianca, out, 0); }
 
         //============================= shape
         bool            shape_createFromAsset (const char *uid_runtimeName, ENGShape *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)		{ return res_createFromAssetT (uid_runtimeName, out_handle, loadMode); }
         bool            shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, ENGShape *out_handle);
         void			release (ENGShape &handle)																	{ res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGShape handle, const res::Shape **out, u64 timeout_msec = 0)							{ return res_getOrScheduleLoadT(handle, out, timeout_msec); }
-		void 			shape_on_afterCreate (void *res);
-		void            shape_on_destroy (void *res);
+		void 			internal__shape_on_afterCreate (void *res);
+		void            internal__shape_on_destroy (void *res);
 
         //============================= GPUShape
 		bool            GPUShape_create (ENGShape handle_shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle);
@@ -119,8 +124,8 @@ namespace gos
         void            release (ENGGPUShape &handle)																{ res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGGPUShape handle, const res::GPUShape **out)                                  		{ return res_getOrScheduleLoadT(handle, out, 0); }
 		bool            get (ENGShape handle, const res::GPUShape **out);
-		void 			GPUShape_on_afterCreate (void *res);
-		void            GPUShape_on_destroy (void *res);
+		void 			internal__GPUShape_on_afterCreate (void *res);
+		void            internal__GPUShape_on_destroy (void *res);
         
 
 		//============================= skeleton
@@ -129,16 +134,17 @@ namespace gos
 		bool            skeleton_create (const Skeleton &sk, ENGSkeleton *out_handle);
         void            release (ENGSkeleton &handle)																{ res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGSkeleton handle, const res::Skeleton **out, u64 timeout_msec = 0)        			{ return res_getOrScheduleLoadT(handle, out, timeout_msec); }
-		void 			skeleton_on_afterCreate (void *res);
-		void            skeleton_on_destroy (void *res);
+		void 			internal__skeleton_on_afterCreate (void *res);
+		void            internal__skeleton_on_destroy (void *res);
 
-        //============================= shape
+        //============================= material
         bool            materialPBR_createFromAsset (const char *uid_runtimeName, ENGMaterialPBR *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)		{ return res_createFromAssetT (uid_runtimeName, out_handle, loadMode); }
-        bool            materialPBR_create (ENGMaterialPBR *out_handle);
+						//TODO: l'idea e' che dopo "create" devo poter ottenere un pt al materiale per poterlo modificare
+		bool            materialPBR_create (ENGMaterialPBR *out_handle);
         void			release (ENGMaterialPBR &handle)															{ res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGMaterialPBR handle, const res::MaterialPBR **out, u64 timeout_msec = 0)				{ return res_getOrScheduleLoadT(handle, out, timeout_msec); }
-		void 			materialPBR_on_afterCreate (void *res);
-		void            materialPBR_on_destroy (void *res);
+		void 			internal__materialPBR_on_afterCreate (void *res);
+		void            internal__materialPBR_on_destroy (void *res);
 
 
 		//============================= model3d
@@ -146,16 +152,16 @@ namespace gos
         gos::Model*		model_create (ENGSkeleton handle_skeleton, u16 num_shape, u16 num_material, u16 num_meshes, ENGModel3d *out_handle);
         void            release (ENGModel3d &handle)																{ res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGModel3d handle, const res::Model3d **out, u64 timeout_msec = 0)        				{ return res_getOrScheduleLoadT(handle, out, timeout_msec); }
-		void 			model_on_afterCreate (void *res);
-		void            model_on_destroy (void *res);
+		void 			internal__model_on_afterCreate (void *res);
+		void            internal__model_on_destroy (void *res);
 		
 		//============================= model instance
         bool            modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_handle);
         void            release (ENGModel3dInst &handle)															{ res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGModel3dInst handle, const res::Model3dInst **out)                           		{ return res_getOrScheduleLoadT(handle, out, 0); }
 		void            modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &matW);
-		void 			modelinst_on_afterCreate (void *res);
-		void            modelinst_on_destroy (void *res);
+		void 			internal__modelinst_on_afterCreate (void *res);
+		void            internal__modelinst_on_destroy (void *res);
 
 
     private:
@@ -263,6 +269,8 @@ namespace gos
 		res::Manager 								resManager;
 		FastHashMap<ENGShape, ENGGPUShape>			map_of_shape_to_gpushape;
 		gos::ObjectPool<res::HandleChain>			resHandleChainPool;
+
+		
 		
 
 

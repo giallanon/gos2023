@@ -127,8 +127,10 @@ namespace gos
         u8                  priv_from_family_to_index (eGPUQueueFamily type) const          { return map_qfamily_to_q[static_cast<u8>(type)]; }
         void                priv_addNativeQFamily (eGPUQueueFamily familyType, u32 familyIndex);
         bool                priv_getMemoryType (uint32_t typeBits, VkMemoryPropertyFlags properties, u32 *out_index);
-        bool                priv_allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory);
+        bool                priv_allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory, const char *debug_from_who);
+		bool                priv__do_allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory, const char *debug_from_who);
         void                priv_freeMemory (VkDeviceMemory memory, u64 memSize);
+		void                priv__do_freeMemory (VkDeviceMemory memory, u64 memSize);
 
     private:
         sPhyDeviceInfo      phyDevInfo;
@@ -138,7 +140,7 @@ namespace gos
         VulkanQFamily       qfamilyList[NUM_MAX_QFAMILY];
         u8                  map_qfamily_to_q[NUM_MAX_QFAMILY];
         u8                  numQFamily;
-
+		gos::Mutex			mutex_memAlloc;
     };    
 } //namespace gos
 

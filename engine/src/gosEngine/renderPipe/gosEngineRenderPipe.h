@@ -55,13 +55,7 @@ namespace gos
 			};
 
 		public:
-					RenderPipe();
-					~RenderPipe()																			{ unsetup(); }
-
-			bool	setup (gos::Allocator *allocator, Engine *eng);
-			void	unsetup();
-
-            //==== gestione texture ====
+            //======= gestione texture ====
             u32		texture_addIfNotExitst (GPUTextureHandle texHandle);
             void	texture_remove (GPUTextureHandle texHandle)                                     { texture_array.remove(texHandle); }
             bool	texture_find (GPUTextureHandle texHandle, u32 *out_index) const                 { return texture_array.find(texHandle, out_index); }
@@ -82,6 +76,12 @@ namespace gos
             static constexpr u32    NUM_MAX_TEXTURE     = 1024;
 
 		private:
+					//solo engine puo' istanziare RenderPipe
+					RenderPipe();
+					~RenderPipe()																			{ unsetup(); }
+			bool	setup (gos::Allocator *allocator, Engine *eng);
+			void	unsetup();
+
 			void 	priv_add_renderer (Renderer *r);
 
         private:
@@ -91,6 +91,9 @@ namespace gos
 			ENGPipeline 				handle_pipeline;
 			GPUSamplerHandle            handle_samplers[2];
 			gos::FastArray<Renderer*>	renderer_list;
+
+
+		friend Engine;
 		};
 	} //namespace engine
 } //namespace gos

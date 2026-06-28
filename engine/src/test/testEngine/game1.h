@@ -45,13 +45,11 @@ private:
 	gos::ent::Registry				entRegistry;
     gos::geom::Camera3				cam;
 
-	gos::engine::RenderPipe			renderPipe;
 	gos::engine::Renderer1			*renderer1;
 	gos::engine::Renderer_line3d	*renderer_line3d;
 
 	gos::ENGGPUShape				handle_gpushape_cube;
 	gos::ENGGPUShape				handle_gpushape_cyl;
-	gos::ENGTexture					handle_texBianca;
 	gos::ENGTexture					handle_texChecker;
     u32								material_indices[4];
 

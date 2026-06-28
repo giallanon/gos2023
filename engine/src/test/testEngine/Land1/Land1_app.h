@@ -40,7 +40,6 @@ private:
 	Land1::Map							map;
 	Land1::Renderer						*renderer_land;
 	
-	gos::ENGTexture			handle_texBianca;
 	gos::ENGModel3d 		handle_model_albero;
 	gos::ENGModel3dInst		modelinst_albero[NUM_MAX_ALBERI];
 	u32						num_alberi;

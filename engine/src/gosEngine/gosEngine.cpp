@@ -31,6 +31,10 @@ void Engine::unsetup()
     thread::deleteMsgQ (msgq_1R, msgq_1W);
     thread::deleteMsgQ (msgq_2R, msgq_2W);
 
+	//renderPipe
+	release(handle_texture_bianca);
+	renderPipe.unsetup();
+
     //resource manager
 	resManager.unsetup();
 	resHandleChainPool.unsetup();
@@ -212,6 +216,25 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
         return false;
     }
     thread::eventDestroy (params.hEvent_started);
+
+
+	//renderPipe
+	handle_texture_bianca.setInvalid();
+	if (!renderPipe.setup (allocator, this))
+		return false;
+	else
+	{
+		gpu::StageHelper stageHelper;
+		stageHelper.setup (gpu, 1024*1024);
+
+		//creo la "tex_bianca"
+		u16 dimx = 64;
+		u16 dimy = 64;
+		u8 *srcDATA = GOSALLOCT(u8*, gos::getScrapAllocator(), dimx*dimy*sizeof(u32));
+		memset (srcDATA, 0xFF, dimx*dimy*sizeof(u32));
+		texture2D_create (dimx, dimy, 1, eImageFormat::U8_RGBA, eMemAccessMode::onGPU, srcDATA, &handle_texture_bianca, stageHelper);
+		GOSFREE(gos::getScrapAllocator(), srcDATA);
+	}
 
     return true;
 }
@@ -455,63 +478,63 @@ void Engine::res_bindEvents (res::Handle handle, res::Descr *res)
 		return;
 
 	case res::eType::vtx_buffer:	
-		res->on_afterCreate = &Engine::vtxBuffer_on_afterCreate;
-		res->on_destroy = &Engine::vtxBuffer_on_destroy;
+		res->on_afterCreate = &Engine::internal__vtxBuffer_on_afterCreate;
+		res->on_destroy = &Engine::internal__vtxBuffer_on_destroy;
 		return;
 
 	case res::eType::idx_buffer:
-		res->on_afterCreate = &Engine::idxBuffer_on_afterCreate;
-		res->on_destroy = &Engine::idxBuffer_on_destroy;
+		res->on_afterCreate = &Engine::internal__idxBuffer_on_afterCreate;
+		res->on_destroy = &Engine::internal__idxBuffer_on_destroy;
 		return;
 
 	case res::eType::vtx_shader:
-		res->on_afterCreate = &Engine::vtxshader_on_afterCreate;
-		res->on_destroy = &Engine::vtxshader_on_destroy;
+		res->on_afterCreate = &Engine::internal__vtxshader_on_afterCreate;
+		res->on_destroy = &Engine::internal__vtxshader_on_destroy;
 		return;
 
 	case res::eType::pxl_shader:
-		res->on_afterCreate = &Engine::pxlshader_on_afterCreate;
-		res->on_destroy = &Engine::pxlshader_on_destroy;
+		res->on_afterCreate = &Engine::internal__pxlshader_on_afterCreate;
+		res->on_destroy = &Engine::internal__pxlshader_on_destroy;
 		return;
 
 	case res::eType::pipeline:
-		res->on_afterCreate = &Engine::pipeline_on_afterCreate;
-		res->on_destroy = &Engine::pipeline_on_destroy;
+		res->on_afterCreate = &Engine::internal__pipeline_on_afterCreate;
+		res->on_destroy = &Engine::internal__pipeline_on_destroy;
 		return;
 
 	case res::eType::texture_2d:
-		res->on_afterCreate = &Engine::texture2D_on_afterCreate;
-		res->on_destroy = &Engine::texture2D_on_destroy;
+		res->on_afterCreate = &Engine::internal__texture2D_on_afterCreate;
+		res->on_destroy = &Engine::internal__texture2D_on_destroy;
 		return;
 
 	case res::eType::shape:
-		res->on_afterCreate = &Engine::shape_on_afterCreate;
-		res->on_destroy = &Engine::shape_on_destroy;
+		res->on_afterCreate = &Engine::internal__shape_on_afterCreate;
+		res->on_destroy = &Engine::internal__shape_on_destroy;
 		return;
 
 	case res::eType::gpu_shape:
-		res->on_afterCreate = &Engine::GPUShape_on_afterCreate;
-		res->on_destroy = &Engine::GPUShape_on_destroy;
+		res->on_afterCreate = &Engine::internal__GPUShape_on_afterCreate;
+		res->on_destroy = &Engine::internal__GPUShape_on_destroy;
 		return;
 
 	case res::eType::skeleton:
-		res->on_afterCreate = &Engine::skeleton_on_afterCreate;
-		res->on_destroy = &Engine::skeleton_on_destroy;
+		res->on_afterCreate = &Engine::internal__skeleton_on_afterCreate;
+		res->on_destroy = &Engine::internal__skeleton_on_destroy;
 		return;
 
 	case res::eType::model_3d:
-		res->on_afterCreate = &Engine::model_on_afterCreate;
-		res->on_destroy = &Engine::model_on_destroy;
+		res->on_afterCreate = &Engine::internal__model_on_afterCreate;
+		res->on_destroy = &Engine::internal__model_on_destroy;
 		return;
 
 	case res::eType::model_instance:
-		res->on_afterCreate = &Engine::modelinst_on_afterCreate;
-		res->on_destroy = &Engine::modelinst_on_destroy;
+		res->on_afterCreate = &Engine::internal__modelinst_on_afterCreate;
+		res->on_destroy = &Engine::internal__modelinst_on_destroy;
 		return;
 	
 	case res::eType::materialPBR:
-		res->on_afterCreate = &Engine::materialPBR_on_afterCreate;
-		res->on_destroy = &Engine::materialPBR_on_destroy;
+		res->on_afterCreate = &Engine::internal__materialPBR_on_afterCreate;
+		res->on_destroy = &Engine::internal__materialPBR_on_destroy;
 		return;
 	
 	}
@@ -807,16 +830,16 @@ bool Engine::vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer
 	return gpu->vertexBuffer_create (sizeInByte, mode, &res->vbHandle);
 }
 
-void Engine::vtxBuffer_on_afterCreate (void *resIN)
+void Engine::internal__vtxBuffer_on_afterCreate (void *resIN)
 {
-	//asset_logger->log ("vtxBuffer_on_afterCreate\n");
+	//asset_logger->log ("internal__vtxBuffer_on_afterCreate\n");
 	res::VtxBuffer *res = (res::VtxBuffer*)resIN;
 	res->vbHandle.setInvalid();
 }
 
-void Engine::vtxBuffer_on_destroy (void *resIN)
+void Engine::internal__vtxBuffer_on_destroy (void *resIN)
 {
-	//asset_logger->log ("vtxBuffer_on_destroy\n");
+	//asset_logger->log ("internal__vtxBuffer_on_destroy\n");
 	res::VtxBuffer *res = (res::VtxBuffer*)resIN;
 	gpu->deleteResource (res->vbHandle);
 }
@@ -837,16 +860,16 @@ bool Engine::idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGIdxBuffer
 	return gpu->indexBuffer_create (sizeInByte, mode, &res->ibHandle);
 }
 
-void Engine::idxBuffer_on_afterCreate (void *resIN)
+void Engine::internal__idxBuffer_on_afterCreate (void *resIN)
 {
-	asset_logger->log ("idxBuffer_on_afterCreate\n");
+	asset_logger->log ("internal__idxBuffer_on_afterCreate\n");
 	res::IdxBuffer *res = (res::IdxBuffer*)resIN;
 	res->ibHandle.setInvalid();
 }
 
-void Engine::idxBuffer_on_destroy (void *resIN)
+void Engine::internal__idxBuffer_on_destroy (void *resIN)
 {
-	//asset_logger->log ("idxBuffer_on_destroy\n");
+	//asset_logger->log ("internal__idxBuffer_on_destroy\n");
 	res::IdxBuffer *res = (res::IdxBuffer*)resIN;
 	gpu->deleteResource (res->ibHandle);
 }
@@ -879,16 +902,16 @@ bool Engine::vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, c
     return gpu->vtxshader_createFromMemory (bufferIN, bufferSize, mainFnName, &res->shaderHandle);
 }
 
-void Engine::vtxshader_on_afterCreate (void *resIN)
+void Engine::internal__vtxshader_on_afterCreate (void *resIN)
 {
-	//asset_logger->log ("vtxshader_on_afterCreate\n");
+	//asset_logger->log ("internal__vtxshader_on_afterCreate\n");
 	res::Shader *res = (res::Shader*)resIN;
 	res->shaderHandle.setInvalid();
 }
 
-void Engine::vtxshader_on_destroy (void *resIN)
+void Engine::internal__vtxshader_on_destroy (void *resIN)
 {
-	//asset_logger->log ("vtxshader_on_destroy\n");
+	//asset_logger->log ("internal__vtxshader_on_destroy\n");
 	res::Shader *res = (res::Shader*)resIN;
 	gpu->deleteResource (res->shaderHandle);
 }
@@ -921,16 +944,16 @@ bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, c
     return gpu->pxlshader_createFromMemory (bufferIN, bufferSize, mainFnName, &res->shaderHandle);
 }
 
-void Engine::pxlshader_on_afterCreate (void *resIN)
+void Engine::internal__pxlshader_on_afterCreate (void *resIN)
 {
-	//asset_logger->log ("pxlshader_on_afterCreate\n");
+	//asset_logger->log ("internal__pxlshader_on_afterCreate\n");
 	res::Shader *res = (res::Shader*)resIN;
 	res->shaderHandle.setInvalid();
 }
 
-void Engine::pxlshader_on_destroy (void *resIN)
+void Engine::internal__pxlshader_on_destroy (void *resIN)
 {
-	//asset_logger->log ("pxlshader_on_destroy\n");
+	//asset_logger->log ("internal__pxlshader_on_destroy\n");
 	res::Shader *res = (res::Shader*)resIN;
 	gpu->deleteResource (res->shaderHandle);
 }
@@ -939,16 +962,16 @@ void Engine::pxlshader_on_destroy (void *resIN)
 /**************************************************************** 
  * PIPELINE
  *****************************************************************/
-void Engine::pipeline_on_afterCreate (void *resIN)
+void Engine::internal__pipeline_on_afterCreate (void *resIN)
 {
-	//asset_logger->log ("pipeline_on_afterCreate\n");
+	//asset_logger->log ("internal__pipeline_on_afterCreate\n");
 	res::Pipeline *res = (res::Pipeline*)resIN;
 	res->pipeHandle.setInvalid();
 }
 
- void Engine::pipeline_on_destroy (void *resIN)
+ void Engine::internal__pipeline_on_destroy (void *resIN)
 {
-	//asset_logger->log ("pipeline_on_destroy\n");
+	//asset_logger->log ("internal__pipeline_on_destroy\n");
 	res::Pipeline *res = (res::Pipeline*)resIN;
 	gpu->deleteResource (res->pipeHandle);
 }
@@ -981,16 +1004,16 @@ bool Engine::texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAcces
     return gpu->texture_create2D (im, srcTextureNum, memAccessMode, &res->texHandle, stageHelper);
 }
 
-void Engine::texture2D_on_afterCreate (void *resIN)
+void Engine::internal__texture2D_on_afterCreate (void *resIN)
 {
-	//asset_logger->log ("texture2D_on_afterCreate\n");
+	//asset_logger->log ("internal__texture2D_on_afterCreate\n");
 	res::Texture2d *res = (res::Texture2d*)resIN;
 	res->texHandle.setInvalid();
 }
 
-void Engine::texture2D_on_destroy (void *resIN)
+void Engine::internal__texture2D_on_destroy (void *resIN)
 {
-	//asset_logger->log ("texture2D_on_destroy\n");
+	//asset_logger->log ("internal__texture2D_on_destroy\n");
 	res::Texture2d *res = (res::Texture2d*)resIN;
 	gpu->deleteResource (res->texHandle);
 }
@@ -1018,16 +1041,16 @@ bool Engine::shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, E
     return true;
 }
 
-void Engine::shape_on_afterCreate (void *resIN)
+void Engine::internal__shape_on_afterCreate (void *resIN)
 {
-	//asset_logger->log ("shape_on_afterCreate\n");
+	//asset_logger->log ("internal__shape_on_afterCreate\n");
 	res::Shape *res = (res::Shape*)resIN;
 	res->shape.reset();
 }
 
-void Engine::shape_on_destroy (void *resIN)
+void Engine::internal__shape_on_destroy (void *resIN)
 {
-	//asset_logger->log ("shape_on_destroy\n");
+	//asset_logger->log ("internal__shape_on_destroy\n");
 	res::Shape *res = (res::Shape*)resIN;
 	shape::shapeFree (allocator, &res->shape);
 }
@@ -1114,9 +1137,9 @@ bool Engine::priv_GPUShape_create (const gos::Shape *shape, gpu::StageHelper &st
     return true;
 }
 
-void Engine::GPUShape_on_afterCreate (void *resIN)
+void Engine::internal__GPUShape_on_afterCreate (void *resIN)
 {
-	//asset_logger->log ("GPUShape_on_afterCreate\n");
+	//asset_logger->log ("internal__GPUShape_on_afterCreate\n");
 	res::GPUShape *res = (res::GPUShape*)resIN;
 	res->handle_shape.setInvalid();
 	res->vbHandle.setInvalid();
@@ -1129,9 +1152,9 @@ void Engine::GPUShape_on_afterCreate (void *resIN)
 	res->alloc_idxbuf_size = 0;	
 }
 
-void Engine::GPUShape_on_destroy (void *resIN)
+void Engine::internal__GPUShape_on_destroy (void *resIN)
 {
-	//asset_logger->log ("GPUShape_on_destroy\n");
+	//asset_logger->log ("internal__GPUShape_on_destroy\n");
 	res::GPUShape *res = (res::GPUShape*)resIN;
 	if (res->numVertex)
 		vtxBufferMan.release (res->vbHandle, res->alloc_vtxbuf_offset, res->alloc_vtxbuf_size);
@@ -1176,16 +1199,16 @@ bool Engine::skeleton_createFromMemory (const u8 *buffer, u32 sizeof_buffer, ENG
     return true;
 }
 
-void Engine::skeleton_on_afterCreate (void *resIN)
+void Engine::internal__skeleton_on_afterCreate (void *resIN)
 {
-	//asset_logger->log ("skeleton_on_afterCreate\n");
+	//asset_logger->log ("internal__skeleton_on_afterCreate\n");
 	res::Skeleton *res = (res::Skeleton*)resIN;
 	res->skeleton.reset();
 }
 
-void Engine::skeleton_on_destroy (void *resIN)
+void Engine::internal__skeleton_on_destroy (void *resIN)
 {
-	//asset_logger->log ("skeleton_on_destroy\n");
+	//asset_logger->log ("internal__skeleton_on_destroy\n");
 	res::Skeleton *res = (res::Skeleton*)resIN;
 	skeleton::free (res->skeleton);
 }
@@ -1214,16 +1237,16 @@ gos::Model*	Engine::model_create (ENGSkeleton handle_skeleton, u16 num_shape, u1
     return &res->model;
 }
 
-void Engine::model_on_afterCreate (void *resIN)
+void Engine::internal__model_on_afterCreate (void *resIN)
 {
-	//asset_logger->log ("model_on_afterCreate\n");
+	//asset_logger->log ("internal__model_on_afterCreate\n");
 	res::Model3d *res = (res::Model3d*)resIN;
 	res->model.reset();
 }
 
-void Engine::model_on_destroy (void *resIN)
+void Engine::internal__model_on_destroy (void *resIN)
 {
-	//asset_logger->log ("model_on_destroy\n");
+	//asset_logger->log ("internal__model_on_destroy\n");
 	res::Model3d *res = (res::Model3d*)resIN;
 	model::free(res->model);
 }
@@ -1290,19 +1313,22 @@ bool Engine::modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_hand
 	mi->listof_bones = GOSALLOCT(Bone*, allocator, sizeof(Bone) * mi->num_bones);	
 	memcpy (mi->listof_bones, mi->model_listof_bones, sizeof(Bone) * mi->num_bones);
 
+	mi->num_materials = mr.material_get_num();
+	mi->listof_materials = mr.material_get_pt_to_list();
+
 	return true;
 }
 
-void Engine::modelinst_on_afterCreate (void *resIN)
+void Engine::internal__modelinst_on_afterCreate (void *resIN)
 {
-	//asset_logger->log ("modelinst_on_afterCreate\n");
+	//asset_logger->log ("internal__modelinst_on_afterCreate\n");
 	res::Model3dInst *res = (res::Model3dInst*)resIN;
 	res->minst.reset();
 }
 
-void Engine::modelinst_on_destroy (void *resIN)
+void Engine::internal__modelinst_on_destroy (void *resIN)
 {
-	//asset_logger->log ("modelinst_on_destroy\n");
+	//asset_logger->log ("internal__modelinst_on_destroy\n");
 	res::Model3dInst *res = (res::Model3dInst*)resIN;
 	res->minst.free();
 }
@@ -1349,7 +1375,7 @@ bool Engine::materialPBR_create (ENGMaterialPBR *out_handle)
     return true;
 }
 
-void Engine::materialPBR_on_afterCreate (void *resIN)
+void Engine::internal__materialPBR_on_afterCreate (void *resIN)
 {
 	//asset_logger->log ("materialPBR_on_afterCreate\n");
 	res::MaterialPBR *res = (res::MaterialPBR*)resIN;
@@ -1357,9 +1383,9 @@ void Engine::materialPBR_on_afterCreate (void *resIN)
 	res->diffuse_texture_index = 0;
 }
 
-void Engine::materialPBR_on_destroy (void *resIN)
+void Engine::internal__materialPBR_on_destroy (void *resIN)
 {
-	//asset_logger->log ("materialPBR_on_destroy\n");
+	//asset_logger->log ("internal__materialPBR_on_destroy\n");
 	//res::MaterialPBR *res = (res::MaterialPBR*)resIN;
 
 }
