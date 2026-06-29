@@ -1,5 +1,8 @@
 #version 450
-#include "descriptor.shader"
+#include "../PIPE3__descriptor_0.shader"
+#include "../PIPE3__descriptor_1.shader"
+#include "descriptor_2.shader"
+
 
 //Input
 layout(location = 0) in vec3 in_position;

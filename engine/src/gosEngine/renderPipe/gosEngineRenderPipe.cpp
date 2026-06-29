@@ -1,5 +1,6 @@
 #include "gosEngineRenderPipe.h"
 #include "../gosEngine.h"
+#include <algorithm>
 
 using namespace gos;
 using namespace gos::engine;
@@ -7,6 +8,8 @@ using namespace gos::engine;
 //*******************************************
 RenderPipe::RenderPipe()
 {
+	next_renderer_UID = 0;
+
 	ctx.allocator = NULL;
 	ctx.engine = NULL;
 	ctx.frame_number = 0;
@@ -18,11 +21,12 @@ RenderPipe::RenderPipe()
 }
 
 //*******************************************
-void RenderPipe::unsetup()
+void RenderPipe::priv_unsetup()
 {
 	if (NULL == ctx.allocator)
 		return;
 
+	//release dei renderer addizionali
 	u32 n = renderer_list.getNElem();
 	for (u32 i=0; i<n; i++)
 	{
@@ -31,11 +35,9 @@ void RenderPipe::unsetup()
 	}
 	renderer_list.unsetup();
 
+	texture_array.unsetup();
 
-    texture_array.unsetup();
-
-	engine->release(handle_pipeline);
-
+	//release risorse di ctx
     engine->gpu->deleteResource(ctx.handle_zbuffer);
     engine->gpu->deleteResource(ctx.handle_rt0);
 	engine->gpu->deleteResource(ctx.handle_ubo_scene);
@@ -45,26 +47,37 @@ void RenderPipe::unsetup()
 	engine->gpu->deleteResource(ctx.handle_descrSet1);
     engine->gpu->deleteResource(ctx.handle_descrPool);
 	
+	engine->gpu->deleteResource (handle_descr_set_0);
+	engine->gpu->deleteResource (handle_descr_set_1);
 
 	ctx.allocator = NULL;
     ctx.engine = NULL;
 }
 
 //*******************************************
-bool RenderPipe::setup (gos::Allocator *allocatorIN, Engine *engineIN)
+bool RenderPipe::priv_setup (gos::Allocator *allocatorIN, Engine *engineIN)
 {
-	//Carico la pipeline di default
-	//Questa mi serve soltanto per tirare fuori il descriptor-set0. E' una pipeline fake
-	if (!engineIN->pipeline_createFromAsset ("gosengine_PIPE3", &handle_pipeline, res::eLoadMode::asap))
-	{
-		DBGBREAK;
-		return false;
-	}
-
 	engine = engineIN;
 	gos::GPU *gpu = engineIN->gpu;
 	ctx.allocator = allocatorIN;
 	ctx.engine = engineIN;
+
+	//descrivo i descriptor set 0 & 1 che sono comuni a tutte le PIPE
+	gpu::Pipeline_def def;
+	def
+		.reset()
+        .descriptorset_add(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT)
+            .add (0, eGPUDescriptrorType::SAMPLER, 2, eGPUDescriptrorUsage::vtx_shader | eGPUDescriptrorUsage::pxl_shader)
+			.add (1, eGPUDescriptrorType::TEXTURE2D, 1024, eGPUDescriptrorUsage::vtx_shader | eGPUDescriptrorUsage::pxl_shader)
+            .endDescriptorSet()
+        .descriptorset_add()
+            .add (0, eGPUDescriptrorType::UNIFORM_BUFFER, 1, eGPUDescriptrorUsage::vtx_shader | eGPUDescriptrorUsage::pxl_shader)
+            .endDescriptorSet()
+		;
+
+	engine->gpu->descrSetLayout_create (def.descriptorSetList[0], &handle_descr_set_0);
+	engine->gpu->descrSetLayout_create (def.descriptorSetList[1], &handle_descr_set_1);
+
 
 
 	//rt0
@@ -120,20 +133,11 @@ bool RenderPipe::setup (gos::Allocator *allocatorIN, Engine *engineIN)
 	renderer_list.setup (ctx.allocator, 16);
 
 
-
-    //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
-    const res::Pipeline *res_pipeline;
-    if (!engine->get (handle_pipeline, &res_pipeline, 5000))
-	{
-		DBGBREAK;
-		return false;
-	}
-
 	//alloco una istanza dei descriptor-set
 	gos::gpu::DescrSetInstanceWriter dsw;
 
 	//descriptor set 0
-	if (!gpu->descrSetInstance_create (ctx.handle_descrPool, res_pipeline->pipeHandle, 0, &ctx.handle_descrSet0))
+	if (!gpu->descrSetInstance_create (ctx.handle_descrPool, handle_descr_set_0, &ctx.handle_descrSet0))
 	{
 		gos::logger::err ("RenderPipe::setup() => can't create an instance of descriptorSet_0\n");
 		return false;
@@ -147,7 +151,7 @@ bool RenderPipe::setup (gos::Allocator *allocatorIN, Engine *engineIN)
 	}
 
 	//descriptor set 1
-	if (!gpu->descrSetInstance_create (ctx.handle_descrPool, res_pipeline->pipeHandle, 1, &ctx.handle_descrSet1))
+	if (!gpu->descrSetInstance_create (ctx.handle_descrPool, handle_descr_set_1, &ctx.handle_descrSet1))
 	{
 		gos::logger::err ("RenderPipe::setup() => can't create an instance of descriptorSet_1\n");
 		return false;
@@ -157,10 +161,8 @@ bool RenderPipe::setup (gos::Allocator *allocatorIN, Engine *engineIN)
 		dsw.begin (gpu, ctx.handle_descrSet1)
 			.bindUniformBuffer (0, ctx.handle_ubo_scene, 0)
 			.end();
-	}		
+	}
 
-	//la pipe non mi serve +
-	//engine->release(handle_pipeline);
 	return true;
 }
 
@@ -186,8 +188,13 @@ u32	RenderPipe::texture_addIfNotExitst (GPUTextureHandle texHandle)
 //*******************************************
 void RenderPipe::priv_add_renderer (Renderer *r)
 { 
+	//ad ogni renderer associo un UID progressivo che serve a loro per conoscere quale slot di
+	//modelInstance->renderer_bindings[] utilizzare per storare informazioni personali
+	assert (next_renderer_UID < gos::ModelInstance::NUM_MAX_RENDERER);
+
+	const u8 renderer_UID = next_renderer_UID++;
 	renderer_list.append(r);
-	r->on__attach(ctx); 
+	r->on__attach(ctx, renderer_UID); 
 }
 
 //*******************************************
@@ -205,7 +212,6 @@ void RenderPipe::remove_renderer (Renderer *r)
 		}
 	}
 }
-
 
 //*******************************************
 void RenderPipe::render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle cmdBufferHandle, gos::geom::Camera3 *cam)
@@ -242,6 +248,8 @@ void RenderPipe::render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle
 			.withZB (ctx.handle_zbuffer, eAttachmentLoadOp::clear, eAttachmentStoreOp::store)
 		.define_end();
 
+
+	//rendering
 	const u32 n = renderer_list.getNElem();
 	for (u32 i=0; i<n; i++)
 	{
@@ -250,9 +258,6 @@ void RenderPipe::render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle
 	
 	rctx.end_render_ctx();
 
-
-	
-	
 
 	cw	.imageTransition (ctx.handle_rt0, eImageLayout::color_attachment_optimal, eImageLayout::transfer_src)
 		.imageTransition (swapchainImg.image, eImageLayout::undefined, eImageLayout::transfer_dst)

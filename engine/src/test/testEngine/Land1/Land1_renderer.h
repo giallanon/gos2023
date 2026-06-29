@@ -24,8 +24,8 @@ namespace Land1
 		void	add_exa (const Exa *exa);
 		void	end();
 
-		bool 	on__attach (const RPIPE::Context &ctx) final;
-		void 	on__detach (const RPIPE::Context &ctx) final;
+		bool 	on__attach (const RPIPE::Context &ctx, u8 renderer_UID) final;
+		void 	on__detach (const RPIPE::Context &ctx) final										{ priv_unsetup(); }
 		void 	on__render (const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx) final;
 
 

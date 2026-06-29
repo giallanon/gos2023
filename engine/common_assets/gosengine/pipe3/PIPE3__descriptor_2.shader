@@ -1,6 +1,3 @@
-#include "../PIPE3__common.shader"
-
-
 //////////////////// descr-set 2
 struct sMaterial
 {

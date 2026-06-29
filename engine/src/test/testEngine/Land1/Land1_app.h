@@ -33,7 +33,7 @@ private:
 	i16	mouse_x;
 	i16	mouse_y;
 
-	gos::engine::Renderer1				*renderer1;
+	gos::engine::Renderer_PIPE3			*renderer_PIPE3;
 	gos::engine::Renderer_line3d		*renderer_line3d;
 	gos::engine::Renderer_line3d::Ctx	*line_ctx1;
 	

@@ -18,7 +18,6 @@ Test1::Test1()
 
 	handle_skeleton.setInvalid();
 	handle_model.setInvalid();
-	renderer1 = NULL;
 
 	nextTimeUpdate_msec = 0;
 }
@@ -163,6 +162,8 @@ void Test1::run (gos::Engine *engineIN)
 	//e movement
     movement.bind (&cam.pos);
 
+	//renderer
+	renderer_PIPE3 = engine->renderPipe.add_renderer<engine::Renderer_PIPE3>();
 
 	priv_run4();
 }
@@ -238,11 +239,6 @@ bool Test1::priv_run4 ()
 	priv_model_setup (handle_shape_list[0], handle_shape_list[1]);
 
 
-
-	//creo il renderer
-	renderer1 = engine->renderPipe.add_renderer<engine::Renderer1>();
-
-
     //load degli assets
 	gos::ENGTexture	handle_texChecker;
 	engine->texture2D_createFromAsset ("tex_checker", &handle_texChecker, res::eLoadMode::asap);
@@ -267,10 +263,10 @@ bool Test1::priv_run4 ()
 		}
 		texture_index__texChecker = engine->renderPipe.texture_addIfNotExitst(tex->texHandle);
 
-		renderer1->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
-		renderer1->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
-		renderer1->material_create (texture_index__texBianca, vec3f(1.0f, 0.2f, 0.2f));
-		renderer1->material_create (texture_index__texChecker, vec3f(0.2f, 1.0f, 0.2f));
+		renderer_PIPE3->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
+		renderer_PIPE3->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
+		renderer_PIPE3->material_create (texture_index__texBianca, vec3f(1.0f, 0.2f, 0.2f));
+		renderer_PIPE3->material_create (texture_index__texChecker, vec3f(0.2f, 1.0f, 0.2f));
 	}
 
 
@@ -426,17 +422,17 @@ bool Test1::priv_run4 ()
         {
 			mainLoop.stat_onCommandBufferBegin();
 			{
-				renderer1->begin();
+				renderer_PIPE3->begin();
 				{
 					scene.query (cam, &ent_uniqueList, true);
 
-					ent_uniqueList.forEach ( [&entRegistry = entRegistry, &renderer1 = renderer1](u32 index, gos::Entity ent) {
-						auto cModelInstance = entRegistry.query<ent::CompModelInstance>(ent);
-						renderer1->add (cModelInstance);
+					ent_uniqueList.forEach ( [&entreg = entRegistry, &renderer=renderer_PIPE3](u32 index, gos::Entity ent) {
+						auto cModelInstance = entreg.query<ent::CompModelInstance>(ent);
+						renderer->add (cModelInstance);
 						return true;
 					});
 				}
-				renderer1->end ();
+				renderer_PIPE3->end ();
 			}
 
 			engine->renderPipe.render (swapchainImg, cmdBufferHandle, &cam);

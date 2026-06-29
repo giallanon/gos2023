@@ -21,12 +21,6 @@ Renderer_line3d::~Renderer_line3d()
 }
 
 //********************************************* 
-void Renderer_line3d::on__detach (const RPIPE::Context &ctx)
-{
-	priv_unsetup();
-}
-
-//********************************************* 
 void Renderer_line3d::priv_unsetup()
 {
     if (NULL == engine)
@@ -63,7 +57,7 @@ void Renderer_line3d::priv_unsetup()
 }
 
 //********************************************* 
-bool Renderer_line3d::on__attach (const RPIPE::Context &ctx)
+bool Renderer_line3d::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
 {
     localAllocator = ctx.allocator;
     engine = ctx.engine;
@@ -243,7 +237,6 @@ Renderer_line3d::Ctx* Renderer_line3d::ctx__get (const char *name)
 	}
 	return ctx_list(i).ctx;
 }
-
 
 //********************************************* 
 void Renderer_line3d::on__render (const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx)

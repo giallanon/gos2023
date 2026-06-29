@@ -1,5 +1,5 @@
 #include "gosEngine.h"
-#include "renderPipe/gosEngine_renderer1.h"
+#include "renderPipe/gosEngineRenderPipe_PIPE3.h"
 #include "entity/gosEntity.h"
 #include "model/gosModel.h"
 #include "../gosGPU/utils/gosFreeMovement.h"
@@ -35,11 +35,10 @@ private:
     gos::geom::Camera3				cam;
     gos::FPSMovement				movement;
 
-	
+	gos::engine::Renderer_PIPE3		*renderer_PIPE3;
 	gos::ENGSkeleton				handle_skeleton;
 	gos::ENGModel3d					handle_model;
 
-	gos::engine::Renderer1			*renderer1;
 	u64 nextTimeUpdate_msec;
 
 };

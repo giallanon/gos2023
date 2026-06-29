@@ -35,16 +35,12 @@ Land1/Land1_map.h
 Land1/Land1_renderer.cpp
 Land1/Land1_renderer.h
 
-
 characterController.cpp
 characterController.h
-ExaGenerator.cpp
 game1.cpp
 game1.h
 main.cpp
 PerlinNoise.hpp
-test_exa1.cpp
-test_exa1.h
 test1.cpp
 test1.h
 )

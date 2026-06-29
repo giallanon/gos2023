@@ -1,10 +1,3 @@
-
-//questo include idealmente dovrebbe essere 
-//#include "<common_assets>/gosengine/pipe3/common3.shader"
-#include "../PIPE3__common.shader"
-
-
-
 //////////////////// descr-set 2
 //elenco dei vertici degli exa da renderizzare
 layout(set = 2, binding = 0) readonly buffer SBO_2_0

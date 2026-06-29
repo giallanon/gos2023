@@ -4,6 +4,8 @@
 #include "../res/gosEngineRes.h"
 #include "../gosEngine_dynTextureArray.h"
 #include "../../gosGeom/gosGeomCamera3.h"
+#include "../entity/gosEntityDefaultComponents.h"
+
 
 namespace gos
 {
@@ -12,7 +14,7 @@ namespace gos
 	namespace engine
 	{
 		/******************************
-		 * RenderPipe
+		 * @brief	RenderPipe
 		 * 
 		 */
 		class RenderPipe
@@ -39,8 +41,14 @@ namespace gos
 				u32							frame_number;
 			};
 
+	        struct Material
+	        {
+		        vec3f	diffuse_col;
+		        u32		texture_index;
+	        };	
+
 			/******************************
-			 * Renderer
+			 * @brief	Renderer
 			 * 
 			 */
 			class Renderer
@@ -49,28 +57,30 @@ namespace gos
 								Renderer()			{ }
 				virtual			~Renderer()			{ }
 
-				virtual bool 	on__attach (const RenderPipe::Context &ctx) = 0;
+				virtual bool 	on__attach (const RenderPipe::Context &ctx, u8 renderer_UID) = 0;
 				virtual void 	on__detach (const RenderPipe::Context &ctx) = 0;
 				virtual void 	on__render (const RenderPipe::Context &ctx, gpu::RenderCtx &rctx) = 0;
 			};
 
 		public:
-            //======= gestione texture ====
+			//==================== render addizionali
+						template<class RENDERER>
+			RENDERER* 	add_renderer ()
+						{
+							RENDERER *r = GOSNEW(ctx.allocator, RENDERER)();
+							priv_add_renderer(r);
+							return r;
+						}
+			void 	remove_renderer (Renderer *r);
+			void	render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle cmdBufferHandl, gos::geom::Camera3 *cam);
+
+
+			//==================== gestione texture
             u32		texture_addIfNotExitst (GPUTextureHandle texHandle);
             void	texture_remove (GPUTextureHandle texHandle)                                     { texture_array.remove(texHandle); }
             bool	texture_find (GPUTextureHandle texHandle, u32 *out_index) const                 { return texture_array.find(texHandle, out_index); }
 
-			//==== render ====
-						template<class RENDERER>
-			RENDERER* 	add_renderer ()
-			{
-				RENDERER *r = GOSNEW(ctx.allocator, RENDERER)();
-				priv_add_renderer(r);
-				return r;
-			}
-
-			void 	remove_renderer (Renderer *r);
-			void	render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle cmdBufferHandl, gos::geom::Camera3 *cam);
+			
 
         private:
             static constexpr u32    NUM_MAX_TEXTURE     = 1024;
@@ -78,19 +88,20 @@ namespace gos
 		private:
 					//solo engine puo' istanziare RenderPipe
 					RenderPipe();
-					~RenderPipe()																			{ unsetup(); }
-			bool	setup (gos::Allocator *allocator, Engine *eng);
-			void	unsetup();
-
+					~RenderPipe()																			{ priv_unsetup(); }
+			bool	priv_setup (gos::Allocator *allocator, Engine *eng);
+			void	priv_unsetup();
 			void 	priv_add_renderer (Renderer *r);
 
         private:
 			Context						ctx;
             Engine                      *engine;
 			DynamicTextureArray         texture_array;			
-			ENGPipeline 				handle_pipeline;
 			GPUSamplerHandle            handle_samplers[2];
 			gos::FastArray<Renderer*>	renderer_list;
+			GPUDescrSetLayoutHandle		handle_descr_set_0;
+			GPUDescrSetLayoutHandle		handle_descr_set_1;
+			u8							next_renderer_UID;
 
 
 		friend Engine;

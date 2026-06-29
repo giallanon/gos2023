@@ -33,7 +33,7 @@ void Engine::unsetup()
 
 	//renderPipe
 	release(handle_texture_bianca);
-	renderPipe.unsetup();
+	renderPipe.priv_unsetup();
 
     //resource manager
 	resManager.unsetup();
@@ -217,24 +217,29 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     }
     thread::eventDestroy (params.hEvent_started);
 
+    handle_texture_bianca.setInvalid();
+    return true;
+}
 
-	//renderPipe
-	handle_texture_bianca.setInvalid();
-	if (!renderPipe.setup (allocator, this))
-		return false;
-	else
-	{
-		gpu::StageHelper stageHelper;
-		stageHelper.setup (gpu, 1024*1024);
+//******************************** 
+bool Engine::setup_renderPipe()
+{
+    if (!renderPipe.priv_setup (allocator, this))
+    {
+        logger::err ("Engine::setup_renderPipe() => error creating renderPipe\n");
+        return false;
+    }
 
-		//creo la "tex_bianca"
-		u16 dimx = 64;
-		u16 dimy = 64;
-		u8 *srcDATA = GOSALLOCT(u8*, gos::getScrapAllocator(), dimx*dimy*sizeof(u32));
-		memset (srcDATA, 0xFF, dimx*dimy*sizeof(u32));
-		texture2D_create (dimx, dimy, 1, eImageFormat::U8_RGBA, eMemAccessMode::onGPU, srcDATA, &handle_texture_bianca, stageHelper);
-		GOSFREE(gos::getScrapAllocator(), srcDATA);
-	}
+    gpu::StageHelper stageHelper;
+	stageHelper.setup (gpu, 1024*1024);
+
+	//creo la "tex_bianca"
+	u16 dimx = 64;
+	u16 dimy = 64;
+	u8 *srcDATA = GOSALLOCT(u8*, gos::getScrapAllocator(), dimx*dimy*sizeof(u32));
+	memset (srcDATA, 0xFF, dimx*dimy*sizeof(u32));
+	texture2D_create (dimx, dimy, 1, eImageFormat::U8_RGBA, eMemAccessMode::onGPU, srcDATA, &handle_texture_bianca, stageHelper);
+	GOSFREE(gos::getScrapAllocator(), srcDATA);
 
     return true;
 }
@@ -962,6 +967,18 @@ void Engine::internal__pxlshader_on_destroy (void *resIN)
 /**************************************************************** 
  * PIPELINE
  *****************************************************************/
+bool Engine::pipeline_create (const gpu::Pipeline_def &def, ENGPipeline *out_handle)
+{
+	res::Pipeline *res = (res::Pipeline*)res_createHandle(res::eType::pipeline, &out_handle->res_handle);
+	if (NULL == res)
+    {
+        logger::err ("Engine::pipeline_create() => can't create handle\n");
+        return false;
+    }
+
+    return gpu->pipeline_createNew (def, &res->pipeHandle); 
+}
+
 void Engine::internal__pipeline_on_afterCreate (void *resIN)
 {
 	//asset_logger->log ("internal__pipeline_on_afterCreate\n");

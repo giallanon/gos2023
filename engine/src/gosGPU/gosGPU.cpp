@@ -2029,6 +2029,12 @@ const gpu::Sampler* GPU::getInfo (const GPUSamplerHandle handle) const
  * 
  * 
  *************************************************************************************************************/
+bool GPU::descrSetLayout_create (const gpu::Pipeline_def::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle)
+{
+    VkDescriptorSetLayout vkHandle;
+    return priv_descrSetLayout_build_v2 (ds, out_handle, &vkHandle);
+}
+
 bool GPU::priv_descrSetLayout_build_v2 (const gpu::Pipeline_def::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle, VkDescriptorSetLayout *out_vkHandle)
 {
     //TODO: cachare i descriptor-set ed eventualmente riutilizzarli visto che sono dei descrittori, non e' necessario

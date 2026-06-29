@@ -23,8 +23,8 @@ Game1::Game1()
 	entRegistry.addComponentHandler<ent::CompScriptable>();
 	entRegistry.addComponentHandler<CompMissile>();
 
-	renderer1 = NULL;
 	renderer_line3d = NULL;
+	renderer_PIPE3 = NULL;
     handle_skeleton1.setInvalid();
     handle_skeleton2.setInvalid();
     handle_model_player.setInvalid();
@@ -67,8 +67,8 @@ void Game1::run (gos::Engine *engineIN)
 
 
 	//renderer
-	renderer1 = engine->renderPipe.add_renderer<engine::Renderer1>();
-	renderer_line3d = engine->renderPipe.add_renderer<engine::Renderer_line3d>();
+	renderer_PIPE3 = engine->renderPipe.add_renderer<engine::Renderer_PIPE3>();
+	renderer_line3d =engine->renderPipe.add_renderer<engine::Renderer_line3d>();
 		
 
 
@@ -224,10 +224,10 @@ bool Game1::priv_loadAssets()
 		}
 		texture_index__texChecker = engine->renderPipe.texture_addIfNotExitst(tex->texHandle);
 
-		material_indices[0] = renderer1->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
-		material_indices[1] = renderer1->material_create (texture_index__texBianca, vec3f(1.0f, 0.0f, 0.0f));
-		material_indices[2] = renderer1->material_create (texture_index__texBianca, vec3f(0.0f, 1.0f, 0.0f));
-		material_indices[3] = renderer1->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
+		material_indices[0] =renderer_PIPE3->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
+		material_indices[1] =renderer_PIPE3->material_create (texture_index__texBianca, vec3f(1.0f, 0.0f, 0.0f));
+		material_indices[2] =renderer_PIPE3->material_create (texture_index__texBianca, vec3f(0.0f, 1.0f, 0.0f));
+		material_indices[3] =renderer_PIPE3->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));
 	}
 
     return true;
@@ -635,23 +635,23 @@ void Game1::priv_loop ()
         {
 			mainLoop.stat_onCommandBufferBegin();
 			{
-				renderer1->begin();
+				renderer_PIPE3->begin();
 				{
-                    renderer1->add ( entRegistry.query<ent::CompModelInstance>(ent_mainPlayer) );
-                    renderer1->add ( entRegistry.query<ent::CompModelInstance>(ent_pavimento) );
-					renderer1->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[0]) );
-					renderer1->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[1]) );
-					renderer1->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[2]) );
+					renderer_PIPE3->add ( entRegistry.query<ent::CompModelInstance>(ent_mainPlayer) );
+					renderer_PIPE3->add ( entRegistry.query<ent::CompModelInstance>(ent_pavimento) );
+					renderer_PIPE3->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[0]) );
+					renderer_PIPE3->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[1]) );
+					renderer_PIPE3->add ( entRegistry.query<ent::CompModelInstance>(ent_cubi[2]) );
 						
 
 					for (u8 i = 0; i < NUM_MAX_MISSILE; i++)
 					{
 						if (ent_missile[i].isValid())
-							renderer1->add ( entRegistry.query<ent::CompModelInstance>(ent_missile[i]) );
+							renderer_PIPE3->add ( entRegistry.query<ent::CompModelInstance>(ent_missile[i]) );
 					}
 		
 				}
-				renderer1->end ();
+				renderer_PIPE3->end ();
 			}
 			engine->renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
 			mainLoop.stat_onCommandBufferEnd();

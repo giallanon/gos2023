@@ -43,13 +43,13 @@ model/gosModel.h
 model/gosModelInstance.h
 model/gosModelReader.cpp
 
-renderPipe/gosEngine_renderer1.cpp
-renderPipe/gosEngine_renderer1.h
+renderPipe/gosEngineRenderPipe.cpp
+renderPipe/gosEngineRenderPipe.h
 renderPipe/gosEngineRenderPipe_line3d.cpp
 renderPipe/gosEngineRenderPipe_line3d.h
 renderPipe/gosEngineRenderPipe_line3d_ctx.cpp
-renderPipe/gosEngineRenderPipe.cpp
-renderPipe/gosEngineRenderPipe.h
+renderPipe/gosEngineRenderPipe_PIPE3.cpp
+renderPipe/gosEngineRenderPipe_PIPE3.h
 
 res/gosEngineRes.cpp
 res/gosEngineRes.h

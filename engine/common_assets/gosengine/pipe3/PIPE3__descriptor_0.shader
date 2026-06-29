@@ -8,16 +8,6 @@ layout(set = 0, binding = 0) uniform sampler   PIPE3_samplerList[2];
 layout(set = 0, binding = 1) uniform texture2D PIPE3_textureList[];
 
 
-//////////////////// descr-set 1
-layout(set = 1, binding = 0) uniform UBO_1_0
-{
-    mat4 camVP;
-    vec4 lightDir_and_ambient;
-} scene;
-
-
-
-
 
 //**** sample di una texture 2D con bilinear filtering
 vec4 PIPE3_sample2D_bilinear (uint textureIndex, vec2 texCoord)

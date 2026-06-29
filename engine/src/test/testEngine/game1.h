@@ -2,7 +2,7 @@
 #define _game1_h_
 
 #include "gosEngine.h"
-#include "renderPipe/gosEngine_renderer1.h"
+#include "renderPipe/gosEngineRenderPipe_PIPE3.h"
 #include "renderPipe/gosEngineRenderPipe_line3d.h"
 #include "entity/gosEntity.h"
 #include "model/gosModel.h"
@@ -45,7 +45,7 @@ private:
 	gos::ent::Registry				entRegistry;
     gos::geom::Camera3				cam;
 
-	gos::engine::Renderer1			*renderer1;
+	gos::engine::Renderer_PIPE3		*renderer_PIPE3;
 	gos::engine::Renderer_line3d	*renderer_line3d;
 
 	gos::ENGGPUShape				handle_gpushape_cube;

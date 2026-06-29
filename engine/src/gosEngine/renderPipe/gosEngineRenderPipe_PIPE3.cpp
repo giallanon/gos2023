@@ -1,4 +1,4 @@
-#include "gosEngine_renderer1.h"
+#include "gosEngineRenderPipe_PIPE3.h"
 #include "../gosEngine.h"
 #include <algorithm>
 
@@ -8,7 +8,7 @@ using namespace gos::engine;
 
 
 //**********************************
-Renderer1::Renderer1()
+Renderer_PIPE3::Renderer_PIPE3()
 {
     engine = NULL;
     gpu = NULL;
@@ -16,10 +16,11 @@ Renderer1::Renderer1()
     material_buffer = NULL;
     pRenderableList = NULL;
     nRenderable = 0;
+    renderer_UID = 0xFF;
 }
 
 //**********************************
-void Renderer1::priv_unsetup()
+void Renderer_PIPE3::priv_unsetup()
 {
 	if (NULL == engine)
 	{
@@ -42,17 +43,12 @@ void Renderer1::priv_unsetup()
     gpu = NULL;
 }
 
-//***************************************
-void Renderer1::on__detach (const RPIPE::Context &ctx)
-{
-	priv_unsetup();
-}
 
 //**********************************
-bool Renderer1::on__attach (const RPIPE::Context &ctx)
+bool Renderer_PIPE3::on__attach (const RPIPE::Context &ctx, u8 renderer_UID_IN)
 {
 	//load pipe
-	if (!ctx.engine->pipeline_createFromAsset ("gosengine_renderer1", &handle_pipeline, res::eLoadMode::asap))
+	if (!ctx.engine->pipeline_createFromAsset ("gosengine_PIPE3", &handle_pipeline, res::eLoadMode::asap))
 	{
 		DBGBREAK;
         return false; 
@@ -61,6 +57,7 @@ bool Renderer1::on__attach (const RPIPE::Context &ctx)
 	localAllocator = ctx.allocator;
 	engine = ctx.engine;
 	gpu = engine->gpu;
+    renderer_UID = renderer_UID_IN;
 
 
     //SBO matrici
@@ -100,7 +97,7 @@ bool Renderer1::on__attach (const RPIPE::Context &ctx)
 	//descriptor set 2        
 	if (!gpu->descrSetInstance_create (ctx.handle_descrPool, res_pipeline->pipeHandle, 2, &handle_descrSet2))
 	{
-		gos::logger::err ("Renderer1::setup() => can't create an instance of descriptorSet_2\n");
+		gos::logger::err ("Renderer_PIPE3::setup() => can't create an instance of descriptorSet_2\n");
 		return false;
 	}
 	else
@@ -117,7 +114,7 @@ bool Renderer1::on__attach (const RPIPE::Context &ctx)
 }
 
 //**********************************
-u32 Renderer1::material_create (u32 texture_index, const vec3f diffuse_col)
+u32 Renderer_PIPE3::material_create (u32 texture_index, const vec3f diffuse_col)
 {
     u32 material_index;
     if (!material_bitmask.findAndSetFirstFreeBit(&material_index))
@@ -137,13 +134,13 @@ u32 Renderer1::material_create (u32 texture_index, const vec3f diffuse_col)
 }
 
 //**********************************
-void Renderer1::material_delete (u32 material_index)
+void Renderer_PIPE3::material_delete (u32 material_index)
 {
     material_bitmask.clear (material_index);
 }
 
 //**********************************
-Renderer1::Material* Renderer1::material_getForUpdate (u32 material_index)
+Renderer_PIPE3::Material* Renderer_PIPE3::material_getForUpdate (u32 material_index)
 {
     if (material_bitmask.isBitSet(material_index))
     {
@@ -156,7 +153,7 @@ Renderer1::Material* Renderer1::material_getForUpdate (u32 material_index)
 }
 
 //**********************************
-const Renderer1::Material* Renderer1::material_query (u32 material_index) const
+const Renderer_PIPE3::Material* Renderer_PIPE3::material_query (u32 material_index) const
 {
     if (material_bitmask.isBitSet(material_index))
         return &material_buffer[material_index];
@@ -166,7 +163,7 @@ const Renderer1::Material* Renderer1::material_query (u32 material_index) const
 }
 
 //**********************************
-u64 Renderer1::priv_pack_renderable (ENGGPUShape shape, u32 material_index, u32 matrix_index) const
+u64 Renderer_PIPE3::priv_pack_renderable (ENGGPUShape shape, u32 material_index, u32 matrix_index) const
 {
     u64 ret = shape.viewAsU32();
     ret <<= 32;
@@ -181,7 +178,7 @@ u64 Renderer1::priv_pack_renderable (ENGGPUShape shape, u32 material_index, u32 
 }
 
 //**********************************
-void Renderer1::priv_unpack_renderable (u64 packed, ENGGPUShape *out_shape, u32 *out_material_index, u32 *out_matrix_index) const
+void Renderer_PIPE3::priv_unpack_renderable (u64 packed, ENGGPUShape *out_shape, u32 *out_material_index, u32 *out_matrix_index) const
 {
     out_shape->setFromU32 ( (u32)(packed >> 32) );
     *out_material_index = (u32) ((packed >> 18) & 0x3FFF);
@@ -189,14 +186,14 @@ void Renderer1::priv_unpack_renderable (u64 packed, ENGGPUShape *out_shape, u32 
 }
 
 //**********************************
-void Renderer1::begin ()
+void Renderer_PIPE3::begin ()
 {
     matrix_nextIndex = 0;
     nRenderable = 0;
 }
 
 //**********************************
-void Renderer1::add (const ENGGPUShape shape, const mat4x4f &m, u32 material_index)
+void Renderer_PIPE3::add (const ENGGPUShape shape, const mat4x4f &m, u32 material_index)
 {
     if (matrix_nextIndex >= NUM_MAX_MATRIX)
         return;
@@ -210,19 +207,28 @@ void Renderer1::add (const ENGGPUShape shape, const mat4x4f &m, u32 material_ind
 }
 
 //**********************************
-void Renderer1::add (const ent::CompModelInstance *comp_mi)
+void Renderer_PIPE3::add (const ent::CompModelInstance *comp_mi)
 {
 	add (comp_mi->handle_mi);
 }
 
 //**********************************
-void Renderer1::add (gos::ENGModel3dInst handle)
+void Renderer_PIPE3::add (gos::ENGModel3dInst handle)
 {
 	const res::Model3dInst *res_mi;
 	if (!engine->get (handle, &res_mi))
 		return;
 
-	const gos::ModelInstance *mi = &res_mi->minst;
+    const gos::ModelInstance *mi = &res_mi->minst;
+
+    //se e' la prima volta che vedo questa istanza...
+    if (u32MAX == mi->renderer_bindings[renderer_UID])
+    {
+        res_mi->minst.renderer_bindings[renderer_UID] = 0;
+    }
+
+
+    //addo le shape al renderer
 	for (u32 i=0; i<mi->num_meshes; i++)
 	{
 		const Model::Mesh *mesh = &mi->listof_meshes[i];
@@ -234,12 +240,12 @@ void Renderer1::add (gos::ENGModel3dInst handle)
 }
 
 //**********************************
-void Renderer1::end ()
+void Renderer_PIPE3::end ()
 {
 }
 
 //**********************************
-void Renderer1::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
+void Renderer_PIPE3::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 {
     if (0 == nRenderable)
 	{
@@ -325,8 +331,4 @@ void Renderer1::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
     }
 }
 
-//**********************************
-void Renderer1::on__render (const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx)
-{
-	priv_do_render (ctx, rctx);
-}
+

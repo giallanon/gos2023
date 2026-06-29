@@ -2,7 +2,7 @@
 #define _DefaultApp_h_
 
 #include "gosEngine.h"
-#include "renderPipe/gosEngine_renderer1.h"
+#include "renderPipe/gosEngineRenderPipe_PIPE3.h"
 #include "entity/gosEntity.h"
 #include "model/gosModel.h"
 #include "../gosGPU/utils/gosFreeMovement.h"

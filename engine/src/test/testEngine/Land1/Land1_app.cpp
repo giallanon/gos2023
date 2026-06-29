@@ -7,7 +7,6 @@ using namespace gos;
 //***************************************
 Land1_app::Land1_app()
 {
-	renderer1 = NULL;
 	mouse_x = mouse_y = 0;
 	material_index_to_apply = 1;
 	num_alberi = 0;
@@ -40,8 +39,8 @@ void Land1_app::on__setup ()
 	engine->inputCtx->action_bindToBtn ("KB_3", input::eOrigin::keyboard, GLFW_KEY_3, input::eButtonStatus::pressed);
 	engine->inputCtx->action_bindToBtn ("KB_0", input::eOrigin::keyboard, GLFW_KEY_0, input::eButtonStatus::pressed);
 
+	renderer_PIPE3 = engine->renderPipe.add_renderer<engine::Renderer_PIPE3>();
 	renderer_land = engine->renderPipe.add_renderer<Land1::Renderer>();
-	renderer1 = engine->renderPipe.add_renderer<engine::Renderer1>();
 	renderer_line3d = engine->renderPipe.add_renderer<engine::Renderer_line3d>();
 		line_ctx1 = renderer_line3d->ctx__crete_new("ctx1", 32);
 
@@ -51,7 +50,7 @@ void Land1_app::on__setup ()
 		engine->get_texture_bianca (&tex);
 
 		engine->renderPipe.texture_addIfNotExitst (tex->texHandle);
-		renderer1->material_create (0, vec3f(0.3f, 1 , 0.3f));
+		renderer_PIPE3->material_create (0, vec3f(0.3f, 1 , 0.3f));
 	}
 
 	//engine->model_createFromAsset ("model_LowPolyTree", &handle_model_albero, res::eLoadMode::asap);
@@ -119,10 +118,10 @@ void Land1_app::on__prepare_render()
 
 
 	//alberi
-	renderer1->begin();
+	renderer_PIPE3->begin();
 	for (u32 i=0; i<num_alberi; i++)
-		renderer1->add (modelinst_albero[i]);
-	renderer1->end();
+		renderer_PIPE3->add (modelinst_albero[i]);
+	renderer_PIPE3->end();
 }
 
 //***************************************

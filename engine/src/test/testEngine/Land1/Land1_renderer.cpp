@@ -39,11 +39,12 @@ void Renderer::priv_unsetup()
 }
 
 //***************************************
-bool Renderer::on__attach (const RPIPE::Context &ctx)
+bool Renderer::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
 {
 	//load pipe
 	if (!ctx.engine->pipeline_createFromAsset ("land1_pipe", &handle_pipeline, res::eLoadMode::asap))
 	{
+		logger::err ("Land1_renderer::on__attach() => can't load pipeline\n");
         return false; 
 	}	
 
@@ -107,12 +108,6 @@ bool Renderer::on__attach (const RPIPE::Context &ctx)
 
 
 	return true;
-}
-
-//***************************************
-void Renderer::on__detach (const RPIPE::Context &ctx)
-{
-	priv_unsetup();
 }
 
 //***************************************

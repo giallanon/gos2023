@@ -45,6 +45,8 @@ namespace gos
         bool                asset_rebuildAll();
         bool                asset_build();
 
+        bool                setup_renderPipe();
+
             /* update:  ritorna false se la mainwin e' stata chiusa */
         bool                            update();
         bool                            inputEvent_getNext (InputEvent *out);
@@ -93,6 +95,7 @@ namespace gos
 
         //============================= pipeline
         bool            pipeline_createFromAsset (const char *uid_runtimeName, ENGPipeline *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)	{ return res_createFromAssetT (uid_runtimeName, out_handle, loadMode); }
+        bool            pipeline_create (const gpu::Pipeline_def &rpd, ENGPipeline *out_handle);
         void            release (ENGPipeline &handle)                                                              	{ res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGPipeline handle, const res::Pipeline **out, u64 timeout_msec = 0)            		{ return res_getOrScheduleLoadT(handle, out, timeout_msec); }
 		void 			internal__pipeline_on_afterCreate (void *res);
