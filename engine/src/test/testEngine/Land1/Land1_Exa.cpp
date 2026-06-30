@@ -43,12 +43,12 @@ bool Exa::priv_is_point_in_quad (const gos::vec3f &world_point, u32 quad_index) 
 	const vec2f v3 = vtxList[quadList[quad_index].idx[3]];
 	const vec2f wp (world_point.x, world_point.z);
 	
-	const i8 golden = geom::which_side_of_line2D (v0, v1, wp);
-	if (golden != geom::which_side_of_line2D (v1, v2, wp))
+	const i8 golden = geom::line2D__which_side (v0, v1, wp);
+	if (golden != geom::line2D__which_side (v1, v2, wp))
 		return false;
-	if (golden != geom::which_side_of_line2D (v2, v3, wp))
+	if (golden != geom::line2D__which_side (v2, v3, wp))
 		return false;
-	if (golden != geom::which_side_of_line2D (v3, v0, wp))
+	if (golden != geom::line2D__which_side (v3, v0, wp))
 		return false;
 	return true;
 }

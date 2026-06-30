@@ -236,7 +236,8 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 			//renderizzo i quad che sharano il vtx
 			line_ctx1->
 				set_color_ARGB (0xFF00FF00)
-				.set_line_width(2);
+				.set_line_width(2)
+				.point_set_radius(16);
 
 			u32 quads[8];
 			const u32 nquad = exa->get_quad_from_vtx (vtx_index, quads, 8);
@@ -253,6 +254,29 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 						.line_add_vtx(first_vtx + q->idx[0])
 					.line_end();
 			}
+
+			//vtx0 del quad 0
+			{
+				logger::log ("nquad=%d\n", nquad);
+				u32 nn = nquad;
+				if (nquad > 3)
+					nn = 3;
+				const u32 colors[3] = {0xFFFF0000, 0xFFFFFF00, 0xFFFF00FF};
+				for (u32 i=0; i<nn; i++)
+				{
+					const u32 quad_num = quads[i];
+					const Land1::Exa::Quad *q = &exa->quadList[quad_num];
+				
+					const u16 quad_center_index = line_ctx1->vtx_add (exa->quadCenterList[quad_num].x, 0, exa->quadCenterList[quad_num].y);
+
+					line_ctx1->
+					set_color_ARGB(colors[i])
+						.point (quad_center_index)
+						.point (first_vtx + q->idx[0]);
+				}
+			}
+
+			
 
 			if (bLSHIFT)
 			{

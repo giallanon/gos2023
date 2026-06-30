@@ -21,6 +21,21 @@ namespace Land1
 			u16	adjacent_quad_list[8];
 		};
 
+		struct VtxInfo2
+		{
+			u8	num_quad;	//num quad centrati sul vtx i-esimo
+			u8 	material_index;
+			u16	height;
+			u16	idx_list[16];	//idx0=centro, gli altri 2*num_quad in senso orario
+		};
+
+		struct V2
+		{
+			u16	num_tot_vtx;
+			gos::vec2f	*vtx;
+			VtxInfo2	*vtx_info;
+		};
+
 	public:
 		gos::vec2f	utils__calc_quad_center (u32 quad_index) const;
 		void		utils__get_quad_vertex (u32 quad_index, gos::vec2f *out__vtx4) const;
@@ -43,6 +58,7 @@ namespace Land1
 		Quad		*quadList;
 		gos::vec2f	*quadCenterList;
 		VtxInfo		*vtxInfoList;
+		V2			v2;
 
 
 	private:

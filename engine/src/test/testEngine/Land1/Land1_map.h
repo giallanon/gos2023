@@ -69,6 +69,7 @@ namespace Land1
 
 	private:
 		Exa*		priv_exa_alloc (ExaGenerator &exagen, const gos::vec3f &world_coord);
+		void		priv_exa_calc_v2 (Exa *exa) const;
 		void		priv_exa_free (Exa *exa);
 		void		priv_exa_add_to_map (const gos::examap::Coord &coord, Exa *exa);
 		void		priv_map_destroy();

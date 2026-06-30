@@ -64,7 +64,7 @@ bool CoordConverter::world_is_inside_hex (const vec2f &world_coord, const Coord 
 			const vec2f a (x_spacing_half, z_spacing_half);
 			const vec2f b (exa_world_radius, 0);
 			
-			if (geom::which_side_of_line2D(a, b, vec2f(qx,qz)) > 0)
+			if (geom::line2D__which_side(a, b, vec2f(qx,qz)) > 0)
 				return true;
 		}
 		else
@@ -72,7 +72,7 @@ bool CoordConverter::world_is_inside_hex (const vec2f &world_coord, const Coord 
 			//top left
 			const vec2f a (-exa_world_radius, 0);
 			const vec2f b (-x_spacing_half, z_spacing_half);
-			if (geom::which_side_of_line2D(a, b, vec2f(qx,qz)) > 0)
+			if (geom::line2D__which_side(a, b, vec2f(qx,qz)) > 0)
 				return true;
 		}
 	}
@@ -87,7 +87,7 @@ bool CoordConverter::world_is_inside_hex (const vec2f &world_coord, const Coord 
 			//bottom right
 			const vec2f a ( exa_world_radius, 0);
 			const vec2f b ( x_spacing_half, -z_spacing_half);
-			if (geom::which_side_of_line2D(a, b, vec2f(qx,qz)) > 0)
+			if (geom::line2D__which_side(a, b, vec2f(qx,qz)) > 0)
 				return true;
 		}
 		else
@@ -97,7 +97,7 @@ bool CoordConverter::world_is_inside_hex (const vec2f &world_coord, const Coord 
 			//il bordo e' definito dalla seguente linea
 			const vec2f a (-x_spacing_half, -z_spacing_half);
 			const vec2f b (-exa_world_radius, 0);
-			if (geom::which_side_of_line2D(a, b, vec2f(qx,qz)) > 0)
+			if (geom::line2D__which_side(a, b, vec2f(qx,qz)) > 0)
 				return true;
 		}
 	}

@@ -1,6 +1,7 @@
 #include "Land1_map.h"
 #include "gos.h"
 #include "../PerlinNoise.hpp"
+#include "gosGeomUtils.h"
 
 using namespace gos;
 using namespace Land1;
@@ -101,6 +102,35 @@ Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world
 			+ ret->vtxList[ ret->quadList[i].idx[2] ]
 			+ ret->vtxList[ ret->quadList[i].idx[3] ];
 		ret->quadCenterList[i] /= 4.0f;
+
+
+		//ordino i vtx del quad in senso orario
+		f32 angle_list[4];
+		for (u32 i2=0; i2<4; i2++)
+		{
+			const vec2f v = ret->vtxList[ ret->quadList[i].idx[i2] ];
+			const vec2f p = v - ret->quadCenterList[i];
+			angle_list[i2] = atan2f (p.y, p.x);
+		}
+
+		bool bEsci = false;
+		u32 n = 4;
+		while (bEsci == false)
+		{
+			bEsci = true;
+			n--;
+			
+			for (u32 i2 = 0; i2 < n; i2++)
+			{
+				if (angle_list[i2] < angle_list[i2 + 1])
+				{
+					bEsci = false;
+					GOSSWAP(angle_list[i2], angle_list[i2 + 1]);
+					GOSSWAP(ret->quadList[i].idx[i2], ret->quadList[i].idx[i2 + 1]);
+				}
+			}
+		}		
+
 	}
 
 	//per ogni vtx, vedo quali sono i quad che lo sharano
@@ -116,12 +146,193 @@ Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world
 		}
 	}
 
+	priv_exa_calc_v2 (ret);
+
 	return ret;
+}
+
+//*****************************************
+void Map::priv_exa_calc_v2 (Exa *exa) const
+{
+	memset (&exa->v2, 0, sizeof(Exa::V2));
+	exa->v2.vtx_info = GOSALLOCT(Exa::VtxInfo2*, localAllocator, sizeof(Exa::VtxInfo2) * exa->num_vtx);
+
+	//nell'array finale di tutti i vtx utili di questo exa, i primi N sono i vtx originali, a seguire
+	//ci sono tutti i vtx dei centri dei quad (in ordine da quad 0 a quad N) e a seguire, in ordine sparso,
+	//ci sono gli edge vertex
+	FastArray<vec2f> final_vtx_list(gos::getScrapAllocator(), 2048);
+
+	for (u32 i=0; i<exa->num_vtx; i++)
+	{
+		final_vtx_list.append( exa->vtxList[i] );
+	}
+
+	const u32 start_of_quad_center_vtx = final_vtx_list.getNElem();
+	for (u32 i=0; i<exa->num_quad; i++)
+	{
+		final_vtx_list.append( exa->quadCenterList[i] );
+	}
+
+	FastHashMap<u32, u32> edge_vtx_hashmap;
+	edge_vtx_hashmap.setup (gos::getScrapAllocator(), exa->num_vtx*exa->num_vtx);
+
+	for (u32 i=0; i<exa->num_vtx; i++)
+	{
+		u32 num_idx = 0;
+		exa->v2.vtx_info[i].height = 0;
+		exa->v2.vtx_info[i].material_index = 1;
+		exa->v2.vtx_info[i].idx_list[num_idx++] = (u16)i;
+
+
+		//elenco dei quad con sharano il vtx i-esimo
+		u32 adj_quad_list[16];
+		const u32 nquad = exa->get_quad_from_vtx (i, adj_quad_list, 16);
+		exa->v2.vtx_info[i].num_quad = nquad;
+
+		if (1 == nquad)
+		{
+			exa->v2.vtx_info[i].idx_list[0] = exa->quadList[adj_quad_list[0]].idx[0];
+			exa->v2.vtx_info[i].idx_list[1] = exa->quadList[adj_quad_list[0]].idx[1];
+			exa->v2.vtx_info[i].idx_list[2] = exa->quadList[adj_quad_list[0]].idx[2];
+			exa->v2.vtx_info[i].idx_list[3] = exa->quadList[adj_quad_list[0]].idx[3];
+
+			continue;
+		}
+
+
+
+		for (u32 i2=0; i2<nquad; i2++)
+		{
+			const u32 quad_index = adj_quad_list[i2];
+
+			u32 quad_prev_index;
+			if (i2 == 0)
+				quad_prev_index = adj_quad_list[nquad-1];
+			else
+				quad_prev_index = adj_quad_list[i2-1];
+
+			u32 quad_next_index;
+			if (i2 == nquad-1)
+				quad_next_index = adj_quad_list[0];
+			else
+				quad_next_index = adj_quad_list[i2+1];
+
+			//assumo che il vtx 0 del quad sia l'estremo B dell'edge che parte dal vtx in esame (A)
+			const u32 A_index = i;
+			
+			
+			//const u32 B_index = exa->quadList[quad_index].idx[0];
+
+			u8 i3=0;
+			u32 B_index = exa->quadList[quad_index].idx[0];
+			while (i3 < 3)
+			{
+				if (exa->quadList[quad_index].idx[i3] == (u8)i)
+				{
+					B_index = exa->quadList[quad_index].idx[i3+1];
+					break;
+				}
+				i3++;
+			}
+
+			//const u32 C_index = exa->quadList[quad_next_index].idx[0];
+			i3=0;
+			u32 C_index = exa->quadList[quad_next_index].idx[0];
+			while (i3 < 3)
+			{
+				if (exa->quadList[quad_next_index].idx[i3] == (u8)i)
+				{
+					C_index = exa->quadList[quad_next_index].idx[i3+1];
+					break;
+				}
+				i3++;
+			}
+
+
+			const vec2f A = final_vtx_list(A_index);
+			const vec2f B = final_vtx_list(B_index);
+			const vec2f C = final_vtx_list(C_index);
+
+			const u32 QC_index = start_of_quad_center_vtx + quad_index;
+			assert (QC_index < 0xFFFF);
+			const vec2f QC = final_vtx_list(QC_index);
+
+			const u32 QC_prev_index = start_of_quad_center_vtx + quad_prev_index;
+			assert (QC_prev_index < 0xFFFF);
+			const vec2f QC_prev = final_vtx_list(QC_prev_index);
+
+			const u32 QC_next_index = start_of_quad_center_vtx + quad_next_index;
+			assert (QC_next_index < 0xFFFF);
+			const vec2f QC_next = final_vtx_list(QC_next_index);
+
+#define MAKE_KEY(a,b,c,d)\
+			key = 0;\
+			if (a <= b)	key |= ( ((u32)a << 24) | ((u32)b << 16) );\
+			else		key |= ( ((u32)b << 24) | ((u32)a << 16) );\
+			if (c <= d)	key |= ( ((u32)c << 8) | (u32)d );\
+			else		key |= ( ((u32)d << 8) | (u32)c );\
+
+
+			//calcolo i 2 edge vertex
+			//intersezione 1: (A,B) e (QC_prev,QC)
+			u32 key;
+			u32 v_edge1_index;
+			u32 v_edge2_index;
+			vec2f v_edge;
+			FastHashMap<u32, u32>::Position pos;
+
+			MAKE_KEY(A_index, B_index, QC_prev_index, QC_index);
+			if (!edge_vtx_hashmap.findWithPos(key, &v_edge1_index, &pos))
+			{
+#ifdef _DEBUG
+				assert (geom::line2D__intersect (A, B, QC_prev, QC, &v_edge));
+#else
+				geom::utils::line2D__intersect (A, B, QC_prev, QC, &v_edge);
+#endif
+				v_edge1_index = final_vtx_list.getNElem();
+				final_vtx_list.append (v_edge);
+				edge_vtx_hashmap.insertInPosition (pos, v_edge1_index);
+			}
+			
+			//intersezione 2: (A,C) (QC, QC_next)
+			MAKE_KEY(A_index, C_index, QC_index, QC_next_index);
+			if (!edge_vtx_hashmap.findWithPos(key, &v_edge2_index, &pos))
+			{
+#ifdef _DEBUG
+				assert (geom::line2D__intersect (A, C, QC, QC_next, &v_edge));
+#else
+				geom::utils::line2D__intersect (A, C, QC, QC_next, &v_edge);
+#endif
+				v_edge2_index = final_vtx_list.getNElem();
+				final_vtx_list.append (v_edge);
+				edge_vtx_hashmap.insertInPosition (pos, v_edge2_index);
+			}
+			
+
+			//mi segno tutti i vtx utili centrati su queste vtx primario
+			assert (v_edge1_index < 0xFFFF);
+			assert (QC_index < 0xFFFF);
+			exa->v2.vtx_info[i].idx_list[num_idx++] = (u16)v_edge1_index;
+			exa->v2.vtx_info[i].idx_list[num_idx++] = (u16)QC_index;
+
+#undef MAKE_KEY
+
+		}
+
+		assert (num_idx <= 16);
+	}
+
+
+	exa->v2.num_tot_vtx = final_vtx_list.getNElem();
+	exa->v2.vtx = GOSALLOCT(vec2f*, localAllocator, sizeof(vec2f) * exa->v2.num_tot_vtx);
+	memcpy (exa->v2.vtx, final_vtx_list._queryPointer(), sizeof(vec2f) * exa->v2.num_tot_vtx);
 }
 
 //*****************************************
 void Map::priv_exa_free (Exa *exa)
 {
+	GOSFREE(localAllocator, exa->v2.vtx);
+	GOSFREE(localAllocator, exa->v2.vtx_info);
 	GOSFREE(localAllocator, exa);
 }
 
