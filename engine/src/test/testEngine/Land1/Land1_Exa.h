@@ -18,6 +18,7 @@ namespace Land1
 		struct VtxInfo
 		{
 			u32 material_index;
+			u16	adjacent_quad_list[8];
 		};
 
 	public:

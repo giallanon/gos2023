@@ -291,8 +291,15 @@ void Renderer::priv_add_exa2 (const Land1::Exa *exa)
 			continue;
 
 		//recupero i quad che sharano il vtx i-esimo
-		u32 quads[8];
-		const u32 nquad = exa->get_quad_from_vtx (i, quads, 8);
+		u32 nquad = 0;
+		for (u8 i2 = 0; i2 < 8; i2++)
+		{
+			if (u16MAX == exa->vtxInfoList[i].adjacent_quad_list[i2])
+				break;
+			nquad++;
+		}
+
+		const u16 *quads = exa->vtxInfoList[i].adjacent_quad_list;
 		switch (nquad)
 		{
 		default:

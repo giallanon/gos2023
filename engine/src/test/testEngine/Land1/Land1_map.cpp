@@ -80,6 +80,7 @@ Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world
 	{
 		ret->vtxList[i].set (exagen.vtxList(i).x, exagen.vtxList(i).z);
 		ret->vtxInfoList[i].material_index = 0;
+		memset (ret->vtxInfoList[i].adjacent_quad_list, 0xff, sizeof(ret->vtxInfoList[i].adjacent_quad_list));
 	}
 
 	for (u32 i = 0; i < num_quad; i++)
@@ -100,6 +101,19 @@ Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world
 			+ ret->vtxList[ ret->quadList[i].idx[2] ]
 			+ ret->vtxList[ ret->quadList[i].idx[3] ];
 		ret->quadCenterList[i] /= 4.0f;
+	}
+
+	//per ogni vtx, vedo quali sono i quad che lo sharano
+	for (u32 i = 0; i < ret->num_vtx; i++)
+	{
+		//recupero i quad che sharano il vtx i-esimo
+		u32 quads[8];
+		const u32 nquad = ret->get_quad_from_vtx (i, quads, 8);
+
+		for (u32 ct = 0; ct < nquad; ct++)
+		{
+			ret->vtxInfoList[i].adjacent_quad_list[ct] = (u16)quads[ct];
+		}
 	}
 
 	return ret;
