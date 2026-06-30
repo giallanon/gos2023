@@ -73,7 +73,7 @@ bool Renderer_PIPE3::on__attach (const RPIPE::Context &ctx, u8 renderer_UID_IN)
     material_bitmask.zero();
     material_wasUpdated = 1;
     material_default.texture_index = 0;
-    material_default.diffuse_col.set (1.0f, 1.0f, 1.0f);
+    material_default.diffuse_col.set (1.0f, 0.1f, 1.0f);
     gpu->storageBuffer_create (material_sizeof_buffer, eMemAccessMode::shared_cpuW_autoSync, &handle_sbo_materiaList);
 
     ///SBO instance data
@@ -109,12 +109,12 @@ bool Renderer_PIPE3::on__attach (const RPIPE::Context &ctx, u8 renderer_UID_IN)
 			.end();
 	}
 
-
+    material_default_index = material_create (material_default.texture_index, material_default.diffuse_col);
     return true;
 }
 
 //**********************************
-u32 Renderer_PIPE3::material_create (u32 texture_index, const vec3f diffuse_col)
+u32 Renderer_PIPE3::material_create (u32 texture_index, const vec3f diffuse_col_HDR_RGB)
 {
     u32 material_index;
     if (!material_bitmask.findAndSetFirstFreeBit(&material_index))
@@ -125,7 +125,7 @@ u32 Renderer_PIPE3::material_create (u32 texture_index, const vec3f diffuse_col)
     
     //creo il nuovo materiale
     material_buffer[material_index].texture_index = texture_index;
-    material_buffer[material_index].diffuse_col = diffuse_col;
+    material_buffer[material_index].diffuse_col = diffuse_col_HDR_RGB;
     
     //mi segno che l'array dei materiali e' da aggiornare su GPU
     material_wasUpdated = 1;
@@ -186,6 +186,14 @@ void Renderer_PIPE3::priv_unpack_renderable (u64 packed, ENGGPUShape *out_shape,
 }
 
 //**********************************
+u32 Renderer_PIPE3::priv_material_create_from_PBR (const res::MaterialPBR *material)
+{
+    const vec3f diffuse_col (material->diffuse_col_HDR_RGBA[0], material->diffuse_col_HDR_RGBA[1], material->diffuse_col_HDR_RGBA[2]);
+    const u32 texture_index = 0;
+    return material_create (texture_index, diffuse_col);
+}
+
+//**********************************
 void Renderer_PIPE3::begin ()
 {
     matrix_nextIndex = 0;
@@ -193,7 +201,29 @@ void Renderer_PIPE3::begin ()
 }
 
 //**********************************
-void Renderer_PIPE3::add (const ENGGPUShape shape, const mat4x4f &m, u32 material_index)
+void Renderer_PIPE3::add (const ENGGPUShape handle_shape, const mat4x4f &m, ENGMaterialPBR handle_material)
+{
+    const res::MaterialPBR *res_mat;
+	if (!engine->get (handle_material, &res_mat))
+		return;
+
+    u32 material_index = res_mat->renderer_bindings[renderer_UID];
+    if (u32MAX == material_index)
+    {
+        //questo materiale e' la prima volta che lo vedo
+        material_index = priv_material_create_from_PBR(res_mat);
+        if (!engine->internal__materialPBR_update_renderer_binding (handle_material, renderer_UID, material_index))
+        {
+            DBGBREAK;
+            return;
+        }
+    }
+
+    add (handle_shape, m, material_index);
+}
+
+//**********************************
+void Renderer_PIPE3::add (const ENGGPUShape handle_shape, const mat4x4f &m, u32 material_index)
 {
     if (matrix_nextIndex >= NUM_MAX_MATRIX)
         return;
@@ -203,7 +233,7 @@ void Renderer_PIPE3::add (const ENGGPUShape shape, const mat4x4f &m, u32 materia
     memcpy (&p[sizeof(mat4x4f) * matrix_index], m._getValuesPtConst(), sizeof(mat4x4f));
 
     //u64 *pRenderableList = static_cast<u64*>(instance_buffer.host_pt);
-    pRenderableList[nRenderable++] = priv_pack_renderable (shape, material_index, matrix_index);
+    pRenderableList[nRenderable++] = priv_pack_renderable (handle_shape, material_index, matrix_index);
 }
 
 //**********************************
@@ -213,29 +243,31 @@ void Renderer_PIPE3::add (const ent::CompModelInstance *comp_mi)
 }
 
 //**********************************
-void Renderer_PIPE3::add (gos::ENGModel3dInst handle)
+void Renderer_PIPE3::add (gos::ENGModel3dInst handle_mi)
 {
 	const res::Model3dInst *res_mi;
-	if (!engine->get (handle, &res_mi))
+	if (!engine->get (handle_mi, &res_mi))
 		return;
 
     const gos::ModelInstance *mi = &res_mi->minst;
-
-    //se e' la prima volta che vedo questa istanza...
-    if (u32MAX == mi->renderer_bindings[renderer_UID])
-    {
-        res_mi->minst.renderer_bindings[renderer_UID] = 0;
-    }
-
 
     //addo le shape al renderer
 	for (u32 i=0; i<mi->num_meshes; i++)
 	{
 		const Model::Mesh *mesh = &mi->listof_meshes[i];
-		
-		add(	mi->listof_gpushapes[mesh->shape_index],
-				mi->listof_bones[mesh->bone_index].matrix,
-				mesh->material_index);
+
+        if (u16MAX != mesh->material_index)
+        {
+            add(mi->listof_gpushapes[mesh->shape_index],
+                mi->listof_bones[mesh->bone_index].matrix,
+                mi->listof_materials[mesh->material_index]);
+        }
+        else
+        {
+            add(mi->listof_gpushapes[mesh->shape_index],
+                mi->listof_bones[mesh->bone_index].matrix,
+                material_default_index);
+        }
 	}
 }
 

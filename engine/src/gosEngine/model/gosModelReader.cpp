@@ -18,7 +18,7 @@ ENGSkeleton Reader::skeleton_get_handle() const
 	assert (model::isValid(*m));
 	
 	ENGSkeleton ret;
-	ret.setFromU32 (utils::bufferReadU32 (&m->blob[OFFSET_TO_SKELETON]));
+	ret.setFromU32 (utils::bufferReadU32 (&m->blob[SKELETON]));
 	return ret;
 }
 
@@ -26,7 +26,7 @@ ENGSkeleton Reader::skeleton_get_handle() const
 u32 Reader::mesh_get_num() const
 {
 	assert (model::isValid(*m));
-	return utils::bufferReadU16 (&m->blob[OFFSET_TO_NUM_MESHES]);
+	return utils::bufferReadU16 (&m->blob[NUM_MESHES]);
 }
 
 //*******************************************
@@ -42,23 +42,24 @@ const Model::Mesh* Reader::mesh_get_by_index (u32 index) const
 u32 Reader::gpushape_get_num() const
 {
 	assert (model::isValid(*m));
-	return utils::bufferReadU16 (&m->blob[OFFSET_TO_NUM_SHAPES]);
+	return utils::bufferReadU16 (&m->blob[NUM_SHAPES]);
 }
 
 //*******************************************
 ENGGPUShape Reader::gpushape_get_by_index (u32 index) const
 {
 	assert (index < gpushape_get_num());
+	const ENGGPUShape *list = gpushape_get_pt_to_list();
+	return list[index];
 
-	ENGGPUShape ret;
-	ret.setFromU32 (utils::bufferReadU32 (&m->blob[OFFSET_TO_ENGSHAPE + sizeof(u32) * index]));
-	return ret;
 }
 
 //*******************************************
 const ENGGPUShape* Reader::gpushape_get_pt_to_list () const
 {
-	return reinterpret_cast<const ENGGPUShape*>(&m->blob[OFFSET_TO_ENGSHAPE]);
+	const u32 ct = ENGSHAPE;
+	assert (0 == ct % 8);
+	return reinterpret_cast<const ENGGPUShape*>(&m->blob[ct]);
 }
 
 
@@ -66,25 +67,22 @@ const ENGGPUShape* Reader::gpushape_get_pt_to_list () const
 u32 Reader::material_get_num() const
 {
 	assert (model::isValid(*m));
-	return utils::bufferReadU16 (&m->blob[OFFSET_TO_NUM_MATERIAL]);
+	return utils::bufferReadU16 (&m->blob[NUM_MATERIAL]);
 }
 
 //*******************************************
 ENGMaterialPBR Reader::material_get_by_index (u32 index) const
 {
 	assert (index < material_get_num());
-
-	const u32 ct = utils::bufferReadU32 (&m->blob[OFFSET_TO_START_OF_MATERIALS]);
-
-	ENGMaterialPBR ret;
-	ret.setFromU32 (utils::bufferReadU32 (&m->blob[ct + sizeof(u32) * index]));
-	return ret;
+	const ENGMaterialPBR *list = material_get_pt_to_list();
+	return list[index];
 }
 
 //*******************************************
 const ENGMaterialPBR* Reader::material_get_pt_to_list () const
 {
-	const u32 ct = utils::bufferReadU32 (&m->blob[OFFSET_TO_START_OF_MATERIALS]);
+	const u32 ct = utils::bufferReadU16 (&m->blob[OFFSET_TO_START_OF_MATERIALS]);
+	assert (0 == ct % 8);
 	return reinterpret_cast<const ENGMaterialPBR*>(&m->blob[ct]);
 }
 

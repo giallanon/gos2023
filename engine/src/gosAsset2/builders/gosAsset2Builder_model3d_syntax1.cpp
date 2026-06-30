@@ -217,14 +217,17 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 
 		case eWhatToBuild::materials:
 			{
-				if (!priv_build_material(ctx, doCreateAnAssetFile, out_result))
-					return false;
-
-				buildCtx.iToBuild++;
-				if (buildCtx.iToBuild < buildCtx.imported.num_material)
+				if (buildCtx.imported.num_material > 0)
 				{
-					*out_bCallMeAgain = true;
-					return true;
+					if (!priv_build_material(ctx, doCreateAnAssetFile, out_result))
+						return false;
+
+					buildCtx.iToBuild++;
+					if (buildCtx.iToBuild < buildCtx.imported.num_material)
+					{
+						*out_bCallMeAgain = true;
+						return true;
+					}
 				}
 
 				//passo alla fase finale
@@ -274,7 +277,10 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 					{
 						const u32 shape_index = buildCtx.imported.mesh_list[i].shape_index;
 						const u32 bone_index = buildCtx.imported.mesh_list[i].bone_index;
-						const u32 material_index = 0;
+						
+						u32 material_index = u32MAX;
+						if (buildCtx.imported.num_material)
+							material_index = buildCtx.imported.mesh_list[i].material_index;
 
 						assetFile.mesh_add (shape_index, bone_index, material_index);
 					}
@@ -522,7 +528,13 @@ void Builder_model3d::Syntax1::priv_print_report(const char *filenameDST) const
 		const char *bone_name = skr.name_get_by_index (bone_index);
 
 		//[mesh]: <my-shape-name>;<my-material-name>;<bone-name>;<local-transform-matrix3x3>
-		out << "\t[mesh]: " << shape_name << "; " << buildCtx.imported.materialNameList[material_index] << "; " << bone_name << "; identity\n";
+
+		out << "\t[mesh]: " << shape_name << "; ";
+		if (buildCtx.imported.num_material)
+			out << buildCtx.imported.materialNameList[material_index];
+		else
+			out << "default-material";
+		out << "; " << bone_name << "; identity\n";
 	}
 	
 	out << "}\n\n";

@@ -135,19 +135,19 @@ namespace gos
 							break;
 
 
+
+
 						//meshes
 						reader.moveCursorTo(start_of_list_of_mesh_uid);
 						for (u32 i=0; i<num_meshes; i++)
 						{
 							const u32 index_of_concrete_shape = reader.readU32();
 							const u32 bone_index = reader.readU32();
-							
-							reader.readU32();
-							//const u32 local_material_index = reader.readU32();
+							const u32 local_material_index = reader.readU32();
 
-							//model::set_mesh (res_data->data.model, i, (u16)index_of_concrete_shape, (u16)bone_index, (u16)my_material_index);
-							model::set_mesh (res_model->model, i, (u16)index_of_concrete_shape, (u16)bone_index, 0);
+							model::set_mesh (res_model->model, i, (u16)index_of_concrete_shape, (u16)bone_index, local_material_index);
 						}
+
 
 
 						//fine di while(1)

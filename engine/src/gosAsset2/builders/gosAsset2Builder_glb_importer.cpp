@@ -1070,13 +1070,6 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 			}		
 			++index;
 		}
-
-		//se non ci sono material, creo il default
-		if (0 == materialList.getNElem())
-		{
-			materialList[0].reset();
-			materialNameList.append ("gosengine_default_material");
-		}
 	}	
 
 	//parsing dei nodes
@@ -1129,12 +1122,6 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 			out_results->numShapes = num_shape;
 			out_results->shapeList = GOSALLOCT(gos::Shape*, out_results->allocator, sizeof(gos::Shape) * num_shape);
 			out_results->shapeNameList = GOSALLOCT(char**, out_results->allocator, sizeof(char*) * num_shape);
-			
-
-			out_results->num_material = num_material;
-			out_results->material_list = GOSALLOCT(MaterialPBR*, out_results->allocator, sizeof(MaterialPBR) * num_material);
-			out_results->materialNameList = GOSALLOCT(char**, out_results->allocator, sizeof(char*) * num_material);
-			
 			memcpy (out_results->shapeList, shapeList._queryPointer(), sizeof(gos::Shape) * num_shape);
 			for (u32 i = 0; i < num_shape; i++)
 			{
@@ -1142,16 +1129,23 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 				out_results->shapeNameList[i] = GOSALLOCT(char*, out_results->allocator, sizeof(char) * (str_len+1));
 				memcpy (out_results->shapeNameList[i], shapeNameList(i).getBuffer(), str_len);
 				out_results->shapeNameList[i][str_len] = 0x00;
-			}
+			}			
 
 
-			memcpy (out_results->material_list, materialList._queryPointer(), sizeof(MaterialPBR) * num_material);
-			for (u32 i = 0; i < num_material; i++)
+			out_results->num_material = num_material;
+			if (num_material)
 			{
-				const u32 str_len = materialNameList(i).lengthInByte();
-				out_results->materialNameList[i] = GOSALLOCT(char*, out_results->allocator, sizeof(char) * (str_len+1));
-				memcpy (out_results->materialNameList[i], materialNameList(i).getBuffer(), str_len);
-				out_results->materialNameList[i][str_len] = 0x00;
+				out_results->material_list = GOSALLOCT(MaterialPBR*, out_results->allocator, sizeof(MaterialPBR) * num_material);
+				out_results->materialNameList = GOSALLOCT(char**, out_results->allocator, sizeof(char*) * num_material);
+
+				memcpy (out_results->material_list, materialList._queryPointer(), sizeof(MaterialPBR) * num_material);
+				for (u32 i = 0; i < num_material; i++)
+				{
+					const u32 str_len = materialNameList(i).lengthInByte();
+					out_results->materialNameList[i] = GOSALLOCT(char*, out_results->allocator, sizeof(char) * (str_len + 1));
+					memcpy (out_results->materialNameList[i], materialNameList(i).getBuffer(), str_len);
+					out_results->materialNameList[i][str_len] = 0x00;
+				}
 			}
 
 			//calcolo le mesh

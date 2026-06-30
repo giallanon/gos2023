@@ -22,14 +22,21 @@ namespace gos
 	 *      16      u16     abs-offset-to MATERIAL 1
      * 
      *      18      u32     ENGSkeleton as u32
-     *      22      u32     ENGGPUShape-1 as u32
+     *      22      pad
+     *      23      pad
+     
+     *      24      u32     ENGGPUShape-1 as u32        //voglio che inizia ad un indirizzo multiplo di 8
      *      ..  
      *      ..      u32     ENGGPUShape-N as u32
 	 * 
+     * 
+     *                                                  //voglio che inizia ad un indirizzo multiplo di 8
 	 * 		..		u32		ENGMaterialPBR-1 as u32		//MATERIAL 1 (aka ABS_OFFSET_of_MATERIAL)
 	 * 		..
 	 * 		..		u32		ENGMaterialPBR-N as u32
      * 
+     * 
+     *                                                  //voglio che inizia ad un indirizzo multiplo di 8
      *      ..      sizeof(Mesh)	mesh-0     			//MESH 1    (aka ABS_OFFSET_of_MESH1)
      *      ..
      *      ..      sizeof(Mesh)	mesh-N     
@@ -74,13 +81,13 @@ namespace gos
         class Reader
         {
 		public:
-			static constexpr u32 OFFSET_TO_NUM_SHAPES = 8;
-			static constexpr u32 OFFSET_TO_NUM_MATERIAL = 10;
-			static constexpr u32 OFFSET_TO_NUM_MESHES = 12;
+			static constexpr u32 NUM_SHAPES = 8;
+			static constexpr u32 NUM_MATERIAL = 10;
+			static constexpr u32 NUM_MESHES = 12;
 			static constexpr u32 OFFSET_TO_START_OF_MESHES = 14;
 			static constexpr u32 OFFSET_TO_START_OF_MATERIALS = 16;
-			static constexpr u32 OFFSET_TO_SKELETON	= 18;
-			static constexpr u32 OFFSET_TO_ENGSHAPE = 22;
+			static constexpr u32 SKELETON	= 18;
+			static constexpr u32 ENGSHAPE = 24;
 
         public:
                                 Reader()                        { m = NULL; }

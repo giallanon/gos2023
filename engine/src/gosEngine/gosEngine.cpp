@@ -1392,18 +1392,36 @@ bool Engine::materialPBR_create (ENGMaterialPBR *out_handle)
     return true;
 }
 
+bool Engine::internal__materialPBR_update_renderer_binding (ENGMaterialPBR handle, u8 renderer_uid, u32 data)
+{
+	res::MaterialPBR *res = (res::MaterialPBR*)res_getDescriptor(handle.res_handle);
+	if (NULL == res)
+		return false;
+	if (res::eStatus::ready == res->_descr.status)
+	{
+        assert (renderer_uid < res::MaterialPBR::NUM_MAX_RENDERER);
+		res->renderer_bindings[renderer_uid] = data;
+        return true;
+	}
+
+    return false;
+}
+
 void Engine::internal__materialPBR_on_afterCreate (void *resIN)
 {
 	//asset_logger->log ("materialPBR_on_afterCreate\n");
 	res::MaterialPBR *res = (res::MaterialPBR*)resIN;
-	res->diffuse_col_HDR_RGBA.set (1,1,1,1);
-	res->diffuse_texture_index = 0;
+    
+    memset (res->renderer_bindings, 0xff, sizeof(res->renderer_bindings));
+    res->set_default_material_params();
 }
 
 void Engine::internal__materialPBR_on_destroy (void *resIN)
 {
 	//asset_logger->log ("internal__materialPBR_on_destroy\n");
 	//res::MaterialPBR *res = (res::MaterialPBR*)resIN;
+
+    //TODO: segnalare alle renderPipe che il materiale e' morto
 
 }
 

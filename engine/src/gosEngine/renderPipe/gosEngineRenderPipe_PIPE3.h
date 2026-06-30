@@ -34,13 +34,14 @@ namespace gos
 			void 	on__render (const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx) final						{ priv_do_render (ctx, rctx); }
 
 			void    begin ();
-			void    add (const ENGGPUShape shape, const mat4x4f &m, u32 material_index);
-			void 	add (gos::ENGModel3dInst handle);
+			void    add (const ENGGPUShape handle_shape, const mat4x4f &m, u32 material_index);
+			void    add (const ENGGPUShape handle_shape, const mat4x4f &m, ENGMaterialPBR handle_material);
+			void 	add (gos::ENGModel3dInst handle_mi);
 			void    add (const ent::CompModelInstance *mi);
 			void    end ();
 
 			//==================== gestione materiali
-			u32             material_create (u32 texture_index, const vec3f diffuse_col);
+			u32             material_create (u32 texture_index, const vec3f diffuse_col_HDR_RGB);
 			void            material_delete (u32 material_index);
 			Material*       material_getForUpdate (u32 material_index);
 			const Material* material_query (u32 material_index) const;
@@ -54,6 +55,7 @@ namespace gos
 			u64     priv_pack_renderable (ENGGPUShape shape, u32 material_index, u32 matrix_index) const;
 			void    priv_unpack_renderable (u64 packed, ENGGPUShape *out_shape, u32 *out_material_index, u32 *out_matrix_index) const;
 			void    priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx);
+			u32		priv_material_create_from_PBR (const res::MaterialPBR *mat);
 
 		private:
 			gos::Allocator              *localAllocator;
@@ -73,6 +75,7 @@ namespace gos
 			u32							matrix_nextIndex;
 			
 			Material					material_default;
+			u32							material_default_index;
 			Material					*material_buffer;
 			u32							material_sizeof_buffer;
 			gos::Bitfield				material_bitmask;

@@ -85,15 +85,19 @@ namespace gos
 		struct MaterialPBR
 		{
 		public:
-			res::Descr			_descr;
-			gos::vec4f			diffuse_col_HDR_RGBA;
-			u32					diffuse_texture_index;
+			static constexpr u32 NUM_MAX_RENDERER = 4;
 
-			void 	set_default_material_params() {
-				diffuse_col_HDR_RGBA.set (1,1,1,1);
-				diffuse_texture_index = 0;
+		public:
+			void 	set_default_material_params()						{ diffuse_col_HDR_RGBA.set (1,1,1,1); diffuse_texture_index = 0; }
 
-			}
+		public:
+			res::Descr		_descr;
+			u32				renderer_bindings[NUM_MAX_RENDERER];
+
+			//parametri di materiale
+			gos::vec4f		diffuse_col_HDR_RGBA;
+			u32				diffuse_texture_index;
+
 		};		
 
 		//************************************

@@ -15,14 +15,7 @@ namespace gos
 	class ModelInstance
 	{
 	public:
-		static constexpr u32 NUM_MAX_RENDERER = 4;
-
-	public:
-		void    reset()		{ 
-			allocator=NULL; num_gpushapes=num_bones=num_meshes=0; listof_gpushapes=NULL; listof_bones=NULL; listof_meshes=NULL; model_listof_bones=NULL; 
-			num_materials = 0; listof_materials = NULL;
-			memset (renderer_bindings, 0xFF, sizeof(renderer_bindings));
-		}
+		void    reset()		{ allocator=NULL; num_gpushapes=num_bones=num_meshes=0; listof_gpushapes=NULL; listof_bones=NULL; listof_meshes=NULL; model_listof_bones=NULL; num_materials = 0; listof_materials = NULL; }
 		void 	free()
 		{
 			GOSFREE(allocator, listof_bones);
@@ -42,9 +35,6 @@ namespace gos
 
 		u32 				num_materials;
 		const ENGMaterialPBR	*listof_materials;	//punta alla lista di ENGMaterialPBR di <model>
-		
-
-		u32					renderer_bindings[NUM_MAX_RENDERER];
 
 		gos::Allocator		*allocator;
 	};

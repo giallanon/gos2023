@@ -148,6 +148,7 @@ namespace gos
         bool            get (ENGMaterialPBR handle, const res::MaterialPBR **out, u64 timeout_msec = 0)				{ return res_getOrScheduleLoadT(handle, out, timeout_msec); }
 		void 			internal__materialPBR_on_afterCreate (void *res);
 		void            internal__materialPBR_on_destroy (void *res);
+        bool 			internal__materialPBR_update_renderer_binding (ENGMaterialPBR handle, u8 renderer_uid, u32 data);
 
 
 		//============================= model3d
