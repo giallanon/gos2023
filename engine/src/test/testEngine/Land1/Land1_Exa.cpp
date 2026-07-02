@@ -147,3 +147,43 @@ u32 Exa::get_quad_from_vtx (u32 vtx_index, u32 *out__quadList, u32 num_elem_in_q
 
 	return ret;
 }
+
+
+//************************************************
+u16 Exa::priv_get_index_of_vtx_in_uscita_da (u32 quad_index, u16 vtx_index_A) const
+{
+	assert (quad_index < num_quad);
+
+#ifdef _DEBUG
+	bool debug_ok = false;
+	for (u8 i = 0; i < 4; i++)
+	{
+		if (quadList[quad_index].idx[i] == vtx_index_A)
+			debug_ok = true;
+	}
+	assert (debug_ok);
+#endif
+
+	u8 i=0;
+	while (i < 3)
+	{
+		if (quadList[quad_index].idx[i] == vtx_index_A)
+			return (i+1);
+		i++;
+	}
+
+	return 0;
+}
+
+u16 Exa::get_index_of_vtx_in_uscita_da (u32 quad_index, u16 vtx_index_A) const
+{
+	const u16 ii = priv_get_index_of_vtx_in_uscita_da (quad_index, vtx_index_A);
+	return quadList[quad_index].idx[ii];
+}
+
+//************************************************
+u16 Exa::get_index_of_vtx_in_entrata_a (u32 quad_index, u16 vtx_index_A) const
+{
+	const u16 ii = priv_get_index_of_vtx_in_uscita_da (quad_index, vtx_index_A);
+	return quadList[quad_index].idx[(ii + 2) % 4];
+}

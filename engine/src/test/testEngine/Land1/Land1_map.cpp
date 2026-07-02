@@ -176,9 +176,24 @@ void Map::priv_exa_calc_v2 (Exa *exa) const
 	FastHashMap<u32, u32> edge_vtx_hashmap;
 	edge_vtx_hashmap.setup (gos::getScrapAllocator(), exa->num_vtx*exa->num_vtx);
 
+#define MAKE_KEY(a,b,c,d)\
+			key = 0;\
+			if (a <= b)	key |= ( ((u32)a << 24) | ((u32)b << 16) );\
+			else		key |= ( ((u32)b << 24) | ((u32)a << 16) );\
+			if (c <= d)	key |= ( ((u32)c << 8) | (u32)d );\
+			else		key |= ( ((u32)d << 8) | (u32)c );\
+
+
+	u32 key;
+	u32 v_edge1_index;
+	u32 v_edge2_index;
+	vec2f v_edge;
+	FastHashMap<u32, u32>::Position pos;
+
 	for (u32 i=0; i<exa->num_vtx; i++)
 	{
 		u32 num_idx = 0;
+		memset (exa->v2.vtx_info[i].idx_list, 0xFF, sizeof(exa->v2.vtx_info[i].idx_list));
 		exa->v2.vtx_info[i].height = 0;
 		exa->v2.vtx_info[i].material_index = 1;
 		exa->v2.vtx_info[i].idx_list[num_idx++] = (u16)i;
@@ -191,11 +206,65 @@ void Map::priv_exa_calc_v2 (Exa *exa) const
 
 		if (1 == nquad)
 		{
-			exa->v2.vtx_info[i].idx_list[0] = exa->quadList[adj_quad_list[0]].idx[0];
-			exa->v2.vtx_info[i].idx_list[1] = exa->quadList[adj_quad_list[0]].idx[1];
-			exa->v2.vtx_info[i].idx_list[2] = exa->quadList[adj_quad_list[0]].idx[2];
-			exa->v2.vtx_info[i].idx_list[3] = exa->quadList[adj_quad_list[0]].idx[3];
+			//siamo verosimilmente su un vtx del bordo
+			//Dato che non ci sono le informazioni su tutte i quad adiacenti (perche' farebbero parte di un altro exa)
+			//faccio qualche trucco
+			const u16 quad_index = adj_quad_list[0];
+			
+			const u32 QC_index = start_of_quad_center_vtx + quad_index;
 
+			const u32 A_index = i;
+			const u32 B_index = exa->get_index_of_vtx_in_uscita_da (quad_index, i);
+			const u32 C_index = exa->get_index_of_vtx_in_entrata_a (quad_index, i);
+
+			const vec2f A = final_vtx_list(A_index);
+			const vec2f B = final_vtx_list(B_index);
+			const vec2f C = final_vtx_list(C_index);
+
+			MAKE_KEY(A_index, B_index, A_index, B_index);
+			if (!edge_vtx_hashmap.findWithPos(key, &v_edge1_index, &pos))
+			{
+				v_edge = A + (B - A) * 0.5f;
+				v_edge1_index = final_vtx_list.getNElem();
+				final_vtx_list.append (v_edge);
+				edge_vtx_hashmap.insertInPosition (pos, v_edge1_index);
+			}
+
+			MAKE_KEY(A_index, C_index, A_index, C_index);
+			if (!edge_vtx_hashmap.findWithPos(key, &v_edge2_index, &pos))
+			{
+				v_edge = A + (C - A) * 0.5f;
+				v_edge2_index = final_vtx_list.getNElem();
+				final_vtx_list.append (v_edge);
+				edge_vtx_hashmap.insertInPosition (pos, v_edge2_index);
+			}
+
+			exa->v2.vtx_info[i].idx_list[num_idx++] = (u16)v_edge1_index;
+			exa->v2.vtx_info[i].idx_list[num_idx++] = (u16)QC_index;
+			exa->v2.vtx_info[i].idx_list[num_idx++] = (u16)v_edge2_index;
+
+			continue;
+		}
+
+
+		if (2 == nquad)
+		{
+			//siamo verosimilmente su un vtx del bordo
+			//Dato che non ci sono le informazioni su tutte i quad adiacenti (perche' farebbero parte di un altro exa)
+			//faccio qualche trucco
+			const u16 quad_index = adj_quad_list[0];
+			const u16 quad_next_index = adj_quad_list[1];
+			
+			const u32 QC_index = start_of_quad_center_vtx + quad_index;
+			const u32 QC_next_index = start_of_quad_center_vtx + quad_next_index;
+
+			const u32 A_index = i;
+			const u32 B_index = exa->get_index_of_vtx_in_uscita_da (quad_index, i);
+			const u32 C_index = exa->get_index_of_vtx_in_entrata_a (quad_index, i);
+
+			const vec2f A = final_vtx_list(A_index);
+			const vec2f B = final_vtx_list(B_index);
+			const vec2f C = final_vtx_list(C_index);
 			continue;
 		}
 
@@ -219,34 +288,8 @@ void Map::priv_exa_calc_v2 (Exa *exa) const
 
 			//assumo che il vtx 0 del quad sia l'estremo B dell'edge che parte dal vtx in esame (A)
 			const u32 A_index = i;
-			
-			
-			//const u32 B_index = exa->quadList[quad_index].idx[0];
-
-			u8 i3=0;
-			u32 B_index = exa->quadList[quad_index].idx[0];
-			while (i3 < 3)
-			{
-				if (exa->quadList[quad_index].idx[i3] == (u8)i)
-				{
-					B_index = exa->quadList[quad_index].idx[i3+1];
-					break;
-				}
-				i3++;
-			}
-
-			//const u32 C_index = exa->quadList[quad_next_index].idx[0];
-			i3=0;
-			u32 C_index = exa->quadList[quad_next_index].idx[0];
-			while (i3 < 3)
-			{
-				if (exa->quadList[quad_next_index].idx[i3] == (u8)i)
-				{
-					C_index = exa->quadList[quad_next_index].idx[i3+1];
-					break;
-				}
-				i3++;
-			}
+			const u32 B_index = exa->get_index_of_vtx_in_uscita_da (quad_index, i);
+			const u32 C_index = exa->get_index_of_vtx_in_uscita_da (quad_next_index, i);
 
 
 			const vec2f A = final_vtx_list(A_index);
@@ -265,22 +308,11 @@ void Map::priv_exa_calc_v2 (Exa *exa) const
 			assert (QC_next_index < 0xFFFF);
 			const vec2f QC_next = final_vtx_list(QC_next_index);
 
-#define MAKE_KEY(a,b,c,d)\
-			key = 0;\
-			if (a <= b)	key |= ( ((u32)a << 24) | ((u32)b << 16) );\
-			else		key |= ( ((u32)b << 24) | ((u32)a << 16) );\
-			if (c <= d)	key |= ( ((u32)c << 8) | (u32)d );\
-			else		key |= ( ((u32)d << 8) | (u32)c );\
+
 
 
 			//calcolo i 2 edge vertex
 			//intersezione 1: (A,B) e (QC_prev,QC)
-			u32 key;
-			u32 v_edge1_index;
-			u32 v_edge2_index;
-			vec2f v_edge;
-			FastHashMap<u32, u32>::Position pos;
-
 			MAKE_KEY(A_index, B_index, QC_prev_index, QC_index);
 			if (!edge_vtx_hashmap.findWithPos(key, &v_edge1_index, &pos))
 			{
@@ -314,14 +346,12 @@ void Map::priv_exa_calc_v2 (Exa *exa) const
 			assert (QC_index < 0xFFFF);
 			exa->v2.vtx_info[i].idx_list[num_idx++] = (u16)v_edge1_index;
 			exa->v2.vtx_info[i].idx_list[num_idx++] = (u16)QC_index;
-
-#undef MAKE_KEY
-
 		}
 
 		assert (num_idx <= 16);
 	}
 
+#undef MAKE_KEY
 
 	exa->v2.num_tot_vtx = final_vtx_list.getNElem();
 	exa->v2.vtx = GOSALLOCT(vec2f*, localAllocator, sizeof(vec2f) * exa->v2.num_tot_vtx);

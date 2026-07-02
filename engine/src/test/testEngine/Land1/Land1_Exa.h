@@ -51,6 +51,11 @@ namespace Land1
 					//I quad sono ordinati in senso orario
 		u32			get_quad_from_vtx (u32 vtx_index, u32 *out__quadList, u32 num_elem_in_quad_list) const;
 
+					//dato il quad <quad_index>, e posto che <vtx_index_A> sia uno dei suoi 4 vertici,
+					//ritorna il vtx_index_B del vertice del quad appartenente al lato (vtx_index_A, vtx_index_B) del quad stesso
+		u16			get_index_of_vtx_in_uscita_da (u32 quad_index, u16 vtx_index_A) const;
+		u16			get_index_of_vtx_in_entrata_a (u32 quad_index, u16 vtx_index_A) const;
+
 	public:
 		u16			num_vtx;
 		u16			num_quad;
@@ -63,6 +68,7 @@ namespace Land1
 
 	private:
 		bool		priv_is_point_in_quad (const gos::vec3f &world_point, u32 quad_index) const;
+		u16			priv_get_index_of_vtx_in_uscita_da (u32 quad_index, u16 vtx_index_A) const;
 	};
 
 } //namespace Land1

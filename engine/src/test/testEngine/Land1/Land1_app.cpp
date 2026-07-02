@@ -230,14 +230,13 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 			const u32 i = line_ctx1->vtx_add (vec3f (exa->vtxList[vtx_index].x, 0, exa->vtxList[vtx_index].y) );
 			line_ctx1->
 				set_color_ARGB (0xFFFFFFFF)
-				.point_set_radius(8)
+				.point_set_radius(16)
 				.point (i);
 
 			//renderizzo i quad che sharano il vtx
 			line_ctx1->
-				set_color_ARGB (0xFF00FF00)
-				.set_line_width(2)
-				.point_set_radius(16);
+				set_color_ARGB (0xFF818100)
+				.set_line_width(2);
 
 			u32 quads[8];
 			const u32 nquad = exa->get_quad_from_vtx (vtx_index, quads, 8);
@@ -257,22 +256,45 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 
 			//vtx0 del quad 0
 			{
+				const u32 colors[6] = {0xFFFFFFFF, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFF00FF, 0xFFFFFF00};
+				line_ctx1->point_set_radius(8);
+
 				logger::log ("nquad=%d\n", nquad);
-				u32 nn = nquad;
-				if (nquad > 3)
-					nn = 3;
-				const u32 colors[3] = {0xFFFF0000, 0xFFFFFF00, 0xFFFF00FF};
-				for (u32 i=0; i<nn; i++)
-				{
-					const u32 quad_num = quads[i];
-					const Land1::Exa::Quad *q = &exa->quadList[quad_num];
 				
-					const u16 quad_center_index = line_ctx1->vtx_add (exa->quadCenterList[quad_num].x, 0, exa->quadCenterList[quad_num].y);
+				
+				//u32 nn = nquad;
+				//if (nquad > 5)
+				//	nn = 5;
+				//for (u32 i=0; i<nn; i++)
+				//{
+				//	const u32 quad_num = quads[i];
+				//	const Land1::Exa::Quad *q = &exa->quadList[quad_num];
+				//
+				//	const u16 quad_center_index = line_ctx1->vtx_add (exa->quadCenterList[quad_num].x, 0, exa->quadCenterList[quad_num].y);
+
+				//	line_ctx1->
+				//	set_color_ARGB(colors[i])
+				//		.point (quad_center_index)
+				//		.point (first_vtx + q->idx[0]);
+				//}
+
+				assert (exa->v2.vtx_info[vtx_index].num_quad == nquad);
+				u32 num_vtx_appoggio = 0;
+				for (u8 i = 0; i < 16; i++)
+				{
+					if (exa->v2.vtx_info[vtx_index].idx_list[i] != u16MAX)
+						num_vtx_appoggio++;
+				}
+				logger::log ("num_vtx_appoggio=%d\n", num_vtx_appoggio);
+
+				for (u32 i=0; i<num_vtx_appoggio; i++)
+				{
+					const u16 vi = exa->v2.vtx_info[vtx_index].idx_list[i];
+					const u32 aa = line_ctx1->vtx_add (vec3f(exa->v2.vtx[vi].x, 0, exa->v2.vtx[vi].y));
 
 					line_ctx1->
-					set_color_ARGB(colors[i])
-						.point (quad_center_index)
-						.point (first_vtx + q->idx[0]);
+					set_color_ARGB(colors[i % 6])
+						.point (aa);
 				}
 			}
 
