@@ -8,67 +8,35 @@ namespace Land1
 	struct Exa
 	{
 	public:
-		struct Quad
-		{
-			u8	idx[4];
-			f32 height;
-			u32 material_index;
-		};
-
 		struct VtxInfo
 		{
-			u32 material_index;
-			u16	adjacent_quad_list[8];
-		};
-
-		struct VtxInfo2
-		{
-			u8	num_quad;	//num quad centrati sul vtx i-esimo
+			u8	num_quad;		//num quad centrati sul vtx i-esimo
 			u8 	material_index;
+			u8	num_idx;		//num idx in idx_list
+			u8	is_border_vtx;
 			u16	height;
-			u16	idx_list[16];	//idx0=centro, gli altri 2*num_quad in senso orario
+			u16	idx_list[16];		//idx0=centro, gli altri 2*num_quad in senso orario
+			u16	adj_vtx_list[8];
 		};
 
-		struct V2
-		{
-			u16	num_tot_vtx;
-			gos::vec2f	*vtx;
-			VtxInfo2	*vtx_info;
-		};
 
 	public:
-		gos::vec2f	utils__calc_quad_center (u32 quad_index) const;
-		void		utils__get_quad_vertex (u32 quad_index, gos::vec2f *out__vtx4) const;
-		
-					//dato un punto in world coordinate, ritorna (se esiste) l'indice del quad a cui appartiene
-		bool		get_quad_from_point (const gos::vec3f &world_point, u32 *out__quad_index) const;
-
 					//dato un punto in world coordinate, ritorna (se esiste) l'indice del vtx + vicino
 		bool		get_closest_vtx_from_point (const gos::vec3f &world_point, u32 *out__vtx_index) const;
 		
-					//dato un vtx_index, ritorna l'elenco dei quad che sharano lo stesso vtx
-					//Ritorna il num di quad_index inseriti in <out__quadList>
-					//I quad sono ordinati in senso orario
-		u32			get_quad_from_vtx (u32 vtx_index, u32 *out__quadList, u32 num_elem_in_quad_list) const;
-
-					//dato il quad <quad_index>, e posto che <vtx_index_A> sia uno dei suoi 4 vertici,
-					//ritorna il vtx_index_B del vertice del quad appartenente al lato (vtx_index_A, vtx_index_B) del quad stesso
-		u16			get_index_of_vtx_in_uscita_da (u32 quad_index, u16 vtx_index_A) const;
-		u16			get_index_of_vtx_in_entrata_a (u32 quad_index, u16 vtx_index_A) const;
-
 	public:
-		u16			num_vtx;
-		u16			num_quad;
-		gos::vec2f	*vtxList;
-		Quad		*quadList;
-		gos::vec2f	*quadCenterList;
-		VtxInfo		*vtxInfoList;
-		V2			v2;
+		u16			num_vtx_originali;	//quelli che compongono l'exa originale
+		u16			num_vtx_tot;		//tutti quelli che sono in vtxList
+		VtxInfo		*vtxInfoList;		//una VtxInfo per ogni vtx-originale
+		gos::vec2f	*vtxList;			//tutti i vtx utili al rendering
 
 
 	private:
-		bool		priv_is_point_in_quad (const gos::vec3f &world_point, u32 quad_index) const;
-		u16			priv_get_index_of_vtx_in_uscita_da (u32 quad_index, u16 vtx_index_A) const;
+		bool		priv_is_point_in_tris (const gos::vec3f &world_point, u16 idx0, u16 idx1, u16 idx2) const;
+		bool		priv_is_point_in_quad (const gos::vec3f &world_point, u16 idx0, u16 idx1, u16 idx2, u16 idx3) const;
+		bool		priv_is_point_in_penta (const gos::vec3f &world_point, u16 idx0, u16 idx1, u16 idx2, u16 idx3, u16 idx4) const;
+		bool		priv_is_point_in_exagon (const gos::vec3f &world_point, u16 idx0, u16 idx1, u16 idx2, u16 idx3, u16 idx4, u16 idx5) const;
+		
 	};
 
 } //namespace Land1

@@ -15,6 +15,7 @@ void ExaGenerator::ExaGenerator::unsetup ()
 	trisList.unsetup ();
 	quadList.unsetup ();
 	listOfBorderVtxIndex.unsetup();
+	quadCenterList.unsetup();
 	allocator = NULL;
 }
 
@@ -29,22 +30,23 @@ void ExaGenerator::setup (gos::Allocator *allocatorIN)
 	trisList.setup (allocator, 1024);
 	quadList.setup (allocator, 1024);
 	listOfBorderVtxIndex.setup (allocator, 1024);
+	quadCenterList.setup (allocator, 1024);
 }
 
 //***************************************
-void ExaGenerator::translate (const gos::vec3f &tr)
+void ExaGenerator::translate (const gos::vec2f &tr)
 {
 	const u32 n = vtxList.getNElem();
 	for (u32 i=0; i<n; i++)
-		vtxList[i] += tr;
+		vtxList[i].pos += tr;
 }
 
 //***************************************
-void ExaGenerator::build (f32 hex_radius, const gos::vec3f &world_center)
+void ExaGenerator::build (f32 hex_radius, const gos::vec2f center)
 {
 	assert (NULL != allocator);
 
-	create_default_exa(hex_radius, world_center);
+	create_default_exa (hex_radius);
 
 	simplify_90();
 
@@ -52,19 +54,76 @@ void ExaGenerator::build (f32 hex_radius, const gos::vec3f &world_center)
 
 	for (u32 i=0;i<10; i++)
 		relax();
+
+	translate (center);
+
+	//segno quali sono i vtx del bordo
+	listOfBorderVtxIndex.forEach ([&vtxList=this->vtxList](u32 key, u32 value) {
+		vtxList[value].isBorderVtx = 1;
+		return true;
+	});
+
+	//calcolo il centro di ogni quad
+	const u32 num_quad = quadList.getNElem();
+	for (u32 i = 0; i < num_quad; i++)
+	{
+		quadCenterList[i] = quad_calc_center(i);
+
+		//ordino i vtx del quad in senso orario
+		f32 angle_list[4];
+		for (u32 i2=0; i2<4; i2++)
+		{
+			const vec2f v = vtxList[ quadList[i].idx[i2] ].pos;
+			const vec2f p = v - quadCenterList[i];
+			angle_list[i2] = atan2f (p.y, p.x);
+		}
+
+		bool bEsci = false;
+		u32 n = 4;
+		while (bEsci == false)
+		{
+			bEsci = true;
+			n--;
+			
+			for (u32 i2 = 0; i2 < n; i2++)
+			{
+				if (angle_list[i2] < angle_list[i2 + 1])
+				{
+					bEsci = false;
+					GOSSWAP(angle_list[i2], angle_list[i2 + 1]);
+					GOSSWAP(quadList[i].idx[i2], quadList[i].idx[i2 + 1]);
+				}
+			}
+		}		
+	}
+
+	//per ogni vtx, vedo quali sono i quad che lo sharano
+	const u32 num_vtx = vtxList.getNElem();
+	for (u32 i = 0; i < num_vtx; i++)
+	{
+		//recupero i quad che sharano il vtx i-esimo
+		u32 quads[8];
+		vtxList[i].num_adjacent_quad = get_quad_from_vtx (i, quads, 8);
+
+		for (u32 ct = 0; ct < vtxList[i].num_adjacent_quad; ct++)
+		{
+			vtxList[i].adjacent_quad_list[ct] = (u16)quads[ct];
+		}
+	}
 }
 
 //***************************************
-void ExaGenerator::create_default_exa(f32 radiusIN, const gos::vec3f &centerIN)
+void ExaGenerator::create_default_exa (f32 radiusIN)
 {
 	vtxList.reset();
 	trisList.reset();
 	quadList.reset();
 	listOfBorderVtxIndex.reset();
+	quadCenterList.reset();
 
 	static constexpr u32 NUM_RINGS = 4;
 	
-	const vec3f	center(0,0,0);
+	const vec2f	center(0,0);
 	PointList exaVtx (allocator, 16);
 	FastArray<sRing> ringIndexStartList(allocator, 32);
 
@@ -109,8 +168,8 @@ void ExaGenerator::create_default_exa(f32 radiusIN, const gos::vec3f &centerIN)
 			for (u32 i = 0; i < 6; i++)
 			{
 				//per ogni lato dell'exa, deve generare vtx addizionali in base al ringLevel
-				const vec3f vtx1 = exaVtx(i);
-				const vec3f vtx2 = exaVtx(i + 1);
+				const vec2f vtx1 = exaVtx(i);
+				const vec2f vtx2 = exaVtx(i + 1);
 
 				vtxList.append(vtx1);
 				if (isLastRingLevel)
@@ -122,7 +181,7 @@ void ExaGenerator::create_default_exa(f32 radiusIN, const gos::vec3f &centerIN)
 					for (u32 i2 = 0; i2 < (ringLevel - 1); i2++)
 					{
 						t += tIncr;
-						const vec3f mid = vtx1 + (vtx2 - vtx1) * t;
+						const vec2f mid = vtx1 + (vtx2 - vtx1) * t;
 						vtxList.append(mid);
 						if (isLastRingLevel)
 							listOfBorderVtxIndex.insertIfNotExists (vtxList.getNElem() - 1);
@@ -174,19 +233,12 @@ void ExaGenerator::create_default_exa(f32 radiusIN, const gos::vec3f &centerIN)
 		radius += 1.0f;
 	}
 
-	//swappo y con z e scalo per fittare "radiusIN"
+	//scalo per fittare "radiusIN"
 	const f32 s = radiusIN / (radius-1.0f);
 	const u32 n = vtxList.getNElem();
 	for (u32 i=0; i<n; i++)
 	{
-		vtxList[i].z = vtxList[i].y;
-		vtxList[i].y = 0;
-
-		vtxList[i].x *= s;
-		vtxList[i].z *= s;
-
-		vtxList[i] += centerIN;
-		
+		vtxList[i].pos *= s;
 	}	
 }
 
@@ -288,28 +340,28 @@ bool ExaGenerator::try_remove_edge (const sEdgeToRemove &edge)
 
 	case 0:
 		quadList.append (sQuad{
-				.vtx_idx0 = trisList(edge.tris_index).vtx_idx1,
-				.vtx_idx1 = trisList(edge.tris_index).vtx_idx2,
-				.vtx_idx2 = trisList(edge.tris_index).vtx_idx0,
-				.vtx_idx3 = (u16)vtx_idx_to_add,
+				trisList(edge.tris_index).vtx_idx1,
+				trisList(edge.tris_index).vtx_idx2,
+				trisList(edge.tris_index).vtx_idx0,
+				(u16)vtx_idx_to_add
 			});
 		break;
 
 	case 1:
 		quadList.append (sQuad{
-				.vtx_idx0 = trisList(edge.tris_index).vtx_idx2,
-				.vtx_idx1 = trisList(edge.tris_index).vtx_idx0,
-				.vtx_idx2 = trisList(edge.tris_index).vtx_idx1,
-				.vtx_idx3 = (u16)vtx_idx_to_add
+				trisList(edge.tris_index).vtx_idx2,
+				trisList(edge.tris_index).vtx_idx0,
+				trisList(edge.tris_index).vtx_idx1,
+				(u16)vtx_idx_to_add
 			});
 		break;
 		
 	case 2:
 		quadList.append (sQuad{
-				.vtx_idx0 = trisList(edge.tris_index).vtx_idx0,
-				.vtx_idx1 = trisList(edge.tris_index).vtx_idx1,
-				.vtx_idx2 = trisList(edge.tris_index).vtx_idx2,
-				.vtx_idx3 = (u16)vtx_idx_to_add
+				trisList(edge.tris_index).vtx_idx0,
+				trisList(edge.tris_index).vtx_idx1,
+				trisList(edge.tris_index).vtx_idx2,
+				(u16)vtx_idx_to_add
 			});
 		break;
 	}		
@@ -356,13 +408,13 @@ void ExaGenerator::simplify_90()
 }
 
 //***************************************
-u32 ExaGenerator::find_in_pointList (const PointList &list, u32 index_start, const vec3f &v_to_be_found) const
+u32 ExaGenerator::find_in_pointList (const VtxList &list, u32 index_start, const vec2f &v_to_be_found) const
 {
 	static constexpr f32 MAX_DIST = 0.1f * 0.1f;
 	const u32 n = list.getNElem();
 	while (index_start < n)
 	{
-		const f32 d = math::distance2(list(index_start), v_to_be_found);
+		const f32 d = math::distance2(list(index_start).pos, v_to_be_found);
 		if (d < MAX_DIST)
 			return index_start;
 		index_start++;
@@ -387,14 +439,14 @@ void ExaGenerator::subdivide()
 		const u16 idx0 = trisList(i).vtx_idx0;
 		const u16 idx1 = trisList(i).vtx_idx1;
 		const u16 idx2 = trisList(i).vtx_idx2;
-		const vec3f v0 = vtxList(idx0);
-		const vec3f v1 = vtxList(idx1);
-		const vec3f v2 = vtxList(idx2);
+		const vec2f v0 = vtxList(idx0).pos;
+		const vec2f v1 = vtxList(idx1).pos;
+		const vec2f v2 = vtxList(idx2).pos;
 
-		const vec3f v_center = (v0 + v1 + v2) / 3.0f;
-		const vec3f v_01 = v0 + (v1-v0) * 0.5f;
-		const vec3f v_12 = v1 + (v2-v1) * 0.5f;
-		const vec3f v_20 = v2 + (v0-v2) * 0.5f;
+		const vec2f v_center = (v0 + v1 + v2) / 3.0f;
+		const vec2f v_01 = v0 + (v1-v0) * 0.5f;
+		const vec2f v_12 = v1 + (v2-v1) * 0.5f;
+		const vec2f v_20 = v2 + (v0-v2) * 0.5f;
 
 		const u32 idx_center = vtxList.getNElem();
 		vtxList.append(v_center);
@@ -437,25 +489,25 @@ void ExaGenerator::subdivide()
 		}
 
 		newQuadList.append ( sQuad{
-			.vtx_idx0 = (u16)trisList(i).vtx_idx0,
-			.vtx_idx1 = (u16)idx_v01,
-			.vtx_idx2 = (u16)idx_center,
-			.vtx_idx3 = (u16)idx_v20
+			(u16)trisList(i).vtx_idx0,
+			(u16)idx_v01,
+			(u16)idx_center,
+			(u16)idx_v20
 		});
 
 		newQuadList.append ( sQuad{
-			.vtx_idx0 = (u16)idx_v01,
-			.vtx_idx1 = (u16)trisList(i).vtx_idx1,
-			.vtx_idx2 = (u16)idx_v12,
-			.vtx_idx3 = (u16)idx_center,
+			(u16)idx_v01,
+			(u16)trisList(i).vtx_idx1,
+			(u16)idx_v12,
+			(u16)idx_center
 
 		});	
 		
 		newQuadList.append ( sQuad{
-			.vtx_idx0 = (u16)idx_v12,
-			.vtx_idx1 = (u16)trisList(i).vtx_idx2,
-			.vtx_idx2 = (u16)idx_v20,
-			.vtx_idx3 = (u16)idx_center
+			(u16)idx_v12,
+			(u16)trisList(i).vtx_idx2,
+			(u16)idx_v20,
+			(u16)idx_center
 		});			
 	}
 	trisList.reset();
@@ -464,21 +516,21 @@ void ExaGenerator::subdivide()
 	n = quadList.getNElem();
 	for (u32 i=0; i<n; i++)
 	{
-		const u16 idx0 = quadList(i).vtx_idx0;
-		const u16 idx1 = quadList(i).vtx_idx1;
-		const u16 idx2 = quadList(i).vtx_idx2;
-		const u16 idx3 = quadList(i).vtx_idx3;
+		const u16 idx0 = quadList(i).idx[0];
+		const u16 idx1 = quadList(i).idx[1];
+		const u16 idx2 = quadList(i).idx[2];
+		const u16 idx3 = quadList(i).idx[3];
 
-		const vec3f v0 = vtxList(idx0);
-		const vec3f v1 = vtxList(idx1);
-		const vec3f v2 = vtxList(idx2);
-		const vec3f v3 = vtxList(idx3);
+		const vec2f v0 = vtxList(idx0).pos;
+		const vec2f v1 = vtxList(idx1).pos;
+		const vec2f v2 = vtxList(idx2).pos;
+		const vec2f v3 = vtxList(idx3).pos;
 
-		const vec3f v_center = (v0 + v1 + v2 + v3) / 4.0f;
-		const vec3f v_01 = v0 + (v1-v0) * 0.5f;
-		const vec3f v_12 = v1 + (v2-v1) * 0.5f;
-		const vec3f v_23 = v2 + (v3-v2) * 0.5f;
-		const vec3f v_30 = v3 + (v0-v3) * 0.5f;
+		const vec2f v_center = (v0 + v1 + v2 + v3) / 4.0f;
+		const vec2f v_01 = v0 + (v1-v0) * 0.5f;
+		const vec2f v_12 = v1 + (v2-v1) * 0.5f;
+		const vec2f v_23 = v2 + (v3-v2) * 0.5f;
+		const vec2f v_30 = v3 + (v0-v3) * 0.5f;
 
 		const u32 idx_center = vtxList.getNElem();
 		vtxList.append(v_center);
@@ -533,32 +585,32 @@ void ExaGenerator::subdivide()
 		}		
 
 		newQuadList.append ( sQuad{
-			.vtx_idx0 = (u16)quadList(i).vtx_idx0,
-			.vtx_idx1 = (u16)idx_v01,
-			.vtx_idx2 = (u16)idx_center,
-			.vtx_idx3 = (u16)idx_v30
+			(u16)quadList(i).idx[0],
+			(u16)idx_v01,
+			(u16)idx_center,
+			(u16)idx_v30
 		});
 
 		newQuadList.append ( sQuad{
-			.vtx_idx0 = (u16)idx_v01,
-			.vtx_idx1 = (u16)quadList(i).vtx_idx1,
-			.vtx_idx2 = (u16)idx_v12,
-			.vtx_idx3 = (u16)idx_center,
+			(u16)idx_v01,
+			(u16)quadList(i).idx[1],
+			(u16)idx_v12,
+			(u16)idx_center
 
 		});	
 		
 		newQuadList.append ( sQuad{
-			.vtx_idx0 = (u16)idx_v12,
-			.vtx_idx1 = (u16)quadList(i).vtx_idx2,
-			.vtx_idx2 = (u16)idx_v23,
-			.vtx_idx3 = (u16)idx_center
+			(u16)idx_v12,
+			(u16)quadList(i).idx[2],
+			(u16)idx_v23,
+			(u16)idx_center
 		});			
 
 		newQuadList.append ( sQuad{
-			.vtx_idx0 = (u16)idx_v23,
-			.vtx_idx1 = (u16)quadList(i).vtx_idx3,
-			.vtx_idx2 = (u16)idx_v30,
-			.vtx_idx3 = (u16)idx_center
+			(u16)idx_v23,
+			(u16)quadList(i).idx[3],
+			(u16)idx_v30,
+			(u16)idx_center
 		});			
 
 	}
@@ -573,33 +625,8 @@ void ExaGenerator::relax()
 	relax_2();
 }
 
-//***************************************
-void ExaGenerator::quad_get_vertex (u32 quadIndex, vec3f *out) const
-{
-	out[0] = vtxList(quadList(quadIndex).vtx_idx0);
-	out[1] = vtxList(quadList(quadIndex).vtx_idx1);
-	out[2] = vtxList(quadList(quadIndex).vtx_idx2);
-	out[3] = vtxList(quadList(quadIndex).vtx_idx3);
-}
-
-//***************************************
-f32 ExaGenerator::quad_calc_area (const vec3f *vtx) const
-{
-	f32 a = 0.5f * (   vtx[0].x * vtx[1].z 
-					- vtx[0].z * vtx[1].x
-					+ vtx[1].x * vtx[2].z 
-					- vtx[1].z * vtx[2].x 
-					+ vtx[2].x * vtx[3].z 
-					- vtx[2].z * vtx[3].x 
-					+ vtx[3].x * vtx[0].z 
-					- vtx[3].z * vtx[0].x);
-	if (a < 0)
-		return -a;
-	return a;
-}
-
 /***************************************
- * https://www.zoutube.com/watch?v=Jm3pLya3d9c
+ * https://www.youtube.com/watch?v=Jm3pLya3d9c
  * per ogni quad
  * 	calcolare AREA del quad
  * 	in base a AREA, calcolare il lato L e la diagnole D del quadrato che avrebbe la stessa area
@@ -616,7 +643,7 @@ void ExaGenerator::relax_2()
 {
 	struct sAdjust
 	{
-		vec3f	sum;
+		vec2f	sum;
 		u32 	n;
 	};
 
@@ -624,21 +651,21 @@ void ExaGenerator::relax_2()
 	adj.setup (gos::getScrapAllocator(), vtxList.getNElem());
 	for (u32 i=0; i<vtxList.getNElem(); i++)
 	{
-		adj[i].sum.set(0,0,0);
+		adj[i].sum.set(0,0);
 		adj[i].n = 0;
 	}
 
 	const u32 n = quadList.getNElem();
 	for (u32 i=0; i<n; i++)
 	{
-		vec3f	vtx[4];
+		vec2f	vtx[4];
 		quad_get_vertex (i, vtx);
 
 
 		//angoli del quad
 		bool bSkip = true;
 		{
-			vec3f lato[4];
+			vec2f lato[4];
 			lato[0] = vtx[1] - vtx[0];
 			lato[1] = vtx[2] - vtx[1];
 			lato[2] = vtx[3] - vtx[2];
@@ -653,8 +680,8 @@ void ExaGenerator::relax_2()
 			alfa[2] = acosf(math::dot (lato[2], lato[3]));
 			alfa[3] = acosf(math::dot (lato[3], lato[0]));
 
-			const f32 A_MIN = math::gradToRad(-70);
-			const f32 A_MAX = math::gradToRad(110);
+			constexpr f32 A_MIN = math::gradToRad(-70);
+			constexpr f32 A_MAX = math::gradToRad(110);
 			for (u32 i2=0; i2<4; i2++)
 			{
 				if (alfa[i2] < A_MIN || alfa[i2] > A_MAX)
@@ -682,27 +709,27 @@ void ExaGenerator::relax_2()
 		// 	continue;
 
 
-		const vec3f center = (vtx[0] + vtx[1] + vtx[2] + vtx[3]) / 4.0f;
-		vec3f p[4][4];
+		const vec2f center = (vtx[0] + vtx[1] + vtx[2] + vtx[3]) / 4.0f;
+		vec2f p[4][4];
 		f32   best_dist = 1e36f;
 		u32	  best = 0;
 		for (u32 i2=0; i2<4; i2++)
 		{
-			vec3f dir_center_to_vtx = vtx[i2] - center;
+			vec2f dir_center_to_vtx = vtx[i2] - center;
 			dir_center_to_vtx.normalize();
 
 			u32 i3 = i2+1;
 			if (i3 == 4) i3=0;
-			vec3f dir_vtx_to_vtx = vtx[i3] - vtx[i2];
+			vec2f dir_vtx_to_vtx = vtx[i3] - vtx[i2];
 			dir_vtx_to_vtx.normalize();
-			if (fabsf(dir_vtx_to_vtx.x) > fabsf(dir_vtx_to_vtx.z))
-				dir_vtx_to_vtx.z = 0;
+			if (fabsf(dir_vtx_to_vtx.x) > fabsf(dir_vtx_to_vtx.y))
+				dir_vtx_to_vtx.y = 0;
 			else
 				dir_vtx_to_vtx.x = 0;
 			dir_vtx_to_vtx.normalize();
 
 			
-			vec3f dir2(-dir_vtx_to_vtx.z, dir_vtx_to_vtx.x, 0);
+			vec2f dir2(-dir_vtx_to_vtx.y, dir_vtx_to_vtx.x);
 			dir2.normalize();
 
 			//calcolo il quadratro ipotetico costruito sul vtx i2-esimo
@@ -715,7 +742,7 @@ void ExaGenerator::relax_2()
 			f32 avg_dist = 0;
 			for (u32 i3=0; i3<4; i3++)
 			{
-				vec3f v = vtx[i3] - p[i2][i3];
+				vec2f v = vtx[i3] - p[i2][i3];
 				avg_dist += v.length2();
 			}
 
@@ -734,16 +761,9 @@ void ExaGenerator::relax_2()
 		for (u32 i2=0; i2<4; i2++)
 		{
 			const f32 t = 0.03f;
-			const vec3f v = vtx[best_start_vtx] + (p[best][i2] - vtx[best_start_vtx]) * t;
+			const vec2f v = vtx[best_start_vtx] + (p[best][i2] - vtx[best_start_vtx]) * t;
 
-			u32 vtx_index;
-			switch (best_start_vtx)
-			{
-			case 0:	vtx_index = quadList(i).vtx_idx0; break;
-			case 1:	vtx_index = quadList(i).vtx_idx1; break;
-			case 2:	vtx_index = quadList(i).vtx_idx2; break;
-			case 3:	vtx_index = quadList(i).vtx_idx3; break;
-			}
+			u32 vtx_index = quadList(i).idx[best_start_vtx];
 
 
 			if (!listOfBorderVtxIndex.exists(vtx_index))
@@ -764,9 +784,140 @@ void ExaGenerator::relax_2()
 	{
 		if (0 != adj(i).n)
 		{
-			vec3f sum = adj(i).sum / (f32)adj(i).n;
+			vec2f sum = adj(i).sum / (f32)adj(i).n;
 			vtxList[i] = sum;
 		}
 	}
 }
 
+//***************************************
+void ExaGenerator::quad_get_vertex (u32 quad_index, vec2f *out) const
+{
+	assert (quad_index < quadList.getNElem());
+	out[0] = vtxList(quadList(quad_index).idx[0]).pos;
+	out[1] = vtxList(quadList(quad_index).idx[1]).pos;
+	out[2] = vtxList(quadList(quad_index).idx[2]).pos;
+	out[3] = vtxList(quadList(quad_index).idx[3]).pos;
+}
+
+//***************************************
+f32 ExaGenerator::quad_calc_area (const vec2f *vtx) const
+{
+	f32 a = 0.5f * (   vtx[0].x * vtx[1].y 
+					- vtx[0].y * vtx[1].x
+					+ vtx[1].x * vtx[2].y 
+					- vtx[1].y * vtx[2].x 
+					+ vtx[2].x * vtx[3].y 
+					- vtx[2].y * vtx[3].x 
+					+ vtx[3].x * vtx[0].y 
+					- vtx[3].y * vtx[0].x);
+	if (a < 0)
+		return -a;
+	return a;
+}
+
+//************************************************
+gos::vec2f ExaGenerator::quad_calc_center (u32 quad_index) const
+{
+	assert (quad_index < quadList.getNElem());
+	gos::vec2f ret = vtxList(quadList(quad_index).idx[0]).pos
+		+ vtxList(quadList(quad_index).idx[1]).pos
+		+ vtxList(quadList(quad_index).idx[2]).pos
+		+ vtxList(quadList(quad_index).idx[3]).pos;
+	ret /= 4.0f;
+	return ret;
+}
+
+//************************************************
+u32 ExaGenerator::get_quad_from_vtx (u32 vtx_index, u32 *out__quadList, u32 num_elem_in_quad_list) const
+{
+	assert (vtx_index < vtxList.getNElem());
+
+	u32 ret = 0;
+	for (u32 i = 0; i < quadList.getNElem(); i++)
+	{
+		for (u8 i2 = 0; i2 < 4; i2++)
+		{
+			if (vtx_index == quadList(i).idx[i2])
+			{
+				if (ret < num_elem_in_quad_list)
+					out__quadList[ret++] = i;
+			}
+		}
+	}
+
+	//ordino il risulato in senso orario
+	if (ret > 1)
+	{
+		assert (ret <=8);
+		const vec2f center = vtxList(vtx_index).pos;
+		
+		f32 angle_list[8];
+		for (u32 i = 0; i < ret; i++)
+		{
+			const vec2f  quad_center = quadCenterList(out__quadList[i]);
+			const vec2f p = quad_center - center;
+			angle_list[i] = atan2f (p.y, p.x);
+		}
+
+		bool bEsci = false;
+		u32 n = ret;
+		while (bEsci == false)
+		{
+			bEsci = true;
+			n--;
+			
+			for (u32 i = 0; i < n; i++)
+			{
+				if (angle_list[i] < angle_list[i + 1])
+				{
+					bEsci = false;
+					GOSSWAP(angle_list[i], angle_list[i + 1]);
+					GOSSWAP(out__quadList[i], out__quadList[i + 1]);
+				}
+			}
+		}
+
+	}
+
+	return ret;
+}
+
+//************************************************
+u16 ExaGenerator::priv_get_index_of_vtx_in_uscita_da (u32 quad_index, u16 vtx_index_A) const
+{
+	assert (quad_index < quadList.getNElem());
+
+#ifdef _DEBUG
+	bool debug_ok = false;
+	for (u8 i = 0; i < 4; i++)
+	{
+		if (quadList(quad_index).idx[i] == vtx_index_A)
+			debug_ok = true;
+	}
+	assert (debug_ok);
+#endif
+
+	u8 i=0;
+	while (i < 3)
+	{
+		if (quadList(quad_index).idx[i] == vtx_index_A)
+			return (i+1);
+		i++;
+	}
+
+	return 0;
+}
+
+u16 ExaGenerator::get_index_of_vtx_in_uscita_da (u32 quad_index, u16 vtx_index_A) const
+{
+	const u16 ii = priv_get_index_of_vtx_in_uscita_da (quad_index, vtx_index_A);
+	return quadList(quad_index).idx[ii];
+}
+
+//************************************************
+u16 ExaGenerator::get_index_of_vtx_in_entrata_a (u32 quad_index, u16 vtx_index_A) const
+{
+	const u16 ii = priv_get_index_of_vtx_in_uscita_da (quad_index, vtx_index_A);
+	return quadList(quad_index).idx[(ii + 2) % 4];
+}

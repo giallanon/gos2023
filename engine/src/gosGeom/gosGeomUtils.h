@@ -8,6 +8,7 @@ namespace gos
 	namespace geom
 	{
         void    circle (FastArray<vec3f> *out_vtxList, const vec3f &center, f32 radius, u32 numPoint, f32 starting_angle_grad = 0);
+		void    circle (FastArray<vec2f> *out_vtxList, const vec2f &center, f32 radius, u32 numPoint, f32 starting_angle_grad = 0);
 
 
 				//data una linea 2D <line_start> - <line_end>, ritorna +1 o -1 a seconda che il punto <world_point> stia 

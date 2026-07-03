@@ -26,6 +26,27 @@ void geom::circle (FastArray<vec3f> *out_vtxList, const vec3f &center, f32 radiu
 }
 
 //*********************************************
+void geom::circle (FastArray<vec2f> *out_vtxList, const vec2f &center, f32 radius, u32 numPoint, f32 starting_angle)
+{
+    assert (NULL != out_vtxList);
+
+    const f32 rad_incr = math::DUEPI / (f32)numPoint;
+    f32 rad = math::gradToRad(starting_angle);
+
+    while (numPoint--)
+    {
+        vec2f v;
+
+        v.x = cosf(rad) * radius;
+        v.y = sinf(rad) * radius;
+        v += center;
+
+        out_vtxList->append(v);
+        rad += rad_incr;
+    }
+}
+
+//*********************************************
 i8 geom::line2D__which_side (const vec2f &line_start, const vec2f &line_end, const vec2f &world_point)
 {
     const vec2f ba = line_end - line_start;

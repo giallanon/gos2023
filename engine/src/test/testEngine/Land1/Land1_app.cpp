@@ -170,170 +170,91 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 	logger::log ("hex @ (%d, %d)  LSHIFT=%c\n", coord.x, coord.z, bLSHIFT?'Y':'N');
 	
 
+	const u32 N_COLORS = 7;
+	const u32 colors[N_COLORS] = { 0xFFFFFFFF, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFF00, 0xFF00FFFF, 0xFFFF00FF };
+
 	line_ctx1->clear();
 	line_ctx1->enable_depth_test(false);
 	line_ctx1->enable_depth_write(false);
 	line_ctx1->set_line_width(2);
 
-	//disegno tutti i quad dell'exa <coord>
+	//disegno l'exa <coord>
 	const Land1::Exa *exa;
 	if (map.exa_query(coord, &exa))
 	{
 		//disegno il reticolo dell'exa
-		line_ctx1->set_color_ARGB (0xFF000000);
+		line_ctx1->
+			set_color_ARGB (0xFF000000)
+			.set_line_width(2);
+
 		const u32 first_vtx = line_ctx1->vtx_get_num();
-		for (u32 i = 0; i < exa->num_vtx; i++)
+		for (u32 i = 0; i < exa->num_vtx_tot; i++)
 			line_ctx1->vtx_add (vec3f(exa->vtxList[i].x, 0, exa->vtxList[i].y));
-		for (u32 i = 0; i < exa->num_quad; i++)
+		for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
 		{
-			line_ctx1->
-				set_line_width(2)
-				.line_begin()
-				.line_add_vtx (first_vtx + exa->quadList[i].idx[0])
-				.line_add_vtx (first_vtx + exa->quadList[i].idx[1])
-				.line_add_vtx (first_vtx + exa->quadList[i].idx[2])
-				.line_add_vtx (first_vtx + exa->quadList[i].idx[3])
-				.line_add_vtx (first_vtx + exa->quadList[i].idx[0])
-				.line_end();
+			if (exa->vtxInfoList[iVtx].is_border_vtx)
+				continue;
+			const Land1::Exa::VtxInfo *vi = &exa->vtxInfoList[iVtx];
+
+			for (u32 i=0; i<vi->num_quad; i++)
+			{
+				line_ctx1->line (first_vtx + vi->idx_list[0], first_vtx + vi->idx_list[1+2*i]);
+			}
 		}
 
-		//evidenzio il quad selezionato
-		//u32 quad_index;
-		//if (exa->get_quad_from_point (world_point, &quad_index))
-		//{
-		//	line_ctx1->
-		//		set_line_width (4)
-		//		.set_color_ARGB (0xFFFF0000)
-		//		.line_begin()
-		//		.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[0])
-		//		.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[1])
-		//		.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[2])
-		//		.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[3])
-		//		.line_add_vtx (first_vtx + exa->quadList[quad_index].idx[0])
-		//		.line_end();
+		//diesgno i punti originali
+		line_ctx1->point_set_radius(6);
+		for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
+		{
+			line_ctx1->point (first_vtx + exa->vtxInfoList[iVtx].idx_list[0]);
+		}
 
-		//	if (0xFF == material_index_to_apply)
-		//	{
-		//		const vec2f v = exa->utils__calc_quad_center (quad_index);
-		//		priv_new_albero( vec3f(v.x, 0, v.y) );
-		//	}
-		//	else
-		//	{
-		//		exa->quadList[quad_index].material_index = material_index_to_apply;
-		//	}
-		//}
-
-		//cerco il vtx + vicino
+		//cerco il vtx + vicino a <world_point>
 		u32 vtx_index;
 		if (exa->get_closest_vtx_from_point(world_point, &vtx_index))
 		{
-			const u32 i = line_ctx1->vtx_add (vec3f (exa->vtxList[vtx_index].x, 0, exa->vtxList[vtx_index].y) );
-			line_ctx1->
-				set_color_ARGB (0xFFFFFFFF)
-				.point_set_radius(16)
-				.point (i);
+			line_ctx1->point_set_radius(16);
 
-			//renderizzo i quad che sharano il vtx
-			line_ctx1->
-				set_color_ARGB (0xFF818100)
-				.set_line_width(2);
+			const Land1::Exa::VtxInfo *vi = &exa->vtxInfoList[vtx_index];
 
-			u32 quads[8];
-			const u32 nquad = exa->get_quad_from_vtx (vtx_index, quads, 8);
-			for (u32 i = 0; i < nquad; i++)
+			//diesgno il quad composto dai quad-center
+			line_ctx1->
+				set_color_ARGB (0xFF00FF00)
+				.line_begin();
+			for (u32 i = 0; i < vi->num_quad; i++)
 			{
-				const Land1::Exa::Quad *q = &exa->quadList[quads[i]];
+				const u32 vtx_index = vi->idx_list[2 + i * 2];
+				line_ctx1->line_add_vtx(first_vtx + vtx_index);
+			}
+			line_ctx1->line_add_vtx(first_vtx + vi->idx_list[2]);
+			line_ctx1->line_end();
 
+			//disegno i vtx
+			for (u32 i = 0; i < vi->num_idx; i++)
+			{
+				const u32 vtx_index = first_vtx + vi->idx_list[i];
 				line_ctx1->
-					line_begin()
-						.line_add_vtx(first_vtx + q->idx[0])
-						.line_add_vtx(first_vtx + q->idx[1])
-						.line_add_vtx(first_vtx + q->idx[2])
-						.line_add_vtx(first_vtx + q->idx[3])
-						.line_add_vtx(first_vtx + q->idx[0])
-					.line_end();
+					set_color_ARGB (colors[i % N_COLORS])
+					.point (vtx_index);
 			}
 
-			//vtx0 del quad 0
-			{
-				const u32 colors[6] = {0xFFFFFFFF, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFF00FF, 0xFFFFFF00};
-				line_ctx1->point_set_radius(8);
 
-				logger::log ("nquad=%d\n", nquad);
-				
-				
-				//u32 nn = nquad;
-				//if (nquad > 5)
-				//	nn = 5;
-				//for (u32 i=0; i<nn; i++)
-				//{
-				//	const u32 quad_num = quads[i];
-				//	const Land1::Exa::Quad *q = &exa->quadList[quad_num];
-				//
-				//	const u16 quad_center_index = line_ctx1->vtx_add (exa->quadCenterList[quad_num].x, 0, exa->quadCenterList[quad_num].y);
-
-				//	line_ctx1->
-				//	set_color_ARGB(colors[i])
-				//		.point (quad_center_index)
-				//		.point (first_vtx + q->idx[0]);
-				//}
-
-				assert (exa->v2.vtx_info[vtx_index].num_quad == nquad);
-				u32 num_vtx_appoggio = 0;
-				for (u8 i = 0; i < 16; i++)
-				{
-					if (exa->v2.vtx_info[vtx_index].idx_list[i] != u16MAX)
-						num_vtx_appoggio++;
-				}
-				logger::log ("num_vtx_appoggio=%d\n", num_vtx_appoggio);
-
-				for (u32 i=0; i<num_vtx_appoggio; i++)
-				{
-					const u16 vi = exa->v2.vtx_info[vtx_index].idx_list[i];
-					const u32 aa = line_ctx1->vtx_add (vec3f(exa->v2.vtx[vi].x, 0, exa->v2.vtx[vi].y));
-
-					line_ctx1->
-					set_color_ARGB(colors[i % 6])
-						.point (aa);
-				}
-			}
-
-			
-
-			if (bLSHIFT)
-			{
-				if (0xFF == material_index_to_apply)
-				{
-					priv_new_albero( vec3f(exa->vtxList[vtx_index].x, 0, exa->vtxList[vtx_index].y) );
-				}
-				else
-				{
-					if (0 == exa->vtxInfoList[vtx_index].material_index)
-						exa->vtxInfoList[vtx_index].material_index = material_index_to_apply;
-					else
-						exa->vtxInfoList[vtx_index].material_index = 0;
-				}
-			}
+			//if (bLSHIFT)
+			//{
+			//	if (0xFF == material_index_to_apply)
+			//	{
+			//		priv_new_albero( vec3f(exa->vtxList[vtx_index].x, 0, exa->vtxList[vtx_index].y) );
+			//	}
+			//	else
+			//	{
+			//		if (0 == exa->vtxInfoList[vtx_index].material_index)
+			//			exa->vtxInfoList[vtx_index].material_index = material_index_to_apply;
+			//		else
+			//			exa->vtxInfoList[vtx_index].material_index = 0;
+			//	}
+			//}
 		}
 
 	}
-
-	//disegno il perimetro dell'esagono centrato su <coord>
-	vec3f vv1 = map.exa_coord_to_world (coord);
-	vec3f vv6[6];
-	examap::coord_hexagon (vv1, map.get_exa_world_radius(), vv6, sizeof(vv6));
-
-	line_ctx1->
-		set_color_ARGB (0xFFFFFF80)
-		.set_line_width(2)
-		.line_begin()
-			.line_add_vtx(vv6[0])
-			.line_add_vtx(vv6[1])
-			.line_add_vtx(vv6[2])
-			.line_add_vtx(vv6[3])
-			.line_add_vtx(vv6[4])
-			.line_add_vtx(vv6[5])
-			.line_add_vtx(vv6[0])
-		.line_end();
 
 }
