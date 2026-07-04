@@ -52,6 +52,7 @@ namespace Land1
 				//crea una nuova mappa "circolare" di raggio <map_radius>
 				//Ogni exa ha raggio <exa_radius_world> in word coordinate
 		void	map_create (f32 exa_radius_world, u32 map_radius);
+		void	map_recalc_meshType();
 
 
 		//======================= query
@@ -68,12 +69,16 @@ namespace Land1
 		typedef gos::FastHashMap<u32, Exa*>	HASHMAP;
 
 	private:
-		Exa*		priv_exa_alloc (ExaGenerator &exagen, const gos::vec3f &world_coord);
+		Exa*		priv_exa_alloc (ExaGenerator &exagen, const gos::vec3f &world_coord, gos::Random *rnd);
 		void		priv_exa_calc_v2 (const Land1::ExaGenerator &exagen, Exa *exa) const;
 		void		priv_exa_free (Exa *exa);
 		void		priv_exa_add_to_map (const gos::examap::Coord &coord, Exa *exa);
 		void		priv_map_destroy();
 		Exa*		priv_exa_get (const gos::examap::Coord &c) const;
+
+		
+
+		void		debug_print_exa_stat (const Exa *exa) const;
 
 	private:
 		gos::Allocator				*localAllocator;

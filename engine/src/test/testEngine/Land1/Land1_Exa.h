@@ -8,6 +8,18 @@ namespace Land1
 	struct Exa
 	{
 	public:
+		enum class eMeshType : u8
+		{
+			boh = 0,
+			angolo = 1,
+			full = 2,
+			bordo_doppio = 3,
+			bordo_singolo_dx = 4,
+			bordo_singolo_su = 5,
+			
+			_COUNT = 6	//deve sempre valere il num totale di opzioni disponibili (escluso COUNT))
+		};
+
 		struct VtxInfo
 		{
 			u8	num_quad;		//num quad centrati sul vtx i-esimo
@@ -15,14 +27,17 @@ namespace Land1
 			u8	num_idx;		//num idx in idx_list
 			u8	is_border_vtx;
 			u16	height;
-			u16	idx_list[16];		//idx0=centro, gli altri 2*num_quad in senso orario
-			u16	adj_vtx_list[8];
+			u16	idx_list[16];			//idx0=centro, gli altri 2*num_quad in senso orario
+			eMeshType	mesh_type[8];	//uno per ogni quad
+			u8	connected_vtx[8];		//indici dei vtx "originali" che sono connessi a questo vtx
 		};
 
 
 	public:
 					//dato un punto in world coordinate, ritorna (se esiste) l'indice del vtx + vicino
 		bool		get_closest_vtx_from_point (const gos::vec3f &world_point, u32 *out__vtx_index) const;
+
+		bool		get_quad_indices (u32 vtx_index, u32 quad_index, u16 *out_4_index) const;
 		
 	public:
 		u16			num_vtx_originali;	//quelli che compongono l'exa originale
@@ -36,6 +51,7 @@ namespace Land1
 		bool		priv_is_point_in_quad (const gos::vec3f &world_point, u16 idx0, u16 idx1, u16 idx2, u16 idx3) const;
 		bool		priv_is_point_in_penta (const gos::vec3f &world_point, u16 idx0, u16 idx1, u16 idx2, u16 idx3, u16 idx4) const;
 		bool		priv_is_point_in_exagon (const gos::vec3f &world_point, u16 idx0, u16 idx1, u16 idx2, u16 idx3, u16 idx4, u16 idx5) const;
+		bool		priv_is_point_in_octagon (const gos::vec3f &world_point, u16 idx0, u16 idx1, u16 idx2, u16 idx3, u16 idx4, u16 idx5, u16 idx6, u16 idx7) const;
 		
 	};
 

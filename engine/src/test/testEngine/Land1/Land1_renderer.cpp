@@ -23,15 +23,24 @@ void Renderer::priv_unsetup()
 
 	engine->release(handle_pipeline);
 
-	gpu->buffer_unmap (exaVtxList.mapped_buffer);
-	gpu->buffer_unmap (packedInstanceData.mapped_buffer);
+	gpu->buffer_unmap (sbo_exaVtxList.mapped_buffer);
+	gpu->buffer_unmap (sbo_exaVtxInfo.mapped_buffer);
+	gpu->buffer_unmap (sbo_packedInstanceData.mapped_buffer);
+	gpu->buffer_unmap (sbo_meshInstanceData.mapped_buffer);
 
     gpu->deleteResource(handle_descrSet2);
-	gpu->deleteResource(exaVtxList.handle_sbo);
-	gpu->deleteResource(packedInstanceData.handle_sbo);
+	gpu->deleteResource(sbo_exaVtxList.handle_sbo);
+	gpu->deleteResource(sbo_exaVtxInfo.handle_sbo);
+	gpu->deleteResource(sbo_packedInstanceData.handle_sbo);
+	gpu->deleteResource(sbo_meshInstanceData.handle_sbo);
 
 	engine->release(handle__model_tile1);
 
+	const u8 N = (u8)Exa::eMeshType::_COUNT;
+	for (u8 i=0; i<N; i++)
+	{
+		GOSFREE(localAllocator, mesh_instance_data[i].quad_index_list);
+	}	
 
 	localAllocator = NULL;
 	engine = NULL;
@@ -56,18 +65,31 @@ bool Renderer::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
 
     //SBO hexaVtxList
 	{
-    	exaVtxList.sizeof_buffer = NUM_MAX_EXA * HEXA__NUM_VTX * sizeof(vec4f);
-	    gpu->storageBuffer_create (exaVtxList.sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &exaVtxList.handle_sbo);
-    	gpu->map (exaVtxList.handle_sbo, 0, u32MAX, &exaVtxList.mapped_buffer);
+    	sbo_exaVtxList.sizeof_buffer = NUM_MAX_EXA * HEXA__NUM_VTX * sizeof(vec2f);
+	    gpu->storageBuffer_create (sbo_exaVtxList.sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &sbo_exaVtxList.handle_sbo);
+    	gpu->map (sbo_exaVtxList.handle_sbo, 0, u32MAX, &sbo_exaVtxList.mapped_buffer);
+	}
+
+    //SBO exaVtxInfo
+	{
+    	sbo_exaVtxInfo.sizeof_buffer = NUM_MAX_EXA * 256 * sizeof(sVtxInfo);
+    	gpu->storageBuffer_create (sbo_exaVtxInfo.sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &sbo_exaVtxInfo.handle_sbo);
+    	gpu->map (sbo_exaVtxInfo.handle_sbo, 0, u32MAX, &sbo_exaVtxInfo.mapped_buffer);
 	}
 
     //SBO instance data
 	{
-    	packedInstanceData.sizeof_buffer = NUM_MAX_EXA * HEXA__AVG_NUM_QUAD * sizeof(sInstanceData);
-    	gpu->storageBuffer_create (packedInstanceData.sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &packedInstanceData.handle_sbo);
-    	gpu->map (packedInstanceData.handle_sbo, 0, u32MAX, &packedInstanceData.mapped_buffer);
+    	sbo_packedInstanceData.sizeof_buffer = NUM_MAX_EXA * HEXA__MAX_NUM_QUAD * sizeof(sInstanceData);
+    	gpu->storageBuffer_create (sbo_packedInstanceData.sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &sbo_packedInstanceData.handle_sbo);
+    	gpu->map (sbo_packedInstanceData.handle_sbo, 0, u32MAX, &sbo_packedInstanceData.mapped_buffer);
 	}
 
+	//SBO MeshInstanceData
+	{
+    	sbo_meshInstanceData.sizeof_buffer = NUM_MAX_EXA * HEXA__NUM_VTX * sizeof(u32);
+	    gpu->storageBuffer_create (sbo_meshInstanceData.sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &sbo_meshInstanceData.handle_sbo);
+    	gpu->map (sbo_meshInstanceData.handle_sbo, 0, u32MAX, &sbo_meshInstanceData.mapped_buffer);
+	}
 
 	//mi serve che la pipe sia loaded
     const res::Pipeline *res_pipeline;
@@ -85,14 +107,24 @@ bool Renderer::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
 		else
 		{
 			dsw.begin (gpu, handle_descrSet2)
-				.bindStorageBuffer (0, exaVtxList.handle_sbo)
-				.bindStorageBuffer (1, packedInstanceData.handle_sbo)
+				.bindStorageBuffer (0, sbo_exaVtxList.handle_sbo)
+				.bindStorageBuffer (1, sbo_exaVtxInfo.handle_sbo)
+				.bindStorageBuffer (2, sbo_packedInstanceData.handle_sbo)
+				.bindStorageBuffer (3, sbo_meshInstanceData.handle_sbo)
 				.end();
 		}
 	}
 	
-	
-	
+
+	const u8 N = (u8)Exa::eMeshType::_COUNT;
+	for (u8 i=0; i<N; i++)
+	{
+		mesh_instance_data[i].num_quad = 0;
+		mesh_instance_data[i].quad_index_list = GOSALLOCT(u32*, localAllocator, sizeof(u32) * NUM_MAX_INSTANCE_PER_MESH);
+
+	}
+
+
 	//load risorse
 	engine->model_createFromAsset ("model_tile1", &handle__model_tile1, res::eLoadMode::asap);
 	
@@ -111,7 +143,7 @@ bool Renderer::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
 }
 
 //***************************************
-void Renderer::priv_add_vtx (const gos::vec3f &v)
+void Renderer::priv_add_vtx (const gos::vec2f &v)
 {
 	if (num_vtx >= NUM_MAX_EXA * HEXA__NUM_VTX)
 	{
@@ -119,20 +151,34 @@ void Renderer::priv_add_vtx (const gos::vec3f &v)
 		return;
 	}
 
-	u32 ct = num_vtx*4;
-	f32 *p = reinterpret_cast<f32*>( exaVtxList.mapped_buffer.host_pt );
+	u32 ct = num_vtx*2;
+	f32 *p = reinterpret_cast<f32*>( sbo_exaVtxList.mapped_buffer.host_pt );
 	p[ct++] = v.x;
 	p[ct++] = v.y;
-	p[ct++] = v.z;
-	p[ct] = 1.0f;
 
 	num_vtx++;
 }
 
 //***************************************
-void Renderer::priv_add_quad (u32 idx1, u32 idx2, u32 idx3, u32 idx4, f32 height, u32 material_index)
+void Renderer::priv_add_vtxInfo (u32 height, u32 material_index)
 {
-	if (num_quad >= NUM_MAX_EXA * HEXA__AVG_NUM_QUAD)
+	if (num_vtxInfo >= NUM_MAX_EXA * 256)
+	{
+		DBGBREAK;
+		return;
+	}
+
+	sVtxInfo *p = reinterpret_cast<sVtxInfo*>( sbo_exaVtxInfo.mapped_buffer.host_pt );
+	p[num_vtxInfo].height = height;
+	p[num_vtxInfo].material_index = material_index;
+
+	num_vtxInfo++;
+}
+
+//***************************************
+void Renderer::priv_add_quad (Exa::eMeshType mesh_type, u32 reference_vtx_index, u32 idx1, u32 idx2, u32 idx3, u32 idx4)
+{
+	if (num_quad >= NUM_MAX_INSTANCE_PER_MESH)
 	{
 		DBGBREAK;
 		return;
@@ -143,11 +189,23 @@ void Renderer::priv_add_quad (u32 idx1, u32 idx2, u32 idx3, u32 idx4, f32 height
 	assert (idx3 < u16MAX);
 	assert (idx4 < u16MAX);
 
-	sInstanceData *p = reinterpret_cast<sInstanceData*>( packedInstanceData.mapped_buffer.host_pt );
+	sInstanceData *p = reinterpret_cast<sInstanceData*>( sbo_packedInstanceData.mapped_buffer.host_pt );
 	p[num_quad].quad_indices_0_1 = (((u32)idx1) << 16) | (u32)idx2;
 	p[num_quad].quad_indices_2_3 = (((u32)idx3) << 16) | (u32)idx4;
-	p[num_quad].height = height;
-	p[num_quad].material_index = material_index;
+	p[num_quad].reference_vtx_index = reference_vtx_index;
+	
+	
+	const u8 N = (u8)mesh_type;
+	if (mesh_instance_data[N].num_quad >= NUM_MAX_INSTANCE_PER_MESH)
+	{
+		DBGBREAK;
+		return;
+	}
+
+	const u32 NQ = mesh_instance_data[N].num_quad++;
+	mesh_instance_data[N].quad_index_list[NQ] = num_quad;
+	
+	
 	num_quad++;
 }
 
@@ -165,25 +223,62 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 
     //aggiornamento exaVtx
     {
-		u32 size = num_vtx * sizeof(vec4f);
+		u32 size = num_vtx * sizeof(vec2f);
 		const u32 r = size % gpu->limits_get_nonCoherentAtomSize();
 		if (r)
 			size += gpu->limits_get_nonCoherentAtomSize() - r;
 		
-		assert (size <= exaVtxList.sizeof_buffer);
-        gpu->buffer_manualSync_cpuWrite (exaVtxList.mapped_buffer, 0, size);
+		assert (size <= sbo_exaVtxList.sizeof_buffer);
+        gpu->buffer_manualSync_cpuWrite (sbo_exaVtxList.mapped_buffer, 0, size);
     }
 
-    //aggiornamento quad
+    //aggiornamento exaVtxInfo
     {
-		u32 size = num_quad * sizeof(u64);
+		u32 size = num_vtxInfo * sizeof(sVtxInfo);
+		const u32 r = size % gpu->limits_get_nonCoherentAtomSize();
+		if (r)
+			size += gpu->limits_get_nonCoherentAtomSize() - r;
+		
+		assert (size <= sbo_exaVtxInfo.sizeof_buffer);
+        gpu->buffer_manualSync_cpuWrite (sbo_exaVtxInfo.mapped_buffer, 0, size);
+    }	
+
+    //aggiornamento packedInstanceData
+    {
+		u32 size = num_quad * sizeof(sInstanceData);
 		const u32 r = size % gpu->limits_get_nonCoherentAtomSize();
 		if (r)
 			size += gpu->limits_get_nonCoherentAtomSize() - r;
 
-		assert (size <= packedInstanceData.sizeof_buffer);
-		gpu->buffer_manualSync_cpuWrite (packedInstanceData.mapped_buffer, 0, size);
+		assert (size <= sbo_packedInstanceData.sizeof_buffer);
+		gpu->buffer_manualSync_cpuWrite (sbo_packedInstanceData.mapped_buffer, 0, size);
     }    
+
+	//aggiornamento meshInstanceData
+	{
+		u32 total_size = 0;
+		for (u8 i=0; i<(u8)Exa::eMeshType::_COUNT; i++)
+		{
+			const u32 NQ = mesh_instance_data[i].num_quad;
+			if (0 == NQ)
+				continue;
+
+			u32 size = NQ * sizeof(u32);
+			const u32 r = size % gpu->limits_get_nonCoherentAtomSize();
+			if (r)
+				size += gpu->limits_get_nonCoherentAtomSize() - r;
+
+			u8 *p = reinterpret_cast<u8*>( sbo_meshInstanceData.mapped_buffer.host_pt );
+			memcpy (&p[total_size], mesh_instance_data[i].quad_index_list, sizeof(u32) * NQ);
+
+			mesh_instance_data[i].start_index_in_SBO = total_size / sizeof(u32);
+			total_size += size;
+		}	
+
+		assert (total_size <= sbo_meshInstanceData.sizeof_buffer);
+		gpu->buffer_manualSync_cpuWrite (sbo_meshInstanceData.mapped_buffer, 0, total_size);
+
+	}	
 
     
     //command
@@ -193,30 +288,44 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
         .bindDescriptorSet (handle_descrSet2, 2);
 
     //render delle shape
-	const u32 numInstances = num_quad;
-	u32 first_instance_index = 0;
-
-	const res::GPUShape *cur_shape_info;
-
-	//prato
-	if (engine->get (shape_list[1], &cur_shape_info))
+	for (u8 i=0; i<(u8)Exa::eMeshType::_COUNT; i++)
 	{
-		u32 is_basetta = 0;
-		rctx.bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
-			.pushConstant (0, &is_basetta, sizeof(is_basetta))
-			.drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index);
+		if (0 == mesh_instance_data[i].num_quad)
+			continue;
+
+		u32 meshType;
+		static constexpr u32 MESH_INDEX__BOH = 3;
+		static constexpr u32 MESH_INDEX__FULL = 4;
+		static constexpr u32 MESH_INDEX__ANGOLO = 1;
+		static constexpr u32 MESH_INDEX__BORDO_DOPPIO = 2;
+		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_SU = 5;
+		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_DX = 6;
+		switch ((Exa::eMeshType)i)
+		{
+		default:
+			DBGBREAK;
+			continue;
+
+		case Exa::eMeshType::boh:		meshType = MESH_INDEX__BOH; break;
+		case Exa::eMeshType::angolo:	meshType = MESH_INDEX__ANGOLO; break;
+		case Exa::eMeshType::full:		meshType = MESH_INDEX__FULL; break;
+		case Exa::eMeshType::bordo_doppio:		meshType = MESH_INDEX__BORDO_DOPPIO; break;
+		case Exa::eMeshType::bordo_singolo_dx:	meshType = MESH_INDEX__BORDO_SINGOLO_DX; break;
+		case Exa::eMeshType::bordo_singolo_su:	meshType = MESH_INDEX__BORDO_SINGOLO_SU; break;
+			break;
+		}
+	
+	
+		const u32 numInstances = mesh_instance_data[i].num_quad;
+		const u32 first_instance_index = mesh_instance_data[i].start_index_in_SBO;
+
+		const res::GPUShape *cur_shape_info;
+		if (engine->get (shape_list[meshType], &cur_shape_info))
+		{
+			rctx.bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
+				.drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index);
+		}
 	}
-
-	//basetta
-	//if (engine->get (shape_list[0], &cur_shape_info))
-	//{
-	//	u32 is_basetta = 1;
-	//	rctx.bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
-	//		.pushConstant (0, &is_basetta, sizeof(is_basetta))
-	//		.drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index);
-	//}
-
-	first_instance_index += numInstances;
 }
 
 //***************************************
@@ -240,64 +349,41 @@ void Renderer::end()						{ priv_end2(); }
 void Renderer::priv_begin2()
 {
 	num_vtx = 0;
+	num_vtxInfo = 0;
 	num_quad = 0;
+
+	const u8 N = (u8)Exa::eMeshType::_COUNT;
+	for (u8 i=0; i<N; i++)
+	{
+		mesh_instance_data[i].num_quad = 0;
+		mesh_instance_data[i].start_index_in_SBO = 0;
+	}	
 }
 
 //***************************************
 void Renderer::priv_add_exa2 (const Land1::Exa *exa)
 {
-/*	u32 starting_vtx = num_vtx;
-	for (u32 i = 0; i < exa->num_quad; i++)
+	const u32 STARTING_VTX = num_vtx;
+	for (u32 i = 0; i < exa->num_vtx_tot; i++)
 	{
-		priv_add_vtx (vec3f(exa->quadCenterList[i].x, 0, exa->quadCenterList[i].y) );
+		priv_add_vtx (exa->vtxList[i]);
 	}
 
-	for (u32 i = 0; i < exa->num_vtx; i++)
+	const u32 STARTING_VTXINFO = num_vtxInfo;
+	for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
 	{
-		if (0 == exa->vtxInfoList[i].material_index)
-			continue;
+		const Exa::VtxInfo *vi = &exa->vtxInfoList[iVtx];
 
-		//recupero i quad che sharano il vtx i-esimo
-		u32 nquad = 0;
-		for (u8 i2 = 0; i2 < 8; i2++)
+		priv_add_vtxInfo (vi->height, vi->material_index);
+
+		for (u32 iQuad=0; iQuad < vi->num_quad; iQuad++)
 		{
-			if (u16MAX == exa->vtxInfoList[i].adjacent_quad_list[i2])
-				break;
-			nquad++;
-		}
-
-		const u16 *quads = exa->vtxInfoList[i].adjacent_quad_list;
-		switch (nquad)
-		{
-		default:
-			break;
-
-		case 3:
-			//aggiungo un quad composto dai quad-center dei 4 quad trovati
-			priv_add_quad ( starting_vtx + quads[0], starting_vtx + quads[1], starting_vtx + quads[2], starting_vtx + quads[0], 0, exa->vtxInfoList[i].material_index);
-			break;
-
-		case 4:
-			//aggiungo un quad composto dai quad-center dei 4 quad trovati
-			priv_add_quad ( starting_vtx + quads[0], starting_vtx + quads[1], starting_vtx + quads[2], starting_vtx + quads[3], 0, exa->vtxInfoList[i].material_index);
-			break;
-
-		case 5:
-			//aggiungo un quad composto dai quad-center dei 4 quad trovati
-			priv_add_quad ( starting_vtx + quads[0], starting_vtx + quads[1], starting_vtx + quads[2], starting_vtx + quads[3], 0, exa->vtxInfoList[i].material_index);
-			priv_add_quad ( starting_vtx + quads[3], starting_vtx + quads[4], starting_vtx + quads[0], starting_vtx + quads[3], 0, exa->vtxInfoList[i].material_index);
-			break;
-
-		case 6:
-			//aggiungo un quad composto dai quad-center dei 4 quad trovati
-			priv_add_quad ( starting_vtx + quads[0], starting_vtx + quads[1], starting_vtx + quads[2], starting_vtx + quads[3], 0, exa->vtxInfoList[i].material_index);
-			priv_add_quad ( starting_vtx + quads[3], starting_vtx + quads[4], starting_vtx + quads[5], starting_vtx + quads[0], 0, exa->vtxInfoList[i].material_index);
-			break;
-
+			u16 quad_indices[8];
+			if (exa->get_quad_indices (iVtx, iQuad, quad_indices))
+				priv_add_quad ( vi->mesh_type[iQuad], STARTING_VTXINFO + iVtx, STARTING_VTX + quad_indices[0], STARTING_VTX + quad_indices[1], STARTING_VTX + quad_indices[2], STARTING_VTX + quad_indices[3]);
 		}
 
 	}
-	*/
 }
 
 //***************************************

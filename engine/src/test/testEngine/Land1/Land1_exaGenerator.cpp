@@ -5,6 +5,19 @@
 using namespace gos;
 using namespace Land1;
 
+
+//***************************************
+static f32 ExaGenerator__calc_angle (const vec2f p)
+{
+	f32 ret = atan2f (p.y, p.x);
+	ret -= math::PIMEZZI;
+	if (ret < 0)
+		ret += math::DUEPI;
+	if (ret > math::DUEPI)
+		ret -= math::DUEPI;
+	return ret;
+}
+
 //***************************************
 void ExaGenerator::ExaGenerator::unsetup ()
 {
@@ -42,9 +55,10 @@ void ExaGenerator::translate (const gos::vec2f &tr)
 }
 
 //***************************************
-void ExaGenerator::build (f32 hex_radius, const gos::vec2f center)
+void ExaGenerator::build (f32 hex_radius, const gos::vec2f center, gos::Random *rndIN)
 {
 	assert (NULL != allocator);
+	rnd = rndIN;
 
 	create_default_exa (hex_radius);
 
@@ -75,7 +89,7 @@ void ExaGenerator::build (f32 hex_radius, const gos::vec2f center)
 		{
 			const vec2f v = vtxList[ quadList[i].idx[i2] ].pos;
 			const vec2f p = v - quadCenterList[i];
-			angle_list[i2] = atan2f (p.y, p.x);
+			angle_list[i2] = ExaGenerator__calc_angle (p);
 		}
 
 		bool bEsci = false;
@@ -248,9 +262,9 @@ void ExaGenerator::select_edge_to_remove (sEdgeToRemove *out)
 	//logger::log (eTextColor::grey, "select_edge_to_remove... ");
 
 	const u32 nTris = trisList.getNElem();
-	out->tris_index = gos::randomU32(nTris - 1);
+	out->tris_index = rnd->getU32(nTris - 1);
 
-	switch (gos::randomU32(2))
+	switch (rnd->getU32(2))
 	{
 	default:
 		DBGBREAK;
@@ -857,7 +871,7 @@ u32 ExaGenerator::get_quad_from_vtx (u32 vtx_index, u32 *out__quadList, u32 num_
 		{
 			const vec2f  quad_center = quadCenterList(out__quadList[i]);
 			const vec2f p = quad_center - center;
-			angle_list[i] = atan2f (p.y, p.x);
+			angle_list[i] = ExaGenerator__calc_angle(p);
 		}
 
 		bool bEsci = false;

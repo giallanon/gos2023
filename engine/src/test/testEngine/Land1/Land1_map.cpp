@@ -2,6 +2,7 @@
 #include "gos.h"
 #include "../PerlinNoise.hpp"
 #include "gosGeomUtils.h"
+#include "gosRandom.h"
 
 using namespace gos;
 using namespace Land1;
@@ -31,9 +32,9 @@ void Map::setup (gos::Allocator *allocatorIN)
 }
 
 //*****************************************
-Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world_coord)
+Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world_coord, gos::Random *rnd)
 {
-	exagen.build (exacc.get_exa_world_radius(), vec2f(world_coord.x, world_coord.z));
+	exagen.build (exacc.get_exa_world_radius(), vec2f(world_coord.x, world_coord.z), rnd);
 	
 	const u32 num_vtx_originali = exagen.vtxList.getNElem();
 	const u32 num_quad = exagen.quadCenterList.getNElem();
@@ -57,22 +58,20 @@ Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world
 
 
 	//calcolo gli edge-vtx
-	FastHashMap<u32, u32> edge_vtx_hashmap;
+	FastHashMap<u64, u32> edge_vtx_hashmap;
 	edge_vtx_hashmap.setup (gos::getScrapAllocator(), num_vtx_originali * num_vtx_originali);
 
 #define MAKE_KEY(a,b,c,d)\
+			assert(a<=0xFFFF); assert(b<=0xFFFF); assert(c<=0xFFFF); assert(d<=0xFFFF);\
 			key = 0;\
-			if (a <= b)	key |= ( ((u32)a << 24) | ((u32)b << 16) );\
-			else		key |= ( ((u32)b << 24) | ((u32)a << 16) );\
-			if (c <= d)	key |= ( ((u32)c << 8) | (u32)d );\
-			else		key |= ( ((u32)d << 8) | (u32)c );\
+			if (a <= b)	key |= ( ((u64)a << 48) | ((u64)b << 32) );\
+			else		key |= ( ((u64)b << 48) | ((u64)a << 32) );\
+			if (c <= d)	key |= ( ((u64)c << 16) | (u64)d );\
+			else		key |= ( ((u64)d << 16) | (u64)c );\
 
 
 	u32 key;
-	u32 v_edge1_index;
-	u32 v_edge2_index;
-	vec2f v_edge;
-	FastHashMap<u32, u32>::Position pos;
+	FastHashMap<u64, u32>::Position pos;
 
 	for (u32 iVtx=0; iVtx<num_vtx_originali; iVtx++)
 	{
@@ -84,6 +83,7 @@ Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world
 		vtxInfoList[iVtx].is_border_vtx = 0;
 		if (exagen.is_a_border_vertex(iVtx))
 			vtxInfoList[iVtx].is_border_vtx = 1;
+		memset (vtxInfoList[iVtx].connected_vtx, 0xFF, sizeof(vtxInfoList[iVtx].connected_vtx));
 
 		//il primo vtx e' sempre il centro
 		vtxInfoList[iVtx].idx_list[num_idx++] = (u16)iVtx;
@@ -93,169 +93,350 @@ Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world
 		const u32 nquad = exagen.get_quad_from_vtx (iVtx, adj_quad_list, 16);
 		vtxInfoList[iVtx].num_quad = (u8)nquad;
 
-
-		//TODO
 		if (vtxInfoList[iVtx].is_border_vtx)
-			continue;
-
-
-		assert (nquad >= 3);
-		for (u32 i = 0; i < nquad; i++)
 		{
-			const u32 quad_index = adj_quad_list[i];
-			vtxInfoList[iVtx].adj_vtx_list[i] = exagen.get_index_of_vtx_in_entrata_a (quad_index, iVtx);
-		}
-		//se e' un vtx del bordo, per il momento skippo
-		if (exagen.is_a_border_vertex(iVtx))
-		{
-			continue;
-		}
-
-
-		/*
-		if (1 == nquad)
-		{
-			//siamo verosimilmente su un vtx del bordo
-			//Dato che non ci sono le informazioni su tutte i quad adiacenti (perche' farebbero parte di un altro exa)
-			//faccio qualche trucco
-			const u16 quad_index = adj_quad_list[0];
-			
-			const u32 QC_index = start_of_quad_center_vtx + quad_index;
-
-			const u32 A_index = i;
-			const u32 B_index = exa->get_index_of_vtx_in_uscita_da (quad_index, i);
-			const u32 C_index = exa->get_index_of_vtx_in_entrata_a (quad_index, i);
-
-			const vec2f A = final_vtx_list(A_index);
-			const vec2f B = final_vtx_list(B_index);
-			const vec2f C = final_vtx_list(C_index);
-
-			MAKE_KEY(A_index, B_index, A_index, B_index);
-			if (!edge_vtx_hashmap.findWithPos(key, &v_edge1_index, &pos))
+			switch (nquad)
 			{
-				v_edge = A + (B - A) * 0.5f;
-				v_edge1_index = final_vtx_list.getNElem();
-				final_vtx_list.append (v_edge);
-				edge_vtx_hashmap.insertInPosition (pos, v_edge1_index);
+			default:
+				DBGBREAK;
+				break;
+
+			case 1:
+				//siamo su un vtx del bordo
+				//Dato che non ci sono le informazioni su tutte i quad adiacenti (perche' farebbero parte di un altro exa)
+				//faccio qualche trucco
+				{
+					const u16 quad_index = adj_quad_list[0];
+					
+					const u32 QC_index = START_OF_QUAD_CENTER_VTX + quad_index;
+
+					const u32 A_index = iVtx;
+					const u32 B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
+					const u32 C_index = exagen.get_index_of_vtx_in_entrata_a (quad_index, iVtx);
+
+					const vec2f A = final_vtx_list(A_index);
+					const vec2f B = final_vtx_list(B_index);
+					const vec2f C = final_vtx_list(C_index);
+
+					vec2f v_AB;
+					u32 A_B_index;
+					MAKE_KEY(A_index, B_index, A_index, B_index);
+					if (!edge_vtx_hashmap.findWithPos(key, &A_B_index, &pos))
+					{
+						v_AB = A + (B - A) * 0.5f;
+						A_B_index = final_vtx_list.getNElem();
+						final_vtx_list.append (v_AB);
+						edge_vtx_hashmap.insertInPosition (pos, A_B_index);
+					}
+
+					vec2f v_AC;
+					u32 A_C_index;
+					MAKE_KEY(A_index, C_index, A_index, C_index);
+					if (!edge_vtx_hashmap.findWithPos(key, &A_C_index, &pos))
+					{
+						v_AC = A + (C - A) * 0.5f;
+						A_C_index = final_vtx_list.getNElem();
+						final_vtx_list.append (v_AC);
+						edge_vtx_hashmap.insertInPosition (pos, A_C_index);
+					}
+
+
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)A_B_index;
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)QC_index;
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)A_C_index;
+				}
+				break;
+
+			case 2:
+				//siamo su un vtx del bordo
+				//Dato che non ci sono le informazioni su tutte i quad adiacenti (perche' farebbero parte di un altro exa)
+				//faccio qualche trucco
+				{
+					u16 quad_index = adj_quad_list[0];
+					u16 quad_prev_index = adj_quad_list[1];
+					
+					const u32 A_index = iVtx;
+					u32 B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
+					u32 C_index = exagen.get_index_of_vtx_in_uscita_da (quad_prev_index, iVtx);
+					u32 D_index = exagen.get_index_of_vtx_in_entrata_a (quad_prev_index, iVtx);
+
+					if (B_index == D_index)
+					{
+						quad_index = adj_quad_list[1];
+						quad_prev_index = adj_quad_list[0];
+						B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
+						C_index = exagen.get_index_of_vtx_in_uscita_da (quad_prev_index, iVtx);
+						D_index = exagen.get_index_of_vtx_in_entrata_a (quad_prev_index, iVtx);
+					}
+					
+
+					const u32 QC_index = START_OF_QUAD_CENTER_VTX + quad_index;
+					const u32 QC_prev_index = START_OF_QUAD_CENTER_VTX + quad_prev_index;
+					const vec2f A = final_vtx_list(A_index);
+					const vec2f B = final_vtx_list(B_index);
+					const vec2f C = final_vtx_list(C_index);
+					const vec2f D = final_vtx_list(D_index);
+					const vec2f QC = final_vtx_list(QC_index);
+					const vec2f QC_prev = final_vtx_list(QC_prev_index);
+
+					vec2f v_AB;
+					u32 A_B_index;
+					MAKE_KEY(A_index, B_index, A_index, B_index);
+					if (!edge_vtx_hashmap.findWithPos(key, &A_B_index, &pos))
+					{
+						v_AB = A + (B - A) * 0.5f;
+						A_B_index = final_vtx_list.getNElem();
+						final_vtx_list.append (v_AB);
+						edge_vtx_hashmap.insertInPosition (pos, A_B_index);
+					}
+
+					vec2f v_AD;
+					u32 A_D_index;
+					MAKE_KEY(A_index, D_index, A_index, D_index);
+					if (!edge_vtx_hashmap.findWithPos(key, &A_D_index, &pos))
+					{
+						v_AD = A + (D - A) * 0.5f;
+						A_D_index = final_vtx_list.getNElem();
+						final_vtx_list.append (v_AD);
+						edge_vtx_hashmap.insertInPosition (pos, A_D_index);
+					}
+
+					vec2f v_QC_QCprev;
+					u32 QC_QCprev_index;
+					MAKE_KEY(A_index, C_index, QC_index, QC_prev_index);
+					if (!edge_vtx_hashmap.findWithPos(key, &QC_QCprev_index, &pos))
+					{
+		#ifdef _DEBUG
+						assert (geom::line2D__intersect (A, C, QC, QC_prev, &v_QC_QCprev));
+		#else
+						geom::line2D__intersect (A, C, QC, QC_prev, &v_QC_QCprev);
+		#endif
+						QC_QCprev_index = final_vtx_list.getNElem();
+						final_vtx_list.append (v_QC_QCprev);
+						edge_vtx_hashmap.insertInPosition (pos, QC_QCprev_index);
+					}				
+
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)A_B_index;
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)QC_index;
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)QC_QCprev_index;
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)QC_prev_index;
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)A_D_index;
+				}
+				break;
+
+			case 3:
+				//siamo su un vtx del bordo
+				//Dato che non ci sono le informazioni su tutte i quad adiacenti (perche' farebbero parte di un altro exa)
+				//faccio qualche trucco
+				{
+					u16 quad_index = adj_quad_list[0];
+					u16 quad_next_index = adj_quad_list[1];
+					u16 quad_prev_index = adj_quad_list[2];
+					
+					const u32 A_index = iVtx;
+					u32 B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
+					u32 C_index = exagen.get_index_of_vtx_in_uscita_da (quad_next_index, iVtx);
+					u32 D_index = exagen.get_index_of_vtx_in_uscita_da (quad_prev_index, iVtx);
+					u32 E_index = exagen.get_index_of_vtx_in_entrata_a (quad_prev_index, iVtx);
+
+					if (B_index == E_index)
+					{
+						quad_index = adj_quad_list[1];
+						quad_next_index = adj_quad_list[2];
+						quad_prev_index = adj_quad_list[0];
+					
+						B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
+						C_index = exagen.get_index_of_vtx_in_uscita_da (quad_next_index, iVtx);
+						D_index = exagen.get_index_of_vtx_in_uscita_da (quad_prev_index, iVtx);
+						E_index = exagen.get_index_of_vtx_in_entrata_a (quad_prev_index, iVtx);
+
+						if (B_index == E_index)
+						{
+							quad_index = adj_quad_list[2];
+							quad_next_index = adj_quad_list[0];
+							quad_prev_index = adj_quad_list[1];
+						
+							B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
+							C_index = exagen.get_index_of_vtx_in_uscita_da (quad_next_index, iVtx);
+							D_index = exagen.get_index_of_vtx_in_uscita_da (quad_prev_index, iVtx);
+							E_index = exagen.get_index_of_vtx_in_entrata_a (quad_prev_index, iVtx);
+						}
+					}
+
+					assert (B_index != E_index);
+
+					const u32 QC_index = START_OF_QUAD_CENTER_VTX + quad_index;
+					const u32 QC_next_index = START_OF_QUAD_CENTER_VTX + quad_next_index;
+					const u32 QC_prev_index = START_OF_QUAD_CENTER_VTX + quad_prev_index;
+
+					const vec2f A = final_vtx_list(A_index);
+					const vec2f B = final_vtx_list(B_index);
+					const vec2f C = final_vtx_list(C_index);
+					const vec2f D = final_vtx_list(D_index);
+					const vec2f E = final_vtx_list(E_index);
+					const vec2f QC = final_vtx_list(QC_index);
+					const vec2f QC_next = final_vtx_list(QC_next_index);
+					const vec2f QC_prev = final_vtx_list(QC_prev_index);
+
+					vec2f v_AB;
+					u32 A_B_index;
+					MAKE_KEY(A_index, B_index, A_index, B_index);
+					if (!edge_vtx_hashmap.findWithPos(key, &A_B_index, &pos))
+					{
+						v_AB = A + (B - A) * 0.5f;
+						A_B_index = final_vtx_list.getNElem();
+						final_vtx_list.append (v_AB);
+						edge_vtx_hashmap.insertInPosition (pos, A_B_index);
+					}
+
+					vec2f v_AE;
+					u32 A_E_index;
+					MAKE_KEY(A_index, E_index, A_index, E_index);
+					if (!edge_vtx_hashmap.findWithPos(key, &A_E_index, &pos))
+					{
+						v_AE = A + (E - A) * 0.5f;
+						A_E_index = final_vtx_list.getNElem();
+						final_vtx_list.append (v_AE);
+						edge_vtx_hashmap.insertInPosition (pos, A_E_index);
+					}
+
+					vec2f v_QC_QCnext;
+					u32 QC_QCnext_index;
+					MAKE_KEY(A_index, C_index, QC_index, QC_next_index);
+					if (!edge_vtx_hashmap.findWithPos(key, &QC_QCnext_index, &pos))
+					{
+		#ifdef _DEBUG
+						assert (geom::line2D__intersect (A, C, QC, QC_next, &v_QC_QCnext));
+		#else
+						geom::line2D__intersect (A, C, QC, QC_next, &v_QC_QCnext);
+		#endif
+						QC_QCnext_index = final_vtx_list.getNElem();
+						final_vtx_list.append (v_QC_QCnext);
+						edge_vtx_hashmap.insertInPosition (pos, QC_QCnext_index);
+					}				
+
+					vec2f v_QCnext_QCprev;
+					u32 QCnext_QCprev_index;
+					MAKE_KEY(A_index, D_index, QC_next_index, QC_prev_index);
+					if (!edge_vtx_hashmap.findWithPos(key, &QCnext_QCprev_index, &pos))
+					{
+		#ifdef _DEBUG
+						assert (geom::line2D__intersect (A, D, QC_next, QC_prev, &v_QCnext_QCprev));
+		#else
+						geom::line2D__intersect (A, D, QC_next, QC_prev, &v_QCnext_QCprev);
+		#endif
+						QCnext_QCprev_index = final_vtx_list.getNElem();
+						final_vtx_list.append (v_QCnext_QCprev);
+						edge_vtx_hashmap.insertInPosition (pos, QCnext_QCprev_index);
+					}	
+
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)A_B_index;
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)QC_index;
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)QC_QCnext_index;
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)QC_next_index;
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)QCnext_QCprev_index;
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)QC_prev_index;
+					vtxInfoList[iVtx].idx_list[num_idx++] = (u16)A_E_index;
+				}
+				break;
 			}
-
-			MAKE_KEY(A_index, C_index, A_index, C_index);
-			if (!edge_vtx_hashmap.findWithPos(key, &v_edge2_index, &pos))
-			{
-				v_edge = A + (C - A) * 0.5f;
-				v_edge2_index = final_vtx_list.getNElem();
-				final_vtx_list.append (v_edge);
-				edge_vtx_hashmap.insertInPosition (pos, v_edge2_index);
-			}
-
-			exa->v2.vtx_info[i].idx_list[num_idx++] = (u16)v_edge1_index;
-			exa->v2.vtx_info[i].idx_list[num_idx++] = (u16)QC_index;
-			exa->v2.vtx_info[i].idx_list[num_idx++] = (u16)v_edge2_index;
-
-			continue;
 		}
-
-
-		if (2 == nquad)
+		else
 		{
-			//siamo verosimilmente su un vtx del bordo
-			//Dato che non ci sono le informazioni su tutte i quad adiacenti (perche' farebbero parte di un altro exa)
-			//faccio qualche trucco
-			const u16 quad_index = adj_quad_list[0];
-			const u16 quad_next_index = adj_quad_list[1];
-			
-			const u32 QC_index = start_of_quad_center_vtx + quad_index;
-			const u32 QC_next_index = start_of_quad_center_vtx + quad_next_index;
-
-			const u32 A_index = i;
-			const u32 B_index = exa->get_index_of_vtx_in_uscita_da (quad_index, i);
-			const u32 C_index = exa->get_index_of_vtx_in_entrata_a (quad_index, i);
-
-			const vec2f A = final_vtx_list(A_index);
-			const vec2f B = final_vtx_list(B_index);
-			const vec2f C = final_vtx_list(C_index);
-			continue;
-		}
-		*/
-
-		assert (nquad >= 3);
-		for (u32 i2=0; i2<nquad; i2++)
-		{
-			const u32 quad_index = adj_quad_list[i2];
-
-			u32 quad_prev_index;
-			if (i2 == 0)
-				quad_prev_index = adj_quad_list[nquad-1];
-			else
-				quad_prev_index = adj_quad_list[i2-1];
-
-			u32 quad_next_index;
-			if (i2 == nquad-1)
-				quad_next_index = adj_quad_list[0];
-			else
-				quad_next_index = adj_quad_list[i2+1];
-
-			//assumo che il vtx 0 del quad sia l'estremo B dell'edge che parte dal vtx in esame (A)
-			const u32 A_index = iVtx;
-			const u32 B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
-			const u32 C_index = exagen.get_index_of_vtx_in_uscita_da (quad_next_index, iVtx);
-
-			const vec2f A = final_vtx_list(A_index);
-			const vec2f B = final_vtx_list(B_index);
-			const vec2f C = final_vtx_list(C_index);
-
-			const u32 QC_index = START_OF_QUAD_CENTER_VTX + quad_index;
-			assert (QC_index < 0xFFFF);
-			const vec2f QC = final_vtx_list(QC_index);
-
-			const u32 QC_prev_index = START_OF_QUAD_CENTER_VTX + quad_prev_index;
-			assert (QC_prev_index < 0xFFFF);
-			const vec2f QC_prev = final_vtx_list(QC_prev_index);
-
-			const u32 QC_next_index = START_OF_QUAD_CENTER_VTX + quad_next_index;
-			assert (QC_next_index < 0xFFFF);
-			const vec2f QC_next = final_vtx_list(QC_next_index);
-
-
-
-			//calcolo i 2 edge vertex
-			//intersezione 1: (A,B) e (QC_prev,QC)
-			MAKE_KEY(A_index, B_index, QC_prev_index, QC_index);
-			if (!edge_vtx_hashmap.findWithPos(key, &v_edge1_index, &pos))
+			//non e' un vtx del borde
+			assert (nquad >= 3);
+			for (u32 i2=0; i2<nquad; i2++)
 			{
-#ifdef _DEBUG
-				assert (geom::line2D__intersect (A, B, QC_prev, QC, &v_edge));
-#else
-				geom::line2D__intersect (A, B, QC_prev, QC, &v_edge);
-#endif
-				v_edge1_index = final_vtx_list.getNElem();
-				final_vtx_list.append (v_edge);
-				edge_vtx_hashmap.insertInPosition (pos, v_edge1_index);
+				const u32 quad_index = adj_quad_list[i2];
+
+				u32 quad_prev_index;
+				if (i2 == 0)
+					quad_prev_index = adj_quad_list[nquad-1];
+				else
+					quad_prev_index = adj_quad_list[i2-1];
+
+				u32 quad_next_index;
+				if (i2 == nquad-1)
+					quad_next_index = adj_quad_list[0];
+				else
+					quad_next_index = adj_quad_list[i2+1];
+
+				//assumo che il vtx 0 del quad sia l'estremo B dell'edge che parte dal vtx in esame (A)
+				const u32 A_index = iVtx;
+				const u32 B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
+				const u32 C_index = exagen.get_index_of_vtx_in_uscita_da (quad_next_index, iVtx);
+
+				const vec2f A = final_vtx_list(A_index);
+				const vec2f B = final_vtx_list(B_index);
+				const vec2f C = final_vtx_list(C_index);
+
+				const u32 QC_index = START_OF_QUAD_CENTER_VTX + quad_index;
+				assert (QC_index < 0xFFFF);
+				const vec2f QC = final_vtx_list(QC_index);
+
+				const u32 QC_prev_index = START_OF_QUAD_CENTER_VTX + quad_prev_index;
+				assert (QC_prev_index < 0xFFFF);
+				const vec2f QC_prev = final_vtx_list(QC_prev_index);
+
+				const u32 QC_next_index = START_OF_QUAD_CENTER_VTX + quad_next_index;
+				assert (QC_next_index < 0xFFFF);
+				const vec2f QC_next = final_vtx_list(QC_next_index);
+
+
+
+				//calcolo i 2 edge vertex
+				//intersezione 1: (A,B) e (QC_prev,QC)
+				u32 v_edge1_index;
+				u32 v_edge2_index;
+				vec2f v_edge;
+
+				MAKE_KEY(A_index, B_index, QC_prev_index, QC_index);
+				if (!edge_vtx_hashmap.findWithPos(key, &v_edge1_index, &pos))
+				{
+	#ifdef _DEBUG
+					assert (geom::line2D__intersect (A, B, QC_prev, QC, &v_edge));
+	#else
+					geom::line2D__intersect (A, B, QC_prev, QC, &v_edge);
+	#endif
+					v_edge1_index = final_vtx_list.getNElem();
+					final_vtx_list.append (v_edge);
+					edge_vtx_hashmap.insertInPosition (pos, v_edge1_index);
+				}
+				
+				//intersezione 2: (A,C) (QC, QC_next)
+				MAKE_KEY(A_index, C_index, QC_index, QC_next_index);
+				if (!edge_vtx_hashmap.findWithPos(key, &v_edge2_index, &pos))
+				{
+	#ifdef _DEBUG
+					assert (geom::line2D__intersect (A, C, QC, QC_next, &v_edge));
+	#else
+					geom::line2D__intersect (A, C, QC, QC_next, &v_edge);
+	#endif
+					v_edge2_index = final_vtx_list.getNElem();
+					final_vtx_list.append (v_edge);
+					edge_vtx_hashmap.insertInPosition (pos, v_edge2_index);
+				}
+				
+				//mi segno tutti i vtx utili centrati su queste vtx primario
+				assert (v_edge1_index < 0xFFFF);
+				assert (QC_index < 0xFFFF);
+				vtxInfoList[iVtx].idx_list[num_idx++] = (u16)v_edge1_index;
+				vtxInfoList[iVtx].idx_list[num_idx++] = (u16)QC_index;
+
+				vtxInfoList[iVtx].connected_vtx[i2] = B_index;
 			}
-			
-			//intersezione 2: (A,C) (QC, QC_next)
-			MAKE_KEY(A_index, C_index, QC_index, QC_next_index);
-			if (!edge_vtx_hashmap.findWithPos(key, &v_edge2_index, &pos))
-			{
-#ifdef _DEBUG
-				assert (geom::line2D__intersect (A, C, QC, QC_next, &v_edge));
-#else
-				geom::line2D__intersect (A, C, QC, QC_next, &v_edge);
-#endif
-				v_edge2_index = final_vtx_list.getNElem();
-				final_vtx_list.append (v_edge);
-				edge_vtx_hashmap.insertInPosition (pos, v_edge2_index);
-			}
-			
-			//mi segno tutti i vtx utili centrati su queste vtx primario
-			assert (v_edge1_index < 0xFFFF);
-			assert (QC_index < 0xFFFF);
-			vtxInfoList[iVtx].idx_list[num_idx++] = (u16)v_edge1_index;
-			vtxInfoList[iVtx].idx_list[num_idx++] = (u16)QC_index;
 		}
+
+
 
 		assert (num_idx <= 16);
 		vtxInfoList[iVtx].num_idx = (u8)num_idx;
+
+		//mesh type
+		for (u32 i=0; i<nquad; i++)
+		{
+			vtxInfoList[iVtx].mesh_type[i] = Exa::eMeshType::boh;
+		}
 	}
 
 #undef MAKE_KEY
@@ -273,6 +454,7 @@ Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world
 	memcpy (ret->vtxList, final_vtx_list._queryPointer(), sizeof(vec2f) * final_vtx_list.getNElem());
 
 	GOSFREE(gos::getScrapAllocator(), vtxInfoList);
+
 	return ret;
 
 }
@@ -304,6 +486,19 @@ void Map::priv_map_destroy()
 }
 
 //*****************************************
+void Map::debug_print_exa_stat (const Exa *exa) const
+{
+	u32 nq = 0;
+	for (u32 i=0; i<exa->num_vtx_originali; i++)
+	{
+		nq += exa->vtxInfoList[i].num_quad;
+	}
+
+
+	logger::log ("exa stat => vtx=%d, num_quad=%d\n", exa->num_vtx_tot, nq);
+}
+
+//*****************************************
 void Map::map_create (f32 exa_radius_world, u32 map_radius)
 {
 	const vec3f WORLD_CENTER(0,0,0);
@@ -316,8 +511,12 @@ void Map::map_create (f32 exa_radius_world, u32 map_radius)
 	exagen.setup (gos::getScrapAllocator());
 
 	//genero exa in 0,0
-	Exa *exa = priv_exa_alloc ( exagen, exacc.exa_coord_to_world (examap::Coord(0,0)) );
+	gos::Random rnd;
+	rnd.seed (12345);
+
+	Exa *exa = priv_exa_alloc ( exagen, exacc.exa_coord_to_world (examap::Coord(0,0)), &rnd );
 	priv_exa_add_to_map (examap::Coord(0,0), exa);
+	debug_print_exa_stat(exa);
 
 	//creo una serie di anelli attorno a 0,0
 	{
@@ -334,28 +533,80 @@ void Map::map_create (f32 exa_radius_world, u32 map_radius)
 			u32 n = examap::coord_ring (examap::Coord(0, 0), radius, coordList, MAX_NUM_COORD);
 			for (u32 i = 0; i < n; i++)
 			{
-				exa = priv_exa_alloc ( exagen, exacc.exa_coord_to_world (coordList[i]) );
+				exa = priv_exa_alloc ( exagen, exacc.exa_coord_to_world (coordList[i]), &rnd );
 				priv_exa_add_to_map (coordList[i], exa);
+				debug_print_exa_stat(exa);
 			}
 		}
 	}
 
-
 	//genero delle height
 	{
-		exaList.forEach ([exa_radius_world] (u32 key, Exa *exa) {
+		exaList.forEach ([exa_radius_world, &rnd] (u32 key, Exa *exa) {
 			for (u32 i = 0; i < exa->num_vtx_originali; i++)
 			{
-				const u32 r = gos::randomU32(100);
+				const u32 r = rnd.getU32(100);
 				if (r < 70)			exa->vtxInfoList[i].material_index = 1; 
 				else if (r < 90)	exa->vtxInfoList[i].material_index = 2; 
 				else				exa->vtxInfoList[i].material_index = 3; 
 			}
 			return true;
 		});
-
-		
 	}
+
+	map_recalc_meshType();
+}
+
+//*****************************************
+void Map::map_recalc_meshType()
+{
+	const u32 N = exaList.getNElem();
+	const auto list = exaList._queryList();
+
+	for (u32 iExa=0; iExa<N; iExa++)
+	{
+		const HASHMAP::sElem *elem = &list->queryElem(iExa);
+		const Exa *exa = elem->value;
+
+		for (u32 iVtx=0; iVtx<exa->num_vtx_originali; iVtx++)
+		{
+			// if (108 == iVtx)
+			// 	DBGBREAK;
+
+			Exa::VtxInfo *vi = &exa->vtxInfoList[iVtx];
+
+			if (vi->is_border_vtx)
+				continue;
+
+			//if (vi->material_index == 3)	vi->height = 1;
+			for (u32 iQuad=0; iQuad<vi->num_quad; iQuad++)
+			{
+				u16 quad_indices[8];
+				if (!exa->get_quad_indices (iVtx, iQuad, quad_indices))
+					continue;
+				
+				const u8 adj_vtx_idx_0 = vi->connected_vtx[iQuad];
+				const u8 adj_vtx_idx_1 = vi->connected_vtx[(iQuad+1) % vi->num_quad];
+				if (0xFF == adj_vtx_idx_0)
+					continue;
+
+				const u8 material_adj_vtx_0 = exa->vtxInfoList[adj_vtx_idx_0].material_index;
+				const u8 material_adj_vtx_1 = exa->vtxInfoList[adj_vtx_idx_1].material_index;
+
+				u8 mask = 0;
+				if (material_adj_vtx_0 != vi->material_index)	mask |= 0x01;
+				if (material_adj_vtx_1 != vi->material_index)	mask |= 0x02;
+				switch (mask)
+				{
+				default:	vi->mesh_type[iQuad] = Exa::eMeshType::full;	break;
+				case 0x01:	vi->mesh_type[iQuad] = Exa::eMeshType::bordo_singolo_su;	break;
+				case 0x02:	vi->mesh_type[iQuad] = Exa::eMeshType::bordo_singolo_dx;	break;
+				case 0x03:	vi->mesh_type[iQuad] = Exa::eMeshType::angolo;	break;
+				}
+			}
+		}
+	}
+	
 }
 
 //*****************************************

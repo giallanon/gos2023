@@ -2,6 +2,7 @@
 #define _Land1_exaGenerator_h_
 #include "Land1_enumAndDefine.h"
 #include "gosUniqueSortedList.h"
+#include "gosRandom.h"
 
 
 namespace Land1
@@ -52,7 +53,7 @@ namespace Land1
 
 		//build e' una standalone, fa tutto quello che deve fare e filla vtxList, trisList, quadList, listOfBorderVtxIndex
 		//con i dati rilevanti
-		void	build (f32 hex_radius, const gos::vec2f center);
+		void	build (f32 hex_radius, const gos::vec2f center, gos::Random *rnd);
 		void	translate (const gos::vec2f &tr);
 
 		bool		is_a_border_vertex (u32 vtx_index) const						{ assert(vtx_index < vtxList.getNElem()); return (vtxList(vtx_index).isBorderVtx != 0); }
@@ -111,6 +112,7 @@ namespace Land1
 
 	private:
 		gos::Allocator *allocator;
+		gos::Random		*rnd;
 		TrisList		trisList;
 		BorderVtxList	listOfBorderVtxIndex;	//elenco degli indici dei vtx che rappresentano il bordo dell'exa
 

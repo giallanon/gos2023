@@ -90,7 +90,10 @@
 		"iostream": "cpp",
 		"new": "cpp",
 		"stdexcept": "cpp",
-		"stdfloat": "cpp"
+		"stdfloat": "cpp",
+		"__hash_table": "cpp",
+		"__split_buffer": "cpp",
+		"__tree": "cpp"
 	},
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.compilerPath": "",

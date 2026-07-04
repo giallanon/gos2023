@@ -66,8 +66,8 @@ void Land1_app::on__setup ()
 
 
 	//creo una mappa
-	const f32 EXA_WORLD_RADIUS = 20.0f;
-	const u32 NUM_RINGS = 3;
+	const f32 EXA_WORLD_RADIUS = 50.0f;
+	const u32 NUM_RINGS = 4;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, NUM_RINGS);
 }
@@ -170,8 +170,8 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 	logger::log ("hex @ (%d, %d)  LSHIFT=%c\n", coord.x, coord.z, bLSHIFT?'Y':'N');
 	
 
-	const u32 N_COLORS = 7;
-	const u32 colors[N_COLORS] = { 0xFFFFFFFF, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFF00, 0xFF00FFFF, 0xFFFF00FF };
+	const u32 N_COLORS = 8;
+	const u32 colors[N_COLORS] = { 0xFFFFFFFF, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFF00, 0xFF00FFFF, 0xFFFF00FF, 0xFFa889B1 };
 
 	line_ctx1->clear();
 	line_ctx1->enable_depth_test(false);
@@ -192,14 +192,18 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 			line_ctx1->vtx_add (vec3f(exa->vtxList[i].x, 0, exa->vtxList[i].y));
 		for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
 		{
-			if (exa->vtxInfoList[iVtx].is_border_vtx)
-				continue;
 			const Land1::Exa::VtxInfo *vi = &exa->vtxInfoList[iVtx];
 
 			for (u32 i=0; i<vi->num_quad; i++)
 			{
 				line_ctx1->line (first_vtx + vi->idx_list[0], first_vtx + vi->idx_list[1+2*i]);
 			}
+			if (1 == vi->num_quad)
+				line_ctx1->line (first_vtx + vi->idx_list[0], first_vtx + vi->idx_list[3]);
+			if (2 == vi->num_quad)
+				line_ctx1->line (first_vtx + vi->idx_list[0], first_vtx + vi->idx_list[5]);
+			if (3 == vi->num_quad && vi->is_border_vtx)
+				line_ctx1->line (first_vtx + vi->idx_list[0], first_vtx + vi->idx_list[7]);
 		}
 
 		//diesgno i punti originali
@@ -213,11 +217,17 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 		u32 vtx_index;
 		if (exa->get_closest_vtx_from_point(world_point, &vtx_index))
 		{
-			line_ctx1->point_set_radius(16);
-
 			const Land1::Exa::VtxInfo *vi = &exa->vtxInfoList[vtx_index];
 
-			//diesgno il quad composto dai quad-center
+			logger::log ("vtx_index=%d, num_quad=%d, is_border=%d idx=", vtx_index, vi->num_quad, vi->is_border_vtx);
+			for (u32 i=0; i<vi->num_idx; i++)
+				logger::log ("%d, ", vi->idx_list[i]);
+			logger::log("\n");
+
+
+			line_ctx1->point_set_radius(16);
+
+			//disegno il quad composto dai quad-center
 			line_ctx1->
 				set_color_ARGB (0xFF00FF00)
 				.line_begin();
@@ -238,21 +248,39 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 					.point (vtx_index);
 			}
 
+			//raggio da centro a QC
+			for (u32 i = 0; i < vi->num_quad; i++)
+			{
+				const u32 vtx_index = vi->idx_list[2 + i * 2];
+				line_ctx1->
+					set_color_ARGB (colors[i % N_COLORS])
+					.line (vi->idx_list[0], vtx_index);
+			}
 
-			//if (bLSHIFT)
-			//{
-			//	if (0xFF == material_index_to_apply)
-			//	{
-			//		priv_new_albero( vec3f(exa->vtxList[vtx_index].x, 0, exa->vtxList[vtx_index].y) );
-			//	}
-			//	else
-			//	{
-			//		if (0 == exa->vtxInfoList[vtx_index].material_index)
-			//			exa->vtxInfoList[vtx_index].material_index = material_index_to_apply;
-			//		else
-			//			exa->vtxInfoList[vtx_index].material_index = 0;
-			//	}
-			//}
+			//disegno i vtx ai quali questo vtx e' collegato
+			line_ctx1->point_set_radius(8);
+			for (u32 i=0; i<vi->num_quad; i++)
+			{
+				const u32 idx = vi->connected_vtx[i];
+				if (0xFF == idx)
+					continue;
+				
+				line_ctx1->set_color_ARGB (colors[(1 + i*2) % N_COLORS])
+					.point(idx);
+			}
+
+			if (bLSHIFT)
+			{
+				if (0xFF == material_index_to_apply)
+				{
+					priv_new_albero( vec3f(exa->vtxList[vtx_index].x, 0, exa->vtxList[vtx_index].y) );
+				}
+				else
+				{
+					exa->vtxInfoList[vtx_index].material_index = material_index_to_apply;
+					map.map_recalc_meshType();
+				}
+			}
 		}
 
 	}
