@@ -3,7 +3,8 @@
 
 @model3d: model_tile1
 {
-	import: tile/tile_default.glb
+	//import: tile/tile_default.glb
+	import: tile/tileset_2.glb
 
 	post_op: "	skeleton-resolve;
 				uniform-resize-x, 1.0;

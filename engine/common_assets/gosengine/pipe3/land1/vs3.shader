@@ -83,6 +83,7 @@ void main()
         case 1: out_diffuse_col = color_sRGB_to_linear(66,136,71); break;
         case 2: out_diffuse_col = color_sRGB_to_linear(89,170,92); break;
         case 3: out_diffuse_col = color_sRGB_to_linear(116,95,55); break;
+		case 0xff: out_diffuse_col = color_sRGB_to_linear(76,58,20); break;
     }
 
 }

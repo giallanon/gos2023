@@ -10,15 +10,19 @@ Land1_app::Land1_app()
 	mouse_x = mouse_y = 0;
 	material_index_to_apply = 1;
 	num_alberi = 0;
+	num_modelinst_exa = 0;
 }
 
 //***************************************
 void Land1_app::on__unsetup()
 {
 	engine->release (handle_model_albero);
+	engine->release (handle__model_exa);
 
 	for (u32 i=0; i<num_alberi; i++)
 		engine->release (modelinst_albero[i]);
+	for (u32 i=0; i<num_modelinst_exa; i++)
+		engine->release (modelinst_exa[i]);
 }
 
 //***************************************
@@ -53,10 +57,8 @@ void Land1_app::on__setup ()
 		renderer_PIPE3->material_create (0, vec3f(0.3f, 1 , 0.3f));
 	}
 
-	//engine->model_createFromAsset ("model_LowPolyTree", &handle_model_albero, res::eLoadMode::asap);
 	engine->model_createFromAsset ("model_gix_tree_1", &handle_model_albero, res::eLoadMode::asap);
-	//engine->model_createFromAsset ("model_albero", &handle_model_albero, res::eLoadMode::asap);
-	//engine->model_createFromAsset ("model_omino", &handle_model_albero, res::eLoadMode::asap);
+	engine->model_createFromAsset ("model_exa", &handle__model_exa, res::eLoadMode::asap);
 	
 
 	cam.pos.warp (0, 20, 0);
@@ -64,12 +66,37 @@ void Land1_app::on__setup ()
 	cam.markUpdated();
 	move_free.bind (&cam.pos);
 
-
 	//creo una mappa
-	const f32 EXA_WORLD_RADIUS = 50.0f;
+	const f32 EXA_WORLD_RADIUS = 15.0f; //50.0f;
 	const u32 NUM_RINGS = 4;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, NUM_RINGS);
+
+
+	//
+	{
+		Land1::Map::Result r;
+		r.setup (gos::getScrapAllocator());
+		map.query_visible_exa (&r);
+
+		const res::Model3d *res_model;
+		if (!engine->get (handle__model_exa, &res_model, 4000))
+		{
+			DBGBREAK;
+			return;
+		}
+
+		num_modelinst_exa = r.get_num();
+		for (u32 i=0; i<num_modelinst_exa; i++)
+		{
+			const vec2f c = r.get_exa_by_index(i)->vtxList[0];
+
+			engine->modelinst_create (handle__model_exa, &modelinst_exa[i]);
+			mat4x4f matTr;
+			matTr.buildTranslation ( vec3f(c.x, -0.1f, c.y) );
+			engine->modelinst_applyTransform (modelinst_exa[i], matTr);
+		}
+	}
 }
 
 //***************************************
@@ -121,6 +148,9 @@ void Land1_app::on__prepare_render()
 	renderer_PIPE3->begin();
 	for (u32 i=0; i<num_alberi; i++)
 		renderer_PIPE3->add (modelinst_albero[i]);
+
+	for (u32 i=0; i<num_modelinst_exa; i++)
+		renderer_PIPE3->add (modelinst_exa[i]);
 	renderer_PIPE3->end();
 }
 

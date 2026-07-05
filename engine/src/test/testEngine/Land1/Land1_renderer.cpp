@@ -294,12 +294,21 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 			continue;
 
 		u32 meshType;
-		static constexpr u32 MESH_INDEX__BOH = 3;
-		static constexpr u32 MESH_INDEX__FULL = 4;
-		static constexpr u32 MESH_INDEX__ANGOLO = 1;
-		static constexpr u32 MESH_INDEX__BORDO_DOPPIO = 2;
-		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_SU = 5;
-		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_DX = 6;
+		// static constexpr u32 MESH_INDEX__BOH = 3;
+		// static constexpr u32 MESH_INDEX__FULL = 4;
+		// static constexpr u32 MESH_INDEX__ANGOLO = 1;
+		// static constexpr u32 MESH_INDEX__BORDO_DOPPIO = 2;
+		// static constexpr u32 MESH_INDEX__BORDO_SINGOLO_SU = 5;
+		// static constexpr u32 MESH_INDEX__BORDO_SINGOLO_DX = 6;
+		static constexpr u32 MESH_INDEX__BASE = 0;
+		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_SU = 1;
+		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_DX = 2;		
+		static constexpr u32 MESH_INDEX__BORDO_DOPPIO = 3;
+		static constexpr u32 MESH_INDEX__ANGOLO = 4;
+		static constexpr u32 MESH_INDEX__BOH = 5;
+		static constexpr u32 MESH_INDEX__FULL = 6;
+		
+		
 		switch ((Exa::eMeshType)i)
 		{
 		default:
@@ -325,6 +334,7 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 			rctx.bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
 				.drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index);
 		}
+
 	}
 }
 

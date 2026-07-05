@@ -1,0 +1,12 @@
+@include: common.gosasset_d
+
+
+@model3d: model_exa
+{
+	import: tile/exa.glb
+
+	post_op: "	skeleton-resolve;
+				uniform-resize-x, 30.0;
+				center-at, 0, 0, 0
+			"
+}

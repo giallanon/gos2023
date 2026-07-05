@@ -66,7 +66,7 @@ void ExaGenerator::build (f32 hex_radius, const gos::vec2f center, gos::Random *
 
 	subdivide();
 
-	for (u32 i=0;i<10; i++)
+	for (u32 i=0;i<60; i++)
 		relax();
 
 	translate (center);

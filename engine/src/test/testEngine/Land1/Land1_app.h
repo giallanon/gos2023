@@ -44,6 +44,10 @@ private:
 	gos::ENGModel3dInst		modelinst_albero[NUM_MAX_ALBERI];
 	u32						num_alberi;
 
+	gos::ENGModel3d 		handle__model_exa;
+	gos::ENGModel3dInst		modelinst_exa[1024];
+	u32						num_modelinst_exa;
+
 	u8	material_index_to_apply;
 };
 
