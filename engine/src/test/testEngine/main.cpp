@@ -18,8 +18,8 @@ int main()
         if (!engine.setup (1024, 768, "test engine"))
             return -2;
 
-        if (!engine.asset_build())  return -3;
-        //if (!engine.asset_rebuildAll())  return -3;
+        //if (!engine.asset_build())  return -3;
+        if (!engine.asset_rebuildAll())  return -3;
 
 
         if (engine.setup_renderPipe())

@@ -31,11 +31,17 @@ void AssetFile_model3D::begin(gos::Allocator *localAllocatorIN)
 		listof_shape.setup (localAllocator, 128);
 		listof_mesh.setup (localAllocator, 128);
 		listof_material.setup (localAllocator, 128);
+		shape_name_list.setup (localAllocator, 1024);
+		mesh_name_list.setup (localAllocator, 1024);
+		material_name_list.setup (localAllocator, 1024);
 	}
 
 	listof_shape.reset();
 	listof_mesh.reset();
 	listof_material.reset();
+	shape_name_list.reset();
+	mesh_name_list.reset();
+	material_name_list.reset();
 	uid_of_concrete_skeleton.setInvalid();
 }
 
@@ -46,7 +52,7 @@ void AssetFile_model3D::skeleton_set (UID uid_of_concrete_skeleton__IN)
 }
 
 //************************************
-u32 AssetFile_model3D::shape_add (UID uid_of_concrete_shape)
+u32 AssetFile_model3D::shape_add (UID uid_of_concrete_shape, const char *shape_name)
 {
 	const u32 n = listof_shape.getNElem();
 	for (u32 i = 0; i < n; i++)
@@ -54,12 +60,14 @@ u32 AssetFile_model3D::shape_add (UID uid_of_concrete_shape)
 		if (listof_shape(i) == uid_of_concrete_shape)
 			return i;
 	}
+
 	listof_shape.append (uid_of_concrete_shape);
+	shape_name_list.append (shape_name);
 	return n;
 }
 
 //************************************
-u32 AssetFile_model3D::material_add (UID uid_of_concrete_material)
+u32 AssetFile_model3D::material_add (UID uid_of_concrete_material, const char *material_name)
 {
 	const u32 n = listof_material.getNElem();
 	for (u32 i = 0; i < n; i++)
@@ -67,12 +75,14 @@ u32 AssetFile_model3D::material_add (UID uid_of_concrete_material)
 		if (listof_material(i) == uid_of_concrete_material)
 			return i;
 	}
+
 	listof_material.append (uid_of_concrete_material);
+	material_name_list.append(material_name);
 	return n;
 }
 
 //************************************
-bool AssetFile_model3D::mesh_add (u32 shape_index, u32 bone_index, u32 material_index)
+bool AssetFile_model3D::mesh_add (u32 shape_index, u32 bone_index, u32 material_index, const char *mesh_name)
 {
 	if (shape_index >= listof_shape.getNElem())
 		return false;
@@ -84,6 +94,7 @@ bool AssetFile_model3D::mesh_add (u32 shape_index, u32 bone_index, u32 material_
 	};
 
 	listof_mesh.append (m);
+	mesh_name_list.append (mesh_name);
 	return true;
 }
 

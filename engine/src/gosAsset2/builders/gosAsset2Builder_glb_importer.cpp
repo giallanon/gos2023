@@ -456,6 +456,7 @@ bool Importer_glb::priv_parseMesh (const gos::IniFileSection *sec, const VtxLayo
 	{
 		sprintf_s (meshName, sizeof(meshName), "noname_%04d", meshNum);
 	}
+	meshesList[meshNum].set_name(meshName);
 
 	char s[128];
 	u32 index = 0;
@@ -833,7 +834,7 @@ void Importer_glb::priv_resolveSkeletonChildren (Bone *me, const Bone *father)
 
 
 //********************************************
-void Importer_glb::priv_build_mesh_list (Bone *me, const gos::Skeleton *sk, gos::FastArray<Result::sMesh> *out_list)
+void Importer_glb::priv_build_mesh_list (Bone *me, const gos::Skeleton *sk, gos::FastArray<Result::sMesh> *out_list, gos::Allocator *result_allocator)
 {
 	if (u32MAX != me->nodeIndex)
 	{
@@ -859,6 +860,7 @@ void Importer_glb::priv_build_mesh_list (Bone *me, const gos::Skeleton *sk, gos:
 				(*out_list)[mesh_num].bone_index = bone_index;
 				(*out_list)[mesh_num].shape_instance_index = 0;
 				(*out_list)[mesh_num].material_index = material_index;
+				(*out_list)[mesh_num].mesh_name = gos::string::utf8::allocStr (result_allocator, meshesList(ii).get_mesh_name());
 			}
 		}
 	}
@@ -866,7 +868,7 @@ void Importer_glb::priv_build_mesh_list (Bone *me, const gos::Skeleton *sk, gos:
 	Bone *b = me->firstChild;
 	while (b)
 	{
-		priv_build_mesh_list (b, sk, out_list);
+		priv_build_mesh_list (b, sk, out_list, result_allocator);
 		b = b->nextSibling;
 	}
 }
@@ -1127,7 +1129,8 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 			{
 				const u32 str_len = shapeNameList(i).lengthInByte();
 				out_results->shapeNameList[i] = GOSALLOCT(char*, out_results->allocator, sizeof(char) * (str_len+1));
-				memcpy (out_results->shapeNameList[i], shapeNameList(i).getBuffer(), str_len);
+				if (str_len > 0)
+					memcpy (out_results->shapeNameList[i], shapeNameList(i).getBuffer(), str_len);
 				out_results->shapeNameList[i][str_len] = 0x00;
 			}			
 
@@ -1143,14 +1146,15 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 				{
 					const u32 str_len = materialNameList(i).lengthInByte();
 					out_results->materialNameList[i] = GOSALLOCT(char*, out_results->allocator, sizeof(char) * (str_len + 1));
-					memcpy (out_results->materialNameList[i], materialNameList(i).getBuffer(), str_len);
+					if (str_len > 0)
+						memcpy (out_results->materialNameList[i], materialNameList(i).getBuffer(), str_len);
 					out_results->materialNameList[i][str_len] = 0x00;
 				}
 			}
 
 			//calcolo le mesh
 			gos::FastArray<Result::sMesh> mesh_list (gos::getScrapAllocator(), num_shape*2);
-			priv_build_mesh_list (&rootBone, &out_results->skeleton, &mesh_list);
+			priv_build_mesh_list (&rootBone, &out_results->skeleton, &mesh_list, out_results->allocator);
 
 			const u32 num_mesh = mesh_list.getNElem();
 			out_results->num_mesh = num_mesh;

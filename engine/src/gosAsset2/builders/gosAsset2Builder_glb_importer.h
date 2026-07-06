@@ -38,6 +38,7 @@ namespace gos
 					u16 material_index;
 					u16 shape_instance_index;	//==0 => <shape_index> e' usata da 1 sola mesh.
 												//==N => <shape_index> e' usata da (N+1) mesh.
+					char *mesh_name;
 				};
 
 
@@ -58,12 +59,16 @@ namespace gos
 						{
 							GOSFREE(allocator, materialNameList[i]);
 						}
+						for (u32 i = 0; i < num_mesh; i++)
+						{
+							GOSFREE(allocator, mesh_list[i].mesh_name);
+						}
 
 						GOSFREE(allocator, shapeList);
 						GOSFREE(allocator, shapeNameList);
-						GOSFREE(allocator, mesh_list);
 						GOSFREE(allocator, materialNameList);
 						GOSFREE(allocator, material_list);
+						GOSFREE(allocator, mesh_list);
 						numShapes = num_mesh = num_material = 0;
 					}
 					gos::skeleton::free(skeleton);
@@ -78,17 +83,20 @@ namespace gos
 
 			public:
 				VtxLayout				vtxLayot;
+				
 				u32 					numShapes;
 				gos::Shape 				*shapeList;
 				char					**shapeNameList;
+				
 				gos::Skeleton			skeleton;
-
-				u32						num_mesh;
-				sMesh					*mesh_list;
 
 				u32						num_material;
 				MaterialPBR				*material_list;
 				char					**materialNameList;
+
+				u32						num_mesh;
+				sMesh					*mesh_list;
+
 				
 			private:
 				bool					priv_is_skeleton_resolved() const { return bSkeletonIsResolved; }
@@ -235,17 +243,21 @@ namespace gos
 				//per glTF, una mesh e' una collezione di primitive.
 				//Per me, la cosa si traduce in una collezione di shape
 
-				void 	begin (gos::FastArray<sMeshInfo> &globalBufferIN)	{ numShapes = 0; offsettInGlobalBuffer = globalBufferIN.getNElem(); globalBuffer = &globalBufferIN; }
+				void 	begin (gos::FastArray<sMeshInfo> &globalBufferIN)	{ numShapes = 0; offsettInGlobalBuffer = globalBufferIN.getNElem(); globalBuffer = &globalBufferIN; memset(mesh_name,0,sizeof(mesh_name)); }
+
+				void	set_name (const char *mesh_nameIN)					{ gos::string::utf8::copyStrAsMuchAsYouCan (mesh_name, sizeof(mesh_name), mesh_nameIN); }
 				void 	addShape (u32 shape_idx, u32 material_index)		{ numShapes++; sMeshInfo info {shape_idx, material_index};	globalBuffer->append(info); }
 
 				u32 	getNumShapes() const 								{ return numShapes; }
 				u32 	getShapeIndex (u32 shapeNum) const					{ return globalBuffer->queryElem (offsettInGlobalBuffer+shapeNum).shape_idx; }
 				u32 	getMaterialIndex (u32 shapeNum) const				{ return globalBuffer->queryElem (offsettInGlobalBuffer+shapeNum).material_idx; }
+				const char* get_mesh_name() const							{ return mesh_name; }
 
 			private:
 				gos::FastArray<sMeshInfo> *globalBuffer;
 				u32 					numShapes;
 				u32 					offsettInGlobalBuffer;
+				char					mesh_name[64];
 			};
 		
 
@@ -263,7 +275,7 @@ namespace gos
 
 			void 	priv_resolveSkeleton (Bone *rootBone);
 			void 	priv_resolveSkeletonChildren (Bone *bone, const Bone *father);
-			void	priv_build_mesh_list (Bone *me, const gos::Skeleton *sk, gos::FastArray<Result::sMesh> *out_list);
+			void	priv_build_mesh_list (Bone *me, const gos::Skeleton *sk, gos::FastArray<Result::sMesh> *out_list, gos::Allocator *result_allocator);
 			
 			void 	priv_printStatistics() const;
 			void 	priv_printSkeleton() const;
@@ -283,6 +295,7 @@ namespace gos
 			gos::FastArray<sNode>			nodesList;
 			gos::FastArray<sMeshInfo>		shapesInMesh;	//usato come array di appoggio per memorizzare l'elenco delle shape che stanno in ogni singola mesh
 			gos::FastArray<sMesh>			meshesList;
+
 			gos::FastArray<Shape> 			shapeList;
 			gos::Array<gos::UTF8String>		shapeNameList;
 

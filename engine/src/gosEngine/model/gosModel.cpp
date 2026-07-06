@@ -37,8 +37,9 @@ bool model::alloc (gos::Allocator *allocator, u16 num_shape, u16 num_material, u
 		+sizeof(u16)	//num_meshes
 		+sizeof(u16)	//abs-offset-to MESH 1
 		+sizeof(u16)	//abs-offset-to MATERIAL 1
+		+sizeof(u16)	//abs-offset-to NAME-TABLE
 		+sizeof(u32)	//ENGSkeleton as u32
-		+2; //PAD
+		;
 
 	//ENGGPUShape 1 to n
 	assert (0 == sizeof_blob % 8);
@@ -57,6 +58,11 @@ bool model::alloc (gos::Allocator *allocator, u16 num_shape, u16 num_material, u
 	assert (0 == sizeof_blob % 8);
 	sizeof_blob += sizeof(Model::Mesh) * num_meshes;		
 	sizeof_blob = utils::calcNextMultipleOf8(sizeof_blob);
+
+	//tabella con i nomi
+	const u16 START_of_NAME_TABLE = sizeof_blob;
+	sizeof_blob += Reader::SIZE_OF_A_NAME * (num_shape + num_material + num_meshes);
+	
 
 
 
@@ -78,10 +84,14 @@ bool model::alloc (gos::Allocator *allocator, u16 num_shape, u16 num_material, u
 	ct += utils::bufferWriteU16 (&out->blob[ct], num_meshes);
 
 	assert (ct == Reader::OFFSET_TO_START_OF_MESHES);
-	ct += utils::bufferWriteU16 (&out->blob[ct], 0);
+	ct += utils::bufferWriteU16 (&out->blob[ct], START_of_MESH);
 
 	assert (ct == Reader::OFFSET_TO_START_OF_MATERIALS);
-	ct += utils::bufferWriteU16 (&out->blob[ct], 0);
+	ct += utils::bufferWriteU16 (&out->blob[ct], START_of_MATERIAL);
+
+	assert (ct == Reader::OFFSET_TO_START_OF_NAME_TABLE);
+	ct += utils::bufferWriteU16 (&out->blob[ct], START_of_NAME_TABLE);
+
 
 	assert (ct == Reader::SKELETON);
 	ENGSkeleton handle_sk;
@@ -99,7 +109,6 @@ bool model::alloc (gos::Allocator *allocator, u16 num_shape, u16 num_material, u
 
 	//materials
 	ct = START_of_MATERIAL;
-	utils::bufferWriteU16 (&out->blob[Reader::OFFSET_TO_START_OF_MATERIALS], ct);
 	for (u32 i=0; i<num_material; i++)
 	{
 		ENGMaterialPBR handle;
@@ -110,12 +119,32 @@ bool model::alloc (gos::Allocator *allocator, u16 num_shape, u16 num_material, u
 	
 	//meshes
 	ct = START_of_MESH;
-	utils::bufferWriteU16 (&out->blob[Reader::OFFSET_TO_START_OF_MESHES], START_of_MESH);
 	assert (ct + sizeof(Model::Mesh) * num_meshes <= sizeof_blob);
+
+	//name table
+	ct = START_of_NAME_TABLE;
+	assert (ct + Reader::SIZE_OF_A_NAME * (num_shape + num_material + num_meshes)  <= sizeof_blob);
 
 	return true;
 }
 
+//************************** 
+static void model__do_set_name (Model &m, u16 index, const char *name__can_be_NULL)
+{
+	const u32 START_of_NAMETABLE = utils::bufferReadU16 (&m.blob[model::Reader::OFFSET_TO_START_OF_NAME_TABLE]);
+	const u32 i = START_of_NAMETABLE + index * model::Reader::SIZE_OF_A_NAME;
+	
+	memset (&m.blob[i], 0, model::Reader::SIZE_OF_A_NAME);
+	if (NULL == name__can_be_NULL)
+		return;
+	if (0x00 == name__can_be_NULL[0])
+		return;
+
+	u32 len = (u32) strlen(name__can_be_NULL);
+	if (len >= model::Reader::SIZE_OF_A_NAME)
+		len = model::Reader::SIZE_OF_A_NAME - 1;
+	memcpy (&m.blob[i], name__can_be_NULL, len);
+}
 
 //************************** 
 bool model::set_skeleton (Model &m, ENGSkeleton handle)
@@ -126,7 +155,7 @@ bool model::set_skeleton (Model &m, ENGSkeleton handle)
 }
 
 //************************** 
-bool model::set_gpushape (Model &m, u32 shape_num, ENGGPUShape handle)
+bool model::set_gpushape (Model &m, u32 shape_num, ENGGPUShape handle, const char *name__can_be_NULL)
 {
 	assert (model::isValid(m));
 
@@ -134,10 +163,9 @@ bool model::set_gpushape (Model &m, u32 shape_num, ENGGPUShape handle)
 	assert (shape_num < num_shape);
 	if (shape_num < num_shape)
 	{
-		
-		//utils::bufferWriteU32 (&m.blob[Reader::ENGSHAPE + sizeof(u32)*shape_num], handle.viewAsU32());
 		const u32 u = handle.viewAsU32();
 		memcpy (&m.blob[Reader::ENGSHAPE + sizeof(u32)*shape_num], &u, sizeof(u32) );
+		model__do_set_name (m, shape_num, name__can_be_NULL);
 		return true;
 	}
 
@@ -146,7 +174,28 @@ bool model::set_gpushape (Model &m, u32 shape_num, ENGGPUShape handle)
 }
 
 //************************** 
-bool model::set_mesh  (Model &m, u32 mesh_num, u16 shape_indexIN, u16 bone_indexIN, u16 material_indexIN)
+bool model::set_material (Model &m, u32 material_num, ENGMaterialPBR handle, const char *name__can_be_NULL)
+{
+	assert (model::isValid(m));
+
+	const u32 num_materials = utils::bufferReadU16 (&m.blob[Reader::NUM_MATERIAL]);
+	assert (material_num < num_materials);
+	if (material_num >= num_materials)
+	{
+		DBGBREAK;
+		return false;
+	}
+
+	const u32 START_of_MATERIALS = utils::bufferReadU16 (&m.blob[Reader::OFFSET_TO_START_OF_MATERIALS]);
+	ENGMaterialPBR *list = reinterpret_cast<ENGMaterialPBR*>(&m.blob[START_of_MATERIALS]);
+	list[material_num] = handle;
+
+	model__do_set_name (m, utils::bufferReadU16 (&m.blob[Reader::NUM_SHAPES]) + material_num, name__can_be_NULL);
+	return true;
+}
+
+//************************** 
+bool model::set_mesh  (Model &m, u32 mesh_num, u16 shape_indexIN, u16 bone_indexIN, u16 material_indexIN, const char *name__can_be_NULL)
 {
 	assert (model::isValid(m));
 
@@ -169,25 +218,10 @@ bool model::set_mesh  (Model &m, u32 mesh_num, u16 shape_indexIN, u16 bone_index
 	Model::Mesh *list = reinterpret_cast<Model::Mesh*>(&m.blob[START_of_MESH]);
 	list[mesh_num] = mesh;
 
+	const u16 num_shapes = utils::bufferReadU16 (&m.blob[Reader::NUM_SHAPES]);
+	const u16 num_material = utils::bufferReadU16 (&m.blob[Reader::NUM_MATERIAL]);
+	model__do_set_name (m, num_shapes + num_material + mesh_num, name__can_be_NULL);
 	return true;
 }
 
-//************************** 
-bool model::set_material (Model &m, u32 material_num, ENGMaterialPBR handle)
-{
-	assert (model::isValid(m));
-
-	const u32 num_materials = utils::bufferReadU16 (&m.blob[Reader::NUM_MATERIAL]);
-	assert (material_num < num_materials);
-	if (material_num >= num_materials)
-	{
-		DBGBREAK;
-		return false;
-	}
-
-	const u32 START_of_MATERIALS = utils::bufferReadU16 (&m.blob[Reader::OFFSET_TO_START_OF_MATERIALS]);
-	ENGMaterialPBR *list = reinterpret_cast<ENGMaterialPBR*>(&m.blob[START_of_MATERIALS]);
-	list[material_num] = handle;
-	return true;
-}
 

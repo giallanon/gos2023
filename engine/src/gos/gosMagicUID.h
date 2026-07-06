@@ -24,7 +24,7 @@ namespace gos
 static constexpr u32 GOS_MAGIC__DATA_BLOB_DEF       = gos::magic::_makeID (0xA10000, 0x01);
 
 //i magic definiti nel modulo gos::Engine con 0xA20000
-static constexpr u32 GOS_MAGIC__ENGINE_MODEL        = gos::magic::_makeID (0xA20000, 0x03);
+static constexpr u32 GOS_MAGIC__ENGINE_MODEL        = gos::magic::_makeID (0xA20000, 0x04);
 
 
 
@@ -39,7 +39,7 @@ static constexpr u32 GOS_MAGIC__SKELETON            = gos::magic::_makeID (0xA70
 
 //i magic definiti nel modulo gos::Asset con 0xA90000
 static constexpr u32 GOS_MAGIC__ASSET_PIPELINE_DEF  = gos::magic::_makeID (0xA90000, 0x04);
-static constexpr u32 GOS_MAGIC__ASSET_MODEL3D     	= gos::magic::_makeID (0xA90001, 0x05);
+static constexpr u32 GOS_MAGIC__ASSET_MODEL3D     	= gos::magic::_makeID (0xA90001, 0x06);
 static constexpr u32 GOS_MAGIC__ASSET_MATERIAL_PBR	= gos::magic::_makeID (0xA90002, 0x01);
 
 //i magic definiti nel modulo gos::material con 0xAA0000

@@ -1,6 +1,7 @@
 #ifndef _gosAssetFile_model3D_h_
 #define _gosAssetFile_model3D_h_
 #include "../gosAsset2.h"
+#include "string/gosUTF8String.h"
 
 namespace gos
 {
@@ -23,10 +24,10 @@ namespace gos
             void    skeleton_set (UID uid_of_concrete_skeleton);
 
                     //ritorna l'index della shape addata  (eventuali shape duplicate vengono gestite evitando la duplicazione)
-            u32     shape_add (UID uid_of_concrete_shape);
-			u32     material_add (UID uid_of_concrete_material);
+            u32     shape_add (UID uid_of_concrete_shape, const char *shape_name);
+			u32     material_add (UID uid_of_concrete_material, const char *material_name);
 
-            bool    mesh_add (u32 shape_index, u32 bone_index, u32 material_index);
+            bool    mesh_add (u32 shape_index, u32 bone_index, u32 material_index, const char *mesh_name);
 
             void    end();
 
@@ -50,6 +51,9 @@ namespace gos
             FastArray<UID>          listof_shape;
             FastArray<sMeshInfo>    listof_mesh;
 			FastArray<UID>          listof_material;
+            Array<UTF8String>       shape_name_list;
+            Array<UTF8String>       mesh_name_list;
+            Array<UTF8String>       material_name_list;
             
         };
     } //namespace asset2

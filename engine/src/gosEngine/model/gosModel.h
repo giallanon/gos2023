@@ -20,26 +20,30 @@ namespace gos
      *      12      u16     num_meshes
      *      14      u16     abs-offset-to MESH 1
 	 *      16      u16     abs-offset-to MATERIAL 1
+     *      18      u16     abs-offset-to NAME-TABLE
      * 
-     *      18      u32     ENGSkeleton as u32
-     *      22      pad
-     *      23      pad
+     *      20      u32     ENGSkeleton as u32
      
-     *      24      u32     ENGGPUShape-1 as u32        //voglio che inizia ad un indirizzo multiplo di 8
+     *      24      u32     ENGGPUShape-1 as u32        //voglio che inizi ad un indirizzo multiplo di 8
      *      ..  
      *      ..      u32     ENGGPUShape-N as u32
 	 * 
-     * 
-     *                                                  //voglio che inizia ad un indirizzo multiplo di 8
-	 * 		..		u32		ENGMaterialPBR-1 as u32		//MATERIAL 1 (aka ABS_OFFSET_of_MATERIAL)
+     *      ..      pad
+     
+	 * 		..		u32		ENGMaterialPBR-1 as u32		//MATERIAL 1 (aka ABS_OFFSET_of_MATERIAL) (voglio che inizi ad un indirizzo multiplo di 8)
 	 * 		..
 	 * 		..		u32		ENGMaterialPBR-N as u32
      * 
+     *      ..      pad
+     *                                                  
+     *      ..      sizeof(Mesh)	mesh-0     			//MESH 1    (aka ABS_OFFSET_of_MESH1)  (voglio che inizi ad un indirizzo multiplo di 8)
+     *      ..                                          
+     *      ..      sizeof(Mesh)	mesh-N
      * 
-     *                                                  //voglio che inizia ad un indirizzo multiplo di 8
-     *      ..      sizeof(Mesh)	mesh-0     			//MESH 1    (aka ABS_OFFSET_of_MESH1)
-     *      ..
-     *      ..      sizeof(Mesh)	mesh-N     
+     *      ..      pad
+     *      ..      32B     name-0                      //voglio che inizi ad un indirizzo multiplo di 8
+     *      ..                                          //elenco di tutti i nomi shape, meterial, mesh, ciascuno lungo 32B 0x00  incluso
+     *      ..      32B     name-N                      //i primi num_shape nomi sono quelli dell shape, a seguire num_material nomi e poi num_mesh nomi
      */
     struct Model
     {
@@ -69,9 +73,9 @@ namespace gos
 		void    free (Model &sk);
 
 		bool	set_skeleton (Model &m, ENGSkeleton handle);
-		bool	set_gpushape (Model &m, u32 shape_num, ENGGPUShape handle);
-		bool 	set_mesh  (Model &m, u32 mesh_num, u16 shape_index, u16 bone_index, u16 material_index);
-		bool 	set_material (Model &m, u32 material_num, ENGMaterialPBR handle);
+		bool	set_gpushape (Model &m, u32 shape_num, ENGGPUShape handle, const char *name__can_be_NULL = NULL);
+		bool 	set_material (Model &m, u32 material_num, ENGMaterialPBR handle, const char *name__can_be_NULL = NULL);
+		bool 	set_mesh  (Model &m, u32 mesh_num, u16 shape_index, u16 bone_index, u16 material_index, const char *name__can_be_NULL = NULL);
 
 
         /*******************************
@@ -81,12 +85,14 @@ namespace gos
         class Reader
         {
 		public:
+            static constexpr u32 SIZE_OF_A_NAME = 32;
 			static constexpr u32 NUM_SHAPES = 8;
 			static constexpr u32 NUM_MATERIAL = 10;
 			static constexpr u32 NUM_MESHES = 12;
 			static constexpr u32 OFFSET_TO_START_OF_MESHES = 14;
 			static constexpr u32 OFFSET_TO_START_OF_MATERIALS = 16;
-			static constexpr u32 SKELETON	= 18;
+            static constexpr u32 OFFSET_TO_START_OF_NAME_TABLE = 18;
+			static constexpr u32 SKELETON	= 20;
 			static constexpr u32 ENGSHAPE = 24;
 
         public:

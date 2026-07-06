@@ -550,7 +550,7 @@ bool Builder_model3d::Syntax2::priv_do_create_assetFile (DBContext &ctx, UID uid
 
 	//shapes
 	for (u32 i=0; i<listof_UID_of_concrete_shape_that_I_need.getNElem(); i++)
-		assetFile.shape_add (listof_UID_of_concrete_shape_that_I_need(i));
+		assetFile.shape_add (listof_UID_of_concrete_shape_that_I_need(i), "");
 
 	//material
 	//TODO
@@ -563,7 +563,7 @@ bool Builder_model3d::Syntax2::priv_do_create_assetFile (DBContext &ctx, UID uid
 		UID uid = parsed_params.listof_shapeInfo(k).uid_of_concrete_shape_asset;
 		u32 index_of_concrete_shape = listof_UID_of_concrete_shape_that_I_need.simpleSearch (uid);
 
-		assetFile.mesh_add (index_of_concrete_shape, listof_final_meshes(i).bone_index, listof_final_meshes(i).my_material_index);
+		assetFile.mesh_add (index_of_concrete_shape, listof_final_meshes(i).bone_index, listof_final_meshes(i).my_material_index, "");
 		
 	}
 

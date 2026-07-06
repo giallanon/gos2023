@@ -1,6 +1,5 @@
 @include: common.gosasset_d
 
-
 @model3d: model_tile1
 {
 	//import: tile/tile_default.glb

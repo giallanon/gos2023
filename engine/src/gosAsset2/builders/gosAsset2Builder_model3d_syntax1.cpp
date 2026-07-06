@@ -263,13 +263,13 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 					//shapes
 					for (u32 i = 0; i < listof_uid_of_concreste_shape.getNElem(); i++)
 					{
-						assetFile.shape_add (listof_uid_of_concreste_shape(i));
+						assetFile.shape_add (listof_uid_of_concreste_shape(i), buildCtx.imported.shapeNameList[i]);
 					}
 
 					//material
 					for (u32 i = 0; i < listof_uid_of_concrete_material.getNElem(); i++)
 					{
-						assetFile.material_add (listof_uid_of_concrete_material(i));
+						assetFile.material_add (listof_uid_of_concrete_material(i), buildCtx.imported.materialNameList[i]);
 					}
 
 					//meshes
@@ -282,7 +282,7 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 						if (buildCtx.imported.num_material)
 							material_index = buildCtx.imported.mesh_list[i].material_index;
 
-						assetFile.mesh_add (shape_index, bone_index, material_index);
+						assetFile.mesh_add (shape_index, bone_index, material_index, buildCtx.imported.mesh_list[i].mesh_name );
 					}
 
 					return assetFile.save (filenameDST);
@@ -521,20 +521,22 @@ void Builder_model3d::Syntax1::priv_print_report(const char *filenameDST) const
 		const u32 bone_index = buildCtx.imported.mesh_list[i].bone_index;
 		const u32 material_index = buildCtx.imported.mesh_list[i].material_index;
 		const char *shape_name = buildCtx.imported.shapeNameList[shape_index];
+		const char *mesh_name = buildCtx.imported.mesh_list[i].mesh_name;
 		
 		skeleton::Reader skr;
 		skr.setup (&buildCtx.imported.skeleton);
 		//const gos::Bone *bone = skr.bone_get_by_index(bone_index);
 		const char *bone_name = skr.name_get_by_index (bone_index);
 
-		//[mesh]: <my-shape-name>;<my-material-name>;<bone-name>;<local-transform-matrix3x3>
-
-		out << "\t[mesh]: " << shape_name << "; ";
+		out << "\t//[mesh]: <mesh-name>; <my-shape-name>; <my-material-name>; <bone-name>; <local-transform-matrix3x3>\n";
+		out << "\t[mesh]: " 
+			<< "\"" << mesh_name << "\"; "
+			<< "\"" << shape_name << "\"; ";
 		if (buildCtx.imported.num_material)
-			out << buildCtx.imported.materialNameList[material_index];
+			out << "\"" << buildCtx.imported.materialNameList[material_index] << "\"";
 		else
-			out << "default-material";
-		out << "; " << bone_name << "; identity\n";
+			out << "\"default-material\"";
+		out << "; \"" << bone_name << "\"; identity\n";
 	}
 	
 	out << "}\n\n";
