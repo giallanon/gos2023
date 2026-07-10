@@ -76,6 +76,9 @@ namespace gos
 			u32		pack_coord_u32() const						{ u32 ret = ((u32)x & 0x0000FFFF); ret |= ((u32)z & 0x0000FFFF) << 16; return ret; }
 			void	set_from_packed_coord_u32 (u32 packed)		{ this->x = (i16)(packed & 0x0000FFFF); this->z = (i16)((packed & 0xFFFF0000) >> 16); }
 
+			bool	operator== (const Coord &b) const			{ return ( x==b.x && z==b.z ); }
+			bool	operator!= (const Coord &b) const			{ return ( x!=b.x || z!=b.z ); }
+
 		public:
 			i16 x;
 			i16 z;

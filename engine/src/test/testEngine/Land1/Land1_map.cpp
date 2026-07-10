@@ -435,7 +435,7 @@ Land1::Exa* Map::priv_exa_alloc (Land1::ExaGenerator &exagen, const vec3f &world
 		//mesh type
 		for (u32 i=0; i<nquad; i++)
 		{
-			vtxInfoList[iVtx].mesh_type[i] = Exa::eMeshType::boh;
+			vtxInfoList[iVtx].mesh_type[i] = Land1::eMeshType::boh;
 		}
 	}
 
@@ -598,10 +598,10 @@ void Map::map_recalc_meshType()
 				if (material_adj_vtx_1 != vi->material_index)	mask |= 0x02;
 				switch (mask)
 				{
-				default:	vi->mesh_type[iQuad] = Exa::eMeshType::full;	break;
-				case 0x01:	vi->mesh_type[iQuad] = Exa::eMeshType::bordo_singolo_su;	break;
-				case 0x02:	vi->mesh_type[iQuad] = Exa::eMeshType::bordo_singolo_dx;	break;
-				case 0x03:	vi->mesh_type[iQuad] = Exa::eMeshType::angolo;	break;
+				default:	vi->mesh_type[iQuad] = Land1::eMeshType::full;	break;
+				case 0x01:	vi->mesh_type[iQuad] = Land1::eMeshType::bordo_singolo_su;	break;
+				case 0x02:	vi->mesh_type[iQuad] = Land1::eMeshType::bordo_singolo_dx;	break;
+				case 0x03:	vi->mesh_type[iQuad] = Land1::eMeshType::angolo;	break;
 				}
 			}
 		}

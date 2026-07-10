@@ -1,6 +1,7 @@
 #ifndef _Land1_renderer_h_
 #define _Land1_renderer_h_
 #include "Land1_Exa.h"
+#include "Land1_map2.h"
 #include "../DefaultApp/DefaultApp.h"
 #include "../gosGameUtils/examap/gosExamap.h"
 
@@ -92,7 +93,7 @@ namespace Land1
 		void	priv_do_render(const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx);
 		void	priv_add_vtx (const gos::vec2f &v);
 		void	priv_add_vtxInfo (u32 height, u32 material_index);
-		void	priv_add_quad (Exa::eMeshType mesh_type, u32 reference_vtx_index, u32 idx1, u32 idx2, u32 idx3, u32 idx4);
+		void	priv_add_quad (Land1::eMeshType mesh_type, u32 reference_vtx_index, u32 idx1, u32 idx2, u32 idx3, u32 idx4);
 
 		void	priv_begin2();
 		void	priv_add_exa2 (const Exa *exa);
@@ -118,7 +119,7 @@ namespace Land1
 		u32 		num_vtx;
 		u32 		num_vtxInfo;
 		u32			num_quad;
-		MeshInstanceData	mesh_instance_data[(u32)Exa::eMeshType::_COUNT];
+		MeshInstanceData	mesh_instance_data[(u32)Land1::eMeshType::_COUNT];
 	};
 
 } //namespace Land1

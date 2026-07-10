@@ -8,18 +8,6 @@ namespace Land1
 	struct Exa
 	{
 	public:
-		enum class eMeshType : u8
-		{
-			boh = 0,
-			angolo = 1,
-			full = 2,
-			bordo_doppio = 3,
-			bordo_singolo_dx = 4,
-			bordo_singolo_su = 5,
-			
-			_COUNT = 6	//deve sempre valere il num totale di opzioni disponibili (escluso COUNT))
-		};
-
 		struct VtxInfo
 		{
 			u8	num_quad;		//num quad centrati sul vtx i-esimo

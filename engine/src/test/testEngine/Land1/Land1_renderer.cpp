@@ -36,7 +36,7 @@ void Renderer::priv_unsetup()
 
 	engine->release(handle__model_tile1);
 
-	const u8 N = (u8)Exa::eMeshType::_COUNT;
+	const u8 N = (u8)Land1::eMeshType::_COUNT;
 	for (u8 i=0; i<N; i++)
 	{
 		GOSFREE(localAllocator, mesh_instance_data[i].quad_index_list);
@@ -116,7 +116,7 @@ bool Renderer::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
 	}
 	
 
-	const u8 N = (u8)Exa::eMeshType::_COUNT;
+	const u8 N = (u8)Land1::eMeshType::_COUNT;
 	for (u8 i=0; i<N; i++)
 	{
 		mesh_instance_data[i].num_quad = 0;
@@ -176,7 +176,7 @@ void Renderer::priv_add_vtxInfo (u32 height, u32 material_index)
 }
 
 //***************************************
-void Renderer::priv_add_quad (Exa::eMeshType mesh_type, u32 reference_vtx_index, u32 idx1, u32 idx2, u32 idx3, u32 idx4)
+void Renderer::priv_add_quad (Land1::eMeshType mesh_type, u32 reference_vtx_index, u32 idx1, u32 idx2, u32 idx3, u32 idx4)
 {
 	if (num_quad >= NUM_MAX_INSTANCE_PER_MESH)
 	{
@@ -257,7 +257,7 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 	//aggiornamento meshInstanceData
 	{
 		u32 total_size = 0;
-		for (u8 i=0; i<(u8)Exa::eMeshType::_COUNT; i++)
+		for (u8 i=0; i<(u8)Land1::eMeshType::_COUNT; i++)
 		{
 			const u32 NQ = mesh_instance_data[i].num_quad;
 			if (0 == NQ)
@@ -288,7 +288,7 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
         .bindDescriptorSet (handle_descrSet2, 2);
 
     //render delle shape
-	for (u8 i=0; i<(u8)Exa::eMeshType::_COUNT; i++)
+	for (u8 i=0; i<(u8)Land1::eMeshType::_COUNT; i++)
 	{
 		if (0 == mesh_instance_data[i].num_quad)
 			continue;
@@ -309,18 +309,18 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 		static constexpr u32 MESH_INDEX__FULL = 6;
 		
 		
-		switch ((Exa::eMeshType)i)
+		switch ((Land1::eMeshType)i)
 		{
 		default:
 			DBGBREAK;
 			continue;
 
-		case Exa::eMeshType::boh:		meshType = MESH_INDEX__BOH; break;
-		case Exa::eMeshType::angolo:	meshType = MESH_INDEX__ANGOLO; break;
-		case Exa::eMeshType::full:		meshType = MESH_INDEX__FULL; break;
-		case Exa::eMeshType::bordo_doppio:		meshType = MESH_INDEX__BORDO_DOPPIO; break;
-		case Exa::eMeshType::bordo_singolo_dx:	meshType = MESH_INDEX__BORDO_SINGOLO_DX; break;
-		case Exa::eMeshType::bordo_singolo_su:	meshType = MESH_INDEX__BORDO_SINGOLO_SU; break;
+		case Land1::eMeshType::boh:		meshType = MESH_INDEX__BOH; break;
+		case Land1::eMeshType::angolo:	meshType = MESH_INDEX__ANGOLO; break;
+		case Land1::eMeshType::full:		meshType = MESH_INDEX__FULL; break;
+		case Land1::eMeshType::bordo_doppio:		meshType = MESH_INDEX__BORDO_DOPPIO; break;
+		case Land1::eMeshType::bordo_singolo_dx:	meshType = MESH_INDEX__BORDO_SINGOLO_DX; break;
+		case Land1::eMeshType::bordo_singolo_su:	meshType = MESH_INDEX__BORDO_SINGOLO_SU; break;
 			break;
 		}
 	
@@ -362,7 +362,7 @@ void Renderer::priv_begin2()
 	num_vtxInfo = 0;
 	num_quad = 0;
 
-	const u8 N = (u8)Exa::eMeshType::_COUNT;
+	const u8 N = (u8)Land1::eMeshType::_COUNT;
 	for (u8 i=0; i<N; i++)
 	{
 		mesh_instance_data[i].num_quad = 0;
