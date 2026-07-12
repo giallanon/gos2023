@@ -238,10 +238,6 @@ void Land1_app::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 
 		//diesgno i punti originali
 		line_ctx1->point_set_radius(6);
-		for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
-		{
-			line_ctx1->point (first_vtx + exa->vtxInfoList[iVtx].idx_list[0]);
-		}
 
 		//cerco il vtx + vicino a <world_point>
 		u32 vtx_index;

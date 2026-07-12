@@ -71,9 +71,9 @@ void Land1_app2::on__setup ()
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, 187);
 	map.exa__add (examap::Coord(0,0));
-	map.exa__add (examap::Coord(1,0));
-	map.exa__add (examap::Coord(-1,0));
-	map.exa__add (examap::Coord(-1,1));
+	// map.exa__add (examap::Coord(1,0));
+	// map.exa__add (examap::Coord(-1,0));
+	// map.exa__add (examap::Coord(-1,1));
 
 
 	//
@@ -131,9 +131,9 @@ void Land1_app2::priv_new_albero (const gos::vec3f &world_point)
 //***************************************
 void Land1_app2::on__prepare_render()
 {
-	Land1::Map2::Result r;
-	r.setup (gos::getScrapAllocator());
-	map.query_visible_exa (&r);
+	// Land1::Map2::Result r;
+	// r.setup (gos::getScrapAllocator());
+	// map.query_visible_exa (&r);
 
 	//renderer_land->begin();
 	//for (u32 i = 0; i < r.get_num(); i++)
@@ -194,84 +194,117 @@ void Land1_app2::on__handle_input (const Engine::InputEvent &ev)
 //***************************************
 void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 {
-	const examap::Coord coord = map.world_coord_to_exa (world_point);
-	logger::log ("hex @ (%d, %d)  LSHIFT=%c\n", coord.x, coord.z, bLSHIFT?'Y':'N');
+	const examap::Coord exa_coord = map.world_coord_to_exa (world_point);
+	logger::log ("hex @ (%d, %d)\n", exa_coord.x, exa_coord.z);
 	
 
-	const u32 N_COLORS = 8;
-	const u32 colors[N_COLORS] = { 0xFFFFFFFF, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFF00, 0xFF00FFFF, 0xFFFF00FF, 0xFFa889B1 };
+	// const u32 N_COLORS = 8;
+	// const u32 colors[N_COLORS] = { 0xFFFFFFFF, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFF00, 0xFF00FFFF, 0xFFFF00FF, 0xFFa889B1 };
 
 	line_ctx1->clear();
 	line_ctx1->enable_depth_test(false);
 	line_ctx1->enable_depth_write(false);
 	line_ctx1->set_line_width(2);
+	line_ctx1->set_color_ARGB (0xFF000000);
+
+	FastArray<Land1::Map2::Vtx> vtxList (gos::getScrapAllocator(), 1024);
+	if (!map.get_list_of_vtx_by_exa (exa_coord, vtxList, true))
+		return;
+
+	const u32 num_vtx = vtxList.getNElem();
+	for (u32 i=0; i<num_vtx; i++)
+		line_ctx1->vtx_add ( vec3f(vtxList(i).pos.x, 0, vtxList(i).pos.y) );
+
+	for (u32 iVtx=0; iVtx<num_vtx; iVtx++)
+	{
+		const Land1::Map2::Vtx *vv = &vtxList(iVtx);
+
+		for (u32 i=0; i<vv->num_adj_vtx; i++)
+		{
+			const Land1::GVC gvc = vv->connected_vtx[i];
+			if (gvc.get_exa_coord() == exa_coord)
+			{
+				assert (gvc.get_vertex_idx() < vtxList.getNElem());
+				line_ctx1->line (iVtx, gvc.get_vertex_idx());
+			}
+		}
+	}
+
+	//disegno i vtx
+	line_ctx1
+		->point_set_radius(6)
+		.set_color_ARGB (0xFFFF0000);
+	for (u32 iVtx=0; iVtx<num_vtx; iVtx++)
+	{
+		line_ctx1->point (iVtx);	
+	}	
 
 	//disegno l'exa <coord>
-	const Land1::Exa2 *exa;
-	if (map.exa_query(coord, &exa))
-	{
-		//disegno il reticolo dell'exa
-		line_ctx1->
-			set_color_ARGB (0xFF000000)
-			.set_line_width(2);
+	// const Land1::Exa2 *exa;
+	// if (map.exa_query(coord, &exa))
+	// {
+	// 	//disegno il reticolo dell'exa
+	// 	line_ctx1->
+	// 		set_color_ARGB (0xFF000000)
+	// 		.set_line_width(2);
 
-		const u32 first_vtx = line_ctx1->vtx_get_num();
-		for (u32 i = 0; i < exa->num_vtx_tot; i++)
-			line_ctx1->vtx_add (vec3f(exa->vtxList[i].x, 0, exa->vtxList[i].y));
-		for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
-		{
-			const Land1::Exa2::VtxInfo *vi = &exa->vtxInfoList[iVtx];
+	// 	const u32 first_vtx = line_ctx1->vtx_get_num();
+	// 	for (u32 i = 0; i < exa->num_vtx_tot; i++)
+	// 		line_ctx1->vtx_add (vec3f(exa->vtxList[i].x, 0, exa->vtxList[i].y));
+	// 	for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
+	// 	{
+	// 		const Land1::Exa2::VtxInfo *vi = &exa->vtxInfoList[iVtx];
 
-			u8 num_connected_vtx=0;
-			for (u32 i = 0; i < 8; i++)
-			{
-				if (!vi->connected_vtx[i].is_valid())
-					break;
-				num_connected_vtx++;
-			}
+	// 		u8 num_connected_vtx=0;
+	// 		for (u32 i = 0; i < 8; i++)
+	// 		{
+	// 			if (!vi->connected_vtx[i].is_valid())
+	// 				break;
+	// 			num_connected_vtx++;
+	// 		}
 
 
-			for (u32 i=0; i<num_connected_vtx; i++)
-			{
-				const Land1::GVC gvc = vi->connected_vtx[i];
-				const u16 vtx_index = gvc.get_vertex_idx();
-				assert (vtx_index < exa->num_vtx_originali);
+	// 		for (u32 i=0; i<num_connected_vtx; i++)
+	// 		{
+	// 			const Land1::GVC gvc = vi->connected_vtx[i];
+	// 			const u16 vtx_index = gvc.get_vertex_idx();
+	// 			assert (vtx_index < exa->num_vtx_originali);
 
-				if (gvc.get_exa_coord() == exa->coord)
-				{
-					line_ctx1->line (first_vtx + vi->idx_list[0], first_vtx + vtx_index);
-				}
-				else
-				{
-					//si tratta di un vtx al di fuori dell'exa
-					vec2f v;
-					if (map.get_vertex_from_GVC (gvc, &v))
-					{
-						u16 ii = line_ctx1->vtx_add (vec3f(v.x, 0, v.y));
-						line_ctx1->line (first_vtx + vi->idx_list[0], ii);
-					}
-					else
-					{
-						DBGBREAK;
-					}
-				}
-			}
-		}
+	// 			if (gvc.get_exa_coord() == exa->coord)
+	// 			{
+	// 				line_ctx1->line (first_vtx + vi->idx_list[0], first_vtx + vtx_index);
+	// 			}
+	// 			else
+	// 			{
+	// 				//si tratta di un vtx al di fuori dell'exa
+	// 				vec2f v;
+	// 				if (map.get_vertex_from_GVC (gvc, &v))
+	// 				{
+	// 					u16 ii = line_ctx1->vtx_add (vec3f(v.x, 0, v.y));
+	// 					line_ctx1->line (first_vtx + vi->idx_list[0], ii);
+	// 				}
+	// 				else
+	// 				{
+	// 					DBGBREAK;
+	// 				}
+	// 			}
+	// 		}
+	// 	}
 
-		//diesgno i punti originali
-		line_ctx1->point_set_radius(6);
-		for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
-		{
-			if (!exa->vtxInfoList[iVtx].is_border_vtx)
-				line_ctx1->point (first_vtx + exa->vtxInfoList[iVtx].idx_list[0]);
-		}
-		line_ctx1->set_color_ARGB(0xFFFF0000);
-		for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
-		{
-			if (exa->vtxInfoList[iVtx].is_border_vtx)
-				line_ctx1->point (first_vtx + exa->vtxInfoList[iVtx].idx_list[0]);
-		}
+	// 	//diesgno i punti originali
+	// 	line_ctx1->point_set_radius(6);
+	// 	for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
+	// 	{
+	// 		if (!exa->vtxInfoList[iVtx].is_border_vtx)
+	// 			line_ctx1->point (first_vtx + exa->vtxInfoList[iVtx].idx_list[0]);
+	// 	}
+	// 	line_ctx1->set_color_ARGB(0xFFFF0000);
+	// 	for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
+	// 	{
+	// 		if (exa->vtxInfoList[iVtx].is_border_vtx)
+	// 			line_ctx1->point (first_vtx + exa->vtxInfoList[iVtx].idx_list[0]);
+	// 	}
 
-	}
+	// }
 
 }

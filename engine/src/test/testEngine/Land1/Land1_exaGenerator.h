@@ -98,23 +98,23 @@ namespace Land1
 		typedef gos::UniqueSortedList<u32>	BorderVtxList;
 
 	private:
-		void	create_default_exa(f32 radius);
+		void	create_default_exa(f32 radius, BorderVtxList *listOfBorderVtxIndex);
 		void	simplify_90();
-		void	subdivide();
-		void	relax();
+		void	subdivide(BorderVtxList *listOfBorderVtxIndex);
 		void	select_edge_to_remove (sEdgeToRemove *out);
 		bool	try_remove_edge (const sEdgeToRemove &edge);
 		u32		find_in_pointList (const VtxList &list, u32 index_start, const gos::vec2f &v_to_be_found) const;
 		f32		quad_calc_area (const gos::vec2f *vtx) const;
 		u16		priv_get_index_of_vtx_in_uscita_da (u32 quad_index, u16 vtx_index_A) const;
-		
-		void	relax_2();
+		void	relax_2 (const BorderVtxList *listOfBorderVtxIndex);
+
+		void	remap();
 
 	private:
 		gos::Allocator *allocator;
 		gos::Random		*rnd;
 		TrisList		trisList;
-		BorderVtxList	listOfBorderVtxIndex;	//elenco degli indici dei vtx che rappresentano il bordo dell'exa
+		
 
 
 	}; //class ExaGenerator

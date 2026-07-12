@@ -27,7 +27,6 @@ void ExaGenerator::ExaGenerator::unsetup ()
 	vtxList.unsetup ();
 	trisList.unsetup ();
 	quadList.unsetup ();
-	listOfBorderVtxIndex.unsetup();
 	quadCenterList.unsetup();
 	allocator = NULL;
 }
@@ -42,7 +41,6 @@ void ExaGenerator::setup (gos::Allocator *allocatorIN)
 	vtxList.setup (allocator, 1024);
 	trisList.setup (allocator, 1024);
 	quadList.setup (allocator, 1024);
-	listOfBorderVtxIndex.setup (allocator, 1024);
 	quadCenterList.setup (allocator, 1024);
 }
 
@@ -60,22 +58,32 @@ void ExaGenerator::build (f32 hex_radius, const gos::vec2f center, gos::Random *
 	assert (NULL != allocator);
 	rnd = rndIN;
 
-	create_default_exa (hex_radius);
+	//creazione dell'exa
+	{
+		BorderVtxList listOfBorderVtxIndex;
+		listOfBorderVtxIndex.setup (allocator, 1024);
 
-	simplify_90();
+		create_default_exa (hex_radius, &listOfBorderVtxIndex);
 
-	subdivide();
+		simplify_90();
 
-	for (u32 i=0;i<60; i++)
-		relax();
+		subdivide(&listOfBorderVtxIndex);
 
-	translate (center);
+		for (u32 i=0;i<60; i++)
+			relax_2(&listOfBorderVtxIndex);
 
-	//segno quali sono i vtx del bordo
-	listOfBorderVtxIndex.forEach ([&vtxList=this->vtxList](u32 key, u32 value) {
-		vtxList[value].isBorderVtx = 1;
-		return true;
-	});
+		translate (center);
+
+		//segno quali sono i vtx del bordo
+		listOfBorderVtxIndex.forEach ([&vtxList=this->vtxList](u32 key, u32 value) {
+			vtxList[value].isBorderVtx = 1;
+			return true;
+		});
+	}
+
+	//remap vtx
+	remap();
+
 
 	//calcolo il centro di ogni quad
 	const u32 num_quad = quadList.getNElem();
@@ -127,12 +135,12 @@ void ExaGenerator::build (f32 hex_radius, const gos::vec2f center, gos::Random *
 }
 
 //***************************************
-void ExaGenerator::create_default_exa (f32 radiusIN)
+void ExaGenerator::create_default_exa (f32 radiusIN, BorderVtxList *listOfBorderVtxIndex)
 {
 	vtxList.reset();
 	trisList.reset();
 	quadList.reset();
-	listOfBorderVtxIndex.reset();
+	listOfBorderVtxIndex->reset();
 	quadCenterList.reset();
 
 	static constexpr u32 NUM_RINGS = 4;
@@ -187,7 +195,7 @@ void ExaGenerator::create_default_exa (f32 radiusIN)
 
 				vtxList.append(vtx1);
 				if (isLastRingLevel)
-					listOfBorderVtxIndex.insertIfNotExists (vtxList.getNElem() - 1);
+					listOfBorderVtxIndex->insertIfNotExists (vtxList.getNElem() - 1);
 
 				{
 					const f32 tIncr = 1.0f / (f32)ringLevel;
@@ -198,7 +206,7 @@ void ExaGenerator::create_default_exa (f32 radiusIN)
 						const vec2f mid = vtx1 + (vtx2 - vtx1) * t;
 						vtxList.append(mid);
 						if (isLastRingLevel)
-							listOfBorderVtxIndex.insertIfNotExists (vtxList.getNElem() - 1);
+							listOfBorderVtxIndex->insertIfNotExists (vtxList.getNElem() - 1);
 
 					}
 				}
@@ -437,7 +445,7 @@ u32 ExaGenerator::find_in_pointList (const VtxList &list, u32 index_start, const
 }
 
 //***************************************
-void ExaGenerator::subdivide()
+void ExaGenerator::subdivide(BorderVtxList *listOfBorderVtxIndex)
 {
 	if (0 == trisList.getNElem())
 		return;
@@ -472,9 +480,9 @@ void ExaGenerator::subdivide()
 			idx_v01 = vtxList.getNElem();
 			vtxList.append(v_01);
 
-			if (listOfBorderVtxIndex.exists(idx0) && listOfBorderVtxIndex.exists(idx1))
+			if (listOfBorderVtxIndex->exists(idx0) && listOfBorderVtxIndex->exists(idx1))
 			{
-				listOfBorderVtxIndex.insertIfNotExists(idx_v01);
+				listOfBorderVtxIndex->insertIfNotExists(idx_v01);
 			}
 		}
 
@@ -484,9 +492,9 @@ void ExaGenerator::subdivide()
 			idx_v12 = vtxList.getNElem();
 			vtxList.append(v_12);
 
-			if (listOfBorderVtxIndex.exists(idx1) && listOfBorderVtxIndex.exists(idx2))
+			if (listOfBorderVtxIndex->exists(idx1) && listOfBorderVtxIndex->exists(idx2))
 			{
-				listOfBorderVtxIndex.insertIfNotExists(idx_v12);
+				listOfBorderVtxIndex->insertIfNotExists(idx_v12);
 			}
 		}
 		
@@ -496,9 +504,9 @@ void ExaGenerator::subdivide()
 			idx_v20 = vtxList.getNElem();
 			vtxList.append(v_20);
 
-			if (listOfBorderVtxIndex.exists(idx2) && listOfBorderVtxIndex.exists(idx0))
+			if (listOfBorderVtxIndex->exists(idx2) && listOfBorderVtxIndex->exists(idx0))
 			{
-				listOfBorderVtxIndex.insertIfNotExists(idx_v20);
+				listOfBorderVtxIndex->insertIfNotExists(idx_v20);
 			}
 		}
 
@@ -556,9 +564,9 @@ void ExaGenerator::subdivide()
 			idx_v01 = vtxList.getNElem();
 			vtxList.append(v_01);
 
-			if (listOfBorderVtxIndex.exists(idx0) && listOfBorderVtxIndex.exists(idx1))
+			if (listOfBorderVtxIndex->exists(idx0) && listOfBorderVtxIndex->exists(idx1))
 			{
-				listOfBorderVtxIndex.insertIfNotExists(idx_v01);
+				listOfBorderVtxIndex->insertIfNotExists(idx_v01);
 			}			
 		}
 
@@ -568,9 +576,9 @@ void ExaGenerator::subdivide()
 			idx_v12 = vtxList.getNElem();
 			vtxList.append(v_12);
 
-			if (listOfBorderVtxIndex.exists(idx1) && listOfBorderVtxIndex.exists(idx2))
+			if (listOfBorderVtxIndex->exists(idx1) && listOfBorderVtxIndex->exists(idx2))
 			{
-				listOfBorderVtxIndex.insertIfNotExists(idx_v12);
+				listOfBorderVtxIndex->insertIfNotExists(idx_v12);
 			}				
 		}
 		
@@ -580,9 +588,9 @@ void ExaGenerator::subdivide()
 			idx_v23 = vtxList.getNElem();
 			vtxList.append(v_23);
 
-			if (listOfBorderVtxIndex.exists(idx2) && listOfBorderVtxIndex.exists(idx3))
+			if (listOfBorderVtxIndex->exists(idx2) && listOfBorderVtxIndex->exists(idx3))
 			{
-				listOfBorderVtxIndex.insertIfNotExists(idx_v23);
+				listOfBorderVtxIndex->insertIfNotExists(idx_v23);
 			}				
 		}
 
@@ -592,9 +600,9 @@ void ExaGenerator::subdivide()
 			idx_v30 = vtxList.getNElem();
 			vtxList.append(v_30);
 
-			if (listOfBorderVtxIndex.exists(idx3) && listOfBorderVtxIndex.exists(idx0))
+			if (listOfBorderVtxIndex->exists(idx3) && listOfBorderVtxIndex->exists(idx0))
 			{
-				listOfBorderVtxIndex.insertIfNotExists(idx_v30);
+				listOfBorderVtxIndex->insertIfNotExists(idx_v30);
 			}				
 		}		
 
@@ -633,11 +641,6 @@ void ExaGenerator::subdivide()
 	quadList.copyFrom (newQuadList);
 }
 
-//***************************************
-void ExaGenerator::relax()
-{
-	relax_2();
-}
 
 /***************************************
  * https://www.youtube.com/watch?v=Jm3pLya3d9c
@@ -653,7 +656,7 @@ void ExaGenerator::relax()
  *  scegliere il quadrato che minimizza il movimento dei vertici.
  * 	muovere "un po'" i vertici in direzione del quadrato
  */
-void ExaGenerator::relax_2()
+void ExaGenerator::relax_2(const BorderVtxList *listOfBorderVtxIndex)
 {
 	struct sAdjust
 	{
@@ -780,7 +783,7 @@ void ExaGenerator::relax_2()
 			u32 vtx_index = quadList(i).idx[best_start_vtx];
 
 
-			if (!listOfBorderVtxIndex.exists(vtx_index))
+			if (!listOfBorderVtxIndex->exists(vtx_index))
 			{
 				//vtxList[vtx_index] = v;
 				adj[vtx_index].n++;
@@ -934,4 +937,117 @@ u16 ExaGenerator::get_index_of_vtx_in_entrata_a (u32 quad_index, u16 vtx_index_A
 {
 	const u16 ii = priv_get_index_of_vtx_in_uscita_da (quad_index, vtx_index_A);
 	return quadList(quad_index).idx[(ii + 2) % 4];
+}
+
+
+//************************************************
+void ExaGenerator::remap()
+{
+	//devo operare solo su vtxList e quadList
+	// vtx[0] e' il centro, a seguire ci sono i 48 vtx del bordo e poi tutto il resto in ordine sparso
+	const u32 num_vtx = vtxList.getNElem();
+	VtxList		new_vtxList;
+	FastArray<u32>	vtx_remap_list;
+
+	new_vtxList.setup (gos::getScrapAllocator(), num_vtx);
+	
+	vtx_remap_list.setup (gos::getScrapAllocator(), num_vtx);
+	for (u32 i=0; i<num_vtx; i++)
+		vtx_remap_list[i] = i;
+
+
+	//vtx 0 e' sempre il cento
+	u32 ct_vtx = 0;
+	new_vtxList[ct_vtx++] = vtxList(0);
+	
+	//Voglio che i vtx da 1 a 48 (inclusi) siano i vtx del bordo, e li voglio in ordine
+	//in modo che il vtx 1 sia il primo a dx e gli altri siano i vtx in senso antiorario (in ordine corretto)
+	//Aggiungo i primi 24 vtx di bordo (perche' sono gia' in ordine corretto)
+	//e li metto in posizione 1, 3, 5, 7 ...
+	{
+		vec2f primi24[24];
+
+		u32 n_border_vtx = 0;
+		u32 i=1;
+		for (; i<num_vtx; i++)
+		{
+			if (!vtxList(i).isBorderVtx)
+				continue;
+
+			const u32 n = 1 + n_border_vtx*2;
+			new_vtxList[n] = vtxList(i);
+			vtx_remap_list[i] = n;
+
+			assert (n_border_vtx < 24);
+			primi24[n_border_vtx] = vtxList(i).pos;
+
+			n_border_vtx++;
+			if (24 == n_border_vtx)
+				break;
+		}
+		assert (n_border_vtx == 24);
+		i++;
+
+		//aggiungo gli altri border vtx in posizione 2, 4, 6..
+		n_border_vtx = 0;
+		for (; i<num_vtx; i++)
+		{
+			if (!vtxList(i).isBorderVtx)
+				continue;
+
+			for (u32 t=0; t<24;t++)
+			{
+				const vec2f p1 = primi24[t];
+				vec2f p2;
+				if (t==23)
+					p2 = primi24[0];
+				else
+					p2 = primi24[t+1];
+
+				const vec2f p = p1 + (p2 - p1) * 0.5f;
+				static constexpr f32 MAX_DIST = 0.1f * 0.1f;
+				const f32 d = math::distance2(vtxList(i).pos, p);
+				if (d < MAX_DIST)
+				{
+					const u32 n = 2 + 2*t;
+					new_vtxList[n] = vtxList(i);
+					vtx_remap_list[i] = n;
+				}
+			}
+		}		
+	}
+
+	//tutti gli altri
+	ct_vtx = new_vtxList.getNElem();
+	for (u32 i=1; i<num_vtx; i++)
+	{
+		if (vtxList(i).isBorderVtx)
+			continue;
+
+		new_vtxList[ct_vtx] = vtxList(i);
+		vtx_remap_list[i] = ct_vtx;
+		ct_vtx++;
+	}
+	assert (ct_vtx == num_vtx);
+
+
+
+	//remappo i quad
+	const u32 num_quad = quadList.getNElem();
+	for (u32 i=0; i<num_quad; i++)
+	{
+		for (u8 t=0; t<4; t++)
+		{
+			const u16 ii = quadList[i].idx[t];
+			quadList[i].idx[t] = vtx_remap_list[ii];
+		}
+	}
+
+
+	//copio i nuovi vtx
+	vtxList.reset();
+	for (u32 i=0; i<num_vtx; i++)
+	{
+		vtxList[i] = new_vtxList[i];
+	}
 }
