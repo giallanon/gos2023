@@ -66,7 +66,7 @@ namespace Land1
 		gos::vec3f			get_map_world_center() const											{ return exacc.get_map_world_center(); }
 	
 	private:
-		typedef gos::FastHashMap<u32, Exa*>	HASHMAP;
+		typedef gos::FastHashMap<gos::examap::Coord, Exa*>	HASHMAP;
 
 	private:
 		Exa*		priv_exa_alloc (ExaGenerator &exagen, const gos::vec3f &world_coord, gos::Random *rnd);

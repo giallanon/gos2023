@@ -470,8 +470,7 @@ void Map::priv_exa_free (Exa *exa)
 //*****************************************
 void Map::priv_exa_add_to_map (const examap::Coord &coord, Exa *exa)
 {
-	const u32 key = coord.pack_coord_u32();
-	exaList.insertIfNotExists (key, exa);
+	exaList.insertIfNotExists (coord, exa);
 }
 
 //*****************************************
@@ -542,7 +541,7 @@ void Map::map_create (f32 exa_radius_world, u32 map_radius)
 
 	//genero delle height
 	{
-		exaList.forEach ([exa_radius_world, &rnd] (u32 key, Exa *exa) {
+		exaList.forEach ([exa_radius_world, &rnd] (examap::Coord coord, Exa *exa) {
 			for (u32 i = 0; i < exa->num_vtx_originali; i++)
 			{
 				const u32 r = rnd.getU32(100);
@@ -620,12 +619,10 @@ bool Map::exa_query (const gos::examap::Coord &c, const Exa **out) const
 }
 
 //*****************************************
-Land1::Exa* Map::priv_exa_get (const gos::examap::Coord &c) const
+Land1::Exa* Map::priv_exa_get (const gos::examap::Coord &coord) const
 {
-	const u32 key = c.pack_coord_u32();
-
 	Exa *exa;
-	if (exaList.find (key, &exa))
+	if (exaList.find (coord, &exa))
 		return exa;
 	return NULL;
 }

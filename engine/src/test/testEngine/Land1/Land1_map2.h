@@ -21,7 +21,7 @@ namespace Land1
 			u8	num_adj_vtx;
 			u16	height;
 			GVC	coord;
-			GVC	connected_vtx[7];		//indici dei vtx "originali" che sono connessi a questo vtx
+			u16	adj_vtx_list[8];
 		};
 
 	public:
@@ -36,9 +36,15 @@ namespace Land1
 
 				//crea un nuovo exa e lo adda alla mappa in posizione <coord>
 		void	exa__add (const gos::examap::Coord coord);
+		void	exa__add_with_radius (const gos::examap::Coord center_coord, u32 radius);
 
 		//======================= utils
-		bool	get_list_of_vtx_by_exa (const gos::examap::Coord &exa_coord, gos::FastArray<Vtx> &out, bool bClearOut=true) const;
+				//filla <outList> con tutti i vtx necessari a renderizzare l'exa.
+				//Ritorna il numero di "vertici originali" dell'exa. Ogni vtx e' collegato ad altri vertici ma non tutti i vtx
+				//fanno parte di <exa_coord>. Il num di vtx ritornato e' il num di vtx di <outList> che fanno effettivamente
+				//parte dell'exa
+		u32		get_exa_vtxList (const gos::examap::Coord &exa_coord, gos::FastArray<Vtx> &outList, bool bClear_outList=true) const;
+		
 
 		//======================= query
 		gos::vec3f 			exa_coord_to_world (const gos::examap::Coord &exa_coord) const			{ return exacc.exa_coord_to_world(exa_coord); }
@@ -46,24 +52,39 @@ namespace Land1
 		gos::examap::Coord	world_coord_to_exa (f32 x, f32 z) const									{ return exacc.world_coord_to_exa (x,z); }
 		f32					get_exa_world_radius() const											{ return exacc.get_exa_world_radius(); }
 		gos::vec3f			get_map_world_center() const											{ return exacc.get_map_world_center(); }
+		bool				world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const;
+		bool				GVC_to_world_coord  (const GVC gvc, gos::vec3f *out_world_coord) const;
 
 	private:
+		struct Node
+		{
+			gos::vec2f	pos;
+			u8 	material_index;
+			u8	num_adj_vtx;
+			u16	height;
+			GVC	coord;
+			GVC	connected_vtx[7];		//indici dei vtx "originali" che sono connessi a questo vtx
+		};
+
 		struct HexInfo
 		{
-			gos::examap::Coord coord;
+			gos::examap::Coord	coord;
+			u16					num_vtx;
 		};
 
 
 
 	private:
-		typedef gos::FastHashMap<u32, Vtx>			VTXMAP;
-		typedef gos::FastHashMap<u32, HexInfo>		HEXMAP;
+		typedef gos::FastHashMap<GVC, Node>			Nodemap;
+		typedef gos::FastHashMap<gos::examap::Coord, HexInfo>		EXAMAP;
 
 
 	private:
 		void 	priv_destroy_map();
-		bool	priv_vtxmap__add_vtx (const GVC gvc, const Vtx &vtx);
-		bool 	priv_vtxmap__get_vtx (const GVC gvc, Vtx *out) const;
+		bool	priv_vtxmap__add_vtx (const GVC gvc, const Node &vtx);
+		bool 	priv_vtxmap__get_vtx (const GVC gvc, Node *out) const;
+		void	priv_node_to_vtx (const Node &node, Vtx *out) const;
+		void	priv_node_to_vtx (const GVC gvc, Vtx *out) const;
 
 
 
@@ -71,8 +92,8 @@ namespace Land1
 		gos::Allocator				*localAllocator;
 		gos::Random					rnd;
 		gos::examap::CoordConverter	exacc;
-		VTXMAP						vtxmap;
-		HEXMAP						hexmap;
+		Nodemap						nodemap;
+		EXAMAP						examap;
 
 	};
 } //namespace Land1

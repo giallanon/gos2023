@@ -28,29 +28,28 @@ void Map2::priv_destroy_map()
 {
 	if (NULL == localAllocator)
 		return;
-	vtxmap.reset();
-	hexmap.reset();
+	nodemap.reset();
+	examap.reset();
 }
 
 //************************************* 
 void Map2::setup (gos::Allocator *allocator)
 {
 	localAllocator = allocator;
-	vtxmap.setup (localAllocator, 1024);
-	hexmap.setup (localAllocator, 1024);
+	nodemap.setup (localAllocator, 1024);
+	examap.setup (localAllocator, 1024);
 }
 
 //************************************* 
-bool Map2::priv_vtxmap__add_vtx (const GVC gvc, const Vtx &vtxIN)
+bool Map2::priv_vtxmap__add_vtx (const GVC gvc, const Node &vtxIN)
 {
-	const u32 key = gvc.get_as_u32();
-	return vtxmap.insertIfNotExists (key, vtxIN);
+	return nodemap.insertIfNotExists (gvc, vtxIN);
 }
 
 //************************************* 
-bool Map2::priv_vtxmap__get_vtx (const GVC gvc, Vtx *out) const
+bool Map2::priv_vtxmap__get_vtx (const GVC gvc, Node *out) const
 {
-	return vtxmap.find (gvc.get_as_u32(), out);
+	return nodemap.find (gvc, out);
 }
 
 //************************************* 
@@ -64,9 +63,29 @@ void Map2::map_create (f32 exa_radius_world, u32 random_seed)
 }
 
 //************************************* 
+void Map2::exa__add_with_radius (const gos::examap::Coord center_coord, u32 map_radius)
+{
+	exa__add (center_coord);
+
+	const u32 MAX_RADIUS = 128;
+	const u32 MAX_NUM_COORD = MAX_RADIUS * 6;
+	examap::Coord coordList[MAX_NUM_COORD];
+
+	assert (map_radius <= MAX_RADIUS);
+
+	for (u32 ring = 1; ring <= map_radius; ring++)
+	{
+		const u32 radius = ring;
+		u32 n = examap::coord_ring (center_coord, radius, coordList, MAX_NUM_COORD);
+		for (u32 i = 0; i < n; i++)
+			exa__add (coordList[i]);
+	}
+}
+
+//************************************* 
 void Map2::exa__add (const gos::examap::Coord coordIN)
 {
-	if (hexmap.exists (coordIN.pack_coord_u32()))
+	if (examap.exists (coordIN))
 	{
 		DBGBREAK;
 		return;
@@ -82,19 +101,14 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 	const u32 num_vtx_originali = exagen.vtxList.getNElem();
 
 
-	//addo l'exa alla mappa di hex
-	HexInfo hexinfo;
-	hexinfo.coord = coordIN;
-	hexmap.insertIfNotExists (coordIN.pack_coord_u32(), hexinfo);
-
 	//Creo un elenco di vtx dell'exa e dtermino GVC per ciascuno
-	FastArray<Vtx> exavtx (gos::getScrapAllocator(), num_vtx_originali);
+	FastArray<Node> exavtx (gos::getScrapAllocator(), num_vtx_originali);
 	for (u32 iVtx=0; iVtx<num_vtx_originali; iVtx++)
 	{
 		const ExaGenerator::VtxInfo *vi = &exagen.vtxList[iVtx];
 
 		//creo il vtx
-		Vtx vv;
+		Node vv;
 		vv.pos = vi->pos;
 		vv.material_index = 0;
 		vv.num_adj_vtx = 0;
@@ -169,53 +183,162 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		{
 			//il vtx esisteva gia' in mappa, vuol dire che devo aggiornare l'elenco
 			//delle sue adj integrandolo con quelle di <vv>
-			Vtx vReal;
+			Node vReal;
 			priv_vtxmap__get_vtx (gvc, &vReal);
 
 			const u32 n = exavtx(iVtx).num_adj_vtx;
+			assert (n <= 7);
 			for (u32 i=0; i<n; i++)
 			{
 				bool bFound = false;
-				for (u32 t=0; t<vReal.num_adj_vtx; t++)
+				for (u32 t = 0; t < vReal.num_adj_vtx; t++)
 				{
 					if (vReal.connected_vtx[t] == gvc)
 					{
 						bFound = true;
 						break;
 					}
-					if (!bFound)
-					{
-						const u32 n = vReal.num_adj_vtx++;
-						vReal.connected_vtx[n] = gvc;
-					}
+				}
+				if (!bFound)
+				{
+					const u32 ii = vReal.num_adj_vtx++;
+					assert (ii<=8);
+					vReal.connected_vtx[ii] = gvc;
 				}
 			}
 
-			vtxmap.insertOrReplaceValue (gvc.get_as_u32(), vReal);
+			nodemap.insertOrReplaceValue (gvc, vReal);
 		}
 	}
+
+
+	//addo l'exa alla mappa di hex
+	HexInfo hexinfo;
+	hexinfo.coord = coordIN;
+	hexinfo.num_vtx = num_vtx_originali;
+	examap.insertIfNotExists (coordIN, hexinfo);
 
 }
 
 //************************************* 
-bool Map2::get_list_of_vtx_by_exa (const gos::examap::Coord &exa_coord, FastArray<Vtx> &out_list, bool bClearOut) const
+void Map2::priv_node_to_vtx (const Node &node, Vtx *out) const
 {
-	if (bClearOut)
-		out_list.reset();
-
-	if (!hexmap.exists (exa_coord.pack_coord_u32()))
+	out->pos = node.pos;
+	out->material_index = node.material_index;
+	out->num_adj_vtx = node.num_adj_vtx;
+	out->height = node.height;
+	out->coord = node.coord;
+}
+//************************************* 
+void Map2::priv_node_to_vtx (const GVC gvc, Vtx *out) const
+{
+	Node node;
+	if (nodemap.find (gvc, &node))
+		priv_node_to_vtx (node, out);
+	else
 	{
+		DBGBREAK;
+		memset (out, 0, sizeof(Vtx));
+	}
+}
+
+//************************************* 
+bool Map2::world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const
+{
+	examap::Coord exa_coord = exacc.world_coord_to_exa (world_coord);
+	
+	HexInfo hex;
+	if (!examap.find (exa_coord, &hex))
 		return false;
+
+
+	const vec2f p (world_coord.x, world_coord.z);
+	f32 best_d = 1e36f;
+	for (u32 iVtx = 0; iVtx < hex.num_vtx; iVtx++)
+	{
+		GVC gvc;
+		gvc.set (exa_coord, iVtx);
+
+		Node node;
+		if (nodemap.find (gvc, &node))
+		{
+			const f32 d = math::distance2(node.pos, p);
+			if (d < best_d)
+			{
+				best_d = d;
+				(*out) = gvc;
+			}			
+		}
 	}
 
-	vtxmap.forEach ( [exa_coord, &out_list](u32 key, const Vtx vtx) {
+	return true;
+}
 
-//		if (vtx.coord.get_exa_coord() == exa_coord)
+//************************************* 
+bool Map2::GVC_to_world_coord  (const GVC gvc, gos::vec3f *out_world_coord) const
+{
+	Node node;
+	if (!nodemap.find (gvc, &node))
+		return false;
+	out_world_coord->set (node.pos.x, 0, node.pos.y);
+	return true;
+}
+
+//************************************* 
+u32 Map2::get_exa_vtxList (const gos::examap::Coord &exa_coord, FastArray<Vtx> &outList, bool bClear_outList) const
+{
+	if (bClear_outList)
+		outList.reset();
+	if (!examap.exists(exa_coord))
+		return 0;
+
+	//metto in <outlist> l'elenco dei vtx di exa_coord
+	//uso <map> per mappare GVC all'indice del vtx all'interno di <outlist>
+	gos::FastHashMap<GVC, u32>	map (gos::getScrapAllocator(), 1024);
+	nodemap.forEach ([&map, &outList, exa_coord, me=this](GVC gvc, const Node node) {
+		if (gvc.get_exa_coord() == exa_coord)
 		{
-			out_list.append (vtx);
+			Vtx vtx;
+			me->priv_node_to_vtx (node, &vtx);
+			
+			const u32 ii = outList.getNElem ();
+			outList.append(vtx);
+			map.insertIfNotExists (gvc, ii);
 		}
 		return true;
 	});
 
-	return true;
+	const u32 ret = outList.getNElem();
+
+	//sistemo le adiacenze
+	const u32 n = outList.getNElem();
+	for (u32 iVtx = 0; iVtx < n; iVtx++)
+	{
+		Vtx *v = &outList[iVtx];
+		
+		Node node;
+		if (!nodemap.find (v->coord, &node))
+			DBGBREAK;
+		for (u32 t = 0; t < v->num_adj_vtx; t++)
+		{
+			const GVC gvc = node.connected_vtx[t];
+			
+			u32 index;
+			if (!map.find (gvc, &index))
+			{
+				//stiamo puntando ad un vtx situato su un altro exa
+				Vtx vtx;
+				priv_node_to_vtx (gvc, &vtx);
+				vtx.num_adj_vtx=0;
+
+				index = outList.getNElem ();
+				map.insertIfNotExists (gvc, index);
+				outList.append(vtx);
+			}
+			
+			v->adj_vtx_list[t] = (u16)index;
+		}
+	}
+
+	return ret;
 }

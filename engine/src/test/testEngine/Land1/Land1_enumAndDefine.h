@@ -2,7 +2,7 @@
 #define _Land1_enumAndDefine_h_
 #include "../gosGameUtils/examap/gosExamap.h"
 #include "../gos/gosBit.h"
-
+#include "../gos/gosHashMap.h"
 
 namespace Land1
 {
@@ -49,6 +49,7 @@ namespace Land1
 
 		u32		get_as_u32() const															{ return bitmask; }
 
+		int		compare (const GVC &b) const												{ if (bitmask==b.bitmask) return 0; if (bitmask>b.bitmask) return 1; return -1; }
 		bool	operator== (const GVC &b) const												{ return ( bitmask == b.bitmask ); }
 		bool	operator!= (const GVC &b) const												{ return ( bitmask != b.bitmask ); }
 

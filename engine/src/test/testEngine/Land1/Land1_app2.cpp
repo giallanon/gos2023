@@ -70,10 +70,9 @@ void Land1_app2::on__setup ()
 	const f32 EXA_WORLD_RADIUS = 5.0f; //50.0f;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, 187);
-	map.exa__add (examap::Coord(0,0));
-	// map.exa__add (examap::Coord(1,0));
-	// map.exa__add (examap::Coord(-1,0));
-	// map.exa__add (examap::Coord(-1,1));
+
+	map.exa__add_with_radius ( examap::Coord(0, 0), 4 );
+	
 
 
 	//
@@ -192,9 +191,37 @@ void Land1_app2::on__handle_input (const Engine::InputEvent &ev)
 }
 
 //***************************************
+u32 Land1_app2::priv_do_draw_exa (const examap::Coord exa_coord)
+{
+	FastArray<Land1::Map2::Vtx> vtxList (gos::getScrapAllocator(), 1024);
+	const u32 num_vtx = map.get_exa_vtxList (exa_coord, vtxList, true);
+	if (0 == num_vtx)
+		return 0;
+
+	const u32 START_IDX = line_ctx1->vtx_get_num();
+	for (u32 i=0; i<vtxList.getNElem(); i++)
+		line_ctx1->vtx_add ( vec3f(vtxList(i).pos.x, 0, vtxList(i).pos.y) );
+
+	for (u32 iVtx=0; iVtx<num_vtx; iVtx++)
+	{
+		const Land1::Map2::Vtx *vv = &vtxList(iVtx);
+
+		for (u32 i=0; i<vv->num_adj_vtx; i++)
+		{
+			line_ctx1->line (START_IDX + iVtx, START_IDX + vv->adj_vtx_list[i]);
+		}
+	}
+
+	return num_vtx;
+}
+
+//***************************************
 void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 {
-	const examap::Coord exa_coord = map.world_coord_to_exa (world_point);
+	Land1::GVC gvc;
+	if (!map.world_coord_to_GVC (world_point, &gvc))
+		return;
+	const examap::Coord exa_coord = gvc.get_exa_coord();
 	logger::log ("hex @ (%d, %d)\n", exa_coord.x, exa_coord.z);
 	
 
@@ -204,40 +231,46 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 	line_ctx1->clear();
 	line_ctx1->enable_depth_test(false);
 	line_ctx1->enable_depth_write(false);
-	line_ctx1->set_line_width(2);
-	line_ctx1->set_color_ARGB (0xFF000000);
+	line_ctx1->set_line_width(1);
+	line_ctx1->set_color_ARGB (0xFF404040);
 
-	FastArray<Land1::Map2::Vtx> vtxList (gos::getScrapAllocator(), 1024);
-	if (!map.get_list_of_vtx_by_exa (exa_coord, vtxList, true))
-		return;
-
-	const u32 num_vtx = vtxList.getNElem();
-	for (u32 i=0; i<num_vtx; i++)
-		line_ctx1->vtx_add ( vec3f(vtxList(i).pos.x, 0, vtxList(i).pos.y) );
-
-	for (u32 iVtx=0; iVtx<num_vtx; iVtx++)
+	//disegno tutti i vicini dell'exa selezionato
 	{
-		const Land1::Map2::Vtx *vv = &vtxList(iVtx);
-
-		for (u32 i=0; i<vv->num_adj_vtx; i++)
-		{
-			const Land1::GVC gvc = vv->connected_vtx[i];
-			if (gvc.get_exa_coord() == exa_coord)
-			{
-				assert (gvc.get_vertex_idx() < vtxList.getNElem());
-				line_ctx1->line (iVtx, gvc.get_vertex_idx());
-			}
-		}
+		examap::Coord coord_list[32];
+		const u32 n = examap::coord_ring (exa_coord, 1, coord_list, 32);
+		for (u32 i = 0; i < n; i++)
+			priv_do_draw_exa (coord_list[i]);
 	}
+
+
+	//solo per l'exa selezionato....
+	line_ctx1->set_color_ARGB (0xFF000000);
+	const u32 START_IDX = line_ctx1->vtx_get_num();
+	const u32 num_vtx = priv_do_draw_exa (exa_coord);
+	
 
 	//disegno i vtx
 	line_ctx1
 		->point_set_radius(6)
-		.set_color_ARGB (0xFFFF0000);
+		.set_color_ARGB (0xFF303030);
 	for (u32 iVtx=0; iVtx<num_vtx; iVtx++)
 	{
-		line_ctx1->point (iVtx);	
-	}	
+		line_ctx1->point (START_IDX + iVtx);	
+	}
+
+	//disegno il vtx selezionato
+	{
+		line_ctx1
+			->point_set_radius(10)
+			.set_color_ARGB (0xFFFF0000);
+		
+		vec3f p;
+		map.GVC_to_world_coord (gvc, &p);
+
+		const u32 ii = line_ctx1->vtx_add(p);
+		line_ctx1->point (ii);
+	}
+
 
 	//disegno l'exa <coord>
 	// const Land1::Exa2 *exa;
