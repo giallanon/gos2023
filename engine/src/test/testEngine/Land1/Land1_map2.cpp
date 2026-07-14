@@ -186,12 +186,16 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 					u32 C_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
 					u32 D_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[1], iVtx);
 
-					if (C_index == D_index)
+					if (D_index == B_index || D_index == C_index)
 					{
 						B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
 						C_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[0], iVtx);
 						D_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
 					}
+
+					assert (B_index != C_index);
+					assert (B_index != D_index);
+					assert (C_index != D_index);
 
 					exavtx[iVtx].num_adj_vtx = 3;
 					exavtx[iVtx].connected_vtx[0] = exavtx[B_index].coord;
@@ -262,6 +266,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 	for (u32 iVtx=0; iVtx<num_vtx_originali; iVtx++)
 	{		
 		const GVC gvc = exavtx(iVtx).coord;
+
 		if (priv_vtxmap__add_vtx (gvc, exavtx(iVtx)))
 		{
 			//il vtx e' nuovo, non esisteva in mappa
@@ -291,11 +296,40 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 				if (!bFound)
 				{
 					const u32 ii = vReal.num_adj_vtx++;
-					assert (ii<=8);
+					assert (ii<=7);
 					vReal.connected_vtx[ii] = gvc_connected;
 				}
 			}
 
+			//ordino i vtx adiacenti in senso orario
+			{
+				vec2f vvv[8];
+				for (u32 i=0; i<vReal.num_adj_vtx; i++)
+				{
+					Node node;
+					if (vReal.connected_vtx[i].get_exa_coord() == coordIN)
+						vvv[i] = exavtx(vReal.connected_vtx[i].get_vertex_idx()).pos;
+					else if (GVC_to_node (vReal.connected_vtx[i], &node))
+					{
+						vvv[i] = node.pos;
+					}
+					else
+					{
+						vvv[i].set (0,0);
+					}
+				}
+
+				u32 ordered_index[8];
+				geom::point2D_order_clockwise (vReal.pos, vvv, vReal.num_adj_vtx, ordered_index, sizeof(ordered_index));
+				
+				GVC gvc_temp[8];
+				for (u32 i=0; i<vReal.num_adj_vtx; i++)
+					gvc_temp[i] = vReal.connected_vtx[ ordered_index[i] ];
+				for (u32 i=0; i<vReal.num_adj_vtx; i++)					
+					vReal.connected_vtx[i] = gvc_temp[i];
+			}
+
+			//aggiorno il nodo
 			nodemap.insertOrReplaceValue (gvc, vReal);
 		}
 	}
@@ -435,10 +469,10 @@ u32 Map2::get_exa_vtxList (const gos::examap::Coord &exa_coord, FastArray<Vtx> &
 	}
 
 	//calcolo i quad center
-	for (u32 iVtx = 0; iVtx < n; iVtx++)
-	{
-		Vtx *v = &outList[iVtx];
-	}
+	// for (u32 iVtx = 0; iVtx < n; iVtx++)
+	// {
+	// 	Vtx *v = &outList[iVtx];
+	// }
 
 	return ret;
 }

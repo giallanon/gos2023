@@ -21,7 +21,7 @@ namespace Land1
 			u8	num_adj_vtx;
 			u16	height;
 			GVC	coord;
-			GVC	connected_vtx[7];		//indici dei vtx "originali" che sono connessi a questo vtx
+			GVC	connected_vtx[6];		//indici dei vtx "originali" che sono connessi a questo vtx
 		};
 
 		struct Vtx

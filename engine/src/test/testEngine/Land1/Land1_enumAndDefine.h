@@ -21,7 +21,9 @@ namespace Land1
 
 	//Global Vertex Coordinate
 	struct GVC
-	{
+	{			GVC()																		{ }
+				GVC(i16 hex_x, i16 hex_z, u16 vertex_idx)									{ set(hex_x, hex_z, vertex_idx); }
+				
 		void	set_as_u32 (u32 c)															{ bitmask = c; }
 		void	set (const gos::examap::Coord &hex_coord, u16 vertex_idx)					{ set(hex_coord.x, hex_coord.z, vertex_idx); }
 		void	set (i16 hex_x, i16 hex_z, u16 vertex_idx)

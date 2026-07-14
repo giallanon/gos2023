@@ -10,10 +10,10 @@ using namespace Land1;
 static f32 ExaGenerator__calc_angle (const vec2f p)
 {
 	f32 ret = atan2f (p.y, p.x);
-	ret -= math::PIMEZZI;
+	//ret -= math::PIMEZZI;
 	if (ret < 0)
 		ret += math::DUEPI;
-	if (ret > math::DUEPI)
+	if (ret >= math::DUEPI)
 		ret -= math::DUEPI;
 	return ret;
 }
