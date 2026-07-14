@@ -14,6 +14,16 @@ namespace Land1
 	class Map2
 	{
 	public:
+		struct Node
+		{
+			gos::vec2f	pos;
+			u8 	material_index;
+			u8	num_adj_vtx;
+			u16	height;
+			GVC	coord;
+			GVC	connected_vtx[7];		//indici dei vtx "originali" che sono connessi a questo vtx
+		};
+
 		struct Vtx
 		{
 			gos::vec2f	pos;
@@ -54,18 +64,9 @@ namespace Land1
 		gos::vec3f			get_map_world_center() const											{ return exacc.get_map_world_center(); }
 		bool				world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const;
 		bool				GVC_to_world_coord  (const GVC gvc, gos::vec3f *out_world_coord) const;
+		bool				GVC_to_node (const GVC gvc, Node *out) const;
 
 	private:
-		struct Node
-		{
-			gos::vec2f	pos;
-			u8 	material_index;
-			u8	num_adj_vtx;
-			u16	height;
-			GVC	coord;
-			GVC	connected_vtx[7];		//indici dei vtx "originali" che sono connessi a questo vtx
-		};
-
 		struct HexInfo
 		{
 			gos::examap::Coord	coord;

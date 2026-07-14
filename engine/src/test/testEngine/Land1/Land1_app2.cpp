@@ -70,7 +70,8 @@ void Land1_app2::on__setup ()
 	const f32 EXA_WORLD_RADIUS = 5.0f; //50.0f;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, 187);
-
+	//map.exa__add ( gos::examap::Coord(0,0));
+	//map.exa__add ( gos::examap::Coord(0,-1));
 	map.exa__add_with_radius ( examap::Coord(0, 0), 4 );
 	
 
@@ -221,12 +222,17 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 	Land1::GVC gvc;
 	if (!map.world_coord_to_GVC (world_point, &gvc))
 		return;
+	Land1::Map2::Node node;
+	map.GVC_to_node (gvc, &node);
 	const examap::Coord exa_coord = gvc.get_exa_coord();
-	logger::log ("hex @ (%d, %d)\n", exa_coord.x, exa_coord.z);
+	logger::log ("hex @ (%d, %d), vtx=%d, num_adjc=%d", exa_coord.x, exa_coord.z, gvc.get_vertex_idx(), node.num_adj_vtx);
+	for (u32 i=0; i<node.num_adj_vtx; i++)
+		logger::log ("  (%d, %d, %d)", node.connected_vtx[i].get_exa_coord().x, node.connected_vtx[i].get_exa_coord().z, node.connected_vtx[i].get_vertex_idx());
+	logger::log ("\n");
 	
 
-	// const u32 N_COLORS = 8;
-	// const u32 colors[N_COLORS] = { 0xFFFFFFFF, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFF00, 0xFF00FFFF, 0xFFFF00FF, 0xFFa889B1 };
+	const u32 N_COLORS = 8;
+	const u32 colors[N_COLORS] = { 0xFFFFFFFF, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFF00, 0xFF00FFFF, 0xFFFF00FF, 0xFFa889B1 };
 
 	line_ctx1->clear();
 	line_ctx1->enable_depth_test(false);
@@ -261,8 +267,8 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 	//disegno il vtx selezionato
 	{
 		line_ctx1
-			->point_set_radius(10)
-			.set_color_ARGB (0xFFFF0000);
+			->point_set_radius(10);
+			//.set_color_ARGB (0xFFFF0000);
 		
 		vec3f p;
 		map.GVC_to_world_coord (gvc, &p);
@@ -270,6 +276,18 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 		const u32 ii = line_ctx1->vtx_add(p);
 		line_ctx1->point (ii);
 	}
+
+	//disegno i vtx adiacenti
+	for (u32 i = 0; i < node.num_adj_vtx; i++)
+	{
+		vec3f p;
+		map.GVC_to_world_coord (node.connected_vtx[i], &p);
+
+		const u32 ii = line_ctx1->vtx_add(p);
+		line_ctx1->set_color_ARGB (colors[i % N_COLORS])
+			.point (ii);
+	}
+
 
 
 	//disegno l'exa <coord>

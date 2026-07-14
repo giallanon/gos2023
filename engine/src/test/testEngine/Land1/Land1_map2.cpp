@@ -78,7 +78,9 @@ void Map2::exa__add_with_radius (const gos::examap::Coord center_coord, u32 map_
 		const u32 radius = ring;
 		u32 n = examap::coord_ring (center_coord, radius, coordList, MAX_NUM_COORD);
 		for (u32 i = 0; i < n; i++)
+		{
 			exa__add (coordList[i]);
+		}
 	}
 }
 
@@ -145,6 +147,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		}
 		else
 		{
+			assert (iVtx ==0 || iVtx > 48);
 			gvc.set (coordIN, iVtx);
 		}
 
@@ -159,16 +162,102 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		u32 adj_quad_list[16];
 		const u32 nquad = exagen.get_quad_from_vtx (iVtx, adj_quad_list, 16);
 		
-		exavtx[iVtx].num_adj_vtx = (u8)nquad;
-		for (u32 t=0; t<nquad; t++)
+		if (exagen.is_a_border_vertex(iVtx))
 		{
-			const u32 quad_index = adj_quad_list[t];
-			const u32 B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
+			switch (nquad)
+			{
+			default:
+				DBGBREAK;
+				break;
 
-			exavtx[iVtx].connected_vtx[t] = exavtx[B_index].coord;
+			case 1: 
+				{
+					const u32 B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
+					const u32 C_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[0], iVtx);
+					exavtx[iVtx].num_adj_vtx = 2;
+					exavtx[iVtx].connected_vtx[0] = exavtx[B_index].coord;
+					exavtx[iVtx].connected_vtx[1] = exavtx[C_index].coord;
+				}
+				break;
+			
+			case 2:
+				{
+					u32 B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
+					u32 C_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
+					u32 D_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[1], iVtx);
+
+					if (C_index == D_index)
+					{
+						B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
+						C_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
+						D_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[0], iVtx);
+					}
+
+					exavtx[iVtx].num_adj_vtx = 3;
+					exavtx[iVtx].connected_vtx[0] = exavtx[B_index].coord;
+					exavtx[iVtx].connected_vtx[1] = exavtx[C_index].coord;
+					exavtx[iVtx].connected_vtx[2] = exavtx[D_index].coord;
+				}
+				break;
+
+			case 3:
+				{
+					u16 quad_index = adj_quad_list[0];
+					u16 quad_next_index = adj_quad_list[1];
+					u16 quad_prev_index = adj_quad_list[2];
+					
+					u32 B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
+					u32 C_index = exagen.get_index_of_vtx_in_uscita_da (quad_next_index, iVtx);
+					u32 D_index = exagen.get_index_of_vtx_in_uscita_da (quad_prev_index, iVtx);
+					u32 E_index = exagen.get_index_of_vtx_in_entrata_a (quad_prev_index, iVtx);
+
+					if (B_index == E_index)
+					{
+						quad_index = adj_quad_list[1];
+						quad_next_index = adj_quad_list[2];
+						quad_prev_index = adj_quad_list[0];
+
+						B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
+						C_index = exagen.get_index_of_vtx_in_uscita_da (quad_next_index, iVtx);
+						D_index = exagen.get_index_of_vtx_in_uscita_da (quad_prev_index, iVtx);
+						E_index = exagen.get_index_of_vtx_in_entrata_a (quad_prev_index, iVtx);
+
+						if (B_index == E_index)
+						{
+							quad_index = adj_quad_list[2];
+							quad_next_index = adj_quad_list[0];
+							quad_prev_index = adj_quad_list[1];
+
+							B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
+							C_index = exagen.get_index_of_vtx_in_uscita_da (quad_next_index, iVtx);
+							D_index = exagen.get_index_of_vtx_in_uscita_da (quad_prev_index, iVtx);
+							E_index = exagen.get_index_of_vtx_in_entrata_a (quad_prev_index, iVtx);
+						}
+					}
+
+					exavtx[iVtx].num_adj_vtx = 4;
+					exavtx[iVtx].connected_vtx[0] = exavtx[B_index].coord;
+					exavtx[iVtx].connected_vtx[1] = exavtx[C_index].coord;
+					exavtx[iVtx].connected_vtx[2] = exavtx[D_index].coord;
+					exavtx[iVtx].connected_vtx[3] = exavtx[E_index].coord;
+
+				}
+				break;
+			}
+		}
+		else
+		{
+			assert (nquad >= 3);
+			exavtx[iVtx].num_adj_vtx = (u8)nquad;
+			for (u32 t = 0; t < nquad; t++)
+			{
+				const u32 quad_index = adj_quad_list[t];
+				const u32 B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
+
+				exavtx[iVtx].connected_vtx[t] = exavtx[B_index].coord;
+			}
 		}
 	}	
-
 
 	//addo i vtx alla mappa
 	for (u32 iVtx=0; iVtx<num_vtx_originali; iVtx++)
@@ -182,7 +271,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		else
 		{
 			//il vtx esisteva gia' in mappa, vuol dire che devo aggiornare l'elenco
-			//delle sue adj integrandolo con quelle di <vv>
+			//delle sue adj integrandolo con quelle di <exavtx(iVtx)>
 			Node vReal;
 			priv_vtxmap__get_vtx (gvc, &vReal);
 
@@ -190,10 +279,11 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 			assert (n <= 7);
 			for (u32 i=0; i<n; i++)
 			{
+				const GVC gvc_connected = exavtx(iVtx).connected_vtx[i];
 				bool bFound = false;
 				for (u32 t = 0; t < vReal.num_adj_vtx; t++)
 				{
-					if (vReal.connected_vtx[t] == gvc)
+					if (vReal.connected_vtx[t] == gvc_connected)
 					{
 						bFound = true;
 						break;
@@ -203,7 +293,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 				{
 					const u32 ii = vReal.num_adj_vtx++;
 					assert (ii<=8);
-					vReal.connected_vtx[ii] = gvc;
+					vReal.connected_vtx[ii] = gvc_connected;
 				}
 			}
 
@@ -211,13 +301,11 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		}
 	}
 
-
 	//addo l'exa alla mappa di hex
 	HexInfo hexinfo;
 	hexinfo.coord = coordIN;
 	hexinfo.num_vtx = num_vtx_originali;
 	examap.insertIfNotExists (coordIN, hexinfo);
-
 }
 
 //************************************* 
@@ -282,6 +370,12 @@ bool Map2::GVC_to_world_coord  (const GVC gvc, gos::vec3f *out_world_coord) cons
 		return false;
 	out_world_coord->set (node.pos.x, 0, node.pos.y);
 	return true;
+}
+
+//************************************* 
+bool Map2::GVC_to_node (const GVC gvc, Node *out_node) const
+{
+	return nodemap.find (gvc, out_node);
 }
 
 //************************************* 
