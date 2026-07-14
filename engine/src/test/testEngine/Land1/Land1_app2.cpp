@@ -225,7 +225,7 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 	Land1::Map2::Node node;
 	map.GVC_to_node (gvc, &node);
 	const examap::Coord exa_coord = gvc.get_exa_coord();
-	logger::log ("hex @ (%d, %d), vtx=%d, num_adjc=%d", exa_coord.x, exa_coord.z, gvc.get_vertex_idx(), node.num_adj_vtx);
+	logger::log ("(%d, %d, %d) num_adjc=%d", exa_coord.x, exa_coord.z, gvc.get_vertex_idx(), node.num_adj_vtx);
 	for (u32 i=0; i<node.num_adj_vtx; i++)
 		logger::log ("  (%d, %d, %d)", node.connected_vtx[i].get_exa_coord().x, node.connected_vtx[i].get_exa_coord().z, node.connected_vtx[i].get_vertex_idx());
 	logger::log ("\n");

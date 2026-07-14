@@ -188,9 +188,9 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 
 					if (C_index == D_index)
 					{
-						B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
-						C_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
-						D_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[0], iVtx);
+						B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
+						C_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[0], iVtx);
+						D_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
 					}
 
 					exavtx[iVtx].num_adj_vtx = 3;
@@ -202,38 +202,37 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 
 			case 3:
 				{
-					u16 quad_index = adj_quad_list[0];
-					u16 quad_next_index = adj_quad_list[1];
-					u16 quad_prev_index = adj_quad_list[2];
-					
-					u32 B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
-					u32 C_index = exagen.get_index_of_vtx_in_uscita_da (quad_next_index, iVtx);
-					u32 D_index = exagen.get_index_of_vtx_in_uscita_da (quad_prev_index, iVtx);
-					u32 E_index = exagen.get_index_of_vtx_in_entrata_a (quad_prev_index, iVtx);
+					u32 B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
+					u32 C_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
+					u32 D_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[2], iVtx);
+					u32 E_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[2], iVtx);
 
-					if (B_index == E_index)
+					if (E_index == B_index || E_index == C_index || E_index == D_index)
 					{
-						quad_index = adj_quad_list[1];
-						quad_next_index = adj_quad_list[2];
-						quad_prev_index = adj_quad_list[0];
+						B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
+						C_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
+						D_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[1], iVtx);
+						E_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[2], iVtx);
 
-						B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
-						C_index = exagen.get_index_of_vtx_in_uscita_da (quad_next_index, iVtx);
-						D_index = exagen.get_index_of_vtx_in_uscita_da (quad_prev_index, iVtx);
-						E_index = exagen.get_index_of_vtx_in_entrata_a (quad_prev_index, iVtx);
-
-						if (B_index == E_index)
+						if (D_index == B_index || D_index == C_index || D_index == E_index)
 						{
-							quad_index = adj_quad_list[2];
-							quad_next_index = adj_quad_list[0];
-							quad_prev_index = adj_quad_list[1];
+							B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
+							C_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[0], iVtx);
+							D_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
+							E_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[2], iVtx);
+	
+							if (C_index == B_index || C_index == D_index || C_index == E_index)
+								DBGBREAK;
 
-							B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
-							C_index = exagen.get_index_of_vtx_in_uscita_da (quad_next_index, iVtx);
-							D_index = exagen.get_index_of_vtx_in_uscita_da (quad_prev_index, iVtx);
-							E_index = exagen.get_index_of_vtx_in_entrata_a (quad_prev_index, iVtx);
 						}
 					}
+
+					assert (B_index != C_index);
+					assert (B_index != D_index);
+					assert (B_index != E_index);
+					assert (C_index != D_index);
+					assert (C_index != E_index);
+					assert (D_index != E_index);
 
 					exavtx[iVtx].num_adj_vtx = 4;
 					exavtx[iVtx].connected_vtx[0] = exavtx[B_index].coord;
@@ -430,8 +429,15 @@ u32 Map2::get_exa_vtxList (const gos::examap::Coord &exa_coord, FastArray<Vtx> &
 				outList.append(vtx);
 			}
 			
+			assert (t<8);
 			v->adj_vtx_list[t] = (u16)index;
 		}
+	}
+
+	//calcolo i quad center
+	for (u32 iVtx = 0; iVtx < n; iVtx++)
+	{
+		Vtx *v = &outList[iVtx];
 	}
 
 	return ret;

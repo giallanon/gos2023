@@ -30,8 +30,9 @@ namespace Land1
 			u8 	material_index;
 			u8	num_adj_vtx;
 			u16	height;
-			GVC	coord;
 			u16	adj_vtx_list[8];
+			gos::vec2f	quad_center[6];
+			GVC	coord;
 		};
 
 	public:
