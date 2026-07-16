@@ -105,7 +105,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 
 	//Creo un elenco di vtx dell'exa e dtermino GVC per ciascuno
 	FastArray<Node> exavtx (gos::getScrapAllocator(), num_vtx_originali);
-	for (u32 iVtx=0; iVtx<num_vtx_originali; iVtx++)
+	for (u32 iVtx = 0; iVtx < num_vtx_originali; iVtx++)
 	{
 		const ExaGenerator::VtxInfo *vi = &exagen.vtxList[iVtx];
 
@@ -117,11 +117,11 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		vv.height = 0;
 
 		//determino il GVC
-		GVC gvc;		
+		GVC gvc;
 		if (vi->isBorderVtx)
 		{
-			assert (iVtx >=1 && iVtx <= 48);
-			if ( (iVtx >= 1 && iVtx<=16) || (iVtx >=42 && iVtx <= 48) )
+			assert (iVtx >= 1 && iVtx <= 48);
+			if ((iVtx >= 1 && iVtx <= 16) || (iVtx >= 42 && iVtx <= 48))
 			{
 				//questo vtx del bordo e' mio
 				gvc.set (coordIN, iVtx);
@@ -131,14 +131,14 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 				const i32 xx = coordIN.x;
 				const i32 zz = coordIN.z;
 				//il vtx appartiene ad un altro exa
-				if (iVtx ==17)
-					gvc.set (examap::Coord(xx-1, zz+1), 1);
-				else if (iVtx >=18 && iVtx <= 24)
-					gvc.set (examap::Coord(xx-1, zz+1), 42 + 24 - iVtx);
-				else if (iVtx >=25 && iVtx <= 33)
-					gvc.set (examap::Coord(xx-1, zz), 1 + 33 - iVtx);
-				else if (iVtx >=34 && iVtx <= 41)
-					gvc.set (examap::Coord(xx, zz-1), 9 + 41 - iVtx);
+				if (iVtx == 17)
+					gvc.set (examap::Coord(xx - 1, zz + 1), 1);
+				else if (iVtx >= 18 && iVtx <= 24)
+					gvc.set (examap::Coord(xx - 1, zz + 1), 42 + 24 - iVtx);
+				else if (iVtx >= 25 && iVtx <= 33)
+					gvc.set (examap::Coord(xx - 1, zz), 1 + 33 - iVtx);
+				else if (iVtx >= 34 && iVtx <= 41)
+					gvc.set (examap::Coord(xx, zz - 1), 9 + 41 - iVtx);
 				else
 				{
 					DBGBREAK;
@@ -147,7 +147,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		}
 		else
 		{
-			assert (iVtx ==0 || iVtx > 48);
+			assert (iVtx == 0 || iVtx > 48);
 			gvc.set (coordIN, iVtx);
 		}
 
@@ -156,12 +156,12 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 	}
 
 	//calcolo i vtx adiacenti ad ogni vtx dell'exa
-	for (u32 iVtx=0; iVtx<num_vtx_originali; iVtx++)
+	for (u32 iVtx = 0; iVtx < num_vtx_originali; iVtx++)
 	{
 		//elenco dei quad con sharano il vtx i-esimo
 		u32 adj_quad_list[16];
 		const u32 nquad = exagen.get_quad_from_vtx (iVtx, adj_quad_list, 16);
-		
+
 		if (exagen.is_a_border_vertex(iVtx))
 		{
 			switch (nquad)
@@ -170,82 +170,82 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 				DBGBREAK;
 				break;
 
-			case 1: 
-				{
-					const u32 B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
-					const u32 C_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[0], iVtx);
-					exavtx[iVtx].num_adj_vtx = 2;
-					exavtx[iVtx].connected_vtx[0] = exavtx[B_index].coord;
-					exavtx[iVtx].connected_vtx[1] = exavtx[C_index].coord;
-				}
-				break;
-			
-			case 2:
-				{
-					u32 B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
-					u32 C_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
-					u32 D_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[1], iVtx);
+			case 1:
+			{
+				const u32 B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
+				const u32 C_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[0], iVtx);
+				exavtx[iVtx].num_adj_vtx = 2;
+				exavtx[iVtx].connected_vtx[0] = exavtx[B_index].coord;
+				exavtx[iVtx].connected_vtx[1] = exavtx[C_index].coord;
+			}
+			break;
 
-					if (D_index == B_index || D_index == C_index)
+			case 2:
+			{
+				u32 B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
+				u32 C_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
+				u32 D_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[1], iVtx);
+
+				if (D_index == B_index || D_index == C_index)
+				{
+					B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
+					C_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[0], iVtx);
+					D_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
+				}
+
+				assert (B_index != C_index);
+				assert (B_index != D_index);
+				assert (C_index != D_index);
+
+				exavtx[iVtx].num_adj_vtx = 3;
+				exavtx[iVtx].connected_vtx[0] = exavtx[B_index].coord;
+				exavtx[iVtx].connected_vtx[1] = exavtx[C_index].coord;
+				exavtx[iVtx].connected_vtx[2] = exavtx[D_index].coord;
+			}
+			break;
+
+			case 3:
+			{
+				u32 B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
+				u32 C_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
+				u32 D_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[2], iVtx);
+				u32 E_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[2], iVtx);
+
+				if (E_index == B_index || E_index == C_index || E_index == D_index)
+				{
+					B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
+					C_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
+					D_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[1], iVtx);
+					E_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[2], iVtx);
+
+					if (D_index == B_index || D_index == C_index || D_index == E_index)
 					{
 						B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
 						C_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[0], iVtx);
 						D_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
-					}
-
-					assert (B_index != C_index);
-					assert (B_index != D_index);
-					assert (C_index != D_index);
-
-					exavtx[iVtx].num_adj_vtx = 3;
-					exavtx[iVtx].connected_vtx[0] = exavtx[B_index].coord;
-					exavtx[iVtx].connected_vtx[1] = exavtx[C_index].coord;
-					exavtx[iVtx].connected_vtx[2] = exavtx[D_index].coord;
-				}
-				break;
-
-			case 3:
-				{
-					u32 B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
-					u32 C_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
-					u32 D_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[2], iVtx);
-					u32 E_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[2], iVtx);
-
-					if (E_index == B_index || E_index == C_index || E_index == D_index)
-					{
-						B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
-						C_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
-						D_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[1], iVtx);
 						E_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[2], iVtx);
 
-						if (D_index == B_index || D_index == C_index || D_index == E_index)
-						{
-							B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
-							C_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[0], iVtx);
-							D_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[1], iVtx);
-							E_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[2], iVtx);
-	
-							if (C_index == B_index || C_index == D_index || C_index == E_index)
-								DBGBREAK;
+						if (C_index == B_index || C_index == D_index || C_index == E_index)
+							DBGBREAK;
 
-						}
 					}
-
-					assert (B_index != C_index);
-					assert (B_index != D_index);
-					assert (B_index != E_index);
-					assert (C_index != D_index);
-					assert (C_index != E_index);
-					assert (D_index != E_index);
-
-					exavtx[iVtx].num_adj_vtx = 4;
-					exavtx[iVtx].connected_vtx[0] = exavtx[B_index].coord;
-					exavtx[iVtx].connected_vtx[1] = exavtx[C_index].coord;
-					exavtx[iVtx].connected_vtx[2] = exavtx[D_index].coord;
-					exavtx[iVtx].connected_vtx[3] = exavtx[E_index].coord;
-
 				}
-				break;
+
+				assert (B_index != C_index);
+				assert (B_index != D_index);
+				assert (B_index != E_index);
+				assert (C_index != D_index);
+				assert (C_index != E_index);
+				assert (D_index != E_index);
+
+				exavtx[iVtx].num_adj_vtx = 4;
+				exavtx[iVtx].connected_vtx[0] = exavtx[B_index].coord;
+				exavtx[iVtx].connected_vtx[1] = exavtx[C_index].coord;
+				exavtx[iVtx].connected_vtx[2] = exavtx[D_index].coord;
+				exavtx[iVtx].connected_vtx[3] = exavtx[E_index].coord;
+
+			}
+			break;
 			}
 		}
 		else
@@ -257,14 +257,17 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 				const u32 quad_index = adj_quad_list[t];
 				const u32 B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
 
+				assert (t < 6);
 				exavtx[iVtx].connected_vtx[t] = exavtx[B_index].coord;
 			}
 		}
-	}	
+	}
 
 	//addo i vtx alla mappa
-	for (u32 iVtx=0; iVtx<num_vtx_originali; iVtx++)
-	{		
+	FastArray<GVC> list_of_external_updated_vtx (gos::getScrapAllocator(), 128);
+
+	for (u32 iVtx = 0; iVtx < num_vtx_originali; iVtx++)
+	{
 		const GVC gvc = exavtx(iVtx).coord;
 
 		if (priv_vtxmap__add_vtx (gvc, exavtx(iVtx)))
@@ -281,7 +284,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 
 			const u32 n = exavtx(iVtx).num_adj_vtx;
 			assert (n <= 7);
-			for (u32 i=0; i<n; i++)
+			for (u32 i = 0; i < n; i++)
 			{
 				const GVC gvc_connected = exavtx(iVtx).connected_vtx[i];
 				bool bFound = false;
@@ -296,7 +299,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 				if (!bFound)
 				{
 					const u32 ii = vReal.num_adj_vtx++;
-					assert (ii<=7);
+					assert (ii < 6);
 					vReal.connected_vtx[ii] = gvc_connected;
 				}
 			}
@@ -304,7 +307,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 			//ordino i vtx adiacenti in senso orario
 			{
 				vec2f vvv[8];
-				for (u32 i=0; i<vReal.num_adj_vtx; i++)
+				for (u32 i = 0; i < vReal.num_adj_vtx; i++)
 				{
 					Node node;
 					if (vReal.connected_vtx[i].get_exa_coord() == coordIN)
@@ -315,30 +318,112 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 					}
 					else
 					{
-						vvv[i].set (0,0);
+						vvv[i].set (0, 0);
 					}
 				}
 
 				u32 ordered_index[8];
 				geom::point2D_order_clockwise (vReal.pos, vvv, vReal.num_adj_vtx, ordered_index, sizeof(ordered_index));
-				
+
 				GVC gvc_temp[8];
-				for (u32 i=0; i<vReal.num_adj_vtx; i++)
-					gvc_temp[i] = vReal.connected_vtx[ ordered_index[i] ];
-				for (u32 i=0; i<vReal.num_adj_vtx; i++)					
+				for (u32 i = 0; i < vReal.num_adj_vtx; i++)
+					gvc_temp[i] = vReal.connected_vtx[ordered_index[i]];
+				for (u32 i = 0; i < vReal.num_adj_vtx; i++)
 					vReal.connected_vtx[i] = gvc_temp[i];
 			}
 
 			//aggiorno il nodo
 			nodemap.insertOrReplaceValue (gvc, vReal);
+			list_of_external_updated_vtx.append (gvc);
 		}
 	}
+
+	//calcolo i quad center
+	for (u32 iVtx = 0; iVtx < num_vtx_originali; iVtx++)
+	{
+		priv_node__update_quad_center (exavtx(iVtx).coord);
+	}
+
+	for (u32 iVtx = 0; iVtx < list_of_external_updated_vtx.getNElem(); iVtx++)
+		priv_node__update_quad_center(list_of_external_updated_vtx(iVtx));
+
 
 	//addo l'exa alla mappa di hex
 	HexInfo hexinfo;
 	hexinfo.coord = coordIN;
 	hexinfo.num_vtx = num_vtx_originali;
 	examap.insertIfNotExists (coordIN, hexinfo);
+}
+
+//************************************* 
+void Map2::priv_node__update_quad_center (const GVC gvcIN)
+{
+	Node node;
+	if (!nodemap.find (gvcIN, &node))
+	{
+		DBGBREAK;
+		return;
+	}
+
+	if (node.num_adj_vtx < 3)
+		return;
+
+	for (u32 iQuad = 0; iQuad < node.num_adj_vtx; iQuad++)
+	{
+		Node node1;
+		Node node2;
+		Node node3; 
+
+		if (!nodemap.find (node.connected_vtx[iQuad], &node1))
+		{
+			DBGBREAK;
+			continue;
+		}
+
+		u32 ii = iQuad+1;
+		if (ii == node.num_adj_vtx)
+			ii=0;
+		if (!nodemap.find (node.connected_vtx[ii], &node2))
+		{
+			DBGBREAK;
+			continue;
+		}
+
+		//node3 e' il GVC che node1 e node2 hanno in comune
+		bool bFound = false;
+		for (u32 i2 = 0; i2 < node1.num_adj_vtx; i2++)
+		{
+			for (u32 i3 = 0; i3 < node2.num_adj_vtx; i3++)
+			{
+				if (node1.connected_vtx[i2] == node2.connected_vtx[i3])
+				{
+					bFound = true;
+					if (!nodemap.find (node1.connected_vtx[i2], &node3))
+					{
+						DBGBREAK;
+						continue;
+					}
+					break;
+				}
+			}
+
+			if (bFound)
+				break;
+		}
+
+		if (!bFound)
+		{
+			DBGBREAK;
+			continue;
+		}
+
+		//ho tutti e 4 i nodi del quad, posso determinare il centro
+		node.quad_center[iQuad] = (node.pos + node1.pos + node2.pos + node3.pos) * 0.25f;
+
+	}
+
+	//update del nodo
+	nodemap.insertOrReplaceValue (gvcIN, node);
 }
 
 //************************************* 
@@ -350,6 +435,7 @@ void Map2::priv_node_to_vtx (const Node &node, Vtx *out) const
 	out->height = node.height;
 	out->coord = node.coord;
 }
+
 //************************************* 
 void Map2::priv_node_to_vtx (const GVC gvc, Vtx *out) const
 {
@@ -438,8 +524,7 @@ u32 Map2::get_exa_vtxList (const gos::examap::Coord &exa_coord, FastArray<Vtx> &
 	const u32 ret = outList.getNElem();
 
 	//sistemo le adiacenze
-	const u32 n = outList.getNElem();
-	for (u32 iVtx = 0; iVtx < n; iVtx++)
+	for (u32 iVtx = 0; iVtx < ret; iVtx++)
 	{
 		Vtx *v = &outList[iVtx];
 		
@@ -463,16 +548,10 @@ u32 Map2::get_exa_vtxList (const gos::examap::Coord &exa_coord, FastArray<Vtx> &
 				outList.append(vtx);
 			}
 			
-			assert (t<8);
+			assert (t<6);
 			v->adj_vtx_list[t] = (u16)index;
 		}
 	}
-
-	//calcolo i quad center
-	// for (u32 iVtx = 0; iVtx < n; iVtx++)
-	// {
-	// 	Vtx *v = &outList[iVtx];
-	// }
 
 	return ret;
 }

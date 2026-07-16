@@ -288,6 +288,19 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 			.point (ii);
 	}
 
+	//disegno i quad-center
+	{
+		line_ctx1->point_set_radius(4);
+		for (u32 i = 0; i < node.num_adj_vtx; i++)
+		{
+			const vec3f p (node.quad_center[i].x, 0, node.quad_center[i].y);
+			const u32 ii = line_ctx1->vtx_add(p);
+			line_ctx1->set_color_ARGB (colors[i % N_COLORS])
+				.point (ii);
+			
+		}
+	}
+
 
 
 	//disegno l'exa <coord>

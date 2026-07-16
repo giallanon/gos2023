@@ -21,7 +21,8 @@ namespace Land1
 			u8	num_adj_vtx;
 			u16	height;
 			GVC	coord;
-			GVC	connected_vtx[6];		//indici dei vtx "originali" che sono connessi a questo vtx
+			GVC	connected_vtx[6];
+			gos::vec2f	quad_center[6];
 		};
 
 		struct Vtx
@@ -30,8 +31,7 @@ namespace Land1
 			u8 	material_index;
 			u8	num_adj_vtx;
 			u16	height;
-			u16	adj_vtx_list[8];
-			gos::vec2f	quad_center[6];
+			u16	adj_vtx_list[6];
 			GVC	coord;
 		};
 
@@ -87,6 +87,7 @@ namespace Land1
 		bool 	priv_vtxmap__get_vtx (const GVC gvc, Node *out) const;
 		void	priv_node_to_vtx (const Node &node, Vtx *out) const;
 		void	priv_node_to_vtx (const GVC gvc, Vtx *out) const;
+		void	priv_node__update_quad_center (const GVC gvc);
 
 
 
