@@ -27,7 +27,7 @@ private:
 
 private:
 	void	priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT);
-	u32		priv_do_draw_exa (const gos::examap::Coord exa_coord);
+	u32		priv_do_draw_exa (const gos::examap::Coord exa_coord, gos::FastArray<Land1::Map2::Vtx> *out_list);
 	void	priv_new_albero (const gos::vec3f &world_point);
 
 private:

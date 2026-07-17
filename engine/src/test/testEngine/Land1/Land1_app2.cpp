@@ -192,20 +192,20 @@ void Land1_app2::on__handle_input (const Engine::InputEvent &ev)
 }
 
 //***************************************
-u32 Land1_app2::priv_do_draw_exa (const examap::Coord exa_coord)
+u32 Land1_app2::priv_do_draw_exa (const examap::Coord exa_coord, FastArray<Land1::Map2::Vtx> *out_list)
 {
-	FastArray<Land1::Map2::Vtx> vtxList (gos::getScrapAllocator(), 1024);
-	const u32 num_vtx = map.get_exa_vtxList (exa_coord, vtxList, true);
+	out_list->reset();
+	const u32 num_vtx = map.get_exa_vtxList (exa_coord, *out_list, true);
 	if (0 == num_vtx)
 		return 0;
 
 	const u32 START_IDX = line_ctx1->vtx_get_num();
-	for (u32 i=0; i<vtxList.getNElem(); i++)
-		line_ctx1->vtx_add ( vec3f(vtxList(i).pos.x, 0, vtxList(i).pos.y) );
+	for (u32 i=0; i<out_list->getNElem(); i++)
+		line_ctx1->vtx_add ( vec3f((*out_list)(i).pos.x, 0, (*out_list)(i).pos.y) );
 
 	for (u32 iVtx=0; iVtx<num_vtx; iVtx++)
 	{
-		const Land1::Map2::Vtx *vv = &vtxList(iVtx);
+		const Land1::Map2::Vtx *vv = &(*out_list)(iVtx);
 
 		for (u32 i=0; i<vv->num_adj_vtx; i++)
 		{
@@ -231,6 +231,8 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 	logger::log ("\n");
 	
 
+	FastArray<Land1::Map2::Vtx> vtxList (gos::getScrapAllocator(), 1024);
+
 	const u32 N_COLORS = 8;
 	const u32 colors[N_COLORS] = { 0xFFFFFFFF, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFF00, 0xFF00FFFF, 0xFFFF00FF, 0xFFa889B1 };
 
@@ -245,14 +247,14 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 		examap::Coord coord_list[32];
 		const u32 n = examap::coord_ring (exa_coord, 1, coord_list, 32);
 		for (u32 i = 0; i < n; i++)
-			priv_do_draw_exa (coord_list[i]);
+			priv_do_draw_exa (coord_list[i], &vtxList);
 	}
 
 
 	//solo per l'exa selezionato....
 	line_ctx1->set_color_ARGB (0xFF000000);
 	const u32 START_IDX = line_ctx1->vtx_get_num();
-	const u32 num_vtx = priv_do_draw_exa (exa_coord);
+	const u32 num_vtx = priv_do_draw_exa (exa_coord, &vtxList);
 	
 
 	//disegno i vtx
@@ -300,75 +302,5 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 			
 		}
 	}
-
-
-
-	//disegno l'exa <coord>
-	// const Land1::Exa2 *exa;
-	// if (map.exa_query(coord, &exa))
-	// {
-	// 	//disegno il reticolo dell'exa
-	// 	line_ctx1->
-	// 		set_color_ARGB (0xFF000000)
-	// 		.set_line_width(2);
-
-	// 	const u32 first_vtx = line_ctx1->vtx_get_num();
-	// 	for (u32 i = 0; i < exa->num_vtx_tot; i++)
-	// 		line_ctx1->vtx_add (vec3f(exa->vtxList[i].x, 0, exa->vtxList[i].y));
-	// 	for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
-	// 	{
-	// 		const Land1::Exa2::VtxInfo *vi = &exa->vtxInfoList[iVtx];
-
-	// 		u8 num_connected_vtx=0;
-	// 		for (u32 i = 0; i < 8; i++)
-	// 		{
-	// 			if (!vi->connected_vtx[i].is_valid())
-	// 				break;
-	// 			num_connected_vtx++;
-	// 		}
-
-
-	// 		for (u32 i=0; i<num_connected_vtx; i++)
-	// 		{
-	// 			const Land1::GVC gvc = vi->connected_vtx[i];
-	// 			const u16 vtx_index = gvc.get_vertex_idx();
-	// 			assert (vtx_index < exa->num_vtx_originali);
-
-	// 			if (gvc.get_exa_coord() == exa->coord)
-	// 			{
-	// 				line_ctx1->line (first_vtx + vi->idx_list[0], first_vtx + vtx_index);
-	// 			}
-	// 			else
-	// 			{
-	// 				//si tratta di un vtx al di fuori dell'exa
-	// 				vec2f v;
-	// 				if (map.get_vertex_from_GVC (gvc, &v))
-	// 				{
-	// 					u16 ii = line_ctx1->vtx_add (vec3f(v.x, 0, v.y));
-	// 					line_ctx1->line (first_vtx + vi->idx_list[0], ii);
-	// 				}
-	// 				else
-	// 				{
-	// 					DBGBREAK;
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-
-	// 	//diesgno i punti originali
-	// 	line_ctx1->point_set_radius(6);
-	// 	for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
-	// 	{
-	// 		if (!exa->vtxInfoList[iVtx].is_border_vtx)
-	// 			line_ctx1->point (first_vtx + exa->vtxInfoList[iVtx].idx_list[0]);
-	// 	}
-	// 	line_ctx1->set_color_ARGB(0xFFFF0000);
-	// 	for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
-	// 	{
-	// 		if (exa->vtxInfoList[iVtx].is_border_vtx)
-	// 			line_ctx1->point (first_vtx + exa->vtxInfoList[iVtx].idx_list[0]);
-	// 	}
-
-	// }
 
 }
