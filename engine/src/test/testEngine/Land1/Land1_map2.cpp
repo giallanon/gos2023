@@ -389,10 +389,12 @@ void Map2::priv_node__update_quad_center (const GVC gvcIN)
 			continue;
 		}
 
-		//node3 e' il GVC che node1 e node2 hanno in comune
+		//node3 e' il GVC che node1 e node2 hanno in comune (se escludo node.gvc)
 		bool bFound = false;
 		for (u32 i2 = 0; i2 < node1.num_adj_vtx; i2++)
 		{
+			if (node1.connected_vtx[i2] == gvcIN)
+				continue;
 			for (u32 i3 = 0; i3 < node2.num_adj_vtx; i3++)
 			{
 				if (node1.connected_vtx[i2] == node2.connected_vtx[i3])
@@ -411,11 +413,6 @@ void Map2::priv_node__update_quad_center (const GVC gvcIN)
 				break;
 		}
 
-		if (!bFound)
-		{
-			DBGBREAK;
-			continue;
-		}
 
 		//ho tutti e 4 i nodi del quad, posso determinare il centro
 		node.quad_center[iQuad] = (node.pos + node1.pos + node2.pos + node3.pos) * 0.25f;
