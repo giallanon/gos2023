@@ -51,7 +51,7 @@ void main()
 	const vec2 v = mix (v_down, v_up, tz_0_1);
 
 	//const vec4 world = vec4 (v.x, height + in_position.y, v.y, 1);
-	const vec4 world = vec4 (v.x, height * in_position.y, v.y, 1);
+	const vec4 world = vec4 (v.x, height + height * in_position.y, v.y, 1);
 	gl_Position = world * scene.camVP;
 
 

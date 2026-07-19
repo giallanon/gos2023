@@ -75,6 +75,7 @@ namespace Land1
 		f32					get_exa_world_radius() const											{ return exacc.get_exa_world_radius(); }
 		gos::vec3f			get_map_world_center() const											{ return exacc.get_map_world_center(); }
 		bool				world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const;
+		bool				world_ray_to_GVC  (const gos::vec3f &world_o, const gos::vec3f &world_dir, GVC *out) const;
 		bool				GVC_to_world_coord  (const GVC gvc, gos::vec3f *out_world_coord) const;
 		bool				GVC_to_node (const GVC gvc, Node *out) const;
 

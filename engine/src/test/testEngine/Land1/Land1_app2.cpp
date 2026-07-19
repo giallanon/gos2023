@@ -10,19 +10,15 @@ Land1_app2::Land1_app2()
 	mouse_x = mouse_y = 0;
 	material_index_to_apply = 1;
 	num_alberi = 0;
-	num_modelinst_exa = 0;
 }
 
 //***************************************
 void Land1_app2::on__unsetup()
 {
 	engine->release (handle_model_albero);
-	engine->release (handle__model_exa);
 
 	for (u32 i=0; i<num_alberi; i++)
 		engine->release (modelinst_albero[i]);
-	for (u32 i=0; i<num_modelinst_exa; i++)
-		engine->release (modelinst_exa[i]);
 }
 
 //***************************************
@@ -63,7 +59,6 @@ void Land1_app2::on__setup ()
 	}
 
 	engine->model_createFromAsset ("model_gix_tree_1", &handle_model_albero, res::eLoadMode::asap);
-	engine->model_createFromAsset ("model_exa", &handle__model_exa, res::eLoadMode::asap);
 	
 
 	cam.pos.warp (0, 20, 0);
@@ -72,39 +67,10 @@ void Land1_app2::on__setup ()
 	move_free.bind (&cam.pos);
 
 	//creo una mappa
-	const f32 EXA_WORLD_RADIUS = 50.0f;
+	const f32 EXA_WORLD_RADIUS = 10.0f; //50.0f;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, 187);
-	//map.exa__add ( gos::examap::Coord(0,0));
-	//map.exa__add ( gos::examap::Coord(0,-1));
 	map.exa__add_with_radius ( examap::Coord(0, 0), 4 );
-	
-
-
-	//
-	//{
-	//	Land1::Map2::Result r;
-	//	r.setup (gos::getScrapAllocator());
-	//	map.query_visible_exa (&r);
-
-	//	const res::Model3d *res_model;
-	//	if (!engine->get (handle__model_exa, &res_model, 4000))
-	//	{
-	//		DBGBREAK;
-	//		return;
-	//	}
-
-	//	num_modelinst_exa = r.get_num();
-	//	for (u32 i=0; i<num_modelinst_exa; i++)
-	//	{
-	//		const vec2f c = r.get_exa_by_index(i)->vtxList[0];
-
-	//		engine->modelinst_create (handle__model_exa, &modelinst_exa[i]);
-	//		mat4x4f matTr;
-	//		matTr.buildTranslation ( vec3f(c.x, -0.1f, c.y) );
-	//		engine->modelinst_applyTransform (modelinst_exa[i], matTr);
-	//	}
-	//}
 }
 
 //***************************************
@@ -169,11 +135,10 @@ void Land1_app2::on__prepare_render()
 
 	//alberi
 	renderer_PIPE3->begin();
-	for (u32 i=0; i<num_alberi; i++)
-		renderer_PIPE3->add (modelinst_albero[i]);
-
-	for (u32 i=0; i<num_modelinst_exa; i++)
-		renderer_PIPE3->add (modelinst_exa[i]);
+	{
+		for (u32 i=0; i<num_alberi; i++)
+			renderer_PIPE3->add (modelinst_albero[i]);
+	}
 	renderer_PIPE3->end();
 }
 
@@ -358,11 +323,11 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 			break;
 
 		case 0xFE:
-			map.inc_node_height (node.coord, 400);
+			map.inc_node_height (node.coord, 100);
 			break;
 
 		case 0xFD:
-			map.dec_node_height (node.coord, 400);
+			map.dec_node_height (node.coord, 100);
 			break;
 
 		default:

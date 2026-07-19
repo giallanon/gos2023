@@ -294,20 +294,12 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 			continue;
 
 		u32 meshType;
-		// static constexpr u32 MESH_INDEX__BOH = 3;
-		// static constexpr u32 MESH_INDEX__FULL = 4;
-		// static constexpr u32 MESH_INDEX__ANGOLO = 1;
-		// static constexpr u32 MESH_INDEX__BORDO_DOPPIO = 2;
-		// static constexpr u32 MESH_INDEX__BORDO_SINGOLO_SU = 5;
-		// static constexpr u32 MESH_INDEX__BORDO_SINGOLO_DX = 6;
-		//static constexpr u32 MESH_INDEX__BASE = 0;
-		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_SU = 1;
-		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_DX = 2;		
-		static constexpr u32 MESH_INDEX__ANGOLO_INTERNO = 3;
-		static constexpr u32 MESH_INDEX__ANGOLO = 4;
-		static constexpr u32 MESH_INDEX__BOH = 5;
-		static constexpr u32 MESH_INDEX__FULL = 6;
-		static constexpr u32 MESH_INDEX__STRANO = 7;
+		static constexpr u32 MESH_INDEX__ANGOLO = 1;
+		static constexpr u32 MESH_INDEX__ANGOLO_INTERNO = 2;
+		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_SU = 3;
+		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_DX = 4;		
+		static constexpr u32 MESH_INDEX__FULL = 5;
+		static constexpr u32 MESH_INDEX__STRANO = 6;
 		
 		
 		switch ((Land1::eMeshType)i)
@@ -316,7 +308,6 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 			DBGBREAK;
 			continue;
 
-		case Land1::eMeshType::boh:		meshType = MESH_INDEX__BOH; break;
 		case Land1::eMeshType::angolo:	meshType = MESH_INDEX__ANGOLO; break;
 		case Land1::eMeshType::full:		meshType = MESH_INDEX__FULL; break;
 		case Land1::eMeshType::angolo_interno:		meshType = MESH_INDEX__ANGOLO_INTERNO; break;

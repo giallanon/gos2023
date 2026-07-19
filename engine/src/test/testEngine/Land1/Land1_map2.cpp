@@ -114,7 +114,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		vv.pos = vi->pos;
 		vv.material_index = 1 + rnd.getU32(2);
 		vv.num_adj_vtx = 0;
-		vv.height = 100;
+		vv.height = 0;
 
 		for (u32 i=0; i<6; i++)
 			vv.mesh_type[i] = eMeshType::full;
@@ -488,6 +488,14 @@ bool Map2::world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const
 }
 
 //************************************* 
+bool Map2::world_ray_to_GVC  (const gos::vec3f &world_o, const gos::vec3f &world_dir, GVC *out) const
+{
+	//TODO
+	DBGBREAK;
+	return false;
+}
+
+//************************************* 
 bool Map2::GVC_to_world_coord  (const GVC gvc, gos::vec3f *out_world_coord) const
 {
 	Node node;
@@ -594,27 +602,14 @@ void Map2::priv_calc_mesh_type (const GVC gvc)
 		eMeshType mt;
 		switch (mask)
 		{
-		default:	mt = eMeshType::boh; break;
 		case 0x00:	mt = eMeshType::full; break;
 		case 0x01:	mt = eMeshType::bordo_singolo_su; break;
 		case 0x02:	mt = eMeshType::angolo_interno; break;
 		case 0x03:	mt = eMeshType::bordo_singolo_su; break;
 		case 0x04:	mt = eMeshType::bordo_singolo_dx; break;
 		case 0x05:	mt = eMeshType::bordo_strano; break;
-
 		case 0x06:	mt = eMeshType::bordo_singolo_dx; break;
 		case 0x07:	mt = eMeshType::angolo; break;
-
-
-		// 
-		// case 0x01:	mt = eMeshType::bordo_singolo_su; break;
-		// case 0x02:	mt = eMeshType::bordo_singolo_dx; break;
-		// //case 0x03:	mt = eMeshType::angolo; break;
-		
-		//case 0x04:
-		//case 0x05:
-		//case 0x06:
-		
 		}
 
 

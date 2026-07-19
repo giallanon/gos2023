@@ -1,0 +1,7 @@
+@include: common.gosasset_d
+
+@model3d: model_tile1
+{
+	import: tile/tileset_3.glb
+	post_op: "	skeleton-resolve;"
+}
