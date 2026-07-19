@@ -114,7 +114,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		vv.pos = vi->pos;
 		vv.material_index = 1 + rnd.getU32(2);
 		vv.num_adj_vtx = 0;
-		vv.height = 0;
+		vv.height = 100;
 
 		for (u32 i=0; i<6; i++)
 			vv.mesh_type[i] = eMeshType::full;
@@ -431,7 +431,7 @@ void Map2::priv_node__update_quad_center (const GVC gvcIN)
 //************************************* 
 void Map2::priv_node_to_vtx (const Node &node, Vtx *out) const
 {
-	out->pos = node.pos;
+	out->pos.set (node.pos.x, (f32)node.height * EXA_HEIGHT_MUL, node.pos.y);
 	out->material_index = node.material_index;
 	out->num_adj_vtx = node.num_adj_vtx;
 	out->height = node.height;
@@ -461,7 +461,8 @@ bool Map2::world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const
 		return false;
 
 
-	const vec2f p (world_coord.x, world_coord.z);
+	//const vec2f p (world_coord.x, world_coord.z);
+	const vec3f p (world_coord.x, world_coord.y, world_coord.z);
 	f32 best_d = 1e36f;
 	for (u32 iVtx = 0; iVtx < hex.num_vtx; iVtx++)
 	{
@@ -471,7 +472,10 @@ bool Map2::world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const
 		Node node;
 		if (nodemap.find (gvc, &node))
 		{
-			const f32 d = math::distance2(node.pos, p);
+			//const vec3f nodepos = node.pos;
+			const vec3f nodepos (node.pos.x, (f32)node.height * EXA_HEIGHT_MUL, node.pos.y);
+
+			const f32 d = math::distance2(nodepos, p);
 			if (d < best_d)
 			{
 				best_d = d;
@@ -489,7 +493,7 @@ bool Map2::GVC_to_world_coord  (const GVC gvc, gos::vec3f *out_world_coord) cons
 	Node node;
 	if (!nodemap.find (gvc, &node))
 		return false;
-	out_world_coord->set (node.pos.x, 0, node.pos.y);
+	out_world_coord->set (node.pos.x, (f32)node.height * EXA_HEIGHT_MUL, node.pos.y);
 	return true;
 }
 

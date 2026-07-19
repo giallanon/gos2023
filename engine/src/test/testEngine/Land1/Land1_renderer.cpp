@@ -385,7 +385,7 @@ void Renderer::add_exa (const Land1::ExaR *exa)
 
 		priv_add_vtxInfo (vi->height, vi->material_index);
 
-		if (vi->height == 0)	continue;
+		//if (vi->height == 0)	continue;
 
 		for (u32 iQuad=0; iQuad < vi->num_quad; iQuad++)
 		{

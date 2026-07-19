@@ -14,6 +14,8 @@ namespace Land1
 	class Map2
 	{
 	public:
+		static constexpr f32 EXA_HEIGHT_MUL = 0.01f;
+
 		struct Node
 		{
 			gos::vec2f	pos;
@@ -30,7 +32,7 @@ namespace Land1
 
 		struct Vtx
 		{
-			gos::vec2f	pos;
+			gos::vec3f	pos;
 			u8 	material_index;
 			u8	num_adj_vtx;
 			u16	height;

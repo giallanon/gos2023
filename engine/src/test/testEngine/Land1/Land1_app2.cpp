@@ -72,7 +72,7 @@ void Land1_app2::on__setup ()
 	move_free.bind (&cam.pos);
 
 	//creo una mappa
-	const f32 EXA_WORLD_RADIUS = 25.0f; //50.0f;
+	const f32 EXA_WORLD_RADIUS = 50.0f;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, 187);
 	//map.exa__add ( gos::examap::Coord(0,0));
@@ -230,7 +230,10 @@ u32 Land1_app2::priv_do_draw_exa (const examap::Coord exa_coord, FastArray<Land1
 
 	const u32 START_IDX = line_ctx1->vtx_get_num();
 	for (u32 i=0; i<out_list->getNElem(); i++)
-		line_ctx1->vtx_add ( vec3f((*out_list)(i).pos.x, 0, (*out_list)(i).pos.y) );
+	{
+		//line_ctx1->vtx_add ( vec3f((*out_list)(i).pos.x, 0, (*out_list)(i).pos.y) );
+		line_ctx1->vtx_add ( (*out_list)(i).pos );
+	}
 
 	for (u32 iVtx=0; iVtx<num_vtx; iVtx++)
 	{
@@ -266,7 +269,7 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 	const u32 N_COLORS = 8;
 	const u32 colors[N_COLORS] = { 0xFFFFFFFF, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFF00, 0xFF00FFFF, 0xFFFF00FF, 0xFFa889B1 };
 
-	line_ctx1->enable_depth_test(false);
+	line_ctx1->enable_depth_test(true);
 	line_ctx1->enable_depth_write(false);
 	line_ctx1->set_line_width(1);
 	line_ctx1->set_color_ARGB (0xFF404040);
@@ -298,8 +301,8 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 	//disegno il vtx selezionato
 	{
 		line_ctx1
-			->point_set_radius(10);
-			//.set_color_ARGB (0xFFFF0000);
+			->point_set_radius(20)
+			.set_color_ARGB (0xFFFF00FF);
 		
 		vec3f p;
 		map.GVC_to_world_coord (gvc, &p);
@@ -309,6 +312,7 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 	}
 
 	//disegno i vtx adiacenti
+	line_ctx1->point_set_radius(10);
 	for (u32 i = 0; i < node.num_adj_vtx; i++)
 	{
 		vec3f p;
@@ -324,7 +328,7 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 		line_ctx1->point_set_radius(4);
 		for (u32 i = 0; i < node.num_adj_vtx; i++)
 		{
-			const vec3f p (node.quad_center[i].x, 0, node.quad_center[i].y);
+			const vec3f p (node.quad_center[i].x, (f32)node.height * Land1::Map2::EXA_HEIGHT_MUL, node.quad_center[i].y);
 			const u32 ii = line_ctx1->vtx_add(p);
 			
 			vec3f p2;
@@ -354,11 +358,11 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 			break;
 
 		case 0xFE:
-			map.inc_node_height (node.coord, 100);
+			map.inc_node_height (node.coord, 400);
 			break;
 
 		case 0xFD:
-			map.dec_node_height (node.coord, 100);
+			map.dec_node_height (node.coord, 400);
 			break;
 
 		default:
