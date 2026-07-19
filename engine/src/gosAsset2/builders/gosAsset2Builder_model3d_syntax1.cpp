@@ -647,6 +647,21 @@ bool Builder_model3d::Syntax1::priv_apply_post_op()
 			vec3f tr = dst - aabb_center;
 			buildCtx.imported.translate (tr);
 		}
+		else if (string::utf8::areEqual(command, "bottom-bottom-left-corner-at", true))
+		{
+			vec3f dst;
+			if (!sp_params.extract_vec3f (&dst))	{ logger->log (eTextColor::red, "line %d, parsing [%s] => missing param\n", sec->getLineStarted(), op); return false; }
+			
+			vec3f aabb_center;
+			buildCtx.imported.calc_AABB (&aabb);
+			aabb.calcCenter(&aabb_center);
+
+			aabb_center.y -= (aabb.calcDimY() * 0.5f);
+			aabb_center.x -= (aabb.calcDimX() * 0.5f);
+			aabb_center.z -= (aabb.calcDimZ() * 0.5f);
+			vec3f tr = dst - aabb_center;
+			buildCtx.imported.translate (tr);
+		}		
 		else if (string::utf8::areEqual(command, "skeleton-resolve", true))
 		{
 			buildCtx.imported.skeleton_resolve ();

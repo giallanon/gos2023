@@ -11,15 +11,19 @@ namespace Land1
 		boh = 0,
 		angolo = 1,
 		full = 2,
-		bordo_doppio = 3,
+		angolo_interno = 3,
 		bordo_singolo_dx = 4,
 		bordo_singolo_su = 5,
+		bordo_strano = 6,
 
-		_COUNT = 6	//deve sempre valere il num totale di opzioni disponibili (escluso COUNT))
+		_COUNT = 7	//deve sempre valere il num totale di opzioni disponibili (escluso COUNT))
 	};
 
 
-	//Global Vertex Coordinate
+	/******************************************
+	* @brief	GVC
+	*			Global Vertex Coordinate
+	*/
 	struct GVC
 	{			GVC()																		{ }
 				GVC(i16 hex_x, i16 hex_z, u16 vertex_idx)									{ set(hex_x, hex_z, vertex_idx); }
@@ -58,6 +62,56 @@ namespace Land1
 	private:
 		u32		bitmask;
 	};
+
+
+	/******************************************
+	* @brief	ExaR
+	*			Tutto quello che serve per renderizzare
+	*			un exa
+	*/
+	class ExaR
+	{
+	public:
+		static constexpr u8 NUM_MAX_QUADS = 6;
+
+	public:
+		struct VtxInfo
+		{
+			u8	num_quad;				//num quad centrati sul vtx i-esimo
+			u8 	material_index;
+			u16	height;
+			eMeshType	mesh_type[NUM_MAX_QUADS];	//uno per ogni quad
+			u16	idx_list[1 + NUM_MAX_QUADS*2];		//idx0 = centro, gli altri 2*num_quad in senso orario
+		};
+
+	public:
+		static ExaR*	alloc (gos::Allocator *allocatorIN, u32 num_vtxInfoIN, u32 num_vtx_totIN)
+		{
+			assert (num_vtxInfoIN < u16MAX);
+			assert (num_vtx_totIN < u16MAX);
+
+			ExaR *ret = GOSALLOCT(ExaR*, allocatorIN, sizeof(ExaR));
+			ret->num_vtxInfo = num_vtxInfoIN;
+			ret->num_vtx_tot = num_vtx_totIN;
+			ret->vtxInfoList = GOSALLOCT(VtxInfo*, allocatorIN, sizeof(VtxInfo) * num_vtxInfoIN);
+			ret->vtxList = GOSALLOCT(gos::vec2f*, allocatorIN, sizeof(gos::vec2f) * num_vtx_totIN);
+			return ret;
+		}
+
+		static void 	free (gos::Allocator *allocatorIN, ExaR *exar)
+		{
+			GOSFREE (allocatorIN, exar->vtxInfoList);
+			GOSFREE (allocatorIN, exar->vtxList);
+			GOSFREE (allocatorIN, exar);
+		}
+
+	public:
+		u16			num_vtxInfo;		//quelli che compongono l'exa originale
+		u16			num_vtx_tot;		//tutti quelli che sono in vtxList
+		VtxInfo		*vtxInfoList;		//una VtxInfo per ogni vtx-originale
+		gos::vec2f	*vtxList;			//tutti i vtx utili al rendering
+	};
+
 
 }// namespace Land1
 

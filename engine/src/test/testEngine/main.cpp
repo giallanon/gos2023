@@ -1,6 +1,5 @@
 #include "test1.h"
 #include "game1.h"
-#include "Land1/Land1_app.h"
 #include "Land1/Land1_app2.h"
 
 
@@ -27,7 +26,6 @@ int main()
         {
             //Test1 test;		test.run (&engine);
             //Game1 game;		game.run (&engine);
-			//Land1_app app;		app.run (&engine);
             Land1_app2 app;		app.run (&engine);
         }
     }

@@ -34,7 +34,9 @@ void Land1_app2::on__setup ()
 		.action_add ("KB_1")
 		.action_add ("KB_2")
 		.action_add ("KB_3")
-		.action_add ("KB_0");
+		.action_add ("KB_0")
+		.action_add ("Height++")
+		.action_add ("Height--");
 		
 	engine->inputCtx->action_bindToBtn ("mouse_LB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
 	engine->inputCtx->action_bindToBtn ("mouse_LB+SHIFT", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed, input::eButtonModifier::LSHIFT);
@@ -42,6 +44,9 @@ void Land1_app2::on__setup ()
 	engine->inputCtx->action_bindToBtn ("KB_2", input::eOrigin::keyboard, GLFW_KEY_2, input::eButtonStatus::pressed);
 	engine->inputCtx->action_bindToBtn ("KB_3", input::eOrigin::keyboard, GLFW_KEY_3, input::eButtonStatus::pressed);
 	engine->inputCtx->action_bindToBtn ("KB_0", input::eOrigin::keyboard, GLFW_KEY_0, input::eButtonStatus::pressed);
+	engine->inputCtx->action_bindToBtn ("Height++", input::eOrigin::keyboard, GLFW_KEY_KP_ADD, input::eButtonStatus::pressed);
+	engine->inputCtx->action_bindToBtn ("Height--", input::eOrigin::keyboard, GLFW_KEY_KP_SUBTRACT, input::eButtonStatus::pressed);
+
 
 	renderer_PIPE3 = engine->renderPipe.add_renderer<engine::Renderer_PIPE3>();
 	renderer_land = engine->renderPipe.add_renderer<Land1::Renderer>();
@@ -67,7 +72,7 @@ void Land1_app2::on__setup ()
 	move_free.bind (&cam.pos);
 
 	//creo una mappa
-	const f32 EXA_WORLD_RADIUS = 5.0f; //50.0f;
+	const f32 EXA_WORLD_RADIUS = 25.0f; //50.0f;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, 187);
 	//map.exa__add ( gos::examap::Coord(0,0));
@@ -128,19 +133,39 @@ void Land1_app2::priv_new_albero (const gos::vec3f &world_point)
 	num_alberi++;
 }
 
+
+//***************************************
+void Land1_app2::priv_render_add_exar (const gos::examap::Coord coord)
+{
+	gos::Allocator *allocator = gos::getScrapAllocator();
+	Land1::ExaR *exar;
+
+	exar = map.calc_exaR (allocator, coord);
+	if (NULL != exar)
+	{
+		renderer_land->add_exa (exar);
+		Land1::ExaR::free (allocator, exar);
+	}
+}
+
 //***************************************
 void Land1_app2::on__prepare_render()
 {
-	// Land1::Map2::Result r;
-	// r.setup (gos::getScrapAllocator());
-	// map.query_visible_exa (&r);
-
-	//renderer_land->begin();
-	//for (u32 i = 0; i < r.get_num(); i++)
-	//	renderer_land->add_exa (r.get_exa_by_index(i));
-	//renderer_land->end();
-
-
+	renderer_land->begin();
+	{
+		priv_render_add_exar (examap::Coord(0,0));
+	
+		const u32 MAX_RADIUS = 128;
+		const u32 MAX_NUM_COORD = MAX_RADIUS * 6;
+		examap::Coord coordList[MAX_NUM_COORD];
+		for (u32 ring = 1; ring <= 2; ring++)
+		{
+			u32 n = examap::coord_ring (examap::Coord(0,0), ring, coordList, MAX_NUM_COORD);
+			for (u32 i = 0; i < n; i++)
+				priv_render_add_exar (coordList[i]);
+		}
+	}
+	renderer_land->end();
 
 	//alberi
 	renderer_PIPE3->begin();
@@ -188,6 +213,10 @@ void Land1_app2::on__handle_input (const Engine::InputEvent &ev)
 			priv_draw_exa (point_on_hex, engine->inputEvent_getBtnModifier()->isLSHIFT());
 		}
 		break;
+
+	case COMPILE_TIME_STR_CRC32("Height++"):	material_index_to_apply = 0xFE; break;
+	case COMPILE_TIME_STR_CRC32("Height--"):	material_index_to_apply = 0xFD; break;
+
 	}
 }
 
@@ -219,6 +248,7 @@ u32 Land1_app2::priv_do_draw_exa (const examap::Coord exa_coord, FastArray<Land1
 //***************************************
 void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 {
+	line_ctx1->clear();
 	Land1::GVC gvc;
 	if (!map.world_coord_to_GVC (world_point, &gvc))
 		return;
@@ -236,7 +266,6 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 	const u32 N_COLORS = 8;
 	const u32 colors[N_COLORS] = { 0xFFFFFFFF, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFF00, 0xFF00FFFF, 0xFFFF00FF, 0xFFa889B1 };
 
-	line_ctx1->clear();
 	line_ctx1->enable_depth_test(false);
 	line_ctx1->enable_depth_write(false);
 	line_ctx1->set_line_width(1);
@@ -290,17 +319,52 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 			.point (ii);
 	}
 
-	//disegno i quad-center
+	//disegno i quad-center e il vtx "other" che apaprtiene al quad i-esimo
 	{
 		line_ctx1->point_set_radius(4);
 		for (u32 i = 0; i < node.num_adj_vtx; i++)
 		{
 			const vec3f p (node.quad_center[i].x, 0, node.quad_center[i].y);
 			const u32 ii = line_ctx1->vtx_add(p);
+			
+			vec3f p2;
+			map.GVC_to_world_coord (node.other_vtx[i], &p2);
+			const u32 ii2 = line_ctx1->vtx_add(p2);
+			
 			line_ctx1->set_color_ARGB (colors[i % N_COLORS])
-				.point (ii);
+				.point (ii)
+				.point (ii2);
 			
 		}
 	}
+
+
+
+
+
+	if (bLSHIFT)
+	{
+		switch (material_index_to_apply)
+		{
+		case 0xFF:
+			{
+				const vec3f world( node.pos.x, 0, node.pos.y );
+				priv_new_albero( world );
+			}
+			break;
+
+		case 0xFE:
+			map.inc_node_height (node.coord, 100);
+			break;
+
+		case 0xFD:
+			map.dec_node_height (node.coord, 100);
+			break;
+
+		default:
+			map.set_node_material_index (node.coord, material_index_to_apply);
+			break;
+		}
+	}	
 
 }

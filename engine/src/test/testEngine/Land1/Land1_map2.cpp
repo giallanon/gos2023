@@ -112,9 +112,12 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		//creo il vtx
 		Node vv;
 		vv.pos = vi->pos;
-		vv.material_index = 0;
+		vv.material_index = 1 + rnd.getU32(2);
 		vv.num_adj_vtx = 0;
 		vv.height = 0;
+
+		for (u32 i=0; i<6; i++)
+			vv.mesh_type[i] = eMeshType::full;
 
 		//determino il GVC
 		GVC gvc;
@@ -348,6 +351,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		priv_node__update_quad_center(list_of_external_updated_vtx(iVtx));
 
 
+
 	//addo l'exa alla mappa di hex
 	HexInfo hexinfo;
 	hexinfo.coord = coordIN;
@@ -415,6 +419,7 @@ void Map2::priv_node__update_quad_center (const GVC gvcIN)
 
 
 		//ho tutti e 4 i nodi del quad, posso determinare il centro
+		node.other_vtx[iQuad] = node3.coord;
 		node.quad_center[iQuad] = (node.pos + node1.pos + node2.pos + node3.pos) * 0.25f;
 
 	}
@@ -442,7 +447,7 @@ void Map2::priv_node_to_vtx (const GVC gvc, Vtx *out) const
 	else
 	{
 		DBGBREAK;
-		memset (out, 0, sizeof(Vtx));
+		memset ((void*)out, 0, sizeof(Vtx));
 	}
 }
 
@@ -492,6 +497,132 @@ bool Map2::GVC_to_world_coord  (const GVC gvc, gos::vec3f *out_world_coord) cons
 bool Map2::GVC_to_node (const GVC gvc, Node *out_node) const
 {
 	return nodemap.find (gvc, out_node);
+}
+
+//************************************* 
+void Map2::set_node_material_index (const GVC gvc, u8 material_index)
+{
+	Node node;
+	if (!nodemap.find (gvc, &node))
+		return;
+	if (node.material_index != material_index)
+	{
+		node.material_index = material_index;
+		nodemap.insertOrReplaceValue (gvc, node);
+	}
+}
+
+//************************************* 
+void Map2::priv_do_set_node_height (const GVC gvc, Node &node, u16 height)
+{
+	if (node.height == height)
+		return;
+
+	node.height = height;
+	nodemap.insertOrReplaceValue (gvc, node);
+	priv_calc_mesh_type (gvc);
+
+	for (u8 iQuad=0; iQuad<node.num_adj_vtx; iQuad++)
+	{
+		priv_calc_mesh_type (node.connected_vtx[iQuad]);
+		priv_calc_mesh_type (node.other_vtx[iQuad]);
+	}
+}
+
+//************************************* 
+void Map2::set_node_height (const GVC gvc, u16 height)
+{
+	Node node;
+	if (!nodemap.find (gvc, &node))
+		return;
+	priv_do_set_node_height (gvc, node, height);
+}
+
+//************************************* 
+void Map2::inc_node_height (const GVC gvc, u16 h)
+{
+	Node node;
+	if (!nodemap.find (gvc, &node))
+		return;
+	u16 height = node.height + h;
+	priv_do_set_node_height (gvc, node, height);
+}
+
+//************************************* 
+void Map2::dec_node_height (const GVC gvc, u16 h)
+{
+	Node node;
+	if (!nodemap.find (gvc, &node))
+		return;
+
+	u16 height = 0;
+	if (node.height >= h)
+		height = node.height - h;
+	priv_do_set_node_height (gvc, node, height);
+}
+
+//************************************* 
+void Map2::priv_calc_mesh_type (const GVC gvc)
+{
+	Node node;
+	if (!nodemap.find (gvc, &node))
+		return;
+
+	bool bModified = false;
+	for (u8 iQuad=0; iQuad<node.num_adj_vtx; iQuad++)
+	{
+		GVC gvc3;
+		if (iQuad + 1 == node.num_adj_vtx)
+			gvc3 = node.connected_vtx[0];
+		else
+			gvc3 = node.connected_vtx[iQuad+1];
+
+		Node node1, node2, node3;
+		nodemap.find (node.connected_vtx[iQuad], &node1);
+		nodemap.find (node.other_vtx[iQuad], &node2);
+		nodemap.find (gvc3, &node3);
+
+		u8 mask = 0;
+		if (node1.height < node.height) 	mask |= 0x01;
+		if (node2.height < node.height)		mask |= 0x02;
+		if (node3.height < node.height)		mask |= 0x04;
+
+		eMeshType mt;
+		switch (mask)
+		{
+		default:	mt = eMeshType::boh; break;
+		case 0x00:	mt = eMeshType::full; break;
+		case 0x01:	mt = eMeshType::bordo_singolo_su; break;
+		case 0x02:	mt = eMeshType::angolo_interno; break;
+		case 0x03:	mt = eMeshType::bordo_singolo_su; break;
+		case 0x04:	mt = eMeshType::bordo_singolo_dx; break;
+		case 0x05:	mt = eMeshType::bordo_strano; break;
+
+		case 0x06:	mt = eMeshType::bordo_singolo_dx; break;
+		case 0x07:	mt = eMeshType::angolo; break;
+
+
+		// 
+		// case 0x01:	mt = eMeshType::bordo_singolo_su; break;
+		// case 0x02:	mt = eMeshType::bordo_singolo_dx; break;
+		// //case 0x03:	mt = eMeshType::angolo; break;
+		
+		//case 0x04:
+		//case 0x05:
+		//case 0x06:
+		
+		}
+
+
+		if (mt != node.mesh_type[iQuad])
+		{
+			node.mesh_type[iQuad] = mt;
+			bModified = true;
+		}
+	}
+
+	if (bModified)
+		nodemap.insertOrReplaceValue (gvc, node);
 }
 
 //************************************* 
@@ -552,3 +683,166 @@ u32 Map2::get_exa_vtxList (const gos::examap::Coord &exa_coord, FastArray<Vtx> &
 
 	return ret;
 }
+
+
+//************************************* 
+static u64 Land1_map__make_key_1 (const GVC gvc1, const GVC gvc2)
+{
+	const u64 a = gvc1.get_as_u32();
+	const u64 b = gvc2.get_as_u32();
+	if (a < b)
+		return ( (a << 32)| b );
+	return ( (b << 32)| a );
+}
+
+static gos::Key128 Land1_map__make_key_2 (const GVC gvc1, const GVC gvc2, const GVC gvc3, const GVC gvc4)
+{
+	u64 k[4] = { gvc1.get_as_u32(), gvc2.get_as_u32(), gvc3.get_as_u32(),gvc4.get_as_u32() };
+
+	bool bEsci = false;
+	u8 n = 4;
+	while (bEsci == false)
+	{
+		bEsci = true;
+		n--;
+		for (u8 i=0; i<n; i++)
+		{
+			if (k[i] < k[i+1])
+			{
+				bEsci = false;
+				GOSSWAP(k[i], k[i+1]);
+			}
+		}
+	}
+
+	Key128 ret;
+	ret.high = (k[0] << 32) | k[1];
+	ret.low  = (k[2] << 32) | k[3];
+	return ret;
+}
+
+//************************************* 
+Land1::ExaR* Map2::calc_exaR (gos::Allocator *allocatorIN, const gos::examap::Coord &exa_coord) const
+{
+	HexInfo hexinfo;
+	if (!examap.find (exa_coord, &hexinfo))
+		return NULL;
+
+	//mappa d'appoggio per la creazione dei vtx dei quad
+	FastHashMap<u64, u16> edge_vtx_map(gos::getScrapAllocator(), hexinfo.num_vtx);
+	FastHashMap<Key128, u16> qc_vtx_map(gos::getScrapAllocator(), hexinfo.num_vtx);
+		
+
+
+	//i vtx utili al rendering sono:
+	//	- tutti i vtx originali
+	//	- per ogni vtx originale, tutti i vtx degli N quad che lo interessano
+	const u32 estimated_num_vtx = hexinfo.num_vtx	//vtx originali
+								+hexinfo.num_vtx 	//quad center
+								+hexinfo.num_vtx;	//vtx addizionali per i quad
+
+	FastArray<vec2f> vtx_list (gos::getScrapAllocator(), estimated_num_vtx);
+	FastArray<ExaR::VtxInfo> vtxinfo_list (gos::getScrapAllocator(), hexinfo.num_vtx);
+
+	const FastArray<Nodemap::sElem> *nodeList = nodemap._queryList();
+	for (u32 iNode=0; iNode<nodeList->getNElem(); iNode++)
+	{
+		const Node *node = &nodeList->queryElem(iNode).value;
+
+		if (node->coord.get_exa_coord() != exa_coord)
+			continue;
+
+		//addo il vtx del centro
+		const u16 node_center_idx = (u16)vtx_list.getNElem();
+		vtx_list.append (node->pos);
+
+		//addo i quad center
+		u16 quad_center_idx[8];
+		for (u32 iQuad=0; iQuad<node->num_adj_vtx; iQuad++)
+		{
+			GVC cc;
+			if (iQuad + 1 == node->num_adj_vtx)
+				cc = node->connected_vtx[0];
+			else
+				cc = node->connected_vtx[iQuad + 1];
+
+			const Key128 key = Land1_map__make_key_2 (node->coord, node->connected_vtx[iQuad], node->other_vtx[iQuad], cc);
+			
+			u16 idx;
+			if (!qc_vtx_map.find(key, &idx))
+			{
+				idx = (u16)vtx_list.getNElem();
+				qc_vtx_map.insertIfNotExists (key, idx);
+				vtx_list.append (node->quad_center[iQuad]);
+			}
+
+			quad_center_idx[iQuad] = idx;
+		}
+
+		//addo gli edge vertex
+		u16 edge_vtx_idx[8];
+		for (u32 iQuad=0; iQuad<node->num_adj_vtx; iQuad++)
+		{
+			const u64 edge_key = Land1_map__make_key_1( node->coord, node->connected_vtx[iQuad] );
+			u16 idx;
+			if (!edge_vtx_map.find(edge_key, &idx))
+			{
+				idx = (u16)vtx_list.getNElem();
+				edge_vtx_map.insertIfNotExists (edge_key, idx);
+
+				//calcolo la posizione del vtx che e' l'intersezione di node->coord, node->connected_vtx[iQuad] contro
+				// quad_center[iQuad], quad_center[iQuad-1]
+				vec3f p;
+				const vec2f A = node->pos;
+
+				GVC_to_world_coord  (node->connected_vtx[iQuad], &p);
+				const vec2f B (p.x, p.z);
+
+				const vec2f C ( vtx_list(quad_center_idx[iQuad]) );
+
+				u32 ii;
+				if (0 == iQuad) ii = node->num_adj_vtx - 1;
+				else ii = iQuad -1;
+				const vec2f D ( vtx_list(quad_center_idx[ii]) );
+
+				vec2f pp;
+				if (geom::line2D__intersect (A, B, C, D, &pp))
+					vtx_list.append (pp);
+				else
+				{
+					DBGBREAK;
+				}
+			}
+
+			edge_vtx_idx[iQuad] = idx;
+		}
+
+		//memmo tutto 
+		ExaR::VtxInfo vtxinfo;
+		vtxinfo.num_quad = node->num_adj_vtx;
+		vtxinfo.material_index = node->material_index;
+		vtxinfo.height = node->height;
+		
+		u32 num_idx = 0;
+		vtxinfo.idx_list[num_idx++] = node_center_idx;
+		for (u32 iQuad=0; iQuad<node->num_adj_vtx; iQuad++)
+		{
+			vtxinfo.mesh_type[iQuad] = node->mesh_type[iQuad];
+			vtxinfo.idx_list[num_idx++] = edge_vtx_idx[iQuad];
+			vtxinfo.idx_list[num_idx++] = quad_center_idx[iQuad];
+		}
+		assert (num_idx <= 13);
+
+		vtxinfo_list.append (vtxinfo);
+	}
+
+
+	//alloco ExaR
+	ExaR *exar = ExaR::alloc (allocatorIN, vtxinfo_list.getNElem(), vtx_list.getNElem());
+	memcpy (exar->vtxList, vtx_list._queryPointer(), sizeof(vec2f) * vtx_list.getNElem());
+	memcpy (exar->vtxInfoList, vtxinfo_list._queryPointer(), sizeof(ExaR::VtxInfo) * vtxinfo_list.getNElem());
+
+	return exar;
+}
+
+

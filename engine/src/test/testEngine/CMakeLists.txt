@@ -23,18 +23,11 @@ add_executable(${BINARY_OUTPUT_FILENAME}
 DefaultApp/DefaultApp.cpp
 DefaultApp/DefaultApp.h
 
-Land1/Land1_app.cpp
-Land1/Land1_app.h
 Land1/Land1_app2.cpp
 Land1/Land1_app2.h
 Land1/Land1_enumAndDefine.h
-Land1/Land1_Exa.cpp
-Land1/Land1_Exa.h
 Land1/Land1_exaGenerator.cpp
 Land1/Land1_exaGenerator.h
-
-Land1/Land1_map.cpp
-Land1/Land1_map.h
 Land1/Land1_map2.cpp
 Land1/Land1_map2.h
 Land1/Land1_renderer.cpp

@@ -22,7 +22,10 @@ namespace Land1
 			u16	height;
 			GVC	coord;
 			GVC	connected_vtx[6];
+			GVC	other_vtx[6];			//ogni quad e' composto da <coord>, connected_vtx[i], connected_vtx[i+1], other_vtx[i]
+										//<other_vtx> non e' direttamente linkato a this
 			gos::vec2f	quad_center[6];
+			eMeshType	mesh_type[6];
 		};
 
 		struct Vtx
@@ -56,6 +59,12 @@ namespace Land1
 				//parte dell'exa
 		u32		get_exa_vtxList (const gos::examap::Coord &exa_coord, gos::FastArray<Vtx> &outList, bool bClear_outList=true) const;
 		
+		ExaR* 	calc_exaR (gos::Allocator *allocator, const gos::examap::Coord &exa_coord) const;
+
+		void 	set_node_material_index (const GVC gvc, u8 material_index);
+		void 	set_node_height (const GVC gvc, u16 height);
+		void 	inc_node_height (const GVC gvc, u16 h);
+		void 	dec_node_height (const GVC gvc, u16 h);
 
 		//======================= query
 		gos::vec3f 			exa_coord_to_world (const gos::examap::Coord &exa_coord) const			{ return exacc.exa_coord_to_world(exa_coord); }
@@ -88,6 +97,8 @@ namespace Land1
 		void	priv_node_to_vtx (const Node &node, Vtx *out) const;
 		void	priv_node_to_vtx (const GVC gvc, Vtx *out) const;
 		void	priv_node__update_quad_center (const GVC gvc);
+		void 	priv_calc_mesh_type (const GVC gvc);
+		void 	priv_do_set_node_height (const GVC gvc, Node &node, u16 height);
 
 
 

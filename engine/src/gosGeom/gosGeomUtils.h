@@ -15,7 +15,7 @@ namespace gos
 				//a destra o a sinistra della linea
 		i8		line2D__which_side (const vec2f &line_start, const vec2f &line_end, const vec2f &world_point);
 
-				//calcola il punto di intersezione della linea A-B contro la linea A-D
+				//calcola il punto di intersezione della linea A-B contro la linea C-D
 		bool	line2D__intersect (const vec2f &A, const vec2f &B, const vec2f &C, const vec2f &D, vec2f *out);
 
 				//ordina tutti i <num_point> presenti in <point_list> in senso orario rispetto a <center> e ritorna

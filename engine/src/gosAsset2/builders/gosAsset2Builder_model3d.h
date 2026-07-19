@@ -29,6 +29,7 @@
 			top-center-at, <x>, <y>, <z>
 			bottom-center-at, <x>, <y>, <z>
 			top-bottom-left-corner-at, <x>, <y>, <z>	=> il vtx in basso a sx della faccia top viene posizionato in <x,y,z>
+			bottom-bottom-left-corner-at, <x>, <y>, <z>	=> il vtx in basso a sx della faccia bottom viene posizionato in <x,y,z>
 }
 
 Questo genera:

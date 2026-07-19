@@ -22,6 +22,30 @@ namespace gos
 
 	template<>  inline int HashMap_compareFn (const void* const &t1, const void* const &t2)	{ if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
 
+
+	/**
+	 * brief	Key128
+	 * 			classe di comodo per implementare un u128 da usare
+	 * 			come chiave per le hashmap
+	 */
+	class Key128
+	{
+	public:
+		u64 	high;
+		u64 	low;
+
+		int 	compare (const Key128 &b) const
+		{
+			if (high > b.high) return 1;
+			if (high < b.high) return -1;
+			if (low > b.low)	return 1;
+			if (low < b.low)	return -1;
+			return 0;
+		}
+	};
+
+
+
     /**
      * @brief HashMap
      * E' una hash map dove TKEY e' l'hash e TVALUE e' il value

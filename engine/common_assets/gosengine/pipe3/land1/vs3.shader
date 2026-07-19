@@ -34,7 +34,7 @@ void main()
 	const uint quad_index_3 = (instanceData.data[packed_index].quad_indices_2_3 & 0x0000FFFF);
 	const uint ref_vtx_idx = instanceData.data[packed_index].reference_vtx_idx;
 
-	const float height = 0.1 * exaVtxInfo.data[ref_vtx_idx].height;
+	const float height = 0.01 * exaVtxInfo.data[ref_vtx_idx].height;
 	const uint material_index = exaVtxInfo.data[ref_vtx_idx].material_index;
 
 
@@ -50,7 +50,8 @@ void main()
 	const vec2 v_down = mix (v3, v2, tx_0_1);
 	const vec2 v = mix (v_down, v_up, tz_0_1);
 
-	const vec4 world = vec4 (v.x, height + in_position.y, v.y, 1);
+	//const vec4 world = vec4 (v.x, height + in_position.y, v.y, 1);
+	const vec4 world = vec4 (v.x, height * in_position.y, v.y, 1);
 	gl_Position = world * scene.camVP;
 
 

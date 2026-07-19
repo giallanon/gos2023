@@ -300,13 +300,14 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 		// static constexpr u32 MESH_INDEX__BORDO_DOPPIO = 2;
 		// static constexpr u32 MESH_INDEX__BORDO_SINGOLO_SU = 5;
 		// static constexpr u32 MESH_INDEX__BORDO_SINGOLO_DX = 6;
-		static constexpr u32 MESH_INDEX__BASE = 0;
+		//static constexpr u32 MESH_INDEX__BASE = 0;
 		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_SU = 1;
 		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_DX = 2;		
-		static constexpr u32 MESH_INDEX__BORDO_DOPPIO = 3;
+		static constexpr u32 MESH_INDEX__ANGOLO_INTERNO = 3;
 		static constexpr u32 MESH_INDEX__ANGOLO = 4;
 		static constexpr u32 MESH_INDEX__BOH = 5;
 		static constexpr u32 MESH_INDEX__FULL = 6;
+		static constexpr u32 MESH_INDEX__STRANO = 7;
 		
 		
 		switch ((Land1::eMeshType)i)
@@ -318,9 +319,10 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 		case Land1::eMeshType::boh:		meshType = MESH_INDEX__BOH; break;
 		case Land1::eMeshType::angolo:	meshType = MESH_INDEX__ANGOLO; break;
 		case Land1::eMeshType::full:		meshType = MESH_INDEX__FULL; break;
-		case Land1::eMeshType::bordo_doppio:		meshType = MESH_INDEX__BORDO_DOPPIO; break;
+		case Land1::eMeshType::angolo_interno:		meshType = MESH_INDEX__ANGOLO_INTERNO; break;
 		case Land1::eMeshType::bordo_singolo_dx:	meshType = MESH_INDEX__BORDO_SINGOLO_DX; break;
 		case Land1::eMeshType::bordo_singolo_su:	meshType = MESH_INDEX__BORDO_SINGOLO_SU; break;
+		case Land1::eMeshType::bordo_strano:		meshType = MESH_INDEX__STRANO; break;
 			break;
 		}
 	
@@ -348,15 +350,7 @@ void Renderer::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 
 
 //***************************************
-void Renderer::begin()						{ priv_begin2(); }
-void Renderer::add_exa (const Exa *exa)		{ priv_add_exa2 (exa); }
-void Renderer::end()						{ priv_end2(); }
-
-
-
-
-//***************************************
-void Renderer::priv_begin2()
+void Renderer::begin()
 {
 	num_vtx = 0;
 	num_vtxInfo = 0;
@@ -371,7 +365,12 @@ void Renderer::priv_begin2()
 }
 
 //***************************************
-void Renderer::priv_add_exa2 (const Land1::Exa *exa)
+void Renderer::end()
+{
+}
+
+//***************************************
+void Renderer::add_exa (const Land1::ExaR *exa)
 {
 	const u32 STARTING_VTX = num_vtx;
 	for (u32 i = 0; i < exa->num_vtx_tot; i++)
@@ -380,25 +379,27 @@ void Renderer::priv_add_exa2 (const Land1::Exa *exa)
 	}
 
 	const u32 STARTING_VTXINFO = num_vtxInfo;
-	for (u32 iVtx = 0; iVtx < exa->num_vtx_originali; iVtx++)
+	for (u32 iVtx = 0; iVtx < exa->num_vtxInfo; iVtx++)
 	{
-		const Exa::VtxInfo *vi = &exa->vtxInfoList[iVtx];
+		const ExaR::VtxInfo *vi = &exa->vtxInfoList[iVtx];
 
 		priv_add_vtxInfo (vi->height, vi->material_index);
 
+		if (vi->height == 0)	continue;
+
 		for (u32 iQuad=0; iQuad < vi->num_quad; iQuad++)
 		{
-			u16 quad_indices[8];
-			if (exa->get_quad_indices (iVtx, iQuad, quad_indices))
-				priv_add_quad ( vi->mesh_type[iQuad], STARTING_VTXINFO + iVtx, STARTING_VTX + quad_indices[0], STARTING_VTX + quad_indices[1], STARTING_VTX + quad_indices[2], STARTING_VTX + quad_indices[3]);
+			const u32 ii = 1 + 2*iQuad;
+			u32 ii2 = ii+2;
+			if (iQuad +1 == vi->num_quad)
+				ii2 = 1;
+
+			priv_add_quad ( vi->mesh_type[iQuad], STARTING_VTXINFO + iVtx, 
+				STARTING_VTX + vi->idx_list[0],
+				STARTING_VTX + vi->idx_list[ii], 
+				STARTING_VTX + vi->idx_list[ii+1], 
+				STARTING_VTX + vi->idx_list[ii2]);
 		}
 
 	}
 }
-
-//***************************************
-void Renderer::priv_end2()
-{
-}
-
-

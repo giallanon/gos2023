@@ -5,10 +5,10 @@
 {
 	import: <common_assets>/model3d/albero/gix_tree_1.glb
 
-/*	post_op: "	skeleton-resolve;
+	post_op: "	skeleton-resolve;
 				uniform-resize-y, 9.0;
 				bottom-center-at, 0, 0, 0
 			"
-*/
+
 }
 
