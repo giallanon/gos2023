@@ -229,6 +229,46 @@ namespace gos
                     return true;
                 }
 
+        
+        /**
+         * @brief   cerca key e, se la trova, ritorna un pt al <value>
+         *          ATTENZIONE: il pt ritornato non e' stabile nel senso che, a seguito di altre operazioni di insert/remove
+         *                      il pt potrebbe non essere + valido.
+         *                      Questa chiamata e' da utilizzare per un breve accesso in scrittura
+         *
+         * @return  un puntatore valido (key) esiste, NULL altrimenti.
+         */
+        TVALUE* get_pointer (const TKEY &key)
+                {
+                    if (list.getNElem() == 0)
+                        return NULL;
+
+                    sSearchRange s;
+                    s.start = 0;
+                    s.end_incluso = list.getNElem() - 1;
+
+                    u32 index;
+                    if (!priv_binarySearch (s, key, &index))
+                        return NULL;
+
+                    return &list[index].value;
+                }
+
+        const TVALUE* query_pointer (const TKEY &key) const
+                {
+                    if (list.getNElem() == 0)
+                        return NULL;
+
+                    sSearchRange s;
+                    s.start = 0;
+                    s.end_incluso = list.getNElem() - 1;
+
+                    u32 index;
+                    if (!priv_binarySearch (s, key, &index))
+                        return NULL;
+
+                    return &list(index).value;
+                }
 
         /**
          * @brief   cerca key e valorizza <out_position>

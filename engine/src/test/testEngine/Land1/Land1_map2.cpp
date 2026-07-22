@@ -28,7 +28,6 @@ void Map2::priv_destroy_map()
 {
 	if (NULL == localAllocator)
 		return;
-	nodemap.reset();
 	examap.reset();
 }
 
@@ -36,20 +35,60 @@ void Map2::priv_destroy_map()
 void Map2::setup (gos::Allocator *allocator)
 {
 	localAllocator = allocator;
-	nodemap.setup (localAllocator, 1024);
 	examap.setup (localAllocator, 1024);
 }
 
 //************************************* 
-bool Map2::priv_vtxmap__add_vtx (const GVC gvc, const Node &vtxIN)
+bool Map2::priv_examap__update_node (const GVC gvc, const Node &nodeIN)
 {
-	return nodemap.insertIfNotExists (gvc, vtxIN);
+	ExaInfo *exaInfo = examap.get_pointer (gvc.get_exa_coord());
+	if (NULL == exaInfo)
+	{
+		DBGBREAK;
+		return false;
+	}
+
+	const u32 idx = gvc.get_vertex_idx();
+	assert (idx < exaInfo->num_vtx);
+	exaInfo->node_list[idx] = nodeIN;
+	return true;
 }
 
 //************************************* 
-bool Map2::priv_vtxmap__get_vtx (const GVC gvc, Node *out) const
+bool Map2::priv_examap__get_node (const GVC gvc, Node *out) const
 {
-	return nodemap.find (gvc, out);
+	const ExaInfo *exaInfo = examap.query_pointer (gvc.get_exa_coord());
+	if (NULL == exaInfo)
+		return false;
+
+	const u32 idx = gvc.get_vertex_idx();
+	assert (idx < exaInfo->num_vtx);
+	*out = exaInfo->node_list[idx];
+	return true;
+}
+
+//************************************* 
+Map2::Node* Map2::priv_examap__get_nodePointer (const GVC gvc)
+{
+	const ExaInfo *exaInfo = examap.query_pointer (gvc.get_exa_coord());
+	if (NULL == exaInfo)
+		return NULL;
+
+	const u32 idx = gvc.get_vertex_idx();
+	assert (idx < exaInfo->num_vtx);
+	return &exaInfo->node_list[idx];
+}
+
+//************************************* 
+const Map2::Node* Map2::priv_examap__get_nodePointer (const GVC gvc) const
+{
+	const ExaInfo *exaInfo = examap.query_pointer (gvc.get_exa_coord());
+	if (NULL == exaInfo)
+		return NULL;
+
+	const u32 idx = gvc.get_vertex_idx();
+	assert (idx < exaInfo->num_vtx);
+	return &exaInfo->node_list[idx];
 }
 
 //************************************* 
@@ -266,25 +305,61 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		}
 	}
 
-	//addo i vtx alla mappa
-	FastArray<GVC> list_of_external_updated_vtx (gos::getScrapAllocator(), 128);
+	//a questo punto in exavtx[] ho l'elenco dei vtx utili per l'exa
+	//Alcuni dei vtx del bordo non hanno la stessa Coord di questo exa perch' tecnicamente
+	//fanno parte di exa adiacenti
+	assert (exavtx.getNElem() == num_vtx_originali);
 
+	u32 num_vtx_this_exa = 0;
+	u32 num_vtx_other_exa = 0;
+	for (u32 iVtx = 0; iVtx < num_vtx_originali; iVtx++)
+	{
+		if (exavtx(iVtx).coord.get_exa_coord() == coordIN)
+			num_vtx_this_exa++;
+		else
+			num_vtx_other_exa++;
+	}
+
+	//creo l'exaInfo e lo addo alla mappa
+	ExaInfo exaInfo;
+	exaInfo.reset();
+	exaInfo.coord = coordIN;
+	exaInfo.num_vtx = num_vtx_this_exa;
+	exaInfo.node_list = GOSALLOCT(Node*, localAllocator, sizeof(Node) * exaInfo.num_vtx);
+	{
+		for (u32 iVtx = 0; iVtx < num_vtx_originali; iVtx++)
+		{
+			if (exavtx(iVtx).coord.get_exa_coord() == coordIN)
+			{
+				const u16 idx = exavtx(iVtx).coord.get_vertex_idx();
+				assert (idx < exaInfo.num_vtx);
+				exaInfo.node_list[idx] = exavtx(iVtx);
+			}
+		}
+
+		examap.insertIfNotExists (coordIN, exaInfo);
+	}
+
+
+	//addo i nodi non strettamente appartenenti all'exa
+	FastArray<GVC> list_of_external_updated_vtx (gos::getScrapAllocator(), 128);
 	for (u32 iVtx = 0; iVtx < num_vtx_originali; iVtx++)
 	{
 		const GVC gvc = exavtx(iVtx).coord;
 
-		if (priv_vtxmap__add_vtx (gvc, exavtx(iVtx)))
+		if (exavtx(iVtx).coord.get_exa_coord() == coordIN)
+			continue;
+
+		Node vReal;
+		if (!priv_examap__get_node (exavtx(iVtx).coord, &vReal))
 		{
-			//il vtx e' nuovo, non esisteva in mappa
-			//Lo aggiungo e basta, non ho altro da fare
+			//il nodo in questione NON esiste in mappa.
+			//Questo vuol dire che devo creare una exaInfo ad hoc, e marcarla come "partial" e poi aggiungere questo nodo
 		}
 		else
 		{
-			//il vtx esisteva gia' in mappa, vuol dire che devo aggiornare l'elenco
+			//il nodo esisteva gia' in mappa, vuol dire che devo aggiornare l'elenco
 			//delle sue adj integrandolo con quelle di <exavtx(iVtx)>
-			Node vReal;
-			priv_vtxmap__get_vtx (gvc, &vReal);
-
 			const u32 n = exavtx(iVtx).num_adj_vtx;
 			assert (n <= 7);
 			for (u32 i = 0; i < n; i++)
@@ -336,7 +411,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 			}
 
 			//aggiorno il nodo
-			nodemap.insertOrReplaceValue (gvc, vReal);
+			priv_examap__update_node (gvc, vReal);
 			list_of_external_updated_vtx.append (gvc);
 		}
 	}
@@ -350,61 +425,54 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 	for (u32 iVtx = 0; iVtx < list_of_external_updated_vtx.getNElem(); iVtx++)
 		priv_node__update_quad_center(list_of_external_updated_vtx(iVtx));
 
-
-
-	//addo l'exa alla mappa di hex
-	HexInfo hexinfo;
-	hexinfo.coord = coordIN;
-	hexinfo.num_vtx = num_vtx_originali;
-	examap.insertIfNotExists (coordIN, hexinfo);
 }
 
 //************************************* 
 void Map2::priv_node__update_quad_center (const GVC gvcIN)
 {
-	Node node;
-	if (!nodemap.find (gvcIN, &node))
+	Node *node = priv_examap__get_nodePointer (gvcIN);
+	if (NULL == node)
 	{
 		DBGBREAK;
 		return;
 	}
 
-	if (node.num_adj_vtx < 3)
+	if (node->num_adj_vtx < 3)
 		return;
 
-	for (u32 iQuad = 0; iQuad < node.num_adj_vtx; iQuad++)
+	for (u32 iQuad = 0; iQuad < node->num_adj_vtx; iQuad++)
 	{
-		Node node1;
-		Node node2;
-		Node node3; 
-
-		if (!nodemap.find (node.connected_vtx[iQuad], &node1))
+		Node *node1 = priv_examap__get_nodePointer (node->connected_vtx[iQuad]);
+		if (NULL == node1)
 		{
 			DBGBREAK;
 			continue;
 		}
 
 		u32 ii = iQuad+1;
-		if (ii == node.num_adj_vtx)
+		if (ii == node->num_adj_vtx)
 			ii=0;
-		if (!nodemap.find (node.connected_vtx[ii], &node2))
+		Node *node2 = priv_examap__get_nodePointer (node->connected_vtx[ii]);
+		if (NULL == node2)
 		{
 			DBGBREAK;
 			continue;
 		}
 
 		//node3 e' il GVC che node1 e node2 hanno in comune (se escludo node.gvc)
+		Node *node3 = NULL;
 		bool bFound = false;
-		for (u32 i2 = 0; i2 < node1.num_adj_vtx; i2++)
+		for (u32 i2 = 0; i2 < node1->num_adj_vtx; i2++)
 		{
-			if (node1.connected_vtx[i2] == gvcIN)
+			if (node1->connected_vtx[i2] == gvcIN)
 				continue;
-			for (u32 i3 = 0; i3 < node2.num_adj_vtx; i3++)
+			for (u32 i3 = 0; i3 < node2->num_adj_vtx; i3++)
 			{
-				if (node1.connected_vtx[i2] == node2.connected_vtx[i3])
+				if (node1->connected_vtx[i2] == node2->connected_vtx[i3])
 				{
 					bFound = true;
-					if (!nodemap.find (node1.connected_vtx[i2], &node3))
+					node3 = priv_examap__get_nodePointer (node1->connected_vtx[i2]);
+					if (NULL == node3)
 					{
 						DBGBREAK;
 						continue;
@@ -419,17 +487,14 @@ void Map2::priv_node__update_quad_center (const GVC gvcIN)
 
 
 		//ho tutti e 4 i nodi del quad, posso determinare il centro
-		node.other_vtx[iQuad] = node3.coord;
-		node.quad_center[iQuad] = (node.pos + node1.pos + node2.pos + node3.pos) * 0.25f;
+		node->other_vtx[iQuad] = node3->coord;
+		node->quad_center[iQuad] = (node->pos + node1->pos + node2->pos + node3->pos) * 0.25f;
 
 	}
-
-	//update del nodo
-	nodemap.insertOrReplaceValue (gvcIN, node);
 }
 
 //************************************* 
-void Map2::priv_node_to_vtx (const Node &node, Vtx *out) const
+void Map2::priv_node_to_vtx (const Node *node, Vtx *out) const
 {
 	out->pos.set (node.pos.x, (f32)node.height * EXA_HEIGHT_MUL, node.pos.y);
 	out->material_index = node.material_index;
@@ -441,9 +506,11 @@ void Map2::priv_node_to_vtx (const Node &node, Vtx *out) const
 //************************************* 
 void Map2::priv_node_to_vtx (const GVC gvc, Vtx *out) const
 {
-	Node node;
-	if (nodemap.find (gvc, &node))
+	const Node *node = priv_examap__get_nodePointer (gvc);
+	if (NULL != node)
+	{
 		priv_node_to_vtx (node, out);
+	}
 	else
 	{
 		DBGBREAK;
@@ -456,32 +523,26 @@ bool Map2::world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const
 {
 	examap::Coord exa_coord = exacc.world_coord_to_exa (world_coord);
 	
-	HexInfo hex;
-	if (!examap.find (exa_coord, &hex))
+	const ExaInfo *exaInfo = examap.query_pointer (exa_coord);
+	if (NULL == exaInfo)
 		return false;
 
 
 	//const vec2f p (world_coord.x, world_coord.z);
 	const vec3f p (world_coord.x, world_coord.y, world_coord.z);
 	f32 best_d = 1e36f;
-	for (u32 iVtx = 0; iVtx < hex.num_vtx; iVtx++)
+	for (u32 iVtx = 0; iVtx < exaInfo->num_vtx; iVtx++)
 	{
-		GVC gvc;
-		gvc.set (exa_coord, iVtx);
+		//const vec3f nodepos = node.pos;
+		const Node *node = &exaInfo->node_list[iVtx];
+		const vec3f nodepos (node->pos.x, (f32)node->height * EXA_HEIGHT_MUL, node->pos.y);
 
-		Node node;
-		if (nodemap.find (gvc, &node))
+		const f32 d = math::distance2(nodepos, p);
+		if (d < best_d)
 		{
-			//const vec3f nodepos = node.pos;
-			const vec3f nodepos (node.pos.x, (f32)node.height * EXA_HEIGHT_MUL, node.pos.y);
-
-			const f32 d = math::distance2(nodepos, p);
-			if (d < best_d)
-			{
-				best_d = d;
-				(*out) = gvc;
-			}			
-		}
+			best_d = d;
+			(*out) = node->coord;
+		}			
 	}
 
 	return true;
@@ -498,17 +559,25 @@ bool Map2::world_ray_to_GVC  (const gos::vec3f &world_o, const gos::vec3f &world
 //************************************* 
 bool Map2::GVC_to_world_coord  (const GVC gvc, gos::vec3f *out_world_coord) const
 {
-	Node node;
-	if (!nodemap.find (gvc, &node))
+	const Node *node = priv_examap__get_nodePointer (gvc);
+	if (NULL == node)
 		return false;
-	out_world_coord->set (node.pos.x, (f32)node.height * EXA_HEIGHT_MUL, node.pos.y);
+
+	const u32 idx = gvc.get_vertex_idx();
+	assert (idx < exaInfo->num_vtx);
+	const Node *node = &exaInfo->node_list[idx];
+	out_world_coord->set (node->pos.x, (f32)node->height * EXA_HEIGHT_MUL, node->pos.y);
 	return true;
 }
 
 //************************************* 
 bool Map2::GVC_to_node (const GVC gvc, Node *out_node) const
 {
-	return nodemap.find (gvc, out_node);
+	const Node *node = priv_examap__get_nodePointer (gvc);
+	if (NULL == node)
+		return false;
+	*out_node = *node;
+	return true;
 }
 
 //************************************* 
@@ -525,79 +594,77 @@ void Map2::set_node_material_index (const GVC gvc, u8 material_index)
 }
 
 //************************************* 
-void Map2::priv_do_set_node_height (const GVC gvc, Node &node, u16 height)
+void Map2::priv_do_set_node_height (const GVC gvc, Node *node, u16 height)
 {
-	if (node.height == height)
+	if (node->height == height)
 		return;
 
-	node.height = height;
-	nodemap.insertOrReplaceValue (gvc, node);
+	node->height = height;
 	priv_calc_mesh_type (gvc);
 
-	for (u8 iQuad=0; iQuad<node.num_adj_vtx; iQuad++)
+	for (u8 iQuad=0; iQuad<node->num_adj_vtx; iQuad++)
 	{
-		priv_calc_mesh_type (node.connected_vtx[iQuad]);
-		priv_calc_mesh_type (node.other_vtx[iQuad]);
+		priv_calc_mesh_type (node->connected_vtx[iQuad]);
+		priv_calc_mesh_type (node->other_vtx[iQuad]);
 	}
 }
 
 //************************************* 
 void Map2::set_node_height (const GVC gvc, u16 height)
 {
-	Node node;
-	if (!nodemap.find (gvc, &node))
-		return;
-	priv_do_set_node_height (gvc, node, height);
+	Node *node = priv_examap__get_nodePointer (gvc);
+	if (NULL != node)
+		priv_do_set_node_height (gvc, node, height);
 }
 
 //************************************* 
 void Map2::inc_node_height (const GVC gvc, u16 h)
 {
-	Node node;
-	if (!nodemap.find (gvc, &node))
-		return;
-	u16 height = node.height + h;
-	priv_do_set_node_height (gvc, node, height);
+	Node *node = priv_examap__get_nodePointer (gvc);
+	if (NULL != node)
+	{
+		const u16 height = node->height + h;
+		priv_do_set_node_height (gvc, node, height);
+	}
 }
 
 //************************************* 
 void Map2::dec_node_height (const GVC gvc, u16 h)
 {
-	Node node;
-	if (!nodemap.find (gvc, &node))
-		return;
-
-	u16 height = 0;
-	if (node.height >= h)
-		height = node.height - h;
-	priv_do_set_node_height (gvc, node, height);
+	Node *node = priv_examap__get_nodePointer (gvc);
+	if (NULL != node)
+	{
+		u16 height = 0;
+		if (node->height >= h)
+			height = node->height - h;
+		priv_do_set_node_height (gvc, node, height);
+	}
 }
 
 //************************************* 
 void Map2::priv_calc_mesh_type (const GVC gvc)
 {
-	Node node;
-	if (!nodemap.find (gvc, &node))
+	Node *node = priv_examap__get_nodePointer (gvc);
+	if (NULL == node)
 		return;
 
-	bool bModified = false;
-	for (u8 iQuad=0; iQuad<node.num_adj_vtx; iQuad++)
+//	bool bModified = false;
+	for (u8 iQuad=0; iQuad<node->num_adj_vtx; iQuad++)
 	{
 		GVC gvc3;
-		if (iQuad + 1 == node.num_adj_vtx)
-			gvc3 = node.connected_vtx[0];
+		if (iQuad + 1 == node->num_adj_vtx)
+			gvc3 = node->connected_vtx[0];
 		else
-			gvc3 = node.connected_vtx[iQuad+1];
+			gvc3 = node->connected_vtx[iQuad+1];
 
-		Node node1, node2, node3;
-		nodemap.find (node.connected_vtx[iQuad], &node1);
-		nodemap.find (node.other_vtx[iQuad], &node2);
-		nodemap.find (gvc3, &node3);
+		const Node *node1 = priv_examap__get_nodePointer (node.connected_vtx[iQuad]);
+		const Node *node2 = priv_examap__get_nodePointer (node.other_vtx[iQuad]);
+		const Node *node3 = priv_examap__get_nodePointer (gvc3);
 
 		u8 mask = 0;
-		if (node1.height < node.height) 	mask |= 0x01;
-		if (node2.height < node.height)		mask |= 0x02;
-		if (node3.height < node.height)		mask |= 0x04;
+		if (node1->height < node->height) 	mask |= 0x01;
+		if (node2->height < node->height)		mask |= 0x02;
+		if (node3->height < node->height)		mask |= 0x04;
 
 		eMeshType mt;
 		switch (mask)
@@ -613,15 +680,12 @@ void Map2::priv_calc_mesh_type (const GVC gvc)
 		}
 
 
-		if (mt != node.mesh_type[iQuad])
+		if (mt != node->mesh_type[iQuad])
 		{
-			node.mesh_type[iQuad] = mt;
-			bModified = true;
+			node->mesh_type[iQuad] = mt;
+	//		bModified = true;
 		}
 	}
-
-	if (bModified)
-		nodemap.insertOrReplaceValue (gvc, node);
 }
 
 //************************************* 

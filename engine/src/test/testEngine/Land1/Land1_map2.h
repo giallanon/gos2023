@@ -80,36 +80,46 @@ namespace Land1
 		bool				GVC_to_node (const GVC gvc, Node *out) const;
 
 	private:
-		struct HexInfo
+		struct ExaInfo
 		{
+		public:
+			static constexpr u32	FLAG__IS_PARTIAL	= 0;	//vuol dire che HexInfo non esiste in quanto addato dalla fn exa__add() ma esiste solo
+																//perche' e' stato necessario un certo numero di vtx d'appoggio creati ad altri exa
+
+		public:
+			void	reset()					{ flag.zero(); num_vtx = 0; node_list = NULL; }
+		public:
 			gos::examap::Coord	coord;
+			gos::Flag8			flag;
 			u16					num_vtx;
+			Node				*node_list;
 		};
 
 
 
 	private:
 		typedef gos::FastHashMap<GVC, Node>			Nodemap;
-		typedef gos::FastHashMap<gos::examap::Coord, HexInfo>		EXAMAP;
+		typedef gos::FastHashMap<gos::examap::Coord, ExaInfo>		EXAMAP;
 
 
 	private:
-		void 	priv_destroy_map();
-		bool	priv_vtxmap__add_vtx (const GVC gvc, const Node &vtx);
-		bool 	priv_vtxmap__get_vtx (const GVC gvc, Node *out) const;
-		void	priv_node_to_vtx (const Node &node, Vtx *out) const;
+		void 		priv_destroy_map();
+		bool		priv_examap__update_node (const GVC gvc, const Node &nodeIN);
+		bool 		priv_examap__get_node (const GVC gvc, Node *out) const;
+		Node*		priv_examap__get_nodePointer (const GVC gvc);
+		const Node*	priv_examap__get_nodePointer (const GVC gvc) const;
+
+		void	priv_node_to_vtx (const Node *node, Vtx *out) const;
 		void	priv_node_to_vtx (const GVC gvc, Vtx *out) const;
 		void	priv_node__update_quad_center (const GVC gvc);
 		void 	priv_calc_mesh_type (const GVC gvc);
-		void 	priv_do_set_node_height (const GVC gvc, Node &node, u16 height);
-
+		void 	priv_do_set_node_height (const GVC gvc, Node *node, u16 height);
 
 
 	private:
 		gos::Allocator				*localAllocator;
 		gos::Random					rnd;
 		gos::examap::CoordConverter	exacc;
-		Nodemap						nodemap;
 		EXAMAP						examap;
 
 	};
