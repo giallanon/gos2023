@@ -70,7 +70,7 @@ void Land1_app2::on__setup ()
 	const f32 EXA_WORLD_RADIUS = 10.0f; //50.0f;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, 187);
-	map.exa__add_with_radius ( examap::Coord(0, 0), 4 );
+	map.exa__add_with_radius ( examap::Coord(0, 0), 1);
 }
 
 //***************************************
@@ -323,15 +323,15 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 			break;
 
 		case 0xFE:
-			map.inc_node_height (node.coord, 100);
+			map.inc_node_height (node.gvc, 100);
 			break;
 
 		case 0xFD:
-			map.dec_node_height (node.coord, 100);
+			map.dec_node_height (node.gvc, 100);
 			break;
 
 		default:
-			map.set_node_material_index (node.coord, material_index_to_apply);
+			map.set_node_material_index (node.gvc, material_index_to_apply);
 			break;
 		}
 	}	

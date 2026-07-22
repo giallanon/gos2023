@@ -23,6 +23,7 @@ namespace Land1
 	* @brief	GVC
 	*			Global Vertex Coordinate
 	*/
+#define DEBUG__GVC_HELPER
 	struct GVC
 	{			GVC()																		{ }
 				GVC(i16 hex_x, i16 hex_z, u16 vertex_idx)									{ set(hex_x, hex_z, vertex_idx); }
@@ -40,6 +41,10 @@ namespace Land1
 			bitmask  = (hex_x + 512) << 22;
 			bitmask |= (hex_z + 512) << 12;
 			bitmask |= vertex_idx;
+
+			#ifdef DEBUG__GVC_HELPER
+			xx = hex_x; zz = hex_z; vidx=vertex_idx;
+			#endif
 		}
 
 		void	set_invalid()																{ bitmask = u32MAX; }
@@ -60,6 +65,11 @@ namespace Land1
 
 	private:
 		u32		bitmask;
+
+		#ifdef DEBUG__GVC_HELPER
+		i16 xx, zz;
+		u16 vidx;
+		#endif
 	};
 
 

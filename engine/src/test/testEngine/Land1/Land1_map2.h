@@ -22,7 +22,7 @@ namespace Land1
 			u8 	material_index;
 			u8	num_adj_vtx;
 			u16	height;
-			GVC	coord;
+			GVC	gvc;
 			GVC	connected_vtx[6];
 			GVC	other_vtx[6];			//ogni quad e' composto da <coord>, connected_vtx[i], connected_vtx[i+1], other_vtx[i]
 										//<other_vtx> non e' direttamente linkato a this
@@ -37,7 +37,7 @@ namespace Land1
 			u8	num_adj_vtx;
 			u16	height;
 			u16	adj_vtx_list[6];
-			GVC	coord;
+			GVC	gvc;
 		};
 
 	public:
@@ -83,15 +83,11 @@ namespace Land1
 		struct ExaInfo
 		{
 		public:
-			static constexpr u32	FLAG__IS_PARTIAL	= 0;	//vuol dire che HexInfo non esiste in quanto addato dalla fn exa__add() ma esiste solo
-																//perche' e' stato necessario un certo numero di vtx d'appoggio creati ad altri exa
+			void	reset()					{ num_node = 0; node_list = NULL; }
 
 		public:
-			void	reset()					{ flag.zero(); num_vtx = 0; node_list = NULL; }
-		public:
 			gos::examap::Coord	coord;
-			gos::Flag8			flag;
-			u16					num_vtx;
+			u16					num_node;
 			Node				*node_list;
 		};
 
@@ -99,7 +95,7 @@ namespace Land1
 
 	private:
 		typedef gos::FastHashMap<GVC, Node>			Nodemap;
-		typedef gos::FastHashMap<gos::examap::Coord, ExaInfo>		EXAMAP;
+		typedef gos::FastHashMap<gos::examap::Coord, ExaInfo>		Examap;
 
 
 	private:
@@ -108,10 +104,10 @@ namespace Land1
 		bool 		priv_examap__get_node (const GVC gvc, Node *out) const;
 		Node*		priv_examap__get_nodePointer (const GVC gvc);
 		const Node*	priv_examap__get_nodePointer (const GVC gvc) const;
+		void		priv_examap__merge_node_adj (Node *nodeIN, const Node *other_node);
 
 		void	priv_node_to_vtx (const Node *node, Vtx *out) const;
-		void	priv_node_to_vtx (const GVC gvc, Vtx *out) const;
-		void	priv_node__update_quad_center (const GVC gvc);
+		void	priv_node__update_quad_center (Node *node);
 		void 	priv_calc_mesh_type (const GVC gvc);
 		void 	priv_do_set_node_height (const GVC gvc, Node *node, u16 height);
 
@@ -120,7 +116,8 @@ namespace Land1
 		gos::Allocator				*localAllocator;
 		gos::Random					rnd;
 		gos::examap::CoordConverter	exacc;
-		EXAMAP						examap;
+		Examap						examap;
+		Nodemap						temp_node_list;
 
 	};
 } //namespace Land1

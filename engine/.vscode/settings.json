@@ -94,7 +94,8 @@
 		"__hash_table": "cpp",
 		"__split_buffer": "cpp",
 		"__tree": "cpp",
-		"__node_handle": "cpp"
+		"__node_handle": "cpp",
+		"filesystem": "cpp"
 	},
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.compilerPath": "",
