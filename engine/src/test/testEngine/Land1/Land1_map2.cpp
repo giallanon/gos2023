@@ -846,6 +846,14 @@ Land1::ExaR* Map2::calc_exaR (gos::Allocator *allocatorIN, const gos::examap::Co
 	if (NULL == exaInfo)
 		return NULL;
 
+	examap::Coord cc = exa_coord;
+	cc.move (examap::eDir::top);
+	const bool bExists_exa_top = examap.exists (cc);
+	cc = exa_coord; cc.move (examap::eDir::right_top);
+	const bool bExists_exa_right_top = examap.exists (cc);
+	cc = exa_coord; cc.move (examap::eDir::right_bottom);
+	const bool bExists_exa_right_bottom = examap.exists (cc);
+
 	//mappa d'appoggio per la creazione dei vtx dei quad
 	FastHashMap<u64, u16> edge_vtx_map(gos::getScrapAllocator(), exaInfo->num_node);
 	FastHashMap<Key128, u16> qc_vtx_map(gos::getScrapAllocator(), exaInfo->num_node);
@@ -870,6 +878,27 @@ Land1::ExaR* Map2::calc_exaR (gos::Allocator *allocatorIN, const gos::examap::Co
 		if (node->num_adj_vtx < 3)
 			continue;
 
+		const u16 iVtx = node->gvc.get_vertex_idx();
+		if ((iVtx >= 1 && iVtx <= 16) || (iVtx >= 42 && iVtx <= 48))
+		{
+			//questo vtx del bordo e' mio
+			//i nodi del bordo vanno renderizzati solo se l'exa in questione ha degli exa
+			//adiacenti vivi
+
+//1 serve top-right bottom right
+//
+//da 2 a 8, right-top
+//
+//9   top e  right-top
+//
+//10-16  top
+//
+//
+//42-48 right bottom
+
+
+			continue;
+		}
 
 		//addo il vtx del centro
 		const u16 node_center_idx = (u16)vtx_list.getNElem();

@@ -70,7 +70,7 @@ void Land1_app2::on__setup ()
 	const f32 EXA_WORLD_RADIUS = 10.0f; //50.0f;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, 187);
-	map.exa__add_with_radius ( examap::Coord(0, 0), 1);
+	map.exa__add_with_radius ( examap::Coord(0, 0), 0);
 }
 
 //***************************************
