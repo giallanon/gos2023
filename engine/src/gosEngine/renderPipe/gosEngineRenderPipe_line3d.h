@@ -100,7 +100,7 @@ namespace gos
 
 
 			//=============== gestione dei ctx
-			Ctx*	ctx__crete_new (const char *name, u16 estimated_num_vtx);
+			Ctx*	ctx__create_new (const char *name, u16 estimated_num_vtx);
 			void	ctx__delete (const char *name);
 			Ctx*	ctx__get (const char *name);
 

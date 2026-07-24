@@ -29,6 +29,7 @@ private:
 	void	priv_draw_exa (const Land1::GVC &gvc, bool bLSHIFT);
 	u32		priv_do_draw_exa (const gos::examap::Coord exa_coord, gos::FastArray<Land1::Map2::Vtx> *out_list);
 	void	priv_new_albero (const gos::vec3f &world_point);
+	void	priv_mouse_to_GVC ();
 
 private:
 	i16	mouse_x;
@@ -37,6 +38,7 @@ private:
 	gos::engine::Renderer_PIPE3			*renderer_PIPE3;
 	gos::engine::Renderer_line3d		*renderer_line3d;
 	gos::engine::Renderer_line3d::Ctx	*line_ctx1;
+	gos::engine::Renderer_line3d::Ctx	*line_ctx2;
 	
 	Land1::Map2							map;
 	Land1::Renderer						*renderer_land;
@@ -46,7 +48,8 @@ private:
 	u32						num_alberi;
 
 
-	u8	material_index_to_apply;
+	Land1::GVC				last_mouseover_gvc;
+	u8						material_index_to_apply;
 };
 
 #endif //_Land1_app2_h_

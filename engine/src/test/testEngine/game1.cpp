@@ -520,7 +520,7 @@ void Game1::priv_loop ()
 
 
 	//line3d
-	gos::engine::Renderer_line3d::Ctx *line_ctx1 = renderer_line3d->ctx__crete_new("ctx1", 32);
+	gos::engine::Renderer_line3d::Ctx *line_ctx1 = renderer_line3d->ctx__create_new("ctx1", 32);
 		line_ctx1->clear();
 		line_ctx1->vtx_add (0,0,0);
 		line_ctx1->vtx_add (10,0,0);
@@ -531,7 +531,7 @@ void Game1::priv_loop ()
 		line_ctx1->set_color_ARGB (0xFF00FF00); 	line_ctx1->line (0, 2);
 		line_ctx1->set_color_ARGB (0xFF0000FF); 	line_ctx1->line (0, 3);
 
-	gos::engine::Renderer_line3d::Ctx *line_ctx2 = renderer_line3d->ctx__crete_new("ctx2", 32);
+	gos::engine::Renderer_line3d::Ctx *line_ctx2 = renderer_line3d->ctx__create_new("ctx2", 32);
 	{
 		FastArray<vec3f> vtxList (gos::getScrapAllocator(), 64);
 

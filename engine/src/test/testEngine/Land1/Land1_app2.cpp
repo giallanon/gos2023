@@ -10,6 +10,7 @@ Land1_app2::Land1_app2()
 	mouse_x = mouse_y = 0;
 	material_index_to_apply = 1;
 	num_alberi = 0;
+	last_mouseover_gvc.set_invalid();
 }
 
 //***************************************
@@ -47,7 +48,8 @@ void Land1_app2::on__setup ()
 	renderer_PIPE3 = engine->renderPipe.add_renderer<engine::Renderer_PIPE3>();
 	renderer_land = engine->renderPipe.add_renderer<Land1::Renderer>();
 	renderer_line3d = engine->renderPipe.add_renderer<engine::Renderer_line3d>();
-		line_ctx1 = renderer_line3d->ctx__crete_new("ctx1", 32);
+		line_ctx1 = renderer_line3d->ctx__create_new("ctx1", 1024);
+		line_ctx2 = renderer_line3d->ctx__create_new("ctx2", 32);
 
 	//carico un po' di texture
 	{
@@ -103,25 +105,24 @@ void Land1_app2::priv_new_albero (const gos::vec3f &world_point)
 	num_alberi++;
 }
 
-
 //***************************************
 void Land1_app2::on__prepare_render()
 {
-	renderer_land->begin();
-	{
-		renderer_land->add_exa (examap::Coord(0,0));
-	
-		const u32 MAX_RADIUS = 128;
-		const u32 MAX_NUM_COORD = MAX_RADIUS * 6;
-		examap::Coord coordList[MAX_NUM_COORD];
-		for (u32 ring = 1; ring <= 2; ring++)
-		{
-			u32 n = examap::coord_ring (examap::Coord(0,0), ring, coordList, MAX_NUM_COORD);
-			for (u32 i = 0; i < n; i++)
-				renderer_land->add_exa (coordList[i]);
-		}
-	}
-	renderer_land->end();
+	//renderer_land->begin();
+	//{
+	//	renderer_land->add_exa (examap::Coord(0,0));
+	//
+	//	const u32 MAX_RADIUS = 128;
+	//	const u32 MAX_NUM_COORD = MAX_RADIUS * 6;
+	//	examap::Coord coordList[MAX_NUM_COORD];
+	//	for (u32 ring = 1; ring <= 2; ring++)
+	//	{
+	//		u32 n = examap::coord_ring (examap::Coord(0,0), ring, coordList, MAX_NUM_COORD);
+	//		for (u32 i = 0; i < n; i++)
+	//			renderer_land->add_exa (coordList[i]);
+	//	}
+	//}
+	//renderer_land->end();
 
 	//alberi
 	renderer_PIPE3->begin();
@@ -130,6 +131,36 @@ void Land1_app2::on__prepare_render()
 			renderer_PIPE3->add (modelinst_albero[i]);
 	}
 	renderer_PIPE3->end();
+
+
+	line_ctx2->clear();
+	if (last_mouseover_gvc.is_valid())
+	{
+		line_ctx2->enable_depth_test(false)
+			.enable_depth_write(false)
+			.set_line_width(4)
+			.set_color_ARGB (0xFFFFFFFF)
+			.line_begin();
+
+	}
+}
+
+//***************************************
+void Land1_app2::priv_mouse_to_GVC ()
+{
+	const gpu::Viewport *vp = gpu->getInfo (gpu->viewport_getDefault());
+	vec2f m(mouse_x, mouse_y);
+	vec3f world_dir;
+	cam.unproject (vp->getW_f32(), vp->getH_f32(), &m , &world_dir, 1);
+
+	if (last_mouseover_gvc.is_valid())
+	{
+		if (map.does_world_ray_intersect_GVC (cam.pos.o, world_dir, last_mouseover_gvc))
+			return;
+	}
+
+	if (!map.world_ray_to_GVC (cam.pos.o, world_dir, &last_mouseover_gvc))
+		last_mouseover_gvc.set_invalid();
 }
 
 //***************************************
@@ -157,19 +188,9 @@ void Land1_app2::on__handle_input (const Engine::InputEvent &ev)
 	case COMPILE_TIME_STR_CRC32("mouse_LB+SHIFT"):
 		{
 			line_ctx1->clear();
-
-			const gpu::Viewport *vp = gpu->getInfo (gpu->viewport_getDefault());
-			vec2f m(mouse_x, mouse_y);
-			vec3f world_dir;
-			cam.unproject (vp->getW_f32(), vp->getH_f32(), &m , &world_dir, 1);
-
-
-			Land1::GVC gvc;
-			if (map.world_ray_to_GVC (cam.pos.o, world_dir, &gvc))
-			{
-				priv_draw_exa (gvc, engine->inputEvent_getBtnModifier()->isLSHIFT());
-			}
-
+			priv_mouse_to_GVC();
+			if (last_mouseover_gvc.is_valid())
+				priv_draw_exa (last_mouseover_gvc, engine->inputEvent_getBtnModifier()->isLSHIFT());
 
 			//supponendo che hex sia sempre ad altezza y=0...
 			//const f32 t = -cam.pos.o.y / world_dir.y;

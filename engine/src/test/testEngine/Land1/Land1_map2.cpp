@@ -644,6 +644,37 @@ bool Map2::world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const
 }
 
 //************************************* 
+bool Map2::priv_world_ray_intersect_quad (const Node *node, const gos::vec3f &rayO, const gos::vec3f &rayDir, f32 rayLen) const
+{
+	//intersezione del ray con il plane parallelo a XZ situato ad altezza H
+	const f32 H = (f32)node->height * EXA_HEIGHT_MUL;
+	const f32 t = (H - rayO.y) / rayDir.y;
+	if (t >= 0 && t <= rayLen)
+	{
+		//vediamo se il punto di intereszione sta all'interno dei poligono centrato sul nodo
+		const vec2f p (rayO.x + rayDir.x * t, rayO.z + rayDir.z * t);
+		bool bFound = true;
+		for (u8 i = 0; i < node->num_adj_vtx; i++)
+		{
+			u8 ii;
+			if (i + 1 == node->num_adj_vtx)
+				ii = 0;
+			else
+				ii = i + 1;
+
+			if (geom::line2D__which_side (node->quad_center[i], node->quad_center[ii], p) < 0)
+			{
+				bFound = false;
+				break;
+			}
+		}
+
+		if (bFound)
+			return true;
+	}
+	return false;
+}
+//************************************* 
 bool Map2::priv_world_ray_intersect_quad (const ExaInfo *exa, const gos::vec3f &rayO, const gos::vec3f &rayDir, f32 rayLen, u16 *out__node_idx) const
 {
 	assert (NULL != exa);
@@ -658,35 +689,10 @@ bool Map2::priv_world_ray_intersect_quad (const ExaInfo *exa, const gos::vec3f &
 		if (!node->gvc.is_valid())
 			continue;
 
-		const f32 H = (f32)node->height * EXA_HEIGHT_MUL;
-		
-		//intersezione del ray con il plane parallelo a XZ situato ad altezza H
-		const f32 t = (H - rayO.y) / rayDir.y;
-		if (t >= 0 && t <= rayLen)
+		if (priv_world_ray_intersect_quad(node, rayO, rayDir, rayLen))
 		{
-			//vediamo se il punto di intereszione sta all'interno dei poligono centrato sul nodo
-			const vec2f p (rayO.x + rayDir.x * t, rayO.z + rayDir.z * t);
-			bool bFound = true;
-			for (u8 i = 0; i < node->num_adj_vtx; i++)
-			{
-				u8 ii;
-				if (i + 1 == node->num_adj_vtx)
-					ii = 0;
-				else
-					ii = i + 1;
-
-				if (geom::line2D__which_side (node->quad_center[i], node->quad_center[ii], p) < 0)
-				{
-					bFound = false;
-					break;
-				}
-			}
-
-			if (bFound)
-			{
-				*out__node_idx = iNode;
-				return true;
-			}
+			*out__node_idx = iNode;
+			return true;
 		}
 	}
 
@@ -698,8 +704,22 @@ bool Map2::priv_world_ray_intersect_quad (const ExaInfo *exa, const gos::vec3f &
 bool Map2::world_ray_to_GVC  (const gos::vec3f &world_o, const gos::vec3f &world_dir, GVC *out) const
 {
 	static constexpr f32 RAY_LEN = 10000.0f;
-	f32		min_d = 1e36f;
-	u32		best_idx = u32MAX;
+
+	static constexpr u8 NUM_BEST = 4;
+	struct sElem
+	{
+		f32 dist;
+		u32 idx;
+	};
+
+	u8 num_best = 0;
+	sElem best_list[NUM_BEST];
+	for (u8 i = 0; i < NUM_BEST; i++)
+	{
+		best_list[i].dist = 1e36f;
+		best_list[i].idx = u32MAX;
+	}
+
 
 	const FastArray<Examap::sElem> *list = examap._queryList();
 	const u32 n = list->getNElem();
@@ -708,24 +728,51 @@ bool Map2::world_ray_to_GVC  (const gos::vec3f &world_o, const gos::vec3f &world
 		f32 d;
 		if (geom::ray3D__intersect_AABB3 (world_o, world_dir, RAY_LEN, list->queryElem(i).value.aabb, &d))
 		{
-			if (d < min_d)
+			if (num_best != 4)
 			{
-				min_d = d;
-				best_idx = i;
+				best_list[num_best].dist = d;
+				best_list[num_best].idx = i;
+				num_best++;
+			}
+			else
+			{
+				const u32 N = NUM_BEST-1;
+				if (d < best_list[N].dist)
+				{
+					best_list[N].dist = d;
+					best_list[N].idx = i;
+					utils::bubbleSort (best_list, NUM_BEST, [](const sElem *a, const sElem *b) { return a->dist > b->dist; } );
+				}
 			}
 		}
 	}
 
-	if (u32MAX == best_idx)	
-		return false;
+	utils::bubbleSort (best_list, num_best, [](const sElem *a, const sElem *b) { return a->dist > b->dist; } );
 
-	u16 node_idx;
-	if (priv_world_ray_intersect_quad (&list->queryElem(best_idx).value, world_o, world_dir, RAY_LEN, &node_idx))
+
+	for (u8 i = 0; i < num_best; i++)
 	{
-		out->set (list->queryElem(best_idx).value.coord, node_idx);
-		return true;
+		assert (u32MAX != best_list[i].idx);
+
+		u16 node_idx;
+		if (priv_world_ray_intersect_quad (&list->queryElem(best_list[i].idx).value, world_o, world_dir, RAY_LEN, &node_idx))
+		{
+			out->set (list->queryElem(best_list[i].idx).value.coord, node_idx);
+			return true;
+		}
 	}
 	return false;
+}
+
+//************************************* 
+bool Map2::does_world_ray_intersect_GVC  (const gos::vec3f &rayO, const gos::vec3f &rayDir, const GVC &gvc) const
+{
+	const Node *node = priv_examap__get_nodePointer (gvc);
+	if (NULL == node)
+		return false;
+
+	static constexpr f32 RAY_LEN = 10000.0f;
+	return priv_world_ray_intersect_quad(node, rayO, rayDir, RAY_LEN);
 }
 
 //************************************* 

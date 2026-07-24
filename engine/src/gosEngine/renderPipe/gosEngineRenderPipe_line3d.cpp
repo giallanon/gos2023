@@ -185,11 +185,11 @@ bool Renderer_line3d::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
 }
 
 //********************************************* 
-Renderer_line3d::Ctx* Renderer_line3d::ctx__crete_new (const char *name, u16 estimated_num_vtx)
+Renderer_line3d::Ctx* Renderer_line3d::ctx__create_new (const char *name, u16 estimated_num_vtx)
 {
 	if (u32MAX != priv_ctx__get(name))
 	{
-		logger::err ("Renderer_line3d::ctx__crete_new() => %s already exists\n");
+		logger::err ("Renderer_line3d::ctx__create_new() => %s already exists\n");
 		return NULL;
 	}
 

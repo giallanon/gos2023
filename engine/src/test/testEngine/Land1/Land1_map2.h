@@ -76,9 +76,11 @@ namespace Land1
 		f32					get_exa_world_radius() const											{ return exacc.get_exa_world_radius(); }
 		gos::vec3f			get_map_world_center() const											{ return exacc.get_map_world_center(); }
 		bool				world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const;
-		bool				world_ray_to_GVC  (const gos::vec3f &world_o, const gos::vec3f &world_dir, GVC *out) const;
 		bool				GVC_to_world_coord  (const GVC gvc, gos::vec3f *out_world_coord) const;
 		bool				GVC_to_node (const GVC gvc, Node *out) const;
+
+		bool				world_ray_to_GVC  (const gos::vec3f &world_o, const gos::vec3f &world_dir, GVC *out) const;
+		bool				does_world_ray_intersect_GVC  (const gos::vec3f &world_o, const gos::vec3f &world_dir, const GVC &gvc) const;
 
 		bool				exaInfo__get_last_time_updated(const gos::examap::Coord &exa_coord, u16 *out__last_time_updated) const;
 		bool				exaInfo__get_AABB (const gos::examap::Coord &exa_coord, gos::geom::AABB3 *out__aabb) const;
@@ -120,6 +122,7 @@ namespace Land1
 		void 		priv_calc_mesh_type (const GVC gvc);
 		void 		priv_do_set_node_height (const GVC gvc, Node *node, u16 height);
 		bool		priv_world_ray_intersect_quad (const ExaInfo *exa, const gos::vec3f &world_o, const gos::vec3f &world_dir, f32 rayLen, u16 *out__node_idx) const;
+		bool		priv_world_ray_intersect_quad (const Node *node, const gos::vec3f &world_o, const gos::vec3f &world_dir, f32 rayLen) const;
 
 
 	private:

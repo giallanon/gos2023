@@ -66,6 +66,33 @@ namespace gos
                     //ritorna la potenza del 2 piu' vicina e che sia maggiore uguale a num
 
 
+        /**
+        * @brief    bubbleSort()
+        *           dato un array <list> di <num_elem>, fa il bubblesort usando cmpFn(const A, const B)
+        */
+                template<typename T, typename LAMBDA>
+        void    bubbleSort (T *list, u32 num_elem, LAMBDA&& cmpFn)
+                {
+                    if (num_elem < 2)
+                        return;
+
+                    bool bEsci = false;
+                    while (bEsci == false)
+                    {
+                        num_elem--;
+                        bEsci = true;
+                        u32 ct = 0;
+                        for (u32 i=0; i<num_elem; i++)
+                        {
+                            if (cmpFn(&list[i], &list[i+1]))
+                            {
+                                bEsci = false;
+                                GOSSWAP(list[i], list[i+1]);
+                            }
+                        }
+                    }
+                }
+
         /**********************************************************
          * Buffer read/write
          * 
