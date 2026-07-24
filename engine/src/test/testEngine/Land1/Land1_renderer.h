@@ -18,10 +18,11 @@ namespace Land1
 
 	public:
 				Renderer();
-				~Renderer() { priv_unsetup(); }
+				~Renderer()																			{ priv_unsetup(); }
 
+		void	map_attach (Map2 *map);
 		void	begin();
-		void	add_exa (const Land1::ExaR *exa);
+		void	add_exa (const gos::examap::Coord exa_coord);
 		void	end();
 
 		bool 	on__attach (const RPIPE::Context &ctx, u8 renderer_UID) final;
@@ -89,16 +90,18 @@ namespace Land1
 
 	private:
 		void	priv_unsetup();
-		void	priv_do_render(const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx);
 		void	priv_add_vtx (const gos::vec2f &v);
 		void	priv_add_vtxInfo (u32 height, u32 material_index);
 		void	priv_add_quad (Land1::eMeshType mesh_type, u32 reference_vtx_index, u32 idx1, u32 idx2, u32 idx3, u32 idx4);
-
+		void	priv_do_add_exa (const Land1::ExaR *exa);
 
 	private:
 		gos::Allocator					*localAllocator;
 		gos::Engine						*engine;
 		gos::GPU						*gpu;
+		
+		Map2							*map;
+		gos::FastHashMap<u32, ExaR*>	exaR_map;
 
 		gos::ENGPipeline 				handle_pipeline;
 		GPUDescrSetInstanceHandle   	handle_descrSet2;

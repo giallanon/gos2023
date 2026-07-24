@@ -555,6 +555,19 @@ void Map2::priv_node_to_vtx (const Node *node, Vtx *out) const
 }
 
 //************************************* 
+bool Map2::get_exa_last_time_updated(const gos::examap::Coord &exa_coord, u16 *out__last_time_updated) const
+{
+	assert (NULL != out__last_time_updated);
+	const ExaInfo *exaInfo = examap.query_pointer (exa_coord);
+	if (NULL != exaInfo)
+	{
+		*out__last_time_updated = exaInfo->last_time_updated;
+		return true;
+	}
+	return false;
+}
+
+//************************************* 
 bool Map2::world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const
 {
 	examap::Coord exa_coord = exacc.world_coord_to_exa (world_coord);
@@ -632,11 +645,18 @@ bool Map2::GVC_to_node (const GVC gvc, Node *out_node) const
 //************************************* 
 void Map2::set_node_material_index (const GVC gvc, u8 material_index)
 {
-	Node *node = priv_examap__get_nodePointer (gvc);
-	if (NULL != node)
+	ExaInfo *exaInfo = examap.get_pointer (gvc.get_exa_coord());
+	if (NULL != exaInfo)
 	{
-		if (node->material_index != material_index)
-			node->material_index = material_index;
+		const u32 idx = gvc.get_vertex_idx();
+		assert (idx < exaInfo->num_node);
+		assert (exaInfo->node_list[idx].gvc == gvc);
+
+		if (exaInfo->node_list[idx].material_index != material_index)
+		{
+			exaInfo->last_time_updated++;
+			exaInfo->node_list[idx].material_index = material_index;
+		}
 	}
 }
 
@@ -691,11 +711,15 @@ void Map2::dec_node_height (const GVC gvc, u16 h)
 //************************************* 
 void Map2::priv_calc_mesh_type (const GVC gvc)
 {
-	Node *node = priv_examap__get_nodePointer (gvc);
-	if (NULL == node)
+	ExaInfo *exaInfo = examap.get_pointer (gvc.get_exa_coord());
+	if (NULL == exaInfo)
 		return;
 
-//	bool bModified = false;
+	assert (gvc.get_vertex_idx() < exaInfo->num_node);
+	assert (exaInfo->node_list[gvc.get_vertex_idx()].gvc == gvc);
+	Node *node = &exaInfo->node_list[gvc.get_vertex_idx()];
+
+	bool bModified = false;
 	for (u8 iQuad=0; iQuad<node->num_adj_vtx; iQuad++)
 	{
 		GVC gvc3;
@@ -730,9 +754,12 @@ void Map2::priv_calc_mesh_type (const GVC gvc)
 		if (mt != node->mesh_type[iQuad])
 		{
 			node->mesh_type[iQuad] = mt;
-	//		bModified = true;
+			bModified = true;
 		}
 	}
+
+	if (bModified)
+		exaInfo->last_time_updated++;
 }
 
 //************************************* 
@@ -801,7 +828,6 @@ u32 Map2::get_exa_vtxList (const gos::examap::Coord &exa_coord, FastArray<Vtx> &
 
 	return ret;
 }
-
 
 //************************************* 
 static u64 Land1_map__make_key_1 (const GVC gvc1, const GVC gvc2)
@@ -878,27 +904,43 @@ Land1::ExaR* Map2::calc_exaR (gos::Allocator *allocatorIN, const gos::examap::Co
 		if (node->num_adj_vtx < 3)
 			continue;
 
-		const u16 iVtx = node->gvc.get_vertex_idx();
-		if ((iVtx >= 1 && iVtx <= 16) || (iVtx >= 42 && iVtx <= 48))
+		//i nodi del bordo sono un po' particolari. Devo renderizzare solo quelli
+		//che appartengono a me e, in piu', per i miei vertici devo verificare
+		//se questo exa ha dei veri exa adiacenti
+		//per il vtx 1 serve che esista right-top e right-bottom
+		//			 da 2 a 8, serve right-top
+		//			9 serve top e  right-top
+		//			10-16  serve top
+		//			42-48 serve right-bottom
 		{
-			//questo vtx del bordo e' mio
-			//i nodi del bordo vanno renderizzati solo se l'exa in questione ha degli exa
-			//adiacenti vivi
-
-//1 serve top-right bottom right
-//
-//da 2 a 8, right-top
-//
-//9   top e  right-top
-//
-//10-16  top
-//
-//
-//42-48 right bottom
-
-
-			continue;
+			const u16 iBorderVtx = node->gvc.get_vertex_idx();
+			if (1 == iBorderVtx)
+			{
+				if (!bExists_exa_right_top || !bExists_exa_right_bottom)
+					continue;
+			}
+			else if (iBorderVtx >= 2 && iBorderVtx <= 8)
+			{
+				if (!bExists_exa_right_top)
+					continue;
+			}
+			else if (9 == iBorderVtx)
+			{
+				if (!bExists_exa_top || !bExists_exa_right_top)
+					continue;
+			}
+			else if (iBorderVtx >= 10 && iBorderVtx <= 16)
+			{
+				if (!bExists_exa_top)
+					continue;
+			}
+			else if (iBorderVtx >= 42 && iBorderVtx <= 48)
+			{
+				if (!bExists_exa_right_bottom)
+					continue;
+			}
 		}
+
 
 		//addo il vtx del centro
 		const u16 node_center_idx = (u16)vtx_list.getNElem();
@@ -986,7 +1028,7 @@ Land1::ExaR* Map2::calc_exaR (gos::Allocator *allocatorIN, const gos::examap::Co
 
 
 	//alloco ExaR
-	ExaR *exar = ExaR::alloc (allocatorIN, vtxinfo_list.getNElem(), vtx_list.getNElem());
+	ExaR *exar = ExaR::alloc (allocatorIN, vtxinfo_list.getNElem(), vtx_list.getNElem(), exaInfo->last_time_updated);
 	memcpy (exar->vtxList, vtx_list._queryPointer(), sizeof(vec2f) * vtx_list.getNElem());
 	memcpy (exar->vtxInfoList, vtxinfo_list._queryPointer(), sizeof(ExaR::VtxInfo) * vtxinfo_list.getNElem());
 

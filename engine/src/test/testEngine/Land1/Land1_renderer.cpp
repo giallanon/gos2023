@@ -13,6 +13,7 @@ Renderer::Renderer()
 	gpu = NULL;
 	num_vtx = 0;
 	num_quad = 0;
+	map = NULL;
 }
 
 //***************************************
@@ -40,11 +41,24 @@ void Renderer::priv_unsetup()
 	for (u8 i=0; i<N; i++)
 	{
 		GOSFREE(localAllocator, mesh_instance_data[i].quad_index_list);
-	}	
+	}
+
+
+	exaR_map.forEach ([localAllocator=this->localAllocator](u32 key, ExaR *exar) {
+		Land1::ExaR::free (localAllocator, exar);
+		return true;
+	});
+	exaR_map.reset();
 
 	localAllocator = NULL;
 	engine = NULL;
 	gpu = NULL;
+}
+
+//***************************************
+void Renderer::map_attach (Map2 *mapIN)
+{
+	map = mapIN;
 }
 
 //***************************************
@@ -128,6 +142,10 @@ bool Renderer::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
 	//load risorse
 	engine->model_createFromAsset ("model_tile1", &handle__model_tile1, res::eLoadMode::asap);
 	
+
+	exaR_map.setup (localAllocator, 128);
+
+
 	//aspetto che le risorse siano caricate
 	const res::Model3d *res_model;
 	engine->get (handle__model_tile1, &res_model, 4000);
@@ -210,7 +228,7 @@ void Renderer::priv_add_quad (Land1::eMeshType mesh_type, u32 reference_vtx_inde
 }
 
 //***************************************
-void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
+void Renderer::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 {
     if (0 == num_quad)
         return;
@@ -331,18 +349,11 @@ void Renderer::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 	}
 }
 
-//***************************************
-void Renderer::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
-{
-	if (0 == num_quad)
-		return;
-	priv_do_render (ctx, rctx);
-}
-
 
 //***************************************
 void Renderer::begin()
 {
+	assert (NULL != map);
 	num_vtx = 0;
 	num_vtxInfo = 0;
 	num_quad = 0;
@@ -361,7 +372,40 @@ void Renderer::end()
 }
 
 //***************************************
-void Renderer::add_exa (const Land1::ExaR *exa)
+void Renderer::add_exa (const gos::examap::Coord exa_coord)
+{
+	assert (NULL != map);
+
+	u16 last_time_updated;
+	if (!map->get_exa_last_time_updated (exa_coord, &last_time_updated))
+		return;
+
+	const u32 key = exa_coord.pack_coord_u32();
+	ExaR *exar;
+	if (exaR_map.find (key, &exar))
+	{
+		if (exar->exaSRC_last_time_updated == last_time_updated)
+		{
+			priv_do_add_exa (exar);
+			return;
+		}
+
+		//devo refreshare il mio exaR perche' la mappa e' cambiata
+		ExaR::free (localAllocator, exar);
+		exaR_map.remove (key);
+	}
+
+	exar = map->calc_exaR (localAllocator, exa_coord);
+	if (NULL != exar)
+	{
+		exaR_map.insertIfNotExists (key, exar);
+		priv_do_add_exa (exar);
+	}
+}
+
+
+//***************************************
+void Renderer::priv_do_add_exa (const Land1::ExaR *exa)
 {
 	const u32 STARTING_VTX = num_vtx;
 	for (u32 i = 0; i < exa->num_vtx_tot; i++)

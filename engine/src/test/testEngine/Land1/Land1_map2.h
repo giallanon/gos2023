@@ -74,6 +74,7 @@ namespace Land1
 		gos::examap::Coord	world_coord_to_exa (f32 x, f32 z) const									{ return exacc.world_coord_to_exa (x,z); }
 		f32					get_exa_world_radius() const											{ return exacc.get_exa_world_radius(); }
 		gos::vec3f			get_map_world_center() const											{ return exacc.get_map_world_center(); }
+		bool				get_exa_last_time_updated(const gos::examap::Coord &exa_coord, u16 *out__last_time_updated) const;
 		bool				world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const;
 		bool				world_ray_to_GVC  (const gos::vec3f &world_o, const gos::vec3f &world_dir, GVC *out) const;
 		bool				GVC_to_world_coord  (const GVC gvc, gos::vec3f *out_world_coord) const;
@@ -83,11 +84,12 @@ namespace Land1
 		struct ExaInfo
 		{
 		public:
-			void	reset()					{ num_node = 0; node_list = NULL; }
+			void	reset()					{ num_node = 0; node_list = NULL; last_time_updated = 0; }
 
 		public:
 			gos::examap::Coord	coord;
 			u16					num_node;
+			u16					last_time_updated;
 			Node				*node_list;
 		};
 

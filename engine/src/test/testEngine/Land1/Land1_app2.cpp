@@ -70,7 +70,11 @@ void Land1_app2::on__setup ()
 	const f32 EXA_WORLD_RADIUS = 10.0f; //50.0f;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, 187);
-	map.exa__add_with_radius ( examap::Coord(0, 0), 0);
+	map.exa__add_with_radius ( examap::Coord(0, 0), 4);
+
+
+
+	renderer_land->map_attach (&map);
 }
 
 //***************************************
@@ -101,25 +105,11 @@ void Land1_app2::priv_new_albero (const gos::vec3f &world_point)
 
 
 //***************************************
-void Land1_app2::priv_render_add_exar (const gos::examap::Coord coord)
-{
-	gos::Allocator *allocator = gos::getScrapAllocator();
-	Land1::ExaR *exar;
-
-	exar = map.calc_exaR (allocator, coord);
-	if (NULL != exar)
-	{
-		renderer_land->add_exa (exar);
-		Land1::ExaR::free (allocator, exar);
-	}
-}
-
-//***************************************
 void Land1_app2::on__prepare_render()
 {
 	renderer_land->begin();
 	{
-		priv_render_add_exar (examap::Coord(0,0));
+		renderer_land->add_exa (examap::Coord(0,0));
 	
 		const u32 MAX_RADIUS = 128;
 		const u32 MAX_NUM_COORD = MAX_RADIUS * 6;
@@ -128,7 +118,7 @@ void Land1_app2::on__prepare_render()
 		{
 			u32 n = examap::coord_ring (examap::Coord(0,0), ring, coordList, MAX_NUM_COORD);
 			for (u32 i = 0; i < n; i++)
-				priv_render_add_exar (coordList[i]);
+				renderer_land->add_exa (coordList[i]);
 		}
 	}
 	renderer_land->end();

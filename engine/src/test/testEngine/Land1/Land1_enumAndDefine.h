@@ -94,7 +94,7 @@ namespace Land1
 		};
 
 	public:
-		static ExaR*	alloc (gos::Allocator *allocatorIN, u32 num_vtxInfoIN, u32 num_vtx_totIN)
+		static ExaR*	alloc (gos::Allocator *allocatorIN, u32 num_vtxInfoIN, u32 num_vtx_totIN, u16 exa_last_time_updatedIN)
 		{
 			assert (num_vtxInfoIN < u16MAX);
 			assert (num_vtx_totIN < u16MAX);
@@ -102,6 +102,7 @@ namespace Land1
 			ExaR *ret = GOSALLOCT(ExaR*, allocatorIN, sizeof(ExaR));
 			ret->num_vtxInfo = num_vtxInfoIN;
 			ret->num_vtx_tot = num_vtx_totIN;
+			ret->exaSRC_last_time_updated = exa_last_time_updatedIN;
 			ret->vtxInfoList = GOSALLOCT(VtxInfo*, allocatorIN, sizeof(VtxInfo) * num_vtxInfoIN);
 			ret->vtxList = GOSALLOCT(gos::vec2f*, allocatorIN, sizeof(gos::vec2f) * num_vtx_totIN);
 			return ret;
@@ -115,6 +116,7 @@ namespace Land1
 		}
 
 	public:
+		u16			exaSRC_last_time_updated;	//questo exaR e' stato creato quando l'exa sorgente aveva <last_time_updated> == exaSRC_last_time_updated
 		u16			num_vtxInfo;		//quelli che compongono l'exa originale
 		u16			num_vtx_tot;		//tutti quelli che sono in vtxList
 		VtxInfo		*vtxInfoList;		//una VtxInfo per ogni vtx-originale
