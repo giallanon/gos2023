@@ -108,6 +108,8 @@ template<typename UINT_TYPE>
 
 
 #define GOSSWAP(a,b)	{auto temp=(a); (a)=(b); (b)=temp;}
+#define GOSMIN(x, y)    ((x) < (y) ? (x) : (y))
+#define GOSMAX(x, y)    ((x) > (y) ? (x) : (y))
 
 
 //================================================================

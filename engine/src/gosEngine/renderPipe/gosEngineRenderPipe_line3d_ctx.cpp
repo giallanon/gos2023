@@ -150,3 +150,46 @@ Renderer_line3d::Ctx& Renderer_line3d::Ctx::point (u16 vtx_index)
 	program.append (vtx_index);
 	return *this;
 }
+
+//********************************************* 
+Renderer_line3d::Ctx& Renderer_line3d::Ctx::aabb3 (const vec3f &vmin, const vec3f &vmax, u16 line_width)
+{
+	if (0 != line_width)
+		set_line_width (line_width);
+
+	const u16 idx[8] = {
+		vtx_add(vmin.x, vmin.y, vmin.z),
+		vtx_add(vmax.x, vmin.y, vmin.z),
+		vtx_add(vmax.x, vmax.y, vmin.z),
+		vtx_add(vmin.x, vmax.y, vmin.z),
+
+		vtx_add(vmin.x, vmin.y, vmax.z),
+		vtx_add(vmax.x, vmin.y, vmax.z),
+		vtx_add(vmax.x, vmax.y, vmax.z),
+		vtx_add(vmin.x, vmax.y, vmax.z)
+	};
+
+	line_begin();
+		line_add_vtx(idx[0]);
+		line_add_vtx(idx[1]);
+		line_add_vtx(idx[2]);
+		line_add_vtx(idx[3]);
+		line_add_vtx(idx[0]);
+	line_end();
+
+	line_begin();
+		line_add_vtx(idx[4]);
+		line_add_vtx(idx[5]);
+		line_add_vtx(idx[6]);
+		line_add_vtx(idx[7]);
+		line_add_vtx(idx[4]);
+	line_end();
+
+	line (idx[0], idx[4]);
+	line (idx[1], idx[5]);
+	line (idx[2], idx[6]);
+	line (idx[3], idx[7]);
+	
+
+	return *this;
+}

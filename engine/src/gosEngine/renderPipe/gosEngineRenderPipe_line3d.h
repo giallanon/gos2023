@@ -58,6 +58,8 @@ namespace gos
 				Ctx&	point_set_radius (u16 radius);
 				Ctx& 	point (u16 vtx_index);
 
+				Ctx& 	aabb3 (const vec3f &vmin, const vec3f &vmax, u16 line_width=0);
+
 			private:
 				enum class eCMD : u16
 				{

@@ -1,5 +1,6 @@
 #include "gosExamap.h"
 #include "../gosGeom/gosGeomUtils.h"
+#include "../gosGeom/gosGeomIntersect2D.h"
 
 using namespace gos;
 using namespace gos::examap;

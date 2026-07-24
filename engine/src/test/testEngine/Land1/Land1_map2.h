@@ -4,6 +4,7 @@
 #include "Land1_exaGenerator.h"
 #include "../gosGameUtils/examap/gosExamap.h"
 #include "gosHashMap.h"
+#include "../gosGeom/gosGeomAABB3.h"
 
 namespace Land1
 {
@@ -23,9 +24,9 @@ namespace Land1
 			u8	num_adj_vtx;
 			u16	height;
 			GVC	gvc;
-			GVC	connected_vtx[6];
-			GVC	other_vtx[6];			//ogni quad e' composto da <coord>, connected_vtx[i], connected_vtx[i+1], other_vtx[i]
-										//<other_vtx> non e' direttamente linkato a this
+			GVC	connected_node[6];
+			GVC	other_node[6];			//ogni quad e' composto da <coord>, connected_node[i], connected_node[i+1], other_node[i]
+										//<other_node> non e' direttamente linkato a questo node
 			gos::vec2f	quad_center[6];
 			eMeshType	mesh_type[6];
 		};
@@ -74,11 +75,13 @@ namespace Land1
 		gos::examap::Coord	world_coord_to_exa (f32 x, f32 z) const									{ return exacc.world_coord_to_exa (x,z); }
 		f32					get_exa_world_radius() const											{ return exacc.get_exa_world_radius(); }
 		gos::vec3f			get_map_world_center() const											{ return exacc.get_map_world_center(); }
-		bool				get_exa_last_time_updated(const gos::examap::Coord &exa_coord, u16 *out__last_time_updated) const;
 		bool				world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const;
 		bool				world_ray_to_GVC  (const gos::vec3f &world_o, const gos::vec3f &world_dir, GVC *out) const;
 		bool				GVC_to_world_coord  (const GVC gvc, gos::vec3f *out_world_coord) const;
 		bool				GVC_to_node (const GVC gvc, Node *out) const;
+
+		bool				exaInfo__get_last_time_updated(const gos::examap::Coord &exa_coord, u16 *out__last_time_updated) const;
+		bool				exaInfo__get_AABB (const gos::examap::Coord &exa_coord, gos::geom::AABB3 *out__aabb) const;
 
 	private:
 		struct ExaInfo
@@ -87,10 +90,13 @@ namespace Land1
 			void	reset()					{ num_node = 0; node_list = NULL; last_time_updated = 0; }
 
 		public:
+			Node				*node_list;
+			gos::geom::AABB3	aabb;
 			gos::examap::Coord	coord;
 			u16					num_node;
 			u16					last_time_updated;
-			Node				*node_list;
+			
+			
 		};
 
 
@@ -107,11 +113,13 @@ namespace Land1
 		Node*		priv_examap__get_nodePointer (const GVC gvc);
 		const Node*	priv_examap__get_nodePointer (const GVC gvc) const;
 		void		priv_examap__merge_node_adj (Node *nodeIN, const Node *other_node);
+		void		priv_examap__recalc_AABB (ExaInfo *exa);
 
-		void	priv_node_to_vtx (const Node *node, Vtx *out) const;
-		void	priv_node__update_quad_center (Node *node);
-		void 	priv_calc_mesh_type (const GVC gvc);
-		void 	priv_do_set_node_height (const GVC gvc, Node *node, u16 height);
+		void		priv_node_to_vtx (const Node *node, Vtx *out) const;
+		void		priv_node__update_quad_center (Node *node);
+		void 		priv_calc_mesh_type (const GVC gvc);
+		void 		priv_do_set_node_height (const GVC gvc, Node *node, u16 height);
+		bool		priv_world_ray_intersect_quad (const ExaInfo *exa, const gos::vec3f &world_o, const gos::vec3f &world_dir, f32 rayLen, u16 *out__node_idx) const;
 
 
 	private:

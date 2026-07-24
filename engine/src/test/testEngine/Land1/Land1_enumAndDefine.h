@@ -86,7 +86,7 @@ namespace Land1
 	public:
 		struct VtxInfo
 		{
-			u8	num_quad;				//num quad centrati sul vtx i-esimo
+			u8	num_quad;							//num quad centrati sul vtx i-esimo
 			u8 	material_index;
 			u16	height;
 			eMeshType	mesh_type[NUM_MAX_QUADS];	//uno per ogni quad
@@ -117,7 +117,7 @@ namespace Land1
 
 	public:
 		u16			exaSRC_last_time_updated;	//questo exaR e' stato creato quando l'exa sorgente aveva <last_time_updated> == exaSRC_last_time_updated
-		u16			num_vtxInfo;		//quelli che compongono l'exa originale
+		u16			num_vtxInfo;		//quelli che compongono l'exa originale e che sono memmati in <vtxInfoList>
 		u16			num_vtx_tot;		//tutti quelli che sono in vtxList
 		VtxInfo		*vtxInfoList;		//una VtxInfo per ogni vtx-originale
 		gos::vec2f	*vtxList;			//tutti i vtx utili al rendering

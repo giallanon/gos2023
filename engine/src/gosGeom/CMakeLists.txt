@@ -30,6 +30,10 @@ gosGeomEular.cpp
 gosGeomEular.h
 gosGeomFrustum3.cpp
 gosGeomFrustum3.h
+gosGeomIntersect2D.cpp
+gosGeomIntersect2D.h
+gosGeomIntersect3D.cpp
+gosGeomIntersect3D.h
 gosGeomKDop.h
 gosGeomPlane3.cpp
 gosGeomPlane3.h

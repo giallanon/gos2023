@@ -1,7 +1,8 @@
 #include "Land1_map2.h"
 #include "gos.h"
 #include "gosGeomUtils.h"
-
+#include "gosGeomIntersect2D.h"
+#include "gosGeomIntersect3D.h"
 
 using namespace gos;
 using namespace Land1;
@@ -228,8 +229,8 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 				const u32 B_index = exagen.get_index_of_vtx_in_uscita_da (adj_quad_list[0], iVtx);
 				const u32 C_index = exagen.get_index_of_vtx_in_entrata_a (adj_quad_list[0], iVtx);
 				exavtx[iVtx].num_adj_vtx = 2;
-				exavtx[iVtx].connected_vtx[0] = exavtx[B_index].gvc;
-				exavtx[iVtx].connected_vtx[1] = exavtx[C_index].gvc;
+				exavtx[iVtx].connected_node[0] = exavtx[B_index].gvc;
+				exavtx[iVtx].connected_node[1] = exavtx[C_index].gvc;
 			}
 			break;
 
@@ -251,9 +252,9 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 				assert (C_index != D_index);
 
 				exavtx[iVtx].num_adj_vtx = 3;
-				exavtx[iVtx].connected_vtx[0] = exavtx[B_index].gvc;
-				exavtx[iVtx].connected_vtx[1] = exavtx[C_index].gvc;
-				exavtx[iVtx].connected_vtx[2] = exavtx[D_index].gvc;
+				exavtx[iVtx].connected_node[0] = exavtx[B_index].gvc;
+				exavtx[iVtx].connected_node[1] = exavtx[C_index].gvc;
+				exavtx[iVtx].connected_node[2] = exavtx[D_index].gvc;
 			}
 			break;
 
@@ -292,10 +293,10 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 				assert (D_index != E_index);
 
 				exavtx[iVtx].num_adj_vtx = 4;
-				exavtx[iVtx].connected_vtx[0] = exavtx[B_index].gvc;
-				exavtx[iVtx].connected_vtx[1] = exavtx[C_index].gvc;
-				exavtx[iVtx].connected_vtx[2] = exavtx[D_index].gvc;
-				exavtx[iVtx].connected_vtx[3] = exavtx[E_index].gvc;
+				exavtx[iVtx].connected_node[0] = exavtx[B_index].gvc;
+				exavtx[iVtx].connected_node[1] = exavtx[C_index].gvc;
+				exavtx[iVtx].connected_node[2] = exavtx[D_index].gvc;
+				exavtx[iVtx].connected_node[3] = exavtx[E_index].gvc;
 
 			}
 			break;
@@ -311,7 +312,7 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 				const u32 B_index = exagen.get_index_of_vtx_in_uscita_da (quad_index, iVtx);
 
 				assert (t < 6);
-				exavtx[iVtx].connected_vtx[t] = exavtx[B_index].gvc;
+				exavtx[iVtx].connected_node[t] = exavtx[B_index].gvc;
 			}
 		}
 	}
@@ -415,8 +416,38 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 			}			
 		}
 	}
+
+
+	//aggiorno BB dell'exa
+	priv_examap__recalc_AABB (examap.get_pointer (coordIN));
 }
 
+//************************************* 
+void Map2::priv_examap__recalc_AABB (ExaInfo *exa)
+{
+	if (NULL == exa)
+	{
+		DBGBREAK;
+		return;
+	}
+
+	exa->aabb.vmin.set (1e36f, 1e36f, 1e36f);
+	exa->aabb.vmax.set (-1e36f, -1e36f, -1e36f);
+	for (u32 iNode = 0; iNode < exa->num_node; iNode++)
+	{
+		if (!exa->node_list[iNode].gvc.is_valid())
+			continue;
+
+		const vec3f p (exa->node_list[iNode].pos.x, (f32)exa->node_list[iNode].height * EXA_HEIGHT_MUL,  exa->node_list[iNode].pos.y);
+		if (p.x < exa->aabb.vmin.x)		exa->aabb.vmin.x = p.x;
+		if (p.y < exa->aabb.vmin.y)		exa->aabb.vmin.y = p.y;
+		if (p.z < exa->aabb.vmin.z)		exa->aabb.vmin.z = p.z;
+
+		if (p.x > exa->aabb.vmax.x)		exa->aabb.vmax.x = p.x;
+		if (p.y > exa->aabb.vmax.y)		exa->aabb.vmax.y = p.y;
+		if (p.z > exa->aabb.vmax.z)		exa->aabb.vmax.z = p.z;
+	}
+}
 
 /************************************* 
  * fa il merge delle adiacenze di <nodeIN> con quelle di <temp_node> modificando <nodeIN>
@@ -427,12 +458,12 @@ void Map2::priv_examap__merge_node_adj (Node *nodeIN, const Node *other_node)
 	assert (NN <= 6);
 	for (u32 i = 0; i < NN; i++)
 	{
-		const GVC gvc_connected = other_node->connected_vtx[i];
+		const GVC gvc_connected = other_node->connected_node[i];
 		
 		bool bFound = false;
 		for (u32 t = 0; t < nodeIN->num_adj_vtx; t++)
 		{
-			if (nodeIN->connected_vtx[t] == gvc_connected)
+			if (nodeIN->connected_node[t] == gvc_connected)
 			{
 				bFound = true;
 				break;
@@ -442,7 +473,7 @@ void Map2::priv_examap__merge_node_adj (Node *nodeIN, const Node *other_node)
 		{
 			const u32 ii = nodeIN->num_adj_vtx++;
 			assert (ii < 6);
-			nodeIN->connected_vtx[ii] = gvc_connected;
+			nodeIN->connected_node[ii] = gvc_connected;
 		}
 	}
 
@@ -451,9 +482,9 @@ void Map2::priv_examap__merge_node_adj (Node *nodeIN, const Node *other_node)
 		vec2f vvv[8];
 		for (u32 i = 0; i < nodeIN->num_adj_vtx; i++)
 		{
-			const Node *node2 = priv_examap__get_nodePointer (nodeIN->connected_vtx[i]);
+			const Node *node2 = priv_examap__get_nodePointer (nodeIN->connected_node[i]);
 			if (NULL == node2)
-				node2 = temp_node_list.query_pointer (nodeIN->connected_vtx[i]);
+				node2 = temp_node_list.query_pointer (nodeIN->connected_node[i]);
 			if (NULL != node2)
 				vvv[i] = node2->pos;
 			else
@@ -465,9 +496,9 @@ void Map2::priv_examap__merge_node_adj (Node *nodeIN, const Node *other_node)
 
 		GVC gvc_temp[8];
 		for (u32 i = 0; i < nodeIN->num_adj_vtx; i++)
-			gvc_temp[i] = nodeIN->connected_vtx[ordered_index[i]];
+			gvc_temp[i] = nodeIN->connected_node[ordered_index[i]];
 		for (u32 i = 0; i < nodeIN->num_adj_vtx; i++)
-			nodeIN->connected_vtx[i] = gvc_temp[i];
+			nodeIN->connected_node[i] = gvc_temp[i];
 	}
 }
 
@@ -479,10 +510,10 @@ void Map2::priv_node__update_quad_center (Node *nodeIN)
 
 	for (u32 iQuad = 0; iQuad < nodeIN->num_adj_vtx; iQuad++)
 	{
-		const Node *node1 = priv_examap__get_nodePointer (nodeIN->connected_vtx[iQuad]);
+		const Node *node1 = priv_examap__get_nodePointer (nodeIN->connected_node[iQuad]);
 		if (NULL == node1)
 		{
-			node1 = temp_node_list.query_pointer (nodeIN->connected_vtx[iQuad]);
+			node1 = temp_node_list.query_pointer (nodeIN->connected_node[iQuad]);
 			if (NULL == node1)
 			{
 				DBGBREAK;
@@ -493,10 +524,10 @@ void Map2::priv_node__update_quad_center (Node *nodeIN)
 		u32 ii = iQuad+1;
 		if (ii == nodeIN->num_adj_vtx)
 			ii=0;
-		const Node *node2 = priv_examap__get_nodePointer (nodeIN->connected_vtx[ii]);
+		const Node *node2 = priv_examap__get_nodePointer (nodeIN->connected_node[ii]);
 		if (NULL == node2)
 		{
-			node2 = temp_node_list.query_pointer (nodeIN->connected_vtx[ii]);
+			node2 = temp_node_list.query_pointer (nodeIN->connected_node[ii]);
 			if (NULL == node2)
 			{
 				DBGBREAK;
@@ -509,17 +540,17 @@ void Map2::priv_node__update_quad_center (Node *nodeIN)
 		bool bFound = false;
 		for (u32 i2 = 0; i2 < node1->num_adj_vtx; i2++)
 		{
-			if (node1->connected_vtx[i2] == nodeIN->gvc)
+			if (node1->connected_node[i2] == nodeIN->gvc)
 				continue;
 			for (u32 i3 = 0; i3 < node2->num_adj_vtx; i3++)
 			{
-				if (node1->connected_vtx[i2] == node2->connected_vtx[i3])
+				if (node1->connected_node[i2] == node2->connected_node[i3])
 				{
 					bFound = true;
-					node3 = priv_examap__get_nodePointer (node1->connected_vtx[i2]);
+					node3 = priv_examap__get_nodePointer (node1->connected_node[i2]);
 					if (NULL == node3)
 					{
-						node3 = temp_node_list.query_pointer (node1->connected_vtx[i2]);
+						node3 = temp_node_list.query_pointer (node1->connected_node[i2]);
 						if (NULL == node3)
 						{
 							DBGBREAK;
@@ -538,7 +569,7 @@ void Map2::priv_node__update_quad_center (Node *nodeIN)
 		//ho tutti e 4 i nodi del quad, posso determinare il centro
 		if (bFound)
 		{
-			nodeIN->other_vtx[iQuad] = node3->gvc;
+			nodeIN->other_node[iQuad] = node3->gvc;
 			nodeIN->quad_center[iQuad] = (nodeIN->pos + node1->pos + node2->pos + node3->pos) * 0.25f;
 		}
 	}
@@ -555,13 +586,26 @@ void Map2::priv_node_to_vtx (const Node *node, Vtx *out) const
 }
 
 //************************************* 
-bool Map2::get_exa_last_time_updated(const gos::examap::Coord &exa_coord, u16 *out__last_time_updated) const
+bool Map2::exaInfo__get_last_time_updated(const gos::examap::Coord &exa_coord, u16 *out__last_time_updated) const
 {
 	assert (NULL != out__last_time_updated);
 	const ExaInfo *exaInfo = examap.query_pointer (exa_coord);
 	if (NULL != exaInfo)
 	{
 		*out__last_time_updated = exaInfo->last_time_updated;
+		return true;
+	}
+	return false;
+}
+
+//************************************* 
+bool Map2::exaInfo__get_AABB (const gos::examap::Coord &exa_coord, gos::geom::AABB3 *out__aabb) const
+{
+	assert (NULL != out__aabb);
+	const ExaInfo *exaInfo = examap.query_pointer (exa_coord);
+	if (NULL != exaInfo)
+	{
+		*out__aabb = exaInfo->aabb;
 		return true;
 	}
 	return false;
@@ -600,10 +644,87 @@ bool Map2::world_coord_to_GVC  (const gos::vec3f &world_coord, GVC *out) const
 }
 
 //************************************* 
+bool Map2::priv_world_ray_intersect_quad (const ExaInfo *exa, const gos::vec3f &rayO, const gos::vec3f &rayDir, f32 rayLen, u16 *out__node_idx) const
+{
+	assert (NULL != exa);
+	assert (NULL != out__node_idx);
+
+	if (rayDir.y == 0)
+		return false;
+
+	for (u16 iNode = 0; iNode < exa->num_node; iNode++)
+	{
+		const Node *node = &exa->node_list[iNode];
+		if (!node->gvc.is_valid())
+			continue;
+
+		const f32 H = (f32)node->height * EXA_HEIGHT_MUL;
+		
+		//intersezione del ray con il plane parallelo a XZ situato ad altezza H
+		const f32 t = (H - rayO.y) / rayDir.y;
+		if (t >= 0 && t <= rayLen)
+		{
+			//vediamo se il punto di intereszione sta all'interno dei poligono centrato sul nodo
+			const vec2f p (rayO.x + rayDir.x * t, rayO.z + rayDir.z * t);
+			bool bFound = true;
+			for (u8 i = 0; i < node->num_adj_vtx; i++)
+			{
+				u8 ii;
+				if (i + 1 == node->num_adj_vtx)
+					ii = 0;
+				else
+					ii = i + 1;
+
+				if (geom::line2D__which_side (node->quad_center[i], node->quad_center[ii], p) < 0)
+				{
+					bFound = false;
+					break;
+				}
+			}
+
+			if (bFound)
+			{
+				*out__node_idx = iNode;
+				return true;
+			}
+		}
+	}
+
+	
+	return false;
+}
+
+//************************************* 
 bool Map2::world_ray_to_GVC  (const gos::vec3f &world_o, const gos::vec3f &world_dir, GVC *out) const
 {
-	//TODO
-	DBGBREAK;
+	static constexpr f32 RAY_LEN = 10000.0f;
+	f32		min_d = 1e36f;
+	u32		best_idx = u32MAX;
+
+	const FastArray<Examap::sElem> *list = examap._queryList();
+	const u32 n = list->getNElem();
+	for (u32 i = 0; i < n; i++)
+	{
+		f32 d;
+		if (geom::ray3D__intersect_AABB3 (world_o, world_dir, RAY_LEN, list->queryElem(i).value.aabb, &d))
+		{
+			if (d < min_d)
+			{
+				min_d = d;
+				best_idx = i;
+			}
+		}
+	}
+
+	if (u32MAX == best_idx)	
+		return false;
+
+	u16 node_idx;
+	if (priv_world_ray_intersect_quad (&list->queryElem(best_idx).value, world_o, world_dir, RAY_LEN, &node_idx))
+	{
+		out->set (list->queryElem(best_idx).value.coord, node_idx);
+		return true;
+	}
 	return false;
 }
 
@@ -668,11 +789,15 @@ void Map2::priv_do_set_node_height (const GVC gvc, Node *node, u16 height)
 
 	node->height = height;
 	priv_calc_mesh_type (gvc);
+	priv_examap__recalc_AABB (examap.get_pointer(node->gvc.get_exa_coord()));
 
 	for (u8 iQuad=0; iQuad<node->num_adj_vtx; iQuad++)
 	{
-		priv_calc_mesh_type (node->connected_vtx[iQuad]);
-		priv_calc_mesh_type (node->other_vtx[iQuad]);
+		priv_calc_mesh_type (node->connected_node[iQuad]);
+		priv_examap__recalc_AABB (examap.get_pointer(node->connected_node[iQuad].get_exa_coord()));
+
+		priv_calc_mesh_type (node->other_node[iQuad]);
+		priv_examap__recalc_AABB (examap.get_pointer(node->connected_node[iQuad].get_exa_coord()));
 	}
 }
 
@@ -719,17 +844,17 @@ void Map2::priv_calc_mesh_type (const GVC gvc)
 	assert (exaInfo->node_list[gvc.get_vertex_idx()].gvc == gvc);
 	Node *node = &exaInfo->node_list[gvc.get_vertex_idx()];
 
-	bool bModified = false;
+	//bool bModified = false;
 	for (u8 iQuad=0; iQuad<node->num_adj_vtx; iQuad++)
 	{
 		GVC gvc3;
 		if (iQuad + 1 == node->num_adj_vtx)
-			gvc3 = node->connected_vtx[0];
+			gvc3 = node->connected_node[0];
 		else
-			gvc3 = node->connected_vtx[iQuad+1];
+			gvc3 = node->connected_node[iQuad+1];
 
-		const Node *node1 = priv_examap__get_nodePointer (node->connected_vtx[iQuad]);
-		const Node *node2 = priv_examap__get_nodePointer (node->other_vtx[iQuad]);
+		const Node *node1 = priv_examap__get_nodePointer (node->connected_node[iQuad]);
+		const Node *node2 = priv_examap__get_nodePointer (node->other_node[iQuad]);
 		const Node *node3 = priv_examap__get_nodePointer (gvc3);
 
 		u8 mask = 0;
@@ -754,12 +879,12 @@ void Map2::priv_calc_mesh_type (const GVC gvc)
 		if (mt != node->mesh_type[iQuad])
 		{
 			node->mesh_type[iQuad] = mt;
-			bModified = true;
+			//bModified = true;
 		}
 	}
 
-	if (bModified)
-		exaInfo->last_time_updated++;
+	//if (bModified)
+	exaInfo->last_time_updated++;
 }
 
 //************************************* 
@@ -801,15 +926,15 @@ u32 Map2::get_exa_vtxList (const gos::examap::Coord &exa_coord, FastArray<Vtx> &
 
 		for (u32 t = 0; t < v->num_adj_vtx; t++)
 		{
-			const GVC gvc = node->connected_vtx[t];
+			const GVC gvc = node->connected_node[t];
 			
 			u32 index;
 			//stiamo puntando ad un vtx situato su un altro exa
 			if (!map.find (gvc, &index))
 			{
-				const Node *node2 = priv_examap__get_nodePointer(node->connected_vtx[t]);
+				const Node *node2 = priv_examap__get_nodePointer(node->connected_node[t]);
 				if (NULL == node2)
-					node2 = temp_node_list.query_pointer(node->connected_vtx[t]);
+					node2 = temp_node_list.query_pointer(node->connected_node[t]);
 
 				assert (NULL != node2);
 				Vtx vtx;
@@ -952,11 +1077,11 @@ Land1::ExaR* Map2::calc_exaR (gos::Allocator *allocatorIN, const gos::examap::Co
 		{
 			GVC cc;
 			if (iQuad + 1 == node->num_adj_vtx)
-				cc = node->connected_vtx[0];
+				cc = node->connected_node[0];
 			else
-				cc = node->connected_vtx[iQuad + 1];
+				cc = node->connected_node[iQuad + 1];
 
-			const Key128 key = Land1_map__make_key_2 (node->gvc, node->connected_vtx[iQuad], node->other_vtx[iQuad], cc);
+			const Key128 key = Land1_map__make_key_2 (node->gvc, node->connected_node[iQuad], node->other_node[iQuad], cc);
 			
 			u16 idx;
 			if (!qc_vtx_map.find(key, &idx))
@@ -973,19 +1098,19 @@ Land1::ExaR* Map2::calc_exaR (gos::Allocator *allocatorIN, const gos::examap::Co
 		u16 edge_vtx_idx[8];
 		for (u32 iQuad=0; iQuad<node->num_adj_vtx; iQuad++)
 		{
-			const u64 edge_key = Land1_map__make_key_1( node->gvc, node->connected_vtx[iQuad] );
+			const u64 edge_key = Land1_map__make_key_1( node->gvc, node->connected_node[iQuad] );
 			u16 idx;
 			if (!edge_vtx_map.find(edge_key, &idx))
 			{
 				idx = (u16)vtx_list.getNElem();
 				edge_vtx_map.insertIfNotExists (edge_key, idx);
 
-				//calcolo la posizione del vtx che e' l'intersezione di node->coord, node->connected_vtx[iQuad] contro
+				//calcolo la posizione del vtx che e' l'intersezione di node->coord, node->connected_node[iQuad] contro
 				// quad_center[iQuad], quad_center[iQuad-1]
 				vec3f p;
 				const vec2f A = node->pos;
 
-				GVC_to_world_coord (node->connected_vtx[iQuad], &p);
+				GVC_to_world_coord (node->connected_node[iQuad], &p);
 				const vec2f B (p.x, p.z);
 
 				const vec2f C ( vtx_list(quad_center_idx[iQuad]) );

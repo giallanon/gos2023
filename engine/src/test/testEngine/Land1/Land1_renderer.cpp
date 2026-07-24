@@ -377,7 +377,7 @@ void Renderer::add_exa (const gos::examap::Coord exa_coord)
 	assert (NULL != map);
 
 	u16 last_time_updated;
-	if (!map->get_exa_last_time_updated (exa_coord, &last_time_updated))
+	if (!map->exaInfo__get_last_time_updated (exa_coord, &last_time_updated))
 		return;
 
 	const u32 key = exa_coord.pack_coord_u32();

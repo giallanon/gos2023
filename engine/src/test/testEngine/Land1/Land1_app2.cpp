@@ -156,16 +156,27 @@ void Land1_app2::on__handle_input (const Engine::InputEvent &ev)
 	case COMPILE_TIME_STR_CRC32("mouse_LB"):
 	case COMPILE_TIME_STR_CRC32("mouse_LB+SHIFT"):
 		{
+			line_ctx1->clear();
+
 			const gpu::Viewport *vp = gpu->getInfo (gpu->viewport_getDefault());
 			vec2f m(mouse_x, mouse_y);
 			vec3f world_dir;
 			cam.unproject (vp->getW_f32(), vp->getH_f32(), &m , &world_dir, 1);
 
-			//supponendo che hex sia sempre ad altezza y=0...
-			const f32 t = -cam.pos.o.y / world_dir.y;
-			const vec3f point_on_hex = cam.pos.o + world_dir * t;
 
-			priv_draw_exa (point_on_hex, engine->inputEvent_getBtnModifier()->isLSHIFT());
+			Land1::GVC gvc;
+			if (map.world_ray_to_GVC (cam.pos.o, world_dir, &gvc))
+			{
+				priv_draw_exa (gvc, engine->inputEvent_getBtnModifier()->isLSHIFT());
+			}
+
+
+			//supponendo che hex sia sempre ad altezza y=0...
+			//const f32 t = -cam.pos.o.y / world_dir.y;
+			//const vec3f point_on_hex = cam.pos.o + world_dir * t;
+			//Land1::GVC gvc;
+			//if (map.world_coord_to_GVC (point_on_hex, &gvc))
+			//	priv_draw_exa (gvc, engine->inputEvent_getBtnModifier()->isLSHIFT());
 		}
 		break;
 
@@ -204,18 +215,14 @@ u32 Land1_app2::priv_do_draw_exa (const examap::Coord exa_coord, FastArray<Land1
 }
 
 //***************************************
-void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
+void Land1_app2::priv_draw_exa (const Land1::GVC &gvc, bool bLSHIFT)
 {
-	line_ctx1->clear();
-	Land1::GVC gvc;
-	if (!map.world_coord_to_GVC (world_point, &gvc))
-		return;
 	Land1::Map2::Node node;
 	map.GVC_to_node (gvc, &node);
 	const examap::Coord exa_coord = gvc.get_exa_coord();
 	logger::log ("(%d, %d, %d) num_adjc=%d", exa_coord.x, exa_coord.z, gvc.get_vertex_idx(), node.num_adj_vtx);
 	for (u32 i=0; i<node.num_adj_vtx; i++)
-		logger::log ("  (%d, %d, %d)", node.connected_vtx[i].get_exa_coord().x, node.connected_vtx[i].get_exa_coord().z, node.connected_vtx[i].get_vertex_idx());
+		logger::log ("  (%d, %d, %d)", node.connected_node[i].get_exa_coord().x, node.connected_node[i].get_exa_coord().z, node.connected_node[i].get_vertex_idx());
 	logger::log ("\n");
 	
 
@@ -271,7 +278,7 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 	for (u32 i = 0; i < node.num_adj_vtx; i++)
 	{
 		vec3f p;
-		map.GVC_to_world_coord (node.connected_vtx[i], &p);
+		map.GVC_to_world_coord (node.connected_node[i], &p);
 
 		const u32 ii = line_ctx1->vtx_add(p);
 		line_ctx1->set_color_ARGB (colors[i % N_COLORS])
@@ -287,7 +294,7 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 			const u32 ii = line_ctx1->vtx_add(p);
 			
 			vec3f p2;
-			map.GVC_to_world_coord (node.other_vtx[i], &p2);
+			map.GVC_to_world_coord (node.other_node[i], &p2);
 			const u32 ii2 = line_ctx1->vtx_add(p2);
 			
 			line_ctx1->set_color_ARGB (colors[i % N_COLORS])
@@ -324,6 +331,17 @@ void Land1_app2::priv_draw_exa (const gos::vec3f &world_point, bool bLSHIFT)
 			map.set_node_material_index (node.gvc, material_index_to_apply);
 			break;
 		}
-	}	
+	}
+
+
+	//AABB dell'exa selezionato
+	{
+		geom::AABB3 aabb;
+		if (map.exaInfo__get_AABB (exa_coord, &aabb))
+		{
+			line_ctx1->set_color_ARGB (0xFF0000FF)
+				.aabb3 (aabb.vmin, aabb.vmax, 5);
+		}
+	}
 
 }
