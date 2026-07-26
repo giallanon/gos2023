@@ -3,6 +3,7 @@
 #include "gosGeomUtils.h"
 #include "gosGeomIntersect2D.h"
 #include "gosGeomIntersect3D.h"
+#include "../PerlinNoise.hpp"
 
 using namespace gos;
 using namespace Land1;
@@ -114,6 +115,24 @@ void Map2::map_create (f32 exa_radius_world, u32 random_seed)
 }
 
 //************************************* 
+void Map2::map_recalc_mesh_type()
+{
+	const FastArray<Examap::sElem> *list = examap._queryList();
+	const u32 N = list->getNElem();
+	for (u32 iExa=0; iExa<N; iExa++)
+	{
+		const ExaInfo *exainfo = &list->queryElem(iExa).value;
+		for (u32 iNode=0; iNode<exainfo->num_node; iNode++)
+		{
+			const Node *node = &exainfo->node_list[iNode];
+			if (!node->gvc.is_valid())
+				continue;
+			priv_calc_mesh_type(node->gvc);
+		}
+	}
+	
+}
+//************************************* 
 void Map2::exa__add_with_radius (const gos::examap::Coord center_coord, u32 map_radius)
 {
 	exa__add (center_coord);
@@ -154,7 +173,10 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 	const u32 num_vtx_originali = exagen.vtxList.getNElem();
 
 
-	//Creo un elenco di vtx dell'exa e dtermino GVC per ciascuno
+	siv::PerlinNoise perlin{ 1234 }; //gos::randomU32(u32MAX)};
+
+
+	//Creo un elenco di vtx dell'exa e determino GVC per ciascuno
 	FastArray<Node> exavtx (gos::getScrapAllocator(), num_vtx_originali);
 	for (u32 iVtx = 0; iVtx < num_vtx_originali; iVtx++)
 	{
@@ -166,6 +188,13 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		vv.material_index = 1 + rnd.getU32(2);
 		vv.num_adj_vtx = 0;
 		vv.height = 0;
+
+		// {
+		// 	f32 h = (f32)perlin.normalizedOctave2D_01(vv.pos.x, vv.pos.y, 2);
+		// 	if (h > 0.62)	
+		// 		vv.height = 100;
+		// }
+
 
 		for (u32 i=0; i<6; i++)
 			vv.mesh_type[i] = eMeshType::full;
@@ -405,7 +434,9 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		{
 			const GVC gvc = exavtx(iVtx).gvc;
 			if (gvc.get_exa_coord() == coordIN)
+			{
 				priv_node__update_quad_center (&ee->node_list[ gvc.get_vertex_idx()]);
+			}
 			else
 			{
 				Node *node = priv_examap__get_nodePointer (gvc);
@@ -413,23 +444,39 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 					node = temp_node_list.get_pointer (gvc);
 				assert (NULL != node);
 				priv_node__update_quad_center (node);
-			}			
+			}
+
+			
 		}
 	}
 
 
 	//aggiorno BB dell'exa
 	priv_examap__recalc_AABB (examap.get_pointer (coordIN));
+
+	gos::examap::Coord cc;
+	cc = coordIN; cc.move (examap::eDir::top);			priv_examap__recalc_AABB (examap.get_pointer (cc));
+	cc = coordIN; cc.move (examap::eDir::right_top);	priv_examap__recalc_AABB (examap.get_pointer (cc));
+	cc = coordIN; cc.move (examap::eDir::right_bottom);	priv_examap__recalc_AABB (examap.get_pointer (cc));
+	cc = coordIN; cc.move (examap::eDir::bottom);		priv_examap__recalc_AABB (examap.get_pointer (cc));
+	cc = coordIN; cc.move (examap::eDir::left_bottom);	priv_examap__recalc_AABB (examap.get_pointer (cc));
+	cc = coordIN; cc.move (examap::eDir::left_top);		priv_examap__recalc_AABB (examap.get_pointer (cc));
 }
 
 //************************************* 
 void Map2::priv_examap__recalc_AABB (ExaInfo *exa)
 {
 	if (NULL == exa)
-	{
-		DBGBREAK;
 		return;
-	}
+
+	examap::Coord cc = exa->coord;
+	cc.move (examap::eDir::top);
+	const bool bExists_exa_top = examap.exists (cc);
+	cc = exa->coord; cc.move (examap::eDir::right_top);
+	const bool bExists_exa_right_top = examap.exists (cc);
+	cc = exa->coord; cc.move (examap::eDir::right_bottom);
+	const bool bExists_exa_right_bottom = examap.exists (cc);
+
 
 	exa->aabb.vmin.set (1e36f, 1e36f, 1e36f);
 	exa->aabb.vmax.set (-1e36f, -1e36f, -1e36f);
@@ -437,16 +484,63 @@ void Map2::priv_examap__recalc_AABB (ExaInfo *exa)
 	{
 		if (!exa->node_list[iNode].gvc.is_valid())
 			continue;
+		if (exa->node_list[iNode].num_adj_vtx < 3)
+			continue;
 
-		const vec3f p (exa->node_list[iNode].pos.x, (f32)exa->node_list[iNode].height * EXA_HEIGHT_MUL,  exa->node_list[iNode].pos.y);
-		if (p.x < exa->aabb.vmin.x)		exa->aabb.vmin.x = p.x;
-		if (p.y < exa->aabb.vmin.y)		exa->aabb.vmin.y = p.y;
-		if (p.z < exa->aabb.vmin.z)		exa->aabb.vmin.z = p.z;
+		const f32 H = (f32)exa->node_list[iNode].height * EXA_HEIGHT_MUL;
 
-		if (p.x > exa->aabb.vmax.x)		exa->aabb.vmax.x = p.x;
-		if (p.y > exa->aabb.vmax.y)		exa->aabb.vmax.y = p.y;
-		if (p.z > exa->aabb.vmax.z)		exa->aabb.vmax.z = p.z;
+		const u16 iBorderVtx = exa->node_list[iNode].gvc.get_vertex_idx();
+		if (1 == iBorderVtx)
+		{
+			if (!bExists_exa_right_top || !bExists_exa_right_bottom)
+				continue;
+		}
+		else if (iBorderVtx >= 2 && iBorderVtx <= 8)
+		{
+			if (!bExists_exa_right_top)
+				continue;
+		}
+		else if (9 == iBorderVtx)
+		{
+			if (!bExists_exa_top || !bExists_exa_right_top)
+				continue;
+		}
+		else if (iBorderVtx >= 10 && iBorderVtx <= 16)
+		{
+			if (!bExists_exa_top)
+				continue;
+		}
+		else if (iBorderVtx >= 42 && iBorderVtx <= 48)
+		{
+			if (!bExists_exa_right_bottom)
+				continue;
+		}
+
+		// const vec3f p (exa->node_list[iNode].pos.x, H,  exa->node_list[iNode].pos.y);
+		// if (p.x < exa->aabb.vmin.x)		exa->aabb.vmin.x = p.x;
+		// if (p.y < exa->aabb.vmin.y)		exa->aabb.vmin.y = p.y;
+		// if (p.z < exa->aabb.vmin.z)		exa->aabb.vmin.z = p.z;
+
+		// if (p.x > exa->aabb.vmax.x)		exa->aabb.vmax.x = p.x;
+		// if (p.y > exa->aabb.vmax.y)		exa->aabb.vmax.y = p.y;
+		// if (p.z > exa->aabb.vmax.z)		exa->aabb.vmax.z = p.z;
+	
+
+		//considero anche i quad-center	
+		for (u32 i=0; i<exa->node_list[iNode].num_adj_vtx; i++)
+		{
+			const vec3f p (exa->node_list[iNode].quad_center[i].x, H, exa->node_list[iNode].quad_center[i].y);
+			if (p.x < exa->aabb.vmin.x)		exa->aabb.vmin.x = p.x;
+			if (p.y < exa->aabb.vmin.y)		exa->aabb.vmin.y = p.y;
+			if (p.z < exa->aabb.vmin.z)		exa->aabb.vmin.z = p.z;
+
+			if (p.x > exa->aabb.vmax.x)		exa->aabb.vmax.x = p.x;
+			if (p.y > exa->aabb.vmax.y)		exa->aabb.vmax.y = p.y;
+			if (p.z > exa->aabb.vmax.z)		exa->aabb.vmax.z = p.z;			
+		}
+		
 	}
+
 }
 
 /************************************* 
@@ -903,6 +997,8 @@ void Map2::priv_calc_mesh_type (const GVC gvc)
 		const Node *node1 = priv_examap__get_nodePointer (node->connected_node[iQuad]);
 		const Node *node2 = priv_examap__get_nodePointer (node->other_node[iQuad]);
 		const Node *node3 = priv_examap__get_nodePointer (gvc3);
+		if (NULL == node1 || NULL == node2 || NULL == node3)
+			continue;
 
 		u8 mask = 0;
 		if (node1->height < node->height) 	mask |= 0x01;

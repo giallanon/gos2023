@@ -78,14 +78,26 @@ void main()
 
 
 	//material
+//     switch (material_index)
+//     {
+// 		default: out_diffuse_col = color_sRGB_to_linear(255,0,255); break;
+//         case 1: out_diffuse_col = color_sRGB_to_linear(66,136,71); break;
+//         case 2: out_diffuse_col = color_sRGB_to_linear(89,170,92); break;
+//         case 3: out_diffuse_col = color_sRGB_to_linear(116,95,55); break;
+// 		case 0xff: out_diffuse_col = color_sRGB_to_linear(76,58,20); break;
+//     }
+
+	vec3 material_color = color_sRGB_to_linear(255,0,255);
     switch (material_index)
     {
-		default: out_diffuse_col = color_sRGB_to_linear(255,0,255); break;
-        case 1: out_diffuse_col = color_sRGB_to_linear(66,136,71); break;
-        case 2: out_diffuse_col = color_sRGB_to_linear(89,170,92); break;
-        case 3: out_diffuse_col = color_sRGB_to_linear(116,95,55); break;
-		case 0xff: out_diffuse_col = color_sRGB_to_linear(76,58,20); break;
-    }
+        case 1: material_color = color_sRGB_to_linear(66,136,71); break;
+        case 2: material_color = color_sRGB_to_linear(89,170,92); break;
+        case 3: material_color = color_sRGB_to_linear(116,95,55); break;
+		case 0xff: material_color = color_sRGB_to_linear(76,58,20); break;
+	}
+
+	const vec3 rock_color = color_sRGB_to_linear(100,100,100);
+	out_diffuse_col = mix (rock_color, material_color, out_normal.y);
 
 }
 

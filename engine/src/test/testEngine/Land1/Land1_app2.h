@@ -30,6 +30,7 @@ private:
 	u32		priv_do_draw_exa (const gos::examap::Coord exa_coord, gos::FastArray<Land1::Map2::Vtx> *out_list);
 	void	priv_new_albero (const gos::vec3f &world_point);
 	void	priv_mouse_to_GVC ();
+	void 	priv_on_mouse_click (bool bLB);
 
 private:
 	i16	mouse_x;
@@ -49,6 +50,7 @@ private:
 
 
 	Land1::GVC				last_mouseover_gvc;
+	u64						next_time_calc_mouseover_ms;
 	u8						material_index_to_apply;
 };
 

@@ -312,11 +312,11 @@ void Renderer::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 			continue;
 
 		u32 meshType;
-		static constexpr u32 MESH_INDEX__ANGOLO = 1;
-		static constexpr u32 MESH_INDEX__ANGOLO_INTERNO = 2;
-		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_SU = 3;
-		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_DX = 4;		
-		static constexpr u32 MESH_INDEX__FULL = 5;
+		static constexpr u32 MESH_INDEX__FULL = 1;
+		static constexpr u32 MESH_INDEX__ANGOLO = 2;
+		static constexpr u32 MESH_INDEX__ANGOLO_INTERNO = 3;
+		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_SU =4;
+		static constexpr u32 MESH_INDEX__BORDO_SINGOLO_DX = 5;		
 		static constexpr u32 MESH_INDEX__STRANO = 6;
 		
 		

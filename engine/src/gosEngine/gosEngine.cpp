@@ -79,7 +79,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 
     //main win
     GOSWinHandle mainWin;
-    if (!gos::input::window_create (1024, 768, gos::getAppName(), &mainWin))
+    if (!gos::input::window_create (mainWin_w, mainWin_h, gos::getAppName(), &mainWin))
     {
         logger::err ("Engine::setup() => input::window_create failed\n");
         return false;

@@ -6,6 +6,7 @@
 #include "gosHashMap.h"
 #include "../gosGeom/gosGeomAABB3.h"
 
+
 namespace Land1
 {
 	/*******************************
@@ -55,6 +56,8 @@ namespace Land1
 		void	exa__add (const gos::examap::Coord coord);
 		void	exa__add_with_radius (const gos::examap::Coord center_coord, u32 radius);
 
+		void 	map_recalc_mesh_type();
+		
 		//======================= utils
 				//filla <outList> con tutti i vtx necessari a renderizzare l'exa.
 				//Ritorna il numero di "vertici originali" dell'exa. Ogni vtx e' collegato ad altri vertici ma non tutti i vtx

@@ -68,7 +68,7 @@ namespace gos
 
         /**
         * @brief    bubbleSort()
-        *           dato un array <list> di <num_elem>, fa il bubblesort usando cmpFn(const A, const B)
+        *           dato un array <list> di <num_elem>, fa il bubblesort usando cmpFn(const T *a, const T *b)
         */
                 template<typename T, typename LAMBDA>
         void    bubbleSort (T *list, u32 num_elem, LAMBDA&& cmpFn)
@@ -81,7 +81,6 @@ namespace gos
                     {
                         num_elem--;
                         bEsci = true;
-                        u32 ct = 0;
                         for (u32 i=0; i<num_elem; i++)
                         {
                             if (cmpFn(&list[i], &list[i+1]))

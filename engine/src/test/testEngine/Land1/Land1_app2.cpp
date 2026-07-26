@@ -11,6 +11,7 @@ Land1_app2::Land1_app2()
 	material_index_to_apply = 1;
 	num_alberi = 0;
 	last_mouseover_gvc.set_invalid();
+	next_time_calc_mouseover_ms = 0;
 }
 
 //***************************************
@@ -28,6 +29,7 @@ void Land1_app2::on__setup ()
 	engine->inputCtx->
 		action_add ("mouse_LB")
 		.action_add ("mouse_LB+SHIFT")
+		.action_add ("mouse_RB")
 		.action_add ("KB_1")
 		.action_add ("KB_2")
 		.action_add ("KB_3")
@@ -36,7 +38,9 @@ void Land1_app2::on__setup ()
 		.action_add ("Height--");
 		
 	engine->inputCtx->action_bindToBtn ("mouse_LB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed);
+	engine->inputCtx->action_bindToBtn ("mouse_RB", input::eOrigin::mouse, GOS_BUTTON_MOUSE_RIGHT, input::eButtonStatus::pressed);
 	engine->inputCtx->action_bindToBtn ("mouse_LB+SHIFT", input::eOrigin::mouse, GOS_BUTTON_MOUSE_LEFT, input::eButtonStatus::pressed, input::eButtonModifier::LSHIFT);
+	
 	engine->inputCtx->action_bindToBtn ("KB_1", input::eOrigin::keyboard, GLFW_KEY_1, input::eButtonStatus::pressed);
 	engine->inputCtx->action_bindToBtn ("KB_2", input::eOrigin::keyboard, GLFW_KEY_2, input::eButtonStatus::pressed);
 	engine->inputCtx->action_bindToBtn ("KB_3", input::eOrigin::keyboard, GLFW_KEY_3, input::eButtonStatus::pressed);
@@ -73,8 +77,7 @@ void Land1_app2::on__setup ()
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, 187);
 	map.exa__add_with_radius ( examap::Coord(0, 0), 4);
-
-
+	//map.map_recalc_mesh_type();
 
 	renderer_land->map_attach (&map);
 }
@@ -108,21 +111,22 @@ void Land1_app2::priv_new_albero (const gos::vec3f &world_point)
 //***************************************
 void Land1_app2::on__prepare_render()
 {
-	//renderer_land->begin();
-	//{
-	//	renderer_land->add_exa (examap::Coord(0,0));
-	//
-	//	const u32 MAX_RADIUS = 128;
-	//	const u32 MAX_NUM_COORD = MAX_RADIUS * 6;
-	//	examap::Coord coordList[MAX_NUM_COORD];
-	//	for (u32 ring = 1; ring <= 2; ring++)
-	//	{
-	//		u32 n = examap::coord_ring (examap::Coord(0,0), ring, coordList, MAX_NUM_COORD);
-	//		for (u32 i = 0; i < n; i++)
-	//			renderer_land->add_exa (coordList[i]);
-	//	}
-	//}
-	//renderer_land->end();
+	const u64 timenow_msec = gos::getTimeSinceStart_msec();
+	renderer_land->begin();
+	{
+		renderer_land->add_exa (examap::Coord(0,0));
+	
+		const u32 MAX_RADIUS = 128;
+		const u32 MAX_NUM_COORD = MAX_RADIUS * 6;
+		examap::Coord coordList[MAX_NUM_COORD];
+		for (u32 ring = 1; ring <= 2; ring++)
+		{
+			u32 n = examap::coord_ring (examap::Coord(0,0), ring, coordList, MAX_NUM_COORD);
+			for (u32 i = 0; i < n; i++)
+				renderer_land->add_exa (coordList[i]);
+		}
+	}
+	renderer_land->end();
 
 	//alberi
 	renderer_PIPE3->begin();
@@ -133,16 +137,40 @@ void Land1_app2::on__prepare_render()
 	renderer_PIPE3->end();
 
 
+	if (timenow_msec >= next_time_calc_mouseover_ms)
+	{
+		next_time_calc_mouseover_ms = timenow_msec + 30;
+		priv_mouse_to_GVC();
+	}
+
+	//disegno il quad del mouseover
 	line_ctx2->clear();
 	if (last_mouseover_gvc.is_valid())
 	{
-		line_ctx2->enable_depth_test(false)
-			.enable_depth_write(false)
-			.set_line_width(4)
-			.set_color_ARGB (0xFFFFFFFF)
-			.line_begin();
+		Land1::Map2::Node node_over;
+		if (map.GVC_to_node (last_mouseover_gvc, &node_over))
+		{
+			const f32 H = (f32)node_over.height * Land1::Map2::EXA_HEIGHT_MUL;
+			line_ctx2->enable_depth_test(false)
+				.enable_depth_write(false)
+				.set_color_ARGB (0xFFFFFFFF)
+				.set_line_width(3);
 
-	}
+			u32 ct = line_ctx2->vtx_get_num();
+			for (u32 i=0; i<node_over.num_adj_vtx; i++)
+			{
+				const vec3f p (node_over.quad_center[i].x, H, node_over.quad_center[i].y);
+				line_ctx2->vtx_add(p);
+			}
+			line_ctx2->line_begin();
+			for (u32 i=0; i<node_over.num_adj_vtx; i++)
+				line_ctx2->line_add_vtx(ct + i);
+			line_ctx2->line_add_vtx(ct);
+			line_ctx2->line_end();
+
+
+		}
+	}	
 }
 
 //***************************************
@@ -190,15 +218,17 @@ void Land1_app2::on__handle_input (const Engine::InputEvent &ev)
 			line_ctx1->clear();
 			priv_mouse_to_GVC();
 			if (last_mouseover_gvc.is_valid())
-				priv_draw_exa (last_mouseover_gvc, engine->inputEvent_getBtnModifier()->isLSHIFT());
-
-			//supponendo che hex sia sempre ad altezza y=0...
-			//const f32 t = -cam.pos.o.y / world_dir.y;
-			//const vec3f point_on_hex = cam.pos.o + world_dir * t;
-			//Land1::GVC gvc;
-			//if (map.world_coord_to_GVC (point_on_hex, &gvc))
-			//	priv_draw_exa (gvc, engine->inputEvent_getBtnModifier()->isLSHIFT());
+			{
+				//priv_draw_exa (last_mouseover_gvc, engine->inputEvent_getBtnModifier()->isLSHIFT());
+				priv_on_mouse_click (true);
+			}
 		}
+		break;
+
+	case COMPILE_TIME_STR_CRC32("mouse_RB"):
+		priv_mouse_to_GVC();
+		if (last_mouseover_gvc.is_valid())
+			priv_on_mouse_click (false);
 		break;
 
 	case COMPILE_TIME_STR_CRC32("Height++"):	material_index_to_apply = 0xFE; break;
@@ -364,5 +394,41 @@ void Land1_app2::priv_draw_exa (const Land1::GVC &gvc, bool bLSHIFT)
 				.aabb3 (aabb.vmin, aabb.vmax, 5);
 		}
 	}
+}
+
+
+//***************************************
+void Land1_app2::priv_on_mouse_click (bool bLB)
+{
+	if (!last_mouseover_gvc.is_valid())
+		return;
+
+	const Land1::GVC gvc = last_mouseover_gvc;
+
+	if (!bLB)
+	{
+		map.dec_node_height (gvc, 100);
+	}
+	else
+	{
+		switch (material_index_to_apply)
+		{
+		case 0xFF:
+			{
+				vec3f p;
+				if (map.GVC_to_world_coord (gvc, &p))
+					priv_new_albero( p );
+			}
+			break;
+
+		case 0xFE:
+			map.inc_node_height (gvc, 100);
+			break;
+
+		default:
+			map.set_node_material_index (gvc, material_index_to_apply);
+			break;
+		}
+	}	
 
 }
