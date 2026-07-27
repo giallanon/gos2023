@@ -96,7 +96,7 @@ void main()
 		case 0xff: material_color = color_sRGB_to_linear(76,58,20); break;
 	}
 
-	const vec3 rock_color = color_sRGB_to_linear(100,100,100);
+	const vec3 rock_color = color_sRGB_to_linear(200,200,200);
 	out_diffuse_col = mix (rock_color, material_color, out_normal.y);
 
 }

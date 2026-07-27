@@ -73,7 +73,7 @@ void Land1_app2::on__setup ()
 	move_free.bind (&cam.pos);
 
 	//creo una mappa
-	const f32 EXA_WORLD_RADIUS = 10.0f; //50.0f;
+	const f32 EXA_WORLD_RADIUS = 50.0f;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, 187);
 	map.exa__add_with_radius ( examap::Coord(0, 0), 4);
