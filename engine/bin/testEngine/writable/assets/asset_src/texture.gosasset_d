@@ -19,3 +19,15 @@
 	dstFmt:U8_RGBA
 }
 
+@tex2D: perlin-001
+{
+	src: texture/perlin-001.png
+	//src: <common_assets>/images/faccia256x256.png
+	srcColorSpace:	sRGB
+
+	dstNumMipMap: max
+	dstFmt:U8_RGBA
+	
+	post_op: "normalizeRGB"
+}
+

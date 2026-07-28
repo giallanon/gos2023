@@ -241,6 +241,11 @@ bool Engine::setup_renderPipe()
 	texture2D_create (dimx, dimy, 1, eImageFormat::U8_RGBA, eMemAccessMode::onGPU, srcDATA, &handle_texture_bianca, stageHelper);
 	GOSFREE(gos::getScrapAllocator(), srcDATA);
 
+    //aggiungo la texture bianca alla render pipe
+    const res::Texture2d *res_texture2d;
+    get (handle_texture_bianca, &res_texture2d, 4000);
+    renderPipe.texture_add_reserved (res_texture2d->texHandle, engine::RenderPipe::SPECIAL_TEXTURE__BIANCA);
+
     return true;
 }
 

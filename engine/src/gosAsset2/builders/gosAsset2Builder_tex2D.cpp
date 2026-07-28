@@ -1,7 +1,6 @@
 #include "gos.h"
 #include "../gos/gosString.h"
 #include "../gosAsset2Builder.h"
-#include "../gosImage/gosImageBufferRGBA.h"
 #include "gosAsset2Builder_tex2D.h"
 #include "gosAsset2Builder_tex2D_shaders.h"
 
@@ -277,6 +276,42 @@ bool Builder_tex2D::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *o
 	return true;
 }
 
+//************************************
+bool Builder_tex2D::priv_apply_post_op(image::BufferRGBA *img)
+{
+	char post_op[4096];
+	if (!sec->get ("post_op", post_op, sizeof(post_op)))
+		return true;
+
+	string::utf8::StringListParser sp;
+	string::utf8::StringListParser sp_params;
+	sp.toStart (post_op, ';');
+
+	
+	char op[256];
+	while (sp.next(op, sizeof(op)))
+	{
+		char command[128];
+		sp_params.toStart (op, ',');
+		if (!sp_params.next(command, sizeof(command)))
+			continue;
+
+		if (string::utf8::areEqual(command, "normalizeRGBA", true))
+		{
+            img->normalizeRGBA();
+		}
+		else if (string::utf8::areEqual(command, "normalizeRGB", true))
+		{
+            img->normalizeRGB();
+		}
+		else
+		{
+			logger->log (eTextColor::red, "line %d, invalid operation: %s\n", sec->getLineStarted(), command);
+			return false;        
+		}		
+	}
+    return true;
+}
 
 //************************************
 bool Builder_tex2D::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const Params &params, const char *filenameDST)
@@ -306,6 +341,12 @@ bool Builder_tex2D::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_a
         //se necessario converto sRGB to RGB
         if (params.srcIs_sRGB)
             srcImage.convert_sRGB_to_RGB();
+
+
+        //eventuali operazioni di post processing
+        if (!priv_apply_post_op(&srcImage))
+            return false;
+
 
         result = gpu->texture_create2D (srcImage.getW(), srcImage.getH(), 1, eImageFormat::U8_RGBA, eMemAccessMode::onGPU, srcImage._bufferRGBA, &texHandle, stageHelper);
         srcImage.free (gos::getSysHeapAllocator());

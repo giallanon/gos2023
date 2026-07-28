@@ -799,3 +799,53 @@ void BufferRGBA::convert_sRGB_to_RGB()
 
 	}
 }
+
+//***********************************************************
+void BufferRGBA::priv_normalize (u8 num_ch)
+{
+	const u32 size = _w * _h * 4;
+
+	u8	col_min[4] = { 255, 255, 255, 255 };
+	u8	col_max[4] = { 0, 0, 0, 0 };
+
+	u32 ct = 0;
+	while (ct < size)
+	{
+		u8 col[4] = {
+			_bufferRGBA[ct++],
+			_bufferRGBA[ct++],
+			_bufferRGBA[ct++],
+			_bufferRGBA[ct++]
+		};
+
+		for (u8 i = 0; i < 4; i++)
+		{
+			if (col[i] < col_min[i])	col_min[i] = col[i];
+			if (col[i] > col_max[i])	col_max[i] = col[i];
+		}
+	}
+
+	ct = 0;
+	while (ct < size)
+	{
+		u32 ct_start = ct;
+		u8 col[4] = {
+			_bufferRGBA[ct++],
+			_bufferRGBA[ct++],
+			_bufferRGBA[ct++],
+			_bufferRGBA[ct++]
+		};
+
+		for (u8 i = 0; i < num_ch; i++)
+		{
+			col[i] -= col_min[i];
+
+			col[i] = (u8)math::round (255.0f * ((f32)col[i] / (f32)(col_max[i] - col_min[i])));
+		}
+
+		_bufferRGBA[ct_start++] = col[0];
+		_bufferRGBA[ct_start++] = col[1];
+		_bufferRGBA[ct_start++] = col[2];
+		_bufferRGBA[ct_start++] = col[3];
+	}
+}

@@ -112,6 +112,7 @@ namespace Land1
 		SBO_MeshInstanceData			sbo_meshInstanceData;
 
 		gos::ENGModel3d 				handle__model_tile1;
+		gos::ENGTexture					hanle__tex_perlin01;
 		const gos::ENGGPUShape			*shape_list;
 
 		u32 		num_vtx;

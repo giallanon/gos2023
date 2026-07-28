@@ -3,6 +3,7 @@
 #include "gosAsset2BuilderInterface.h"
 #include "../gosGPU/gosGPUEnumAndDefine.h"
 #include "../gosImage/gosImageBuilder.h"
+#include "../gosImage/gosImageBufferRGBA.h"
 
 /* Sintassi:
 
@@ -13,6 +14,15 @@
 
 	(optional)  dstNumMipMap: max|<number >= 1>     => default = "max" => indica il num di mipmap totali (compreso il livello 0)
 	(mandatory) dstFmt:U8_RGBA|U8_RGB|U8_R
+
+	(optional) post_op:  <operation>,<param1>, ... , <paramN> ;		=> un elenco di <operation> da eseguire sulla img src prima di produrre l'asset
+						 ....										=> le <operation> sono separate da ;  i parametri di una <operation>
+						 <operation>,<param1>, ... , <paramN>		=> sono separti da ,
+
+		Le <operation> supportate sono:
+			normalizeRGB			    => calcola il min e il max colore per ogni canale e lo rimappa in 0-255
+            normalizeRGBA			    => calcola il min e il max colore per ogni canale e lo rimappa in 0-255
+
 }
 */
 
@@ -54,6 +64,7 @@ namespace gos
             bool    priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const Params &params, const char *filenameDST);
             bool    priv_create_GPUResourceOnce();
             bool    priv_save (const gpu::sMappedImage &src, gos::image::Builder &builder, eImageFormat dstFmt, u32 srcW, u32 srcH, u32 mipMapNum_0toN, u32 numPallini);
+            bool    priv_apply_post_op (image::BufferRGBA *img);
 
         private:
 			Params 				params;

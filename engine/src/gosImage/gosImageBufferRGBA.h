@@ -50,6 +50,10 @@ namespace gos
 			void			clear (const gos::ColorU32 &col)											{ clear (col.r(), col.g(), col.b(), col.a()); }
 
 			void 			convert_sRGB_to_RGB();
+			
+							//calcola il min e il max per ogni canale e poi li rimappa in 0-255
+			void			normalizeRGB()																{ priv_normalize(3); }
+			void			normalizeRGBA()																{ priv_normalize(4); }
 
 			void			putPixel (i16 x, i16 y, u8 r, u8 g, u8 b, u8 a = 0xff);
 			void			putPixel (const gos::Point2 &p, u8 r, u8 g, u8 b, u8 a = 0xff)				{ putPixel (p.x, p.y, r, g, b, a); }
@@ -103,6 +107,7 @@ namespace gos
 			u8*				priv_getPointerTo (i16 x, i16 y) const											{ return &_bufferRGBA[priv_calcOffset(x,y)]; }
 			u8				priv_circonferenza_quadrante (i16 px, i16 py, i16 r, u8 spessore) const;
 			u8				priv_circle_quadrante (i16 px, i16 py, i16 r) const;
+			void			priv_normalize (u8 num_ch);
 
 		public:
 			u8				*_bufferRGBA;

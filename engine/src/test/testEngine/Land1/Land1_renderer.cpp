@@ -23,6 +23,7 @@ void Renderer::priv_unsetup()
 		return;
 
 	engine->release(handle_pipeline);
+	engine->release(hanle__tex_perlin01);
 
 	gpu->buffer_unmap (sbo_exaVtxList.mapped_buffer);
 	gpu->buffer_unmap (sbo_exaVtxInfo.mapped_buffer);
@@ -141,21 +142,28 @@ bool Renderer::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
 
 	//load risorse
 	engine->model_createFromAsset ("model_tile1", &handle__model_tile1, res::eLoadMode::asap);
-	
+	engine->texture2D_createFromAsset ("perlin-001", &hanle__tex_perlin01, res::eLoadMode::asap);
 
 	exaR_map.setup (localAllocator, 128);
 
 
 	//aspetto che le risorse siano caricate
 	const res::Model3d *res_model;
-	engine->get (handle__model_tile1, &res_model, 4000);
+	{
+		engine->get (handle__model_tile1, &res_model, 4000);
 
-	//il modello ha delle shape, voglio sapere quali
-	//queste shape sono gia' bindata a VB/IB
-	gos::model::Reader mr;
-	mr.setup (&res_model->model);
-	shape_list = mr.gpushape_get_pt_to_list();
+		//il modello ha delle shape, voglio sapere quali
+		//queste shape sono gia' bindata a VB/IB
+		gos::model::Reader mr;
+		mr.setup (&res_model->model);
+		shape_list = mr.gpushape_get_pt_to_list();
+	}
 
+	const res::Texture2d *res_texture2d;
+	{
+		engine->get (hanle__tex_perlin01, &res_texture2d, 4000);
+		engine->renderPipe.texture_add_if_dont_exists (res_texture2d->texHandle);
+	}
 
 	return true;
 }

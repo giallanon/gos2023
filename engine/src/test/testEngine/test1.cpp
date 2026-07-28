@@ -254,14 +254,14 @@ bool Test1::priv_run4 ()
 			DBGBREAK;
 			return false;
 		}
-		texture_index__texBianca = engine->renderPipe.texture_addIfNotExitst(tex->texHandle);
+		texture_index__texBianca = engine->renderPipe.texture_add_if_dont_exists(tex->texHandle);
 
 		if (!engine->get (handle_texChecker, &tex, 5000))
 		{
 			DBGBREAK;
 			return false;
 		}
-		texture_index__texChecker = engine->renderPipe.texture_addIfNotExitst(tex->texHandle);
+		texture_index__texChecker = engine->renderPipe.texture_add_if_dont_exists(tex->texHandle);
 
 		renderer_PIPE3->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
 		renderer_PIPE3->material_create (texture_index__texChecker, vec3f(1.0f, 1.0f, 1.0f));

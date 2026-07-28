@@ -60,7 +60,7 @@ void Land1_app2::on__setup ()
 		const gos::res::Texture2d *tex;
 		engine->get_texture_bianca (&tex);
 
-		engine->renderPipe.texture_addIfNotExitst (tex->texHandle);
+		engine->renderPipe.texture_add_if_dont_exists (tex->texHandle);
 		renderer_PIPE3->material_create (0, vec3f(0.3f, 1 , 0.3f));
 	}
 

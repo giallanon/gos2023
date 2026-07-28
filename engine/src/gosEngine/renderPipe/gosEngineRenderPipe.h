@@ -20,6 +20,9 @@ namespace gos
 		class RenderPipe
 		{
 		public:
+			static u8 constexpr		SPECIAL_TEXTURE__BIANCA		= 0;
+
+		public:
 			struct SceneData
 			{
 				gos::mat4x4f    matVP;
@@ -76,7 +79,8 @@ namespace gos
 
 
 			//==================== gestione texture
-            u32		texture_addIfNotExitst (GPUTextureHandle texHandle);
+			bool	texture_add_reserved (GPUTextureHandle texHandle, u32 texture_index);
+            u32		texture_add_if_dont_exists (GPUTextureHandle texHandle);
             void	texture_remove (GPUTextureHandle texHandle)                                     { texture_array.remove(texHandle); }
             bool	texture_find (GPUTextureHandle texHandle, u32 *out_index) const                 { return texture_array.find(texHandle, out_index); }
 
@@ -97,7 +101,7 @@ namespace gos
 			Context						ctx;
             Engine                      *engine;
 			DynamicTextureArray         texture_array;			
-			GPUSamplerHandle            handle_samplers[2];
+			GPUSamplerHandle            handle_samplers[3];
 			gos::FastArray<Renderer*>	renderer_list;
 			GPUDescrSetLayoutHandle		handle_descr_set_0;
 			GPUDescrSetLayoutHandle		handle_descr_set_1;

@@ -14,15 +14,7 @@ layout(location = 0) out vec3 out_normal;
 layout(location = 1) out vec2 out_texCoord;
 layout(location = 2) flat out vec3 out_diffuse_col;
 
-vec3 color_sRGB_to_linear (float r, float g, float b)
-{
-    vec3 ret;
-    ret.x = pow (r/255.0f, 2.2f);
-    ret.y = pow (g/255.0f, 2.2f);
-    ret.z = pow (b/255.0f, 2.2f);
 
-    return ret;
-}
 
 void main() 
 {
@@ -74,18 +66,9 @@ void main()
 	//normale
     out_normal = in_normal * matW;
 
-    out_texCoord = in_texCoord;
+    //out_texCoord = in_texCoord;
+	out_texCoord.xy = world.xz / 100;
 
-
-	//material
-//     switch (material_index)
-//     {
-// 		default: out_diffuse_col = color_sRGB_to_linear(255,0,255); break;
-//         case 1: out_diffuse_col = color_sRGB_to_linear(66,136,71); break;
-//         case 2: out_diffuse_col = color_sRGB_to_linear(89,170,92); break;
-//         case 3: out_diffuse_col = color_sRGB_to_linear(116,95,55); break;
-// 		case 0xff: out_diffuse_col = color_sRGB_to_linear(76,58,20); break;
-//     }
 
 	vec3 material_color = color_sRGB_to_linear(255,0,255);
     switch (material_index)
@@ -96,8 +79,8 @@ void main()
 		case 0xff: material_color = color_sRGB_to_linear(76,58,20); break;
 	}
 
+	//material_color = color_sRGB_to_linear(66,136,71);
 	const vec3 rock_color = color_sRGB_to_linear(200,200,200);
 	out_diffuse_col = mix (rock_color, material_color, out_normal.y);
-
 }
 

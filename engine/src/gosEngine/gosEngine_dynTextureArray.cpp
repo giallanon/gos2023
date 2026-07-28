@@ -19,6 +19,11 @@ void DynamicTextureArray::setup (gos::Allocator *allocator, u32 num_max_textureI
     hashMap.setup (allocator, num_max_texture);
 
     bitmask.zero();
+
+    //le prime N texture sono "reserved" e possono essere
+    //modificate solo tramite add_reserved()
+    for (u32 i=0; i<NUM_RESERVED; i++)
+        bitmask.set(i);
 }
 
 //*************************************
@@ -29,7 +34,25 @@ void DynamicTextureArray::unsetup()
 }
 
 //*************************************
-u32 DynamicTextureArray::addIfNotExitst (GPUTextureHandle texHandle, bool *out_canBeNULL_wasNew)
+bool DynamicTextureArray::add_reserved (GPUTextureHandle texHandle, u32 reserved_index)
+{
+    assert (reserved_index < NUM_RESERVED);
+    
+    FastHashMap<GPUTextureHandle, u32>::Position pos;
+    u32 index;
+    if (hashMap.findWithPos (texHandle, &index, &pos))
+    {
+        assert (reserved_index == index);
+        return true;
+    }
+
+    assert (bitmask.isBitSet (reserved_index));
+    hashMap.insertInPosition (pos, reserved_index);
+    return true;
+}
+
+//*************************************
+u32 DynamicTextureArray::add_if_dont_exists (GPUTextureHandle texHandle, bool *out_canBeNULL_wasNew)
 {
     FastHashMap<GPUTextureHandle, u32>::Position pos;
     u32 index;
