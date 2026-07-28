@@ -25,8 +25,8 @@ void main()
 	
 	
 	
-	float f01 = PIPE3_sample2D_bilinear_REPEAT (16, in_texCoord).r;
-	vec3 diffuse_col = in_diffuse_col +(0.2*in_diffuse_col*f01);
+	float f01 = PIPE3_sample2D_bilinear (16, in_texCoord).r;
+	vec3 diffuse_col = in_diffuse_col +(0.4*in_diffuse_col*f01);
 	
 	/*const vec3 rock_color = color_sRGB_to_linear(200,200,200);
 	const vec3 material_color_final = mix (color_sRGB_to_linear(66,136,71), color_sRGB_to_linear(89,170,92), f01);

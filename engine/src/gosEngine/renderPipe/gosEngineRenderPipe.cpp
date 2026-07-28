@@ -67,7 +67,7 @@ bool RenderPipe::priv_setup (gos::Allocator *allocatorIN, Engine *engineIN)
 	def
 		.reset()
         .descriptorset_add(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT)
-            .add (0, eGPUDescriptrorType::SAMPLER, 3, eGPUDescriptrorUsage::vtx_shader | eGPUDescriptrorUsage::pxl_shader)
+            .add (0, eGPUDescriptrorType::SAMPLER, 2, eGPUDescriptrorUsage::vtx_shader | eGPUDescriptrorUsage::pxl_shader)
 			.add (1, eGPUDescriptrorType::TEXTURE2D, 1024, eGPUDescriptrorUsage::vtx_shader | eGPUDescriptrorUsage::pxl_shader)
             .endDescriptorSet()
         .descriptorset_add()
@@ -123,13 +123,6 @@ bool RenderPipe::priv_setup (gos::Allocator *allocatorIN, Engine *engineIN)
         desc.mipFilter = eSamplerMipFilter::nearest;
         desc.bAnisotropic = false;
         gpu->sampler_create (desc, &handle_samplers[1]);
-
-        //sampler2d: bilinear filtering : REPEAT
-        desc.reset();
-		desc.addressModeU = eSamplerAddressMode::REPEAT;
-		desc.addressModeV = eSamplerAddressMode::REPEAT;
-        gpu->sampler_create (desc, &handle_samplers[2]);
-
     }
 
     //UBO "scene"
@@ -154,7 +147,6 @@ bool RenderPipe::priv_setup (gos::Allocator *allocatorIN, Engine *engineIN)
 		dsw.begin (gpu, ctx.handle_descrSet0)
 			.bindSamplerInArray  (0, handle_samplers[0], 0)             //bindo in samplerList[0] il sampler "bilinear"
 			.bindSamplerInArray  (0, handle_samplers[1], 1)             //bindo in samplerList[1] il sampler "point"
-			.bindSamplerInArray  (0, handle_samplers[2], 2)             //bindo in samplerList[2] il sampler "bilinear" con texture repeat
 			.end();
 	}
 
@@ -177,9 +169,18 @@ bool RenderPipe::priv_setup (gos::Allocator *allocatorIN, Engine *engineIN)
 //*******************************************
 bool RenderPipe::texture_add_reserved (GPUTextureHandle texHandle, u32 texture_index)
 {
-	const bool ret = texture_array.add_reserved (texHandle, texture_index);
-	assert (ret);
-	return ret;
+    if (texture_array.add_reserved (texHandle, texture_index))
+    {
+        gos::gpu::DescrSetInstanceWriter dsw;
+        dsw.begin (engine->gpu, ctx.handle_descrSet0)
+            .bindTextureInArray (1, texHandle, texture_index)
+            .end();
+
+		return true;
+    }	
+	
+	DBGBREAK;
+	return false;
 }
 
 //*******************************************

@@ -101,7 +101,7 @@ namespace gos
 			Context						ctx;
             Engine                      *engine;
 			DynamicTextureArray         texture_array;			
-			GPUSamplerHandle            handle_samplers[3];
+			GPUSamplerHandle            handle_samplers[2];
 			gos::FastArray<Renderer*>	renderer_list;
 			GPUDescrSetLayoutHandle		handle_descr_set_0;
 			GPUDescrSetLayoutHandle		handle_descr_set_1;
