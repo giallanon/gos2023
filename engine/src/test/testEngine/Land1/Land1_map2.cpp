@@ -190,9 +190,8 @@ void Map2::exa__add (const gos::examap::Coord coordIN)
 		vv.height = 0;
 
 		// {
-		// 	f32 h = (f32)perlin.normalizedOctave2D_01(vv.pos.x, vv.pos.y, 2);
-		// 	if (h > 0.62)	
-		// 		vv.height = 100;
+		// 	f32 h = (f32)perlin.normalizedOctave2D_01(vv.pos.x, vv.pos.y, 4);
+		// 	vv.height = math::round(h*10.0f)  * 50;
 		// }
 
 
