@@ -56,14 +56,7 @@ void Land1_app2::on__setup ()
 		line_ctx2 = renderer_line3d->ctx__create_new("ctx2", 32);
 
 	//carico un po' di texture
-	{
-		const gos::res::Texture2d *tex;
-		engine->get_texture_bianca (&tex);
-
-		engine->renderPipe.texture_add_if_dont_exists (tex->texHandle);
-		renderer_PIPE3->material_create (0, vec3f(0.3f, 1 , 0.3f));
-	}
-
+	renderer_PIPE3->material_create (engine::RenderPipe::SPECIAL_TEXTURE__BIANCA, vec3f(0.3f, 1 , 0.3f));
 	engine->model_createFromAsset ("model_gix_tree_1", &handle_model_albero, res::eLoadMode::asap);
 	
 
@@ -112,6 +105,7 @@ void Land1_app2::priv_new_albero (const gos::vec3f &world_point)
 void Land1_app2::on__prepare_render()
 {
 	const u64 timenow_msec = gos::getTimeSinceStart_msec();
+
 	renderer_land->begin();
 	{
 		renderer_land->add_exa (examap::Coord(0,0));

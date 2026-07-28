@@ -200,6 +200,12 @@ bool model::set_mesh  (Model &m, u32 mesh_num, u16 shape_indexIN, u16 bone_index
 	assert (model::isValid(m));
 
 	const u32 num_meshes = utils::bufferReadU16 (&m.blob[Reader::NUM_MESHES]);
+	const u16 num_shapes = utils::bufferReadU16 (&m.blob[Reader::NUM_SHAPES]);
+	const u16 num_material = utils::bufferReadU16 (&m.blob[Reader::NUM_MATERIAL]);
+
+	assert (material_indexIN < num_material);
+	assert (shape_indexIN < num_shapes);
+
 	assert (mesh_num < num_meshes);
 	if (mesh_num >= num_meshes)
 	{
@@ -218,8 +224,6 @@ bool model::set_mesh  (Model &m, u32 mesh_num, u16 shape_indexIN, u16 bone_index
 	Model::Mesh *list = reinterpret_cast<Model::Mesh*>(&m.blob[START_of_MESH]);
 	list[mesh_num] = mesh;
 
-	const u16 num_shapes = utils::bufferReadU16 (&m.blob[Reader::NUM_SHAPES]);
-	const u16 num_material = utils::bufferReadU16 (&m.blob[Reader::NUM_MATERIAL]);
 	model__do_set_name (m, num_shapes + num_material + mesh_num, name__can_be_NULL);
 	return true;
 }

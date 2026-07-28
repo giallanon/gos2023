@@ -1,5 +1,6 @@
 @include: common.gosasset_d
 
+
 @model3d: model_omino
 {
 	import: <common_assets>/model3d/omino/omino.glb

@@ -26,13 +26,7 @@ void main()
 	
 	
 	float f01 = PIPE3_sample2D_bilinear_REPEAT (16, in_texCoord).r;
-	if (f01 < 0.2)
-		f01 = 0.7;
-	else if (f01 < 0.4)
-		f01 = 0.8;
-	else if (f01 < 0.6)
-		f01 = 0.9;
-	
+	vec3 diffuse_col = in_diffuse_col +(0.2*in_diffuse_col*f01);
 	
 	/*const vec3 rock_color = color_sRGB_to_linear(200,200,200);
 	const vec3 material_color_final = mix (color_sRGB_to_linear(66,136,71), color_sRGB_to_linear(89,170,92), f01);
@@ -41,7 +35,7 @@ void main()
 	*/
 	
 	
-	out_colorRGBA = vec4(in_diffuse_col * sunLight * f01, 1);
+	out_colorRGBA = vec4(diffuse_col * sunLight, 1);
 	
 
 }

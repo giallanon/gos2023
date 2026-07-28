@@ -515,6 +515,7 @@ void Builder_model3d::Syntax1::priv_print_report(const char *filenameDST) const
 
 	//mesh
 	out << "\n";
+	out << "\t//[mesh]: <mesh-name>; <my-shape-name>; <my-material-name>; <bone-name>; <local-transform-matrix3x3>\n";
 	for (u32 i = 0; i < buildCtx.imported.num_mesh; i++)
 	{
 		const u32 shape_index = buildCtx.imported.mesh_list[i].shape_index;
@@ -527,8 +528,7 @@ void Builder_model3d::Syntax1::priv_print_report(const char *filenameDST) const
 		skr.setup (&buildCtx.imported.skeleton);
 		//const gos::Bone *bone = skr.bone_get_by_index(bone_index);
 		const char *bone_name = skr.name_get_by_index (bone_index);
-
-		out << "\t//[mesh]: <mesh-name>; <my-shape-name>; <my-material-name>; <bone-name>; <local-transform-matrix3x3>\n";
+		
 		out << "\t[mesh]: " 
 			<< "\"" << mesh_name << "\"; "
 			<< "\"" << shape_name << "\"; ";

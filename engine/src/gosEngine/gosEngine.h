@@ -110,7 +110,6 @@ namespace gos
 		void 			internal__texture2D_on_afterCreate (void *res);
 		void            internal__texture2D_on_destroy (void *res);
 
-		ENGTexture		handle_texture_bianca;
 		bool            get_texture_bianca (const res::Texture2d **out)               								{ return res_getOrScheduleLoadT(handle_texture_bianca, out, 0); }
 
         //============================= shape
@@ -273,6 +272,7 @@ namespace gos
 		res::Manager 								resManager;
 		FastHashMap<ENGShape, ENGGPUShape>			map_of_shape_to_gpushape;
 		gos::ObjectPool<res::HandleChain>			resHandleChainPool;
+        ENGTexture		                            handle_texture_bianca;
 
 		
 		

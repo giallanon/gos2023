@@ -43,7 +43,7 @@ namespace gos
 
 						res->set_default_material_params();
 						res->diffuse_col_HDR_RGBA.set (matIN.diffuse_col_RGBA_HDR[0], matIN.diffuse_col_RGBA_HDR[1], matIN.diffuse_col_RGBA_HDR[2], matIN.diffuse_col_RGBA_HDR[3]);
-						res->diffuse_texture_index = 0;
+						res->diffuse_texture_index = engine::RenderPipe::SPECIAL_TEXTURE__BIANCA;
 
 
 						//fine, tutto ok

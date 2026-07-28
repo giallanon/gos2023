@@ -461,7 +461,7 @@ void Game1::priv_spawnMissile (const gos::vec3f &o, const gos::vec3f dir)
 void Game1::priv_loop ()
 {
 	//engine->model_createFromAsset ("model_albero", &handle_model_albero, res::eLoadMode::asap);
-	engine->model_createFromAsset ("model_LowPolyTree", &handle_model_albero, res::eLoadMode::asap);
+	engine->model_createFromAsset ("model_omino", &handle_model_albero, res::eLoadMode::asap);
 
 	const res::Model3d *res_model_albero;
 	engine->get (handle_model_albero, &res_model_albero, 4000);
