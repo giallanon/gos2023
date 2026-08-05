@@ -138,12 +138,12 @@ namespace gos
 			static constexpr u8	FLAG1__MARKED_FOR_RELOAD	= 0;
 
 		public:
-			void 	reset()			{ uid.setInvalid(); status=eStatus::error; refCount = 0; flag1.zero(); figli=padri=NULL; on_afterCreate=NULL; on_afterLoad=NULL; on_unload=NULL; on_destroy=NULL; }
+			void 	reset()			{ uid.setInvalid(); _status=eStatus::error; refCount = 0; flag1.zero(); figli=padri=NULL; on_afterCreate=NULL; on_afterLoad=NULL; on_unload=NULL; on_destroy=NULL; }
 
 		public:
 			asset2::UID			uid;		//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
 			Handle				handle;
-			res::eStatus		status;		//stato della risorsa dal punto di vista dell'engine
+			res::eStatus		_status;		//stato della risorsa dal punto di vista dell'engine  (non cambiare direttamente il valore, usa res_set_status()
 			gos::Flag8			flag1;
 			u8					_pad1;
 			u8					_pad2;

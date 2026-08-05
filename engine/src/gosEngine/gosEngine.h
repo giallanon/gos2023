@@ -183,7 +183,8 @@ namespace gos
         void            priv_texture2D__remove_from_mega_array (res::Texture2d *res);
         bool            priv_texture2D_create_ex (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle, gpu::StageHelper &stageHelper, u32 desired_texture_index);
 
-		void 			res_printInfo (const void *res) const;
+		void 			res_printInfo (const void *res, const char *debug_info) const;
+        void            res_set_status (res::Descr *res, res::eStatus new_status);
 		res::Descr*		res_createHandle (res::eType res_type, res::Handle *out_handle);
         res::Descr*		res_getOrCreateHandleFromAsset (const char *uid_runtimeName, res::Handle *out_handle, bool *out_bWasNew);
 		res::Descr*		res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle *out_handle, bool *out_bWasNew);

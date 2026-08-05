@@ -295,8 +295,8 @@ void Engine::priv_reload_resource()
             const sUnloadInfo info = list_of_res_to_be_reloaded(i);
             res::Descr *res = res_getDescriptor(info.res_handle);
 
-            res->status = res::eStatus::error;
-            list_of_res_to_be_reloaded[i].timer_msec = gos::getTimeSinceStart_msec() + 10;
+            res_set_status (res, res::eStatus::error);
+            list_of_res_to_be_reloaded[i].timer_msec = (u32)gos::getTimeSinceStart_msec() + 10;
             continue;
         }
 
@@ -319,7 +319,7 @@ void Engine::priv_reload_resource()
         //unload della risorsa
         assert (NULL != res->on_unload);
         (this->*res->on_unload) (res);
-        res->status = res::eStatus::notLoaded;
+        res_set_status (res, res::eStatus::notLoaded);
         res->flag1.clear (res::Descr::FLAG1__MARKED_FOR_RELOAD);
         
         //schedulo il reload
@@ -349,14 +349,14 @@ void Engine::priv_flushLoaderThreadMsg()
                 res::Descr *res = (res::Descr*)loaderMsgList[i].buffer;
                 if (bLoadOK)
                 {
-                    res->status = res::eStatus::ready;
+                    res_set_status (res, res::eStatus::ready);
 
                     //se esiste, chiamo l'handler
                     if (NULL != res->on_afterLoad)
                         (this->*res->on_afterLoad)(res);
                 }
                 else
-                    res->status = res::eStatus::error;
+                    res_set_status (res, res::eStatus::error);
 
 				//chi ha chiamato il load, ha anche incrementato il refCount..ora lo decremoento
 				res_release(res);
@@ -483,17 +483,17 @@ bool Engine::res_assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) 
 }
 
 //**************************************************************** 
-void Engine::res_printInfo (const void *resIN) const
+void Engine::res_printInfo (const void *resIN, const char *debug_info) const
 {
-	return;
-	// const res::Descr *res = (const res::Descr*)resIN;
+	 const res::Descr *res = (const res::Descr*)resIN;
 
-	// asset_logger->log ("res::    [%08X] [%04d] [%-12s] [%-12s] [uid: %016" PRIX64 "]\n",
-	// 	res->handle.viewAsU32(),
-	// 	res->refCount,
-	// 	res::enumToString((res::eType)res->handle.get_value_TYPE()),
-	// 	res::enumToString(res->status),
-	// 	res->uid._uid);
+	 asset_logger->log ("res::[%-20s]    [%08X] [%04d] [%-12s] [%-12s] [uid: %016" PRIX64 "]\n",
+        debug_info,
+	 	res->handle.viewAsU32(),
+	 	res->refCount,
+	 	res::enumToString((res::eType)res->handle.get_value_TYPE()),
+	 	res::enumToString(res->_status),
+	 	res->uid._uid);
 }
 
 //**************************************************************** 
@@ -610,6 +610,17 @@ void Engine::res_bindEvents (res::Handle handle, res::Descr *res)
 }
 
 //**************************************************************** 
+void Engine::res_set_status (res::Descr *res, res::eStatus new_status)
+{
+    assert (NULL != res);
+    if (res->_status != new_status)
+    {
+        res->_status = new_status;
+        res_printInfo (res, "status");
+    }
+}
+
+//**************************************************************** 
 res::Descr* Engine::res_createHandle (res::eType res_type, res::Handle *out_handle)
 {
 	assert (NULL != out_handle);
@@ -625,13 +636,13 @@ res::Descr* Engine::res_createHandle (res::eType res_type, res::Handle *out_hand
 	res->reset();
 	res->handle = *out_handle;
 	res->refCount = 1;
-	res->status = res::eStatus::ready;
+	res->_status = res::eStatus::ready;
 	res_bindEvents (*out_handle, res);
 	
 	if (NULL != res->on_afterCreate)
 		(this->*res->on_afterCreate)(res);
 
-	res_printInfo(res);
+	res_printInfo(res, "create");
 	return res;
 }
 
@@ -677,7 +688,7 @@ res::Descr* Engine::res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle
         //incremento il ref count
         res::Descr *res = res_getDescriptor(*out_handle);
         res->refCount++;
-        res_printInfo(res);
+        res_printInfo(res, "refcount++");
 		return res;
     }
 
@@ -692,12 +703,12 @@ res::Descr* Engine::res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle
     res->reset();
 	res->handle = *out_handle;
     res->refCount = 1;
-    res->status = res::eStatus::notLoaded;
+    res->_status = res::eStatus::notLoaded;
 	res->uid = uid;
 	res_bindEvents (*out_handle, res);
 	if (NULL != res->on_afterCreate)
 		(this->*res->on_afterCreate)(res);
-	res_printInfo(res);
+	res_printInfo(res, "creatFrmAsset_BGN");
 
     //inserisco la coppia <uid, handle> in hashlist
     listof_knownUID.insertInPosition (pos, out_handle->viewAsU32());
@@ -723,12 +734,12 @@ res::Descr* Engine::res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle
 		else
 		{
 			child_res->refCount++;
-			res_printInfo(res);
 		}
 
         //child_handle diventa uno dei miei figli
         res_addChild (res, child_res);
     }
+    res_printInfo(res, "creatFrmAsset_FIN");
 	asset_logger->decIndent();
     return res;
 }
@@ -750,20 +761,20 @@ bool Engine::res_getOrScheduleLoad (res::Handle handle, const res::Descr **out, 
 	}
 
 	(*out) = res;
-	if (res::eStatus::ready == res->status)
+	if (res::eStatus::ready == res->_status)
 	{
 		return true;
 	}
 
 	assert (res->uid.isValid());
-	if (res::eStatus::notLoaded == res->status)
+	if (res::eStatus::notLoaded == res->_status)
 	{
 		//dato che l'asset e' notLoaded, schedulo il suo load (e degli asset da cui dipende)
 		//Incremento il ref count perche' sto passando la risorsa al loader-thread e questo garantisce che 
 		//la risorsa non verra' eliminata da eventuali release()
-		res->status = res::eStatus::loading;
+		res_set_status (res, res::eStatus::loading);
 		res->refCount++;
-		res_printInfo(res);
+		res_printInfo(res, "getOrScheduleLoad");
 
 		asset_logger->incIndent();
 		res::HandleChain *p = res->figli;
@@ -784,14 +795,14 @@ bool Engine::res_getOrScheduleLoad (res::Handle handle, const res::Descr **out, 
 	}
 
 	//se richiesto, attendo per un po' nella speranza di vedere l'asset "ready"
-	if (timeout_msec > 0 && res::eStatus::error != res->status)
+	if (timeout_msec > 0 && res::eStatus::error != res->_status)
 	{
 		u64 time_to_exit_msec = gos::getTimeSinceStart_msec() + timeout_msec;
 		while (gos::getTimeSinceStart_msec() < time_to_exit_msec)
 		{
 			priv_flushLoaderThreadMsg();
-			if (res::eStatus::ready == res->status) return true;
-			if (res::eStatus::error == res->status) return false;
+			if (res::eStatus::ready == res->_status) return true;
+			if (res::eStatus::error == res->_status) return false;
 		}
 	}
 	return false;
@@ -801,14 +812,14 @@ bool Engine::res_getOrScheduleLoad (res::Handle handle, const res::Descr **out, 
 void Engine::res_do_destroy (res::Descr *res)
 {
     assert (NULL != res);
-    assert (res->status != res::eStatus::loading);
+    assert (res->_status != res::eStatus::loading);
     //chiamo il "distruttore" di me stesso solo se la risorsa era stata effettivamente caricata
-    if (res::eStatus::ready == res->status)
+    if (res::eStatus::ready == res->_status)
     {
         (this->*res->on_destroy)(res);
     }
-    res->status = res::eStatus::notLoaded;
-	res_printInfo(res);
+    res_set_status (res, res::eStatus::notLoaded);
+	res_printInfo(res, "destroy");
 
     //se ho dei figli, faccio il release
 	asset_logger->incIndent();
@@ -856,7 +867,7 @@ void Engine::res_release (res::Descr *res)
     if (1 == res->refCount)
     {
         //dobbiamo effettivamente fare il free della risorsa
-        switch (res->status)
+        switch (res->_status)
         {
         case res::eStatus::loading:
             //anche questo non dovrebbe succedere perche' quando la risorsa viene passata
@@ -879,7 +890,7 @@ void Engine::res_release (res::Descr *res)
     else
 	{
         res->refCount--;
-		res_printInfo(res);
+		res_printInfo(res, "release");
 	}
 }
 
@@ -1183,12 +1194,12 @@ void Engine::priv_texture2D__add_to_mega_array (res::Texture2d *res, u32 desired
     else
         res->index = renderPipe.internal__texture_add_if_dont_exists (res->texHandle);
 
-    asset_logger->log ("priv_texture2D__add_to_mega_array (tex-index=%d)\n", res->index);
+    //asset_logger->log ("priv_texture2D__add_to_mega_array (tex-index=%d)\n", res->index);
 }
 
 void Engine::priv_texture2D__remove_from_mega_array (res::Texture2d *res)
 {
-    asset_logger->log ("priv_texture2D__remove_from_mega_array (tex-index=%d)\n", res->index);
+    //asset_logger->log ("priv_texture2D__remove_from_mega_array (tex-index=%d)\n", res->index);
 
     renderPipe.internal__texture_remove (res->texHandle);
     res->index = u32MAX;
@@ -1437,7 +1448,7 @@ bool Engine::modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_hand
 		logger::err ("Engine::modelinst_create() => invalid handle_model\n");
 		return false;
 	}
-	if (res_model->_descr.status != res::eStatus::ready)
+	if (res_model->_descr._status != res::eStatus::ready)
 	{
 		logger::err ("Engine::modelinst_create() => src model is not in READY status\n");
 		return false;
@@ -1468,7 +1479,7 @@ bool Engine::modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_hand
 	asset_logger->incIndent();
 		res_addChild (&res->_descr, &res_model->_descr);
 		res_model->_descr.refCount++;
-		res_printInfo(res_model);
+		res_printInfo(res_model, "modelinst_create");
 	asset_logger->decIndent();
 
 	
@@ -1512,7 +1523,7 @@ void Engine::modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &mat
 	res::Model3dInst *res = (res::Model3dInst*)res_getDescriptor(handle.res_handle);
 	if (NULL == res)
 		return;
-	if (res::eStatus::ready == res->_descr.status)
+	if (res::eStatus::ready == res->_descr._status)
 	{
 		priv_modelinst_applyTransform_ric (res->minst.model_listof_bones, res->minst.listof_bones, 0, matW);
 	}
@@ -1554,7 +1565,7 @@ bool Engine::internal__materialPBR_update_renderer_binding (ENGMaterialPBR handl
 	res::MaterialPBR *res = (res::MaterialPBR*)res_getDescriptor(handle.res_handle);
 	if (NULL == res)
 		return false;
-	if (res::eStatus::ready == res->_descr.status)
+	if (res::eStatus::ready == res->_descr._status)
 	{
         assert (renderer_uid < res::MaterialPBR::NUM_MAX_RENDERER);
 		res->renderer_bindings[renderer_uid] = data;
