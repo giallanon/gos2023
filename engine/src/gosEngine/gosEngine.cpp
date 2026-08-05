@@ -35,6 +35,8 @@ void Engine::unsetup()
 	release(handle_texture_bianca);
 	renderPipe.priv_unsetup();
 
+    list_of_res_to_be_reloaded.unsetup();
+
     //resource manager
 	resManager.unsetup();
 	resHandleChainPool.unsetup();
@@ -99,6 +101,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
     engAllocator->setup (1024 * 1024 * 128); //128MB
     this->allocator = engAllocator;
 
+    list_of_res_to_be_reloaded.setup (engAllocator, 1024);
 
     //asset
     {
@@ -238,13 +241,8 @@ bool Engine::setup_renderPipe()
 	u16 dimy = 64;
 	u8 *srcDATA = GOSALLOCT(u8*, gos::getScrapAllocator(), dimx*dimy*sizeof(u32));
 	memset (srcDATA, 0xFF, dimx*dimy*sizeof(u32));
-	texture2D_create (dimx, dimy, 1, eImageFormat::U8_RGBA, eMemAccessMode::onGPU, srcDATA, &handle_texture_bianca, stageHelper);
+    priv_texture2D_create_ex (dimx, dimy, 1, eImageFormat::U8_RGBA, eMemAccessMode::onGPU, srcDATA, &handle_texture_bianca, stageHelper, engine::RenderPipe::SPECIAL_TEXTURE__BIANCA);
 	GOSFREE(gos::getScrapAllocator(), srcDATA);
-
-    //aggiungo la texture bianca alla render pipe
-    const res::Texture2d *res_texture2d;
-    get (handle_texture_bianca, &res_texture2d, 4000);
-    renderPipe.texture_add_reserved (res_texture2d->texHandle, engine::RenderPipe::SPECIAL_TEXTURE__BIANCA);
 
     return true;
 }
@@ -273,10 +271,61 @@ bool Engine::update()
     //loader-thread
     priv_flushLoaderThreadMsg();
 
+    //reload delle risorse
+    priv_reload_resource();
+
     //input
     gos::input::pollEvents();
     input::resolveEvents (gpu->getWindow(), inputCtx, &evtList);
     return true;
+}
+
+//******************************** 
+void Engine::priv_reload_resource()
+{
+    u32 N = list_of_res_to_be_reloaded.getNElem();
+    for (u32 i = 0; i < N; i++)
+    {
+        if (0 == list_of_res_to_be_reloaded(i).timer_msec)
+        {
+            //e' la prima volta che entro in questa fn
+            //Marco la risorsa come "error" in modo che nessun renderer la usi da ora in poi
+            //Aspetto un po' pero' prima di fare davvero il free della risorsa nell'evenienza che la risorsa sia
+            //attualmente in uso da parte di GPU in qualche shader
+            const sUnloadInfo info = list_of_res_to_be_reloaded(i);
+            res::Descr *res = res_getDescriptor(info.res_handle);
+
+            res->status = res::eStatus::error;
+            list_of_res_to_be_reloaded[i].timer_msec = gos::getTimeSinceStart_msec() + 10;
+            continue;
+        }
+
+        if (gos::getTimeSinceStart_msec() < list_of_res_to_be_reloaded(i).timer_msec)
+        {
+            //sto aspettando "un po'" prima di fare il free
+            continue;
+        }
+
+        const sUnloadInfo info = list_of_res_to_be_reloaded(i);
+        list_of_res_to_be_reloaded.removeAndSwapWithLast (i);
+        N--;
+        i--;
+        
+        res::Descr *res = res_getDescriptor(info.res_handle);
+        
+        assert (NULL != res);
+        assert (res->flag1.isBitSet (res::Descr::FLAG1__MARKED_FOR_RELOAD));
+
+        //unload della risorsa
+        assert (NULL != res->on_unload);
+        (this->*res->on_unload) (res);
+        res->status = res::eStatus::notLoaded;
+        res->flag1.clear (res::Descr::FLAG1__MARKED_FOR_RELOAD);
+        
+        //schedulo il reload
+        const res::Descr *descr;
+        res_getOrScheduleLoad (info.res_handle, &descr);
+    }
 }
 
 //******************************** 
@@ -299,12 +348,20 @@ void Engine::priv_flushLoaderThreadMsg()
 
                 res::Descr *res = (res::Descr*)loaderMsgList[i].buffer;
                 if (bLoadOK)
+                {
                     res->status = res::eStatus::ready;
+
+                    //se esiste, chiamo l'handler
+                    if (NULL != res->on_afterLoad)
+                        (this->*res->on_afterLoad)(res);
+                }
                 else
                     res->status = res::eStatus::error;
 
 				//chi ha chiamato il load, ha anche incrementato il refCount..ora lo decremoento
 				res_release(res);
+
+                
 
 				//informo tutti quelli che dipendono da questa risorsa del suo cambio di stato
 				// engine::ResHandleDepList *p = brh->deplist;
@@ -515,6 +572,8 @@ void Engine::res_bindEvents (res::Handle handle, res::Descr *res)
 	case res::eType::texture_2d:
 		res->on_afterCreate = &Engine::internal__texture2D_on_afterCreate;
 		res->on_destroy = &Engine::internal__texture2D_on_destroy;
+        res->on_afterLoad = &Engine::internal__texture2D_on_afterLoad;
+        res->on_unload = &Engine::internal__texture2D_on_unload;
 		return;
 
 	case res::eType::shape:
@@ -824,6 +883,31 @@ void Engine::res_release (res::Descr *res)
 	}
 }
 
+//**************************************************************** 
+bool Engine::res_reload (res::Handle handle)
+{
+    res::Descr *res = res_getDescriptor(handle);
+    if (NULL == res)
+    {
+        DBGBREAK;
+        return false;
+    }
+    
+    if (res->flag1.isBitSet (res::Descr::FLAG1__MARKED_FOR_RELOAD))
+        return false;
+
+    //lo marco per "reload" e aggiungo ad una lista
+    //la risorsa viene poi processata nella Engine::update();
+    res->flag1.set (res::Descr::FLAG1__MARKED_FOR_RELOAD);
+    
+    const sUnloadInfo info = {
+        .res_handle = handle,
+        .timer_msec = 0,
+    };
+    list_of_res_to_be_reloaded.append (info);
+    return true;
+}
+
 
 /**************************************************************** 
  * VTX BUFFER
@@ -1004,14 +1088,24 @@ void Engine::internal__pipeline_on_afterCreate (void *resIN)
  *****************************************************************/
 bool Engine::texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle, gpu::StageHelper &stageHelper)
 {
+	if (priv_texture2D_create_ex (dimx, dimy, nMipMap, fmt, memAccessMode, srcDATA, out_handle, stageHelper, u32MAX))
+        return true;
+    logger::err ("Engine::texture2D_create() => can't create handle\n");
+    return false;
+}
+
+bool Engine::priv_texture2D_create_ex (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle, gpu::StageHelper &stageHelper, u32 desired_texture_index)
+{
 	res::Texture2d *res = (res::Texture2d*)res_createHandle(res::eType::texture_2d, &out_handle->res_handle);
 	if (NULL == res)
-    {
-        logger::err ("Engine::texture2D_create() => can't create handle\n");
         return false;
-    }
 
-    return gpu->texture_create2D (dimx, dimy, nMipMap, fmt, memAccessMode, srcDATA, &res->texHandle, stageHelper);
+    if (gpu->texture_create2D (dimx, dimy, nMipMap, fmt, memAccessMode, srcDATA, &res->texHandle, stageHelper))
+    {
+        priv_texture2D__add_to_mega_array (res, desired_texture_index);
+        return true;
+    }
+    return false;
 }
 
 bool Engine::texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture *out_handle, gpu::StageHelper &stageHelper)
@@ -1023,24 +1117,82 @@ bool Engine::texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAcces
         return false;
     }
 
-    return gpu->texture_create2D (im, srcTextureNum, memAccessMode, &res->texHandle, stageHelper);
+    if (gpu->texture_create2D (im, srcTextureNum, memAccessMode, &res->texHandle, stageHelper))
+    {
+        priv_texture2D__add_to_mega_array (res);
+        return true;
+    }
+
+    DBGBREAK;
+    return false;
 }
 
 void Engine::internal__texture2D_on_afterCreate (void *resIN)
 {
-	//asset_logger->log ("internal__texture2D_on_afterCreate\n");
+    //questa fn viene chiamata subito dopo res_createHandle()
+
+    //asset_logger->log ("internal__texture2D_on_afterCreate\n");
 	res::Texture2d *res = (res::Texture2d*)resIN;
 	res->texHandle.setInvalid();
+    res->index = u32MAX;
 }
 
 void Engine::internal__texture2D_on_destroy (void *resIN)
 {
-	//asset_logger->log ("internal__texture2D_on_destroy\n");
+    //chiamata da res_destroy() solo se la res e' in stato ready
+
 	res::Texture2d *res = (res::Texture2d*)resIN;
-	gpu->deleteResource (res->texHandle);
+    asset_logger->log ("internal__texture2D_on_destroy (tex-index=%d)\n", res->index);
+
+    assert (res->texHandle.isValid());
+    priv_texture2D__remove_from_mega_array (res);
+	gpu->deleteResource (res->texHandle);    
 }
 
+void Engine::internal__texture2D_on_afterLoad (void *resIN)
+{
+    //chiamata da this dopo che la risorsa e' stata creata e schedulata per il caricamento da disco.
+    //Una volta che il caricamento e' terminato con successo, questo handler viene invocato
 
+	res::Texture2d *res = (res::Texture2d*)resIN;
+    asset_logger->log ("internal__texture2D_on_afterLoad (tex-index=%d)\n", res->index);
+
+    assert (res->texHandle.isValid());
+    priv_texture2D__add_to_mega_array(res);
+}
+
+void Engine::internal__texture2D_on_unload (void *resIN)
+{
+    res::Texture2d *res = (res::Texture2d*)resIN;
+    asset_logger->log ("internal__texture2D_on_unload (tex-index=%d)\n", res->index);
+
+	
+    priv_texture2D__remove_from_mega_array (res);
+    if (res->texHandle.isValid())
+    {
+        gpu->deleteResource (res->texHandle);
+        res->texHandle.setInvalid();
+    }
+}
+
+void Engine::priv_texture2D__add_to_mega_array (res::Texture2d *res, u32 desired_index)
+{
+    assert (u32MAX == res->index);
+    if (u32MAX != desired_index)
+        res->index = renderPipe.internal__texture_add_reserved (res->texHandle, desired_index);
+    else
+        res->index = renderPipe.internal__texture_add_if_dont_exists (res->texHandle);
+
+    asset_logger->log ("priv_texture2D__add_to_mega_array (tex-index=%d)\n", res->index);
+}
+
+void Engine::priv_texture2D__remove_from_mega_array (res::Texture2d *res)
+{
+    asset_logger->log ("priv_texture2D__remove_from_mega_array (tex-index=%d)\n", res->index);
+
+    renderPipe.internal__texture_remove (res->texHandle);
+    res->index = u32MAX;
+}
 
 /**************************************************************** 
  * SHAPE

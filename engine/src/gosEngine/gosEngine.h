@@ -107,8 +107,11 @@ namespace gos
         bool            texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture *out_handle, gpu::StageHelper &stageHelper);
         void            release (ENGTexture &handle)                                                                { res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGTexture handle, const res::Texture2d **out, u64 timeout_msec = 0)               	{ return res_getOrScheduleLoadT(handle, out, timeout_msec); }
+        bool            reload (ENGTexture handle)                                                                  { return res_reload (handle.res_handle); }
 		void 			internal__texture2D_on_afterCreate (void *res);
 		void            internal__texture2D_on_destroy (void *res);
+        void            internal__texture2D_on_afterLoad(void *res);
+        void            internal__texture2D_on_unload (void *resIN);
 
 		bool            get_texture_bianca (const res::Texture2d **out)               								{ return res_getOrScheduleLoadT(handle_texture_bianca, out, 0); }
 
@@ -172,8 +175,13 @@ namespace gos
 
 	private:
 		void 			priv_flushLoaderThreadMsg();
+        void 			priv_reload_resource();
 		bool 			priv_GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, res::GPUShape *res);
 		void			priv_modelinst_applyTransform_ric (const gos::Bone *model_listof_bones, gos::Bone *listof_bones, u32 boneIndex, const mat4x4f &parent_matW) const;
+
+        void            priv_texture2D__add_to_mega_array (res::Texture2d *res, u32 desired_index=u32MAX);
+        void            priv_texture2D__remove_from_mega_array (res::Texture2d *res);
+        bool            priv_texture2D_create_ex (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle, gpu::StageHelper &stageHelper, u32 desired_texture_index);
 
 		void 			res_printInfo (const void *res) const;
 		res::Descr*		res_createHandle (res::eType res_type, res::Handle *out_handle);
@@ -183,6 +191,7 @@ namespace gos
         res::Descr*		res_getDescriptor (res::Handle handle);
         void            res_release (res::Handle handle);
 		void            res_release (res::Descr *res);
+        bool            res_reload (res::Handle handle);
         void            res_do_destroy (res::Descr *res);
 		bool 			res_getOrScheduleLoad (res::Handle handle, const res::Descr **out, u64 timeout_msec = 0);
 		
@@ -258,6 +267,14 @@ namespace gos
 							res_addChild (&padre->_descr, figlio);
 						}						
 
+
+    private:
+        struct sUnloadInfo
+        {
+            res::Handle res_handle;
+            u32         timer_msec;
+        };
+
     private:
         gos::Allocator                              *allocator;
         bool                                        bQuitEngine;
@@ -272,6 +289,7 @@ namespace gos
 		res::Manager 								resManager;
 		FastHashMap<ENGShape, ENGGPUShape>			map_of_shape_to_gpushape;
 		gos::ObjectPool<res::HandleChain>			resHandleChainPool;
+        gos::FastArray<sUnloadInfo>                 list_of_res_to_be_reloaded;
         ENGTexture		                            handle_texture_bianca;
 
 		

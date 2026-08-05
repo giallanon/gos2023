@@ -42,6 +42,7 @@ namespace gos
 		{
 		public:
 			res::Descr			_descr;
+			u32					index;
 			GPUTextureHandle	texHandle;
 		};
 

@@ -146,25 +146,6 @@ bool Renderer::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
 
 	exaR_map.setup (localAllocator, 128);
 
-
-	//aspetto che le risorse siano caricate
-	const res::Model3d *res_model;
-	{
-		engine->get (handle__model_tile1, &res_model, 4000);
-
-		//il modello ha delle shape, voglio sapere quali
-		//queste shape sono gia' bindata a VB/IB
-		gos::model::Reader mr;
-		mr.setup (&res_model->model);
-		shape_list = mr.gpushape_get_pt_to_list();
-	}
-
-	const res::Texture2d *res_texture2d;
-	{
-		engine->get (hanle__tex_perlin01, &res_texture2d, 4000);
-		engine->renderPipe.texture_add_if_dont_exists (res_texture2d->texHandle);
-	}
-
 	return true;
 }
 
@@ -241,11 +222,19 @@ void Renderer::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
     if (0 == num_quad)
         return;
 
+
+	if (0 == ctx.frame_number % 1000)
+	{
+		if (ctx.engine->reload (hanle__tex_perlin01))
+			logger::log (eTextColor::darkGreen, "reloading texture\n");
+	}
+
     const res::Pipeline *res_pipeline;
     if (!engine->get (handle_pipeline, &res_pipeline))
     {
         return;
     }
+
 
     //aggiornamento exaVtx
     {
@@ -312,6 +301,24 @@ void Renderer::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
         .bindDescriptorSet (ctx.handle_descrSet0, 0)
         .bindDescriptorSet (ctx.handle_descrSet1, 1)
         .bindDescriptorSet (handle_descrSet2, 2);
+
+	const res::Model3d *res_model;
+	if (!engine->get (handle__model_tile1, &res_model))
+		return;
+	const gos::ENGGPUShape	*shape_list = NULL;
+	//il modello ha delle shape, voglio sapere quali
+	//queste shape sono gia' bindata a VB/IB
+	gos::model::Reader mr;
+	mr.setup (&res_model->model);
+	shape_list = mr.gpushape_get_pt_to_list();
+
+
+	const res::Texture2d *res_texture2d;
+	if (!engine->get (hanle__tex_perlin01, &res_texture2d))
+	{
+		//logger::log (eTextColor::magenta, "not rendering...\n");
+		return;
+	}
 
     //render delle shape
 	for (u8 i=0; i<(u8)Land1::eMeshType::_COUNT; i++)

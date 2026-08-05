@@ -167,7 +167,7 @@ bool RenderPipe::priv_setup (gos::Allocator *allocatorIN, Engine *engineIN)
 }
 
 //*******************************************
-bool RenderPipe::texture_add_reserved (GPUTextureHandle texHandle, u32 texture_index)
+bool RenderPipe::internal__texture_add_reserved (GPUTextureHandle texHandle, u32 texture_index)
 {
     if (texture_array.add_reserved (texHandle, texture_index))
     {
@@ -184,7 +184,7 @@ bool RenderPipe::texture_add_reserved (GPUTextureHandle texHandle, u32 texture_i
 }
 
 //*******************************************
-u32	RenderPipe::texture_add_if_dont_exists (GPUTextureHandle texHandle)
+u32	RenderPipe::internal__texture_add_if_dont_exists (GPUTextureHandle texHandle)
 { 
 	assert (ctx.handle_descrSet0.isValid());
 

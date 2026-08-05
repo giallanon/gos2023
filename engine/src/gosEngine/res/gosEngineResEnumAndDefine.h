@@ -2,12 +2,15 @@
 #define _gosEngineResEnumAndDefine_h_
 #include "../../gos/gos.h"
 #include "../../gosAsset2/gosAsset2EnumAndDefine.h"
+#include "../../gos/gosBit.h"
 
 namespace gos
 {
 	class Engine; //fwd
 
 	typedef void (Engine::*FN_afterCreate)(void *res);
+	typedef void (Engine::*FN_afterLoad)(void *res);
+	typedef void (Engine::*FN_unload)(void *res);
 	typedef void (Engine::*FN_destroy)(void *res);
 
 
@@ -132,13 +135,16 @@ namespace gos
 		struct Descr
 		{
 		public:
-			void 	reset()			{ uid.setInvalid(); status=eStatus::error; refCount = 0; figli=padri=NULL; on_afterCreate=NULL; on_destroy=NULL; }
+			static constexpr u8	FLAG1__MARKED_FOR_RELOAD	= 0;
+
+		public:
+			void 	reset()			{ uid.setInvalid(); status=eStatus::error; refCount = 0; flag1.zero(); figli=padri=NULL; on_afterCreate=NULL; on_afterLoad=NULL; on_unload=NULL; on_destroy=NULL; }
 
 		public:
 			asset2::UID			uid;		//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
 			Handle				handle;
 			res::eStatus		status;		//stato della risorsa dal punto di vista dell'engine
-			u8					_pad0;
+			gos::Flag8			flag1;
 			u8					_pad1;
 			u8					_pad2;
 			i32					refCount;
@@ -147,6 +153,8 @@ namespace gos
 			HandleChain			*padri;		//lista di handle di cui io sono figlio (che vengono notificati ogni volta che io cambio di stato)
 
 			FN_afterCreate		on_afterCreate;
+			FN_afterLoad		on_afterLoad;
+			FN_unload			on_unload;
 			FN_destroy			on_destroy;
 		};
 

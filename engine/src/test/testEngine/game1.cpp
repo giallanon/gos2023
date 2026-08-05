@@ -215,14 +215,14 @@ bool Game1::priv_loadAssets()
 			DBGBREAK;
 			return false;
 		}
-		texture_index__texBianca = engine->renderPipe.texture_add_if_dont_exists(tex->texHandle);
+		texture_index__texBianca = tex->index;
 
 		if (!engine->get (handle_texChecker, &tex, 5000))
 		{
 			DBGBREAK;
 			return false;
 		}
-		texture_index__texChecker = engine->renderPipe.texture_add_if_dont_exists(tex->texHandle);
+		texture_index__texChecker = tex->index;
 
 		material_indices[0] =renderer_PIPE3->material_create (texture_index__texBianca, vec3f(1.0f, 1.0f, 1.0f));
 		material_indices[1] =renderer_PIPE3->material_create (texture_index__texBianca, vec3f(1.0f, 0.0f, 0.0f));

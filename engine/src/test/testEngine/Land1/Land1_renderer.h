@@ -113,7 +113,7 @@ namespace Land1
 
 		gos::ENGModel3d 				handle__model_tile1;
 		gos::ENGTexture					hanle__tex_perlin01;
-		const gos::ENGGPUShape			*shape_list;
+		
 
 		u32 		num_vtx;
 		u32 		num_vtxInfo;

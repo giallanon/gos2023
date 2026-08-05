@@ -79,10 +79,10 @@ namespace gos
 
 
 			//==================== gestione texture
-			bool	texture_add_reserved (GPUTextureHandle texHandle, u32 texture_index);
-            u32		texture_add_if_dont_exists (GPUTextureHandle texHandle);
-            void	texture_remove (GPUTextureHandle texHandle)                                     { texture_array.remove(texHandle); }
-            bool	texture_find (GPUTextureHandle texHandle, u32 *out_index) const                 { return texture_array.find(texHandle, out_index); }
+			bool	internal__texture_add_reserved (GPUTextureHandle texHandle, u32 texture_index);
+            u32		internal__texture_add_if_dont_exists (GPUTextureHandle texHandle);
+            void	internal__texture_remove (GPUTextureHandle texHandle)                                     { texture_array.remove(texHandle); }
+            bool	internal__texture_find (GPUTextureHandle texHandle, u32 *out_index) const                 { return texture_array.find(texHandle, out_index); }
 
 			
 
