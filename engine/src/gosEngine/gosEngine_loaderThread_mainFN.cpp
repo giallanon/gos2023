@@ -86,13 +86,13 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
 						res::Descr *res = (res::Descr*)msgList[i].buffer;
 
                         const asset2::UID uid = res->uid;
-                        //loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] %016" PRIX64 " do load\n", asset2::enumToString(uid.getAssetType()), uid._uid);
+                        loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] %016" PRIX64 " load started\n", asset2::enumToString(uid.getAssetType()), uid._uid);
 
                         loaders::BaseLoader *loader = loaderList[(u32)uid.getAssetType()];
                         assert (NULL != loader);
                         if (loader->load (loaderInfo, res))
 						{
-							//loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] %016" PRIX64 " loaded\n", asset2::enumToString(uid.getAssetType()), uid._uid);
+							loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] %016" PRIX64 " loaded\n", asset2::enumToString(uid.getAssetType()), uid._uid);
                             thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK, 0, res);
 						}
                         else

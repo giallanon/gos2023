@@ -9,11 +9,11 @@ void Engine::res_printInfo (const void *resIN, const char *debug_info) const
 {
 	 const res::Descr *res = (const res::Descr*)resIN;
 
-	 asset_logger->log (eTextColor::darkYellow, "res::[%-20s] [%08X] [%03d] [%-12s] [%-12s] [uid: %016" PRIX64 "]\n",
+	 asset_logger->log (eTextColor::darkYellow, "res::[%-20s] [%08X] [%03d] [%02d/%-12s] [%-12s] [uid: %016" PRIX64 "]\n",
 		debug_info,
 		res->handle.viewAsU32(),
 		res->refCount,
-		res::enumToString(res->_status),
+		res->num_child_not_ready, res::enumToString(res->_status), 
 		res::enumToString((res::eType)res->handle.get_value_TYPE()),
 		res->uid._uid);
 }
@@ -138,14 +138,8 @@ res::Descr* Engine::res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle
 		bool bWasNew;
 		res::Handle child_handle;
 		res::Descr *child_res = res_getOrCreateHandleFromAsset (child_uid, &child_handle, &bWasNew);
-		if (bWasNew)
-		{
-			res_bindEvents (child_handle, child_res);
-		}
-		else
-		{
+		if (!bWasNew)
 			child_res->refCount++;
-		}
 
 		//child_handle diventa uno dei miei figli
 		res_addChild (res, child_res);
@@ -182,16 +176,19 @@ void Engine::res_bindEvents (res::Handle handle, res::Descr *res)
 	case res::eType::vtx_shader:
 		res->on_afterCreate = &Engine::internal__vtxshader_on_afterCreate;
 		res->on_destroy = &Engine::internal__vtxshader_on_destroy;
+		res->on_unload = &Engine::internal__vtxshader_on_unload;
 		return;
 
 	case res::eType::pxl_shader:
 		res->on_afterCreate = &Engine::internal__pxlshader_on_afterCreate;
 		res->on_destroy = &Engine::internal__pxlshader_on_destroy;
+		res->on_unload = &Engine::internal__pxlshader_on_unload;
 		return;
 
 	case res::eType::pipeline:
 		res->on_afterCreate = &Engine::internal__pipeline_on_afterCreate;
 		res->on_destroy = &Engine::internal__pipeline_on_destroy;
+		res->on_unload = &Engine::internal__pipeline_on_unload;
 		return;
 
 	case res::eType::texture_2d:
@@ -321,6 +318,8 @@ void Engine::res_addChild (res::Descr *padre_res, res::Descr *child_res)
 
 	chain->next = padre_res->figli;
 	padre_res->figli = chain;
+	if (res::eStatus::ready != child_res->_status)
+		padre_res->num_child_not_ready++;
 
 	//padre diventa "padre" di child
 	chain = res_newHandleChain();
@@ -341,7 +340,11 @@ void Engine::res_freeHandleChain (res::HandleChain *p)
 	resHandleChainPool.free(p);
 }
 
-//**************************************************************** 
+/**************************************************************** 
+* Ritorna true solo se <handle> punta ad una valida risorsa che al momento e':
+*	- in stato eReady
+*	- tutti i suoi figli sono in stato eRerady
+*/
 bool Engine::res_getOrScheduleLoad (res::Handle handle, const res::Descr **out, u64 timeout_msec)
 {
 	res::Descr *res= res_getDescriptor(handle);
@@ -352,10 +355,8 @@ bool Engine::res_getOrScheduleLoad (res::Handle handle, const res::Descr **out, 
 	}
 
 	(*out) = res;
-	if (res::eStatus::ready == res->_status)
-	{
+	if (res::eStatus::ready == res->_status && 0 == res->num_child_not_ready)
 		return true;
-	}
 
 	assert (res->uid.isValid());
 	if (res::eStatus::notLoaded == res->_status)
@@ -391,7 +392,7 @@ bool Engine::res_getOrScheduleLoad (res::Handle handle, const res::Descr **out, 
 		while (gos::getTimeSinceStart_msec() < time_to_exit_msec)
 		{
 			priv_flushLoaderThreadMsg();
-			if (res::eStatus::ready == res->_status) return true;
+			if (res::eStatus::ready == res->_status && 0 == res->num_child_not_ready) return true;
 			if (res::eStatus::error == res->_status) return false;
 		}
 	}
@@ -441,7 +442,6 @@ void Engine::res_do_destroy (res::Descr *res)
 	resManager.raw_release(res->handle);
 }
 
-
 //**************************************************************** 
 bool Engine::res_hotreload (res::Handle handle)
 {
@@ -451,17 +451,40 @@ bool Engine::res_hotreload (res::Handle handle)
 		DBGBREAK;
 		return false;
 	}
-	
+
 	//if (res->flag1.isBitSet (res::Descr::FLAG1__MARKED_FOR_RELOAD))
 	if (res::eStatus::hot_reload == res->_status)
 		return false;
 
-	//Incremento il ref count per evitare che qualcuno mi elimini la risorsa intanto
-	//che e' in hot-reload
-	//L'hot-reload viene poi processata nella Engine::update();
+	const bool bWasReady = (res::eStatus::ready == res->_status);
+
+	//Incremento il ref count per evitare che qualcuno mi elimini la risorsa intanto che e' in hot-reload
+	//L'hot-reload effettivo viene poi processata nella Engine::update();
 	res->refCount++;
 	res_set_status (res, res::eStatus::hot_reload);
-	
+
+	//se questa risorsa era ready, allora informo i suoi padri che non sono piu' in stato ready
+	if (bWasReady)
+	{
+		res::HandleChain *p = res->padri;
+		while (p)
+		{
+			p->res->num_child_not_ready++;
+			res_printInfo (p->res, "child unrdy");
+			p = p->next;
+		}
+	}
+
+	//se questa risorsa ha dei figli, devo farne l'hot reload
+	res::HandleChain *p = res->figli;
+	while (p)
+	{
+		res_hotreload (p->res->handle);
+		p = p->next;
+	}
+
+
+	//aggiungo la risorsa alle lista delle risorsa di cui fare l'hot-reload
 	const sUnloadInfo info = {
 		.res_handle = handle,
 		.timer_msec = (u32)gos::getTimeSinceStart_msec() + 10,
