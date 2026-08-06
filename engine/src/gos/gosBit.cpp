@@ -1,4 +1,5 @@
 #include "gosBit.h"
+#include "gos.h"
 
 using namespace gos;
 

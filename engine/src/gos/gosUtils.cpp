@@ -777,3 +777,35 @@ u16 utils::getFormatSize (const eImageFormat fmt)
     case eImageFormat::F32_R: return sizeof(f32);
     }
 }
+
+
+//********************************************************** 
+void utils::format_time_msec_as_HHMMSSMS (u64 time_msec, char *out, u32 sizeof_out, char time_sep)
+{
+    u32 ss = (u32) (time_msec / 1000);
+    time_msec %= 1000;
+
+    u32 mm = (u32) (ss / 60);
+    ss %= 60;
+
+    u32 hh = (u32) (mm / 60);
+    mm %= 60;
+
+
+	if (time_sep == 0x00)
+	{
+		assert(sizeof_out >= 10);
+		if (sizeof_out >= 10)
+			sprintf_s (out, sizeof_out, "%02d%02d%02d%03d", hh, mm, ss, (u32)time_msec);
+		else
+			out[0] = 0x00;
+	}
+	else
+	{
+		assert(sizeof_out >= 13);
+		if (sizeof_out >= 13)
+			sprintf_s (out, sizeof_out, "%02d%c%02d%c%02d%c%03d", hh, time_sep, mm, time_sep, ss, time_sep, (u32)time_msec);
+		else
+			out[0] = 0x00;
+	}
+}

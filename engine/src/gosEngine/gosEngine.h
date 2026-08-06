@@ -107,7 +107,7 @@ namespace gos
         bool            texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture *out_handle, gpu::StageHelper &stageHelper);
         void            release (ENGTexture &handle)                                                                { res_release(handle.res_handle); handle.res_handle.setInvalid(); }
         bool            get (ENGTexture handle, const res::Texture2d **out, u64 timeout_msec = 0)               	{ return res_getOrScheduleLoadT(handle, out, timeout_msec); }
-        bool            reload (ENGTexture handle)                                                                  { return res_reload (handle.res_handle); }
+        bool            hotreload (ENGTexture handle)                                                               { return res_hotreload (handle.res_handle); }
 		void 			internal__texture2D_on_afterCreate (void *res);
 		void            internal__texture2D_on_destroy (void *res);
         void            internal__texture2D_on_afterLoad(void *res);
@@ -175,7 +175,7 @@ namespace gos
 
 	private:
 		void 			priv_flushLoaderThreadMsg();
-        void 			priv_reload_resource();
+        void 			priv_handle_res_hotreload();
 		bool 			priv_GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, res::GPUShape *res);
 		void			priv_modelinst_applyTransform_ric (const gos::Bone *model_listof_bones, gos::Bone *listof_bones, u32 boneIndex, const mat4x4f &parent_matW) const;
 
@@ -185,14 +185,15 @@ namespace gos
 
 		void 			res_printInfo (const void *res, const char *debug_info) const;
         void            res_set_status (res::Descr *res, res::eStatus new_status);
+        res::Descr*		res__do_createHandle (res::eType res_type, res::eStatus status, asset2::UID uid, res::Handle *out_handle);
 		res::Descr*		res_createHandle (res::eType res_type, res::Handle *out_handle);
         res::Descr*		res_getOrCreateHandleFromAsset (const char *uid_runtimeName, res::Handle *out_handle, bool *out_bWasNew);
 		res::Descr*		res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle *out_handle, bool *out_bWasNew);
 		void 			res_bindEvents (res::Handle handle, res::Descr *res);
         res::Descr*		res_getDescriptor (res::Handle handle);
-        void            res_release (res::Handle handle);
-		void            res_release (res::Descr *res);
-        bool            res_reload (res::Handle handle);
+        bool            res_release (res::Handle handle);
+		bool            res_release (res::Descr *res);
+        bool            res_hotreload (res::Handle handle);
         void            res_do_destroy (res::Descr *res);
 		bool 			res_getOrScheduleLoad (res::Handle handle, const res::Descr **out, u64 timeout_msec = 0);
 		
@@ -290,7 +291,7 @@ namespace gos
 		res::Manager 								resManager;
 		FastHashMap<ENGShape, ENGGPUShape>			map_of_shape_to_gpushape;
 		gos::ObjectPool<res::HandleChain>			resHandleChainPool;
-        gos::FastArray<sUnloadInfo>                 list_of_res_to_be_reloaded;
+        gos::FastArray<sUnloadInfo>                 list_of_res_to_be_hotreloaded;
         ENGTexture		                            handle_texture_bianca;
 
 		

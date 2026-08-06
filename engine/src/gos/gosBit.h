@@ -1,9 +1,11 @@
 #ifndef _gosBit_h_
 #define _gosBit_h_
-#include "gos.h"
+#include "gosEnumAndDefine.h"
 
 namespace gos
 {
+	class Allocator;	//fwd
+
 	/**
 	 * @brief Manipolazione di BIT 
 	 * Settano/resettano il bit in posizione [pos].

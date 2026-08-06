@@ -225,8 +225,8 @@ void Renderer::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 
 	if (0 == ctx.frame_number % 1000)
 	{
-		if (ctx.engine->reload (hanle__tex_perlin01))
-			logger::log (eTextColor::darkGreen, "reloading texture\n");
+		if (ctx.engine->hotreload (hanle__tex_perlin01))
+			logger::log (eTextColor::darkGreen, "hot-reloading texture\n");
 	}
 
     const res::Pipeline *res_pipeline;

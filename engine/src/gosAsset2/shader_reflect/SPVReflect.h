@@ -5,6 +5,7 @@
 #include "gosDataBlob.h"
 #include "gosBit.h"
 #include "string/gosUTF8String.h"
+#include "gos.h"
 
 namespace gos
 {

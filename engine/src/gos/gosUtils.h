@@ -65,6 +65,7 @@ namespace gos
         inline u32  calcClosestPowerOf2 (u32 num)                                                   { return GOS_NEXT_POWER_OF_TWO<u32>(num); }
                     //ritorna la potenza del 2 piu' vicina e che sia maggiore uguale a num
 
+        void        format_time_msec_as_HHMMSSMS (u64 time_msec, char *out, u32 sizeof_out, char time_sep = 0x00);
 
         /**
         * @brief    bubbleSort()

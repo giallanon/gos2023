@@ -45,6 +45,7 @@ const char* res::enumToString (res::eStatus s)
     case res::eStatus::ready:       return "ready";
     case res::eStatus::notLoaded:	return "notLoaded";
 	case res::eStatus::loading:		return "loading";
+	case res::eStatus::hot_reload:	return "hot_reload";
 	case res::eStatus::error:       return "error";
 	}
 }

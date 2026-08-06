@@ -27,6 +27,7 @@ namespace gos
 			ready			= 0,
 			notLoaded		= 1,		//esiste nell'engine ma non e' stata ancora caricata
 			loading			= 2,		//esiste nell'engine e' ed in fase di caricamento
+			hot_reload		= 3,		//esiste nell'engine e' ed in fase di unload/reload
 			error 			= 0xff		//errore fatale. Esiste nell'engine ma probabilmente il loader non e' riuscito a caricarla, questo asset e' spacciato per sempre
 		};
 
@@ -135,7 +136,7 @@ namespace gos
 		struct Descr
 		{
 		public:
-			static constexpr u8	FLAG1__MARKED_FOR_RELOAD	= 0;
+			//static constexpr u8	FLAG1__MARKED_FOR_RELOAD	= 0;
 
 		public:
 			void 	reset()			{ uid.setInvalid(); _status=eStatus::error; refCount = 0; flag1.zero(); figli=padri=NULL; on_afterCreate=NULL; on_afterLoad=NULL; on_unload=NULL; on_destroy=NULL; }

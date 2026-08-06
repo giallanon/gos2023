@@ -65,6 +65,7 @@ gosEngine_dynTextureArray.h
 gosEngine_idxBufferMan.cpp
 gosEngine_idxBufferMan.h
 gosEngine_loaderThread_mainFN.cpp
+gosEngine_res.cpp
 gosEngine_scene.cpp
 gosEngine_scene.h
 gosEngine_vtxBufferMan.cpp

@@ -15,8 +15,12 @@ bool LoggerStdout_sortFn_discendente (const u64 &a, const u64 &b)           { re
 LoggerStdout::LoggerStdout()
 {
     gos::thread::mutexCreate(&mutex);
-    bShoudLogToStdout = true;
-	indent = 0;
+
+    flag.zero();
+    flag.set (FLAG__SHOULD_LOG_TO_STDOUT);
+    flag.set (FLAG__USE_HHMMSSMsec);
+
+    indent = 0;
     isANewLine = 1;
     logToFile = NULL;
     priv_buildIndentStr();
@@ -62,11 +66,17 @@ void LoggerStdout::priv_out (const char *what)
     if (isANewLine)
     {
         char hhmmss[16];
-        gos::Time24 dt;
-        dt.setNow_local();
-        dt.formatAs_HHMMSS (hhmmss, sizeof(hhmmss), ':');
+        if (flag.isBitSet(FLAG__USE_HHMMSSMsec))
+            utils::format_time_msec_as_HHMMSSMS (gos::getTimeSinceStart_msec(), hhmmss, sizeof(hhmmss), ':');
+        else
+        {
+            gos::Time24 dt;
+            dt.setNow_local();
+            dt.formatAs_HHMMSS (hhmmss, sizeof(hhmmss), ':');
+        }       
 
-        if (bShoudLogToStdout)
+
+        if (flag.isBitSet(FLAG__SHOULD_LOG_TO_STDOUT))
             fprintf (stdout, "%s %s", hhmmss, strIndent);
 
         if (logToFile)
@@ -75,7 +85,7 @@ void LoggerStdout::priv_out (const char *what)
         isANewLine = 0;
     }
 
-    if (bShoudLogToStdout)
+    if (flag.isBitSet(FLAG__SHOULD_LOG_TO_STDOUT))
     {
         fprintf (stdout, "%s", what);
         fflush(stdout);
@@ -164,7 +174,7 @@ void LoggerStdout::priv_log (const char *prefix, const char *format, va_list arg
 	u32 i = 0;
     if (buffer[0] == '\n')
     {
-        if (bShoudLogToStdout)
+        if (flag.isBitSet(FLAG__SHOULD_LOG_TO_STDOUT))
             fprintf (stdout, "\n");
         
         if (logToFile)
@@ -183,7 +193,7 @@ void LoggerStdout::priv_log (const char *prefix, const char *format, va_list arg
             if (i-iStart)
                 priv_out (&buffer[iStart]);
             
-            if (bShoudLogToStdout)
+            if (flag.isBitSet(FLAG__SHOULD_LOG_TO_STDOUT))
                 fprintf (stdout, "\n");
             
             if (logToFile)

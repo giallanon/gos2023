@@ -1,5 +1,6 @@
 #include "SPVReflect.h"
 #include "gosUtils.h"
+#include "gos.h"
 
 using namespace gos;
 
