@@ -24,10 +24,11 @@ namespace gos
 
 		enum class eStatus : u8
 		{
-			ready			= 0,
+			aready			= 0,		//esiste nell'engine, e' stato caricato, e tutti i suoi figli sono ready
 			notLoaded		= 1,		//esiste nell'engine ma non e' stata ancora caricata
 			loading			= 2,		//esiste nell'engine e' ed in fase di caricamento
-			hot_reload		= 3,		//esiste nell'engine e' ed in fase di unload/reload
+			loaded			= 3,		//esiste nell'engine, e' stato caricato, ma alcuni dei suoi figli non sono ready
+			hot_reload		= 4,		//esiste nell'engine e' ed in fase di unload/reload
 			error 			= 0xff		//errore fatale. Esiste nell'engine ma probabilmente il loader non e' riuscito a caricarla, questo asset e' spacciato per sempre
 		};
 
@@ -136,13 +137,13 @@ namespace gos
 		struct Descr
 		{
 		public:
-			void 	reset()			{ uid.setInvalid(); _status=eStatus::error; refCount = 0; num_child_not_ready=0; figli=padri=NULL; on_afterCreate=NULL; on_afterLoad=NULL; on_unload=NULL; on_destroy=NULL; }
+			void 	reset()			{ uid.setInvalid(); _status=eStatus::error; refCount = 0; _num_child_not_ready=0; figli=padri=NULL; on_afterCreate=NULL; on_afterLoad=NULL; on_unload=NULL; on_destroy=NULL; }
 
 		public:
 			asset2::UID			uid;					//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
 			Handle				handle;
-			res::eStatus		_status;				//stato della risorsa dal punto di vista dell'engine  (non cambiare direttamente il valore, usa res_set_status()
-			u8					num_child_not_ready;	//se ho dei figli, questo mi dice quanti di loro sono in stato != da eReady
+			res::eStatus		_status;				//stato della risorsa dal punto di vista dell'engine  (non cambiare direttamente il valore, usa res__set_status()
+			u8					_num_child_not_ready;	//se ho dei figli, questo mi dice quanti di loro sono in stato != da eReady
 			u8					_pad1;
 			u8					_pad2;
 			i32					refCount;

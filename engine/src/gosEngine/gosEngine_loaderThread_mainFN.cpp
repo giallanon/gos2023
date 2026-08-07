@@ -84,21 +84,25 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
 				case MSG_FOR_LOADER_THREAD__LOAD:
 					{
 						res::Descr *res = (res::Descr*)msgList[i].buffer;
-
-                        const asset2::UID uid = res->uid;
-                        loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] %016" PRIX64 " load started\n", asset2::enumToString(uid.getAssetType()), uid._uid);
-
-                        loaders::BaseLoader *loader = loaderList[(u32)uid.getAssetType()];
-                        assert (NULL != loader);
-                        if (loader->load (loaderInfo, res))
+						if (true == bQuit)
+							thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO, 0, res);
+						else
 						{
-							loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] %016" PRIX64 " loaded\n", asset2::enumToString(uid.getAssetType()), uid._uid);
-                            thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK, 0, res);
-						}
-                        else
-						{
-							loaderInfo.logger->log (eTextColor::red, "res::MT  [%s] %016" PRIX64 " ERROR LOADING\n", asset2::enumToString(uid.getAssetType()), uid._uid);
-                            thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO, 0, res);
+							const asset2::UID uid = res->uid;
+							loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] %016" PRIX64 " load started\n", asset2::enumToString(uid.getAssetType()), uid._uid);
+
+							loaders::BaseLoader *loader = loaderList[(u32)uid.getAssetType()];
+							assert (NULL != loader);
+							if (loader->load (loaderInfo, res))
+							{
+								loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] %016" PRIX64 " loaded\n", asset2::enumToString(uid.getAssetType()), uid._uid);
+								thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK, 0, res);
+							}
+							else
+							{
+								loaderInfo.logger->log (eTextColor::red, "res::MT  [%s] %016" PRIX64 " ERROR LOADING\n", asset2::enumToString(uid.getAssetType()), uid._uid);
+								thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO, 0, res);
+							}
 						}
 					}
 					break;
@@ -112,9 +116,6 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
                 break;
         }
     }
-
-    //TODO:: eliminare tutti i messaggi pendendi nel caso in cui ci siano ancora
-    //risorse da unloadare
 
 
     //free dei loader

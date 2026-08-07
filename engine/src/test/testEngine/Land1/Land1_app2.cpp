@@ -122,6 +122,22 @@ void Land1_app2::on__prepare_render()
 	}
 	renderer_land->end();
 
+
+	if (0 == engine->get_frame_num() % 3000)
+	{
+		logger::log (eTextColor::white, "hot reloading albero\n");
+		engine->hotreload (handle_model_albero);
+
+		// const res::Model3d *res_model;
+		// if (engine->get (handle_model_albero, &res_model))
+		// {
+		// 	gos::model::Reader mr(&res_model->model);
+		// 	ENGSkeleton handle_sk = mr.skeleton_get_handle();
+
+		// 	engine->hotreload (handle_sk);
+		// }
+	}
+
 	//alberi
 	renderer_PIPE3->begin();
 	{

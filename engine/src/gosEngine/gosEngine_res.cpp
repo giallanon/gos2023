@@ -5,7 +5,7 @@ using namespace gos;
 using namespace gos::engine;
 
 //**************************************************************** 
-void Engine::res_printInfo (const void *resIN, const char *debug_info) const
+void Engine::res__printInfo (const void *resIN, const char *debug_info) const
 {
 	 const res::Descr *res = (const res::Descr*)resIN;
 
@@ -13,19 +13,83 @@ void Engine::res_printInfo (const void *resIN, const char *debug_info) const
 		debug_info,
 		res->handle.viewAsU32(),
 		res->refCount,
-		res->num_child_not_ready, res::enumToString(res->_status), 
+		res->_num_child_not_ready, res::enumToString(res->_status), 
 		res::enumToString((res::eType)res->handle.get_value_TYPE()),
 		res->uid._uid);
 }
 
 //**************************************************************** 
-void Engine::res_set_status (res::Descr *res, res::eStatus new_status)
+void Engine::res__set_status (res::Descr *res, res::eStatus new_status)
 {
 	assert (NULL != res);
-	if (res->_status != new_status)
+	if (res->_status == new_status)
 	{
-		res->_status = new_status;
-		res_printInfo (res, "status");
+		return;
+	}
+
+	const res::eStatus old_status = res->_status;
+	res->_status = new_status;
+	res__printInfo (res, "status");
+
+	if (res::eStatus::aready == old_status)
+	{
+		//se ero "ready" e ora non lo sono +, devo informare i miei padri
+		res::HandleChain *p = res->padri;
+		while (p)
+		{
+			res__on_children_become_notready (p->res);
+			p = p->next;
+		}
+	}
+	else if (res::eStatus::aready == new_status)
+	{
+		//se ero "non ready" e adesso invece sono "ready", devo informare i miei padri		
+		res::HandleChain *p = res->padri;
+		while (p)
+		{
+			res__on_children_become_ready (p->res);
+			p = p->next;
+		}
+	}
+}
+
+//**************************************************************** 
+void Engine::res__on_children_become_ready (res::Descr *res_padre)
+{
+	assert (NULL != res_padre);
+
+	//uno dei miei figli era "not ready" e ora e' diventato ready
+	assert (res_padre->_num_child_not_ready > 0);
+	res_padre->_num_child_not_ready--;
+	res__printInfo (res_padre, "child rdy");
+
+	if (0 == res_padre->_num_child_not_ready)
+	{
+		if (res::eStatus::loaded == res_padre->_status)
+		{
+			//io ero "loaded" che vuol dire che ero pronto, ma avevo dei figli not-ready.
+			//Ora che tutti anche i miei figli sono diventati ready, cambio di stato e divento "ready".
+			//Il mio cambio di stato viene propagato ai miei padri
+			res__set_status (res_padre, res::eStatus::aready);
+		}
+	}
+}
+
+//**************************************************************** 
+void Engine::res__on_children_become_notready (res::Descr *res_padre)
+{
+	assert (NULL != res_padre);
+
+	//uno dei miei figli era "ready" e ora e' diventato "not ready"
+	res_padre->_num_child_not_ready++;
+	res__printInfo (res_padre, "child unrdy");
+
+	if (res::eStatus::aready == res_padre->_status)
+	{
+		//io ero "ready" in quanto anche tutti i miei figli erano ready.
+		//Ora che almeno uno dei miei figli e' diventato not-ready, cambio il mio stato.
+		//Il mio cambio di stato viene propagato ai miei padri
+		res__set_status (res_padre, res::eStatus::loaded);	
 	}
 }
 
@@ -44,53 +108,53 @@ res::Descr* Engine::res__do_createHandle (res::eType res_typeIN, res::eStatus st
 	res->_status = statusIN;
 	res->uid = uid;
 	
-	res_bindEvents (*out_handle, res);
+	res__bindEvents (*out_handle, res);
 	
+	res__printInfo (res, "create");
+
 	if (NULL != res->on_afterCreate)
 		(this->*res->on_afterCreate)(res);
-
-	res_printInfo (res, "create");
+	
 	return res;
 }
 
 //**************************************************************** 
-res::Descr* Engine::res_createHandle (res::eType res_type, res::Handle *out_handle)
+res::Descr* Engine::res__createHandle (res::eType res_type, res::Handle *out_handle)
 {
 	asset2::UID uid;
 	uid.setInvalid();
-	res::Descr *descr = res__do_createHandle (res_type, res::eStatus::ready, uid, out_handle);
+	res::Descr *descr = res__do_createHandle (res_type, res::eStatus::aready, uid, out_handle);
 	if (NULL == descr)
 	{
-		logger::err ("Engine::res_createHandle() => can't create handle for res type=%d\n", (u8)res_type);
+		logger::err ("Engine::res__createHandle() => can't create handle for res type=%d\n", (u8)res_type);
 	}
 	return descr;
 }
 
 //**************************************************************** 
-res::Descr* Engine::res_getOrCreateHandleFromAsset (const char *uid_runtimeName, res::Handle *out_handle, bool *out_bWasNew)
+res::Descr* Engine::res__getOrCreateHandleFromAsset (const char *uid_runtimeName, res::Handle *out_handle, bool *out_bWasNew)
 {
 	assert (NULL != out_handle);
 	asset2::UID uid;
 	if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
 	{
-		logger::err ("Engine::res_getOrCreateHandleFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
+		logger::err ("Engine::res__getOrCreateHandleFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
 		return NULL;
 	}
 
-	return res_getOrCreateHandleFromAsset (uid, out_handle, out_bWasNew);
+	return res__getOrCreateHandleFromAsset (uid, out_handle, out_bWasNew);
 }
 
-//**************************************************************** 
-res::Descr* Engine::res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle *out_handle, bool *out_bWasNew)
+res::Descr* Engine::res__getOrCreateHandleFromAsset (asset2::UID uid, res::Handle *out_handle, bool *out_bWasNew)
 {
 	assert (uid.isValid());
 	assert (NULL != out_handle);
 	assert (NULL != out_bWasNew);
 
 	res::eType res_type;
-	if (!res_assetUID_to_resUID (uid, &res_type))
+	if (!res__assetUID_to_resUID (uid, &res_type))
 	{
-		logger::err ("Engine::res_getOrCreateHandleFromAsset() => can't deduct res_type frome assert uid [%016]" PRIX64 "\n", uid._uid);
+		logger::err ("Engine::res__getOrCreateHandleFromAsset() => can't deduct res_type frome assert uid [%016]" PRIX64 "\n", uid._uid);
 		return NULL;
 	}
 
@@ -106,9 +170,9 @@ res::Descr* Engine::res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle
 		assert (out_handle->get_value_TYPE() == (u32)res_type);
 
 		//incremento il ref count
-		res::Descr *res = res_getDescriptor(*out_handle);
+		res::Descr *res = res__getDescriptor(*out_handle);
 		res->refCount++;
-		res_printInfo(res, "refcount++");
+		res__printInfo(res, "refcount++");
 		return res;
 	}
 
@@ -117,7 +181,7 @@ res::Descr* Engine::res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle
 	res::Descr *res = res__do_createHandle (res_type, res::eStatus::notLoaded, uid, out_handle);
 	if (NULL == res)
 	{
-		logger::err ("Engine::res_getOrCreateHandleFromAsset() => can't create handle for res type=%d and asset uid=%016" PRIX64 "\n", (u8)res_type, uid._uid);
+		logger::err ("Engine::res__getOrCreateHandleFromAsset() => can't create handle for res type=%d and asset uid=%016" PRIX64 "\n", (u8)res_type, uid._uid);
 		return NULL;
 	}
 
@@ -137,19 +201,19 @@ res::Descr* Engine::res_getOrCreateHandleFromAsset (asset2::UID uid, res::Handle
 		   
 		bool bWasNew;
 		res::Handle child_handle;
-		res::Descr *child_res = res_getOrCreateHandleFromAsset (child_uid, &child_handle, &bWasNew);
+		res::Descr *child_res = res__getOrCreateHandleFromAsset (child_uid, &child_handle, &bWasNew);
 		if (!bWasNew)
 			child_res->refCount++;
 
 		//child_handle diventa uno dei miei figli
-		res_addChild (res, child_res);
+		res__addChild (res, child_res);
 	}
 	asset_logger->decIndent();
 	return res;
 }
 
 //**************************************************************** 
-void Engine::res_bindEvents (res::Handle handle, res::Descr *res)
+void Engine::res__bindEvents (res::Handle handle, res::Descr *res)
 {
 	assert (NULL != res);
 	assert (handle.isValid());
@@ -201,16 +265,19 @@ void Engine::res_bindEvents (res::Handle handle, res::Descr *res)
 	case res::eType::shape:
 		res->on_afterCreate = &Engine::internal__shape_on_afterCreate;
 		res->on_destroy = &Engine::internal__shape_on_destroy;
+		res->on_unload = &Engine::internal__shape_on_unload;
 		return;
 
 	case res::eType::gpu_shape:
 		res->on_afterCreate = &Engine::internal__GPUShape_on_afterCreate;
 		res->on_destroy = &Engine::internal__GPUShape_on_destroy;
+		res->on_destroy = &Engine::internal__GPUShape_on_unload;
 		return;
 
 	case res::eType::skeleton:
 		res->on_afterCreate = &Engine::internal__skeleton_on_afterCreate;
 		res->on_destroy = &Engine::internal__skeleton_on_destroy;
+		res->on_unload = &Engine::internal__skeleton_on_unload;
 		return;
 
 	case res::eType::model_3d:
@@ -232,22 +299,21 @@ void Engine::res_bindEvents (res::Handle handle, res::Descr *res)
 }
 
 //**************************************************************** 
-res::Descr* Engine::res_getDescriptor (res::Handle handle)
+res::Descr* Engine::res__getDescriptor (res::Handle handle)
 {
 	return (res::Descr*)resManager.raw_get_data (handle);
 }
 
 //**************************************************************** 
-bool Engine::res_release (res::Handle handle)
+bool Engine::res__release (res::Handle handle)
 {
-	res::Descr *res = res_getDescriptor(handle);
+	res::Descr *res = res__getDescriptor(handle);
 	if (NULL != res)
-		return res_release(res);
+		return res__release(res);
 	return false;
 }
 
-//**************************************************************** 
-bool Engine::res_release (res::Descr *res)
+bool Engine::res__release (res::Descr *res)
 {
 	assert (NULL != res);
 	assert (res->refCount > 0);
@@ -269,28 +335,38 @@ bool Engine::res_release (res::Descr *res)
 		case res::eStatus::hot_reload:
 			//questo non dovrebbe succedere perche' quando la risorsa viene "hot-reloaded"
 			//il suo ref-count viene incrementato
-			DBGBREAK;
+			if (bQuitEngine)
+			{
+				//caso molto particolare dell'engine in fase di distruzione ma con in canna degli hot reload
+				res->_status = res::eStatus::loaded;
+				res__do_destroy(res);
+			}
+			else
+			{
+				DBGBREAK;
+			}
 			break;
 
 		//anche se la risorsa non e' stata nemmeno caricata, non c'e' da preoccuparsene, posso fare il "free" immediatamente
 		case res::eStatus::notLoaded:
 		case res::eStatus::error:
-		case res::eStatus::ready:
-			res_do_destroy(res);
+		case res::eStatus::loaded:
+		case res::eStatus::aready:
+			res__do_destroy(res);
 			return true;
 		}
 	}
 	else
 	{
 		res->refCount--;
-		res_printInfo(res, "release");
+		res__printInfo(res, "release");
 	}
 
 	return false;
 }
 
 //**************************************************************** 
-bool Engine::res_assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) const
+bool Engine::res__assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) const
 {
 	assert (uid.isAnAsset());
 	switch (uid.getAssetType())
@@ -310,32 +386,33 @@ bool Engine::res_assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) 
 }
 
 //**************************************************************** 
-void Engine::res_addChild (res::Descr *padre_res, res::Descr *child_res)
+void Engine::res__addChild (res::Descr *padre_res, res::Descr *child_res)
 {
 	//child diventa figlio di padre
-	res::HandleChain *chain = res_newHandleChain();
+	res::HandleChain *chain = res__newHandleChain();
 	chain->res = child_res;
-
 	chain->next = padre_res->figli;
 	padre_res->figli = chain;
-	if (res::eStatus::ready != child_res->_status)
-		padre_res->num_child_not_ready++;
 
 	//padre diventa "padre" di child
-	chain = res_newHandleChain();
+	chain = res__newHandleChain();
 	chain->res = padre_res;
 	chain->next = child_res->padri;
 	child_res->padri = chain;	
+
+	//se child e' not-ready, lo comunico al mio nuovo padre
+	if (res::eStatus::aready != child_res->_status)
+		res__on_children_become_notready (padre_res);
 }
 
 //**************************************************************** 
-res::HandleChain* Engine::res_newHandleChain ()
+res::HandleChain* Engine::res__newHandleChain ()
 {
 	return resHandleChainPool.alloc();
 }
 
 //**************************************************************** 
-void Engine::res_freeHandleChain (res::HandleChain *p)
+void Engine::res__freeHandleChain (res::HandleChain *p)
 {
 	resHandleChainPool.free(p);
 }
@@ -345,9 +422,9 @@ void Engine::res_freeHandleChain (res::HandleChain *p)
 *	- in stato eReady
 *	- tutti i suoi figli sono in stato eRerady
 */
-bool Engine::res_getOrScheduleLoad (res::Handle handle, const res::Descr **out, u64 timeout_msec)
+bool Engine::res__getOrScheduleLoad (res::Handle handle, const res::Descr **out, u64 timeout_msec)
 {
-	res::Descr *res= res_getDescriptor(handle);
+	res::Descr *res= res__getDescriptor(handle);
 	if (NULL == res)
 	{
 		(*out) = NULL;
@@ -355,24 +432,31 @@ bool Engine::res_getOrScheduleLoad (res::Handle handle, const res::Descr **out, 
 	}
 
 	(*out) = res;
-	if (res::eStatus::ready == res->_status && 0 == res->num_child_not_ready)
+	if (res::eStatus::aready == res->_status)
+	{
+		assert (0 == res->_num_child_not_ready);
 		return true;
+	}
 
-	assert (res->uid.isValid());
+	//se la risorsa non e' associata ad un UID, non posso schedularne il load, quindi
+	//ritorna false
+	if (!res->uid.isValid())
+		return false;
+
 	if (res::eStatus::notLoaded == res->_status)
 	{
 		//dato che l'asset e' notLoaded, schedulo il suo load (e degli asset da cui dipende)
 		//Incremento il ref count perche' sto passando la risorsa al loader-thread e questo garantisce che 
 		//la risorsa non verra' eliminata da eventuali release()
 		res->refCount++;
-		res_set_status (res, res::eStatus::loading);
+		res__set_status (res, res::eStatus::loading);
 
 		asset_logger->incIndent();
 		res::HandleChain *p = res->figli;
 		while (p)
 		{
 			const res::Descr *descr;
-			res_getOrScheduleLoad(p->res->handle, &descr);
+			res__getOrScheduleLoad(p->res->handle, &descr);
 			p = p->next;
 		}
 		asset_logger->decIndent();
@@ -392,7 +476,12 @@ bool Engine::res_getOrScheduleLoad (res::Handle handle, const res::Descr **out, 
 		while (gos::getTimeSinceStart_msec() < time_to_exit_msec)
 		{
 			priv_flushLoaderThreadMsg();
-			if (res::eStatus::ready == res->_status && 0 == res->num_child_not_ready) return true;
+			if (res::eStatus::aready == res->_status)
+			{
+				assert (0 == res->_num_child_not_ready);
+				return true;
+			}
+
 			if (res::eStatus::error == res->_status) return false;
 		}
 	}
@@ -400,19 +489,21 @@ bool Engine::res_getOrScheduleLoad (res::Handle handle, const res::Descr **out, 
 }
 
 //**************************************************************** 
-void Engine::res_do_destroy (res::Descr *res)
+void Engine::res__do_destroy (res::Descr *res)
 {
 	assert (NULL != res);
 	assert (res->_status != res::eStatus::loading);
 	assert (res->_status != res::eStatus::hot_reload);
+	assert (res->refCount == 1);
+
+	res->refCount = 0;
 
 	//chiamo il "distruttore" di me stesso solo se la risorsa era stata effettivamente caricata
-	if (res::eStatus::ready == res->_status)
+	if (res::eStatus::aready == res->_status || res::eStatus::loaded == res->_status)
 	{
 		(this->*res->on_destroy)(res);
 	}
-	res_set_status (res, res::eStatus::notLoaded);
-	res_printInfo(res, "destroy");
+	res__set_status (res, res::eStatus::notLoaded);
 
 	//se ho dei figli, faccio il release
 	asset_logger->incIndent();
@@ -420,8 +511,8 @@ void Engine::res_do_destroy (res::Descr *res)
 	while (p)
 	{
 		res::HandleChain *next = p->next;
-		res_release (p->res);
-		res_freeHandleChain(p);
+		res__release (p->res);
+		res__freeHandleChain(p);
 		p = next;
 	}
 	asset_logger->decIndent();
@@ -434,7 +525,7 @@ void Engine::res_do_destroy (res::Descr *res)
 	while (p)
 	{
 		res::HandleChain *next = p->next;
-		res_freeHandleChain(p);
+		res__freeHandleChain(p);
 		p = next;
 	}
 
@@ -443,9 +534,9 @@ void Engine::res_do_destroy (res::Descr *res)
 }
 
 //**************************************************************** 
-bool Engine::res_hotreload (res::Handle handle)
+bool Engine::res__hotreload (res::Handle handle)
 {
-	res::Descr *res = res_getDescriptor(handle);
+	res::Descr *res = res__getDescriptor(handle);
 	if (NULL == res)
 	{
 		DBGBREAK;
@@ -456,30 +547,17 @@ bool Engine::res_hotreload (res::Handle handle)
 	if (res::eStatus::hot_reload == res->_status)
 		return false;
 
-	const bool bWasReady = (res::eStatus::ready == res->_status);
-
 	//Incremento il ref count per evitare che qualcuno mi elimini la risorsa intanto che e' in hot-reload
 	//L'hot-reload effettivo viene poi processata nella Engine::update();
 	res->refCount++;
-	res_set_status (res, res::eStatus::hot_reload);
+	res__set_status (res, res::eStatus::hot_reload);
 
-	//se questa risorsa era ready, allora informo i suoi padri che non sono piu' in stato ready
-	if (bWasReady)
-	{
-		res::HandleChain *p = res->padri;
-		while (p)
-		{
-			p->res->num_child_not_ready++;
-			res_printInfo (p->res, "child unrdy");
-			p = p->next;
-		}
-	}
 
 	//se questa risorsa ha dei figli, devo farne l'hot reload
 	res::HandleChain *p = res->figli;
 	while (p)
 	{
-		res_hotreload (p->res->handle);
+		res__hotreload (p->res->handle);
 		p = p->next;
 	}
 
@@ -487,7 +565,7 @@ bool Engine::res_hotreload (res::Handle handle)
 	//aggiungo la risorsa alle lista delle risorsa di cui fare l'hot-reload
 	const sUnloadInfo info = {
 		.res_handle = handle,
-		.timer_msec = (u32)gos::getTimeSinceStart_msec() + 10,
+		.timer_msec = (u32)gos::getTimeSinceStart_msec() + 1000,
 	};
 	list_of_res_to_be_hotreloaded.append (info);
 	return true;

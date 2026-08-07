@@ -88,7 +88,7 @@ void MarchingSquare::run (gos::Allocator  *allocator, const VkEx5MarchingSquare:
     priv_free();
 
     numQuadPieni = 0;
-    u32 numQuadVuoti = 0;
+    //u32 numQuadVuoti = 0;
     u32 numQuadDiConfine = 0;
     u32 stimaNumeroDiPerimetri = 4;
     u32 numMaxQuadPerPerimetro = 0;
@@ -110,7 +110,7 @@ void MarchingSquare::run (gos::Allocator  *allocator, const VkEx5MarchingSquare:
             switch (quadList.buffer[ct].quadType)
             {
             default:    numQuadDiConfine++; break;
-            case 0:     numQuadVuoti++; break;
+            //case 0:     numQuadVuoti++; break;
             case 5:     numQuadDiConfine+=2; stimaNumeroDiPerimetri++; break; //questo caso ha una doppia linea quindi comparira' 2 volte nei perimetri
             case 10:    numQuadDiConfine+=2; stimaNumeroDiPerimetri++; break; //questo caso ha una doppia linea quindi comparira' 2 volte nei perimetri
             case 15:    numQuadPieni++; break;

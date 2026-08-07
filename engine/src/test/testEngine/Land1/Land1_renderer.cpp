@@ -219,15 +219,18 @@ void Renderer::priv_add_quad (Land1::eMeshType mesh_type, u32 reference_vtx_inde
 //***************************************
 void Renderer::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 {
-    if (0 == num_quad)
-        return;
-
-
-	if (0 == ctx.frame_number % 1000)
+	if (0 == num_quad)
 	{
-		//if (ctx.engine->hotreload (hanle__tex_perlin01))	logger::log (eTextColor::darkGreen, "hot-reloading texture\n");
-		if (ctx.engine->hotreload (handle_pipeline))	logger::log (eTextColor::darkGreen, "hot-reloading handle_pipeline\n");
+		return;
 	}
+
+	// if (0 == ctx.frame_number % 2000)
+	// {
+	// 	if (ctx.engine->hotreload (hanle__tex_perlin01))	logger::log (eTextColor::darkGreen, "hot-reloading texture\n");
+
+	// 	logger::log (eTextColor::darkGreen, "hot-reloading handle_pipeline\n");
+	// 	if (ctx.engine->hotreload (handle_pipeline))	logger::log (eTextColor::darkGreen, "hot-reloading DONE\n");
+	// }
 
     const res::Pipeline *res_pipeline;
     if (!engine->get (handle_pipeline, &res_pipeline))

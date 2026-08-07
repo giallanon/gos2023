@@ -16,6 +16,7 @@ Engine::Engine()
 	inputCtx = NULL;
 	bQuitEngine = false;
 	asset_logger = NULL;
+	frame_num = 0;
 }
 
 //******************************** 
@@ -25,17 +26,36 @@ void Engine::unsetup()
 	if (NULL == gpu || NULL == allocator)
 		return;
 
+	logger::log ("\n\n***************** engine unsetup begin *********************\n");
+	if (NULL != asset_logger)
+		asset_logger->log ("\n\n***************** engine unsetup begin *********************\n");
+
+
+	//release di tutte le risorse che erano in scheduling per l'hot-reload
+	for (u32 i=0; i<list_of_res_to_be_hotreloaded.getNElem(); i++)
+	{
+		res::Descr *res = res__getDescriptor (list_of_res_to_be_hotreloaded(i).res_handle);
+		res__release (res);
+	}
+	list_of_res_to_be_hotreloaded.unsetup();
+
 	//chiedo al thread di morire e aspetto che termini
 	thread::pushMsg (msgq_1W, MSG_FOR_LOADER_THREAD__DIE, 0);
 	thread::waitEnd (hThreadLoader);
+
+	for (u8 i=0; i<4; i++)
+	{
+		priv_flushLoaderThreadMsg();
+	}
 	thread::deleteMsgQ (msgq_1R, msgq_1W);
 	thread::deleteMsgQ (msgq_2R, msgq_2W);
+
+
+
 
 	//renderPipe
 	release(handle_texture_bianca);
 	renderPipe.priv_unsetup();
-
-	list_of_res_to_be_hotreloaded.unsetup();
 
 	//resource manager
 	resManager.unsetup();
@@ -265,6 +285,8 @@ void Engine::toggleVSync()
 //******************************** 
 bool Engine::update()
 {
+	frame_num++;
+
 	if (bQuitEngine)
 		return false;
 
@@ -298,7 +320,7 @@ void Engine::priv_handle_res_hotreload()
 		N--;
 		i--;
 		
-		res::Descr *res = res_getDescriptor (info.res_handle);
+		res::Descr *res = res__getDescriptor (info.res_handle);
 		
 		assert (NULL != res);
 		assert (res::eStatus::hot_reload == res->_status);
@@ -308,15 +330,15 @@ void Engine::priv_handle_res_hotreload()
 			(this->*res->on_unload) (res);
 
 		//la porto in stato "not loaded"
-		res_set_status (res, res::eStatus::notLoaded);
+		res__set_status (res, res::eStatus::notLoaded);
 
 		//faccio il release dato che ho incrementato il ref-count durante la chiamata a "hotreload()"
 		//Se a seguito del mio release la risorsa e' stata eliminata, non sto a schedulare il load
-		if (!res_release (res))
+		if (!res__release (res))
 		{
 			//schedulo il reload
 			const res::Descr *descr;
-			res_getOrScheduleLoad (info.res_handle, &descr);
+			res__getOrScheduleLoad (info.res_handle, &descr);
 		}
 	}
 }
@@ -342,27 +364,20 @@ void Engine::priv_flushLoaderThreadMsg()
 				res::Descr *res = (res::Descr*)loaderMsgList[i].buffer;
 				if (bLoadOK)
 				{
-					res_set_status (res, res::eStatus::ready);
-
 					//se esiste, chiamo l'handler
 					if (NULL != res->on_afterLoad)
 						(this->*res->on_afterLoad)(res);
 
-					//se questa risorsa ha dei padri, li informo che ora sono diventata ready
-					res::HandleChain *p = res->padri;
-					while (p)
-					{
-						assert (p->res->num_child_not_ready > 0);
-						p->res->num_child_not_ready--;
-						res_printInfo (p->res, "child rdy");
-						p = p->next;
-					}
+					if (0 == res->_num_child_not_ready)
+						res__set_status (res, res::eStatus::aready);
+					else
+						res__set_status (res, res::eStatus::loaded);
 				}
 				else
-					res_set_status (res, res::eStatus::error);
+					res__set_status (res, res::eStatus::error);
 
 				//chi ha chiamato il load, ha anche incrementato il refCount..ora lo decremoento
-				res_release(res);
+				res__release(res);
 
 			}
 			break;
@@ -428,7 +443,7 @@ bool Engine::inputEvent_getNext (InputEvent *out)
 			break;
 
 		case COMPILE_TIME_STR_CRC32("toggle_mouse_mode"):
-		printf ("engine:: toggle mouse mode\n");
+			logger::log (eTextColor::white, "engine:: toggle mouse mode\n");
 			input::window_toggleMouseMode(gpu->getWindow());
 			break;
 		}
@@ -461,7 +476,7 @@ bool Engine::asset_build()
  *****************************************************************/
 bool Engine::vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer *out_handle)
 {
-	res::VtxBuffer *res = (res::VtxBuffer*)res_createHandle(res::eType::vtx_buffer, &out_handle->res_handle);
+	res::VtxBuffer *res = (res::VtxBuffer*)res__createHandle(res::eType::vtx_buffer, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::vtxBuffer_create() => can't create handle\n");
@@ -491,7 +506,7 @@ void Engine::internal__vtxBuffer_on_destroy (void *resIN)
  *****************************************************************/
 bool Engine::idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGIdxBuffer *out_handle)
 {
-	res::IdxBuffer *res = (res::IdxBuffer*)res_createHandle(res::eType::idx_buffer, &out_handle->res_handle);
+	res::IdxBuffer *res = (res::IdxBuffer*)res__createHandle(res::eType::idx_buffer, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::idxBuffer_create() => can't create handle\n");
@@ -521,7 +536,7 @@ void Engine::internal__idxBuffer_on_destroy (void *resIN)
  *****************************************************************/
 bool Engine::vtxshader_createFromFile (const char *filename, const char *mainFnName, ENGVtxShader *out_handle)
 {
-	res::Shader *res = (res::Shader*)res_createHandle(res::eType::vtx_shader, &out_handle->res_handle);
+	res::Shader *res = (res::Shader*)res__createHandle(res::eType::vtx_shader, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::vtxshader_createFromFile() => can't create handle\n");
@@ -533,7 +548,7 @@ bool Engine::vtxshader_createFromFile (const char *filename, const char *mainFnN
 
 bool Engine::vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGVtxShader *out_handle)
 {
-	res::Shader *res = (res::Shader*)res_createHandle(res::eType::vtx_shader, &out_handle->res_handle);
+	res::Shader *res = (res::Shader*)res__createHandle(res::eType::vtx_shader, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::vtxshader_createFromMemory() => can't create handle\n");
@@ -570,7 +585,7 @@ void Engine::internal__vtxshader_on_unload (void *resIN)
  *****************************************************************/
 bool Engine::pxlshader_createFromFile (const char *filename, const char *mainFnName, ENGPxlShader *out_handle)
 {
-	res::Shader *res = (res::Shader*)res_createHandle(res::eType::pxl_shader, &out_handle->res_handle);
+	res::Shader *res = (res::Shader*)res__createHandle(res::eType::pxl_shader, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::pxlshader_createFromFile() => can't create handle\n");
@@ -582,7 +597,7 @@ bool Engine::pxlshader_createFromFile (const char *filename, const char *mainFnN
 
 bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGPxlShader *out_handle)
 {
-	res::Shader *res = (res::Shader*)res_createHandle(res::eType::pxl_shader, &out_handle->res_handle);
+	res::Shader *res = (res::Shader*)res__createHandle(res::eType::pxl_shader, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::pxlshader_createFromMemory() => can't create handle\n");
@@ -620,7 +635,7 @@ void Engine::internal__pxlshader_on_unload (void *resIN)
  *****************************************************************/
 bool Engine::pipeline_create (const gpu::Pipeline_def &def, ENGPipeline *out_handle)
 {
-	res::Pipeline *res = (res::Pipeline*)res_createHandle(res::eType::pipeline, &out_handle->res_handle);
+	res::Pipeline *res = (res::Pipeline*)res__createHandle(res::eType::pipeline, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::pipeline_create() => can't create handle\n");
@@ -666,7 +681,7 @@ bool Engine::texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt,
 
 bool Engine::priv_texture2D_create_ex (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle, gpu::StageHelper &stageHelper, u32 desired_texture_index)
 {
-	res::Texture2d *res = (res::Texture2d*)res_createHandle(res::eType::texture_2d, &out_handle->res_handle);
+	res::Texture2d *res = (res::Texture2d*)res__createHandle(res::eType::texture_2d, &out_handle->res_handle);
 	if (NULL == res)
 		return false;
 
@@ -680,7 +695,7 @@ bool Engine::priv_texture2D_create_ex (u16 dimx, u16 dimy, u8 nMipMap, eImageFor
 
 bool Engine::texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture *out_handle, gpu::StageHelper &stageHelper)
 {
-	res::Texture2d *res = (res::Texture2d*)res_createHandle(res::eType::texture_2d, &out_handle->res_handle);
+	res::Texture2d *res = (res::Texture2d*)res__createHandle(res::eType::texture_2d, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::texture2D_create() => can't create handle\n");
@@ -769,7 +784,7 @@ void Engine::priv_texture2D__remove_from_mega_array (res::Texture2d *res)
  *****************************************************************/
 bool Engine::shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, ENGShape *out_handle)
 {
-	res::Shape *res = (res::Shape*)res_createHandle(res::eType::shape, &out_handle->res_handle);
+	res::Shape *res = (res::Shape*)res__createHandle(res::eType::shape, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::shape_create() => can't create handle\n");
@@ -799,6 +814,15 @@ void Engine::internal__shape_on_destroy (void *resIN)
 	shape::shapeFree (allocator, &res->shape);
 }
 
+void Engine::internal__shape_on_unload (void *resIN)
+{
+	//asset_logger->log ("internal__shape_on_unload\n");
+	res::Shape *res = (res::Shape*)resIN;
+	shape::shapeFree (allocator, &res->shape);
+	res->shape.reset();
+}
+
+
 
 /**************************************************************** 
  * GPU SHAPE
@@ -809,13 +833,14 @@ bool Engine::GPUShape_create (ENGShape handle_shape, gpu::StageHelper &stageHelp
 	assert (NULL != out_handle);
 	if (map_of_shape_to_gpushape.find(handle_shape, out_handle))
 	{
-		res::Descr *res = res_getDescriptor(out_handle->res_handle);
+		res::Descr *res = res__getDescriptor(out_handle->res_handle);
 		res->refCount++;
+		res__printInfo(res, "refcount++");
 		return true;
 	}
 
 	//recupero le info sulla shaperSRC
-	res::Shape *res_shape = (res::Shape*)res_getDescriptor(handle_shape.res_handle);
+	res::Shape *res_shape = (res::Shape*)res__getDescriptor(handle_shape.res_handle);
 	if (NULL == res_shape)
 	{
 		logger::err ("Engine::GPUShape_create() => src shape does not exists\n");
@@ -823,7 +848,7 @@ bool Engine::GPUShape_create (ENGShape handle_shape, gpu::StageHelper &stageHelp
 	}
 
 	//Creo una nuova GPUShape
-	res::GPUShape *res = (res::GPUShape*)res_createHandle(res::eType::gpu_shape, &out_handle->res_handle);
+	res::GPUShape *res = (res::GPUShape*)res__createHandle(res::eType::gpu_shape, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::GPUShape_create() => can't create handle\n");
@@ -834,12 +859,19 @@ bool Engine::GPUShape_create (ENGShape handle_shape, gpu::StageHelper &stageHelp
 
 	//mappo la coppia <shape, gpu_shape>
 	map_of_shape_to_gpushape.insertIfNotExists (handle_shape, *out_handle);
+
+
+	//GPUShape diventa un figlio di handle_shape
+	res__addChild (&res_shape->_descr, &res->_descr);
+	res->_descr.refCount++;
+	res__printInfo(res, "refcount++");
+
 	return true;
 }
 
 bool Engine::GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle)
 {
-	res::GPUShape *res = (res::GPUShape*)res_createHandle(res::eType::gpu_shape, &out_handle->res_handle);
+	res::GPUShape *res = (res::GPUShape*)res__createHandle(res::eType::gpu_shape, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::GPUShape_create() => can't create handle\n");
@@ -881,10 +913,8 @@ bool Engine::priv_GPUShape_create (const gos::Shape *shape, gpu::StageHelper &st
 	return true;
 }
 
-void Engine::internal__GPUShape_on_afterCreate (void *resIN)
+void Engine::internal__GPUShape_reset (res::GPUShape *res)
 {
-	//asset_logger->log ("internal__GPUShape_on_afterCreate\n");
-	res::GPUShape *res = (res::GPUShape*)resIN;
 	res->handle_shape.setInvalid();
 	res->vbHandle.setInvalid();
 	res->ibHandle.setInvalid();
@@ -896,10 +926,20 @@ void Engine::internal__GPUShape_on_afterCreate (void *resIN)
 	res->alloc_idxbuf_size = 0;	
 }
 
+void Engine::internal__GPUShape_on_afterCreate (void *resIN)
+{
+	res::GPUShape *res = (res::GPUShape*)resIN;
+	internal__GPUShape_reset(res);
+	asset_logger->log ("internal__GPUShape_on_afterCreate [handle=%08X]\n", res->_descr.handle.viewAsU32());
+}
+
 void Engine::internal__GPUShape_on_destroy (void *resIN)
 {
-	//asset_logger->log ("internal__GPUShape_on_destroy\n");
 	res::GPUShape *res = (res::GPUShape*)resIN;
+
+	asset_logger->log ("internal__GPUShape_on_destroy [handle=%08X]\n", res->_descr.handle.viewAsU32());
+
+
 	if (res->numVertex)
 		vtxBufferMan.release (res->vbHandle, res->alloc_vtxbuf_offset, res->alloc_vtxbuf_size);
 
@@ -911,6 +951,20 @@ void Engine::internal__GPUShape_on_destroy (void *resIN)
 		map_of_shape_to_gpushape.remove (res->handle_shape);
 }
 
+void Engine::internal__GPUShape_on_unload (void *resIN)
+{
+	res::GPUShape *res = (res::GPUShape*)resIN;
+
+	asset_logger->log ("internal__GPUShape_on_unload [handle=%08X]\n", res->_descr.handle.viewAsU32());
+
+	if (res->numVertex)
+		vtxBufferMan.release (res->vbHandle, res->alloc_vtxbuf_offset, res->alloc_vtxbuf_size);
+
+	if (res->numIndices)
+		idxBufferMan.release (res->ibHandle, res->alloc_idxbuf_offset, res->alloc_idxbuf_size);
+
+	internal__GPUShape_reset(res);
+}
 
 
 /**************************************************************** 
@@ -927,7 +981,7 @@ bool Engine::skeleton_create (const Skeleton &sk, ENGSkeleton *out_handle)
 
 bool Engine::skeleton_createFromMemory (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *out_handle)
 {
-	res::Skeleton *res = (res::Skeleton*)res_createHandle(res::eType::skeleton, &out_handle->res_handle);
+	res::Skeleton *res = (res::Skeleton*)res__createHandle(res::eType::skeleton, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::skeleton_createFromMemory() => can't create handle\n");
@@ -957,6 +1011,14 @@ void Engine::internal__skeleton_on_destroy (void *resIN)
 	skeleton::free (res->skeleton);
 }
 
+void Engine::internal__skeleton_on_unload (void *resIN)
+{
+	//asset_logger->log ("internal__skeleton_on_unload\n");
+	internal__skeleton_on_destroy(resIN);
+
+	res::Skeleton *res = (res::Skeleton*)resIN;
+	res->skeleton.reset();
+}
 
 
 /**************************************************************** 
@@ -964,7 +1026,7 @@ void Engine::internal__skeleton_on_destroy (void *resIN)
  *****************************************************************/
 gos::Model*	Engine::model_create (ENGSkeleton handle_skeleton, u16 num_shape, u16 num_material, u16 num_meshes, ENGModel3d *out_handle)
 {
-	res::Model3d *res = (res::Model3d*)res_createHandle(res::eType::model_3d, &out_handle->res_handle);
+	res::Model3d *res = (res::Model3d*)res__createHandle(res::eType::model_3d, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::model_create() => can't create handle\n");
@@ -1001,13 +1063,13 @@ void Engine::internal__model_on_destroy (void *resIN)
 bool Engine::modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_handle)
 {
 	//il modelSRC deve esistere e deve anche essere in stato loaded
-	res::Model3d *res_model = (res::Model3d*)res_getDescriptor (handle_model.res_handle);
+	res::Model3d *res_model = (res::Model3d*)res__getDescriptor (handle_model.res_handle);
 	if (NULL == res_model)
 	{
 		logger::err ("Engine::modelinst_create() => invalid handle_model\n");
 		return false;
 	}
-	if (res_model->_descr._status != res::eStatus::ready)
+	if (res_model->_descr._status != res::eStatus::aready)
 	{
 		logger::err ("Engine::modelinst_create() => src model is not in READY status\n");
 		return false;
@@ -1027,7 +1089,7 @@ bool Engine::modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_hand
 
 
 	//creo istanza
-	res::Model3dInst *res = (res::Model3dInst*)res_createHandle(res::eType::model_instance, &out_handle->res_handle);
+	res::Model3dInst *res = (res::Model3dInst*)res__createHandle(res::eType::model_instance, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::modelinst_create() => can't create handle\n");
@@ -1036,9 +1098,9 @@ bool Engine::modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_hand
 
 	//model diventa mio figlio e io divento uno dei suoi padri
 	asset_logger->incIndent();
-		res_addChild (&res->_descr, &res_model->_descr);
+		res__addChild (&res->_descr, &res_model->_descr);
 		res_model->_descr.refCount++;
-		res_printInfo(res_model, "modelinst_create");
+		res__printInfo(&res_model->_descr, "refcount++");
 	asset_logger->decIndent();
 
 	
@@ -1079,10 +1141,10 @@ void Engine::internal__modelinst_on_destroy (void *resIN)
 
 void Engine::modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &matW)
 {
-	res::Model3dInst *res = (res::Model3dInst*)res_getDescriptor(handle.res_handle);
+	res::Model3dInst *res = (res::Model3dInst*)res__getDescriptor(handle.res_handle);
 	if (NULL == res)
 		return;
-	if (res::eStatus::ready == res->_descr._status)
+	if (res::eStatus::aready == res->_descr._status)
 	{
 		priv_modelinst_applyTransform_ric (res->minst.model_listof_bones, res->minst.listof_bones, 0, matW);
 	}
@@ -1109,7 +1171,7 @@ void Engine::priv_modelinst_applyTransform_ric (const gos::Bone *model__listof_b
  *****************************************************************/
 bool Engine::materialPBR_create (ENGMaterialPBR *out_handle)
 {
-	res::MaterialPBR *res = (res::MaterialPBR*)res_createHandle(res::eType::materialPBR, &out_handle->res_handle);
+	res::MaterialPBR *res = (res::MaterialPBR*)res__createHandle(res::eType::materialPBR, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::materialPBR_create() => can't create handle\n");
@@ -1121,10 +1183,10 @@ bool Engine::materialPBR_create (ENGMaterialPBR *out_handle)
 
 bool Engine::internal__materialPBR_update_renderer_binding (ENGMaterialPBR handle, u8 renderer_uid, u32 data)
 {
-	res::MaterialPBR *res = (res::MaterialPBR*)res_getDescriptor(handle.res_handle);
+	res::MaterialPBR *res = (res::MaterialPBR*)res__getDescriptor(handle.res_handle);
 	if (NULL == res)
 		return false;
-	if (res::eStatus::ready == res->_descr._status)
+	if (res::eStatus::aready == res->_descr._status)
 	{
 		assert (renderer_uid < res::MaterialPBR::NUM_MAX_RENDERER);
 		res->renderer_bindings[renderer_uid] = data;
