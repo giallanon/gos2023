@@ -13,7 +13,7 @@ namespace gos
             class Loader_shape : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, void *resIN)
+                eResult load (LoaderInfo &loaderInfo, void *resIN, CallbackData *in_out__callback_data)
                 {
                     res::Shape *res = static_cast<res::Shape*>(resIN);
 					gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
@@ -26,18 +26,18 @@ namespace gos
                     if (NULL == buffer)
                     {
                         logger::err ("Loader_shape::load() => file not found %s\n", s);
-                        return false;
+                        return eResult::failed;
                     }
 
 					if (!shape::deserialize (buffer, fsize, loaderInfo.engine_allocator, &res->shape))
                     {
 						GOSFREE(thread_allocator, buffer);
                         logger::err ("Loader_shape::load() => error creating shape from %s\n", s);
-                        return false;
+                        return eResult::failed;
                     }
 					GOSFREE(thread_allocator, buffer);
 
-                    return true;
+                    return eResult::success;
                 }
             };
 

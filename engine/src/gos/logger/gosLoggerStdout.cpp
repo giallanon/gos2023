@@ -34,9 +34,9 @@ LoggerStdout::~LoggerStdout()
 }
 
 //*************************************************
-void LoggerStdout::enableFileLogging (const char *fullFolderPathAndName)
+void LoggerStdout::enableFileLogging (const char *fullFolderPathAndName, bool bClearFolder)
 {
-    logToFile = new LogToFile (fullFolderPathAndName);
+    logToFile = new LogToFile (fullFolderPathAndName, bClearFolder);
 }
 
 //*************************************************
@@ -223,7 +223,7 @@ void LoggerStdout::priv_log (const char *prefix, const char *format, va_list arg
  * 
  * 
  ****************************************************************************/
-LoggerStdout::LogToFile::LogToFile(const char *fullFolderPathAndNameIN)
+LoggerStdout::LogToFile::LogToFile(const char *fullFolderPathAndNameIN, bool bClearFolder)
 {
     assert (CHECK_SIZE_COUNTER < FLUSH_COUNTER);
     bIsOpen = false;
@@ -233,7 +233,16 @@ LoggerStdout::LogToFile::LogToFile(const char *fullFolderPathAndNameIN)
     fullFolderPathAndName = priv_allocString (fullFolderPathAndNameIN);
 
     gos::fs::folderCreate (fullFolderPathAndName);
-    priv_clearLogFolder();
+	if (bClearFolder)
+	{
+		//elimina tutti i file dal folder
+		fs::folderDeleteAllFileRecursively (fullFolderPathAndName, eFolderDeleteMode::doNotDeleteAnyFolder);
+	}
+	else
+	{
+		//elimina solo i file vecchi, se necessario
+    	priv_clearLogFolder();
+	}
 
     //apro un nuovo file oppure uso l'ultimo gia' esistente
     bool bCreateNew = true;
@@ -385,7 +394,8 @@ void LoggerStdout::LogToFile::priv_createNewLogFileAndOpenForAppend()
     gos::fs::fileClose(f2);
 
     filename = priv_allocString (s);
-    priv_clearLogFolder();
+
+   	priv_clearLogFolder();
 
     priv_openForAppend();
     priv_logIntestazione();

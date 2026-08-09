@@ -13,7 +13,7 @@ namespace gos
             class Loader_model3d : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, void *resIN)
+                eResult load (LoaderInfo &loaderInfo, void *resIN, CallbackData *in_out__callback_data)
                 {
                     res::Model3d *res_model = static_cast<res::Model3d*>(resIN);
                     gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
@@ -27,13 +27,13 @@ namespace gos
                     if (NULL == buffer)
                     {
                         logger::err ("Loader_model3d::load() => file not found %s\n", s);
-                        return false;
+                        return eResult::failed;
                     }
 
                     gos::BufferR reader;
                     reader.setup (buffer, fsize);
                     
-                    bool ret = false;
+                    eResult ret = eResult::failed;
                     while (1)
                     {
                         const u32 magic = reader.readU32();
@@ -75,7 +75,7 @@ namespace gos
 						
 
 						//shapes
-						ret = true;
+						ret = eResult::success;
 						reader.moveCursorTo(start_of_list_of_shape_uid);
 						for (u32 i=0; i<num_shapes; i++)
 						{
@@ -87,29 +87,14 @@ namespace gos
 							if (!eng->internal__getResFromUID(uid_shape, &res_shape, &handle_shape))
 							{
 								logger::log (eTextColor::red, "resMT::  Loader_model3d::load() => unable to match shape %016" PRIX64 " with raw data\n", uid_shape._uid);
-								ret = false;
+								ret = eResult::failed;
 								break;
 							}
 
 							// vec3f bbmin, bbmax;
 							// shape::shapeCalcAABB (&res_shape->data.shape, &bbmin, &bbmax);
-							
-							//creo la GPUshape (se non esise gia')
-							//handle_gpuShape avra' refCount==1 se la gpushape e' stata creata ora, altrimenti 
-							//il suo refCount viene incrementato di 1 direttamente da GPUShape_create()
-							//Non c'e bisogno quindi che io incrementi il refCount per significare che possiedo questa gpushape
-							ENGGPUShape handle_gpuShape;
-							if (!eng->GPUShape_create (handle_shape, loaderInfo.stageHelper, &handle_gpuShape))
-							{
-								logger::log (eTextColor::red, "resMT::  Loader_model3d::load() => error creating GPUShape from shape %016" PRIX64 "\n", uid_shape._uid);
-								ret = false;
-								break;
-							}
-							
-							model::set_gpushape (res_model->model, i, handle_gpuShape);
-							eng->internal__resAddChild (res_model, handle_gpuShape);
 						}
-						if (!ret)
+						if (eResult::failed == ret)
 							break;
 
 
@@ -125,13 +110,13 @@ namespace gos
 							if (!eng->internal__getResFromUID(uid_materialPBR, &res_materialPBR, &handle_materialPBR))
 							{
 								logger::log (eTextColor::red, "resMT::  Loader_model3d::load() => unable to match material %016" PRIX64 " with raw data\n", uid_materialPBR._uid);
-								ret = false;
+								ret = eResult::failed;
 								break;
 							}
 
 							model::set_material (res_model->model, i, handle_materialPBR);
 						}
-						if (!ret)
+						if (eResult::failed == ret)
 							break;
 
 
@@ -154,10 +139,31 @@ namespace gos
 						break;
                     }
 
+
+					if (eResult::success == ret)
+					{
+						//chiamo la callback perche' il modello deve aggiungere le risorse di tipo GPUShape
+						//e questa cosa va fatta nel main thread
+						in_out__callback_data->user_data_pt = buffer;
+						in_out__callback_data->user_data_1 = fsize;
+						return eResult::callback;
+					}
+
+
 					GOSFREE(thread_allocator, buffer);
                     return ret;
                 }
-            };
+            
+			
+				//*********************************************************
+				bool	load_continued (LoaderInfo &loaderInfo, bool anyError, CallbackData *callback_data)
+				{
+                    gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
+					u8 *buffer = (u8*)callback_data->user_data_pt;
+					GOSFREE(thread_allocator, buffer);
+                    return !anyError;
+				}
+			};
 
 
         } //namespace loaders

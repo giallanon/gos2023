@@ -12,7 +12,7 @@ namespace gos
             class Loader_pipeline : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, void *resIN)
+                eResult load (LoaderInfo &loaderInfo, void *resIN, CallbackData *in_out__callback_data)
                 {
                     res::Pipeline *res = static_cast<res::Pipeline*>(resIN);
                     gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
@@ -27,13 +27,13 @@ namespace gos
                     if (NULL == buffer)
                     {
                         logger::err ("Loader_pipeline::load() => file not found %s\n", s);
-                        return false;
+                        return eResult::failed;
                     }
 
                     gos::BufferR reader;
                     reader.setup (buffer, fsize);
                     
-                    bool ret = false;
+                    eResult ret = eResult::failed;
                     while (1)
                     {
                         const u32 magic = reader.readU32();
@@ -177,7 +177,7 @@ namespace gos
 
 
                         //finito
-                        ret = true;
+                        ret = eResult::success;
                         break;
                     }
                     GOSFREE(thread_allocator, buffer);

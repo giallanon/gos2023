@@ -116,6 +116,7 @@ namespace gos
 		bool            get (ENGTexture handle, const res::Texture2d **out, u64 timeout_msec = 0)               	{ return res__getOrScheduleLoadT(handle, out, timeout_msec); }
 		bool            hotreload (ENGTexture handle)                                                               { return res__hotreload (handle.res_handle); }
 		void 			internal__texture2D_on_afterCreate (void *res);
+		bool 			internal__texture2D_loadCallback(void *callback_data);
 		void            internal__texture2D_on_destroy (void *res);
 		void            internal__texture2D_on_afterLoad(void *res);
 		void            internal__texture2D_on_unload (void *resIN);
@@ -133,13 +134,14 @@ namespace gos
 		void			internal__shape_on_unload (void *resIN);
 
 		//============================= GPUShape
-		bool            GPUShape_create (ENGShape handle_shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle);
+		bool            GPUShape_create (ENGShape handle_shape, ENGGPUShape *out_handle);
 		bool            GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle);
-		void            release (ENGGPUShape &handle)																{ res__release(handle.res_handle); handle.res_handle.setInvalid(); }
+		void            release (ENGGPUShape &handle);
 		bool            get (ENGGPUShape handle, const res::GPUShape **out)                                  		{ return res__getOrScheduleLoadT(handle, out, 0); }
 		bool            get (ENGShape handle, const res::GPUShape **out);
 		void 			internal__GPUShape_reset (res::GPUShape *res);
 		void 			internal__GPUShape_on_afterCreate (void *res);
+		bool 			internal__GPUShape_on_loadCallback(void *callback_data);
 		void            internal__GPUShape_on_destroy (void *res);
 		void			internal__GPUShape_on_unload (void *resIN);
 		
@@ -173,7 +175,9 @@ namespace gos
 		bool            get (ENGModel3d handle, const res::Model3d **out, u64 timeout_msec = 0)        				{ return res__getOrScheduleLoadT(handle, out, timeout_msec); }
 		bool            hotreload (ENGModel3d handle)                                                               { return res__hotreload (handle.res_handle); }
 		void 			internal__model_on_afterCreate (void *res);
+		bool 			internal__model_on_loadCallback(void *callback_data);
 		void            internal__model_on_destroy (void *res);
+		void            internal__model_on_unload (void *resIN);
 		
 		//============================= model instance
 		bool            modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_handle);
@@ -181,7 +185,9 @@ namespace gos
 		bool            get (ENGModel3dInst handle, const res::Model3dInst **out)                           		{ return res__getOrScheduleLoadT(handle, out, 0); }
 		void            modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &matW);
 		void 			internal__modelinst_on_afterCreate (void *res);
+		bool 			internal__modelinst_on_loadCallback(void *callback_data);
 		void            internal__modelinst_on_destroy (void *res);
+		void            internal__modelinst_on_unload (void *resIN);
 
 
 	private:
@@ -202,8 +208,7 @@ namespace gos
 		void            res__on_children_become_ready (res::Descr *resPadre);
 		void            res__on_children_become_notready (res::Descr *resPadre);
 
-		res::Descr*		res__do_createHandle (res::eType res_type, res::eStatus status, asset2::UID uid, res::Handle *out_handle);
-		res::Descr*		res__createHandle (res::eType res_type, res::Handle *out_handle);
+		res::Descr*		res__createHandle (res::eType res_type, res::eStatus status, asset2::UID uid, res::Handle *out_handle);
 		res::Descr*		res__getOrCreateHandleFromAsset (const char *uid_runtimeName, res::Handle *out_handle, bool *out_bWasNew);
 		res::Descr*		res__getOrCreateHandleFromAsset (asset2::UID uid, res::Handle *out_handle, bool *out_bWasNew);
 		void 			res__bindEvents (res::Handle handle, res::Descr *res);
@@ -213,6 +218,7 @@ namespace gos
 		bool            res__hotreload (res::Handle handle);
 		void            res__do_destroy (res::Descr *res);
 		bool 			res__getOrScheduleLoad (res::Handle handle, const res::Descr **out, u64 timeout_msec = 0);
+		bool 			res__scheduleLoadIfNeeded (res::Descr *res, u64 timeout_msec);
 		
 		bool 			res__assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) const;
 		res::HandleChain*	res__newHandleChain ();
@@ -301,6 +307,7 @@ namespace gos
 		input::ResolvedEvtList                      evtList;
 		engine::VtxBufferMan                        vtxBufferMan;
 		engine::IdxBufferMan                        idxBufferMan;
+		gpu::StageHelper							stageHelper;
 
 		gos::Logger                                 *asset_logger;
 		asset2::DBContext                           asset_ctx;
@@ -323,10 +330,14 @@ private:
 
 		static constexpr u32		MSG_FOR_LOADER_THREAD__DIE		        = 0xff;
 		static constexpr u32		MSG_FOR_LOADER_THREAD__LOAD	            = 0x01;
+		static constexpr u32		MSG_FOR_LOADER_THREAD__LOAD_CONTINUE	= 0x02;
 
+public:
 		static constexpr u32		MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK 	= 0x01;
 		static constexpr u32		MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO 	= 0x02;
+		static constexpr u32		MSG_FROM_LOADER_THREAD__ON_LOAD_CALLBACK		= 0x03;
 
+private:		
 		struct sLoaderThreadInitParams
 		{
 			gos::Event		    hEvent_started;

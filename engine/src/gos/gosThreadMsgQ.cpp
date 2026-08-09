@@ -260,35 +260,58 @@ u32 thread::deserializMsg (const u8 *buffer, u32 *out_what, u64 *out_paramU64, u
     return ct;
 }
 
+//**************************************************************
+static sThreadMsgQ* thread__pushMsg_prepare (const HThreadMsgW &h, u32 what, u64 paramU64, const void *src, u32 sizeInBytes, thread::sMsg *out_msg)
+{
+	assert (NULL != out_msg);
+    sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hWrite);
+    if (NULL == s)
+        return NULL;
+
+    memset (out_msg, 0x00, sizeof(thread::sMsg));
+    out_msg->what = what;
+    out_msg->paramU64 = paramU64;
+    if (src && sizeInBytes>0)
+    {
+        out_msg->bufferSize = sizeInBytes;
+        out_msg->buffer = GOSALLOC(gosThreadGlob.allocator, sizeInBytes);
+        memcpy (out_msg->buffer, src, sizeInBytes);
+    }
+    else
+    {
+        out_msg->buffer = NULL;
+        out_msg->bufferSize = 0;
+    }
+
+	return s;
+}
+
+//**************************************************************
+void thread::pushMsg_on_top (const HThreadMsgW &h, u32 what, u64 paramU64, const void *src, u32 sizeInBytes)
+{
+	thread::sMsg msg;
+    sThreadMsgQ *s = thread__pushMsg_prepare (h, what, paramU64, src, sizeInBytes, &msg);
+    if (NULL != s)
+	{
+		MUTEX_LOCK (s->cs);
+			s->fifo->push_on_top(msg);
+			gos::thread::eventFire (s->hEvent);
+		MUTEX_UNLOCK (s->cs);
+	}
+}
 
 //**************************************************************
 void thread::pushMsg (const HThreadMsgW &h, u32 what, u64 paramU64, const void *src, u32 sizeInBytes)
 {
-    sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hWrite);
-
-    if (NULL == s)
-        return;
-
-    thread::sMsg msg;
-    memset (&msg, 0x00, sizeof(msg));
-    msg.what = what;
-    msg.paramU64 = paramU64;
-    if (src && sizeInBytes>0)
-    {
-        msg.bufferSize = sizeInBytes;
-        msg.buffer = GOSALLOC(gosThreadGlob.allocator, sizeInBytes);
-        memcpy (msg.buffer, src, sizeInBytes);
-    }
-    else
-    {
-        msg.buffer = NULL;
-        msg.bufferSize = 0;
-    }
-
-    MUTEX_LOCK (s->cs);
-        s->fifo->push(msg);
-		gos::thread::eventFire (s->hEvent);
-    MUTEX_UNLOCK (s->cs);
+	thread::sMsg msg;
+    sThreadMsgQ *s = thread__pushMsg_prepare (h, what, paramU64, src, sizeInBytes, &msg);
+    if (NULL != s)
+	{
+		MUTEX_LOCK (s->cs);
+			s->fifo->push(msg);
+			gos::thread::eventFire (s->hEvent);
+		MUTEX_UNLOCK (s->cs);
+	}
 }
 
 //**************************************************************

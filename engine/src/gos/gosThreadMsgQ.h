@@ -83,6 +83,8 @@ namespace gos
                             //appende src2 subito dopo src1. Il msg.bufferSize diventa size1+size2.
                             //E' solo una fn di comodo
 
+		void            pushMsg_on_top (const HThreadMsgW &h, u32 what, u64 paramU64, const void *src, u32 sizeInBytes);
+
                         //read
         bool            popMsg (const HThreadMsgR &h, sMsg *out_msg);
         u32             popMultipleMsg (const HThreadMsgR &h, sMsg *out_msgArray, u32 numMaxMessagesToPop);

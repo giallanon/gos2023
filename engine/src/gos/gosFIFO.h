@@ -63,6 +63,29 @@ namespace gos
                         tsPolicy.unlock();
                     }
 
+			//invece che accodare il msg in fondo alla lista, lo mette in cima
+			//in modo che sia il primo msg ritornato da pop
+		void        push_on_top (const T &data)
+					{
+						sRecord *p = GOSALLOCSTRUCT(allocator, sRecord);
+						memcpy (&p->data, &data, sizeof(T));
+
+						tsPolicy.lock();
+							if (first)
+							{
+								p->next = first;
+								first = p;
+							}
+							else
+							{
+								p->next = NULL;
+								first = last = p;
+							}
+						tsPolicy.unlock();
+					}
+
+
+
         bool        pop (T *out_data)
                     {
                         tsPolicy.lock();

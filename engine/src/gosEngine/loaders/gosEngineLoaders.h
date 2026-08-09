@@ -22,17 +22,32 @@ namespace gos
                 gos::Logger			*logger;
                 gos::GPU            *gpu;
                 asset2::DBContext   *ctx;
-				gpu::StageHelper	stageHelper;
             };
 
+			struct CallbackData
+			{
+				res::Descr 	*res;
+				void		*user_data_pt;
+				u64			user_data_1;
+				u64			reschedule_load_at_time_msec;
+			};
 
             //********************************************************
             class BaseLoader
             {
-            public:
+			public:
+				enum class eResult : u8
+				{
+					failed = 0,
+					success = 1,
+					callback = 2
+				};
+
+			public:
                                 BaseLoader()        { } 
                 virtual         ~BaseLoader()       { }
-                virtual bool    load (LoaderInfo &loaderInfo, void *res) = 0;
+                virtual eResult	load (LoaderInfo &loaderInfo, void *res, CallbackData *in_out__callback_data) = 0;
+				virtual	bool	load_continued (LoaderInfo &loaderInfo, bool anyError, CallbackData *callback_data)			{ return false; }
             };
         } //namespace loaders
     } //namespace engine

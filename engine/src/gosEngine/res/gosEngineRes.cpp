@@ -42,7 +42,7 @@ const char* res::enumToString (res::eStatus s)
 	switch (s)
 	{
     default: DBGBREAK;				return "!!res::eStatus::ERR";
-    case res::eStatus::aready:		return "ready";
+    case res::eStatus::ready:		return "ready";
     case res::eStatus::notLoaded:	return "notLoaded";
 	case res::eStatus::loading:		return "loading";
 	case res::eStatus::loaded:		return "loaded";

@@ -9,6 +9,7 @@ namespace gos
 	class Engine; //fwd
 
 	typedef void (Engine::*FN_afterCreate)(void *res);
+	typedef bool (Engine::*FN_loadCallback)(void *callback_data);	//chiamata (se necessario) da loaderThread durante il load. Ritorna false in caso di errore
 	typedef void (Engine::*FN_afterLoad)(void *res);
 	typedef void (Engine::*FN_unload)(void *res);
 	typedef void (Engine::*FN_destroy)(void *res);
@@ -24,7 +25,7 @@ namespace gos
 
 		enum class eStatus : u8
 		{
-			aready			= 0,		//esiste nell'engine, e' stato caricato, e tutti i suoi figli sono ready
+			ready			= 0,		//esiste nell'engine, e' stato caricato, e tutti i suoi figli sono ready
 			notLoaded		= 1,		//esiste nell'engine ma non e' stata ancora caricata
 			loading			= 2,		//esiste nell'engine e' ed in fase di caricamento
 			loaded			= 3,		//esiste nell'engine, e' stato caricato, ma alcuni dei suoi figli non sono ready
@@ -137,14 +138,20 @@ namespace gos
 		struct Descr
 		{
 		public:
-			void 	reset()			{ uid.setInvalid(); _status=eStatus::error; refCount = 0; _num_child_not_ready=0; figli=padri=NULL; on_afterCreate=NULL; on_afterLoad=NULL; on_unload=NULL; on_destroy=NULL; }
+			void 	reset()
+			{
+				uid.setInvalid(); _status=eStatus::error; refCount = 0; _num_child_not_ready=0; figli=padri=NULL; 
+				on_afterCreate=NULL; on_afterLoad=NULL; on_unload=NULL; on_destroy=NULL; on_loadCallback=NULL;
+			}
+
+			eType	get_type() const 			{ return static_cast<eType>(handle.get_value_TYPE()); }
 
 		public:
 			asset2::UID			uid;					//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
 			Handle				handle;
 			res::eStatus		_status;				//stato della risorsa dal punto di vista dell'engine  (non cambiare direttamente il valore, usa res__set_status()
 			u8					_num_child_not_ready;	//se ho dei figli, questo mi dice quanti di loro sono in stato != da eReady
-			u8					_pad1;
+			gos::Flag8			_pad1;
 			u8					_pad2;
 			i32					refCount;
 
@@ -152,6 +159,7 @@ namespace gos
 			HandleChain			*padri;		//lista di handle di cui io sono figlio (che vengono notificati ogni volta che io cambio di stato)
 
 			FN_afterCreate		on_afterCreate;
+			FN_loadCallback		on_loadCallback;
 			FN_afterLoad		on_afterLoad;
 			FN_unload			on_unload;
 			FN_destroy			on_destroy;

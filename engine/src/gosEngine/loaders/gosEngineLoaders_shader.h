@@ -12,7 +12,7 @@ namespace gos
             class Loader_vtxShader : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo,void *resIN)
+                eResult load (LoaderInfo &loaderInfo,void *resIN, CallbackData *in_out__callback_data)
                 {
                     res::Shader *res = static_cast<res::Shader*>(resIN);
 					gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
@@ -26,13 +26,15 @@ namespace gos
                     if (NULL == buffer)
                     {
                         logger::err ("Loader_vtxShader::load() => file not found %s\n", s);
-                        return false;
+                        return eResult::failed;
                     }
 
                     const bool ret = gpu->vtxshader_createFromMemory (buffer, fsize, "main", &res->shaderHandle);
                     GOSFREE(thread_allocator, buffer);
 
-                    return ret;
+					if (ret)
+						return eResult::success;
+                    return eResult::failed;
                 }
             };
 
@@ -41,7 +43,7 @@ namespace gos
             class Loader_pxlShader : public loaders::BaseLoader
             {
             public:
-                bool    load (LoaderInfo &loaderInfo, void *resIN)
+                eResult load (LoaderInfo &loaderInfo, void *resIN, CallbackData *in_out__callback_data)
                 {
                     res::Shader *res = static_cast<res::Shader*>(resIN);
 					gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
@@ -55,13 +57,15 @@ namespace gos
                     if (NULL == buffer)
                     {
                         logger::err ("Loader_pxlShader::load() => file not found %s\n", s);
-                        return false;
+                        return eResult::failed;
                     }
 
                     const bool ret = gpu->pxlshader_createFromMemory (buffer, fsize, "main", &res->shaderHandle);
                     GOSFREE(thread_allocator, buffer);
 
-                    return ret;
+                    if (ret)
+						return eResult::success;
+					return eResult::failed;
 
                 }
             };

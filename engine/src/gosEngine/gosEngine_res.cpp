@@ -31,7 +31,7 @@ void Engine::res__set_status (res::Descr *res, res::eStatus new_status)
 	res->_status = new_status;
 	res__printInfo (res, "status");
 
-	if (res::eStatus::aready == old_status)
+	if (res::eStatus::ready == old_status)
 	{
 		//se ero "ready" e ora non lo sono +, devo informare i miei padri
 		res::HandleChain *p = res->padri;
@@ -41,7 +41,7 @@ void Engine::res__set_status (res::Descr *res, res::eStatus new_status)
 			p = p->next;
 		}
 	}
-	else if (res::eStatus::aready == new_status)
+	else if (res::eStatus::ready == new_status)
 	{
 		//se ero "non ready" e adesso invece sono "ready", devo informare i miei padri		
 		res::HandleChain *p = res->padri;
@@ -70,7 +70,7 @@ void Engine::res__on_children_become_ready (res::Descr *res_padre)
 			//io ero "loaded" che vuol dire che ero pronto, ma avevo dei figli not-ready.
 			//Ora che tutti anche i miei figli sono diventati ready, cambio di stato e divento "ready".
 			//Il mio cambio di stato viene propagato ai miei padri
-			res__set_status (res_padre, res::eStatus::aready);
+			res__set_status (res_padre, res::eStatus::ready);
 		}
 	}
 }
@@ -84,7 +84,7 @@ void Engine::res__on_children_become_notready (res::Descr *res_padre)
 	res_padre->_num_child_not_ready++;
 	res__printInfo (res_padre, "child unrdy");
 
-	if (res::eStatus::aready == res_padre->_status)
+	if (res::eStatus::ready == res_padre->_status)
 	{
 		//io ero "ready" in quanto anche tutti i miei figli erano ready.
 		//Ora che almeno uno dei miei figli e' diventato not-ready, cambio il mio stato.
@@ -94,13 +94,16 @@ void Engine::res__on_children_become_notready (res::Descr *res_padre)
 }
 
 //**************************************************************** 
-res::Descr* Engine::res__do_createHandle (res::eType res_typeIN, res::eStatus statusIN, asset2::UID uid, res::Handle *out_handle)
+res::Descr* Engine::res__createHandle (res::eType res_typeIN, res::eStatus statusIN, asset2::UID uid, res::Handle *out_handle)
 {
 	assert (NULL != out_handle);
 
 	res::Descr *res = (res::Descr*)resManager.raw_reserve (res_typeIN, out_handle);
 	if (NULL == res)
+	{
+		logger::err ("Engine::res__createHandle() => can't create handle for res type=%d\n", (u8)res_typeIN);
 		return NULL;
+	}
 
 	res->reset();
 	res->handle = *out_handle;
@@ -116,19 +119,6 @@ res::Descr* Engine::res__do_createHandle (res::eType res_typeIN, res::eStatus st
 		(this->*res->on_afterCreate)(res);
 	
 	return res;
-}
-
-//**************************************************************** 
-res::Descr* Engine::res__createHandle (res::eType res_type, res::Handle *out_handle)
-{
-	asset2::UID uid;
-	uid.setInvalid();
-	res::Descr *descr = res__do_createHandle (res_type, res::eStatus::aready, uid, out_handle);
-	if (NULL == descr)
-	{
-		logger::err ("Engine::res__createHandle() => can't create handle for res type=%d\n", (u8)res_type);
-	}
-	return descr;
 }
 
 //**************************************************************** 
@@ -178,7 +168,7 @@ res::Descr* Engine::res__getOrCreateHandleFromAsset (asset2::UID uid, res::Handl
 
 	//l'asset e' nuovo, devo quindi creare un nuovo handle
 	*out_bWasNew = true;
-	res::Descr *res = res__do_createHandle (res_type, res::eStatus::notLoaded, uid, out_handle);
+	res::Descr *res = res__createHandle (res_type, res::eStatus::notLoaded, uid, out_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::res__getOrCreateHandleFromAsset() => can't create handle for res type=%d and asset uid=%016" PRIX64 "\n", (u8)res_type, uid._uid);
@@ -260,6 +250,7 @@ void Engine::res__bindEvents (res::Handle handle, res::Descr *res)
 		res->on_destroy = &Engine::internal__texture2D_on_destroy;
 		res->on_afterLoad = &Engine::internal__texture2D_on_afterLoad;
 		res->on_unload = &Engine::internal__texture2D_on_unload;
+		res->on_loadCallback = &Engine::internal__texture2D_loadCallback;
 		return;
 
 	case res::eType::shape:
@@ -272,6 +263,7 @@ void Engine::res__bindEvents (res::Handle handle, res::Descr *res)
 		res->on_afterCreate = &Engine::internal__GPUShape_on_afterCreate;
 		res->on_destroy = &Engine::internal__GPUShape_on_destroy;
 		res->on_destroy = &Engine::internal__GPUShape_on_unload;
+		res->on_loadCallback = &Engine::internal__GPUShape_on_loadCallback;
 		return;
 
 	case res::eType::skeleton:
@@ -283,11 +275,15 @@ void Engine::res__bindEvents (res::Handle handle, res::Descr *res)
 	case res::eType::model_3d:
 		res->on_afterCreate = &Engine::internal__model_on_afterCreate;
 		res->on_destroy = &Engine::internal__model_on_destroy;
+		res->on_unload = &Engine::internal__model_on_unload;
+		res->on_loadCallback = &Engine::internal__model_on_loadCallback;
 		return;
 
 	case res::eType::model_instance:
 		res->on_afterCreate = &Engine::internal__modelinst_on_afterCreate;
 		res->on_destroy = &Engine::internal__modelinst_on_destroy;
+		res->on_unload = &Engine::internal__modelinst_on_unload;
+		res->on_loadCallback = &Engine::internal__modelinst_on_loadCallback;
 		return;
 	
 	case res::eType::materialPBR:
@@ -351,7 +347,7 @@ bool Engine::res__release (res::Descr *res)
 		case res::eStatus::notLoaded:
 		case res::eStatus::error:
 		case res::eStatus::loaded:
-		case res::eStatus::aready:
+		case res::eStatus::ready:
 			res__do_destroy(res);
 			return true;
 		}
@@ -401,7 +397,7 @@ void Engine::res__addChild (res::Descr *padre_res, res::Descr *child_res)
 	child_res->padri = chain;	
 
 	//se child e' not-ready, lo comunico al mio nuovo padre
-	if (res::eStatus::aready != child_res->_status)
+	if (res::eStatus::ready != child_res->_status)
 		res__on_children_become_notready (padre_res);
 }
 
@@ -432,7 +428,12 @@ bool Engine::res__getOrScheduleLoad (res::Handle handle, const res::Descr **out,
 	}
 
 	(*out) = res;
-	if (res::eStatus::aready == res->_status)
+	return res__scheduleLoadIfNeeded (res, timeout_msec);
+}
+
+bool Engine::res__scheduleLoadIfNeeded (res::Descr *res, u64 timeout_msec)
+{
+	if (res::eStatus::ready == res->_status)
 	{
 		assert (0 == res->_num_child_not_ready);
 		return true;
@@ -440,8 +441,8 @@ bool Engine::res__getOrScheduleLoad (res::Handle handle, const res::Descr **out,
 
 	//se la risorsa non e' associata ad un UID, non posso schedularne il load, quindi
 	//ritorna false
-	if (!res->uid.isValid())
-		return false;
+	// if (!res->uid.isValid())
+	// 	return false;
 
 	if (res::eStatus::notLoaded == res->_status)
 	{
@@ -476,7 +477,7 @@ bool Engine::res__getOrScheduleLoad (res::Handle handle, const res::Descr **out,
 		while (gos::getTimeSinceStart_msec() < time_to_exit_msec)
 		{
 			priv_flushLoaderThreadMsg();
-			if (res::eStatus::aready == res->_status)
+			if (res::eStatus::ready == res->_status)
 			{
 				assert (0 == res->_num_child_not_ready);
 				return true;
@@ -499,7 +500,7 @@ void Engine::res__do_destroy (res::Descr *res)
 	res->refCount = 0;
 
 	//chiamo il "distruttore" di me stesso solo se la risorsa era stata effettivamente caricata
-	if (res::eStatus::aready == res->_status || res::eStatus::loaded == res->_status)
+	if (res::eStatus::ready == res->_status || res::eStatus::loaded == res->_status)
 	{
 		(this->*res->on_destroy)(res);
 	}
@@ -543,8 +544,7 @@ bool Engine::res__hotreload (res::Handle handle)
 		return false;
 	}
 
-	//if (res->flag1.isBitSet (res::Descr::FLAG1__MARKED_FOR_RELOAD))
-	if (res::eStatus::hot_reload == res->_status)
+	if (res::eStatus::hot_reload == res->_status || res::eStatus::loading == res->_status)
 		return false;
 
 	//Incremento il ref count per evitare che qualcuno mi elimini la risorsa intanto che e' in hot-reload
@@ -561,12 +561,21 @@ bool Engine::res__hotreload (res::Handle handle)
 		p = p->next;
 	}
 
-
 	//aggiungo la risorsa alle lista delle risorsa di cui fare l'hot-reload
 	const sUnloadInfo info = {
 		.res_handle = handle,
-		.timer_msec = (u32)gos::getTimeSinceStart_msec() + 1000,
+		.timer_msec = (u32)gos::getTimeSinceStart_msec() + 10,
 	};
 	list_of_res_to_be_hotreloaded.append (info);
+
+
+	//se questa risorsa ha dei padri, anche loro dovranon essere ricaricati dato che
+	//il padre dipende da me e, se io cambio, anche mio padre deve potersi ricorstruire e cambiare a sua volta
+	p = res->padri;
+	while (p)
+	{
+		res__hotreload (p->res->handle);
+		p = p->next;
+	}	
 	return true;
 }

@@ -114,6 +114,7 @@ namespace gos
 		public:
 			res::Descr			_descr;
 			gos::ModelInstance	minst;
+			mat4x4f 			matW;
 		};		
 
 	} //namespace res

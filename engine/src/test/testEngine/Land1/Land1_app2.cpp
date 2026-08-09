@@ -69,7 +69,7 @@ void Land1_app2::on__setup ()
 	const f32 EXA_WORLD_RADIUS = 50.0f;
 	map.setup (gos::getSysHeapAllocator());
 	map.map_create (EXA_WORLD_RADIUS, 187);
-	map.exa__add_with_radius ( examap::Coord(0, 0), 4);
+	map.exa__add_with_radius ( examap::Coord(0, 0), 3);
 	//map.map_recalc_mesh_type();
 
 	renderer_land->map_attach (&map);
@@ -81,14 +81,11 @@ void Land1_app2::priv_new_albero (const gos::vec3f &world_point)
 	if (num_alberi >= NUM_MAX_ALBERI)
 		return;
 
-	const res::Model3d *res_model_albero;
-	if (!engine->get (handle_model_albero, &res_model_albero, 4000))
+	if (!engine->modelinst_create (handle_model_albero, &modelinst_albero[num_alberi]))
 	{
 		DBGBREAK;
 		return;
 	}
-
-	engine->modelinst_create (handle_model_albero, &modelinst_albero[num_alberi]);
 
 	mat4x4f matW;
 	mat4x4f matTr;

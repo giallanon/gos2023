@@ -23,7 +23,7 @@ namespace gos
 		void        disableStdouLogging()                                           { flag.clear (FLAG__SHOULD_LOG_TO_STDOUT); }
 		
 					//accetta il path di un folder dentro al quale crea un certo numero di file di log in totale autonomia
-		void        enableFileLogging (const char *fullFolderPathAndName);
+		void        enableFileLogging (const char *fullFolderPathAndName, bool bClearFolder=false);
 		void        disableFileLogging();
 
 		void        incIndent();
@@ -47,7 +47,7 @@ namespace gos
 		class LogToFile
 		{
 		public:
-					LogToFile (const char *fullFolderPathAndName);
+					LogToFile (const char *fullFolderPathAndName, bool bClearFolder);
 					~LogToFile();
 			
 			void    log (const char *format, ...);

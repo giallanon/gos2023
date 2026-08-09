@@ -16,7 +16,7 @@ int main()
     {
         gos::Engine engine;
         //if (!engine.setup (1600, 900, "test engine"))
-        if (!engine.setup (300, 300, "test engine"))
+        if (!engine.setup (900, 400, "test engine"))
             return -2;
 
         if (!engine.asset_build())  return -3;
