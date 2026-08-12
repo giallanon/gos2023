@@ -33,7 +33,7 @@ namespace gos
 						~Builder();
 
                         template<class TBUILDER>
-            bool        addBuilder ()
+            bool        add_builder ()
                         {
                             TBUILDER *builder = GOSNEW(localAllocator, TBUILDER)();
                             if (priv_addBuilder(builder))
@@ -42,8 +42,10 @@ namespace gos
                             return false;
                         }
 
-			bool		rebuildAll (const char *baseFolder, bool bVerbose);
+			bool		rebuild_all (const char *baseFolder, bool bVerbose);
 			bool		build (const char *baseFolder, bool bVerbose);
+			
+			const asset2::UniqueUIDList*	get_list_of_built_UID () const	{ return &build_result_list; }
 
             bool        debug_sanityCheck (const char *baseFolder);
 
@@ -89,7 +91,7 @@ namespace gos
             void            priv_fromDirectiveNameToAssetClassName (const char *directiveName, char *out_asseetClassName, u32 sizeof_out) const;
 
 		private:
-            bool		priv_build (DBContext &ctx, bool bDoCreateAssetFile);
+            bool		priv_build (DBContext &ctx, bool bDoCreateAssetFile, bool bGenerateListOfUpdatedUID);
             bool		priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listof_gosassetd_toRebuild, UniqueUIDList *out_listof_deleted_gosassetd, 
 												UniqueUIDList *out_listOfPossibileConcreteAssetsToBeDeleted,
 												UniqueUIDList *out_listOfPossibileResourceToBeDeleted) const;
@@ -115,12 +117,13 @@ namespace gos
             bool        debug_sanityCheck__cmp_table (DBContext &ctx_sanity, DBContext &ctx, const char *sql, const char *tableName) const;
 		
         private:
-			gos::Allocator	    *localAllocator;
-            gos::GPU            *gpu;
-            gos::Logger         *logger;
-            gos::LoggerNull     loggerNull;
-            gos::LoggerStdout   loggerStdout;
-            BuilderInterface    *builderList[NUM_MAX_BUILDERS];
+			gos::Allocator	    	*localAllocator;
+            gos::GPU            	*gpu;
+            gos::Logger         	*logger;
+            gos::LoggerNull     	loggerNull;
+            gos::LoggerStdout   	loggerStdout;
+            BuilderInterface    	*builderList[NUM_MAX_BUILDERS];
+			asset2::UniqueUIDList	build_result_list;
 		};
 
 	} //namespace asset2

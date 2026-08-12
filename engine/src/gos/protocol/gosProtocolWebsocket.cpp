@@ -27,14 +27,14 @@ bool ProtocolWebsocket::handshake_clientSend (UNUSED_PARAM(IProtocolChannel *ch)
 	if (logger)
 	{
 		logger->log("handshake..\n");
-		logger->incIndent();
+		logger->inc_indent();
 	}
 
 	if (logger)
 		logger->log("error, function non implemented\n");
 
 	if (logger)
-		logger->decIndent();
+		logger->dec_indent();
 
 	return false;
 }

@@ -59,7 +59,7 @@ bool VulkanApp::init (gos::GPU *gpuIN, const char *title)
 
     gos::logger::log (eTextColor::white, "\n\n=======================================================\n");
     gos::logger::log (eTextColor::green, "%s\n", title);
-    gos::logger::incIndent();
+    gos::logger::inc_indent();
         virtual_explain();
 
         gos::logger::log ("\n");
@@ -67,7 +67,7 @@ bool VulkanApp::init (gos::GPU *gpuIN, const char *title)
         gos::logger::log (eTextColor::white, "ALT + BACKSPACE = toggle vsync\n");
         gos::logger::log (eTextColor::white, "CTRL + SHIFT + F1 = show all key binding\n");
         gos::logger::log ("\n\n");
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
     return true;
 }    
 

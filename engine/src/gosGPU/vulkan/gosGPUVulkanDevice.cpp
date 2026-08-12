@@ -22,7 +22,7 @@ void VulkanDevice::unsetup()
 		return;
 	}
 
-	thread::mutexDestroy(mutex_memAlloc);
+	thread::mutex_destroy(mutex_memAlloc);
 
     for (u8 i=0; i<numQFamily; i++)
         qfamilyList[i].unsetup();
@@ -53,7 +53,7 @@ void VulkanDevice::priv_addNativeQFamily (eGPUQueueFamily familyType, u32 family
 //*******************************************
 bool VulkanDevice::setup (const sPhyDeviceInfo &phyInfo, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion)
 {
-	thread::mutexCreate(&mutex_memAlloc);
+	thread::mutex_create(&mutex_memAlloc);
 
     assert (VK_NULL_HANDLE == vkDev);
     this->phyDevInfo = phyInfo;
@@ -61,9 +61,9 @@ bool VulkanDevice::setup (const sPhyDeviceInfo &phyInfo, const gos::StringList &
     bool ret = true;
     gos::Allocator *allocator = gos::getScrapAllocator();
 
-    gos::logger::log ("VulkanDevice::setup()\n");
-    gos::logger::incIndent();
-    gos::logger::log ("creating with phyDev at index:%d\n   gfxQ familyIndex:%d, count=%d\n   computeQ familyIndex:%d, count=%d\n   transferQ familyIndex:%d, count=%d\n", 
+    gos::logger::log_3 ("VulkanDevice::setup()\n");
+    gos::logger::inc_indent();
+    gos::logger::log_3 ("creating with phyDev at index:%d\n   gfxQ familyIndex:%d, count=%d\n   computeQ familyIndex:%d, count=%d\n   transferQ familyIndex:%d, count=%d\n", 
                         phyDevInfo.devIndex,
                         phyDevInfo.queue_gfx.familyIndex, phyDevInfo.queue_gfx.count,
                         phyDevInfo.queue_compute.familyIndex, phyDevInfo.queue_compute.count,
@@ -136,7 +136,7 @@ bool VulkanDevice::setup (const sPhyDeviceInfo &phyInfo, const gos::StringList &
             else
             {
                 foundExtensions[createInfo.enabledExtensionCount++] = extList(index)->extensionName;
-                gos::logger::log ("using extension %s\n", identifier);
+                gos::logger::log_3 ("using extension %s\n", identifier);
             }
         }
     }
@@ -161,9 +161,9 @@ bool VulkanDevice::setup (const sPhyDeviceInfo &phyInfo, const gos::StringList &
     }
     
     if (ret)
-        gos::logger::log (eTextColor::green, "OK\n");
+        gos::logger::log_3 (eTextColor::green, "OK\n");
         
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
     return ret;
 }
 
@@ -336,7 +336,7 @@ bool VulkanDevice::isImage2DFmtSupported (eImageFormat fmtIN, eImageTiling tilin
     if (VK_SUCCESS == result)
         return true;
         
-    gos::logger::log ("WARN: isImage2DFmtSupported(%s,%s) => not supported\n", gos::utils::enumToString(fmtIN), gos::utils::enumToString(tilingIN));
+    gos::logger::log_3 ("WARN: isImage2DFmtSupported(%s,%s) => not supported\n", gos::utils::enumToString(fmtIN), gos::utils::enumToString(tilingIN));
     return false;
 }
 
@@ -347,18 +347,18 @@ bool VulkanDevice::swapchain_create (const VkSurfaceKHR &vkSurfaceKHR, bool bVSy
 
     out->reset();
 
-    gos::logger::log("VulkanDevice::createSwapChain()\n");
-    gos::logger::incIndent();
+    gos::logger::log_3("VulkanDevice::createSwapChain()\n");
+    gos::logger::inc_indent();
 
     gos::Allocator *allocator = gos::getScrapAllocator();
 
     VkSurfaceCapabilitiesKHR vkSurfCapabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phyDevInfo.vkDev, vkSurfaceKHR, &vkSurfCapabilities);
-    gos::logger::log ("surf capab\n");
-    gos::logger::incIndent();
-    gos::logger::log ("min/max image count:%d;%d\n", vkSurfCapabilities.minImageCount, vkSurfCapabilities.maxImageCount);
-    gos::logger::log ("current width/height: %d;%d\n", vkSurfCapabilities.currentExtent.width, vkSurfCapabilities.currentExtent.height);
-    gos::logger::decIndent();
+    gos::logger::log_3 ("surf capab\n");
+    gos::logger::inc_indent();
+    gos::logger::log_3 ("min/max image count:%d;%d\n", vkSurfCapabilities.minImageCount, vkSurfCapabilities.maxImageCount);
+    gos::logger::log_3 ("current width/height: %d;%d\n", vkSurfCapabilities.currentExtent.width, vkSurfCapabilities.currentExtent.height);
+    gos::logger::dec_indent();
 
     VPhyDevicekSurfaceFormatKHRList listOfSurfaceFormat;
     listOfSurfaceFormat.build (allocator, phyDevInfo.vkDev, vkSurfaceKHR);
@@ -419,16 +419,16 @@ bool VulkanDevice::swapchain_create (const VkSurfaceKHR &vkSurfaceKHR, bool bVSy
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    gos::logger::log ("Attempt to create a swapchain with the following:\n");
-    gos::logger::incIndent();
-        gos::logger::log ("minImageCount = %d\n", createInfo.minImageCount);
-        gos::logger::log ("imageFormat = %s\n", string_VkFormat(createInfo.imageFormat));
-        gos::logger::log ("imageColorSpace = %s\n", string_VkColorSpaceKHR(createInfo.imageColorSpace));
-        gos::logger::log ("imageExtent = %d;%d\n", createInfo.imageExtent.width, createInfo.imageExtent.height);
-        gos::logger::log ("imageUsage = %s\n", string_VkImageUsageFlags(createInfo.imageUsage).c_str());
-        gos::logger::log ("imageSharingMode = %s\n", string_VkSharingMode(createInfo.imageSharingMode));
-        gos::logger::log ("presentMode = %s\n", string_VkPresentModeKHR(createInfo.presentMode));
-    gos::logger::decIndent();
+    gos::logger::log_3 ("Attempt to create a swapchain with the following:\n");
+    gos::logger::inc_indent();
+        gos::logger::log_3 ("minImageCount = %d\n", createInfo.minImageCount);
+        gos::logger::log_3 ("imageFormat = %s\n", string_VkFormat(createInfo.imageFormat));
+        gos::logger::log_3 ("imageColorSpace = %s\n", string_VkColorSpaceKHR(createInfo.imageColorSpace));
+        gos::logger::log_3 ("imageExtent = %d;%d\n", createInfo.imageExtent.width, createInfo.imageExtent.height);
+        gos::logger::log_3 ("imageUsage = %s\n", string_VkImageUsageFlags(createInfo.imageUsage).c_str());
+        gos::logger::log_3 ("imageSharingMode = %s\n", string_VkSharingMode(createInfo.imageSharingMode));
+        gos::logger::log_3 ("presentMode = %s\n", string_VkPresentModeKHR(createInfo.presentMode));
+    gos::logger::dec_indent();
 
     VkResult result = vkCreateSwapchainKHR (vkDev, &createInfo, nullptr, &out->vkSwapChain);
     if (VK_SUCCESS != result)
@@ -475,11 +475,11 @@ bool VulkanDevice::swapchain_create (const VkSurfaceKHR &vkSurfaceKHR, bool bVSy
         }
 
         if (VK_SUCCESS == result)
-            gos::logger::log (eTextColor::green, "OK (image count=%d)\n", out->imageCount);
+            gos::logger::log_3 (eTextColor::green, "OK (image count=%d)\n", out->imageCount);
     }
 
 
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
     return (VK_SUCCESS == result);
 }
 
@@ -582,9 +582,9 @@ bool VulkanDevice::priv_getMemoryType (uint32_t typeBits, VkMemoryPropertyFlags 
 //*******************************************
 bool VulkanDevice::priv_allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory, const char *debug_from_who)
 {
-	thread::mutexLock(mutex_memAlloc);
+	thread::mutex_lock(mutex_memAlloc);
 	const bool ret = priv__do_allocMemory (pAllocateInfo,pMemory, debug_from_who);
-	thread::mutexUnlock(mutex_memAlloc);
+	thread::mutex_unlock(mutex_memAlloc);
 	return ret;
 }
 bool VulkanDevice::priv__do_allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory, const char *debug_from_who)
@@ -601,7 +601,7 @@ bool VulkanDevice::priv__do_allocMemory (const VkMemoryAllocateInfo *pAllocateIn
         char debug_m2[32];
         gos::string::format::memoryToKB_MB_GB(pAllocateInfo->allocationSize, debug_m1, sizeof(debug_m1));
         gos::string::format::memoryToKB_MB_GB(memory_curAllocated, debug_m2, sizeof(debug_m2));
-        gos::logger::log (eTextColor::cyan, "VulkanDevice::allocMemory(%s) [%s], cur allocated:%s\n", debug_m1, debug_from_who, debug_m2);
+        gos::logger::log_3 (eTextColor::cyan, "VulkanDevice::allocMemory(%s) [%s], cur allocated:%s\n", debug_m1, debug_from_who, debug_m2);
 #endif
         return true;
     }
@@ -613,9 +613,9 @@ bool VulkanDevice::priv__do_allocMemory (const VkMemoryAllocateInfo *pAllocateIn
 //*********************************************
 void VulkanDevice::priv_freeMemory (VkDeviceMemory memory, u64 memSize)
 {
-	thread::mutexLock(mutex_memAlloc);
+	thread::mutex_lock(mutex_memAlloc);
 	priv__do_freeMemory (memory, memSize);
-	thread::mutexUnlock(mutex_memAlloc);
+	thread::mutex_unlock(mutex_memAlloc);
 }
 void VulkanDevice::priv__do_freeMemory (VkDeviceMemory memory, u64 memSize)
 {
@@ -630,7 +630,7 @@ void VulkanDevice::priv__do_freeMemory (VkDeviceMemory memory, u64 memSize)
         char debug_m2[32];
         gos::string::format::memoryToKB_MB_GB(memSize, debug_m1, sizeof(debug_m1));
         gos::string::format::memoryToKB_MB_GB(memory_curAllocated, debug_m2, sizeof(debug_m2));
-        gos::logger::log (eTextColor::cyan, "VulkanDevice::freeMemory(%s), cur allocated:%s\n", debug_m1, debug_m2);
+        gos::logger::log_3 (eTextColor::cyan, "VulkanDevice::freeMemory(%s), cur allocated:%s\n", debug_m1, debug_m2);
 #endif
 }
 

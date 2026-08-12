@@ -27,7 +27,7 @@ typedef gos::FIFO<thread::sMsg>  GOSThreadMsgFIFO;
 struct sThreadMsgQ
 {
     GOSThreadMsgFIFO    *fifo;
-    gos::Event          hEvent;
+    gos::Signal          hEvent;
     gos::Mutex          cs;
 };
 
@@ -58,7 +58,7 @@ bool thread::internal_init()
     gosThreadGlob.msgHandleList.setup (gosThreadGlob.allocator);
 	gosThreadGlob.threadHandleList.setup (gosThreadGlob.allocator);
     
-    gos::thread::mutexCreate (&gosThreadGlob.cs);
+    gos::thread::mutex_create (&gosThreadGlob.cs);
 
     return true;
 }
@@ -68,7 +68,7 @@ void thread::internal_deinit()
 {
     gosThreadGlob.msgHandleList.unsetup();
 	gosThreadGlob.threadHandleList.unsetup();
-    gos::thread::mutexDestroy (gosThreadGlob.cs);
+    gos::thread::mutex_destroy (gosThreadGlob.cs);
 
     GOSDELETE(gos::getSysHeapAllocator(), gosThreadGlob.allocator);
     gosThreadGlob.allocator = NULL;
@@ -97,7 +97,7 @@ i16 GOS_threadFunctionWrapper (void *userParam)
     //invalido il thread handle e libero le risorse
 	gosThreadGlob.threadHandleList.release (handle);
 
-    gos_err_deleteThisHandlerIfExists (gos::thread::getCurrentThreadID());
+    gos_err_deleteThisHandlerIfExists (gos::thread::get_current_threadID());
 	return retCode;
 }
 
@@ -126,7 +126,7 @@ eThreadError gos::thread::create (GOSThreadHandle *out_hThread, GOS_ThreadMainFu
 
 
 //************************************************************************
-void gos::thread::waitEnd (GOSThreadHandle &hThread)
+void gos::thread::wait_end (GOSThreadHandle &hThread)
 {
 	sGOSThreadInfo *info;
 	if (gosThreadGlob.threadHandleList.fromHandleToPointer (hThread, &info))
@@ -167,8 +167,8 @@ bool thread::createMsgQ (HThreadMsgR *out_handleR, HThreadMsgW *out_handleW)
 
     s->fifo = GOSNEW(gosThreadGlob.allocator, GOSThreadMsgFIFO) ();
 	s->fifo->setup(gosThreadGlob.allocator);
-	gos::thread::eventCreate (&s->hEvent);
-    gos::thread::mutexCreate (&s->cs);
+	gos::thread::signal_create (&s->hEvent);
+    gos::thread::mutex_create (&s->cs);
 
     out_handleR->hRead = msgHandle;
     out_handleW->hWrite = msgHandle;
@@ -195,8 +195,8 @@ void thread::deleteMsgQ (HThreadMsgR &handleR, UNUSED_PARAM(HThreadMsgW &handleW
 		}
 		MUTEX_UNLOCK(s->cs);
 		
-        gos::thread::mutexDestroy(s->cs);
-		gos::thread::eventDestroy (s->hEvent);
+        gos::thread::mutex_destroy(s->cs);
+		gos::thread::signal_destroy (s->hEvent);
         gosThreadGlob.msgHandleList.release (handleR.hRead);
     }
     MUTEX_UNLOCK (gosThreadGlob.cs);
@@ -295,7 +295,7 @@ void thread::pushMsg_on_top (const HThreadMsgW &h, u32 what, u64 paramU64, const
 	{
 		MUTEX_LOCK (s->cs);
 			s->fifo->push_on_top(msg);
-			gos::thread::eventFire (s->hEvent);
+			gos::thread::signal_fire (s->hEvent);
 		MUTEX_UNLOCK (s->cs);
 	}
 }
@@ -309,7 +309,7 @@ void thread::pushMsg (const HThreadMsgW &h, u32 what, u64 paramU64, const void *
 	{
 		MUTEX_LOCK (s->cs);
 			s->fifo->push(msg);
-			gos::thread::eventFire (s->hEvent);
+			gos::thread::signal_fire (s->hEvent);
 		MUTEX_UNLOCK (s->cs);
 	}
 }
@@ -331,7 +331,7 @@ void thread::pushMsg (const HThreadMsgW &h, u32 what, u64 paramU64, void *user_d
 
     MUTEX_LOCK (s->cs);
         s->fifo->push(msg);
-		gos::thread::eventFire (s->hEvent);
+		gos::thread::signal_fire (s->hEvent);
     MUTEX_UNLOCK (s->cs);
 }
 
@@ -368,7 +368,7 @@ void thread::pushMsg2Buffer (const HThreadMsgW &h, u32 what, u64 paramU64, const
 
     MUTEX_LOCK (s->cs);
         s->fifo->push(msg);
-		gos::thread::eventFire(s->hEvent);
+		gos::thread::signal_fire(s->hEvent);
     MUTEX_UNLOCK (s->cs);
 }
 
@@ -378,11 +378,11 @@ bool thread::waitForAnEvent (const HThreadMsgR &h, u32 timeout_msec)
     sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hRead);
     if (NULL == s)
         return false;
-    return thread::eventWait (s->hEvent, timeout_msec);
+    return thread::signal_wait (s->hEvent, timeout_msec);
 }
 
 //**************************************************************
-bool thread::msgQ_getHEvent (const HThreadMsgR &h, gos::Event *out_hEvent)
+bool thread::msgQ_getHEvent (const HThreadMsgR &h, gos::Signal *out_hEvent)
 {
     sThreadMsgQ *s = thread_HTreadMsgHandle_to_pointer(h.hRead);
 

@@ -927,7 +927,7 @@ void glTFImporter::priv_printStatistics() const
 {
 	logger::log (eTextColor::green, "===================================================\n");
 	logger::log (eTextColor::green, "glTFImporter::printStatistics()\n");
-	logger::incIndent();
+	logger::inc_indent();
 
 	const u32 numShapes = shapeOut.shapeList->getNElem();
 	logger::log ("num shapes: %d\n", numShapes);
@@ -946,5 +946,5 @@ void glTFImporter::priv_printStatistics() const
 
 	logger::log ("\n");
 	logger::log ("totalNumVtx=%d, totalNumIdx=%d\n", totNumVtx, totNumIdx);
-	logger::decIndent();
+	logger::dec_indent();
 }

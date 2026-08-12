@@ -28,12 +28,12 @@ void VkInstanceValidationLayersList::build (gos::Allocator *allocatorIN)
         
 void VkInstanceValidationLayersList::printInfo () const
 {
-    gos::logger::log ("available validation layers (%d):\n", getCount());
-    gos::logger::incIndent();
+    gos::logger::log_3 ("available validation layers (%d):\n", getCount());
+    gos::logger::inc_indent();
     for (u32 i=0; i<getCount(); i++)
-        gos::logger::log ("[%s]  ", get(i)->layerName);
-    gos::logger::log ("\n");
-    gos::logger::decIndent();    
+        gos::logger::log_3 ("[%s]  ", get(i)->layerName);
+    gos::logger::log_3 ("\n");
+    gos::logger::dec_indent();    
 }
 
 u32 VkInstanceValidationLayersList::find (const char *layerName) const
@@ -67,12 +67,12 @@ void VkInstanceExtensionList::build (gos::Allocator *allocatorIN)
 
 void VkInstanceExtensionList::printInfo () const
 {
-    gos::logger::log ("available extensions (%d):\n", getCount());
-    gos::logger::incIndent();
+    gos::logger::log_3 ("available extensions (%d):\n", getCount());
+    gos::logger::inc_indent();
     for (u32 i=0; i<getCount(); i++)
-        gos::logger::log ("[%s]  ", get(i)->extensionName);
-    gos::logger::log ("\n");
-    gos::logger::decIndent();
+        gos::logger::log_3 ("[%s]  ", get(i)->extensionName);
+    gos::logger::log_3 ("\n");
+    gos::logger::dec_indent();
 }            
 
 u32 VkInstanceExtensionList::find (const char *extensionName) const
@@ -107,12 +107,12 @@ void VkPhyDeviceExtensionList::build (gos::Allocator *allocatorIN, VkPhysicalDev
 
 void VkPhyDeviceExtensionList::printInfo () const
 {
-    gos::logger::log ("supported extensions:\n");
-    gos::logger::incIndent();
+    gos::logger::log_3 ("supported extensions:\n");
+    gos::logger::inc_indent();
     for (u32 i2=0; i2<getCount(); i2++)
-        gos::logger::log ("[%s]  ", get(i2)->extensionName);
-    gos::logger::log ("\n");
-    gos::logger::decIndent();
+        gos::logger::log_3 ("[%s]  ", get(i2)->extensionName);
+    gos::logger::log_3 ("\n");
+    gos::logger::dec_indent();
 }            
 
 u32 VkPhyDeviceExtensionList::find (const char *extensionName) const
@@ -147,18 +147,18 @@ void VkPhyDeviceQueueList::build (gos::Allocator *allocatorIN, VkPhysicalDevice 
 
 void VkPhyDeviceQueueList::printQueueFamilyInfo (u32 i) const
 {
-    gos::logger::log ("count = %d\n", get(i)->queueCount);
-    gos::logger::log ("flags = ");
-    if (support_VK_QUEUE_GRAPHICS_BIT(i)) gos::logger::log ("[VK_QUEUE_GRAPHICS_BIT]  ");
-    if (support_VK_QUEUE_COMPUTE_BIT(i)) gos::logger::log ("[VK_QUEUE_COMPUTE_BIT]  ");
-    if (support_VK_QVK_QUEUE_TRANSFER_BIT(i)) gos::logger::log ("[VK_QUEUE_TRANSFER_BIT]  ");
-    if (support_VK_QUEUE_SPARSE_BINDING_BIT(i)) gos::logger::log ("[VK_QUEUE_SPARSE_BINDING_BIT]  ");
-    if ((get(i)->queueFlags & VK_QUEUE_VIDEO_DECODE_BIT_KHR)) gos::logger::log ("[VK_QUEUE_VIDEO_DECODE_BIT_KHR]  ");
-    if ((get(i)->queueFlags & VK_QUEUE_VIDEO_ENCODE_BIT_KHR)) gos::logger::log ("[VK_QUEUE_VIDEO_ENCODE_BIT_KHR]  ");
-    if ((get(i)->queueFlags & VK_QUEUE_OPTICAL_FLOW_BIT_NV)) gos::logger::log ("[VK_QUEUE_OPTICAL_FLOW_BIT_NV]  ");
-    if ((get(i)->queueFlags & VK_QUEUE_PROTECTED_BIT)) gos::logger::log ("[VK_QUEUE_PROTECTED_BIT]  ");
-    if ((get(i)->queueFlags & VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT)) gos::logger::log ("[VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT]  ");
-    gos::logger::log ("\n");
+    gos::logger::log_3 ("count = %d\n", get(i)->queueCount);
+    gos::logger::log_3 ("flags = ");
+    if (support_VK_QUEUE_GRAPHICS_BIT(i)) gos::logger::log_3 ("[VK_QUEUE_GRAPHICS_BIT]  ");
+    if (support_VK_QUEUE_COMPUTE_BIT(i)) gos::logger::log_3 ("[VK_QUEUE_COMPUTE_BIT]  ");
+    if (support_VK_QVK_QUEUE_TRANSFER_BIT(i)) gos::logger::log_3 ("[VK_QUEUE_TRANSFER_BIT]  ");
+    if (support_VK_QUEUE_SPARSE_BINDING_BIT(i)) gos::logger::log_3 ("[VK_QUEUE_SPARSE_BINDING_BIT]  ");
+    if ((get(i)->queueFlags & VK_QUEUE_VIDEO_DECODE_BIT_KHR)) gos::logger::log_3 ("[VK_QUEUE_VIDEO_DECODE_BIT_KHR]  ");
+    if ((get(i)->queueFlags & VK_QUEUE_VIDEO_ENCODE_BIT_KHR)) gos::logger::log_3 ("[VK_QUEUE_VIDEO_ENCODE_BIT_KHR]  ");
+    if ((get(i)->queueFlags & VK_QUEUE_OPTICAL_FLOW_BIT_NV)) gos::logger::log_3 ("[VK_QUEUE_OPTICAL_FLOW_BIT_NV]  ");
+    if ((get(i)->queueFlags & VK_QUEUE_PROTECTED_BIT)) gos::logger::log_3 ("[VK_QUEUE_PROTECTED_BIT]  ");
+    if ((get(i)->queueFlags & VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT)) gos::logger::log_3 ("[VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT]  ");
+    gos::logger::log_3 ("\n");
 }
 
 
@@ -196,11 +196,11 @@ bool VPhyDevicekSurfaceFormatKHRList::isSupportedFormat (VkFormat fmt) const
 
 void VPhyDevicekSurfaceFormatKHRList::printInfo() const
 {
-    gos::logger::log ("supported format:\n");
-    gos::logger::incIndent();
+    gos::logger::log_3 ("supported format:\n");
+    gos::logger::inc_indent();
     for (u32 i2=0; i2<getCount(); i2++)
-        gos::logger::log ("%s, %s\n", string_VkFormat(get(i2)->format), string_VkColorSpaceKHR (get(i2)->colorSpace));
-    gos::logger::decIndent();
+        gos::logger::log_3 ("%s, %s\n", string_VkFormat(get(i2)->format), string_VkColorSpaceKHR (get(i2)->colorSpace));
+    gos::logger::dec_indent();
 }
 
 
@@ -226,11 +226,11 @@ void VPhyDevicekSurfacePresentModesKHRList::build (gos::Allocator *allocatorIN, 
 
 void VPhyDevicekSurfacePresentModesKHRList::printInfo() const
 {
-    gos::logger::log ("present mode:\n");
-    gos::logger::incIndent();
+    gos::logger::log_3 ("present mode:\n");
+    gos::logger::inc_indent();
     for (u32 i2=0; i2<getCount(); i2++)
-        gos::logger::log ("%s\n", string_VkPresentModeKHR (*get(i2)));
-    gos::logger::decIndent();
+        gos::logger::log_3 ("%s\n", string_VkPresentModeKHR (*get(i2)));
+    gos::logger::dec_indent();
 }
 
 bool VPhyDevicekSurfacePresentModesKHRList::exists (VkPresentModeKHR mode) const

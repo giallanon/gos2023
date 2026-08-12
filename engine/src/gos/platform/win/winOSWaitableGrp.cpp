@@ -17,13 +17,13 @@ OSWaitableGrp::OSWaitableGrp()
 //***********************************************
 OSWaitableGrp::~OSWaitableGrp()
 {
-	cleanAll();
+	clean_all();
 }
 
 /***********************************************
  * restituisce true se ha eliminato almeno un elemento
  */
-bool OSWaitableGrp::cleanAll()
+bool OSWaitableGrp::clean_all()
 {
 	bool	ret = false;
 
@@ -52,7 +52,7 @@ OSWaitableGrp::sRecord* OSWaitableGrp::priv_newRecord ()
 }
 
 //***********************************************
-void OSWaitableGrp::removeSocket (const gos::Socket &sok)
+void OSWaitableGrp::socket__remove (const gos::Socket &sok)
 { 
 	assert (debug_bWaiting == 0);
 	gos::Allocator *allocator = gos::getSysHeapAllocator();
@@ -113,7 +113,7 @@ OSWaitableGrp::sRecord* OSWaitableGrp::priv_addSocket (const gos::Socket &sok)
 }
 
 //***********************************************
-void OSWaitableGrp::removeEvent (const gos::Event &evt)
+void OSWaitableGrp::signal__remove (const gos::Signal &evt)
 {
 	assert(debug_bWaiting == 0);
 
@@ -125,14 +125,14 @@ void OSWaitableGrp::removeEvent (const gos::Event &evt)
 	{
 		if (p->originType == eWaitEventOrigin::osevent)
 		{
-			if (gos::thread::eventCompare(p->origin.event.evt, evt))
+			if (gos::thread::signal_compare(p->origin.event.evt, evt))
 			{
 				//rimuovo eventuali eventi che sono ancora nel miobuffer di eventi-generati
 				for (u32 i = 0; i < nEventsReady; i++)
 				{
 					if (generatedEventList[i]->originType == eWaitEventOrigin::osevent)
 					{
-						if (gos::thread::eventCompare(evt, generatedEventList[i]->origin.event.evt))
+						if (gos::thread::signal_compare(evt, generatedEventList[i]->origin.event.evt))
 						{
 							generatedEventList[i]->originType = eWaitEventOrigin::deleted;
 						}
@@ -154,7 +154,7 @@ void OSWaitableGrp::removeEvent (const gos::Event &evt)
 }
 
 //***********************************************
-OSWaitableGrp::sRecord* OSWaitableGrp::priv_addEvent (const gos::Event &evt)
+OSWaitableGrp::sRecord* OSWaitableGrp::priv_addEvent (const gos::Signal &evt)
 {
 	assert(debug_bWaiting == 0);
 
@@ -176,12 +176,12 @@ OSWaitableGrp::sRecord* OSWaitableGrp::priv_addMsgQ (const HThreadMsgR &hRead)
 }
 
 //***********************************************
-void OSWaitableGrp::removeMsgQ (const HThreadMsgR &hRead)
+void OSWaitableGrp::msgQ__remove (const HThreadMsgR &hRead)
 {
 	assert(debug_bWaiting == 0);
 	gos::Allocator *allocator = gos::getSysHeapAllocator();
 
-	gos::Event hMsgQEvent;
+	gos::Signal hMsgQEvent;
 	gos::thread::msgQ_getHEvent (hRead, &hMsgQEvent);
 	
 	sRecord *q = NULL;
@@ -190,14 +190,14 @@ void OSWaitableGrp::removeMsgQ (const HThreadMsgR &hRead)
 	{
 		if (p->originType == eWaitEventOrigin::msgQ)
 		{
-			if (gos::thread::eventCompare (p->origin.msgQ.evt, hMsgQEvent))
+			if (gos::thread::signal_compare (p->origin.msgQ.evt, hMsgQEvent))
 			{
 				//rimuovo eventuali eventi che sono ancora nel miobuffer di eventi-generati
 				for (u32 i = 0; i < nEventsReady; i++)
 				{
 					if (generatedEventList[i]->originType == eWaitEventOrigin::msgQ)
 					{
-						if (gos::thread::eventCompare (hMsgQEvent, generatedEventList[i]->origin.msgQ.evt))
+						if (gos::thread::signal_compare (hMsgQEvent, generatedEventList[i]->origin.msgQ.evt))
 							generatedEventList[i]->originType = eWaitEventOrigin::deleted;
 					}
 				}
@@ -424,7 +424,7 @@ u8 OSWaitableGrp::priv_wait(u32 timeoutMSec)
 }
 
 //***********************************************
-eWaitEventOrigin OSWaitableGrp::getEventOrigin (u8 iEvent) const
+eWaitEventOrigin OSWaitableGrp::event__get_origin (u8 iEvent) const
 {
 	assert(debug_bWaiting == 0);
     assert (iEvent < nEventsReady);
@@ -432,7 +432,7 @@ eWaitEventOrigin OSWaitableGrp::getEventOrigin (u8 iEvent) const
 }
 
 //***********************************************
-void* OSWaitableGrp::getEventUserParamAsPtr (u8 iEvent) const
+void* OSWaitableGrp::event__get_user_param_as_ptr (u8 iEvent) const
 {
 	assert(debug_bWaiting == 0);
 	assert(iEvent < nEventsReady);
@@ -440,7 +440,7 @@ void* OSWaitableGrp::getEventUserParamAsPtr (u8 iEvent) const
 }
 
 //***********************************************
-u32 OSWaitableGrp::getEventUserParamAsU32 (u8 iEvent) const
+u32 OSWaitableGrp::event__get_user_param_as_u32 (u8 iEvent) const
 {
 	assert(debug_bWaiting == 0);
 	assert(iEvent < nEventsReady);
@@ -448,27 +448,27 @@ u32 OSWaitableGrp::getEventUserParamAsU32 (u8 iEvent) const
 }
 
 //***********************************************
-gos::Socket& OSWaitableGrp::getEventSrcAsSocket (u8 iEvent) const
+gos::Socket& OSWaitableGrp::event__get_socket_handle (u8 iEvent) const
 {
 	assert(debug_bWaiting == 0);
-    assert (getEventOrigin(iEvent) == eWaitEventOrigin::socket);
+    assert (event__get_origin(iEvent) == eWaitEventOrigin::socket);
     return generatedEventList[iEvent]->origin.socket.sok;
 }
 
 //***********************************************
-gos::Event& OSWaitableGrp::getEventSrcAsEvent (u8 iEvent) const
+gos::Signal& OSWaitableGrp::event__get_signal_handle (u8 iEvent) const
 {
 	assert(debug_bWaiting == 0);
-    assert (getEventOrigin(iEvent) == eWaitEventOrigin::osevent);
+    assert (event__get_origin(iEvent) == eWaitEventOrigin::osevent);
 	return generatedEventList[iEvent]->origin.event.evt;
 }
 
 
 //***********************************************
-HThreadMsgR& OSWaitableGrp::getEventSrcAsMsgQ(u8 iEvent) const
+HThreadMsgR& OSWaitableGrp::event__get_msgQ_handle(u8 iEvent) const
 {
 	assert(debug_bWaiting == 0);
-	assert (getEventOrigin(iEvent) == eWaitEventOrigin::msgQ);
+	assert (event__get_origin(iEvent) == eWaitEventOrigin::msgQ);
 	return generatedEventList[iEvent]->origin.msgQ.hRead;
 }
 

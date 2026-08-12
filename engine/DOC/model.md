@@ -3,7 +3,7 @@
 
   una matrix sono 64B.
   In 4MB ci metto 65K matrici -> piu' che suff per storare tutte le static entity?
-  Una entity pero' può avere + di 1 matrice (skeleton)
+  Una entity pero' puo' avere + di 1 matrice (skeleton)
   Mi serve un modo per storare N matrici nel buffer e associarle alle entity
 
   getNatrixIndices(const entity) -> return fastarray<u32>
@@ -56,13 +56,13 @@ La shape di per se mi serve solo caricarla per infilarla in un VB/IB, poi la pos
 
 
 ### Model
-- ha uno <skeleton> (che può essere anche banale, ovvero solo con root)
+- ha uno <skeleton> (che puo' essere anche banale, ovvero solo con root)
 - ha N1 <GPUShape>
 - ha N2 <material>
 - ha un array di N3 elementi che associa <GPUShape, material, skeleton-bone>
     In sostanza posso riutilizzare una <GPUShape> attaccandola a un qualune <skeleton-bone> e associandole un <material>
     Allo stesso <skeleton-bone> posso associare molte <GPUShape>.
-    La stessa <GPUShape> può essere associata a diversi <skeleton-bone>
+    La stessa <GPUShape> puo' essere associata a diversi <skeleton-bone>
     Anche i <material> possono essere associati liberamente
   
 

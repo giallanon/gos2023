@@ -340,7 +340,7 @@ public:
 private:		
 		struct sLoaderThreadInitParams
 		{
-			gos::Event		    hEvent_started;
+			gos::Signal		    hEvent_started;
 			HThreadMsgR		    msgqR;
 			HThreadMsgW		    msgqW;
 			gos::Logger		    *logger;

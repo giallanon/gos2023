@@ -96,7 +96,7 @@ void AllocPolicy_Track_hard::printReport (u64 totMemoryReserved)
 
 	if (anyMemLeaks())
 	{
-		gos::logger::incIndent();
+		gos::logger::inc_indent();
 		hashof_allocation->forEach ( [](const void *p, const char *filename)
 		{
 			u32 *p32 = (u32*)p;
@@ -104,6 +104,6 @@ void AllocPolicy_Track_hard::printReport (u64 totMemoryReserved)
 			logger::log ("%s %d\n", filename, line_number);
 			return true;
 		});
-		gos::logger::decIndent();
+		gos::logger::dec_indent();
 	}
 }

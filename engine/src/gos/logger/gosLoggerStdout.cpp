@@ -14,7 +14,7 @@ bool LoggerStdout_sortFn_discendente (const u64 &a, const u64 &b)           { re
 //*************************************************
 LoggerStdout::LoggerStdout()
 {
-    gos::thread::mutexCreate(&mutex);
+    gos::thread::mutex_create(&mutex);
 
     flag.zero();
     flag.set (FLAG__SHOULD_LOG_TO_STDOUT);
@@ -29,7 +29,7 @@ LoggerStdout::LoggerStdout()
 //*************************************************
 LoggerStdout::~LoggerStdout() 
 {
-    gos::thread::mutexDestroy(mutex);
+    gos::thread::mutex_destroy(mutex);
     disableFileLogging();
 }
 
@@ -61,7 +61,7 @@ void LoggerStdout::priv_buildIndentStr()
 }
 
 //*************************************************
-void LoggerStdout::priv_out (const char *what)
+void LoggerStdout::priv_out (u8 level, const char *what)
 {
     if (isANewLine)
     {
@@ -77,10 +77,10 @@ void LoggerStdout::priv_out (const char *what)
 
 
         if (flag.isBitSet(FLAG__SHOULD_LOG_TO_STDOUT))
-            fprintf (stdout, "%s %s", hhmmss, strIndent);
+            fprintf (stdout, "[%d] %s %s", level, hhmmss, strIndent);
 
         if (logToFile)
-            logToFile->log ("%s %s", hhmmss, strIndent);
+            logToFile->log ("[%d] %s %s", level, hhmmss, strIndent);
 
         isANewLine = 0;
     }
@@ -96,67 +96,70 @@ void LoggerStdout::priv_out (const char *what)
 }
 
 //*************************************************
-void LoggerStdout::incIndent() 
+void LoggerStdout::inc_indent() 
 { 
-    gos::thread::mutexLock(mutex);
+    gos::thread::mutex_lock(mutex);
 	++indent; 
 	priv_buildIndentStr();
-	gos::thread::mutexUnlock(mutex);
+	gos::thread::mutex_unlock(mutex);
 }
 
 //*************************************************
-void LoggerStdout::decIndent() 
+void LoggerStdout::dec_indent() 
 {
-	gos::thread::mutexLock(mutex);
+	gos::thread::mutex_lock(mutex);
 	if (indent) 
 		--indent; 
 	priv_buildIndentStr();
-	gos::thread::mutexUnlock(mutex);
+	gos::thread::mutex_unlock(mutex);
 }
 
 //*************************************************
-void LoggerStdout::vlog (const eTextColor col, const char *format, va_list argptr)
+void LoggerStdout::vlog (u8 level, const eTextColor col, const char *format, va_list argptr)
 {
-    gos::thread::mutexLock(mutex);
+    gos::thread::mutex_lock(mutex);
     {
         const eTextColor prevColor = console::setTextColor(col);
-        priv_log (NULL, format, argptr);
+        priv_log (level, NULL, format, argptr);
         console::setTextColor(prevColor);
     }
-    gos::thread::mutexUnlock(mutex);
+    gos::thread::mutex_unlock(mutex);
 }
 
 //*************************************************
-void LoggerStdout::vlog (const char *format, va_list argptr)
+void LoggerStdout::vlog (u8 level, const char *format, va_list argptr)
 {
-    gos::thread::mutexLock(mutex);
-    priv_log (NULL, format, argptr);
-    gos::thread::mutexUnlock(mutex);
+    gos::thread::mutex_lock(mutex);
+    priv_log (level, NULL, format, argptr);
+    gos::thread::mutex_unlock(mutex);
 }
 
 //*************************************************
-void LoggerStdout::vlogWithPrefix (const char *prefix, const char *format, va_list argptr)
+void LoggerStdout::vlog_with_prefix (u8 level, const char *prefix, const char *format, va_list argptr)
 {
-	gos::thread::mutexLock(mutex);
-    priv_log (prefix, format, argptr);
-    gos::thread::mutexUnlock(mutex);
+	gos::thread::mutex_lock(mutex);
+    priv_log (level, prefix, format, argptr);
+    gos::thread::mutex_unlock(mutex);
 }
 
 //*************************************************
-void LoggerStdout::vlogWithPrefix (const eTextColor col, const char *prefix, const char *format, va_list argptr)
+void LoggerStdout::vlog_with_prefix (u8 level, const eTextColor col, const char *prefix, const char *format, va_list argptr)
 {
-    gos::thread::mutexLock(mutex);
+    gos::thread::mutex_lock(mutex);
     {
         const eTextColor prevColor = console::setTextColor(col);
-        priv_log (prefix, format, argptr);
+        priv_log (level, prefix, format, argptr);
         console::setTextColor(prevColor);
     }
-    gos::thread::mutexUnlock(mutex);
+    gos::thread::mutex_unlock(mutex);
 }
 
 //*************************************************
-void LoggerStdout::priv_log (const char *prefix, const char *format, va_list argptr) 
+void LoggerStdout::priv_log (u8 level, const char *prefix, const char *format, va_list argptr) 
 {
+	if (!chklvl(level))
+		return;
+		
     if (NULL == prefix)
         vsnprintf (buffer, INTERNAL_BUFFER_SIZE, format, argptr);
     else
@@ -191,7 +194,7 @@ void LoggerStdout::priv_log (const char *prefix, const char *format, va_list arg
         {
             buffer[i] = 0;
             if (i-iStart)
-                priv_out (&buffer[iStart]);
+                priv_out (level, &buffer[iStart]);
             
             if (flag.isBitSet(FLAG__SHOULD_LOG_TO_STDOUT))
                 fprintf (stdout, "\n");
@@ -208,7 +211,7 @@ void LoggerStdout::priv_log (const char *prefix, const char *format, va_list arg
         if (buffer[i] == 0x00)
         {
             if (i-iStart)
-                priv_out (&buffer[iStart]);
+                priv_out (level, &buffer[iStart]);
             break;
         }
 

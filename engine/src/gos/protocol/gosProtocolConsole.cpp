@@ -17,7 +17,7 @@ bool ProtocolConsole::handshake_clientSend(IProtocolChannel *ch, gos::Logger *lo
     if (logger)
     {
         logger->log ("handshake..\n");
-        logger->incIndent();
+        logger->inc_indent();
     }
 
     gos::Random random((u32)time(NULL));
@@ -49,7 +49,7 @@ bool ProtocolConsole::handshake_clientSend(IProtocolChannel *ch, gos::Logger *lo
         if (logger)
         {
             logger->log("FAIL\n");
-            logger->decIndent();
+            logger->dec_indent();
         }
         return false;
     }
@@ -64,7 +64,7 @@ bool ProtocolConsole::handshake_clientSend(IProtocolChannel *ch, gos::Logger *lo
             u8 receivedKey = handshake[11];
             handshake[11] = 0;
             logger->log("Invalid answer: [%s], received key=%d, expected=%d\n", handshake, receivedKey, expectedKey);
-            logger->decIndent();
+            logger->dec_indent();
 			ch->consumeReadBuffer(12);
         }
         return false;
@@ -75,7 +75,7 @@ bool ProtocolConsole::handshake_clientSend(IProtocolChannel *ch, gos::Logger *lo
 	if (logger)
     {
         logger->log("Done!\n");
-        logger->decIndent();
+        logger->dec_indent();
     }
     return true;
 }

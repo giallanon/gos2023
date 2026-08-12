@@ -15,7 +15,7 @@ Ad esempio:
   - una o più immagine (jpg, bmp, tga..) possono dare origine ad un texture, magari con mipmap, magari una texture 3D
 
 ## Virtual-asset
-All'interno dei file di tipo .gosasset_d ci sono le descrizioni dei virtual-asset. Ogni virtual-asset può avere un runtime-name ad
+All'interno dei file di tipo .gosasset_d ci sono le descrizioni dei virtual-asset. Ogni virtual-asset puo' avere un runtime-name ad
 esso associato.
 Si chiamano virtual-asset perchè non tutti i virtual-asset corrispondono ad un diverso concrete-asset.
 E' possibile per esempio descrivere lo stesso identico shader in file gosasset_d differenti, con runtime-name differenti.
@@ -31,8 +31,8 @@ durante il processo di build, e di caricarla a runtime durante il normale funzio
 
 
 ## RuntimeName
-Ogni <asset> può avere uno o più runtimeName.
-Un runtimeName è una stringa che può essere utilizzata dall'engine per caricare un asset.
+Ogni <asset> puo' avere uno o più runtimeName.
+Un runtimeName è una stringa che puo' essere utilizzata dall'engine per caricare un asset.
 I runtimeName sono definiti all'interno dei file .gosasset_d insieme alla dichiarazione del virtual-asset.
 Diversi runtimeName possono puntare allo stesso asset.
 
@@ -81,13 +81,13 @@ In generale comunque, una dichiarazione di asset ha la seguente forma:
   ...
 }
 
-Se un .gosasset_d ha bisogno di asset dichiarati in altri file .gosasset_d, li può includere usando la direttiva:
+Se un .gosasset_d ha bisogno di asset dichiarati in altri file .gosasset_d, li puo' includere usando la direttiva:
 @include: <nome-del-file-gosasset_d>
 
 Tutti i path all'interno di un gosasset_d sono da intendersi come path assoluti, oppure relativi al file gosasset_d stesso.
 
-Una dichiarazione di asset può contenere a sua volta dichiarazioni di asset, ricorsivamente.
-Un asset dichiarato all'interno di un altro asset può essere dichiarato in 2 modi:
+Una dichiarazione di asset puo' contenere a sua volta dichiarazioni di asset, ricorsivamente.
+Un asset dichiarato all'interno di un altro asset puo' essere dichiarato in 2 modi:
   1- con un riferimento ad un runtimeName
   2- con una dichiarazione completa, come se lo avessi dichiarato al di fuori dell'asset padre
   

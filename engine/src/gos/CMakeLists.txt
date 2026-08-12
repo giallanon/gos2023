@@ -66,11 +66,14 @@ memory/gosMemory.cpp
 
 platform/gosPlatform.h 
 platform/gosPlatformInclude.h 
-platform/linux/linuxOS.cpp    
+
 platform/linux/linuxOS.h
+platform/linux/linuxOS.cpp    
+platform/linux/linuxOSConsole.cpp
 platform/linux/linuxOSEvent.cpp
 platform/linux/linuxOSFS.cpp
-platform/linux/linuxOSConsole.cpp
+platform/linux/linuxOSFSWatcher.cpp
+platform/linux/linuxOSFSWatcher.h
 platform/linux/linuxOSInclude.h
 platform/linux/linuxOSSocket.cpp
 platform/linux/linuxOSThread.cpp
@@ -152,6 +155,8 @@ gosFreespaceTracker.h
 gosFS_FSSpecialPathResolver.cpp
 gosFS_FSSpecialPathResolver.h
 gosFS.cpp
+gosFSWatcher.h
+gosFSWatcherInterface.h
 gosHandle.h
 gosHashMap.h
 gosIniFile_section.cpp

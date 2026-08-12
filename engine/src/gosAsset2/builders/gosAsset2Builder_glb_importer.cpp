@@ -1245,7 +1245,7 @@ void Importer_glb::priv_printStatistics() const
 {
 	logger::log (eTextColor::green, "===================================================\n");
 	logger::log (eTextColor::green, "Importer_glb::printStatistics()\n");
-	logger::incIndent();
+	logger::inc_indent();
 
 	const u32 numShapes = shapeList.getNElem();
 	logger::log ("num shapes: %d\n", numShapes);
@@ -1264,7 +1264,7 @@ void Importer_glb::priv_printStatistics() const
 
 	logger::log ("\n");
 	logger::log ("totalNumVtx=%d, totalNumIdx=%d\n", totNumVtx, totNumIdx);
-	logger::decIndent();
+	logger::dec_indent();
 }
 
 //********************************************
@@ -1272,11 +1272,11 @@ void Importer_glb::priv_printSkeleton() const
 {
 	logger::log (eTextColor::green, "===================================================\n");
 	logger::log (eTextColor::green, "Importer_glb::print skeleton\n");
-	logger::incIndent();
+	logger::inc_indent();
 
 	priv_printSkeleton_rec (rootBone.firstChild);
 
-	logger::decIndent();
+	logger::dec_indent();
 }
 
 void Importer_glb::priv_printSkeleton_rec(const Bone *bone) const
@@ -1299,9 +1299,9 @@ void Importer_glb::priv_printSkeleton_rec(const Bone *bone) const
 
 		if (NULL != bone->firstChild)
 		{
-			logger::incIndent();
+			logger::inc_indent();
 			priv_printSkeleton_rec (bone->firstChild);
-			logger::decIndent();
+			logger::dec_indent();
 		}
 
 		bone = bone->nextSibling;

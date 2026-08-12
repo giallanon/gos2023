@@ -181,7 +181,7 @@ void Context::logAllMappedInput() const
     eventIDList.setupWithBase (buffer, sizeof(buffer), gos::getScrapAllocator());
 
     gos::logger::log (eTextColor::yellow, "CONTEXT: %s\n", getName());
-    gos::logger::incIndent();
+    gos::logger::inc_indent();
     
     for (u32 i2=0; i2<actionList.getNElem(); i2++)
     {
@@ -201,7 +201,7 @@ void Context::logAllMappedInput() const
         }
         gos::logger::log ("\n");            
     }
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
 
 }
 

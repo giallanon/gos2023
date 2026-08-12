@@ -388,12 +388,12 @@ void shape::debug_shapePrint (const Shape *s)
 	const u32 sizeOfAVtx = shape::calcSizeOfAVertex(s->vtxLayout);
 
 	gos::logger::log ("\nSHAPE PRINT\n");
-	gos::logger::incIndent();
+	gos::logger::inc_indent();
 
 	gos::logger::log ("num vtx=%d, numIdx=%d\n", s->numVtx, s->numIdx);
 	gos::logger::log ("VtxLayout:\n");
 	{
-		gos::logger::incIndent();
+		gos::logger::inc_indent();
 		for (u32 i=0; i<vtxR.getNumElem(); i++)
 		{
 			gos::logger::log ("OFFSET=%04d  FORMAT=%s  SEMANTIC=%s INDEX=%d\n",
@@ -402,12 +402,12 @@ void shape::debug_shapePrint (const Shape *s)
 				shape::enumToString (vtxR.getSemantic(i)),
 				vtxR.getIndex(i));
 		}
-		gos::logger::decIndent();
+		gos::logger::dec_indent();
 	}
 	
 	gos::logger::log ("Vtx list (%d):\n", s->numVtx);
 	{
-		gos::logger::incIndent();
+		gos::logger::inc_indent();
 
 		u32 ct = 0;
 		for (u32 i=0; i<s->numVtx; i++)
@@ -449,21 +449,21 @@ void shape::debug_shapePrint (const Shape *s)
 			ct += sizeOfAVtx;
 		}
 		
-		gos::logger::decIndent();
+		gos::logger::dec_indent();
 	}
 
 	gos::logger::log ("Idx list (%d):\n", s->numIdx);
 	{
-		gos::logger::incIndent();
+		gos::logger::inc_indent();
 		for (u32 i=0; i<s->numIdx; i+=3)
 		{
 			gos::logger::log ("(%d,%d,%d)  ", s->idxBuffer[i], s->idxBuffer[i+1], s->idxBuffer[i+2]);
 		}
 		gos::logger::log ("\n");
-		gos::logger::decIndent();
+		gos::logger::dec_indent();
 	}
 
-	gos::logger::decIndent();
+	gos::logger::dec_indent();
 }
 
 //********************************************************

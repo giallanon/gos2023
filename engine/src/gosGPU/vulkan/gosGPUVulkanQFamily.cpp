@@ -27,7 +27,7 @@ void VulkanQFamily::setup (VkDevice vkDevIN, eGPUQueueFamily familyTypeIN, u32 f
 
     vkGetDeviceQueue (vkDev, familyIndex, 0, &vkQueueHandle);
 
-    thread::mutexCreate (&mutex);
+    thread::mutex_create (&mutex);
 }
 
 //*******************************************
@@ -36,7 +36,7 @@ void VulkanQFamily::unsetup()
     if (VK_NULL_HANDLE == vkDev)
         return;
 
-    thread::mutexDestroy (mutex);
+    thread::mutex_destroy (mutex);
     for (u32 i = 0; i < NUM_MAX_THREAD; i++)
     {
         poolList[i].threadID = u32MAX;
@@ -109,7 +109,7 @@ bool VulkanQFamily::commandBuffer_create (u32 threadID, VkCommandPool *out_pool,
     *out_pool = getOrCreateCommandPool(threadID);
     if (NULL == *out_pool)
     {
-        gos::logger::log ("VulkanQFamily::commandBuffer_create() => can't create a command pool\n");
+        gos::logger::log_3 ("VulkanQFamily::commandBuffer_create() => can't create a command pool\n");
         return false;
     }
 
@@ -123,7 +123,7 @@ bool VulkanQFamily::commandBuffer_create (u32 threadID, VkCommandPool *out_pool,
     if (result == VK_SUCCESS)
         return true;
 
-    gos::logger::log ("VulkanQFamily::commandBuffer_create() => vkAllocateCommandBuffers() => %s\n", string_VkResult(result));
+    gos::logger::log_3 ("VulkanQFamily::commandBuffer_create() => vkAllocateCommandBuffers() => %s\n", string_VkResult(result));
     return false;
 }
 
@@ -142,9 +142,9 @@ void VulkanQFamily::waitIdle ()
 //**********************************************************
 VkResult VulkanQFamily::submit(u32 submitCount, const VkSubmitInfo *submitInfo, VkFence fence)
 {
-    thread::mutexLock (mutex);
+    thread::mutex_lock (mutex);
 	const VkResult ret = vkQueueSubmit (vkQueueHandle, submitCount, submitInfo, fence);
-    thread::mutexUnlock (mutex);
+    thread::mutex_unlock (mutex);
     return ret;
 }
 

@@ -17,13 +17,15 @@ Builder::Builder(gos::GPU *gpuIN)
 	localAllocator = gos::getSysHeapAllocator();
 	logger = &loggerStdout;
 
+	build_result_list.setup (localAllocator, 256);
+
 	memset(builderList, 0, sizeof(builderList));
-	addBuilder<Builder_vtxShader>();
-	addBuilder<Builder_pxlShader>();
-	addBuilder<Builder_pipe>();
-	addBuilder<Builder_tex2D>();
-	//addBuilder<Builder_glb>();
-	addBuilder<Builder_model3d>();
+	add_builder<Builder_vtxShader>();
+	add_builder<Builder_pxlShader>();
+	add_builder<Builder_pipe>();
+	add_builder<Builder_tex2D>();
+	//add_builder<Builder_glb>();
+	add_builder<Builder_model3d>();
 }
 
 //******************************
@@ -138,7 +140,7 @@ bool Builder::debug_sanityCheck(const char *baseFolder)
 	loggerStdout.enableFileLogging(log_folder);
 
 	logger->log(eTextColor::yellow, "\n\n=== RUNNING SANITY CHECK....\n");
-	logger->incIndent();
+	logger->inc_indent();
 
 	// faccio un rebuild all usando un nome db specifico
 	char s[1024];
@@ -154,7 +156,7 @@ bool Builder::debug_sanityCheck(const char *baseFolder)
 
 	logger->log("building...\n");
 	loggerStdout.disableStdouLogging();
-	bool ret = priv_build(ctxSanity, false);
+	bool ret = priv_build(ctxSanity, false, false);
 	loggerStdout.enableStdouLogging();
 
 	if (!ret)
@@ -296,7 +298,7 @@ bool Builder::debug_sanityCheck__cmp_table(DBContext &ctx_sanity, DBContext &ctx
 }
 
 //******************************
-bool Builder::rebuildAll(const char *baseFolder, bool bVerbose)
+bool Builder::rebuild_all(const char *baseFolder, bool bVerbose)
 {
 	if (bVerbose)
 		logger = &loggerStdout;
@@ -318,7 +320,7 @@ bool Builder::rebuildAll(const char *baseFolder, bool bVerbose)
 
 	// build
 	logger->log("rebuild all...\n");
-	const bool ret = priv_build(ctx, true);
+	const bool ret = priv_build(ctx, true, false);
 	asset2::dbcontext_close(ctx);
 	return ret;
 }
@@ -346,7 +348,7 @@ bool Builder::build(const char *baseFolder, bool bVerbose)
 	if (asset2::dbcontext_open(baseFolder, true, &ctx))
 	{
 		logger->log("building %s\n", baseFolder);
-		ret = priv_build(ctx, true);
+		ret = priv_build(ctx, true, true);
 		asset2::dbcontext_close(ctx);
 	}
 
@@ -364,8 +366,11 @@ bool Builder::build(const char *baseFolder, bool bVerbose)
 }
 
 //******************************
-bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
+bool Builder::priv_build (DBContext &ctx, bool bDoCreateAssetFile, bool bGenerateListOfUpdatedUID)
 {
+	if (bGenerateListOfUpdatedUID)
+		build_result_list.reset();
+
 	gos::DateTime dt;
 	dt.setNow_UTC();
 
@@ -380,7 +385,7 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 	// e' stata modificata o eliminata.
 	// Alla fine, l'output di questo passo e' un elenco di gosasset_d da rebuildare
 	logger->log("\nScanning known resources...\n");
-	logger->incIndent();
+	logger->inc_indent();
 	{
 		// scanno gli .gosasset_d presenti su HD per vedere se ne ce sono di nuovi
 		ret = priv_gosassetd_scan_folder(ctx, ctx.folder_assets_src, &listof_gosAssetd_toBeRebuilt);
@@ -391,7 +396,7 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 
 		logger->log("finished\n");
 	}
-	logger->decIndent();
+	logger->dec_indent();
 	if (!ret)
 		return false;
 
@@ -411,11 +416,11 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 	UniqueUIDList listof_builtAssets(localAllocator, 256);
 	logger->log("\nList of .gosasset_d to be rebuilt:\n");
 	{
-		logger->incIndent();
+		logger->inc_indent();
 		if (0 == listof_gosAssetd_toBeRebuilt.getNElem())
 		{
 			logger->log("Nothing to do\n");
-			logger->decIndent();
+			logger->dec_indent();
 		}
 		else
 		{
@@ -427,7 +432,7 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 				if (fs::fileExists(absFilename))
 					logger->log("[%-12s] %016" PRIX64 " %s\n", asset2::enumToString(uid.getResourceType()), uid._uid, absFilename);
 			}
-			logger->decIndent();
+			logger->dec_indent();
 
 			// build
 			for (u32 i = 0; i < list->getNElem(); i++)
@@ -437,9 +442,9 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 				if (fs::fileExists(absFilename))
 				{
 					logger->log("\nbuilding %016" PRIX64 " %s\n", uid._uid, absFilename);
-					logger->incIndent();
+					logger->inc_indent();
 					ret = priv_gosassetd_build(ctx, bDoCreateAssetFile, absFilename, &listof_builtAssets);
-					logger->decIndent();
+					logger->dec_indent();
 				}
 				if (!ret)
 					break;
@@ -453,7 +458,7 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 		if (listof_possibile_resources_to_be_deleted.getNElem())
 		{
 			logger->log("\nlist of removed resources:\n");
-			logger->incIndent();
+			logger->inc_indent();
 			listof_possibile_resources_to_be_deleted.forEach([&ctx, logger=this->logger](u32 index, const UID uid)
 			{
 				assert (uid.isAResource());
@@ -464,32 +469,36 @@ bool Builder::priv_build(DBContext &ctx, bool bDoCreateAssetFile)
 				}
 				return true;
 			});
-			logger->decIndent();
+			logger->dec_indent();
 		}
 
 		// clean up del DB
 		if (listof_deleted_assets.getNElem())
 		{
 			logger->log("\nlist of deleted assets:\n");
-			logger->incIndent();
-			listof_deleted_assets.forEach([logger = this->logger](u32 index, const UID uid)
+			logger->inc_indent();
+			listof_deleted_assets.forEach([bGenerateListOfUpdatedUID, logger = this->logger, &build_result_list=this->build_result_list](u32 index, const UID uid)
 			{
 				logger->log ("[%-12s] %016" PRIX64 "\n", asset2::enumToString (uid.getAssetType()), uid._uid);
+				if (bGenerateListOfUpdatedUID)
+					build_result_list.insertIfNotExists(uid);
 				return true; 
 			});
-			logger->decIndent();
+			logger->dec_indent();
 		}
 
 		if (listof_builtAssets.getNElem())
 		{
 			logger->log("\nlist of built assets:\n");
-			logger->incIndent();
-			listof_builtAssets.forEach([logger = this->logger](u32 index, const UID uid)
+			logger->inc_indent();
+			listof_builtAssets.forEach([bGenerateListOfUpdatedUID, logger = this->logger, &build_result_list=this->build_result_list](u32 index, const UID uid)
 			{
 				logger->log ("[%-12s] %016" PRIX64 "\n", asset2::enumToString (uid.getAssetType()), uid._uid);
+				if (bGenerateListOfUpdatedUID)
+					build_result_list.insertIfNotExists(uid);
 				return true;
 			});
-			logger->decIndent();
+			logger->dec_indent();
 		}
 	}
 	// fine
@@ -814,9 +823,9 @@ bool Builder::priv_gosassetd_build_parseIncludeSection(DBContext &ctx, bool bDoC
 	{
 		// non e' nel DB, vuol dire che devo prima buildarlo e poi posso proseguire con il build di me stesso
 		logger->log("building included file %s\n", absIncludePath);
-		logger->incIndent();
+		logger->inc_indent();
 		const bool ret = priv_gosassetd_build(ctx, bDoCreateAssetFile, absIncludePath, out_listOfBuiltAssets);
-		logger->decIndent();
+		logger->dec_indent();
 		if (!ret)
 			return false;
 	}
@@ -938,7 +947,7 @@ bool Builder::priv_gosassetd_buildSection(DBContext &ctx, bool bDoCreateAssetFil
 
 		// buildo
 		logger->log("line %d, %s : %s\n", sub->getLineStarted(), assetClass, assetRuntimeName);
-		logger->incIndent();
+		logger->inc_indent();
 		bool ret = false;
 		while (1)
 		{
@@ -1018,7 +1027,7 @@ bool Builder::priv_gosassetd_buildSection(DBContext &ctx, bool bDoCreateAssetFil
 			ret = true;
 			break;
 		}
-		logger->decIndent();
+		logger->dec_indent();
 
 		if (!ret)
 			return false;

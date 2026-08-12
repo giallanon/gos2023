@@ -20,6 +20,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+
+
 /***********************************************
  * typedef dei dati di base
  */

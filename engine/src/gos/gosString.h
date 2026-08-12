@@ -124,7 +124,7 @@ namespace gos
 			u32				copyStr (char *dst, u32 sizeof_dst, const char *src, u32 numBytesDaUtilizzare=u32MAX);
 
 			// Copia in [dst] il massimo num di byte possibili di [src] e mette sempre un 0x00 alla fine di [dst]
-			// Se [sizeof_dst] è troppo piccolo, non va in buffer overflow ma copia tutto quello che può da [src]
+			// Se [sizeof_dst] è troppo piccolo, non va in buffer overflow ma copia tutto quello che puo' da [src]
 			// e aggiunge uno 0x00 alla fine di [dst]
 			// Ritorna length(dst)
             u32             copyStrAsMuchAsYouCan (char *dst, u32 sizeof_dst, const char *src);

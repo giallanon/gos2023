@@ -49,23 +49,23 @@ namespace platform
      * thread stuff
      * 
      */
-    inline void     mutexCreate (OSMutex *m)                                            { ::InitializeCriticalSection(&m->cs); }
-    inline void     mutexDestroy (OSMutex *m)                                           { ::DeleteCriticalSection(&m->cs); }
-    inline bool     mutexLock (OSMutex *m)                                              { ::EnterCriticalSection(&m->cs); return true; }
-    inline void     mutexUnlock (OSMutex *m)                                            { ::LeaveCriticalSection(&m->cs); }
-    inline bool     mutexTryLock (OSMutex *m)                                           { return (TryEnterCriticalSection(&m->cs) == TRUE); }
+    inline void     mutex_create (OSMutex *m)                                            { ::InitializeCriticalSection(&m->cs); }
+    inline void     mutex_destroy (OSMutex *m)                                           { ::DeleteCriticalSection(&m->cs); }
+    inline bool     mutex_lock (OSMutex *m)                                              { ::EnterCriticalSection(&m->cs); return true; }
+    inline void     mutex_unlock (OSMutex *m)                                            { ::LeaveCriticalSection(&m->cs); }
+    inline bool     mutex_try_lock (OSMutex *m)                                           { return (TryEnterCriticalSection(&m->cs) == TRUE); }
     
-	inline bool     eventCreate (OSEvent *out_ev)										{ out_ev->h = ::CreateEvent(NULL, false, false, NULL); return true; }
-	inline void     eventDestroy (OSEvent &ev)											{ ::CloseHandle(ev.h); ev.h = INVALID_HANDLE_VALUE; }
-	inline bool		eventCompare(const OSEvent &a, const OSEvent &b)					{ return (a.h == b.h); }
-	inline void     eventFire (const OSEvent &ev)										{ ::SetEvent(ev.h); }
-	inline bool     eventWait (const OSEvent &ev, u32 timeout_msec)					    { if (WAIT_OBJECT_0 == ::WaitForSingleObject(ev.h, timeout_msec)) return true; return false; }
-	inline void     eventSetInvalid(OSEvent &ev)										{ ev.h = INVALID_HANDLE_VALUE; }
-	inline bool		eventIsInvalid(const OSEvent &ev)									{ return (ev.h == INVALID_HANDLE_VALUE);  }
+	inline bool     signal_create (OSEvent *out_ev)										{ out_ev->h = ::CreateEvent(NULL, false, false, NULL); return true; }
+	inline void     signal_destroy (OSEvent &ev)											{ ::CloseHandle(ev.h); ev.h = INVALID_HANDLE_VALUE; }
+	inline bool		signal_compare(const OSEvent &a, const OSEvent &b)					{ return (a.h == b.h); }
+	inline void     signal_fire (const OSEvent &ev)										{ ::SetEvent(ev.h); }
+	inline bool     signal_wait (const OSEvent &ev, u32 timeout_msec)					    { if (WAIT_OBJECT_0 == ::WaitForSingleObject(ev.h, timeout_msec)) return true; return false; }
+	inline void     signal_set_invalid(OSEvent &ev)										{ ev.h = INVALID_HANDLE_VALUE; }
+	inline bool		signal_is_invalid(const OSEvent &ev)									{ return (ev.h == INVALID_HANDLE_VALUE);  }
 
 	eThreadError    createThread  (OSThread *out_handle, gos::Allocator *allocatorTS, GOS_ThreadMainFunction threadFunction, u32 stackSizeInKb, void *userParam);
 	void            waitThreadEnd (OSThread &handle);
-    u32				getCurrentThreadID();
+    u32				get_current_threadID();
 
 
 				

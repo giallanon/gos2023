@@ -50,23 +50,23 @@ namespace platform
      * thread stuff
      * 
      */
-    inline void     mutexCreate (OSMutex *m)                                            { pthread_mutex_init (m, NULL); }
-    inline void     mutexDestroy (OSMutex *m)                                           { pthread_mutex_destroy(m); }
-	bool     		mutexLock (OSMutex *m);
-    inline void     mutexUnlock (OSMutex *m)                                            { pthread_mutex_unlock(m); }
-    inline bool     mutexTryLock (OSMutex *m)                                           { return (pthread_mutex_trylock(m) == 0); }
+    inline void     mutex_create (OSMutex *m)                                            { pthread_mutex_init (m, NULL); }
+    inline void     mutex_destroy (OSMutex *m)                                           { pthread_mutex_destroy(m); }
+	bool     		mutex_lock (OSMutex *m);
+    inline void     mutex_unlock (OSMutex *m)                                            { pthread_mutex_unlock(m); }
+    inline bool     mutex_try_lock (OSMutex *m)                                           { return (pthread_mutex_trylock(m) == 0); }
 
-    bool            eventCreate (OSEvent *out_ev);
-    void            eventDestroy (OSEvent &ev);
-    void            eventFire (const OSEvent &ev);
-    bool            eventWait (const OSEvent &ev, u32 timeout_msec);
-	inline void     eventSetInvalid (OSEvent &ev)										{ ev.evfd = -1; }
-	inline bool		eventIsInvalid (const OSEvent &ev)									{ return (ev.evfd == -1); }
-	inline bool		eventCompare (const OSEvent &a, const OSEvent &b)					{ return (a.evfd == b.evfd); }
+    bool            signal_create (OSEvent *out_ev);
+    void            signal_destroy (OSEvent &ev);
+    void            signal_fire (const OSEvent &ev);
+    bool            signal_wait (const OSEvent &ev, u32 timeout_msec);
+	inline void     signal_set_invalid (OSEvent &ev)										{ ev.evfd = -1; }
+	inline bool		signal_is_invalid (const OSEvent &ev)									{ return (ev.evfd == -1); }
+	inline bool		signal_compare (const OSEvent &a, const OSEvent &b)					{ return (a.evfd == b.evfd); }
 
     eThreadError    createThread  (OSThread *out_handle, gos::Allocator *allocatorTS, GOS_ThreadMainFunction threadFunction, u32 stackSizeInKb, void *userParam);
     void            waitThreadEnd (OSThread &handle);
-    u32				getCurrentThreadID();
+    u32				get_current_threadID();
     
 
     /******************************************************

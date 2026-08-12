@@ -384,7 +384,7 @@ bool platform::NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP)
 }
 
 //***********************************
-u32 platform::getCurrentThreadID()
+u32 platform::get_current_threadID()
 {
     //pid_t tid = gettid();
     return static_cast<u32>(GetCurrentThreadId());

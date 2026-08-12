@@ -14,7 +14,7 @@ using namespace gos;
 bool input::init()
 {
     gos::logger::log ("INPUT::init\n");
-    gos::logger::incIndent();
+    gos::logger::inc_indent();
     
     localAllocator = GOSNEW(gos::getSysHeapAllocator(), GOSInputMemAllocatorTS)("INPUT");
     localAllocator->setup (1024 * 1024);
@@ -27,7 +27,7 @@ bool input::init()
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
     gos::logger::log ("finished\n");
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
     return true;
 }
 
@@ -35,7 +35,7 @@ bool input::init()
 void input::deinit()
 {
     gos::logger::log ("INPUT::deinit\n");
-    gos::logger::incIndent();
+    gos::logger::inc_indent();
 
     if (NULL != module)
     {
@@ -48,7 +48,7 @@ void input::deinit()
     }
 
     gos::logger::log ("finished\n");
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
 }
 
 //*****************************************

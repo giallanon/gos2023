@@ -31,13 +31,13 @@ ServerTCP::~ServerTCP()
 eSocketError ServerTCP::start (u16 portNumber)
 {
     logger->log ("ProtocolServer::start() on port %d... ", portNumber);
-    logger->incIndent();
+    logger->inc_indent();
 
     eSocketError err = gos::socket::openAsTCPServer(&sok, portNumber);
     if (err != eSocketError::none)
     {
         logger->log ("FAIL, error code=%d\n", err);
-        logger->decIndent();
+        logger->dec_indent();
         return err;
     }
     logger->log ("OK\n");
@@ -49,7 +49,7 @@ eSocketError ServerTCP::start (u16 portNumber)
     if (!gos::socket::listen(sok))
     {
         logger->log ("FAIL\n");
-        logger->decIndent();
+        logger->dec_indent();
         gos::socket::close(sok);
         return eSocketError::errorListening;
     }
@@ -57,7 +57,7 @@ eSocketError ServerTCP::start (u16 portNumber)
 
 
     //aggiungo la socket al gruppo di oggetti in osservazione
-    waitableGrp.addSocket (sok, u32MAX);
+    waitableGrp.socket__add (sok, u32MAX);
 
     //setup dell'handle array
     clientList.reset();
@@ -65,7 +65,7 @@ eSocketError ServerTCP::start (u16 portNumber)
 
 
     logger->log ("Done!\n");
-    logger->decIndent();
+    logger->dec_indent();
     return eSocketError::none;
 }
 
@@ -76,7 +76,7 @@ void ServerTCP::close()
         return;
 
     logger->log ("ProtocolServer::close()\n");
-    logger->incIndent();
+    logger->inc_indent();
 
     //free dei client ancora connessi
     logger->log ("free of client list\n");
@@ -87,7 +87,7 @@ void ServerTCP::close()
     }
     clientList.reset();
 
-    waitableGrp.removeSocket(sok);
+    waitableGrp.socket__remove(sok);
 
     logger->log ("closing socket\n");
     gos::socket::close(sok);
@@ -96,15 +96,16 @@ void ServerTCP::close()
     handleArray.unsetup();
 
     logger->log ("Done!\n");
-    logger->decIndent();
+    logger->dec_indent();
 }
 
 
 //****************************************************
-bool ServerTCP::addExternalSocket1ToWaitList (gos::Socket &sokIN)
+bool ServerTCP::ext_socket__add_to_wait_list (gos::Socket &sokIN)
 { 
-    return waitableGrp.addSocket (sokIN, EVENT_USER_PARAM_IS_EXTERNAL_SOCKET1);
+    return waitableGrp.socket__add (sokIN, EVENT_USER_PARAM_IS_EXTERNAL_SOCKET1);
 }
+
 
 /****************************************************
  * wait
@@ -123,52 +124,59 @@ u8 ServerTCP::wait (u32 timeoutMSec)
     //scanno gli eventi perche' non tutti vanno ritornati, ce ne sono alcuni che devo gesire da me
     for (u8 i=0; i<n; i++)
     {
-        if (waitableGrp.getEventOrigin(i) == eWaitEventOrigin::osevent)
-        {
-            //un gos::Event e' stato fired(), lo segnalo negli eventi che ritorno
-            eventList[nEvents].evtType = ServerTCP::eEventType::osevent_fired;
-			eventList[nEvents].data.if_event.osEvent = &waitableGrp.getEventSrcAsEvent(i);
-			eventList[nEvents++].data.if_event.userParam = waitableGrp.getEventUserParamAsU32(i);
-            continue;
-        }
+		switch (waitableGrp.event__get_origin(i))
+		{
+		default:
+			break;
 
-        else if (waitableGrp.getEventOrigin(i) == eWaitEventOrigin::msgQ)
-        {
+        case eWaitEventOrigin::osevent:
+			//un gos::Signal e' stato fired(), lo segnalo negli eventi che ritorno
+			eventList[nEvents].evtType = ServerTCP::eEventType::signal_fired;
+			eventList[nEvents].data.if_event.osEvent = waitableGrp.event__get_signal_handle(i);
+			eventList[nEvents++].data.if_event.userParam = waitableGrp.event__get_user_param_as_u32(i);
+			break;
+
+        case eWaitEventOrigin::msgQ:
             //una msgQ ha dei dati in arrivo
             eventList[nEvents].evtType = ServerTCP::eEventType::msgQ_has_data_avail;
-			eventList[nEvents].data.if_msgQ.hReadAsU32 = waitableGrp.getEventSrcAsMsgQ(i).hRead.viewAsU32();
-			eventList[nEvents++].data.if_msgQ.userParam = waitableGrp.getEventUserParamAsU32(i);
-            continue;
-        }
+			eventList[nEvents].data.if_msgQ.hReadAsU32 = waitableGrp.event__get_msgQ_handle(i).hRead.viewAsU32();
+			eventList[nEvents++].data.if_msgQ.userParam = waitableGrp.event__get_user_param_as_u32(i);
+            break;
 
-        else if (waitableGrp.getEventOrigin(i) == eWaitEventOrigin::socket)
-        {
-            //l'evento e' stato generato da una socket
-            if (waitableGrp.getEventUserParamAsU32(i) == u32MAX)
-            {
-                //se la socket e' quella del server, allora gestiamo l'eventuale incoming connection
-                HSokServerClient clientHandle;
-                if (priv_checkIncomingConnection (&clientHandle))
-                {
-                    eventList[nEvents].evtType = ServerTCP::eEventType::new_client_connected;
-                    eventList[nEvents++].data.if_socket.clientHandleAsU32 = clientHandle.handle.viewAsU32();
-                }
-            }
-            else if (waitableGrp.getEventUserParamAsU32(i) == EVENT_USER_PARAM_IS_EXTERNAL_SOCKET1)
-            {
-                eventList[nEvents].evtType = ServerTCP::eEventType::external_socket1_has_data_avail;
-                eventList[nEvents++].data.if_externalSok1.sok = waitableGrp.getEventSrcAsSocket(i);
-            }
+		case eWaitEventOrigin::fsWatcher:
+			eventList[nEvents].evtType = ServerTCP::eEventType::fsw_has_data_avail;
+			eventList[nEvents].data.if_fsw.fsw = waitableGrp.event__get_fsWatcher_handle(i);
+			eventList[nEvents++].data.if_fsw.userParam = waitableGrp.event__get_user_param_as_u32(i);
+			break;
+		
+
+        case eWaitEventOrigin::socket:
+			//l'evento e' stato generato da una socket
+			if (u32MAX == waitableGrp.event__get_user_param_as_u32(i))
+			{
+				//se la socket e' quella del server, allora gestiamo l'eventuale incoming connection
+				HSokServerClient clientHandle;
+				if (priv_checkIncomingConnection (&clientHandle))
+				{
+					eventList[nEvents].evtType = ServerTCP::eEventType::new_client_connected;
+					eventList[nEvents++].data.if_socket.clientHandleAsU32 = clientHandle.handle.viewAsU32();
+				}
+			}
+			else if (EVENT_USER_PARAM_IS_EXTERNAL_SOCKET1 == waitableGrp.event__get_user_param_as_u32(i))
+			{
+				eventList[nEvents].evtType = ServerTCP::eEventType::ext_socket1_has_data_avail;
+				eventList[nEvents++].data.if_externalSok1.sok = waitableGrp.event__get_socket_handle(i);
+			}
 			else
-            {
-                //altimenti la socket che si e' svegliata deve essere una dei miei client gia' connessi, segnalo
-                //e ritorno l'evento
-                const u32 clientHandleAsU32 = waitableGrp.getEventUserParamAsU32(i);
-                eventList[nEvents].evtType = ServerTCP::eEventType::client_has_data_avail;
-                eventList[nEvents++].data.if_socket.clientHandleAsU32 = clientHandleAsU32;
-            }
-            continue;
-        }
+			{
+				//altimenti la socket che si e' svegliata deve essere una dei miei client gia' connessi, segnalo
+				//e ritorno l'evento
+				const u32 clientHandleAsU32 = waitableGrp.event__get_user_param_as_u32(i);
+				eventList[nEvents].evtType = ServerTCP::eEventType::client_has_data_avail;
+				eventList[nEvents++].data.if_socket.clientHandleAsU32 = clientHandleAsU32;
+			}
+			break;
+		}
     }
 
     return nEvents;
@@ -194,7 +202,7 @@ void ServerTCP::priv_onClientDeath (HSokServerClient hClient, sRecord *r)
 {
 #ifdef GOS_SERVERCTP__VERBOSE
 	logger->log("ProtocolServer::priv_onClientDeath()\n");
-	logger->incIndent();
+	logger->inc_indent();
 	logger->log("client [0x%08X]\n", hClient.handle.viewAsU32());
 #endif
 
@@ -212,7 +220,7 @@ void ServerTCP::priv_onClientDeath (HSokServerClient hClient, sRecord *r)
 #ifdef GOS_SERVERCTP__VERBOSE
 	logger->log("removing socket\n");
 #endif
-	waitableGrp.removeSocket (r->ch->getSocket());
+	waitableGrp.socket__remove (r->ch->getSocket());
 
 #ifdef GOS_SERVERCTP__VERBOSE
     logger->log("closing channel\n");
@@ -240,35 +248,42 @@ void ServerTCP::priv_onClientDeath (HSokServerClient hClient, sRecord *r)
     handleArray.release(hClient.handle);
 
 #ifdef GOS_SERVERCTP__VERBOSE
-    logger->decIndent();
+    logger->dec_indent();
 #endif
 }
 
 //****************************************************
-ServerTCP::eEventType ServerTCP::getEventType (u8 iEvent) const
+ServerTCP::eEventType ServerTCP::event__get_type (u8 iEvent) const
 {
     assert (iEvent < nEvents);
     return eventList[iEvent].evtType;
 }
 
 //****************************************************
-u32 ServerTCP::getEventSrcAsEventUserParam(u8 iEvent) const
+u32 ServerTCP::event__get_user_param(u8 iEvent) const
 {
 	assert(iEvent < nEvents);
-    assert (eventList[iEvent].evtType == ServerTCP::eEventType::osevent_fired);
-	return eventList[iEvent].data.if_event.userParam;
+	switch (eventList[iEvent].evtType)
+	{
+    case ServerTCP::eEventType::signal_fired:			return eventList[iEvent].data.if_event.userParam;
+	case ServerTCP::eEventType::msgQ_has_data_avail:	return eventList[iEvent].data.if_msgQ.userParam;
+	case ServerTCP::eEventType::fsw_has_data_avail:		return eventList[iEvent].data.if_fsw.userParam;
+	default:
+		DBGBREAK;
+		return 0;
+	}
 }
 
 //****************************************************
-gos::Event* ServerTCP::getEventSrcAsEvent(u8 iEvent) const
+gos::Signal ServerTCP::event__get_signal_handle(u8 iEvent) const
 {
     assert (iEvent < nEvents);
-    assert (eventList[iEvent].evtType == ServerTCP::eEventType::osevent_fired);
+    assert (eventList[iEvent].evtType == ServerTCP::eEventType::signal_fired);
     return eventList[iEvent].data.if_event.osEvent;
 }
 
 //****************************************************
-HThreadMsgR ServerTCP::getEventSrcAsMsgQHandle(u8 iEvent) const
+HThreadMsgR ServerTCP::event__get_msgQ_handle(u8 iEvent) const
 {
     assert (iEvent < nEvents);
     assert (eventList[iEvent].evtType == ServerTCP::eEventType::msgQ_has_data_avail);
@@ -279,24 +294,24 @@ HThreadMsgR ServerTCP::getEventSrcAsMsgQHandle(u8 iEvent) const
 }
 
 //****************************************************
-gos::Socket ServerTCP::getEventSrcAsExternalSocket1(u8 iEvent) const
+gos::Socket ServerTCP::event__get_ext_socket1_handle(u8 iEvent) const
 {
     assert (iEvent < nEvents);
-    assert (eventList[iEvent].evtType == ServerTCP::eEventType::external_socket1_has_data_avail);
+    assert (eventList[iEvent].evtType == ServerTCP::eEventType::ext_socket1_has_data_avail);
 
     return eventList[iEvent].data.if_externalSok1.sok;
 }
 
 //****************************************************
-u32 ServerTCP::getEventSrcAsMsgQUserParam (u8 iEvent) const
+gos::FSWatcher* ServerTCP::event__get_fsWather_handle(u8 iEvent) const
 {
-	assert(iEvent < nEvents);
-    assert (eventList[iEvent].evtType == ServerTCP::eEventType::msgQ_has_data_avail);
-	return eventList[iEvent].data.if_msgQ.userParam;
+    assert (iEvent < nEvents);
+    assert (eventList[iEvent].evtType == ServerTCP::eEventType::fsw_has_data_avail);
+    return eventList[iEvent].data.if_fsw.fsw;
 }
 
 //****************************************************
-HSokServerClient ServerTCP::getEventSrcAsClientHandle(u8 iEvent) const
+HSokServerClient ServerTCP::event__get_client_handle(u8 iEvent) const
 {
     assert (iEvent < nEvents);
     assert ((u8)eventList[iEvent].evtType >= 100);
@@ -311,13 +326,13 @@ bool ServerTCP::priv_checkIncomingConnection (HSokServerClient *out_clientHandle
 {
 #ifdef GOS_SERVERCTP__VERBOSE    
     logger->log ("ProtocolServer::priv_checkIncomingConnection()\n");
-    logger->incIndent();
+    logger->inc_indent();
 #endif
 
     bool ret = priv_checkIncomingConnection2(out_clientHandle);
 
 #ifdef GOS_SERVERCTP__VERBOSE
-    logger->decIndent();
+    logger->dec_indent();
 #endif
     return ret;
 }
@@ -410,7 +425,7 @@ bool ServerTCP::priv_checkIncomingConnection2 (HSokServerClient *out_clientHandl
 	r->protocol = protocol;
 	r->ch = ch;
 
-	waitableGrp.addSocket (acceptedSok, newClientHandle.handle.viewAsU32());
+	waitableGrp.socket__add (acceptedSok, newClientHandle.handle.viewAsU32());
     clientList.append (newClientHandle);
 
 #ifdef GOS_SERVERCTP__VERBOSE

@@ -18,32 +18,38 @@ namespace platform
 						OSWaitableGrp();
 						~OSWaitableGrp();
 
-		bool			cleanAll();
+		bool			clean_all();
 
-		bool            addSocket (const gos::Socket &sok, void *userParam = NULL) 			{ sRecord *s = priv_addSocket(sok); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
-		bool            addSocket (const gos::Socket &sok, u32 userParam) 						{ sRecord *s = priv_addSocket(sok); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
-		void            removeSocket (const gos::Socket &sok);
+		bool            socket__add (const gos::Socket &sok, void *userParam = NULL) 		{ sRecord *s = priv_addSocket(sok); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
+		bool            socket__add (const gos::Socket &sok, u32 userParam)					{ sRecord *s = priv_addSocket(sok); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
+		void            socket__remove (const gos::Socket &sok);
 
-		bool            addEvent (const gos::Event &evt, void *userParam = NULL) 		{ sRecord *s = priv_addEvent(evt); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
-		bool            addEvent (const gos::Event &evt, u32 userParam) 					{ sRecord *s = priv_addEvent(evt); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
-		void            removeEvent (const gos::Event &event);
+		bool            signal__add (const gos::Signal &evt, void *userParam = NULL) 			{ sRecord *s = priv_addEvent(evt); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
+		bool            signal__add (const gos::Signal &evt, u32 userParam) 					{ sRecord *s = priv_addEvent(evt); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
+		void            signal__remove (const gos::Signal &event);
 
-		bool            addMsgQ (const HThreadMsgR &hRead, void *userParam = NULL) 		{ sRecord *s = priv_addMsgQ(hRead); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
-		bool            addMsgQ (const HThreadMsgR &hRead, u32 userParam) 				{ sRecord *s = priv_addMsgQ(hRead); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
-		void            removeMsgQ (const HThreadMsgR &hRead);
+		bool            msgQ__add (const HThreadMsgR &hRead, void *userParam = NULL) 		{ sRecord *s = priv_addMsgQ(hRead); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
+		bool            msgQ__add (const HThreadMsgR &hRead, u32 userParam) 					{ sRecord *s = priv_addMsgQ(hRead); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
+		void            msgQ__remove (const HThreadMsgR &hRead);
+
+		bool			fsWatcher__add (gos::FSWatcher *fsw, void *userParam=NULL)			{ sRecord *s=priv_add_FSWatcher(fsw); if(s) s->userParam.asPtr=userParam; return (s != NULL); }
+        bool            fsWatcher__add (gos::FSWatcher *fsw, u32 userParam)					{ sRecord *s=priv_add_FSWatcher(fsw); if(s) s->userParam.asU32=userParam; return (s != NULL); }
+		void            fsWatcher__remove(gos::FSWatcher *fsw);
 
 		u8              wait (u32 timeoutMSec);
 
-		eWaitEventOrigin getEventOrigin(u8 iEvent) const;
+		eWaitEventOrigin event__get_origin(u8 iEvent) const;
 
-		void*           getEventUserParamAsPtr(u8 iEvent) const;
-		u32             getEventUserParamAsU32(u8 iEvent) const;
+		void*           event__get_user_param_as_ptr(u8 iEvent) const;
+		u32             event__get_user_param_as_u32(u8 iEvent) const;
 
-		gos::Socket&	getEventSrcAsSocket(u8 iEvent) const;
+		gos::Socket		event__get_socket_handle(u8 iEvent) const;
 
-		gos::Event&		getEventSrcAsEvent(u8 iEvent) const;
+		gos::Signal		event__get_signal_handle(u8 iEvent) const;
 
-		HThreadMsgR&	getEventSrcAsMsgQ(u8 iEvent) const;
+		HThreadMsgR		event__get_msgQ_handle(u8 iEvent) const;
+
+		gos::FSWatcher*	event__get_fsWatcher_handle(u8 iEvent) const;
 
 	private:
 		static const u8	MAX_EVENTS_RETURNED = 32;
@@ -56,13 +62,13 @@ namespace platform
 
 		struct sIfEvent
 		{
-			gos::Event		evt;
+			gos::Signal		evt;
 		};
 
 		struct sIfMsgQ
 		{
 			HThreadMsgR		hRead;
-			gos::Event		evt;
+			gos::Signal		evt;
 		};
 
 		union sOrigin
@@ -89,7 +95,7 @@ namespace platform
 	private:
 		sRecord*        priv_newRecord();
 		sRecord*        priv_addSocket (const gos::Socket &sok);
-		sRecord*        priv_addEvent (const gos::Event &evt);
+		sRecord*        priv_addEvent (const gos::Signal &evt);
 		sRecord*        priv_addMsgQ (const HThreadMsgR &hRead);
 		u8              priv_wait (u32 timeoutMSec);
 

@@ -19,12 +19,13 @@ struct HSokServerClient
 
     bool    operator== (const HSokServerClient &b) const                        { return (handle==b.handle); }
     bool    operator!= (const HSokServerClient &b) const                        { return (handle!=b.handle); }
+	u32		viewAsU32() const 													{ return handle.viewAsU32(); }
 };
 
 namespace gos
 {
     /**************************************************************************
-     * ServerTCP
+     * 	@brief	ServerTCP
      *
 	 *	Apre una socket in listen sulla porta [portNumber] (vedi start) e attende connessioni.
 	 *	I client che si connettono possono usare uno qualunque dei protocolli che implementano IProtocol
@@ -34,9 +35,10 @@ namespace gos
     public:
         enum class eEventType: u8
         {
-            osevent_fired                       = 1,        //un gos::Event è stato fired
-            msgQ_has_data_avail                 = 2,        //una msgQ ha dei dati disponibili
-            external_socket1_has_data_avail     = 3,        //la socket esterna "soket1" ha dei dati disponibili
+            signal_fired				= 1,        //un gos::Signal è stato fired
+            msgQ_has_data_avail			= 2,        //una msgQ ha dei dati disponibili
+            ext_socket1_has_data_avail	= 3,        //la socket esterna "soket1" ha dei dati disponibili
+			fsw_has_data_avail			= 4,        
             
             //eventi da 100 a 199 sono relativi a socket di client connessi
             new_client_connected = 100,
@@ -55,24 +57,28 @@ namespace gos
 
         virtual             ~ServerTCP();
 
-        void                useLogger (Logger *loggerIN)                                                                { if (NULL==loggerIN) logger=&nullLogger; else logger=loggerIN; }
+        void                use_logger (Logger *loggerIN)																{ if (NULL==loggerIN) logger=&nullLogger; else logger=loggerIN; }
 		
 
         eSocketError        start (u16 portNumber);
         void                close ();
         
-        // aggiunge/rimuove un gos::Event all'elenco degli oggetti osservati dalla wait()
-        bool                addEventToWaitList (const gos::Event evt, u32 userParam=0)                                  { return waitableGrp.addEvent (evt, userParam); }
-        void                removeEventFromWaitList (const gos::Event evt)                                              { waitableGrp.removeEvent (evt); }
+        // aggiunge/rimuove un gos::Signal all'elenco degli oggetti osservati dalla wait()
+        bool                signal__add_to_wait_list (const gos::Signal evt, u32 userParam=0)							{ return waitableGrp.signal__add (evt, userParam); }
+        void                signal__remove_from_wait_list (const gos::Signal evt)										{ waitableGrp.signal__remove (evt); }
 
-        bool                addMsgQToWaitList (const HThreadMsgR &hRead, u32 userParam)                                 { return waitableGrp.addMsgQ (hRead, userParam); }
-        void                removeMsgQFromWaitList (const HThreadMsgR &hRead)                                           { waitableGrp.removeMsgQ (hRead); }
+        bool                msgQ__add_to_wait_list (const HThreadMsgR &hRead, u32 userParam)							{ return waitableGrp.msgQ__add (hRead, userParam); }
+        void                msgQ__remove_from_wait_list (const HThreadMsgR &hRead)										{ waitableGrp.msgQ__remove (hRead); }
 
-        //this può avere al max 1 external socket
-	    bool                addExternalSocket1ToWaitList (gos::Socket &sok);
-        void                removeExternalSocket1FromWaitList (gos::Socket &sokIN)                                      { waitableGrp.removeSocket (sokIN); }
+	    bool                fsWatcher__add_to_wait_list (gos::FSWatcher *fsw, u32 userParam =0)							{ return waitableGrp.fsWatcher__add (fsw, userParam); }
+        void                fsWatcher__remove_from_wait_list (gos::FSWatcher *fsw)                                      { waitableGrp.fsWatcher__remove (fsw); }
+
+		//this puo' avere al max 1 external socket
+	    bool                ext_socket__add_to_wait_list (gos::Socket &sok);
+        void                ext_socket__remove_from_wait_list (gos::Socket &sokIN)                                      { waitableGrp.socket__remove (sokIN); }
                                 
-        // Chiamata bloccante per un max di timeoutMSec:
+
+		// Chiamata bloccante per un max di timeoutMSec:
         // per specificare un tempo di wait "infinito" (ie: socket sempre bloccante), usare timeoutMSec=u32MAX
         // per indicare il tempo di wait minimo possibile, usare timeoutMSec=0
         // tutti gli altri valori sono comunque validi ma non assumono significati particolari.
@@ -82,19 +88,18 @@ namespace gos
         // Per conoscere il tipo di evento e recuperare il "chi" ha generato l'evento, vedi le fn getEvent...()
         u8                  wait (u32 timeoutMSec);
 
-        eEventType          getEventType (u8 iEvent) const;
-        
-        gos::Event*         getEventSrcAsEvent (u8 iEvent) const;
-		u32					getEventSrcAsEventUserParam (u8 iEvent) const;
-        
-        HThreadMsgR         getEventSrcAsMsgQHandle (u8 iEvent) const;
-        u32                 getEventSrcAsMsgQUserParam (u8 iEvent) const;
-        
-        HSokServerClient    getEventSrcAsClientHandle(u8 iEvent) const;
 
-        gos::Socket         getEventSrcAsExternalSocket1(u8 iEvent) const;
+		eEventType          event__get_type (u8 iEvent) const;
+		u32					event__get_user_param (u8 iEvent) const;
+		gos::Signal   		event__get_signal_handle (u8 iEvent) const;        
+        HThreadMsgR         event__get_msgQ_handle (u8 iEvent) const;        
+        HSokServerClient    event__get_client_handle(u8 iEvent) const;
+        gos::Socket         event__get_ext_socket1_handle(u8 iEvent) const;
+		gos::FSWatcher*		event__get_fsWather_handle(u8 iEvent) const;
 
-        //A seguito di un evento "evt_client_has_data_avail" (vedi wait()), chiamare questa fn per flushare i dati.
+
+
+        //A seguito di un evento "client_has_data_avail" (vedi wait()), chiamare questa fn per flushare i dati.
         //Nel caso in cui tra i dati letti ci fossero dei messaggi utili, il loro payload viene messi in out_buffer.
         //
         //Eventuali messaggi di controllo (come previsti per es dal protocollo websocket), vengono gestiti internamente in totale
@@ -112,7 +117,8 @@ namespace gos
         HSokServerClient    client_getByIndex (u32 i) const                             { return clientList(i); }
 
     private:
-        static const u32    EVENT_USER_PARAM_IS_EXTERNAL_SOCKET1   = 0xFFFFFFFD;
+        static constexpr u32    EVENT_USER_PARAM_IS_EXTERNAL_SOCKET1  	= 0xFFFFFFFD;
+		static constexpr u32    EVENT_USER_PARAM_IS_FSW1				= 0xFFFFFFFC;
 
         enum eClientType
         {
@@ -124,7 +130,7 @@ namespace gos
     private:
 		struct sDataForEvent_event
 		{
-			gos::Event         *osEvent;
+			gos::Signal		osEvent;
 			u32				userParam;
 		};
 
@@ -144,12 +150,19 @@ namespace gos
 			gos::Socket        sok;
 		};
 
+		struct sDataForEvent_fsw
+		{
+			gos::FSWatcher	*fsw;
+			u32			userParam;
+		};		
+
         union uEventData
         {
 			sDataForEvent_event		        if_event;
             sDataForEvent_msgQ              if_msgQ;
 			sDataForEvent_socket	        if_socket;
             sDataForEvent_externalSocket1   if_externalSok1;
+			sDataForEvent_fsw				if_fsw;
         };
 
         struct sEvent

@@ -81,8 +81,8 @@ u32 platform::systeminfo_getNumOfCPUCore()                                      
 u64 platform::getTimeNow_usec()
 {
     struct timespec now;
-    //clock_gettime (CLOCK_MONOTONIC_RAW, &now);
-    clock_gettime (CLOCK_PROCESS_CPUTIME_ID, &now);
+    clock_gettime (CLOCK_MONOTONIC_RAW, &now);
+    //clock_gettime (CLOCK_PROCESS_CPUTIME_ID, &now);
     return (now.tv_sec * 1000000 + now.tv_nsec / 1000);
 }
 
@@ -308,7 +308,7 @@ bool platform::NET_getMACAddress (gos::MacAddress *outMAC, gos::IPv4 *outIP)
 }
 
 //***********************************
-u32 platform::getCurrentThreadID()
+u32 platform::get_current_threadID()
 {
     //pid_t tid = gettid();
     return static_cast<u32>(gettid());

@@ -7,9 +7,9 @@
 int main()
 {
     gos::sGOSInit init;
-    init.memory_setDefaultForGame();
+    init.memory__set_default_for_games();
     
-    init.setLogMode (gos::sGOSInit::eLogMode::both_console_and_file);
+    init.set_log_mode (gos::sGOSInit::eLogMode::both_console_and_file);
 	if (!gos::init (init, "gosEngine"))
 		return -1;
 
@@ -19,8 +19,8 @@ int main()
         if (!engine.setup (900, 400, "test engine"))
             return -2;
 
-        if (!engine.asset_build())  return -3;
-        //if (!engine.asset_rebuildAll())  return -3;
+        //if (!engine.asset_build())  return -3;
+        if (!engine.asset_rebuildAll())  return -3;
 
 
         if (engine.setup_renderPipe())

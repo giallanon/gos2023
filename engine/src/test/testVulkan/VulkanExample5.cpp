@@ -19,11 +19,11 @@ VulkanExample5::VulkanExample5()
 void VulkanExample5::virtual_explain()
 {
     gos::logger::log ("Marching cube\n");
-    gos::logger::incIndent();
+    gos::logger::inc_indent();
     gos::logger::log ("LMB accende i nodi\n");
     gos::logger::log ("RMB spegne i nodi\n");
     gos::logger::log ("ENTER crea il contorno\n");
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
 }
 
 

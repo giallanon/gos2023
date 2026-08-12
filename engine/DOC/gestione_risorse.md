@@ -12,7 +12,7 @@ Ogni risorsa creata dall'engine è associata ad un Handle sul quale si possono u
 	Vuol dire che il Loader ha finito il suo lavoro, ha comunicato all'engine la cosa, ma l'engine non ha ancora processato il messaggio e quindi
 	per un utilizzatore esterno, la risorsa non e' ancora dispoibile all'uso
 	 
--	handle ha un ResUID che può essere invalido se la risorsa non è stata caricata da un asset
+-	handle ha un ResUID che puo' essere invalido se la risorsa non è stata caricata da un asset
 	
 -	il handle "mappa" una zona di memoria fissa e mai spostabile nella quale ci sono le info della risorsa che handle rappresenta.
 	Ogni risorsa ha un campo "BaseResHandle brh;" (che contiene lo stato della risorsa) ed un campo "data" (che dipende dal tipo di risorsa e contiene in effetti i dati specifici della risorsa)

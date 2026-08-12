@@ -12,7 +12,7 @@ namespace gos
 	*	Espone dei metodi generici (read, write, close) che le classi derivate devono implementare
     *	in modo da astrarre la "fisicità" del dispositivo di comunicazione dal suo funzionamento logico.
     *
-    *   La read() legge dal dispositivo e bufferizza in [bufferR] il quale può espandersi fino a [maxSizeOfReadBuffer]
+    *   La read() legge dal dispositivo e bufferizza in [bufferR] il quale puo' espandersi fino a [maxSizeOfReadBuffer]
 	*/
 	class IProtocolChannel
 	{

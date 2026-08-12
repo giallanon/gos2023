@@ -35,7 +35,7 @@ void testTCP()
     //handshake
     gos::logger::log ("handshake\n");
     gos::ProtocolConsole protocol (gos::getSysHeapAllocator(), 1024);
-    if (!protocol.handshake_clientSend (&channel, gos::logger::getSystemLogger()))
+    if (!protocol.handshake_clientSend (&channel, gos::logger::get_system_logger()))
     {
             gos::logger::err ("unable to handshake\n");
             return;
@@ -69,8 +69,8 @@ void runAllTest()
 int main(int argc, const char **argv)
 {
     gos::sGOSInit init;
-    init.memory_setDefaultForNonGame();
-    //init.writableFolder_setMode (gos::sGOSInit::eWritableFolder::inUserFolder);
+    init.memory__set_default_for_NON_games();
+    //init.writableFolder_set_mode (gos::sGOSInit::eWritableFolder::inUserFolder);
     if (!gos::init (init, "testKernel"))
         return 1;
 

@@ -91,20 +91,29 @@ namespace gos
 	 */
 	namespace logger
 	{
-		Logger*	getSystemLogger();
-        void	incIndent();
-		void	decIndent();
+		Logger*	get_system_logger();
+        void	inc_indent();
+		void	dec_indent();
 
+		//log con livello 5
         void	log (const char *format, ...);
         void	log (const eTextColor col, const char *format, ...);
+
+		//log con livello 3
+		void	log_3 (const char *format, ...);
+        void	log_3 (const eTextColor col, const char *format, ...);
+
+		//log con livello 6
+		void	log_7 (const char *format, ...);
+        void	log_7 (const eTextColor col, const char *format, ...);
 		
 		void	err (const char *format, ...);
 				// err() setta anche il global error chiamando gos::err::add()
 
 		void	verbose (const char *format, ...);
 		void	warn (const char *format, ...);
-        void	logWithPrefix (const char *prefix, const char *format, ...);
-        void	logWithPrefix (const eTextColor col, const char *prefix, const char *format, ...);
+        void	log_with_prefix (u8 level, const char *prefix, const char *format, ...);
+        void	log_with_prefix (u8 level, const eTextColor col, const char *prefix, const char *format, ...);
 	} //namespace logger
 
 
@@ -241,27 +250,28 @@ namespace gos
     namespace thread
     {
 		//queste 2 macro sono solo degli alias. Mi piacciono perche' nel codice sono molto piu' evidenti rispetto ad usare la normale chiamata alla fn
-		#define MUTEX_LOCK(mutex) 	gos::thread::mutexLock(mutex); 
-		#define MUTEX_UNLOCK(mutex) gos::thread::mutexUnlock(mutex); 
+		#define MUTEX_LOCK(mutex) 	gos::thread::mutex_lock(mutex); 
+		#define MUTEX_UNLOCK(mutex) gos::thread::mutex_unlock(mutex); 
 
-        inline void    mutexCreate (gos::Mutex *m)      										{ platform::mutexCreate (&m->osm); }
-        inline void    mutexDestroy (gos::Mutex &m)     										{ platform::mutexDestroy (&m.osm); }
-        inline bool    mutexTryLock (gos::Mutex &m)     										{ return platform::mutexTryLock (&m.osm); }
-        inline bool    mutexLock (gos::Mutex &m)        										{ return platform::mutexLock (&m.osm); }
-        inline void    mutexUnlock (gos::Mutex &m)      										{ platform::mutexUnlock (&m.osm); }
+        inline void    mutex_create (gos::Mutex *m)      										{ platform::mutex_create (&m->osm); }
+        inline void    mutex_destroy (gos::Mutex &m)     										{ platform::mutex_destroy (&m.osm); }
+        inline bool    mutex_try_lock (gos::Mutex &m)     										{ return platform::mutex_try_lock (&m.osm); }
+        inline bool    mutex_lock (gos::Mutex &m)        										{ return platform::mutex_lock (&m.osm); }
+        inline void    mutex_unlock (gos::Mutex &m)      										{ platform::mutex_unlock (&m.osm); }
 
         
-		inline bool     eventCreate (gos::Event *out_ev)										{ return platform::eventCreate (&out_ev->osEvt); }
-		inline void     eventDestroy (gos::Event &ev)											{ platform::eventDestroy (ev.osEvt); }
-		inline bool		eventCompare (const gos::Event &a, const gos::Event &b)					{ return platform::eventCompare(a.osEvt, b.osEvt); }
-		inline void     eventFire (const gos::Event &ev)										{ platform::eventFire (ev.osEvt); }
-		inline bool     eventWait (const gos::Event &ev, u32 timeoutMSec)						{ return platform::eventWait (ev.osEvt, timeoutMSec); }
-		inline void     eventSetInvalid (gos::Event &ev)										{ platform::eventSetInvalid (ev.osEvt); }
-		inline bool		eventIsInvalid (const gos::Event &ev)									{ return platform::eventIsInvalid (ev.osEvt); }
+		inline bool     signal_create (gos::Signal *out_ev)										{ return platform::signal_create (&out_ev->osEvt); }
+		inline void     signal_destroy (gos::Signal &ev)											{ platform::signal_destroy (ev.osEvt); }
+		inline bool		signal_compare (const gos::Signal &a, const gos::Signal &b)				{ return platform::signal_compare(a.osEvt, b.osEvt); }
+		inline void     signal_fire (const gos::Signal &ev)										{ platform::signal_fire (ev.osEvt); }
+		inline bool     signal_wait (const gos::Signal &ev, u32 timeoutMSec)						{ return platform::signal_wait (ev.osEvt, timeoutMSec); }
+		inline void     signal_set_invalid (gos::Signal &ev)										{ platform::signal_set_invalid (ev.osEvt); }
+		inline bool		signal_is_invalid (const gos::Signal &ev)								{ return platform::signal_is_invalid (ev.osEvt); }
+		inline bool		signal_is_valid (const gos::Signal &ev)									{ return !platform::signal_is_invalid (ev.osEvt); }
 
         eThreadError    create (GOSThreadHandle *out_hThread, GOS_ThreadMainFunction threadFunction, void *userParam, u16 stackSizeInKb=2048);
-        void            waitEnd (GOSThreadHandle &hThread);
-		inline u32		getCurrentThreadID()													{ return platform::getCurrentThreadID(); }
+        void            wait_end (GOSThreadHandle &hThread);
+		inline u32		get_current_threadID()													{ return platform::get_current_threadID(); }
 
     } // namespace thread
 

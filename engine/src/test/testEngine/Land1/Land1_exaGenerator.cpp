@@ -406,7 +406,7 @@ bool ExaGenerator::try_remove_edge (const sEdgeToRemove &edge)
 void ExaGenerator::simplify_90()
 {
 	// logger::log ("simplify_90\n");
-	// logger::incIndent();
+	// logger::inc_indent();
 	// logger::log ("tris:%d, quad:%d\n", trisList.getNElem(), quadList.getNElem());
 	const u32 tris_limit = (trisList.getNElem() * 20) / 60;
 	const u32 max_consecutive_fail = trisList.getNElem() / 2;
@@ -426,7 +426,7 @@ void ExaGenerator::simplify_90()
 	}
 
 	// logger::log ("tris:%d, quad:%d\n", trisList.getNElem(), quadList.getNElem());
-	// logger::decIndent();
+	// logger::dec_indent();
 }
 
 //***************************************

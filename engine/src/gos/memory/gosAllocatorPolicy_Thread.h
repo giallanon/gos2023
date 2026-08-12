@@ -24,11 +24,11 @@ namespace gos
     class AllocPolicy_Thread_Safe
     {
     public:
-                AllocPolicy_Thread_Safe ()						{ gos::thread::mutexCreate(&mutex); }
-                ~AllocPolicy_Thread_Safe ()						{ gos::thread::mutexDestroy(mutex); }
+                AllocPolicy_Thread_Safe ()						{ gos::thread::mutex_create(&mutex); }
+                ~AllocPolicy_Thread_Safe ()						{ gos::thread::mutex_destroy(mutex); }
 
-        void	lock ()	const									{ gos::thread::mutexLock(mutex); }
-        void	unlock () const									{ gos::thread::mutexUnlock(mutex); }
+        void	lock ()	const									{ gos::thread::mutex_lock(mutex); }
+        void	unlock () const									{ gos::thread::mutex_unlock(mutex); }
         bool	isThreadSafe () const							{ return true; }
 
     private:

@@ -5,7 +5,7 @@
 
 
 //*******************************************************
-bool platform::eventCreate (OSEvent *out_ev)
+bool platform::signal_create (OSEvent *out_ev)
 {
     out_ev->evfd = eventfd(0, EFD_NONBLOCK);
     if (out_ev->evfd == -1)
@@ -32,7 +32,7 @@ bool platform::eventCreate (OSEvent *out_ev)
 }
 
 //*******************************************************
-void platform::eventDestroy (OSEvent &ev)
+void platform::signal_destroy (OSEvent &ev)
 {
     ::close(ev.evfd);
     ::close(ev.h);
@@ -40,7 +40,7 @@ void platform::eventDestroy (OSEvent &ev)
 
 
 //*******************************************************
-void platform::eventFire (const OSEvent &ev)
+void platform::signal_fire (const OSEvent &ev)
 {
     uint64_t val = 1;
     while(1)
@@ -60,7 +60,7 @@ void platform::eventFire (const OSEvent &ev)
 }
 
 //*******************************************************
-bool platform::eventWait (const OSEvent &ev, u32 timeout_msec)
+bool platform::signal_wait (const OSEvent &ev, u32 timeout_msec)
 {
     /*struct epoll_event events;
     if (epoll_pwait(ev.h, &events, 1, timeoutMSec, NULL) <= 0)

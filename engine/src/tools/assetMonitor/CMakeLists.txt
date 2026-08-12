@@ -1,12 +1,12 @@
 #[[====================================================
 #
-#  PROJECT: assetBuilder2
+#  PROJECT: assetMonitor
 #
 =====================================================]]
 cmake_minimum_required(VERSION 4.00)
 
 #project name and version
-project(assetBuilder2 VERSION 1.0.0 LANGUAGES C CXX)
+project(assetMonitor VERSION 1.0.0 LANGUAGES C CXX)
 
 #====================================================
 # path di output di questo progetto

@@ -42,7 +42,7 @@ void Engine::unsetup()
 
 	//chiedo al thread di morire e aspetto che termini
 	thread::pushMsg (msgq_1W, MSG_FOR_LOADER_THREAD__DIE, 0);
-	thread::waitEnd (hThreadLoader);
+	thread::wait_end (hThreadLoader);
 
 	for (u8 i=0; i<4; i++)
 	{
@@ -155,7 +155,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 	params.ctx = &asset_ctx;
 	params.engine_allocator = this->allocator;
 	params.engine = this;
-	thread::eventCreate (&params.hEvent_started);
+	thread::signal_create (&params.hEvent_started);
 
 	eThreadError err = thread::create (&hThreadLoader, Engine::LoaderThread_mainFN, &params);
 	if (err != eThreadError::none)
@@ -237,12 +237,12 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 
 
 	//attendo che il loader-thread abbia segnalato che e' partito
-	if (!thread::eventWait (params.hEvent_started, 20000))
+	if (!thread::signal_wait (params.hEvent_started, 20000))
 	{
 		logger::err ("Engine::setup() => error waiting for thread to start\n");
 		return false;
 	}
-	thread::eventDestroy (params.hEvent_started);
+	thread::signal_destroy (params.hEvent_started);
 
 	handle_texture_bianca.setInvalid();
 	return true;
@@ -477,7 +477,7 @@ bool Engine::asset_rebuildAll()
 {
 	asset2::dbcontext_close (asset_ctx);
 	gos::asset2::Builder builder (gpu);
-	const bool ret = builder.rebuildAll (GOS_ENGINE__ASSET_HUB_PATH, true);
+	const bool ret = builder.rebuild_all (GOS_ENGINE__ASSET_HUB_PATH, true);
 	asset2::dbcontext_open (GOS_ENGINE__ASSET_HUB_PATH, true, &asset_ctx);
 	return ret;
 }
@@ -1169,7 +1169,7 @@ bool Engine::internal__model_on_loadCallback (void *callback_dataIN)
 	res::Model3d *res_model = reinterpret_cast<res::Model3d*>(callback_data->res);
 
 	asset_logger->log ("internal__model_on_loadCallback [%08X]\n", res_model->_descr.handle.viewAsU32());
-	asset_logger->incIndent();
+	asset_logger->inc_indent();
 
 	gos::BufferR reader;
 	reader.setup (buffer, fsize);
@@ -1215,7 +1215,7 @@ bool Engine::internal__model_on_loadCallback (void *callback_dataIN)
 		res__scheduleLoadIfNeeded (res, 0);
 	}
 
-	asset_logger->decIndent();
+	asset_logger->dec_indent();
 	return ret;
 }
 
@@ -1245,11 +1245,11 @@ bool Engine::modelinst_create (ENGModel3d handle_modelSRC, ENGModel3dInst *out_h
 	}
 
 	//modelSRC diventa mio figlio e io divento uno dei suoi padri
-	asset_logger->incIndent();
+	asset_logger->inc_indent();
 		res__addChild (&res->_descr, res_modelSRC);
 		res_modelSRC->refCount++;
 		res__printInfo(res_modelSRC, "refcount++");
-	asset_logger->decIndent();
+	asset_logger->dec_indent();
 
 	return true;
 }
@@ -1283,7 +1283,7 @@ bool Engine::internal__modelinst_on_loadCallback (void *callback_dataIN)
 
 	bool ret = false;
 	asset_logger->log ("internal__modelinst_on_loadCallback [%08X]\n", res->_descr.handle.viewAsU32());
-	asset_logger->incIndent();
+	asset_logger->inc_indent();
 	{
 		//mio figlio e' un Model
 		assert (NULL != res->_descr.figli);
@@ -1347,7 +1347,7 @@ bool Engine::internal__modelinst_on_loadCallback (void *callback_dataIN)
 			}
 		}
 	}
-	asset_logger->decIndent();
+	asset_logger->dec_indent();
 	return ret;
 }
 

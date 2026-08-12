@@ -24,7 +24,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL GOS_vulkanDebugCallback (VkDebugUtilsMessa
     else
         sprintf_s (prefix, sizeof(prefix), "VULKAN [unknown]=> ");
 
-    gos::logger::logWithPrefix (eTextColor::magenta, prefix, "%s\n\n", pCallbackData->pMessage);
+    gos::logger::log_with_prefix (Logger::LEVEL__WARN, eTextColor::magenta, prefix, "%s\n\n", pCallbackData->pMessage);
     return VK_FALSE;
 }
 
@@ -61,7 +61,7 @@ bool GPU::shader_compile (const char *shaderSRCFile, const char *shaderStage, co
         sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s %s -g -O0 -o %s 2>&1",  shaderStage, defineList, shaderSRCFile, shaderDSTFile);
     else
         sprintf_s (cmd, sizeof(cmd), "glslc -fshader-stage=%s --target-env=vulkan1.3 %s %s -O -o %s 2>&1",  shaderStage, defineList, shaderSRCFile, shaderDSTFile);
-    //gos::logger::log ("%s\n", cmd);
+    //gos::logger::log_3 ("%s\n", cmd);
 
     char *result;
     u32 len;
@@ -102,8 +102,8 @@ void GPU::deinit()
     if (NULL == allocator)
         return;
 
-    gos::logger::log ("GPU::deinit()\n");
-    gos::logger::incIndent();
+    gos::logger::log_3 ("GPU::deinit()\n");
+    gos::logger::inc_indent();
 
         //delete dei Sampler
         {
@@ -125,7 +125,7 @@ void GPU::deinit()
         priv_deinitandleLists();
         priv_deinitVulkan();
         //priv_deinitWindowSystem();
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
 
     GOSDELETE(gos::getSysHeapAllocator(), allocator);
     allocator = NULL;
@@ -136,8 +136,8 @@ bool GPU::init (GOSWinHandle mainWin, bool vSyncIN)
 {
     vSync = vSyncIN;
 
-    gos::logger::log ("GPU::init\n");
-    gos::logger::incIndent();
+    gos::logger::log_3 ("GPU::init\n");
+    gos::logger::inc_indent();
 
     //Creo un allocatore dedicato per la GPU
     GOSGPUMemAllocatorTS *gpuAllocator = GOSNEW(gos::getSysHeapAllocator(), GOSGPUMemAllocatorTS)("GPU");
@@ -187,10 +187,10 @@ bool GPU::init (GOSWinHandle mainWin, bool vSyncIN)
 
     //fine
     if (bSuccess)
-        gos::logger::log (eTextColor::green, "GPU::init => OK\n");
+        gos::logger::log_3 (eTextColor::green, "GPU::init => OK\n");
     else
         gos::logger::err ("GPU::init => failed\n");
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
     
     return bSuccess;
 }
@@ -198,7 +198,7 @@ bool GPU::init (GOSWinHandle mainWin, bool vSyncIN)
 //**********************************************************
 bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
 {
-    gos::logger::log ("GPU::priv_initVulkan()\n");
+    gos::logger::log_3 ("GPU::priv_initVulkan()\n");
     gos::Allocator *scrapAllocator = gos::getScrapAllocator();
 
     //creazione di Vulkan instance
@@ -265,13 +265,13 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
         }
         else
         {
-            gos::logger::log (eTextColor::green, "\nselected device is at index %d\n   gfxQ familyIndex=%d, count=%d\n   computeQ familyIndex=%d, count=%d\n   transferQ familyIndex=%d, count=%d\n",
+            gos::logger::log_3 (eTextColor::green, "\nselected device is at index %d\n   gfxQ familyIndex=%d, count=%d\n   computeQ familyIndex=%d, count=%d\n   transferQ familyIndex=%d, count=%d\n",
                 physicalDevInfo.devIndex,
                 physicalDevInfo.queue_gfx.familyIndex,      physicalDevInfo.queue_gfx.count,
                 physicalDevInfo.queue_compute.familyIndex,  physicalDevInfo.queue_compute.count,
                 physicalDevInfo.queue_transfer.familyIndex, physicalDevInfo.queue_compute.count);
         }
-        gos::logger::log("\n");
+        gos::logger::log_3("\n");
 
 
         //creazione del device logico di vulkan
@@ -280,7 +280,7 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
             gos::logger::err ("can't create a logical device\n");
             return false;
         }
-        gos::logger::log("\n");
+        gos::logger::log_3("\n");
     }
 
     /*
@@ -303,18 +303,18 @@ bool GPU::priv_initVulkan (eVulkanVersion vulkanVersion)
             gos::logger::err ("can't create swap chain\n");
             return false;
         }    
-        gos::logger::log("\n");
+        gos::logger::log_3("\n");
     }
 
     //tutto ok
-    gos::logger::log("\n");
+    gos::logger::log_3("\n");
     return true;
 }
 
 //**********************************************************
 void  GPU::priv_deinitVulkan()
 {
-    gos::logger::log ("GPU::priv_deinitVulkan()\n");
+    gos::logger::log_3 ("GPU::priv_deinitVulkan()\n");
     if (VK_NULL_HANDLE != vkInstance)
     {
         vulkan.swapchain_delete(swapchain);
@@ -338,7 +338,7 @@ void  GPU::priv_deinitVulkan()
 //**********************************************************
 bool GPU::priv_initHandleLists()
 {
-    gos::logger::log ("GPU::priv_initHandleLists()\n");
+    gos::logger::log_3 ("GPU::priv_initHandleLists()\n");
     shaderList.setup (allocator);
 
     viewportlList.setup (allocator);
@@ -369,7 +369,7 @@ bool GPU::priv_initHandleLists()
 //**********************************************************
 void  GPU::priv_deinitandleLists()
 {
-    gos::logger::log ("GPU::priv_deinitandleLists()\n");
+    gos::logger::log_3 ("GPU::priv_deinitandleLists()\n");
     
     shaderList.unsetup();
     
@@ -458,7 +458,7 @@ bool GPU::swapChain_acquireImage (gos::gpu::SwapchainImg *out, u64 timeout_ns, V
 
         if (0 == timeToRecreateSwapchain_msec)
         {
-            gos::logger::log (eTextColor::yellow, "GPU::swapChain_acquireImage() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
+            gos::logger::log_3 (eTextColor::yellow, "GPU::swapChain_acquireImage() => vkAcquireNextImageKHR() => %s\n", string_VkResult(result));
             timeToRecreateSwapchain_msec = timeNow_msec + 1000;
         }
         return true;
@@ -493,8 +493,8 @@ bool GPU::priv_swapChain_recreate ()
 
     bSwapChainRecreatedDuringThisFrame = true;
     swapchainAutoID++;
-    gos::logger::log (eTextColor::green, "GPU::swapChain_recreate()\n");
-    gos::logger::incIndent();
+    gos::logger::log_3 (eTextColor::green, "GPU::swapChain_recreate()\n");
+    gos::logger::inc_indent();
 
     int width = 0;
     int height = 0;
@@ -502,7 +502,7 @@ bool GPU::priv_swapChain_recreate ()
     glfwGetFramebufferSize (glfWin, &width, &height);
     while (width == 0 || height == 0) 
     {
-        gos::logger::log ("windows size is weird (w=%d, h=%d), waiting...\n", width, height);
+        gos::logger::log_3 ("windows size is weird (w=%d, h=%d), waiting...\n", width, height);
 
         glfwWaitEvents();
         //glfwGetWindowSize (glfWin, &width, &height);
@@ -510,7 +510,7 @@ bool GPU::priv_swapChain_recreate ()
     }
 
     //attendo che Vulkan sia in idle
-    gos::logger::log ("target windows size is (w=%d, h=%d), waiting vulkan idle...\n", width, height);
+    gos::logger::log_3 ("target windows size is (w=%d, h=%d), waiting vulkan idle...\n", width, height);
     bool ret = true;
     vulkan.waitIdle();
 
@@ -571,14 +571,14 @@ bool GPU::priv_swapChain_recreate ()
     }
 
     //fine
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
     return ret;  
 }
 
 //************************************
 void  GPU::_internal__onWindowResized (int w, int h)
 {
-    gos::logger::log ("window resized, new size (%d,%d)\n", w,h);
+    gos::logger::log_3 ("window resized, new size (%d,%d)\n", w,h);
     this->timeToRecreateSwapchain_msec = gos::getTimeSinceStart_msec() + 500;
 }
 
@@ -589,7 +589,7 @@ void  GPU::toggleFullscreen()
         return;
 
     gos::logger::log (eTextColor::yellow, "toggleFullscreen\n");
-    gos::logger::incIndent();
+    gos::logger::inc_indent();
 
     GLFWwindow *glfWin = mainWindow.getGLF();
     GLFWmonitor *monitor = glfwGetWindowMonitor(glfWin);
@@ -610,7 +610,7 @@ void  GPU::toggleFullscreen()
         glfwSetWindowMonitor(glfWin, NULL, mainWindow.storedX, mainWindow.storedY, mainWindow.storedW, mainWindow.storedH, 0);
     }
 
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
 }
 
 //************************************
@@ -1075,7 +1075,7 @@ bool GPU::cmdBuffer_create (eGPUQueueFamily whichQ, GPUCmdBufferHandle *out_hand
     VkCommandBuffer vkCmdBufferHandle;
     if (!vulkan.commandBuffer_create (whichQ, threadID, &vkPool, &vkCmdBufferHandle))
     {
-        gos::logger::log ("GPU::cmdBuffer_create() => failed\n");
+        gos::logger::err ("GPU::cmdBuffer_create() => failed\n");
         return false;
     }
 

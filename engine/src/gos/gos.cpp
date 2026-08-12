@@ -120,6 +120,7 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 		break;
 	}
 
+	gosGlobals.logger->set_visible_level (init._min_visible_log_level);
 	gos::logger::log (eTextColor::white, "%s is starting...\n", appName);
 
 	gosGlobals.appName = reinterpret_cast<char*>(gos::string::utf8::allocStr (gos::getSysHeapAllocator(), appName));
@@ -162,7 +163,7 @@ void gos::deinit()
 
 	if (NULL != logger)
 	{
-		logger->log ("FIN\n\n\n\n");
+		logger->verbose ("FIN\n\n\n\n");
 		delete logger;
 	}
 }
@@ -179,25 +180,30 @@ u32 gos::randomU32(u32 iMax)						{ return gosGlobalsRnd.getU32(iMax); }
 f32 gos::random (f32 vMin, f32 vMax)				{ const f32 t = gosGlobalsRnd.get01(); return vMin + (vMax-vMin) * t; }
 
 //******************************************
-gos::Logger* gos::logger::getSystemLogger()																{ return gosGlobals.logger; }
-void gos::logger::incIndent()																			{ gosGlobals.logger->incIndent(); }
-void gos::logger::decIndent()																			{ gosGlobals.logger->decIndent(); }
-void gos::logger::log (const char *format, ...)															{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (format, argptr); va_end (argptr); }
-void gos::logger::log (const eTextColor col, const char *format, ...)                                   { va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (col, format, argptr); va_end (argptr); }
-void gos::logger::logWithPrefix (const char *prefix, const char *format, ...)                           { va_list argptr; va_start (argptr, format); gosGlobals.logger->vlogWithPrefix (prefix, format, argptr); va_end (argptr); }
-void gos::logger::logWithPrefix (const eTextColor col, const char *prefix, const char *format, ...)     { va_list argptr; va_start (argptr, format); gosGlobals.logger->vlogWithPrefix (col, prefix, format, argptr); va_end (argptr); }
-void gos::logger::verbose (const char *format, ...)														{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlogWithPrefix (eTextColor::darkYellow, "VERBOSE=>", format, argptr); va_end (argptr); }
-void gos::logger::warn (const char *format, ...)														{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlogWithPrefix (eTextColor::magenta, "WARNING=>", format, argptr); va_end (argptr); }
+gos::Logger* gos::logger::get_system_logger()																{ return gosGlobals.logger; }
+void gos::logger::inc_indent()																			{ gosGlobals.logger->inc_indent(); }
+void gos::logger::dec_indent()																			{ gosGlobals.logger->dec_indent(); }
+void gos::logger::log (const char *format, ...)															{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (Logger::LEVEL__DEFAULT, format, argptr); va_end (argptr); }
+void gos::logger::log (const eTextColor col, const char *format, ...)                                   { va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (Logger::LEVEL__DEFAULT, col, format, argptr); va_end (argptr); }
+void gos::logger::log_3 (const char *format, ...)														{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (3, format, argptr); va_end (argptr); }
+void gos::logger::log_3 (const eTextColor col, const char *format, ...)                             	{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (3, col, format, argptr); va_end (argptr); }
+void gos::logger::log_7 (const char *format, ...)														{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (7, format, argptr); va_end (argptr); }
+void gos::logger::log_7 (const eTextColor col, const char *format, ...)                             	{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (7, col, format, argptr); va_end (argptr); }
+
+void gos::logger::log_with_prefix (u8 level, const char *prefix, const char *format, ...)                           { va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog_with_prefix (level, prefix, format, argptr); va_end (argptr); }
+void gos::logger::log_with_prefix (u8 level, const eTextColor col, const char *prefix, const char *format, ...)     { va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog_with_prefix (level, col, prefix, format, argptr); va_end (argptr); }
+void gos::logger::verbose (const char *format, ...)														{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog_with_prefix (Logger::LEVEL__VERBOSE, eTextColor::darkYellow, "VERBOSE=>", format, argptr); va_end (argptr); }
+void gos::logger::warn (const char *format, ...)														{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog_with_prefix (Logger::LEVEL__WARN, eTextColor::magenta, "WARNING=>", format, argptr); va_end (argptr); }
 void gos::logger::err (const char *format, ...)
 {
 	va_list argptr; 
 	va_start (argptr, format); 
-	gosGlobals.logger->vlogWithPrefix (eTextColor::red, "ERROR=> ", format, argptr);
+	gosGlobals.logger->vlog_with_prefix (Logger::LEVEL__ERR, eTextColor::red, "ERROR=> ", format, argptr);
 	va_end (argptr);
 
 	//aggiungo l'errore sul globalErr
 	va_start (argptr, format); 
-	gosGlobals.errHandler->vadd (gos::thread::getCurrentThreadID(), format, argptr);
+	gosGlobals.errHandler->vadd (gos::thread::get_current_threadID(), format, argptr);
 	va_end (argptr);
 
 	DBGBREAK;
@@ -501,7 +507,7 @@ bool gos::runShellScriptAndStoreResult (const char *cmdLine, gos::Allocator *all
 //******************************************
 void gos::err::clear()
 {
-	gosGlobals.errHandler->clear (gos::thread::getCurrentThreadID());
+	gosGlobals.errHandler->clear (gos::thread::get_current_threadID());
 }
 
 //******************************************
@@ -509,20 +515,20 @@ void gos::err::add (const char *format, ...)
 {
     va_list argptr; 
     va_start (argptr, format); 
-	gosGlobals.errHandler->vadd (gos::thread::getCurrentThreadID(), format, argptr);
+	gosGlobals.errHandler->vadd (gos::thread::get_current_threadID(), format, argptr);
     va_end (argptr);     
 }
 
 //******************************************
 u32 gos::err::anyError()
 {
-	return gosGlobals.errHandler->getErrCount(gos::thread::getCurrentThreadID());
+	return gosGlobals.errHandler->getErrCount(gos::thread::get_current_threadID());
 }
 
 //******************************************
 const char* gos::err::getErrByIndex (u32 i)
 {
-	return gosGlobals.errHandler->getErrByIndex(gos::thread::getCurrentThreadID(), i);
+	return gosGlobals.errHandler->getErrByIndex(gos::thread::get_current_threadID(), i);
 }
 
 //******************************************

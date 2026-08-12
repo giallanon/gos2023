@@ -252,7 +252,8 @@ enum class eWaitEventOrigin : u8
 	osevent = 2,
 	serialPort = 3,
 	msgQ = 4,
-	deleted = 5
+	fsWatcher = 5,
+	deleted = 6
 };
 
 enum class eAliasPathMode : u8
@@ -478,29 +479,26 @@ namespace gos
     public:
                 sGOSInit()                                                  
                 { 
-                    setLogMode(eLogMode::only_console); 
-                    _memory.setDefaultForGame(); 
+                    set_log_mode (eLogMode::only_console); 
+                    memory__set_default_for_games();
                     _writableFolder.reset();
                 }
         
-        void    setLogMode (eLogMode m)                                     { _logMode=m; }
+        void    set_log_mode (eLogMode m, u8 min_visible_log_level = 0)		{ _logMode=m; _min_visible_log_level=min_visible_log_level; }
 
-        void    memory_setDefaultForGame()                                  { _memory.setDefaultForGame(); }
-        void    memory_setDefaultForNonGame()                               { _memory.memory_setDefaultForNonGame(); }
-        void    memory_setStartingSizeOfDefaultHeap_MB (u32 mb)             { _memory.startingSizeOfDefaultHeapAllocator_MB = mb; }
-        void    memory_setStartingSizeOfScrapAllocator_MB (u32 mb)          { _memory.startingSizeOfScrapAllocator_MB = mb; }
+        void    memory__set_default_for_games()								{ _memory.startingSizeOfDefaultHeapAllocator_MB = 1024; _memory.startingSizeOfScrapAllocator_MB = 128; }
+        void    memory__set_default_for_NON_games()							{ _memory.startingSizeOfDefaultHeapAllocator_MB = 1;    _memory.startingSizeOfScrapAllocator_MB = 1; }
+        void    memory__set_starting_size_of_defaultHeap_MB (u32 mb)		{ _memory.startingSizeOfDefaultHeapAllocator_MB = mb; }
+        void    memory_set_starting_size_of_scrapAllocator_MB (u32 mb)		{ _memory.startingSizeOfScrapAllocator_MB = mb; }
 
-        void    writableFolder_setMode (eWritableFolder m)                  { _writableFolder.mode = m; }
-        void    writableFolder_setSuffix (const char *suff)                 { sprintf_s (_writableFolder.suffix, sizeof(_writableFolder.suffix), "%s", suff); }
+        void    writableFolder_set_mode (eWritableFolder m)					{ _writableFolder.mode = m; }
+        void    writableFolder_set_suffix (const char *suff)				{ sprintf_s (_writableFolder.suffix, sizeof(_writableFolder.suffix), "%s", suff); }
         
     public:
         struct sMemory
         {
-            u32         startingSizeOfDefaultHeapAllocator_MB;
-            u32         startingSizeOfScrapAllocator_MB;
-
-            void setDefaultForGame()                { startingSizeOfDefaultHeapAllocator_MB = 1024; startingSizeOfScrapAllocator_MB = 128; }
-            void memory_setDefaultForNonGame()      { startingSizeOfDefaultHeapAllocator_MB = 1;    startingSizeOfScrapAllocator_MB = 1; }
+			u32	startingSizeOfDefaultHeapAllocator_MB;
+            u32	startingSizeOfScrapAllocator_MB;
         };
 
         struct sWritableFolder
@@ -508,13 +506,14 @@ namespace gos
             eWritableFolder mode;
             char            suffix[32];
 
-            void reset() { mode = eWritableFolder::inTheAppFolder; memset (suffix, 0, sizeof(suffix)); }
+            void reset() 								{ mode = eWritableFolder::inTheAppFolder; memset (suffix, 0, sizeof(suffix)); }
         };
 
     public:
         eLogMode        _logMode;
         sMemory         _memory;
         sWritableFolder _writableFolder;
+		u8				_min_visible_log_level;
     };
 
     struct File
@@ -532,7 +531,7 @@ namespace gos
         platform::OSMutex osm;  //"OSMutex" e' dipendente dalla platform, per cui deve essere definito nel codice di platform
     };
 
-    struct Event
+    struct Signal
     {
         platform::OSEvent osEvt;  //"osEvt" e' dipendente dalla platform, per cui deve essere definito nel codice di platform
     };    

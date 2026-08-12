@@ -183,7 +183,7 @@ res::Descr* Engine::res__getOrCreateHandleFromAsset (asset2::UID uid, res::Handl
 	asset2::FastUIDList fastUIDList;
 	fastUIDList.setupWithBase (memblock, sizeof(memblock), gos::getScrapAllocator());
 
-	asset_logger->incIndent();
+	asset_logger->inc_indent();
 	asset2::asset_get_runtime_dependecies_list (asset_ctx, uid, false, &fastUIDList);
 	for (u32 i=0; i<fastUIDList.getNElem(); i++)
 	{
@@ -198,7 +198,7 @@ res::Descr* Engine::res__getOrCreateHandleFromAsset (asset2::UID uid, res::Handl
 		//child_handle diventa uno dei miei figli
 		res__addChild (res, child_res);
 	}
-	asset_logger->decIndent();
+	asset_logger->dec_indent();
 	return res;
 }
 
@@ -452,7 +452,7 @@ bool Engine::res__scheduleLoadIfNeeded (res::Descr *res, u64 timeout_msec)
 		res->refCount++;
 		res__set_status (res, res::eStatus::loading);
 
-		asset_logger->incIndent();
+		asset_logger->inc_indent();
 		res::HandleChain *p = res->figli;
 		while (p)
 		{
@@ -460,7 +460,7 @@ bool Engine::res__scheduleLoadIfNeeded (res::Descr *res, u64 timeout_msec)
 			res__getOrScheduleLoad(p->res->handle, &descr);
 			p = p->next;
 		}
-		asset_logger->decIndent();
+		asset_logger->dec_indent();
 
 		
 		//schedulo il load di me stesso
@@ -507,7 +507,7 @@ void Engine::res__do_destroy (res::Descr *res)
 	res__set_status (res, res::eStatus::notLoaded);
 
 	//se ho dei figli, faccio il release
-	asset_logger->incIndent();
+	asset_logger->inc_indent();
 	res::HandleChain *p = res->figli;
 	while (p)
 	{
@@ -516,7 +516,7 @@ void Engine::res__do_destroy (res::Descr *res)
 		res__freeHandleChain(p);
 		p = next;
 	}
-	asset_logger->decIndent();
+	asset_logger->dec_indent();
 
 	//elimino la lista dei miei padri, ma non c'e' bisogno di notificarli
 	//o di rimuovermi dalla lista dei loro figli perche' essendo io refCountato,

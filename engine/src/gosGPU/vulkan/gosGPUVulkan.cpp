@@ -24,21 +24,21 @@ static u32 toVulkanVersion (eVulkanVersion v)
 //*********************************************
 bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &requiredValidationLayerList, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion)
 {
-    gos::logger::log ("vulkanCreateInstance()\n");
-    gos::logger::incIndent();
+    gos::logger::log_3 ("vulkanCreateInstance()\n");
+    gos::logger::inc_indent();
 
 
     //recupero la versione di vulkan installata
     auto FN_vkEnumerateInstanceVersion = PFN_vkEnumerateInstanceVersion(vkGetInstanceProcAddr(nullptr, "vkEnumerateInstanceVersion"));
     if(FN_vkEnumerateInstanceVersion == nullptr)
-        gos::logger::log ("Installed Vulkan version is 1.0\n");
+        gos::logger::log_3 ("Installed Vulkan version is 1.0\n");
     else
     {
         uint32_t instanceVersion;
         FN_vkEnumerateInstanceVersion (&instanceVersion);
-        gos::logger::log ("Installed Vulkan version is %d.%d.%d\n", VK_API_VERSION_MAJOR(instanceVersion), VK_API_VERSION_MINOR(instanceVersion), VK_API_VERSION_PATCH(instanceVersion));
+        gos::logger::log_3 ("Installed Vulkan version is %d.%d.%d\n", VK_API_VERSION_MAJOR(instanceVersion), VK_API_VERSION_MINOR(instanceVersion), VK_API_VERSION_PATCH(instanceVersion));
     }
-    gos::logger::log ("Target Vulkan version is %d.%d.%d\n", VK_API_VERSION_MAJOR(toVulkanVersion(vulkanVersion)), VK_API_VERSION_MINOR(toVulkanVersion(vulkanVersion)), VK_API_VERSION_PATCH(toVulkanVersion(vulkanVersion)));
+    gos::logger::log_3 ("Target Vulkan version is %d.%d.%d\n", VK_API_VERSION_MAJOR(toVulkanVersion(vulkanVersion)), VK_API_VERSION_MINOR(toVulkanVersion(vulkanVersion)), VK_API_VERSION_PATCH(toVulkanVersion(vulkanVersion)));
 
 
     bool ret = true;
@@ -133,30 +133,30 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
 
     if (ret)
     {
-        gos::logger::log ("Creating vulkan instance with the following:\n");
-        gos::logger::incIndent();
-        gos::logger::log ("extensions (%d): ", createInfo.enabledExtensionCount);
+        gos::logger::log_3 ("Creating vulkan instance with the following:\n");
+        gos::logger::inc_indent();
+        gos::logger::log_3 ("extensions (%d): ", createInfo.enabledExtensionCount);
         for (u32 i=0; i<createInfo.enabledExtensionCount; i++)
-            gos::logger::log("[%s]  ", createInfo.ppEnabledExtensionNames[i]);
-        gos::logger::log("\n");
+            gos::logger::log_3("[%s]  ", createInfo.ppEnabledExtensionNames[i]);
+        gos::logger::log_3("\n");
 
-        gos::logger::log ("layers (%d): ", createInfo.enabledLayerCount);
+        gos::logger::log_3 ("layers (%d): ", createInfo.enabledLayerCount);
         for (u32 i=0; i<createInfo.enabledLayerCount; i++)
-            gos::logger::log("[%s]  ", createInfo.ppEnabledLayerNames[i]);
-        gos::logger::log("\n");
+            gos::logger::log_3("[%s]  ", createInfo.ppEnabledLayerNames[i]);
+        gos::logger::log_3("\n");
 
         VkResult result = vkCreateInstance(&createInfo, nullptr, out);
         if (VK_SUCCESS != result)
         {
             ret = false;
-            gos::logger::log (eTextColor::red, "ERROR: vkCreateInstance => %s\n", string_VkResult(result));
+            gos::logger::log_3 (eTextColor::red, "ERROR: vkCreateInstance => %s\n", string_VkResult(result));
         }
         else
-            gos::logger::log (eTextColor::green,"OK\n");
+            gos::logger::log_3 (eTextColor::green,"OK\n");
 
-        gos::logger::decIndent();
+        gos::logger::dec_indent();
     }
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
     return ret;
 }
 
@@ -164,8 +164,8 @@ bool gos::vulkanCreateInstance (VkInstance *out, const gos::StringList &required
 bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, const VkSurfaceKHR &vkSurfaceKHR, const gos::StringList &requiredExtensionList, eVulkanVersion vulkanVersion, sPhyDeviceInfo *out)
 {
     gos::Allocator *allocator = gos::getScrapAllocator();
-    gos::logger::log ("vulkanScanPhysicalDevices\n");
-    gos::logger::incIndent();
+    gos::logger::log_3 ("vulkanScanPhysicalDevices\n");
+    gos::logger::inc_indent();
     out->reset();
 
     //elenco dei device disponibili nel sistema
@@ -174,30 +174,30 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
     if (0 == nDevices)
     {
         gos::logger::err ("no devices found!\n");
-        gos::logger::decIndent();
+        gos::logger::dec_indent();
         return false;
     }
-    gos::logger::log ("found %d devices\n", nDevices);
+    gos::logger::log_3 ("found %d devices\n", nDevices);
     if (nDevices > 16)
         nDevices = 16;
     VkPhysicalDevice deviceList[16];
     vkEnumeratePhysicalDevices(vkInstance, &nDevices, deviceList);    
 
     //ne scelgo uno
-    gos::logger::incIndent();
+    gos::logger::inc_indent();
     for (u32 i=0; i<nDevices; i++)
     {
         //proprita' del device
         VkPhysicalDeviceProperties deviceProperties;
         vkGetPhysicalDeviceProperties(deviceList[i], &deviceProperties);
-        gos::logger::log ("dev name: %s\n", deviceProperties.deviceName);
-        gos::logger::log ("dev index: %d\n", i);
-        gos::logger::log ("dev type: %s\n", string_VkPhysicalDeviceType(deviceProperties.deviceType));
-        gos::logger::log ("dev api version is %d.%d.%d\n", VK_API_VERSION_MAJOR(deviceProperties.apiVersion), VK_API_VERSION_MINOR(deviceProperties.apiVersion), VK_API_VERSION_PATCH(deviceProperties.apiVersion));
+        gos::logger::log_3 ("dev name: %s\n", deviceProperties.deviceName);
+        gos::logger::log_3 ("dev index: %d\n", i);
+        gos::logger::log_3 ("dev type: %s\n", string_VkPhysicalDeviceType(deviceProperties.deviceType));
+        gos::logger::log_3 ("dev api version is %d.%d.%d\n", VK_API_VERSION_MAJOR(deviceProperties.apiVersion), VK_API_VERSION_MINOR(deviceProperties.apiVersion), VK_API_VERSION_PATCH(deviceProperties.apiVersion));
 
         if (deviceProperties.apiVersion < toVulkanVersion(vulkanVersion))
         {
-            gos::logger::log (eTextColor::red, "DISCARDED! does not mach minimun API version required\n");
+            gos::logger::log_3 (eTextColor::red, "DISCARDED! does not mach minimun API version required\n");
             continue;
         }
 
@@ -206,14 +206,14 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
         {
             if (deviceProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
             {
-                gos::logger::log (eTextColor::yellow, "WARN: this device is not VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, but it's the only one available(%s)\n", string_VkPhysicalDeviceType(deviceProperties.deviceType));
+                gos::logger::log_3 (eTextColor::yellow, "WARN: this device is not VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, but it's the only one available(%s)\n", string_VkPhysicalDeviceType(deviceProperties.deviceType));
             }
         }
         else
         {
             if (deviceProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
             {
-                gos::logger::log (eTextColor::red, "this device is not VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n");
+                gos::logger::log_3 (eTextColor::red, "this device is not VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n");
                 continue;
             }
         }
@@ -233,12 +233,12 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
             const u32 index = extList.find (identifier);
             if (u32MAX == index)
             {
-                gos::logger::log (eTextColor::yellow, "NOT GOOD: extension %s not available\n", identifier);
+                gos::logger::log_3 (eTextColor::yellow, "NOT GOOD: extension %s not available\n", identifier);
                 bIsGoodDevice = false;
             }
             else
             {
-                gos::logger::log (eTextColor::green, "extension %s is available\n", identifier);
+                gos::logger::log_3 (eTextColor::green, "extension %s is available\n", identifier);
             }
         }
 
@@ -256,15 +256,15 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
         sPhyDeviceInfo::sQueueInfo selectedQueue_transfer;
         if (bIsGoodDevice)
         {
-            gos::logger::log ("available family queues:\n");
-            gos::logger::incIndent();
+            gos::logger::log_3 ("available family queues:\n");
+            gos::logger::inc_indent();
             {
                 VkPhyDeviceQueueList list;
                 list.build(allocator, deviceList[i]);
                 for (u32 i2 = 0; i2 < list.getCount(); i2++)
                 {
-                    gos::logger::log ("queue family %d:\n", i2);
-                    gos::logger::incIndent();
+                    gos::logger::log_3 ("queue family %d:\n", i2);
+                    gos::logger::inc_indent();
                     list.printQueueFamilyInfo(i2);
 
                     //deve assolutamente supoprtare la fn di PRESENT
@@ -274,8 +274,8 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
                         vkGetPhysicalDeviceSurfaceSupportKHR (deviceList[i], i2, vkSurfaceKHR, &bIsSupportedKHR);
                         if (!bIsSupportedKHR)
                         {
-                            gos::logger::log (eTextColor::red, "does NOT support PRESENT to KHR surface\n");
-                            gos::logger::decIndent();
+                            gos::logger::log_3 (eTextColor::red, "does NOT support PRESENT to KHR surface\n");
+                            gos::logger::dec_indent();
                             continue;
                         }
                     }
@@ -328,7 +328,7 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
                         }
                     }
 
-                    gos::logger::decIndent();
+                    gos::logger::dec_indent();
                 }
 
                 //Per la transferQ... se non ne ho trovata una dedicata allora uso la GFX o la COMPUTER che
@@ -342,7 +342,7 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
                         selectedQueue_transfer = selectedQueue_compute;
                 }
             }
-            gos::logger::decIndent();
+            gos::logger::dec_indent();
         }
 
 
@@ -356,47 +356,47 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
             out->queue_transfer = selectedQueue_transfer;
         }
     }
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
 
 
     //recupero alcune props del device
     if (out->isValid())
     {
-        gos::logger::log ("vkGetPhysicalDeviceProperties\n");
-        gos::logger::incIndent();
+        gos::logger::log_3 ("vkGetPhysicalDeviceProperties\n");
+        gos::logger::inc_indent();
         vkGetPhysicalDeviceProperties (out->vkDev, &out->deviceProperties);
-        gos::logger::log ("maxMemoryAllocationCount: %d\n", out->deviceProperties.limits.maxMemoryAllocationCount);
-        gos::logger::log ("maxPushConstantsSize: %d\n", out->deviceProperties.limits.maxPushConstantsSize);
-        gos::logger::log ("maxSamplerAllocationCount: %d\n", out->deviceProperties.limits.maxSamplerAllocationCount);
-        gos::logger::log ("maxImageArrayLayers: %d\n", out->deviceProperties.limits.maxImageArrayLayers);
-        gos::logger::log ("maxTexelBufferElements: %d\n", out->deviceProperties.limits.maxTexelBufferElements);
-        gos::logger::log ("maxDescriptorSetSampledImages: %d\n", out->deviceProperties.limits.maxDescriptorSetSampledImages);
-        gos::logger::log ("minUniformBufferOffsetAlignment: %d\n", out->deviceProperties.limits.minUniformBufferOffsetAlignment);
-        gos::logger::log ("maxUniformBufferRange: %d\n", out->deviceProperties.limits.maxUniformBufferRange);
-        gos::logger::log ("minStorageBufferOffsetAlignment: %d\n", out->deviceProperties.limits.minStorageBufferOffsetAlignment);
-        gos::logger::log ("maxStorageBufferRange: %d\n", out->deviceProperties.limits.maxStorageBufferRange);
-        gos::logger::log ("nonCoherentAtomSize: %d\n", out->deviceProperties.limits.nonCoherentAtomSize);
-        gos::logger::decIndent();
+        gos::logger::log_3 ("maxMemoryAllocationCount: %d\n", out->deviceProperties.limits.maxMemoryAllocationCount);
+        gos::logger::log_3 ("maxPushConstantsSize: %d\n", out->deviceProperties.limits.maxPushConstantsSize);
+        gos::logger::log_3 ("maxSamplerAllocationCount: %d\n", out->deviceProperties.limits.maxSamplerAllocationCount);
+        gos::logger::log_3 ("maxImageArrayLayers: %d\n", out->deviceProperties.limits.maxImageArrayLayers);
+        gos::logger::log_3 ("maxTexelBufferElements: %d\n", out->deviceProperties.limits.maxTexelBufferElements);
+        gos::logger::log_3 ("maxDescriptorSetSampledImages: %d\n", out->deviceProperties.limits.maxDescriptorSetSampledImages);
+        gos::logger::log_3 ("minUniformBufferOffsetAlignment: %d\n", out->deviceProperties.limits.minUniformBufferOffsetAlignment);
+        gos::logger::log_3 ("maxUniformBufferRange: %d\n", out->deviceProperties.limits.maxUniformBufferRange);
+        gos::logger::log_3 ("minStorageBufferOffsetAlignment: %d\n", out->deviceProperties.limits.minStorageBufferOffsetAlignment);
+        gos::logger::log_3 ("maxStorageBufferRange: %d\n", out->deviceProperties.limits.maxStorageBufferRange);
+        gos::logger::log_3 ("nonCoherentAtomSize: %d\n", out->deviceProperties.limits.nonCoherentAtomSize);
+        gos::logger::dec_indent();
 
-        gos::logger::log ("GetPhysicalDeviceMemoryProperties\n");
-        gos::logger::incIndent();
+        gos::logger::log_3 ("GetPhysicalDeviceMemoryProperties\n");
+        gos::logger::inc_indent();
         vkGetPhysicalDeviceMemoryProperties (out->vkDev, &out->vkMemoryProperties);
     
         const VkPhysicalDeviceMemoryProperties *info = &out->vkMemoryProperties;
-        gos::logger::log ("memory heap count:%d\n", info->memoryHeapCount);
-        gos::logger::incIndent();
+        gos::logger::log_3 ("memory heap count:%d\n", info->memoryHeapCount);
+        gos::logger::inc_indent();
         for (u32 i = 0; i < info->memoryHeapCount; i++)
         {
             char temp[64];
             gos::string::format::memoryToKB_MB_GB (info->memoryHeaps[i].size, temp, sizeof(temp));
             //gos::string::format::U64(info->memoryHeaps[i].size, '.', temp, sizeof(temp));
-            gos::logger::log ("index:%d\n  size= %s, flags=0x%08X", i, temp, info->memoryHeaps[i].flags);
+            gos::logger::log_3 ("index:%d\n  size= %s, flags=0x%08X", i, temp, info->memoryHeaps[i].flags);
 
             if (((info->memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0))
-                gos::logger::log (", HEAP_DEVICE_LOCAL");
-            gos::logger::log ("\n");
+                gos::logger::log_3 (", HEAP_DEVICE_LOCAL");
+            gos::logger::log_3 ("\n");
 
-            gos::logger::log ("  memory type:\n");
+            gos::logger::log_3 ("  memory type:\n");
             VkMemoryPropertyFlags prevPropFlag = VK_MEMORY_PROPERTY_FLAG_BITS_MAX_ENUM;
             for (u32 i2 = 0; i2 < info->memoryTypeCount; i2++)
             {
@@ -405,44 +405,44 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
                     if (prevPropFlag != info->memoryTypes[i2].propertyFlags)
                     {
                         prevPropFlag = info->memoryTypes[i2].propertyFlags;
-                        gos::logger::log ("    0x%08X", info->memoryTypes[i2].propertyFlags);
+                        gos::logger::log_3 ("    0x%08X", info->memoryTypes[i2].propertyFlags);
             
                         if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0)
-                            gos::logger::log (", DEVICE_LOCAL");
+                            gos::logger::log_3 (", DEVICE_LOCAL");
                         if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT ) != 0)
-                            gos::logger::log (", HOST_VISIBLE");
+                            gos::logger::log_3 (", HOST_VISIBLE");
                         if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ) != 0)
-                            gos::logger::log (", HOST_COHERENT");
+                            gos::logger::log_3 (", HOST_COHERENT");
                         if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT ) != 0)
-                            gos::logger::log (", HOST_CACHED");
+                            gos::logger::log_3 (", HOST_CACHED");
                         if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT ) != 0)
-                            gos::logger::log (", LAZILY_ALLOCATED");
+                            gos::logger::log_3 (", LAZILY_ALLOCATED");
                         if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_PROTECTED_BIT  ) != 0)
-                            gos::logger::log (", PROTECTED");
+                            gos::logger::log_3 (", PROTECTED");
                         if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD  ) != 0)
-                            gos::logger::log (", DEVICE_COHERENT_BIT_AMD");
+                            gos::logger::log_3 (", DEVICE_COHERENT_BIT_AMD");
                         if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD  ) != 0)
-                            gos::logger::log (", DEVICE_UNCACHED_BIT_AMD");
+                            gos::logger::log_3 (", DEVICE_UNCACHED_BIT_AMD");
                         if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_RDMA_CAPABLE_BIT_NV  ) != 0)
-                            gos::logger::log (", RDMA_CAPABLE");
+                            gos::logger::log_3 (", RDMA_CAPABLE");
             
-                        gos::logger::log ("\n");
+                        gos::logger::log_3 ("\n");
                     }
                 }
             }            
         }
-        gos::logger::decIndent();
+        gos::logger::dec_indent();
 
         
         
 
             
-        gos::logger::decIndent();
+        gos::logger::dec_indent();
     }
 
 
 
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
     if (!out->isValid())
         return false;
     return true;

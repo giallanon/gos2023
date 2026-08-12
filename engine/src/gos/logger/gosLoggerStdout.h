@@ -26,18 +26,18 @@ namespace gos
 		void        enableFileLogging (const char *fullFolderPathAndName, bool bClearFolder=false);
 		void        disableFileLogging();
 
-		void        incIndent();
-		void        decIndent();
+		void        inc_indent();
+		void        dec_indent();
 
-		void        vlog (const char *format, va_list argptr);
-		void        vlog (const eTextColor col, const char *format, va_list argptr);
-		void        vlogWithPrefix (const char *prefix, const char *format, va_list argptr);
-		void        vlogWithPrefix (const eTextColor col, const char *prefix, const char *format, va_list argptr);
+		void        vlog (u8 level, const char *format, va_list argptr);
+		void        vlog (u8 level, const eTextColor col, const char *format, va_list argptr);
+		void        vlog_with_prefix (u8 level, const char *prefix, const char *format, va_list argptr);
+		void        vlog_with_prefix (u8 level, const eTextColor col, const char *prefix, const char *format, va_list argptr);
 
 
 	private:
 		static constexpr u16    MAX_INDENT_CHAR = 31;
-		static constexpr u16    INTERNAL_BUFFER_SIZE = 1024;
+		static constexpr u16    INTERNAL_BUFFER_SIZE = 4096;
 		
 		static constexpr u8     FLAG__SHOULD_LOG_TO_STDOUT = 0;
 		static constexpr u8     FLAG__USE_HHMMSSMsec = 1;
@@ -78,8 +78,8 @@ namespace gos
 
 	private:
 		void                priv_buildIndentStr();
-		void                priv_out (const char *what);
-		void                priv_log (const char *prefix, const char *format, va_list argptr);
+		void                priv_out (u8 level, const char *what);
+		void                priv_log (u8 level, const char *prefix, const char *format, va_list argptr);
 		
 		void                priv_logToFileClearLogFolder();
 		

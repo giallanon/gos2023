@@ -49,7 +49,7 @@ MultiThreadErrHandler::MultiThreadErrHandler()
 {
     sprintf_s (NULLSTR, sizeof(NULLSTR), "NULL");
     memset (handlerList, 0x00, sizeof(handlerList));
-    thread::mutexCreate (&mutex);
+    thread::mutex_create (&mutex);
 }
 
 //************************************** 
@@ -63,7 +63,7 @@ MultiThreadErrHandler::~MultiThreadErrHandler()
             handlerList[i].err = NULL;
         }
     }
-    thread::mutexDestroy (mutex);
+    thread::mutex_destroy (mutex);
 }
 
 //************************************** 

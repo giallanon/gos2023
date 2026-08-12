@@ -17,13 +17,13 @@ OSWaitableGrp::OSWaitableGrp()
 //***********************************************
 OSWaitableGrp::~OSWaitableGrp()
 {
-    cleanAll();
+    clean_all();
 }
 
 /***********************************************
  * restituisce true se ha eliminato almeno un elemento
  */
-bool OSWaitableGrp::cleanAll()
+bool OSWaitableGrp::clean_all()
 {
     bool ret = false;
     gos::Allocator *allocator = gos::getSysHeapAllocator();
@@ -67,6 +67,9 @@ int OSWaitableGrp::priv_getFd (const sRecord *s) const
 
     case eWaitEventOrigin::msgQ:
         return s->origin.ifMsgQ.event.osEvt.evfd;
+
+	case eWaitEventOrigin::fsWatcher:
+		return s->origin.isFSW.fd;
 
     default:
         DBGBREAK;
@@ -136,9 +139,8 @@ OSWaitableGrp::sRecord* OSWaitableGrp::priv_addSocket (const gos::Socket &sok)
     return s;
 }
 
-
 //***********************************************
-OSWaitableGrp::sRecord* OSWaitableGrp::priv_addEvent (const gos::Event &evt)
+OSWaitableGrp::sRecord* OSWaitableGrp::priv_addEvent (const gos::Signal &evt)
 {
     sRecord *s = priv_newRecord (EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP | EPOLLET);
     s->originType = eWaitEventOrigin::osevent;
@@ -175,7 +177,7 @@ OSWaitableGrp::sRecord* OSWaitableGrp::priv_addMsgQ (const HThreadMsgR &hRead)
 }
 
 //***********************************************
-void OSWaitableGrp::removeMsgQ (const HThreadMsgR &hRead)
+void OSWaitableGrp::msgQ__remove (const HThreadMsgR &hRead)
 {
     sRecord *p = base;
     while (p)
@@ -193,7 +195,51 @@ void OSWaitableGrp::removeMsgQ (const HThreadMsgR &hRead)
 }
 
 //***********************************************
-u8 OSWaitableGrp::wait(u32 timeoutMSec)
+OSWaitableGrp::sRecord* OSWaitableGrp::priv_add_FSWatcher (gos::FSWatcher *fsw)
+{
+	const int fd = fsw->internal__open_fd();
+	if (-1 == fd)
+	{
+		DBGBREAK;
+		return NULL;
+	}
+
+    sRecord *s = priv_newRecord (EPOLLIN);
+    s->originType = eWaitEventOrigin::fsWatcher;
+    s->origin.isFSW.fsWatcher = fsw;
+	s->origin.isFSW.fd = fd;
+    
+    int err = epoll_ctl (hfd, EPOLL_CTL_ADD, fd, &s->eventInfo);
+    if (err)
+    {
+        priv_findAndRemoveRecordByFD (fd);
+        return NULL;
+    }
+
+    return s;
+}
+
+//***********************************************
+void OSWaitableGrp::fsWatcher__remove(gos::FSWatcher *fsw)
+{
+    sRecord *p = base;
+    while (p)
+    {
+        if (eWaitEventOrigin::fsWatcher == p->originType)
+        {
+            if (p->origin.isFSW.fsWatcher == fsw)
+            {
+                priv_onRemove (p->origin.isFSW.fd);
+				fsw->internal__close_fd();
+                return;
+            }
+        }
+        p = p->next;
+    }
+}
+
+//***********************************************
+u8 OSWaitableGrp::wait (u32 timeoutMSec)
 {
     int epollTimeout;
     if (timeoutMSec == u32MAX)
@@ -209,62 +255,80 @@ u8 OSWaitableGrp::wait(u32 timeoutMSec)
         return 0;
 
     nEventsReady = (u8)n;
+
+	for (u8 i=0; i<nEventsReady; i++)
+	{
+		const sRecord *s = (const sRecord*)events[i].data.ptr;
+		if (eWaitEventOrigin::fsWatcher == s->originType)
+		{
+			s->origin.isFSW.fsWatcher->internal__on_events_fired();
+		}
+	}
+
     return nEventsReady;
 }
 
 //***********************************************
-eWaitEventOrigin OSWaitableGrp::getEventOrigin (u8 iEvent) const
+eWaitEventOrigin OSWaitableGrp::event__get_origin (u8 iEvent) const
 {
     assert (iEvent < nEventsReady);
 
-    sRecord *s = (sRecord*)events[iEvent].data.ptr;
-    return (eWaitEventOrigin)s->originType;
+    const sRecord *s = (const sRecord*)events[iEvent].data.ptr;
+	return s->originType;
 }
 
 //***********************************************
-void* OSWaitableGrp::getEventUserParamAsPtr (u8 iEvent) const
+void* OSWaitableGrp::event__get_user_param_as_ptr (u8 iEvent) const
 {
     assert (iEvent < nEventsReady);
 
-    sRecord *s = (sRecord*)events[iEvent].data.ptr;
+    const sRecord *s = (const sRecord*)events[iEvent].data.ptr;
     return s->userParam.asPtr;
 }
 
 //***********************************************
-u32 OSWaitableGrp::getEventUserParamAsU32 (u8 iEvent) const
+u32 OSWaitableGrp::event__get_user_param_as_u32 (u8 iEvent) const
 {
     assert (iEvent < nEventsReady);
 
-    sRecord *s = (sRecord*)events[iEvent].data.ptr;
+    const sRecord *s = (const sRecord*)events[iEvent].data.ptr;
     return s->userParam.asU32;
 }
 
 //***********************************************
-gos::Socket& OSWaitableGrp::getEventSrcAsSocket (u8 iEvent) const
+gos::Socket OSWaitableGrp::event__get_socket_handle (u8 iEvent) const
 {
-    assert (getEventOrigin(iEvent) == eWaitEventOrigin::socket);
+    assert (event__get_origin(iEvent) == eWaitEventOrigin::socket);
 
-    sRecord *s = (sRecord*)events[iEvent].data.ptr;
+    const sRecord *s = (const sRecord*)events[iEvent].data.ptr;
     return s->origin.socket;
 }
 
 //***********************************************
-gos::Event& OSWaitableGrp::getEventSrcAsEvent (u8 iEvent) const
+gos::Signal OSWaitableGrp::event__get_signal_handle (u8 iEvent) const
 {
-    assert (getEventOrigin(iEvent) == eWaitEventOrigin::osevent);
+    assert (event__get_origin(iEvent) == eWaitEventOrigin::osevent);
 
-    sRecord *s = (sRecord*)events[iEvent].data.ptr;
+    const sRecord *s = (const sRecord*)events[iEvent].data.ptr;
     return s->origin.event;
 }
 
 //***********************************************
-HThreadMsgR& OSWaitableGrp::getEventSrcAsMsgQ(u8 iEvent) const
+HThreadMsgR OSWaitableGrp::event__get_msgQ_handle(u8 iEvent) const
 {
-    assert (getEventOrigin(iEvent) == eWaitEventOrigin::msgQ);
+    assert (event__get_origin(iEvent) == eWaitEventOrigin::msgQ);
 
-    sRecord *s = (sRecord*)events[iEvent].data.ptr;
+    const sRecord *s = (const sRecord*)events[iEvent].data.ptr;
     return s->origin.ifMsgQ.hMsgQRead;
 }
 
+//***********************************************
+gos::FSWatcher* OSWaitableGrp::event__get_fsWatcher_handle(u8 iEvent) const
+{
+    assert (event__get_origin(iEvent) == eWaitEventOrigin::fsWatcher);
+
+    const sRecord *s = (const sRecord*)events[iEvent].data.ptr;
+    return s->origin.isFSW.fsWatcher;
+}
 
 #endif //GOS_PLATFORM__LINUX

@@ -17,13 +17,13 @@ namespace gos
                             LoggerNull()          { }
         virtual             ~LoggerNull()         { }
 
-        void                incIndent()           { }
-        void                decIndent()           { }
+        void                inc_indent()           { }
+        void                dec_indent()           { }
 
-        void                vlog (UNUSED_PARAM(const eTextColor col), UNUSED_PARAM(const char *format), UNUSED_PARAM(va_list argptr))             { }
-        void                vlog (UNUSED_PARAM(const char *format), UNUSED_PARAM(va_list argptr))                                                 { }
-        void                vlogWithPrefix (UNUSED_PARAM(const char *prefix), UNUSED_PARAM(const char *format), UNUSED_PARAM(va_list argptr))     { }
-        void                vlogWithPrefix (UNUSED_PARAM(const eTextColor col), UNUSED_PARAM(const char *prefix), UNUSED_PARAM(const char *format), UNUSED_PARAM(va_list argptr)) { }
+        void                vlog (UNUSED_PARAM(u8 level), UNUSED_PARAM(const eTextColor col), UNUSED_PARAM(const char *format), UNUSED_PARAM(va_list argptr))             { }
+        void                vlog (UNUSED_PARAM(u8 level), UNUSED_PARAM(const char *format), UNUSED_PARAM(va_list argptr))                                                 { }
+        void                vlog_with_prefix (UNUSED_PARAM(u8 level), UNUSED_PARAM(const char *prefix), UNUSED_PARAM(const char *format), UNUSED_PARAM(va_list argptr))     { }
+        void                vlog_with_prefix (UNUSED_PARAM(u8 level), UNUSED_PARAM(const eTextColor col), UNUSED_PARAM(const char *prefix), UNUSED_PARAM(const char *format), UNUSED_PARAM(va_list argptr)) { }
 
 
     };

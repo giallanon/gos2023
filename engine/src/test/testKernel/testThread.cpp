@@ -32,7 +32,7 @@ namespace test1
         //Creo un th, gli passo una struttura e, all'interno del th, modifico il valore di userParam.paramI16
         eThreadError err = gos::thread::create (&hThread1, test_thread::test1::mainFn, &userParam);
         TEST_ASSERT(err == eThreadError::none);
-        gos::thread::waitEnd (hThread1);
+        gos::thread::wait_end (hThread1);
         TEST_ASSERT(userParam.paramI16 == 12346);
 
         return 0;
@@ -54,9 +54,9 @@ namespace test2
         HThreadMsgR hMsgQRead = param->hMsgQRead;
 
         //questo thread rimane in attesa di ricevere msg
-        /*gos::Event hEventMsgArrived;
+        /*gos::Signal hEventMsgArrived;
         TEST_ASSERT(true == gos::thread::getMsgQEvent (hMsgQRead, &hEventMsgArrived));
-        TEST_ASSERT(true == gos::thread::eventWait (hEventMsgArrived, 3000));
+        TEST_ASSERT(true == gos::thread::signal_wait (hEventMsgArrived, 3000));
         */
         TEST_ASSERT(true == gos::thread::waitForAnEvent(hMsgQRead, 3000));
 
@@ -108,10 +108,10 @@ namespace test2
         err = gos::thread::create (&hThread2, test_thread::test2::mainFn2, &userParam);
         TEST_ASSERT(err == eThreadError::none);
 
-        gos::thread::waitEnd (hThread1);
+        gos::thread::wait_end (hThread1);
         printf ("thread1 finished\n");
         
-        gos::thread::waitEnd (hThread2);
+        gos::thread::wait_end (hThread2);
         printf ("thread2 finished\n");
 
         gos::thread::deleteMsgQ (hMsgQRead, hMsgQWrite);
@@ -136,14 +136,14 @@ namespace test3
 
         //questo thread rimane in attesa di ricevere msg
         gos::WaitableGrp waitable;
-        TEST_ASSERT(true == waitable.addMsgQ (hMsgQRead, 675));
+        TEST_ASSERT(true == waitable.msgQ__add (hMsgQRead, 675));
 
         u8 nEvents = waitable.wait(3000);
         TEST_ASSERT(nEvents == 1);
-        TEST_ASSERT(eWaitEventOrigin::msgQ == waitable.getEventOrigin(0));
-        TEST_ASSERT(675 == waitable.getEventUserParamAsU32(0));
+        TEST_ASSERT(eWaitEventOrigin::msgQ == waitable.event__get_origin(0));
+        TEST_ASSERT(675 == waitable.event__get_user_param_as_u32(0));
 
-        HThreadMsgR hRead = waitable.getEventSrcAsMsgQ(0);
+        HThreadMsgR hRead = waitable.event__get_msgQ_handle(0);
         TEST_ASSERT(hRead == hMsgQRead);
 
         gos::thread::sMsg msg;
@@ -193,8 +193,8 @@ namespace test3
         err = gos::thread::create (&hThread2, test_thread::test3::mainFn2, &userParam);
         TEST_ASSERT(err == eThreadError::none);
 
-        gos::thread::waitEnd (hThread1);
-        gos::thread::waitEnd (hThread2);;
+        gos::thread::wait_end (hThread1);
+        gos::thread::wait_end (hThread2);;
 
         gos::thread::deleteMsgQ (hMsgQRead, hMsgQWrite);
 
@@ -253,11 +253,11 @@ namespace test4_globalErr
         gos::err::add ("errore dal main thread");
         TEST_ASSERT(gos::err::anyError() == 1);
 
-        gos::thread::waitEnd (hThread1);
+        gos::thread::wait_end (hThread1);
         TEST_ASSERT(gos::err::anyError() == 1);
 
 
-        gos::thread::waitEnd (hThread2);
+        gos::thread::wait_end (hThread2);
         TEST_ASSERT(gos::err::anyError() == 1);
 
         gos::err::clear();

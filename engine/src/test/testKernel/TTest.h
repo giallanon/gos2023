@@ -43,13 +43,13 @@ public:
         gos::console::setBgColor (eBgColor::black);
         gos::console::setTextColor(eTextColor::grey);
         gos::logger::log ("\n");
-        gos::logger::incIndent();
+        gos::logger::inc_indent();
 
         const u64 timeNow_usec = gos::getTimeSinceStart_usec();
         const int errorOnLine = fn(args...);
         const u64 timeElapsed_usec = gos::getTimeSinceStart_usec() - timeNow_usec;
 
-        gos::logger::decIndent();
+        gos::logger::dec_indent();
         gos::console::setBgColor (eBgColor::white);
         gos::console::setTextColor(eTextColor::black);
         gos::logger::log ("%s: TEST FINISHED:", testName);
@@ -97,13 +97,13 @@ void TEST(sTestResult &testResult, const char *testName, Func fn, Args... args)
     gos::console::setBgColor (eBgColor::black);
     gos::console::setTextColor(eTextColor::grey);
     gos::logger::log ("\n");
-    gos::logger::incIndent();
+    gos::logger::inc_indent();
 
     const u64 timeNow_usec = gos::getTimeSinceStart_usec();
     const int errorOnLine = fn(args...);
     const u64 timeElapsed_usec = gos::getTimeSinceStart_usec() - timeNow_usec;
 
-    gos::logger::decIndent();
+    gos::logger::dec_indent();
     gos::console::setBgColor (eBgColor::white);
     gos::console::setTextColor(eTextColor::black);
     gos::logger::log ("%s: TEST FINISHED:", testName);

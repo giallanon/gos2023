@@ -79,7 +79,7 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
         loaderInfo.ctx = params->ctx;
 
         //segnalo che sono partito
-        thread::eventFire (params->hEvent_started);
+        thread::signal_fire (params->hEvent_started);
     }
 
     //spawn dei loader

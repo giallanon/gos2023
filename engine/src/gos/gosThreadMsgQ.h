@@ -51,8 +51,8 @@ namespace gos
          * Un thread(1) riceverà HandleR e sarà solo in grado di leggere da quella FIFO.
          * Gli altri thread, eventualmente, riceverannno l'HandleW e saranno solo in grado di scrivere su quella FIFO, notificando cosi' il thread(1).
          *
-         * Ogni volta che qualcuno scrive sulla FIFO (vedi push..), un OSEvent dedicato alla FIFO viene fired(). Il thread(1), può quindi stare in attesa
-         * sull'OSEvent in modo da venire notificato quando qualcuno gli ha mandato un msg (ie: non è necessario pollare sulla pop() all'infinito, si può stare in attesa che l'evento
+         * Ogni volta che qualcuno scrive sulla FIFO (vedi push..), un OSEvent dedicato alla FIFO viene fired(). Il thread(1), puo' quindi stare in attesa
+         * sull'OSEvent in modo da venire notificato quando qualcuno gli ha mandato un msg (ie: non è necessario pollare sulla pop() all'infinito, si puo' stare in attesa che l'evento
          * venga fired).
          *
          * Ogni volta che si pop() un messaggio, è necessario poi chiamare deleteMsg() per liberare l'eventuale memoria da esso allocata.
@@ -72,7 +72,7 @@ namespace gos
 
                         //wait
         bool            waitForAnEvent (const HThreadMsgR &h, u32 timeout_msec);
-        bool            msgQ_getHEvent (const HThreadMsgR &h, gos::Event *out_hEvent);
+        bool            msgQ_getHEvent (const HThreadMsgR &h, gos::Signal *out_hEvent);
 
                         //write
         void            pushMsg (const HThreadMsgW &h, u32 what, u64 paramU64, const void *src, u32 sizeInBytes);

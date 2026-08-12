@@ -218,7 +218,7 @@ namespace gos
 
         
         //================ command buffer
-        bool                        cmdBuffer_create (eGPUQueueFamily whichQ, GPUCmdBufferHandle *out_handle, u32 threadID=gos::thread::getCurrentThreadID());
+        bool                        cmdBuffer_create (eGPUQueueFamily whichQ, GPUCmdBufferHandle *out_handle, u32 threadID=gos::thread::get_current_threadID());
         void                        deleteResource (GPUCmdBufferHandle &handle);
         const gpu::CommandBuffer*   getInfo (const GPUCmdBufferHandle handle) const;
 
