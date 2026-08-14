@@ -1,7 +1,7 @@
 #ifndef _Land1_renderer_h_
 #define _Land1_renderer_h_
 #include "Land1_map2.h"
-#include "../DefaultApp/DefaultApp.h"
+#include "renderPipe/gosEngineRenderPipe.h"
 #include "../gosGameUtils/examap/gosExamap.h"
 
 

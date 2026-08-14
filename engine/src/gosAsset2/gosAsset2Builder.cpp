@@ -128,8 +128,13 @@ void Builder::priv_printResList(const ResList &list) const
 }
 
 //***********************************
-bool Builder::debug_sanityCheck(const char *baseFolder)
+bool Builder::debug_sanityCheck(const char *baseFolderIN)
 {
+	char baseFolder[1024];
+	fs::resolvePath (baseFolderIN, baseFolder, sizeof(baseFolder));
+	fs::pathSanitizeInPlace (baseFolder);
+
+
 	static const char SANITY_DB_NAME[] = {"sanitycheck.sqlite3"};
 
 	logger = &loggerStdout;
@@ -298,8 +303,13 @@ bool Builder::debug_sanityCheck__cmp_table(DBContext &ctx_sanity, DBContext &ctx
 }
 
 //******************************
-bool Builder::rebuild_all(const char *baseFolder, bool bVerbose)
+bool Builder::rebuild_all(const char *baseFolderIN, bool bVerbose)
 {
+	char baseFolder[1024];
+	fs::resolvePath (baseFolderIN, baseFolder, sizeof(baseFolder));
+	fs::pathSanitizeInPlace (baseFolder);
+
+
 	if (bVerbose)
 		logger = &loggerStdout;
 	else
@@ -326,8 +336,13 @@ bool Builder::rebuild_all(const char *baseFolder, bool bVerbose)
 }
 
 //******************************
-bool Builder::build(const char *baseFolder, bool bVerbose)
+bool Builder::build(const char *baseFolderIN, bool bVerbose)
 {
+	char baseFolder[1024];
+	fs::resolvePath (baseFolderIN, baseFolder, sizeof(baseFolder));
+	fs::pathSanitizeInPlace (baseFolder);
+
+
 	if (bVerbose)
 		logger = &loggerStdout;
 	else
@@ -368,6 +383,8 @@ bool Builder::build(const char *baseFolder, bool bVerbose)
 //******************************
 bool Builder::priv_build (DBContext &ctx, bool bDoCreateAssetFile, bool bGenerateListOfUpdatedUID)
 {
+	gos::err::clear();
+	
 	if (bGenerateListOfUpdatedUID)
 		build_result_list.reset();
 

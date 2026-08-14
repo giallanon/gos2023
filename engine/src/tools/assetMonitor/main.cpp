@@ -24,7 +24,6 @@ void test (gos::GPU *gpu, const char *subfolder)
     }
 }
 
-
 //******************************** 
 void test_monitor (gos::GPU *gpu, const char *path_to_DB)
 {
@@ -33,25 +32,44 @@ void test_monitor (gos::GPU *gpu, const char *path_to_DB)
 }
 
 //******************************** 
-int main()
+int main (int argc, char *argv[])
 {
     gos::sGOSInit init;
     init.memory__set_default_for_NON_games();
-
     init.set_log_mode (gos::sGOSInit::eLogMode::only_console, gos::Logger::LEVEL__DEFAULT);
-    //init.set_log_mode (gos::sGOSInit::eLogMode::none);
-    if (!gos::init (init, "assetBuilder2"))
+    if (!gos::init (init, "assetMonitor"))
 	{
+		printf ("Error during GOS init\n");
         return -1;
 	}
 
+	logger::log (eTextColor::green, "====================================\n");
+	logger::log (eTextColor::green, "GOS Asset Monitor, V 1.0\n");
+	logger::log (eTextColor::green, "====================================\n");
+	
 	gos::GPU gpu;
 	if (!gpu.init (GOSWinHandle::INVALID(), false))
+	{
+		logger::err ("Can't init GPU\n");
 		return -2;
+	}
 
+#ifdef _DEBUG
 	//test (&gpu, "test1");
 	//test (&gpu, "test2");
-	test_monitor(&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/testEngine/writable/assets");
+	test_monitor(&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/testEngine/writable/assets/");
+#else
+	//for (u8 i=0; i<argc; i++)	printf ("arg %d: %s\n", i, argv[i]);
+
+	//mi aspetto come parametro il path ad una cartella con dentro il DB degli assett
+	if (argc < 2)
+	{
+		logger::err ("Invalid args. Expected syntax is: assetMonitor <path_to_DB_folder>\n");
+		return -3;
+	}
+
+	test_monitor(&gpu, argv[1]);
+#endif
 
 	gpu.deinit();
     

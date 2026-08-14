@@ -121,7 +121,7 @@ bool gos::init (const gos::sGOSInit &init, const char *appName)
 	}
 
 	gosGlobals.logger->set_visible_level (init._min_visible_log_level);
-	gos::logger::log (eTextColor::white, "%s is starting...\n", appName);
+	gos::logger::log_3 (eTextColor::white, "%s is starting...\n", appName);
 
 	gosGlobals.appName = reinterpret_cast<char*>(gos::string::utf8::allocStr (gos::getSysHeapAllocator(), appName));
 
@@ -147,7 +147,7 @@ void gos::deinit()
 {
 	gos::Logger *logger = gosGlobals.logger;
 	if (NULL != logger)
-		gos::logger::log (eTextColor::white, "\n\ngos is shutting down...\n");
+		logger->log_wl (3, eTextColor::white, "\n\ngos is shutting down...\n");
 
 	delete gosGlobals.errHandler;
 	gosGlobals.errHandler = NULL;
@@ -163,7 +163,7 @@ void gos::deinit()
 
 	if (NULL != logger)
 	{
-		logger->verbose ("FIN\n\n\n\n");
+		logger->log_wl (3, "FIN\n\n\n\n");
 		delete logger;
 	}
 }

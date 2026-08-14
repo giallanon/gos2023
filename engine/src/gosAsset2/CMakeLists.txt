@@ -59,6 +59,8 @@ gosAsset2Builder.h
 gosAsset2EnumAndDefine.h
 gosAsset2Monitor.cpp
 gosAsset2Monitor.h
+gosAsset2MonitorClient.cpp
+gosAsset2MonitorClient.h
 )
 
 

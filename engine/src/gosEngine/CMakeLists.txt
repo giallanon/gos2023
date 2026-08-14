@@ -20,6 +20,9 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC 
+defaultApp/gosDefaultApp.cpp
+defaultApp/gosDefaultApp.h
+
 entity/gosEntity_compPos.cpp
 entity/gosEntity.h
 entity/gosEntityComponentList.h

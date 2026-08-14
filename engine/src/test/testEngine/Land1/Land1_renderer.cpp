@@ -1,3 +1,4 @@
+#include "gosEngine.h"
 #include "Land1_renderer.h"
 #include "Land1_exaGenerator.h"
 
@@ -223,14 +224,6 @@ void Renderer::on__render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx)
 	{
 		return;
 	}
-
-	// if (0 == ctx.frame_number % 2000)
-	// {
-	// 	if (ctx.engine->hotreload (hanle__tex_perlin01))	logger::log (eTextColor::white, "hot-reloading texture\n");
-
-	// 	logger::log (eTextColor::darkGreen, "hot-reloading handle_pipeline\n");
-	// 	ctx.engine->hotreload (handle_pipeline);
-	// }
 
     const res::Pipeline *res_pipeline;
     if (!engine->get (handle_pipeline, &res_pipeline))

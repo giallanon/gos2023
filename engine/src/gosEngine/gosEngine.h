@@ -44,6 +44,7 @@ namespace gos
 
 		bool                asset_rebuildAll();
 		bool                asset_build();
+		void 				asset_hotreload (asset2::UID uid);
 
 		bool                setup_renderPipe();
 

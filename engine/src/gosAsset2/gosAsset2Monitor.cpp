@@ -86,6 +86,13 @@ bool Monitor::priv_scan_DB_and_add_path (const char *path_to_DB, FSWatcher *fsw)
 //************************************************
 bool Monitor::run (const char *path_to_DB)
 {
+	//faccio un build del DB
+	{
+		asset2::Builder b(gpu);
+		if (!b.build (path_to_DB, true))
+			return false;
+	}
+
 	if (!priv_setup_server())
 	{
 		logger::err ("Failed to setup server TCP\n");
@@ -103,7 +110,7 @@ bool Monitor::run (const char *path_to_DB)
 
 
 
-	static const u32 WAIT_BEFORE_BUILD_msec = 5000;
+	static const u32 WAIT_BEFORE_BUILD_msec = 2000;
 	u64 time_to_rebuild_msec = 0;
 	while (1)
 	{
@@ -201,11 +208,6 @@ void Monitor::priv_build(const char *path_to_DB)
     asset2::Builder b(gpu);
     if (b.build (path_to_DB, true))
     {
-        b.save_dependencies_report (path_to_DB);
-        b.save_asset_manifest (path_to_DB);
-        b.debug_sanityCheck(path_to_DB);
-
-
 		//elenco degli UID che sono stati influenzati dalla build
 		const asset2::UniqueUIDList *list = b.get_list_of_built_UID();
 		if (0 == list->getNElem())
@@ -239,6 +241,10 @@ void Monitor::priv_build(const char *path_to_DB)
 			}
 			logger::dec_indent();
 		}
+
+        b.save_dependencies_report (path_to_DB);
+        b.save_asset_manifest (path_to_DB);
+        b.debug_sanityCheck(path_to_DB);
     }
 }
 

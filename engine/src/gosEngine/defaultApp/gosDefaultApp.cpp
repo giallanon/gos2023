@@ -1,9 +1,7 @@
-#include "DefaultApp.h"
-#include "gosShapePrefabs.h"
-#include "gosGeomUtils.h"
+#include "gosDefaultApp.h"
 
 using namespace gos;
-
+using namespace gos::engine;
 
 
 //***************************************
@@ -14,6 +12,7 @@ DefaultApp::DefaultApp()
 	engine = NULL;
 	gpu = NULL;
 	bShowCamPos = 0;
+	bEnableAssetMonitor = false;
 }
 
 //***************************************
@@ -162,6 +161,18 @@ void DefaultApp::priv_loop ()
 {
 	on__setup();
 
+	//init dell'asset monitor se richiesto
+	u64 next_time_check_assetMon__msec = 0;
+	asset2::MonitorClient assetMon;
+	if (bEnableAssetMonitor)
+	{
+		if (!assetMon.connect())
+		{
+			logger::err ("unable to connecto to asset monitor\n");
+		}
+	}
+	else
+		next_time_check_assetMon__msec = u64MAX;
 
     gpu::MainLoop2 mainLoop;
     mainLoop.setup (gpu);
@@ -185,6 +196,20 @@ void DefaultApp::priv_loop ()
         //CPU jobs
 		mainLoop.stat_onCPUFrameBegin();
 		{
+			const u64 timenow_msec = gos::getTimeSinceStart_msec();
+			
+			//ogni tot verifico se ho ricevuto notifiche dall'asset monitor
+			if (timenow_msec >= next_time_check_assetMon__msec)
+			{
+				asset2::UID uid;
+				while ( assetMon.read(&uid) )
+				{
+					engine->asset_hotreload (uid);
+				}
+
+				next_time_check_assetMon__msec = timenow_msec + 500;
+			}
+
 			default_handle_input();
 
 			if (last_cam_pos != cam.pos.o)
@@ -214,6 +239,9 @@ void DefaultApp::priv_loop ()
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
         }
 	}
+
+	if (bEnableAssetMonitor)
+		assetMon.disconnect();
 
 	//free
 	gpu->waitIdle();

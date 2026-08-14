@@ -1,6 +1,6 @@
 #ifndef _Land1_app2_h_
 #define _Land1_app2_h_
-#include "../DefaultApp/DefaultApp.h"
+#include "defaultApp/gosDefaultApp.h"
 #include "renderPipe/gosEngineRenderPipe_line3d.h"
 #include "Land1_renderer.h"
 #include "Land1_map2.h"
@@ -11,7 +11,7 @@
 * Land1_app2
 *
 */
-class Land1_app2 : public DefaultApp
+class Land1_app2 : public gos::engine::DefaultApp
 {
 public:
 			Land1_app2();

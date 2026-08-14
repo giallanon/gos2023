@@ -92,3 +92,7 @@ engine/out/
 engine/bin/assetBuilder2/writable/test2/assets2.sqlite3
 engine/bin/testEngine/writable/debug_imported_glTF_omino.ini
 engine/bin/testEngine/writable/debug_imported_glTF_tileset.ini
+
+engine/bin/assetMonitor/writable/debug_imported_glTF.ini
+
+engine/bin/assetMonitor/writable/debug_imported_glTF.json

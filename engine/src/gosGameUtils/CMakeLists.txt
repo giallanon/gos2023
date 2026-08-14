@@ -21,11 +21,12 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC
-"examap/gosExamap.cpp"
-"examap/gosExamap.h"
+examap/gosExamap_CoordConverter.cpp
+examap/gosExamap.cpp
+examap/gosExamap.h
 
 gosGameUtils.h
- "examap/gosExamap_CoordConverter.cpp")
+)
 
 
 #====================================================

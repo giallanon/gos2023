@@ -490,7 +490,18 @@ bool Engine::asset_build()
 	const bool ret = builder.build (GOS_ENGINE__ASSET_HUB_PATH, true);
 	asset2::dbcontext_open (GOS_ENGINE__ASSET_HUB_PATH, true, &asset_ctx);
 	return ret;
+}
 
+//******************************** 
+void Engine::asset_hotreload (asset2::UID uid)
+{
+	u32 handle_asU32;
+	if (listof_knownUID.find (uid, &handle_asU32))
+	{
+		res::Handle res_handle;
+		res_handle.setFromU32 (handle_asU32);
+		res__hotreload (res_handle);
+	}
 }
 
 /**************************************************************** 
