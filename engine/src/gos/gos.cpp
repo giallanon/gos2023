@@ -183,10 +183,19 @@ f32 gos::random (f32 vMin, f32 vMax)				{ const f32 t = gosGlobalsRnd.get01(); r
 gos::Logger* gos::logger::get_system_logger()																{ return gosGlobals.logger; }
 void gos::logger::inc_indent()																			{ gosGlobals.logger->inc_indent(); }
 void gos::logger::dec_indent()																			{ gosGlobals.logger->dec_indent(); }
+
 void gos::logger::log (const char *format, ...)															{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (Logger::LEVEL__DEFAULT, format, argptr); va_end (argptr); }
 void gos::logger::log (const eTextColor col, const char *format, ...)                                   { va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (Logger::LEVEL__DEFAULT, col, format, argptr); va_end (argptr); }
+
+void gos::logger::log_0 (const char *format, ...)														{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (0, format, argptr); va_end (argptr); }
+void gos::logger::log_0 (const eTextColor col, const char *format, ...)                             	{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (0, col, format, argptr); va_end (argptr); }
+
+void gos::logger::log_1 (const char *format, ...)														{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (1, format, argptr); va_end (argptr); }
+void gos::logger::log_1 (const eTextColor col, const char *format, ...)                             	{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (1, col, format, argptr); va_end (argptr); }
+
 void gos::logger::log_3 (const char *format, ...)														{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (3, format, argptr); va_end (argptr); }
 void gos::logger::log_3 (const eTextColor col, const char *format, ...)                             	{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (3, col, format, argptr); va_end (argptr); }
+
 void gos::logger::log_7 (const char *format, ...)														{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (7, format, argptr); va_end (argptr); }
 void gos::logger::log_7 (const eTextColor col, const char *format, ...)                             	{ va_list argptr; va_start (argptr, format); gosGlobals.logger->vlog (7, col, format, argptr); va_end (argptr); }
 

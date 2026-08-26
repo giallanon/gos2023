@@ -32,10 +32,10 @@ namespace gos
 			void					warp (f32 x, f32 y, f32 z)													{ warp(vec3f(x,y,z)); }
 			void					warp (const vec3f &p)														{ o=p; }
 
-			void					moveRelAlongX (f32 howMuch)													{ o += getAsseX() * howMuch; };
-			void					moveRelAlongY (f32 howMuch)													{ o += getAsseY() * howMuch; };
-			void					moveRelAlongZ (f32 howMuch)													{ o += getAsseZ() * howMuch; };
-			void					rotateMeAbout (const vec3f &ax, f32 angle_rad)								
+			void					move_rel_along_x (f32 howMuch)												{ o += getAsseX() * howMuch; };
+			void					move_rel_along_y (f32 howMuch)												{ o += getAsseY() * howMuch; };
+			void					move_rel_along_z (f32 howMuch)												{ o += getAsseZ() * howMuch; };
+			void					rotate_me_about (const vec3f &ax, f32 angle_rad)								
 									{ 
 										mat3x3f m; 
 										m.buildFromAxeAndAngle (ax, angle_rad); 
@@ -59,9 +59,9 @@ namespace gos
 										}
 #endif
 									}
-			void					rotateMeAboutMyX (f32 angle_rad)											{ rotateMeAbout (getAsseX(), angle_rad); }
-			void					rotateMeAboutMyY (f32 angle_rad)											{ rotateMeAbout (getAsseY(), angle_rad); }
-			void					rotateMeAboutMyZ (f32 angle_rad)											{ rotateMeAbout (getAsseZ(), angle_rad); }
+			void					rotate_me_about_my_x (f32 angle_rad)										{ rotate_me_about (getAsseX(), angle_rad); }
+			void					rotate_me_about_my_y (f32 angle_rad)										{ rotate_me_about (getAsseY(), angle_rad); }
+			void					rotate_me_about_my_z (f32 angle_rad)										{ rotate_me_about (getAsseZ(), angle_rad); }
 			
 			void					lookAt (const vec3f &at)													{ alignAsseZ (at -o); }
 			void					alignAsseX (const vec3f &align);

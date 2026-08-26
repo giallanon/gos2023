@@ -38,10 +38,6 @@ vulkan/gosGPUVulkanFeatures.cpp
 vulkan/gosGPUVulkanQFamily.cpp
 vulkan/gosGPUVulkanQFamily.h
 
-utils/gosFPSMovement.cpp
-utils/gosFPSMovement.h
-utils/gosFreeMovement.cpp
-utils/gosFreeMovement.h
 utils/gosGPUMainLoop.cpp
 utils/gosGPUMainLoop.h
 

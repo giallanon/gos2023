@@ -186,7 +186,9 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 			.action_add ("strafe_up")
 			.action_add ("strafe_down")
 			.action_add ("rotateX")
-			.action_add ("rotateY");
+			.action_add ("rotateY")
+			.action_add ("zoom_in")
+			.action_add ("zoom_out");
 			
 
 
@@ -208,6 +210,8 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 		inputCtx->action_bindToAxleREL ("rotateY",  input::eOrigin::mouse, input::eAxle::x, input::eAxleDirection::both);    
 		inputCtx->action_bindToAxleABS ("mouse_move_x", input::eOrigin::mouse, input::eAxle::x);
 		inputCtx->action_bindToAxleABS ("mouse_move_y", input::eOrigin::mouse, input::eAxle::y);
+		inputCtx->action_bindToAxleREL ("zoom_in", input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::both);
+		inputCtx->action_bindToAxleREL ("zoom_out", input::eOrigin::mouse, input::eAxle::z, input::eAxleDirection::both);
 
 	}
 
@@ -431,6 +435,12 @@ const input::MouseStatus* Engine::inputEvent_getMouseStatus() const
 const input::sButtonModifier* Engine::inputEvent_getBtnModifier() const
 {
 	return &evtList.getBtnModifier();
+}
+
+//******************************** 
+input::eButtonStatus Engine::inputEvent_getBtnStatus() const
+{
+	return evtList.getBtnStatus();
 }
 
 //******************************** 
@@ -831,7 +841,7 @@ void Engine::priv_texture2D__add_to_mega_array (res::Texture2d *res, u32 desired
 	else
 		res->index = renderPipe.internal__texture_add_if_dont_exists (res->texHandle);
 
-	//asset_logger->log ("priv_texture2D__add_to_mega_array (tex-index=%d)\n", res->index);
+	asset_logger->log ("priv_texture2D__add_to_mega_array (tex-index=%d)\n", res->index);
 }
 
 void Engine::priv_texture2D__remove_from_mega_array (res::Texture2d *res)
@@ -1362,6 +1372,17 @@ bool Engine::internal__modelinst_on_loadCallback (void *callback_dataIN)
 	return ret;
 }
 
+void Engine::modelinst_getWMatrix (ENGModel3dInst handle, mat4x4f *out_matW)
+{
+	assert (NULL != out_matW);
+	res::Model3dInst *res = (res::Model3dInst*)res__getDescriptor(handle.res_handle);
+	if (NULL != res)
+		*out_matW = res->matW;
+	else
+	{
+		DBGBREAK;
+	}
+}
 
 void Engine::modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &matW)
 {
@@ -1369,6 +1390,9 @@ void Engine::modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &mat
 	if (NULL == res)
 		return;
 	res->matW = matW;
+
+	//se sono gia' in stato ready, applico la matW al mio modello, altrimenti questa cosa
+	//verra' fatta non appena divento ready
 	if (res::eStatus::ready == res->_descr._status)
 	{
 		priv_modelinst_applyTransform_ric (res->minst.model_listof_bones, res->minst.listof_bones, 0, matW);

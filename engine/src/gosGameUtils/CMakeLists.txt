@@ -21,6 +21,14 @@ set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM
 #====================================================
 # file da compilare
 add_library(${BINARY_OUTPUT_FILENAME} STATIC
+ctrl/gosCtrl3rdPersMove.cpp
+ctrl/gosCtrl3rdPersMove.h
+ctrl/gosCtrlAction.h
+ctrl/gosCtrlFreeMove.cpp
+ctrl/gosCtrlFreeMove.h
+ctrl/gosCtrlFPSMove.cpp
+ctrl/gosCtrlFPSMove.h
+
 examap/gosExamap_CoordConverter.cpp
 examap/gosExamap.cpp
 examap/gosExamap.h

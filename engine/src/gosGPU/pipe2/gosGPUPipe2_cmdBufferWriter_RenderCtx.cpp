@@ -100,7 +100,7 @@ RenderCtx& RenderCtx::bindPipeline (const GPUPipelineHandle pipelineHandle)
     if (anyError())
         return *this;
 
-    const gpu::Pipeline2 *pipe = gpu->getInfo (pipelineHandle);
+    const gpu::Pipeline2 *pipe = gpu->get_info (pipelineHandle);
     assert (NULL != pipe);
 
     if (cache_curPipeline != pipe)
@@ -125,7 +125,7 @@ RenderCtx& RenderCtx::bindDescriptorSet (const GPUDescrSetInstanceHandle handle,
     }        
 
     //recupero il descrSetInstance
-    const gpu::DescrSetInstance *ds = gpu->getInfo(handle);
+    const gpu::DescrSetInstance *ds = gpu->get_info(handle);
     if (NULL == ds)
     {
         gos::logger::err ("gpu::CmdBufferWriter::bindDescriptorSet() => invalid descrSetInstace handle\n");
@@ -149,7 +149,7 @@ RenderCtx& RenderCtx::bindVtxIdxBuffer (const GPUVtxBufferHandle vtxbuffer_handl
         cache_vxtBuffer_handle[0] = vtxbuffer_handle;
         cache_vxtBuffer_offset[0] = vtxbuffer_offset;
     
-        const gpu::Buffer *vtxBuffer = gpu->getInfo(vtxbuffer_handle);
+        const gpu::Buffer *vtxBuffer = gpu->get_info(vtxbuffer_handle);
         assert (NULL != vtxBuffer);
 
         static const u8 VTXBUFFER__FIRST_VTX_STREAM_INDEX = 0;
@@ -164,7 +164,7 @@ RenderCtx& RenderCtx::bindVtxIdxBuffer (const GPUVtxBufferHandle vtxbuffer_handl
         cache_idxBuffer_handle = idxbuffer_handle;
         cache_idxBuffer_offset = idxbuffer_offset;
 
-        const gpu::Buffer *idxBuffer = gpu->getInfo (idxbuffer_handle);
+        const gpu::Buffer *idxBuffer = gpu->get_info (idxbuffer_handle);
         assert (NULL != idxBuffer);
         vkCmdBindIndexBuffer (vkCommandBuffer, idxBuffer->vkHandle, idxbuffer_offset, VK_INDEX_TYPE_UINT16);
     }
@@ -180,7 +180,7 @@ RenderCtx& RenderCtx::bindVtxBuffer (const GPUVtxBufferHandle handle, u32 offset
     cache_vxtBuffer_handle[0] = handle;
     cache_vxtBuffer_offset[0] = offsetIN;
 
-    const gpu::Buffer *vtxBuffer = gpu->getInfo(handle);
+    const gpu::Buffer *vtxBuffer = gpu->get_info(handle);
     if (NULL == vtxBuffer)
     {
         gos::logger::err ("gpu::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
@@ -207,7 +207,7 @@ RenderCtx& RenderCtx::bindVtxBuffers (const GPUVtxBufferHandle handleStream0, co
     cache_vxtBuffer_handle[0] = handleStream0;
     cache_vxtBuffer_handle[1] = handleStream1;
 
-    const gpu::Buffer *vtxBuffer0 = gpu->getInfo (handleStream0);
+    const gpu::Buffer *vtxBuffer0 = gpu->get_info (handleStream0);
     if (NULL == vtxBuffer0)
     {
         gos::logger::err ("gpu::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
@@ -215,7 +215,7 @@ RenderCtx& RenderCtx::bindVtxBuffers (const GPUVtxBufferHandle handleStream0, co
         return *this;
     }            
 
-    const gpu::Buffer *vtxBuffer1 = gpu->getInfo (handleStream1);
+    const gpu::Buffer *vtxBuffer1 = gpu->get_info (handleStream1);
     if (NULL == vtxBuffer1)
     {
         gos::logger::err ("gpu::CmdBufferWriter::bindVtxBuffer() => invalid vtxBufferHandle\n");
@@ -242,7 +242,7 @@ RenderCtx& RenderCtx::bindIdxBufferU16 (const GPUIdxBufferHandle handle, u32 off
     cache_idxBuffer_handle = handle;
     cache_idxBuffer_offset = offsetIN;
 
-    const gpu::Buffer *idxBuffer = gpu->getInfo (handle);
+    const gpu::Buffer *idxBuffer = gpu->get_info (handle);
     if (NULL == idxBuffer)
     {
         gos::logger::err ("gpu::CmdBufferWriter::bindIdxBufferU16() => invalid idxBufferHandle\n");

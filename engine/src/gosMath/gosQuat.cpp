@@ -275,7 +275,7 @@ void Quat::buildRotation (const vec3f &ax, f32 angle_rad)
 }
 
 //*******************************************************************
-void Quat::rotateMeAbout (const vec3f &ax, f32 angle_rad)
+void Quat::rotate_me_about (const vec3f &ax, f32 angle_rad)
 {
 	Quat	local;
 	local.buildRotation (ax, angle_rad);

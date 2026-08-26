@@ -211,6 +211,42 @@ namespace gos
 
 			void 			getEulerAngles_YXZ (f32 *out_rad_y, f32 *out_rad_x, f32 *out_rad_z) const
 			{
+				const T R00 = values[ADDR(0,0)];
+				const T R01 = values[ADDR(0,1)];
+				const T R02 = values[ADDR(0,2)];
+
+				const T R10 = values[ADDR(1,0)];
+				const T R11 = values[ADDR(1,1)];
+				const T R12 = values[ADDR(1,2)];
+
+				const T R22 = values[ADDR(2,2)];
+
+				if ( R12 < 1)
+				{
+					if (R12 > -1)
+					{
+						*out_rad_x = asinf ( R12 ) ;
+						*out_rad_y = -atan2f ( R02 , R22 ) ;
+						*out_rad_z = -atan2f ( R10 , R11 ) ;
+					}
+					else // R12 = −1
+					{
+						// Not a u n i q u e s o l u t i o n : t h e t aZ − t he t aY = a t a n 2(−r01 , r 0 0 )
+						*out_rad_x = -math::PIMEZZI;
+						*out_rad_y = atan2f ( -R01 , R00 ) ;
+						*out_rad_z = 0 ;
+					}
+				}
+				else // R12 = +1
+				{
+					// Not a u n i q u e s o l u t i o n : t h e t aZ + t he t aY = a t a n 2(−r01 , r 0 0 )
+					*out_rad_x = math::PIMEZZI;
+					*out_rad_y = -atan2f ( -R01 , R00 );
+					*out_rad_z = 0;
+				}
+
+
+/*
 				const T R31 = values[ADDR(2,0)];
 				if (R31 != 1 && R31 != -1)
 				{
@@ -226,13 +262,13 @@ namespace gos
 					*out_rad_y = pitch_1;
 					*out_rad_z = yaw_1 ;
 
-					/*const T pitch_2 = math::PI - pitch_1;
-					const T roll_2 = atan2f ( R32 / cosf(pitch_2) , R33 /cosf(pitch_2) );
-					const T yaw_2 = atan2f ( R21 / cosf(pitch_2) , R11 / cosf(pitch_2) );
-					*out_rad_x = roll_2;
-					*out_rad_y = pitch_2;
-					*out_rad_z = yaw_2 ;
-*/
+					// const T pitch_2 = math::PI - pitch_1;
+					// const T roll_2 = atan2f ( R32 / cosf(pitch_2) , R33 /cosf(pitch_2) );
+					// const T yaw_2 = atan2f ( R21 / cosf(pitch_2) , R11 / cosf(pitch_2) );
+					// *out_rad_x = roll_2;
+					// *out_rad_y = pitch_2;
+					// *out_rad_z = yaw_2 ;
+					
 					//IMPORTANT NOTE here, there is more than one solution but we choose the first for this case for simplicity !
 					//You can insert your own domain logic here on how to handle both solutions appropriately (see the reference publication link for more info). 
 				}
@@ -253,6 +289,7 @@ namespace gos
 					}
 					*out_rad_z = yaw;
 				}
+*/				
 			}
 
 		private:
@@ -400,7 +437,7 @@ namespace gos
 								values[ADDR(3,3)]=1;
 							}
 			
-			void			buildPerspective (f32 aspectRatio, f32 fovY_rad, f32 nearplane, f32 farplane)
+			void			build_perspective (f32 aspectRatio, f32 fovY_rad, f32 nearplane, f32 farplane)
 							{
 								const f32 tanHalfFov = tanf (fovY_rad * 0.5f);
 								const f32 m00 = 1.0f / (aspectRatio * tanHalfFov);

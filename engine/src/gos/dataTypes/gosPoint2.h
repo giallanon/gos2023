@@ -89,44 +89,44 @@ namespace gos
 						}
 		friend  Rect2	operator+ (const Rect2& a, const Rect2& b)			{ Rect2 r(a); r += b; return r; }
 
-		eClip2D			clipMeAgainstThis(const Rect2 &b)
+		eClipResult			clipMeAgainstThis(const Rect2 &b)
 						{
 							const i16 mex2 = calcX2();
 							const i16 bx2 = b.calcX2();
 							if (mex2 <= b.x)
-								return eClip2D::outside;
+								return eClipResult::outside;
 							if (x >= bx2)
-								return eClip2D::outside;
+								return eClipResult::outside;
 
 							//giunti qui, mex2 sicuramente > b.x
-							eClip2D ret = eClip2D::inside;
+							eClipResult ret = eClipResult::inside;
 							if (x < b.x)
 							{
-								ret = eClip2D::intersect;
+								ret = eClipResult::intersect;
 								x = b.x;
 							}
 							if (mex2 > bx2)
 							{
-								ret = eClip2D::intersect;
+								ret = eClipResult::intersect;
 								dimx = bx2 - x + 1;
 							}
 									
 							const i16 mey2 = calcY2();
 							const i16 by2 = b.calcY2();
 							if (mey2 <= b.y)
-								return eClip2D::outside;
+								return eClipResult::outside;
 							if (y >= by2)
-								return eClip2D::outside;
+								return eClipResult::outside;
 
 							//giunti qui, mey2 sicuramente > b.y
 							if (y < b.y)
 							{
-								ret = eClip2D::intersect;
+								ret = eClipResult::intersect;
 								y = b.y;
 							}
 							if (mey2 > by2)
 							{
-								ret = eClip2D::intersect;
+								ret = eClipResult::intersect;
 								dimy = by2 - y + 1;
 							}
 
@@ -135,55 +135,7 @@ namespace gos
 							return ret;	
 
 
-							/*
-							eClip2D ret = eClip2D::inside;
-
-							const i16 mex2 = calcX2();
-							const i16 mey2 = calcY2();
-
-							if (x < b.x)	
-							{
-								ret = eClip2D::intersect;
-								x = b.x; 
-							}
-
-							const i16 bx2 = b.calcX2();
-							if (mex2 > bx2) 
-							{
-								ret = eClip2D::intersect;
-								dimx = bx2 - x +1;
-							}
-							else
-								dimx = mex2 - x +1;
-
-							if (dimx <= 0)
-							{
-								dimx = dimy = 0;
-								return eClip2D::outside;
-							}
-
-							if (y < b.y)
-							{
-								ret = eClip2D::intersect;
-								y = b.y; 
-							}
-						
-							const i16 by2 = b.calcY2();
-							if (mey2 > by2)
-							{
-								ret = eClip2D::intersect;
-								dimy = by2 - y +1;
-							}
-							else
-								dimy = mey2 - y +1;
-	
-							if (dimy <= 0)
-							{
-								dimx = dimy = 0;
-								return eClip2D::outside;
-							}
-	
-							return ret;		*/		
+							
 						}
 
 	};
@@ -214,23 +166,23 @@ namespace gos
 		i16				calcDimX() const									{ return x2 - x1 + 1; }
 		i16				calcDimY() const									{ return y2 - y1 + 1; }
 
-		eClip2D			doesOverlap (const BBox2 &b) const
+		eClipResult			doesOverlap (const BBox2 &b) const
 						{
-							if (x2 < b.x1)	return eClip2D::outside;
-							if (x1 > b.x2)	return eClip2D::outside;
-							if (y2 < b.y1)	return eClip2D::outside;
-							if (y1 > b.y2)	return eClip2D::outside;
+							if (x2 < b.x1)	return eClipResult::outside;
+							if (x1 > b.x2)	return eClipResult::outside;
+							if (y2 < b.y1)	return eClipResult::outside;
+							if (y1 > b.y2)	return eClipResult::outside;
 
 							if (!b.isPointInside(x1, y1))
-								return eClip2D::intersect;;
+								return eClipResult::intersect;;
 							if (!b.isPointInside(x1, y2))
-								return eClip2D::intersect;;
+								return eClipResult::intersect;;
 							if (!b.isPointInside(x2, y1))
-								return eClip2D::intersect;;
+								return eClipResult::intersect;;
 							if (!b.isPointInside(x2, y2))
-								return eClip2D::intersect;;
+								return eClipResult::intersect;;
 
-							return eClip2D::inside;
+							return eClipResult::inside;
 						}
 
 		BBox2&			operator=  (const BBox2 &b)							{ set(b); return *this; }

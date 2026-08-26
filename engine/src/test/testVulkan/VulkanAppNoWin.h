@@ -4,8 +4,7 @@
 #include "gosAsset2Builder.h"
 #include "../gosGeom/gosGeomCamera3.h"
 #include "../gosShape/gosShape.h"
-#include "../gosGPU/utils/gosFreeMovement.h"
-#include "../gosGPU/utils/gosFPSMovement.h"
+#include "../gosGameUtils/ctrl/gosCtrlFreeMove.h"
 
 
 /*************************************************

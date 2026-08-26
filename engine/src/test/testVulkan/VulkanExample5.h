@@ -130,7 +130,6 @@ private:
 
 private:
     gos::geom::Camera3      cam;
-    gos::FreeMovement       movement;
     gos::Shape              myShape;
     World                   *world;
     SimpleLineRenderer      *line;

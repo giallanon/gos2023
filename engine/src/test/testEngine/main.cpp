@@ -1,5 +1,3 @@
-#include "test1.h"
-#include "game1.h"
 #include "Land1/Land1_app2.h"
 
 

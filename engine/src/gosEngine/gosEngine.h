@@ -54,6 +54,7 @@ namespace gos
 		bool                            inputEvent_getNext (InputEvent *out);
 		const input::MouseStatus*       inputEvent_getMouseStatus() const;
 		const input::sButtonModifier*   inputEvent_getBtnModifier() const;
+		input::eButtonStatus			inputEvent_getBtnStatus() const;
 
 		input::eMouseMode   getMouseMode() const;
 		void			    setMouseMode (input::eMouseMode mode);
@@ -183,8 +184,9 @@ namespace gos
 		//============================= model instance
 		bool            modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_handle);
 		void            release (ENGModel3dInst &handle)															{ res__release(handle.res_handle); handle.res_handle.setInvalid(); }
-		bool            get (ENGModel3dInst handle, const res::Model3dInst **out)                           		{ return res__getOrScheduleLoadT(handle, out, 0); }
+		bool            get (ENGModel3dInst handle, const res::Model3dInst **out, u64 timeout_msec = 0)				{ return res__getOrScheduleLoadT(handle, out, timeout_msec); }
 		void            modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &matW);
+		void 			modelinst_getWMatrix (ENGModel3dInst handle, mat4x4f *out_matW);
 		void 			internal__modelinst_on_afterCreate (void *res);
 		bool 			internal__modelinst_on_loadCallback(void *callback_data);
 		void            internal__modelinst_on_destroy (void *res);

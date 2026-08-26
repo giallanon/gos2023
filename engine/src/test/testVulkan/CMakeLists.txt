@@ -73,10 +73,10 @@ include_directories(${PROJECT_SOURCE_DIR}/../../gosDB.h)
 
 #====================================================
 # additional library to be linked
-set(LIBRARY_LIST "gosAsset2;gosGPU;gosDB;gosImage;gosInput;gosShape;gosGeom;gosMath;gos")
+set(LIBRARY_LIST "gosGameUtils;gosAsset2;gosGPU;gosDB;gosImage;gosInput;gosShape;gosGeom;gosMath;gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
-    message("         linkling additional libray [${libName}] => ${finalLibNameAndPath}")
+    message("         linking additional libray [${libName}] => ${finalLibNameAndPath}")
     target_link_libraries(${BINARY_OUTPUT_FILENAME} ${finalLibNameAndPath})
 endforeach()
 

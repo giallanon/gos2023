@@ -23,9 +23,9 @@ namespace gos
 
 							//========================== fn
 							//aspect = width / height
-			void			setPerspectiveFovLH (f32 aspect, f32 fovY_rad, f32 nearplane, f32 farplane);
+			void			set_perspective_FOV_LH (f32 aspect, f32 fovY_rad, f32 nearplane, f32 farplane);
 										
-			void			setOrthoLH (f32 width, f32 height, f32 nearplane, f32 farplane, f32 zoom);
+			void			set_ortho_LH (f32 width, f32 height, f32 nearplane, f32 farplane, f32 zoom);
 
 			void			projectI (f32 viewportDimx, f32 viewportDimy, const vec3f *points3D, vec2i *point2D, u32 nPoints);
 			void			projectI (u32 viewportDimx, u32 viewportDimy, const vec3f *points3D, vec2i *point2D, u32 nPoints)				{ projectI (static_cast<f32>(viewportDimx), static_cast<f32>(viewportDimy), points3D, point2D, nPoints); }
@@ -39,7 +39,7 @@ namespace gos
 			void			unproject (f32 viewportDimx, f32 viewportDimy, const vec2f *points2D, vec3f *out_direction3D, u32 nPoints);
 			void			unproject (u32 viewportDimx, u32 viewportDimy, const vec2f *points2D, vec3f *out_direction3D, u32 nPoints)		{ unproject (static_cast<f32>(viewportDimx), static_cast<f32>(viewportDimy), points2D, out_direction3D, nPoints); }
 
-			void			changeAspectRatioPerspectiveFovLH (f32 newAspect)																{ setPerspectiveFovLH (newAspect, getFOV_y_rad(), getNearDistance(), getFarDistance()); }
+			void			change_aspectRatio_perspective_FOV_LH (f32 newAspect)															{ set_perspective_FOV_LH (newAspect, get_FOV_y_rad(), get_near_distance(), get_far_distance()); }
 
 							//========================== position
 			Pos3			pos;
@@ -48,22 +48,22 @@ namespace gos
 								markUpdated() in modo che Camera possa sapere che la sua
 								posizione e' stata modificata e quindi aggiornare le
 								sue matrici*/
-			void			markUpdated()											{ ++lastTimeUpdated; }
+			void			mark_updated()											{ ++lastTimeUpdated; }
 
 							//========================== query 
-			f32				getOrthoWidth() const									{ return ortoWidth; }
-			f32				getOrthoHeight() const									{ return ortoHeight; }
-			f32				getAspectRatio() const									{ return aspectRatio; }
-			f32				getNearDistance() const									{ return nearDistance; }
-			f32				getFarDistance() const									{ return farDistance; }
-			f32				getFOV_y_rad () const									{ assert(bIsPerspective); return fovy_rad; }
-			f32				getOrhtoZoom () const									{ assert(!bIsPerspective); return fovy_rad; }
-			bool			isPerspective() const									{ return bIsPerspective; }
+			f32				get_ortho_width() const									{ return ortoWidth; }
+			f32				get_ortho_height() const								{ return ortoHeight; }
+			f32				get_aspectRatio() const									{ return aspectRatio; }
+			f32				get_near_distance() const								{ return nearDistance; }
+			f32				get_far_distance() const								{ return farDistance; }
+			f32				get_FOV_y_rad () const									{ assert(bIsPerspective); return fovy_rad; }
+			f32				get_orhto_zoom () const									{ assert(!bIsPerspective); return fovy_rad; }
+			bool			is_perspective() const									{ return bIsPerspective; }
 
-			const Frustum3&	getFrustumWC()											{ if (!priv_isFrustumUpToDate()) priv_calcFrustum(); return frustumWC; }
-			const mat4x4f&	getMatP () const										{ return matP; }
-			const mat4x4f&	getMatV ();
-			const mat4x4f&	getMatVP ();
+			Frustum3		get_frustumWC()											{ if (!priv_isFrustumUpToDate()) priv_calcFrustum(); return frustumWC; }
+			mat4x4f			get_matP () const										{ return matP; }
+			mat4x4f			get_matV ();
+			mat4x4f			get_matVP ();
 
 		private:
 			void			priv_init()												{ pos.identity();  lastTimeUpdated=0; lastTimeFrustumUpdated = lastTimeMatVPUpdated = lastTimeMatVUpdated = u32MAX; }

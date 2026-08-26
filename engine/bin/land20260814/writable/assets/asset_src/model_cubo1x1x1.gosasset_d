@@ -1,0 +1,11 @@
+@include: common.gosasset_d
+
+
+@model3d: model_cubo1x1x1
+{
+	import: <common_assets>/model3d/cubo1x1x1.glb
+
+	post_op: "	skeleton-resolve;"
+
+}
+

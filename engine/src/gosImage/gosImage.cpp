@@ -28,7 +28,7 @@ bool image::load (gos::Allocator *allocator, const char *filePathAndName, Image 
 	}
 
 	out->p = buffer;
-	const image::sImageHeader *header = image::getInfo(*out);
+	const image::sImageHeader *header = image::get_info(*out);
 	if (header->signature == GOSIMAGE__IMAGE_SIGNATURE)
 		return true;
 
@@ -48,7 +48,7 @@ bool image::save (const Image &img, const char* filePathAndName)
 		return false;
 	}
 
-	const image::sImageHeader *header = image::getInfo(img);
+	const image::sImageHeader *header = image::get_info(img);
 	fs::fileWrite (f, img.p, header->totalSizeOfImage);
 	fs::fileClose(f);
 	return true;
@@ -63,7 +63,7 @@ void image::free (gos::Allocator *allocator, Image &img)
 
 
 //***********************************************
-const image::sImageHeader* image::getInfo (const Image &img)
+const image::sImageHeader* image::get_info (const Image &img)
 {
 	const image::sImageHeader *header = static_cast<const image::sImageHeader*>(img.p);
 	return header;
@@ -73,7 +73,7 @@ const image::sImageHeader* image::getInfo (const Image &img)
 //***********************************************
 static u32 image_getAddrOfTextureHeader (const Image &img, u8 textureNum_0toN)
 {
-	const image::sImageHeader *header = image::getInfo(img);
+	const image::sImageHeader *header = image::get_info(img);
 	if (textureNum_0toN >= header->numTexture)
 		return u32MAX;
 
@@ -92,7 +92,7 @@ static u32 image_getAddrOfTextureHeader (const Image &img, u8 textureNum_0toN)
 }
 
 //***********************************************
-const image::sTextureHeader* image::getTextureInfo (const Image &img, u8 textureNum_0toN)
+const image::sTextureHeader* image::get_texture_info (const Image &img, u8 textureNum_0toN)
 {
 	const u32 addr = image_getAddrOfTextureHeader(img, textureNum_0toN);
 	if (u32MAX == addr)
@@ -106,7 +106,7 @@ const image::sTextureHeader* image::getTextureInfo (const Image &img, u8 texture
 }
 
 //***********************************************
-bool image::getTextureData (const Image &img, u8 textureNum_0toN, u8 mipMapNum_0toN, image::sTextureData *out)
+bool image::get_texture_data (const Image &img, u8 textureNum_0toN, u8 mipMapNum_0toN, image::sTextureData *out)
 {
 	u32 addr = image_getAddrOfTextureHeader (img, textureNum_0toN);
 	if (u32MAX == addr)

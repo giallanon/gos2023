@@ -222,8 +222,8 @@ bool VulkanExample6::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, V
 
     //aggiorno UBO
     ubo.objWorld.identity();
-    ubo.camView = cam.getMatV();
-    ubo.camProj = cam.getMatP();
+    ubo.camView = cam.get_matV();
+    ubo.camProj = cam.get_matP();
 
     //ubo.lightDir.set (-1, -0.3f, 0, 0);
     //ubo.lightDir.set (0, -0.5f, 1, 0);
@@ -307,11 +307,11 @@ bool VulkanExample6::priv_recordCommandBuffer_v2 (gos::gpu::CmdBufferWriter2 &cw
  */
 void VulkanExample6::virtual_onRun()
 {
-    cam.setPerspectiveFovLH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
+    cam.set_perspective_FOV_LH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
     cam.pos.identity();
     cam.pos.warp (0, 0, -19);
     cam.pos.lookAt (vec3f(0,0,0));
-    cam.markUpdated();
+    cam.mark_updated();
 
     movement.bind (&cam.pos);
     mainLoop();
@@ -362,7 +362,7 @@ void VulkanExample6::doCPUStuff ()
     //gestione del movimento
     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
     movement.update(timeNow_msec);
-    cam.markUpdated();
+    cam.mark_updated();
 }
 
 
@@ -390,7 +390,7 @@ void VulkanExample6::mainLoop()
         mainLoop.run();
 
         if (gpu->swapChain_wasRecreated())
-            cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
+            cam.change_aspectRatio_perspective_FOV_LH (gpu->swapChain_calcAspectRatio());
 
 
         //se il job precedente e' stato presentato, posso schedularne uno nuovo

@@ -21,7 +21,7 @@ CmdBufferWriter2& CmdBufferWriter2::begin (GPU *gpuIN, const GPUCmdBufferHandle 
     flag.zero();
 
 
-    const gpu::CommandBuffer *cmdBuffer = gpu->getInfo(handle);
+    const gpu::CommandBuffer *cmdBuffer = gpu->get_info(handle);
     if (NULL == cmdBuffer)
     {
         gos::logger::err ("gpu::CmdBufferWriter2::begin => invalid cmdBufferHandle\n");
@@ -51,7 +51,7 @@ CmdBufferWriter2& CmdBufferWriter2::setViewport (const GPUViewportHandle handle)
 {
     if (!anyError())
     {
-        const gos::gpu::Viewport *viewport = gpu->getInfo(handle);
+        const gos::gpu::Viewport *viewport = gpu->get_info(handle);
 
         VkViewport vkViewport {0.0f, 0.0f, (viewport->getW_f32()), viewport->getH_f32(), 0.0f, 1.0f };
         vkCmdSetViewport(vkCommandBuffer, 0, 1, &vkViewport);
@@ -66,7 +66,7 @@ CmdBufferWriter2& CmdBufferWriter2::setViewport (const GPUViewportHandle handle)
 //***********************************************
 CmdBufferWriter2& CmdBufferWriter2::imageTransition (const GPURenderTargetHandle &rtHandle, const eImageLayout currentLayout, const eImageLayout newLayout)
 {
-    const gpu::RenderTarget *rt_info = gpu->getInfo (rtHandle);
+    const gpu::RenderTarget *rt_info = gpu->get_info (rtHandle);
     assert (NULL != rt_info);
 
     return imageTransition (rt_info->image, currentLayout, newLayout);
@@ -75,7 +75,7 @@ CmdBufferWriter2& CmdBufferWriter2::imageTransition (const GPURenderTargetHandle
 //***********************************************
 CmdBufferWriter2& CmdBufferWriter2::imageTransition (const GPUZBufferHandle &zbHandle, const eImageLayout currentLayout, const eImageLayout newLayout)
 {
-    const gpu::DepthStencil *zBuffer_info = gpu->getInfo (zbHandle);
+    const gpu::DepthStencil *zBuffer_info = gpu->get_info (zbHandle);
     assert (NULL != zBuffer_info);
     return imageTransition (zBuffer_info->image, currentLayout, newLayout);
 }
@@ -186,23 +186,23 @@ CmdBufferWriter2& CmdBufferWriter2::copyBuffer (const VkBuffer srcBuffer, const 
 //***********************************************
 CmdBufferWriter2& CmdBufferWriter2::copyBuffer (GPUStgBufferHandle srcStageBufferHandle, GPUVtxBufferHandle dstVtxBufferHandle, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
 {
-    const gpu::Buffer *src = gpu->getInfo (srcStageBufferHandle);
-    const gpu::Buffer *dst = gpu->getInfo (dstVtxBufferHandle);
+    const gpu::Buffer *src = gpu->get_info (srcStageBufferHandle);
+    const gpu::Buffer *dst = gpu->get_info (dstVtxBufferHandle);
     return copyBuffer (src->vkHandle, dst->vkHandle, offsetSRC, offsetDST, howManyByteToCopy);
 }
 
 //***********************************************
 CmdBufferWriter2& CmdBufferWriter2::copyBuffer (GPUStgBufferHandle srcStageBufferHandle, GPUIdxBufferHandle dstIdxBufferHandle, u32 offsetSRC, u32 offsetDST, u32 howManyByteToCopy)
 {
-    const gpu::Buffer *src = gpu->getInfo (srcStageBufferHandle);
-    const gpu::Buffer *dst = gpu->getInfo (dstIdxBufferHandle);
+    const gpu::Buffer *src = gpu->get_info (srcStageBufferHandle);
+    const gpu::Buffer *dst = gpu->get_info (dstIdxBufferHandle);
     return copyBuffer (src->vkHandle, dst->vkHandle, offsetSRC, offsetDST, howManyByteToCopy);
 }
 
 //***********************************************
 CmdBufferWriter2& CmdBufferWriter2::copyImageToImage (const GPURenderTargetHandle &rtHandle, const VkImage &destination, const VkExtent2D &srcSize, const VkExtent2D &dstSize)
 {
-    const gpu::RenderTarget *rt_info = gpu->getInfo (rtHandle);
+    const gpu::RenderTarget *rt_info = gpu->get_info (rtHandle);
     assert (NULL != rt_info);
 
     return copyImageToImage (rt_info->image, destination, srcSize, dstSize);
@@ -211,10 +211,10 @@ CmdBufferWriter2& CmdBufferWriter2::copyImageToImage (const GPURenderTargetHandl
 //***********************************************
 CmdBufferWriter2& CmdBufferWriter2::copyImageToImage (const GPURenderTargetHandle &rtSRC, const GPURenderTargetHandle &rtDST, const VkExtent2D &srcSize, const VkExtent2D &dstSize)
 {
-    const gpu::RenderTarget *rtSRC_info = gpu->getInfo (rtSRC);
+    const gpu::RenderTarget *rtSRC_info = gpu->get_info (rtSRC);
     assert (NULL != rtSRC_info);
 
-    const gpu::RenderTarget *rtDST_info = gpu->getInfo (rtDST);
+    const gpu::RenderTarget *rtDST_info = gpu->get_info (rtDST);
     assert (NULL != rtDST_info);
 
     return copyImageToImage (rtSRC_info->image, rtDST_info->image, srcSize, dstSize);

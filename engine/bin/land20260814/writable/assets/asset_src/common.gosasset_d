@@ -1,0 +1,6 @@
+@alias
+{
+	name: common_assets
+	path: ../../../../../common_assets
+}
+

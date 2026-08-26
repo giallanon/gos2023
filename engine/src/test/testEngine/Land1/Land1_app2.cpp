@@ -60,10 +60,10 @@ void Land1_app2::on__setup ()
 	engine->model_createFromAsset ("model_gix_tree_1", &handle_model_albero, res::eLoadMode::asap);
 	
 
-	cam.pos.warp (0, 20, 0);
-	cam.pos.lookAt(vec3f(0,0,0));
-	cam.markUpdated();
-	move_free.bind (&cam.pos);
+	geom::Camera3 *cam = camera__get(0);
+	cam->pos.warp (0, 20, 0);
+	cam->pos.lookAt(vec3f(0,0,0));
+	cam->mark_updated();
 
 	//creo una mappa
 	const f32 EXA_WORLD_RADIUS = 50.0f;
@@ -99,7 +99,7 @@ void Land1_app2::priv_new_albero (const gos::vec3f &world_point)
 }
 
 //***************************************
-void Land1_app2::on__prepare_render()
+void Land1_app2::on__render()
 {
 	const u64 timenow_msec = gos::getTimeSinceStart_msec();
 
@@ -183,18 +183,20 @@ void Land1_app2::on__prepare_render()
 //***************************************
 void Land1_app2::priv_mouse_to_GVC ()
 {
-	const gpu::Viewport *vp = gpu->getInfo (gpu->viewport_getDefault());
+	const gpu::Viewport *vp = gpu->get_info (gpu->viewport_getDefault());
 	vec2f m(mouse_x, mouse_y);
 	vec3f world_dir;
-	cam.unproject (vp->getW_f32(), vp->getH_f32(), &m , &world_dir, 1);
+	
+	geom::Camera3 *cam = camera__get_render_camera();
+	cam->unproject (vp->getW_f32(), vp->getH_f32(), &m , &world_dir, 1);
 
 	if (last_mouseover_gvc.is_valid())
 	{
-		if (map.does_world_ray_intersect_GVC (cam.pos.o, world_dir, last_mouseover_gvc))
+		if (map.does_world_ray_intersect_GVC (cam->pos.o, world_dir, last_mouseover_gvc))
 			return;
 	}
 
-	if (!map.world_ray_to_GVC (cam.pos.o, world_dir, &last_mouseover_gvc))
+	if (!map.world_ray_to_GVC (cam->pos.o, world_dir, &last_mouseover_gvc))
 		last_mouseover_gvc.set_invalid();
 }
 

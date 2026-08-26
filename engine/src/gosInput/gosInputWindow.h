@@ -22,7 +22,7 @@ namespace gos
 			u32 					resolveEvents_nextActionID (i16 *out_value);
 			const MouseStatus&		resolveEvents_getMouse() const																{ return resolving.mouseStatus; }
 			const sButtonModifier&	resolveEvents_getBtnModifier() const														{ return resolving.btnModifier; }
-
+			eButtonStatus			resolveEvents_getBtnStatus() const															{ return resolving.btnStatus; }
 
 			void			addButtonEvt (input::eOrigin origin, int buttonId, eButtonStatus status)							{ curEvtList->addButtonEvt (origin, buttonId, status, curBtnModifier); }
 			void			addAxleAbsEvt (input::eOrigin origin, input::eAxle axle, i16 pos)									{ curEvtList->addAxleAbsEvt (origin, axle, pos); }
@@ -64,6 +64,7 @@ namespace gos
 				const Context 	*ctx;
 				MouseStatus		mouseStatus;
 				sButtonModifier	btnModifier;
+				eButtonStatus	btnStatus;
 			};
 
 		private:

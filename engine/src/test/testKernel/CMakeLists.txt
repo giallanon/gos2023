@@ -58,7 +58,7 @@ include_directories(${PROJECT_SOURCE_DIR}/../../gosImage)
 set(LIBRARY_LIST "gosImage;gosGeom;gosMath;gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
-    message("         linkling additional libray [${libName}] => ${finalLibNameAndPath}")
+    message("         linking additional libray [${libName}] => ${finalLibNameAndPath}")
     target_link_libraries(${BINARY_OUTPUT_FILENAME} PRIVATE ${finalLibNameAndPath})
 endforeach()
 

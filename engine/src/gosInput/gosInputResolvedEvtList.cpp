@@ -33,6 +33,12 @@ const MouseStatus& ResolvedEvtList::getMouseStatus() const
 }
 
 //**********************************************
+input::eButtonStatus ResolvedEvtList::getBtnStatus() const
+{
+	return win->resolveEvents_getBtnStatus();
+}
+
+//**********************************************
 const sButtonModifier& ResolvedEvtList::getBtnModifier() const
 {
 	return win->resolveEvents_getBtnModifier();

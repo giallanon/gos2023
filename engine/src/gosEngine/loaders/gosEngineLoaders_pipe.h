@@ -143,7 +143,7 @@ namespace gos
                             auto &builder = def.descriptorset_add();
 
                             eGPUDescriptrorSetOptionBitmask options;
-                            options.setFromU32 (reader.readU32 ());
+                            options.set_from_U32 (reader.readU32 ());
 
 
                             const u32 numElem = reader.readU32 ();
@@ -163,7 +163,7 @@ namespace gos
                                     count = 1;
                                     builder.addCreationFlag (VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
                                 }
-                                if (options.isset(eGPUDescriptrorSetOption::bindless))
+                                if (options.is_set(eGPUDescriptrorSetOption::bindless))
                                     builder.addCreationFlag (VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
 
                                 builder.add (binding, type, count, usage);

@@ -32,12 +32,8 @@ Land1/Land1_renderer.h
 
 characterController.cpp
 characterController.h
-game1.cpp
-game1.h
 main.cpp
 PerlinNoise.hpp
-test1.cpp
-test1.h
 )
 
 
@@ -68,10 +64,10 @@ include_directories(${PROJECT_SOURCE_DIR}/../../gosEngine)
 
 #====================================================
 # additional library to be linked
-set(LIBRARY_LIST "gosGameUtils;gosEngine;gosAsset2;gosGPU;gosDB;gosImage;gosInput;gosShape;gosGeom;gosMath;gos")
+set(LIBRARY_LIST "gosEngine;gosGameUtils;gosAsset2;gosGPU;gosDB;gosImage;gosInput;gosShape;gosGeom;gosMath;gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
-    message("         linkling additional libray [${libName}] => ${finalLibNameAndPath}")
+    message("         linking additional libray [${libName}] => ${finalLibNameAndPath}")
     target_link_libraries(${BINARY_OUTPUT_FILENAME} ${finalLibNameAndPath})
 endforeach()
 

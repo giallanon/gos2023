@@ -54,9 +54,9 @@ namespace gos
 		bool					save (const Image &img, const char* filePathAndName);
 		void					free (gos::Allocator *allocator, Image &img);
 
-		const sImageHeader*		getInfo (const Image &img);
-		const sTextureHeader*	getTextureInfo (const Image &img, u8 textureNum_0toN); 
-		bool					getTextureData (const Image &img, u8 textureNum_0toN, u8 mipMapNum_0toN, sTextureData *out);
+		const sImageHeader*		get_info (const Image &img);
+		const sTextureHeader*	get_texture_info (const Image &img, u8 textureNum_0toN); 
+		bool					get_texture_data (const Image &img, u8 textureNum_0toN, u8 mipMapNum_0toN, sTextureData *out);
 		
 	} //namespace image
  } //namespace gos

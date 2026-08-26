@@ -135,7 +135,10 @@ u32 Window::resolveEvents_nextActionID (i16 *out_value)
             {
                 sBtnEvent info;
                 if (input::event_toButtonEvent (eventID, &info))
+				{
                     resolving.btnModifier = info.modifier;
+					resolving.btnStatus = info.status;
+				}
             }
         }
 

@@ -267,7 +267,7 @@ namespace test_math
 
         //ruoto 90y e poi ruoto l'attuale me stesso sull'asse 0,0,1
         q1.buildRotationAboutAsseY(math::gradToRad(90));
-        q1.rotateMeAbout (vec3f(0,0,1), math::gradToRad(90));
+        q1.rotate_me_about (vec3f(0,0,1), math::gradToRad(90));
         q1.toAxis(&ax, &ay, &az);
         TEST_ASSERT(vecAreVeryClose(ax, vec3f(0, 0, 1), EPSILON));
         TEST_ASSERT(vecAreVeryClose(ay, vec3f(1, 0, 0), EPSILON));
@@ -293,9 +293,9 @@ namespace test_math
         geom::Pos3 pos;
 
         pos.identity();
-        pos.moveRelAlongX (2); TEST_ASSERT(vecAreVeryClose(pos.o, vec3f(2, 0, 0), EPSILON));
-        pos.moveRelAlongY (4); TEST_ASSERT(vecAreVeryClose(pos.o, vec3f(2, 4, 0), EPSILON));
-        pos.moveRelAlongZ (-1); TEST_ASSERT(vecAreVeryClose(pos.o, vec3f(2, 4, -1), EPSILON));
+        pos.move_rel_along_x (2); TEST_ASSERT(vecAreVeryClose(pos.o, vec3f(2, 0, 0), EPSILON));
+        pos.move_rel_along_y (4); TEST_ASSERT(vecAreVeryClose(pos.o, vec3f(2, 4, 0), EPSILON));
+        pos.move_rel_along_z (-1); TEST_ASSERT(vecAreVeryClose(pos.o, vec3f(2, 4, -1), EPSILON));
         pos.warp (1, 0, 0); TEST_ASSERT(vecAreVeryClose(pos.o, vec3f(1, 0, 0), EPSILON));
 
         //rotation di base (oraria, left hand system)
@@ -308,17 +308,17 @@ namespace test_math
             |/
             |------------x
         */
-        pos.identity();	pos.rotateMeAboutMyX(math::gradToRad(90)); 
+        pos.identity();	pos.rotate_me_about_my_x(math::gradToRad(90)); 
         TEST_ASSERT(vecAreVeryClose(pos.getAsseX(), vec3f(1, 0, 0), EPSILON));
         TEST_ASSERT(vecAreVeryClose(pos.getAsseY(), vec3f(0, 0, -1), EPSILON));
         TEST_ASSERT(vecAreVeryClose(pos.getAsseZ(), vec3f(0, 1, 0), EPSILON));
 
-        pos.identity();	pos.rotateMeAboutMyY(math::gradToRad(90)); 
+        pos.identity();	pos.rotate_me_about_my_y(math::gradToRad(90)); 
         TEST_ASSERT(vecAreVeryClose(pos.getAsseX(), vec3f(0, 0, 1), EPSILON));
         TEST_ASSERT(vecAreVeryClose(pos.getAsseY(), vec3f(0, 1, 0), EPSILON));
         TEST_ASSERT(vecAreVeryClose(pos.getAsseZ(), vec3f(-1, 0, 0), EPSILON));
 
-        pos.identity();	pos.rotateMeAboutMyZ(math::gradToRad(90)); 
+        pos.identity();	pos.rotate_me_about_my_z(math::gradToRad(90)); 
         TEST_ASSERT(vecAreVeryClose(pos.getAsseX(), vec3f(0, -1, 0), EPSILON));
         TEST_ASSERT(vecAreVeryClose(pos.getAsseY(), vec3f(1, 0, 0), EPSILON));
         TEST_ASSERT(vecAreVeryClose(pos.getAsseZ(), vec3f(0, 0, 1), EPSILON));
@@ -329,7 +329,7 @@ namespace test_math
         //il mio punto 1,0,0 locale, deve diventare il punto 0,0,1 in word coord
         //Viceversa, il punto wolrd 0,0,1, deve diventare 1,0,0 in locale
         pos.identity();	
-        pos.rotateMeAboutMyY(math::gradToRad(90)); 
+        pos.rotate_me_about_my_y(math::gradToRad(90)); 
         v1.set (1, 0, 0);	pos.vect_ToWorld (&v1, &v2, 1);	TEST_ASSERT(vecAreVeryClose(v2, vec3f(0, 0, 1), EPSILON));
         v1.set (0, 0, 0);	pos.vect_ToLocal (&v2, &v1, 1);	TEST_ASSERT(vecAreVeryClose(v1, vec3f(1, 0, 0), EPSILON));
 
@@ -341,14 +341,14 @@ namespace test_math
 
         //rotazione y90 e a seguire una x90 sull'attuale asse X
         pos.identity();	
-        pos.rotateMeAboutMyY(math::gradToRad(90)); 
-        pos.rotateMeAboutMyX(math::gradToRad(90)); 
+        pos.rotate_me_about_my_y(math::gradToRad(90)); 
+        pos.rotate_me_about_my_x(math::gradToRad(90)); 
         v1.set (1, 0, 0);	pos.vect_ToWorld (&v1, &v2, 1);	TEST_ASSERT(vecAreVeryClose(v2, vec3f(0, 0, 1), EPSILON));
         v1.set (0, 1, 0);	pos.vect_ToWorld (&v1, &v2, 1);	TEST_ASSERT(vecAreVeryClose(v2, vec3f(1, 0, 0), EPSILON));
         v1.set (0, 0, 1);	pos.vect_ToWorld (&v1, &v2, 1);	TEST_ASSERT(vecAreVeryClose(v2, vec3f(0, 1, 0), EPSILON));
 
         //..e ora ruota sull'attuale asse Z	
-        pos.rotateMeAboutMyZ(math::gradToRad(90));
+        pos.rotate_me_about_my_z(math::gradToRad(90));
         v1.set (1, 0, 0);	pos.vect_ToWorld (&v1, &v2, 1);	TEST_ASSERT(vecAreVeryClose(v2, vec3f(-1, 0, 0), EPSILON));
         v1.set (0, 1, 0);	pos.vect_ToWorld (&v1, &v2, 1);	TEST_ASSERT(vecAreVeryClose(v2, vec3f(0, 0, 1), EPSILON));
         v1.set (0, 0, 1);	pos.vect_ToWorld (&v1, &v2, 1);	TEST_ASSERT(vecAreVeryClose(v2, vec3f(0, 1, 0), EPSILON));

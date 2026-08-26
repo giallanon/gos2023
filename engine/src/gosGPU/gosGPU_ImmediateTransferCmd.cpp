@@ -34,7 +34,7 @@ void GPU::ImmediateTransferCmd::unsetup()
 //*************************************************************************
 VkCommandBuffer GPU::ImmediateTransferCmd::getVulkanCmdBufferHandle() const
 {
-    const gpu::CommandBuffer *cmdBuffer = gpu->getInfo(handle_cmdBuffer);
+    const gpu::CommandBuffer *cmdBuffer = gpu->get_info(handle_cmdBuffer);
     return cmdBuffer->vkHandle;
 }
 
@@ -60,7 +60,7 @@ void GPU::ImmediateTransferCmd::end()
 {
     cw.end();
 
-    const gpu::CommandBuffer *cmdBuffer = gpu->getInfo(handle_cmdBuffer);
+    const gpu::CommandBuffer *cmdBuffer = gpu->get_info(handle_cmdBuffer);
 
     //submit
     VkSubmitInfo submitInfo{};

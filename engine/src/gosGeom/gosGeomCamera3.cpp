@@ -25,7 +25,7 @@ void Camera3::priv_copyFrom (const Camera3 &b)
 
 
 //*************************************************************
-void Camera3::setPerspectiveFovLH (f32 aspectIN, f32 fovY_radIN, f32 nearplane, f32 farplane)
+void Camera3::set_perspective_FOV_LH (f32 aspectIN, f32 fovY_radIN, f32 nearplane, f32 farplane)
 {
 	bIsPerspective = true;
 	lastTimeUpdated=0;
@@ -38,11 +38,11 @@ void Camera3::setPerspectiveFovLH (f32 aspectIN, f32 fovY_radIN, f32 nearplane, 
 	farDistance = farplane;
 	fovy_rad = fovY_radIN;
 
-	matP.buildPerspective (aspectRatio, fovy_rad, nearDistance, farDistance);
+	matP.build_perspective (aspectRatio, fovy_rad, nearDistance, farDistance);
 }
 
 //*************************************************************
-void Camera3::setOrthoLH (f32 widthIN, f32 heightIN, f32 nearplane, f32 farplane, f32 zoom)
+void Camera3::set_ortho_LH (f32 widthIN, f32 heightIN, f32 nearplane, f32 farplane, f32 zoom)
 {
 	DBGBREAK; // da rivedere dopo che ho cambiadato da row major a col major
 	assert (zoom > 0);
@@ -78,13 +78,13 @@ void Camera3::priv_calcFrustum()
 	lastTimeFrustumUpdated = lastTimeUpdated;
 	
 	if (bIsPerspective)
-		frustumWC.buildPerspective (pos.o, pos.getAsseZ(), pos.getAsseY(), pos.getAsseX(), nearDistance, farDistance, fovy_rad, aspectRatio);
+		frustumWC.build_perspective (pos.o, pos.getAsseZ(), pos.getAsseY(), pos.getAsseX(), nearDistance, farDistance, fovy_rad, aspectRatio);
 	else
-		frustumWC.buildOrtho (pos.o, pos.getAsseZ(), pos.getAsseY(), pos.getAsseX(), ortoWidth, ortoHeight, nearDistance, farDistance, getOrhtoZoom());
+		frustumWC.build_ortho (pos.o, pos.getAsseZ(), pos.getAsseY(), pos.getAsseX(), ortoWidth, ortoHeight, nearDistance, farDistance, get_orhto_zoom());
 }
 
 //*************************************************************
-const mat4x4f& Camera3::getMatV ()
+mat4x4f Camera3::get_matV ()
 {
 	if (lastTimeUpdated != lastTimeMatVUpdated)
 	{
@@ -107,14 +107,14 @@ const mat4x4f& Camera3::getMatV ()
 }
 
 //*************************************************************
-const mat4x4f& Camera3::getMatVP ()
+mat4x4f Camera3::get_matVP ()
 {
 	if (lastTimeUpdated != lastTimeMatVPUpdated)
 	{
 		lastTimeMatVPUpdated = lastTimeUpdated;
 		//se devo aggiornare anche la matV
 		if (lastTimeUpdated != lastTimeMatVUpdated)
-			getMatV();
+			get_matV();
 		
 		matVP = matP * matV;
 	}
@@ -125,9 +125,9 @@ const mat4x4f& Camera3::getMatVP ()
 //*************************************************************
 void Camera3::projectI (f32 viewportDimx, f32 viewportDimy, const vec3f *points3D, vec2i *point2D, u32 nPoints)
 {
-	getMatVP ();
+	get_matVP ();
 
-	if (isPerspective())
+	if (is_perspective())
 	{
 		const f32 w = viewportDimx;
 		const f32 h = viewportDimy;
@@ -158,9 +158,9 @@ void Camera3::projectI (f32 viewportDimx, f32 viewportDimy, const vec3f *points3
 //*************************************************************
 void Camera3::projectF (f32 viewportDimx, f32 viewportDimy, const vec3f *points3D, vec2f *point2D, u32 nPoints)
 {
-	getMatVP ();
+	get_matVP ();
 
-	if (isPerspective())
+	if (is_perspective())
 	{
 		const f32 w = viewportDimx;
 		const f32 h = viewportDimy;
@@ -191,10 +191,10 @@ void Camera3::projectF (f32 viewportDimx, f32 viewportDimy, const vec3f *points3
 //*************************************************************
 void Camera3::unproject (f32 viewportDimx, f32 viewportDimy, const vec2f *points2D, vec3f *out_direction3D, u32 nPoints)
 {
-	getFrustumWC();
-	const vec3f	nearCenter = frustumWC.getNearCenter();
-	const vec3f	nearHalfAsseX = frustumWC.getNearPlaneHalfAsseX();
-	const vec3f	nearHalfAsseY = frustumWC.getNearPlaneHalfAsseY();
+	get_frustumWC();
+	const vec3f	nearCenter = frustumWC.get_near_center();
+	const vec3f	nearHalfAsseX = frustumWC.get_nearPlane_half_asseX();
+	const vec3f	nearHalfAsseY = frustumWC.get_nearPlane_half_asseY();
 	const vec3f	camO = pos.o;
 
 	const f32 vpHalfDimx = viewportDimx * 0.5f;

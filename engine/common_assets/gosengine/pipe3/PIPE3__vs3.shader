@@ -25,7 +25,7 @@ void main()
 	gl_Position = (vec4(in_position, 1.0) * matW) * scene.camVP;
 
     //normale in world coordinate
-    out_normal = in_normal * mat3(matW);
+    out_normal = PIPE3_transform_normal_by_world_matrix4x4 (in_normal, matW);
     
     out_texCoord = in_texCoord;
 

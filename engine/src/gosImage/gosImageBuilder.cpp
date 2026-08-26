@@ -241,6 +241,7 @@ Builder& Builder::buildTexture2DFromFile (eImageFormat format, const char *filen
 		{
 			beginTexture2D (format, width, height, 1);
 			setMipMapDataMemory (0, rgba, width * height * 4, filter);
+			endTexture2D();
 			stbi_image_free (rgba);
 		}
 	}	

@@ -63,7 +63,7 @@ namespace gos
 
 		void				normalize();
 		void				inverse();
-		void				rotateMeAbout (const vec3f &ax, f32 angle_rad);
+		void				rotate_me_about (const vec3f &ax, f32 angle_rad);
 							/* ax deve essere normalizzato.
 								Attenzione che questa fn ruota *this about ax
 								Se vuoi una quat che esprima una rotazione attorno ad un asse, usa buildFromAxisAndAngle()

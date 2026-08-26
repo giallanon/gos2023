@@ -19,7 +19,7 @@ public:
 protected:
 	void	on__setup () final;
 	void	on__handle_input (const gos::Engine::InputEvent &ev) final;
-	void	on__prepare_render() final;
+	void	on__render() final;
 	void 	on__unsetup() final;
 
 private:

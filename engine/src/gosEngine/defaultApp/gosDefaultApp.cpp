@@ -8,16 +8,79 @@ using namespace gos::engine;
 DefaultApp::DefaultApp()
 {
 	allocator = gos::getSysHeapAllocator();
-	camera_mode = eCameraMode::move_free;
 	engine = NULL;
 	gpu = NULL;
 	bShowCamPos = 0;
 	bEnableAssetMonitor = false;
+	ctrl_action.zero();
+
+	for (u8 i=0; i<CAMERA__NUM_MAX; i++)
+		cam_list[i].flag.zero();
+
+	memset (&nav, 0, sizeof(nav));
+	navigation__create_mode(NAV_MODE__DEFAULT_CAMERA);
 }
 
 //***************************************
 DefaultApp::~DefaultApp()
 {
+}
+
+//***************************************
+geom::Camera3* DefaultApp::camera__create (u32 index, f32 fov_grad, f32 near_plane, f32 far_plane)
+{
+	assert (index < CAMERA__NUM_MAX);
+	
+	cam_list[index].flag.set (CameraInfo::FLAG_CREATED);
+
+	cam_list[index].cam.set_perspective_FOV_LH(gpu->swapChain_calcAspectRatio(), fov_grad, near_plane, far_plane);
+    cam_list[index].cam.pos.identity();
+	cam_list[index].cam.mark_updated();
+
+	return &cam_list[index].cam;
+}
+
+//***************************************
+geom::Camera3* DefaultApp::camera__get (u32 index)
+{
+	assert (index < CAMERA__NUM_MAX);
+	assert (cam_list[index].flag.isBitSet (CameraInfo::FLAG_CREATED));
+	return &cam_list[index].cam;
+}
+
+//***************************************
+void DefaultApp::navigation__create_mode (u8 mode_uid)
+{
+	const u8 n = nav.num++;
+	assert (nav.num <= NAVIGATION__NUM_MAX_MODE);
+	
+	nav.uid[n] = mode_uid;
+}
+
+//***************************************
+void DefaultApp::navigation__set_mode (u8 mode_uid)
+{
+	for (u8 i=0; i<nav.num; i++)
+	{
+		if (nav.uid[i] == mode_uid)
+		{
+			nav.current_index = i;
+
+			logger::log ("navigation_mode: %d\n", mode_uid);
+			on__navigation_mode_changed(mode_uid);
+
+			if (NAV_MODE__DEFAULT_CAMERA == mode_uid)
+			{
+				camera__set_render_camera (0);
+				ctrl_default_cam.set_linear_speed__m_sec (10);
+				ctrl_default_cam.bind (&render_cam->pos);
+				render_cam->mark_updated();
+			}
+
+			return;
+		}
+	}
+	DBGBREAK;
 }
 
 //***************************************
@@ -28,43 +91,22 @@ void DefaultApp::run (gos::Engine *engineIN)
 
 	//input
 	engine->inputCtx->
-		action_add ("toggle_cam_mode")
+		action_add ("toggle_ctrl_mode")
 		.action_add ("toggle_show_cam_pos");
 
-	engine->inputCtx->action_bindToBtn ("toggle_cam_mode", input::eOrigin::keyboard, GLFW_KEY_TAB, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LSHIFT));
+	engine->inputCtx->action_bindToBtn ("toggle_ctrl_mode", input::eOrigin::keyboard, GLFW_KEY_TAB, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LSHIFT));
 	engine->inputCtx->action_bindToBtn ("toggle_show_cam_pos", input::eOrigin::keyboard, GLFW_KEY_C, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LALT));
 
-	//setup camera
-    cam.setPerspectiveFovLH(gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 250.0f);
-    cam.pos.identity();
-    cam.pos.warp (0, 15.0f, -10);
-	cam.pos.lookAt (vec3f(0,0,0));
-	cam.markUpdated();
-
-	//setup movement
-    move_fps.bind (&cam.pos);
-	move_free.bind (&cam.pos);
-
+	//setup camera default
+	camera__create (0, math::gradToRad(45), 0.1f, 250.0f);
+	navigation__set_mode(0);
 
     priv_loop();
 }
 
 //**********************************
-const char* DefaultApp::enum_to_string (eCameraMode m) const
-{
-	switch (m)
-	{
-	default:						return "ERR, camMode::unknown";
-	case eCameraMode::move_free:	return "free";
-	case eCameraMode::move_fps:		return "FPS";
-	}
-}
-
-//**********************************
 void DefaultApp::default_handle_input ()
 {
-    const u64 timeNow_msec = gos::getTimeSinceStart_msec();
-
 	Engine::InputEvent ev;
 	while (engine->inputEvent_getNext(&ev))
 	{
@@ -74,13 +116,11 @@ void DefaultApp::default_handle_input ()
 			on__handle_input(ev);
 			break;
 
-		case COMPILE_TIME_STR_CRC32("toggle_cam_mode"):
-			if (eCameraMode::move_free == camera_mode)
-				camera_mode = eCameraMode::move_fps;
-			else
-				camera_mode = eCameraMode::move_free;
-
-			logger::log ("Cam mode: %s\n", enum_to_string(camera_mode));
+		case COMPILE_TIME_STR_CRC32("toggle_ctrl_mode"):
+			nav.current_index++;
+			if (nav.current_index >= nav.num)
+				nav.current_index = 0;
+			navigation__set_mode ( nav.uid[nav.current_index] );
 			break;
 
 		case COMPILE_TIME_STR_CRC32("toggle_show_cam_pos"):
@@ -88,72 +128,68 @@ void DefaultApp::default_handle_input ()
 			break;
 
 		case COMPILE_TIME_STR_CRC32("move_forward"):
-			if (eCameraMode::move_free == camera_mode)
-				move_free.moveForward ((ev.value == 1));
+			if (gos::input::eButtonStatus::pressed == engine->inputEvent_getBtnStatus())
+				ctrl_action.set (eCtrlAction::forward);
 			else
-				move_fps.moveForward ((ev.value == 1));
+				ctrl_action.clear (eCtrlAction::forward);
 			break;
 
 		case COMPILE_TIME_STR_CRC32("move_backward"):
-			if (eCameraMode::move_free == camera_mode)
-				move_free.moveBackward ((ev.value == 1));
+			if (gos::input::eButtonStatus::pressed == engine->inputEvent_getBtnStatus())
+				ctrl_action.set (eCtrlAction::backward);
 			else
-				move_fps.moveBackward ((ev.value == 1));
+				ctrl_action.clear (eCtrlAction::backward);
 			break;
 
 		case COMPILE_TIME_STR_CRC32("strafe_left"):
-			if (eCameraMode::move_free == camera_mode)
-				move_free.strafeLeft ((ev.value == 1));  
+			if (gos::input::eButtonStatus::pressed == engine->inputEvent_getBtnStatus())
+				ctrl_action.set (eCtrlAction::strafe_left);
 			else
-				move_fps.strafeLeft ((ev.value == 1));  
+				ctrl_action.clear (eCtrlAction::strafe_left);
 			break;
 
 		case COMPILE_TIME_STR_CRC32("strafe_right"):
-			if (eCameraMode::move_free == camera_mode)
-				move_free.strafeRight ((ev.value == 1));
+			if (gos::input::eButtonStatus::pressed == engine->inputEvent_getBtnStatus())
+				ctrl_action.set (eCtrlAction::strafe_right);
 			else
-				move_fps.strafeRight ((ev.value == 1));
+				ctrl_action.clear (eCtrlAction::strafe_right);
 			break;
 
+
 		case COMPILE_TIME_STR_CRC32("rotateY"):
-			if (eCameraMode::move_free == camera_mode)
-				move_free.rotateY ((ev.value < 0));
+			if (ev.value < 0)
+				ctrl_action.set (eCtrlAction::rot_y_clock, true);
 			else
-				move_fps.mouseRotateY (-ev.value);
+				ctrl_action.set (eCtrlAction::rot_y_counterclock, true);
 			break;
 
 		case COMPILE_TIME_STR_CRC32("rotateX"):
-			if (eCameraMode::move_free == camera_mode)
-				move_free.rotateX ((ev.value < 0));
+			if (ev.value < 0)
+				ctrl_action.set (eCtrlAction::rot_x_clock, true);
 			else
-				move_fps.mouseRotateX (-ev.value);
+				ctrl_action.set (eCtrlAction::rot_x_counterclock, true);
 			break;
 
 		case COMPILE_TIME_STR_CRC32("strafe_up"):
-			if (eCameraMode::move_free == camera_mode)
-				move_free.strafeUp ((ev.value == 1));
+			if (gos::input::eButtonStatus::pressed == engine->inputEvent_getBtnStatus())
+				ctrl_action.set (eCtrlAction::strafe_up);
 			else
-				move_fps.strafeUp ((ev.value == 1));
+				ctrl_action.clear (eCtrlAction::strafe_up);
 			break;
 
 		case COMPILE_TIME_STR_CRC32("strafe_down"):
-			if (eCameraMode::move_free == camera_mode)
-				move_free.strafeDown ((ev.value == 1));
+			if (gos::input::eButtonStatus::pressed == engine->inputEvent_getBtnStatus())
+				ctrl_action.set (eCtrlAction::strafe_down);
 			else
-				move_fps.strafeDown ((ev.value == 1));
+				ctrl_action.clear (eCtrlAction::strafe_down);
 			break;
-
+			
+		case COMPILE_TIME_STR_CRC32("zoom_in"):
+			if (ev.value > 0)	ctrl_action.set (eCtrlAction::zoom_in, true);
+			else ctrl_action.set (eCtrlAction::zoom_out, true);
+			break;
 		}
 	}
-
-    //gestione del movimento
-	if (eCameraMode::move_free == camera_mode)
-		move_free.update (timeNow_msec);
-	else
-		move_fps.update (timeNow_msec);
-		
-
-    cam.markUpdated();
 }
 
 //***************************************
@@ -212,19 +248,37 @@ void DefaultApp::priv_loop ()
 
 			default_handle_input();
 
-			if (last_cam_pos != cam.pos.o)
+			//gestione del movimento della camera di default
+			if (0 == navigation__get_mode())
 			{
-				last_cam_pos = cam.pos.o;
+				ctrl_default_cam.update (gos::getTimeSinceStart_msec(), ctrl_action);
+				render_cam->mark_updated();
+			}			
+
+			//virtual callback
+			on__update(timenow_msec);
+
+			if (last_cam_pos != render_cam->pos.o)
+			{
+				last_cam_pos = render_cam->pos.o;
 				if (bShowCamPos)
 					logger::log (eTextColor::white, "CAM: %.2f, %.2f, %.2f\n", last_cam_pos.x, last_cam_pos.y, last_cam_pos.z);
-			}			
+			}
+
+			
         }
 		mainLoop.stat_onCPUFrameEnd();		
 
 
 		//rendering
         if (gpu->swapChain_wasRecreated())
-            cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
+		{
+			for (u8 i=0; i<CAMERA__NUM_MAX; i++)
+			{
+				if (cam_list[i].flag.isBitSet(CameraInfo::FLAG_CREATED))
+					cam_list[i].cam.change_aspectRatio_perspective_FOV_LH (gpu->swapChain_calcAspectRatio());
+			}					
+		}
 
         //se il job precedente e' stato presentato, posso schedularne uno nuovo
         gpu::SwapchainImg swapchainImg;
@@ -232,8 +286,8 @@ void DefaultApp::priv_loop ()
         {
 			mainLoop.stat_onCommandBufferBegin();
 			{
-				on__prepare_render();
-				engine->renderPipe.render (swapchainImg, cmdBufferHandle, &cam);
+				on__render();
+				engine->renderPipe.render (swapchainImg, cmdBufferHandle, render_cam);
 			}
 			mainLoop.stat_onCommandBufferEnd();
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);

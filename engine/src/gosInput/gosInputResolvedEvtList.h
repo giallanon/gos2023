@@ -22,6 +22,7 @@ namespace gos
 
 			const MouseStatus&			getMouseStatus() const;
 			const sButtonModifier&		getBtnModifier() const;
+			input::eButtonStatus		getBtnStatus() const;
 
 		private:
 			void 						setup (Window *win);

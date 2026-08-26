@@ -6,25 +6,24 @@ namespace gos
 {
 	namespace geom
 	{
-		/*========================================================
-		 *
-		 *=======================================================*/
+		/***********************************************
+		 * @brief	Plane3
+		 */
 		class Plane3
 		{
 		public:
 						Plane3 ()																	{ }
-						Plane3 (const vec3f &p, const vec3f &n)										{ setFromPointAndNormal (p, n); }
-						Plane3 (const vec3f &p1, const vec3f &p2, const vec3f &p3)					{ setFrom3Points (p1, p2, p3); }
+						Plane3 (const vec3f &p, const vec3f &n)										{ set_from_point_and_normal (p, n); }
+						Plane3 (const vec3f &p1, const vec3f &p2, const vec3f &p3)					{ set_from_3points (p1, p2, p3); }
 
-						//========================= static
-			static f32	distance (const Plane3 &pl, const vec3f &p)									{ return math::dot (pl.n, (p - pl.p)); }
-							/* Distanza di p dal plane. La distanza � positiva se p � in direzione della normale. */
+			/* Distanza di p dal plane. La distanza e' positiva se p e' in direzione della normale. */
+			f32			distance (const vec3f &pIN)	const											{ return math::dot (this->n, (pIN - this->p)); }
+						
 			
-						//========================= 
-			void		setFromPointAndNormal (const vec3f &pIN, const vec3f &nIN)					{ p = pIN; n = nIN; }
-			void		setFrom3Points (const vec3f &p1, const vec3f &p2, const vec3f &p3);
+			void		set_from_point_and_normal (const vec3f &pIN, const vec3f &nIN)				{ p = pIN; n = nIN; }
+			void		set_from_3points (const vec3f &p1, const vec3f &p2, const vec3f &p3);
 
-						//=========================
+		public:
 			vec3f	p;
 			vec3f	n;
 		};							

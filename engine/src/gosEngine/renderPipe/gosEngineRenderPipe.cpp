@@ -233,7 +233,7 @@ void RenderPipe::remove_renderer (Renderer *r)
 void RenderPipe::render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle cmdBufferHandle, gos::geom::Camera3 *cam)
 {
     //aggiorno UBO descrittore scena
-	ctx.scene.matVP = cam->getMatVP();
+	ctx.scene.matVP = cam->get_matVP();
 	ctx.scene.lightDir = vec4f (cam->pos.getAsseZ(), 0);
 	ctx.scene.lightDir.set (-0.3f, -1.0f, 0.3f,    0.2f);
 	//scene.lightDir.set (0, -1.0f, 0,    0);

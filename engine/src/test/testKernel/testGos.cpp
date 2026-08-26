@@ -1040,7 +1040,7 @@ namespace test11_enum_bitmask
     
     bool fn1 (eProvaBitmask bm)
     {
-        return bm.isset(eProva::bit0);
+        return bm.is_set(eProva::bit0);
     }
 
 
@@ -1058,7 +1058,7 @@ namespace test11_enum_bitmask
         eProva p;
         u8 mask = 0;
         u8 iter;
-        bm.beginFetch(&iter);
+        bm.begin_fetch(&iter);
         while (bm.fetch(iter, &p))
         {
             mask |= (u8)p;
@@ -1066,7 +1066,7 @@ namespace test11_enum_bitmask
         TEST_ASSERT(mask == bm.bitmask);
         
         TEST_ASSERT( fn1(bm) == true );
-        bm.bitclear (eProva::bit0);
+        bm.bit_clear (eProva::bit0);
         TEST_ASSERT( fn1(bm) == false );
 
 

@@ -1,0 +1,20 @@
+@include: common.gosasset_d
+
+// @tex2D: tex_bianca
+// {
+// 	src: <common_assets>/images/bianca.png
+// 	srcColorSpace:	sRGB
+//
+// 	dstNumMipMap: 1
+// 	dstFmt:U8_RGBA
+// }
+
+
+@tex2D: tex_lod
+{
+	src: texture/lod.png
+	srcColorSpace:	sRGB
+
+	dstNumMipMap: max
+	dstFmt:U8_RGBA
+}

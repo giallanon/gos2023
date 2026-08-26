@@ -168,8 +168,8 @@ bool SimpleLineRenderer::recordCommandBuffer (gpu::CmdBufferWriter2 &cw, VkImage
     }
 
     //upload di UBO su GPU
-    ubo.camProj = cam.getMatP();
-    ubo.camView = cam.getMatV();
+    ubo.camProj = cam.get_matP();
+    ubo.camView = cam.get_matV();
     gpu->writeAndSync (hUBO, 0, &ubo, sizeof(sUniformBufferObject));            
     gos::gpu::DescrSetInstanceWriter descrWriter;
     descrWriter.begin (gpu, hDescrSetInstance)

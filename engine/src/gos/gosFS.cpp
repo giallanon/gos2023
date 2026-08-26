@@ -224,6 +224,25 @@ void fs::pathGoBack (const char *pathSenzaSlashIN, char *out, u32 sizeof_out)
 
 }
 
+//**************************************************************************
+void fs::remove_ext_in_place (char *utf8_filename)
+{
+	assert (NULL != utf8_filename);
+	u32 len = string::utf8::lengthInByte (utf8_filename);
+	if (0 == len)
+		return;
+
+	len--;
+	while (len)
+	{
+		if (utf8_filename[len] == '.')
+		{
+			utf8_filename[len] = 0x00;
+			return;
+		}
+		len--;
+	}
+}
 
 //**************************************************************************
 void fs::extractFileExt (const char *utf8_filename, char *out, u32 sizeof_out)

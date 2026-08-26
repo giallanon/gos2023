@@ -578,7 +578,7 @@ bool GPU::priv_swapChain_recreate ()
 //************************************
 void  GPU::_internal__onWindowResized (int w, int h)
 {
-    gos::logger::log_3 ("window resized, new size (%d,%d)\n", w,h);
+    gos::logger::log_0 ("window resized, new size (%d,%d)\n", w,h);
     this->timeToRecreateSwapchain_msec = gos::getTimeSinceStart_msec() + 500;
 }
 
@@ -694,7 +694,7 @@ void GPU::deleteResource (GPUShaderHandle &shaderHandle)
 }
 
 //************************************
-const gpu::Shader* GPU::getInfo (const GPUShaderHandle handle) const
+const gpu::Shader* GPU::get_info (const GPUShaderHandle handle) const
 {
     gpu::Shader *s;
     if (priv_fromHandleToPointer(shaderList, handle, &s))
@@ -765,7 +765,7 @@ void GPU::deleteResource (GPUViewportHandle &handle)
 }
 
 //************************************
-const gpu::Viewport* GPU::getInfo (const GPUViewportHandle &handle) const
+const gpu::Viewport* GPU::get_info (const GPUViewportHandle &handle) const
 {
     gos::gpu::Viewport *v;
     if (!viewportlList.fromHandleToPointer (handle, &v))
@@ -885,7 +885,7 @@ void GPU::priv_renderTarget_deleteFromStruct (gos::gpu::RenderTarget &rt)
 }
 
 //************************************
-const gpu::RenderTarget* GPU::getInfo (const GPURenderTargetHandle handle) const
+const gpu::RenderTarget* GPU::get_info (const GPURenderTargetHandle handle) const
 {
     gpu::RenderTarget *s;
     if (priv_fromHandleToPointer (renderTargetList, handle, &s))
@@ -897,7 +897,7 @@ const gpu::RenderTarget* GPU::getInfo (const GPURenderTargetHandle handle) const
 bool GPU::map (const GPURenderTargetHandle handle, gpu::sMappedImage *out) const
 {
     assert (NULL != out);
-    const gpu::RenderTarget *s = getInfo (handle);
+    const gpu::RenderTarget *s = get_info (handle);
     if (NULL == s)
     {
         gos::logger::err ("GPU::render_target::map() => invalid handle\n");
@@ -1050,7 +1050,7 @@ void GPU::priv_depthStencil_deleteFromStruct (gos::gpu::DepthStencil &depthStenc
 }
 
 //************************************
-const gpu::DepthStencil* GPU::getInfo (const GPUZBufferHandle handle) const
+const gpu::DepthStencil* GPU::get_info (const GPUZBufferHandle handle) const
 {
     gpu::DepthStencil *s;
     if (priv_fromHandleToPointer (depthStencilList, handle, &s))
@@ -1108,7 +1108,7 @@ void GPU::deleteResource (GPUCmdBufferHandle &handle)
 }
 
 //************************************
-const gpu::CommandBuffer* GPU::getInfo (const GPUCmdBufferHandle handle) const
+const gpu::CommandBuffer* GPU::get_info (const GPUCmdBufferHandle handle) const
 {
     gpu::CommandBuffer *s;
     if (cmdBufferList.fromHandleToPointer(handle, &s))
@@ -1303,7 +1303,7 @@ void GPU::deleteResource (GPUStgBufferHandle &handle)
 }
 
 //************************************
-const gpu::Buffer* GPU::getInfo (const GPUStgBufferHandle handle) const
+const gpu::Buffer* GPU::get_info (const GPUStgBufferHandle handle) const
 {
     gpu::Buffer *s;
     if (priv_fromHandleToPointer(staginBufferList, handle, &s))
@@ -1365,7 +1365,7 @@ bool GPU::vertexBuffer_create (u32 sizeInByte, eMemAccessMode modeIN, GPUVtxBuff
 }
 
 //************************************
-const gpu::Buffer* GPU::getInfo (const GPUVtxBufferHandle handle) const
+const gpu::Buffer* GPU::get_info (const GPUVtxBufferHandle handle) const
 {
     gpu::Buffer *s;
     if (priv_fromHandleToPointer(vtxBufferList, handle, &s))
@@ -1410,7 +1410,7 @@ bool GPU::indexBuffer_create (u32 sizeInByte, eMemAccessMode modeIN, GPUIdxBuffe
 }
 
 //************************************
-const gpu::Buffer* GPU::getInfo (const GPUIdxBufferHandle handle) const
+const gpu::Buffer* GPU::get_info (const GPUIdxBufferHandle handle) const
 {
     gpu::Buffer *s;
     if (priv_fromHandleToPointer(idxBufferList, handle, &s))
@@ -1453,7 +1453,7 @@ bool GPU::uniformBuffer_create (u32 sizeInByte, eMemAccessMode modeIN, GPUUnifor
 }
 
 //************************************
-const gpu::Buffer* GPU::getInfo (const GPUUniformBufferHandle handle) const
+const gpu::Buffer* GPU::get_info (const GPUUniformBufferHandle handle) const
 {
     gpu::Buffer *s;
     if (priv_fromHandleToPointer (uniformBufferList, handle, &s))
@@ -1503,7 +1503,7 @@ bool GPU::storageBuffer_create (u32 sizeInByte, eMemAccessMode modeIN, GPUStorag
 }
 
 //************************************
-const gpu::Buffer* GPU::getInfo (const GPUStorageBufferHandle handle) const
+const gpu::Buffer* GPU::get_info (const GPUStorageBufferHandle handle) const
 {
     gpu::Buffer *s;
     if (priv_fromHandleToPointer (storageBufferList, handle, &s))
@@ -1700,7 +1700,7 @@ void GPU::deleteResource (GPUDescrSetInstanceHandle &handle)
 }
 
 //************************************
-const gpu::DescrSetInstance* GPU::getInfo (const GPUDescrSetInstanceHandle handle) const
+const gpu::DescrSetInstance* GPU::get_info (const GPUDescrSetInstanceHandle handle) const
 {
     gpu::DescrSetInstance *s;
     if (priv_fromHandleToPointer (descrSetInstanceList, handle, &s))
@@ -1784,8 +1784,8 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
                 h/=2;
             }
 
-			const gpu::CommandBuffer *vkCmdBuffer = getInfo(helper.get_cmdBuffer_handle());
-			const gpu::Buffer *stgBuffer = getInfo (helper.get_stagBuffer_handle());
+			const gpu::CommandBuffer *vkCmdBuffer = get_info(helper.get_cmdBuffer_handle());
+			const gpu::Buffer *stgBuffer = get_info (helper.get_stagBuffer_handle());
             vkCmdCopyBufferToImage(
                 vkCmdBuffer->vkHandle,
                 stgBuffer->vkHandle,
@@ -1844,7 +1844,7 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
 
 bool GPU::texture_create2D (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, GPUTextureHandle *out_handle, gpu::StageHelper &helper)
 {
-    const image::sTextureHeader *header = image::getTextureInfo (*im, srcTextureNum);
+    const image::sTextureHeader *header = image::get_texture_info (*im, srcTextureNum);
     if (NULL == header)
     {
         gos::logger::err ("GPU::texture_create2D() => invalid image, can't extract header\n");
@@ -1852,7 +1852,7 @@ bool GPU::texture_create2D (const gos::Image *im, u8 srcTextureNum, eMemAccessMo
     }
 
     image::sTextureData texData;
-    if (!image::getTextureData (*im, srcTextureNum, 0, &texData))
+    if (!image::get_texture_data (*im, srcTextureNum, 0, &texData))
     {
         gos::logger::err ("GPU::texture_create2D() => invalid image, can't extract texture data\n");
         return false;
@@ -1894,7 +1894,7 @@ bool GPU::toVulkan (const GPUTextureHandle handle, VkImageView *out) const
     return false;    
 }
 
-const gpu::Texture* GPU::getInfo (const GPUTextureHandle handle) const
+const gpu::Texture* GPU::get_info (const GPUTextureHandle handle) const
 {
     gpu::Texture *s;
     if (priv_fromHandleToPointer(textureList,handle, &s))
@@ -2012,7 +2012,7 @@ void GPU::priv_samplerDelete (GPUSamplerHandle &handle)
 }
 
 //************************************
-const gpu::Sampler* GPU::getInfo (const GPUSamplerHandle handle) const
+const gpu::Sampler* GPU::get_info (const GPUSamplerHandle handle) const
 {
     gpu::Sampler *s;
     if (samplerList.fromHandleToPointer (handle, &s))
@@ -2132,7 +2132,7 @@ void GPU::deleteResource (GPUPipelineHandle &handle)
 }
 
 //************************************
-const gpu::Pipeline2* GPU::getInfo (const GPUPipelineHandle handle) const
+const gpu::Pipeline2* GPU::get_info (const GPUPipelineHandle handle) const
 {
     gpu::Pipeline2 *s;
     if (pipelineList.fromHandleToPointer (handle, &s))
@@ -2220,7 +2220,7 @@ bool GPU::priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 
             {
                 u8 iter;
                 eShaderType shaderType;
-                shaderTypeBitmask.beginFetch (&iter);
+                shaderTypeBitmask.begin_fetch (&iter);
                 while (shaderTypeBitmask.fetch(iter, &shaderType))
                 {
                     switch (shaderType)
@@ -2335,7 +2335,7 @@ bool GPU::priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 
             const GPUShaderHandle handle = rpd.shaderHandleList[i];            
             shadersCreateInfoArray[i].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 
-            const gpu::Shader *shader = getInfo(handle);
+            const gpu::Shader *shader = get_info(handle);
             switch (shader->shaderType)
             {
             default:
@@ -2627,7 +2627,7 @@ bool GPU::priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 
 //************************************
 bool GPU::descrSetInstance_create (const GPUDescrPoolHandle &poolHandle, const GPUPipelineHandle pipelineHandle, u8 descrSetNum, GPUDescrSetInstanceHandle *out_handle)
 {
-    const gpu::Pipeline2 *s = getInfo(pipelineHandle);
+    const gpu::Pipeline2 *s = get_info(pipelineHandle);
     if (NULL == s)
         return false;
 

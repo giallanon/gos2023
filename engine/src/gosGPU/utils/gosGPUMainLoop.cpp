@@ -64,7 +64,7 @@ void GFXJob::priv_submit (const GPUCmdBufferHandle &cmdBufferHandle, u32 swapCha
     swapChainAutoID = gpu->swapChain_getCurrentAutoID();
 
 
-    const gpu::CommandBuffer *cmdBuffer = gpu->getInfo(cmdBufferHandle);
+    const gpu::CommandBuffer *cmdBuffer = gpu->get_info(cmdBufferHandle);
 
 
     VkPipelineStageFlags semaphore_waitStages = { 0 };
@@ -119,7 +119,7 @@ void TransferJob::submit (const GPUCmdBufferHandle &cmdBufferHandle)
     assert (eStato::idle == stato);
     stato = eStato::jobInProgress;
 
-    const gpu::CommandBuffer *cmdBuffer = gpu->getInfo(cmdBufferHandle);
+    const gpu::CommandBuffer *cmdBuffer = gpu->get_info(cmdBufferHandle);
 
     VkPipelineStageFlags semaphore_waitStages = { 0 };
 	semaphore_waitStages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;

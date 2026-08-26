@@ -450,7 +450,7 @@ enum class eDataBlobElemType : u8
     arrayType = 2
 };
 
-enum class eClip2D : u8
+enum class eClipResult : u8
 {
     outside		= 0,
     inside		= 1,

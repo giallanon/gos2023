@@ -286,15 +286,15 @@ void VulkanExample5::virtual_onInputEvent (u32 actionID, i16 value, const gos::i
     {
     default:
         break;
-
-    case COMPILE_TIME_STR_CRC32("move_forward"):           movement.moveForward ((value == 1));break;
-    case COMPILE_TIME_STR_CRC32("move_backward"):          movement.moveBackward ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("strafe_left"):            movement.strafeLeft ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("strafe_right"):           movement.strafeRight ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("strafe_up"):              movement.strafeUp ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("strafe_down"):            movement.strafeDown ((value == 1));    break;
-    case COMPILE_TIME_STR_CRC32("rotateY"):                movement.rotateY ((value<0)); break;
-    case COMPILE_TIME_STR_CRC32("rotateX"):                movement.rotateX ((value<0)); break;
+    
+	case COMPILE_TIME_STR_CRC32("move_forward"):	if (1==value) ctrl_action.set (eCtrlAction::forward); else ctrl_action.clear (eCtrlAction::forward); break;
+    case COMPILE_TIME_STR_CRC32("move_backward"):	if (1==value) ctrl_action.set (eCtrlAction::backward); else ctrl_action.clear (eCtrlAction::backward); break;
+    case COMPILE_TIME_STR_CRC32("strafe_left"):		if (1==value) ctrl_action.set (eCtrlAction::strafe_left); else ctrl_action.clear (eCtrlAction::strafe_left); break;
+    case COMPILE_TIME_STR_CRC32("strafe_right"):	if (1==value) ctrl_action.set (eCtrlAction::strafe_right); else ctrl_action.clear (eCtrlAction::strafe_right); break;
+    case COMPILE_TIME_STR_CRC32("strafe_up"):		if (1==value) ctrl_action.set (eCtrlAction::strafe_up); else ctrl_action.clear (eCtrlAction::strafe_up); break;
+    case COMPILE_TIME_STR_CRC32("strafe_down"):		if (1==value) ctrl_action.set (eCtrlAction::strafe_down); else ctrl_action.clear (eCtrlAction::strafe_down); break;
+    case COMPILE_TIME_STR_CRC32("rotateY"):			if (value < 0) ctrl_action.set (eCtrlAction::rot_y_clock, true); else ctrl_action.set (eCtrlAction::rot_y_counterclock, true); break;
+    case COMPILE_TIME_STR_CRC32("rotateX"):			if (value < 0) ctrl_action.set (eCtrlAction::rot_x_clock, true); else ctrl_action.set (eCtrlAction::rot_x_counterclock, true); break;
 
     case COMPILE_TIME_STR_CRC32("mouse_move"):
     case COMPILE_TIME_STR_CRC32("LMB"):
@@ -434,8 +434,8 @@ void VulkanExample5::priv_doCPUStuff ()
 
     //gestione del movimento
     const u64 timeNow_msec = gos::getTimeSinceStart_msec();
-    movement.update(timeNow_msec);
-    cam.markUpdated();
+    ctrl_free_move.update(timeNow_msec, ctrl_action);
+    cam.mark_updated();
 }
 
 //************************************
@@ -444,8 +444,8 @@ bool VulkanExample5::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
     world->updateInstanceVB (stageHelper);
 
     //upload di UBO su GPU
-    ubo.camView = cam.getMatV();
-    ubo.camProj = cam.getMatP();
+    ubo.camView = cam.get_matV();
+    ubo.camProj = cam.get_matP();
     //ubo.lightDir.set (-0.4f, -1, 0.2f, 0);
     ubo.lightDir.set (0, -1, 0, 0);
     ubo.lightDir.normalize();
@@ -497,13 +497,11 @@ bool VulkanExample5::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
 void VulkanExample5::virtual_onRun()
 {
     //camera
-    cam.setPerspectiveFovLH (gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
+    cam.set_perspective_FOV_LH (gpu->swapChain_calcAspectRatio(),  math::gradToRad(45), 0.1f, 50.0f);
     //cam.pos.identity(); cam.pos.warp (0, 0, -19); cam.pos.lookAt (vec3f(0,0,0));
-    cam.pos.identity(); cam.pos.warp (0, 30, 0); cam.pos.rotateMeAboutMyX (math::gradToRad(-90));
-    
-    cam.markUpdated();
-
-    movement.bind (&cam.pos);
+    cam.pos.identity(); cam.pos.warp (0, 30, 0); cam.pos.rotate_me_about_my_x (math::gradToRad(-90));
+    cam.mark_updated();
+    ctrl_free_move.bind (&cam.pos);
     
     
     
@@ -526,7 +524,7 @@ void VulkanExample5::virtual_onRun()
         mainLoop.run();
 
         if (gpu->swapChain_wasRecreated())
-            cam.changeAspectRatioPerspectiveFovLH (gpu->swapChain_calcAspectRatio());
+            cam.change_aspectRatio_perspective_FOV_LH (gpu->swapChain_calcAspectRatio());
 
         //se il job precedente e' stato presentato, posso schedularne uno nuovo
         gpu::SwapchainImg swapchainImg;

@@ -295,7 +295,7 @@ void Renderer_line3d::priv_begin (gos::geom::Camera3 *cam, gpu::RenderCtx *rctxI
  
 
     SceneData scene;
-	scene.matVP = cam->getMatVP();
+	scene.matVP = cam->get_matVP();
 	scene.screen_wh.set ((f32)gpu->swapChain_getWidth(), (f32)gpu->swapChain_getHeight());
 	gpu->writeAndSync (handle_ubo_scene, 0, &scene, sizeof(scene));
 

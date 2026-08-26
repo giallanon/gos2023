@@ -20,7 +20,7 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::begin (gos::GPU *gpuIN
     imageList.num = 0;
     numWriteDescr = 0;
 
-    descrSetInstHandle = gpu->getInfo (descrSetInstanceHandle);
+    descrSetInstHandle = gpu->get_info (descrSetInstanceHandle);
     if (NULL == descrSetInstHandle)
     {
         bAnyError = true;
@@ -43,7 +43,7 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindUniformBuffer (u32
         return *this;
     }
     
-    const gpu::Buffer *buffer = gpu->getInfo(handle);
+    const gpu::Buffer *buffer = gpu->get_info(handle);
     if (NULL == buffer)
     {
         gos::logger::err ("DescrSetInstanceWriter::bindUniformBuffer() => invalid uniform buffer handle\n");
@@ -79,7 +79,7 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindStorageBuffer (u32
     if (bAnyError)
         return *this;
     
-    const gpu::Buffer *buffer = gpu->getInfo(handle);
+    const gpu::Buffer *buffer = gpu->get_info(handle);
     if (NULL == buffer)
     {
         gos::logger::err ("DescrSetInstanceWriter::bindStorageBuffer() => invalid uniform buffer handle\n");
@@ -95,7 +95,7 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindDynamicStorageBuff
     if (bAnyError)
         return *this;
     
-    const gpu::Buffer *buffer = gpu->getInfo(handle);
+    const gpu::Buffer *buffer = gpu->get_info(handle);
     if (NULL == buffer)
     {
         gos::logger::err ("DescrSetInstanceWriter::bindDynamicStorageBuffer() => invalid uniform buffer handle\n");
@@ -159,7 +159,7 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindCombinedTextureAnd
         return *this;
     }        
 
-    const gpu::Sampler *sampler = gpu->getInfo (samplerHandle);
+    const gpu::Sampler *sampler = gpu->get_info (samplerHandle);
     if (NULL == sampler)
     {
         gos::logger::err ("DescrSetInstanceWriter::bindTextureAndSampler() => invalid sampler handle\n");
@@ -202,7 +202,7 @@ gpu::DescrSetInstanceWriter& gpu::DescrSetInstanceWriter::bindSamplerInArray  (u
         return *this;
     }
 
-    const gpu::Sampler *sampler = gpu->getInfo(handle);
+    const gpu::Sampler *sampler = gpu->get_info(handle);
     if (NULL == sampler)
     {
         gos::logger::err ("DescrSetInstanceWriter::bindSamplerInArray() => invalid sampler handle\n");

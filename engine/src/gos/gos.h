@@ -95,17 +95,14 @@ namespace gos
         void	inc_indent();
 		void	dec_indent();
 
-		//log con livello 5
-        void	log (const char *format, ...);
-        void	log (const eTextColor col, const char *format, ...);
+		//(DEFAULT) log con livello 5
+        void	log (const char *format, ...);		void log (const eTextColor col, const char *format, ...);
 
-		//log con livello 3
-		void	log_3 (const char *format, ...);
-        void	log_3 (const eTextColor col, const char *format, ...);
-
-		//log con livello 6
-		void	log_7 (const char *format, ...);
-        void	log_7 (const eTextColor col, const char *format, ...);
+		//log con altri livelli
+		void	log_0 (const char *format, ...);	void log_0 (const eTextColor col, const char *format, ...);
+		void	log_1 (const char *format, ...);	void log_1 (const eTextColor col, const char *format, ...);
+		void	log_3 (const char *format, ...);	void log_3 (const eTextColor col, const char *format, ...);
+		void	log_7 (const char *format, ...);	void log_7 (const eTextColor col, const char *format, ...);
 		
 		void	err (const char *format, ...);
 				// err() setta anche il global error chiamando gos::err::add()
@@ -171,6 +168,7 @@ namespace gos
 		void			extractFileNameWithoutExt (const char *utf8_filename, char *out, u32 sizeof_out);
 		void			extractFilePathWithSlash (const char *utf8_filename, char *out, u32 sizeof_out);
 		void			extractFilePathWithOutSlash (const char *utf8_filename, char *out, u32 sizeof_out);
+		void			remove_ext_in_place (char *utf8_filename);
 
 		bool			folderExists (const char *utf8_pathSenzaSlashRESOLVABLE);
 		bool			folderDelete (const char *utf8_pathSenzaSlashRESOLVABLE);

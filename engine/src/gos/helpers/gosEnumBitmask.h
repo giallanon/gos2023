@@ -35,16 +35,16 @@ public:
                 EnumBitmask_TPL ()                          { bitmask = 0; }   
                 EnumBitmask_TPL (const TENUM b)             { bitmask = static_cast<MASK_TYPE>(b); }   
     void        zero()                                      { bitmask = 0; }   
-    void        bitset(const TENUM b)                       { bitmask |= static_cast<MASK_TYPE>(b); }   
-    void        bitclear(const TENUM b)                     { bitmask &= ~static_cast<MASK_TYPE>(b); }   
-    bool        isset(const TENUM b) const                  { return (bitmask & static_cast<MASK_TYPE>(b)) != 0; }   
+    void        bit_set(const TENUM b)                      { bitmask |= static_cast<MASK_TYPE>(b); }   
+    void        bit_clear(const TENUM b)                    { bitmask &= ~static_cast<MASK_TYPE>(b); }   
+    bool        is_set(const TENUM b) const					{ return (bitmask & static_cast<MASK_TYPE>(b)) != 0; }   
     MyType&     operator=  (const TENUM b)                  { bitmask = static_cast<MASK_TYPE>(b); return *this; }   
     MyType&     operator|= (const TENUM b)                  { bitmask |= static_cast<MASK_TYPE>(b); return *this; }   
     MyType&     operator&= (const TENUM b)                  { bitmask &= static_cast<MASK_TYPE>(b); return *this; }   
     MyType&     operator| (const TENUM b)                   { bitmask |= static_cast<MASK_TYPE>(b); return *this; }   
     MyType&     operator& (const TENUM b)                   { bitmask &= static_cast<MASK_TYPE>(b); return *this; }   
 
-    void        beginFetch (u8 *iter) const                 { *iter = 0; }   
+    void        begin_fetch (u8 *iter) const				{ *iter = 0; }   
     bool        fetch (u8 &iter, TENUM *out) const   
     {   
         MASK_TYPE mask = 1 << iter;   
@@ -63,7 +63,7 @@ public:
     }   
 
     u32         asU32() const                               { return static_cast<u32>(bitmask); }
-    void        setFromU32 (u32 u)                          { bitmask = u; }
+    void        set_from_U32 (u32 u)						{ bitmask = u; }
 
 public:   
     MASK_TYPE   bitmask;   

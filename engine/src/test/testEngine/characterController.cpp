@@ -96,7 +96,7 @@ void CharacterController::update (gos::ent::Registry &entRegistry,u64 timenow_ms
 
     //rotazione attuale
     gos::Quat quat;
-    ent_pos->quat.rotateMeAbout (vec3f(0,1,0), rel_rotY_rad);
+    ent_pos->quat.rotate_me_about (vec3f(0,1,0), rel_rotY_rad);
     rel_rotY_rad = 0;
 
 
@@ -116,9 +116,9 @@ void CharacterController::update (gos::ent::Registry &entRegistry,u64 timenow_ms
         ent_pos->pos -= asseX * linearSpeed;
 
     //if (status.isBitSet (STATUS_MOVING_UP))
-    //    pos.moveRelAlongY (linearSpeed);
+    //    pos.move_rel_along_y (linearSpeed);
     //else if (status.isBitSet (STATUS_MOVING_DOWN))
-    //    pos.moveRelAlongY (-linearSpeed);
+    //    pos.move_rel_along_y (-linearSpeed);
 
 
   
@@ -129,8 +129,8 @@ void CharacterController::update (gos::ent::Registry &entRegistry,u64 timenow_ms
 
     target_cam->pos.o = ent_pos->pos;
     target_cam->pos.setFromQuat (ent_pos->quat);
-    target_cam->pos.rotateMeAboutMyX (-cam_rotX_rad);
-    target_cam->pos.moveRelAlongZ (-camera_distance_m);
-    target_cam->markUpdated();
+    target_cam->pos.rotate_me_about_my_x (-cam_rotX_rad);
+    target_cam->pos.move_rel_along_z (-camera_distance_m);
+    target_cam->mark_updated();
 }
 

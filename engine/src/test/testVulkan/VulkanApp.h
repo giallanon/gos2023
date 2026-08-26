@@ -4,8 +4,7 @@
 #include "gosAsset2Builder.h"
 #include "../gosGeom/gosGeomCamera3.h"
 #include "../gosShape/gosShape.h"
-#include "../gosGPU/utils/gosFreeMovement.h"
-#include "../gosGPU/utils/gosFPSMovement.h"
+#include "../gosGameUtils/ctrl/gosCtrlFreeMove.h"
 
 
 /*************************************************
@@ -31,6 +30,8 @@ protected:
     gos::GPU                *gpu;
     gos::input::Context     inputCtx;
     bool                    bQuitApp;
+	gos::CtrlAction			ctrl_action;
+	gos::CtrlFreeMove		ctrl_free_move;
     
 protected:
     void            handleInput();

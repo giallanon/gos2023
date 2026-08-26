@@ -19,19 +19,39 @@ vec3 color_sRGB_to_linear (float r, float g, float b)
 }
 
 //**** sample di una texture 2D con bilinear filtering
-vec4 PIPE3_sample2D_bilinear (uint textureIndex, vec2 texCoord)
+vec4 PIPE3_sample2D_bilinear (const uint textureIndex, const vec2 texCoord)
 {
     return texture (sampler2D(PIPE3_textureList[textureIndex], PIPE3_samplerList[PIPE3_SAMPLER2D_BILINEAR]), texCoord);
 }
 
 //**** sample di una texture 2D con point filtering
-vec4 PIPE3_sample2D_point (uint textureIndex, vec2 texCoord)
+vec4 PIPE3_sample2D_point (const uint textureIndex, const vec2 texCoord)
 {
     return texture (sampler2D(PIPE3_textureList[textureIndex], PIPE3_samplerList[PIPE3_SAMPLER2D_POINT]), texCoord);
 }
 
+/**** trasforma le normali
+ E' necessario moltiplicare per la trasporta dell'inversa per tenere in conto
+ eventuali operazioni di scaling non uniformi incluse nella matrice.
+ Se ci sono solo operazioni di scaling uniformi, allora si puo' moltiplicare normalmente
+ seza trasposta dell'inversa.
+ Bisogna inoltre escludere la parte di "traslazione" e questo si fa convertendo dal 4x4
+ in una 3x3*/
+vec3 PIPE3_transform_normal_by_world_matrix4x4 (const vec3 norm, const mat4 matW)
+{
+    //return norm * mat3(matW);
+    //return norm * mat3(transpose(inverse(matW)));
+    return norm * (transpose(inverse(mat3(matW))));
+}
+vec3 PIPE3_transform_normal_by_world_matrix3x3 (const vec3 norm, const mat3 matW)
+{
+    //return norm * mat3(matW);
+    return norm * transpose(inverse(matW));
+}
+
+
 //**** semplice calcolo luce
-float PIPE3_calcLight_01 (vec4 lightDir_and_ambient, vec3 norm)
+float PIPE3_calcLight_01 (const vec4 lightDir_and_ambient, const vec3 norm)
 {
     //sun light
     float c = max(-dot(lightDir_and_ambient.xyz, norm), 0);

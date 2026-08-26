@@ -64,7 +64,7 @@ void StageHelper::priv_mem_to_stgBuffer (const void *src, u32 sizeof_src, u32 st
 {
 	assert (sizeof_stagingBuffer >= stgBuffer_offset + sizeof_src);
 
-    const gpu::Buffer *s = gpu->getInfo (handle_stgBuffer);
+    const gpu::Buffer *s = gpu->get_info (handle_stgBuffer);
 
     //memcpy di dataSRC nello stagin buffer
     assert (s->mapped_size >= sizeof_src);

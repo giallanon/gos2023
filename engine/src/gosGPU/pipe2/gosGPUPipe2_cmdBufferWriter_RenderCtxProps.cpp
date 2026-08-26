@@ -23,7 +23,7 @@ void RenderCtx::Props::withRenderArea (u32 w, u32 h)
 //*****************************************
 void RenderCtx::Props::withRenderArea (GPU *gpu, const GPURenderTargetHandle &rtHandle)
 {
-    const gpu::RenderTarget *rt_info = gpu->getInfo (rtHandle);
+    const gpu::RenderTarget *rt_info = gpu->get_info (rtHandle);
     assert (NULL != rt_info);
     withRenderArea (rt_info->resolvedW, rt_info->resolvedH);
 }
@@ -49,7 +49,7 @@ void RenderCtx::Props::withRT (const VkImageView &sourceIMG, eAttachmentLoadOp l
 //*****************************************
 void RenderCtx::Props::withRT (GPU *gpu, const GPURenderTargetHandle &rtHandle, eAttachmentLoadOp loadOp, eAttachmentStoreOp storeOp, const gos::ColorHDR &color)
 {
-    const gpu::RenderTarget *rt_info = gpu->getInfo (rtHandle);
+    const gpu::RenderTarget *rt_info = gpu->get_info (rtHandle);
     assert (NULL != rt_info);
     withRT (rt_info->view, loadOp, storeOp, color);
 }
@@ -60,7 +60,7 @@ void RenderCtx::Props::withZB (GPU *gpu, const GPUZBufferHandle &zbHandle, eAtta
     assert (0 == haveZB);
 
     haveZB = 1;
-    const gpu::DepthStencil *zBuffer_info = gpu->getInfo (zbHandle);
+    const gpu::DepthStencil *zBuffer_info = gpu->get_info (zbHandle);
     assert (NULL != zBuffer_info);
 
     memset (&zBufferAttach, 0, sizeof(zBufferAttach));
