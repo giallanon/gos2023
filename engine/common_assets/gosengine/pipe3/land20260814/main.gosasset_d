@@ -7,7 +7,7 @@
     cullMode: CCW
 	//cullMode: none
 	drawPrimitive: trisList
-    wireframe: 1
+    wireframe: 0
 
     @vtx_shader
     {

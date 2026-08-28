@@ -26,7 +26,8 @@ namespace gos
 			struct SceneData
 			{
 				gos::mat4x4f    matVP;
-				gos::vec4f      lightDir;
+				gos::vec3f      lightDir;
+				f32				ambient_01;
 			};
 
 			struct Context 

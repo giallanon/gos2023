@@ -1,6 +1,7 @@
 #ifndef _land_renderer_h_
 #define _land_renderer_h_
 #include "map.h"
+#include "materialList.h"
 
 namespace land
 {
@@ -15,6 +16,7 @@ namespace land
 				~Renderer();
 
 		void 	map__bind (const land::Map *map);
+		void	materialList__bind (const MaterialList *ml);
 
 		bool 	on__attach (const gos::engine::RenderPipe::Context &ctx, u8 renderer_UID);
 		void 	on__detach (const gos::engine::RenderPipe::Context &ctx);
@@ -25,8 +27,9 @@ namespace land
 		void 	end();
 
 	private:
-		static constexpr u32 NUM_MAX_CHUNK = 8192;
-		static constexpr u8 MAX_LOD = 8;
+		static constexpr u32 	NUM_MAX_CHUNK = 8192;
+		static constexpr u8 	MAX_LOD = 8;
+		static constexpr u8		MATERIAL__NUM_MAX = 8;
 
 	private:
 		struct LODInfo
@@ -59,6 +62,8 @@ namespace land
 		{
 			struct Elem
 			{
+				//gos::vec3f	norm;
+				u32			encoded_norm;
 				u32			height_and_pad;
 			};
 
@@ -66,6 +71,21 @@ namespace land
 			gos::gpu::sMappedBuffer	mapped_buffer;
 			u32						sizeof_buffer;
 		};
+
+		struct SBO_material_data
+		{
+			struct Elem
+			{
+				f32	color_r;
+				f32	color_g;
+				f32	color_b;
+				f32	pad;
+			};
+
+			GPUStorageBufferHandle	handle_sbo;
+			gos::gpu::sMappedBuffer	mapped_buffer;
+			u32						sizeof_buffer;
+		};		
 
 	private:
 		void	priv__calc_LOD_details (u32 num_vtx_per_lato_max_LOD, f32 chunk_border_len__m);
@@ -84,12 +104,14 @@ namespace land
 		gos::ENGTexture			handle_texture_lod;
 
 		const land::Map 		*map;
+		const land::MaterialList *material_list;
 		u8						num_lod;
 		LODInfo					lod_info_list[MAX_LOD];
 		LODBucket				lod_bucket_list[MAX_LOD];
 
 		SBO_instance_data		sbo_instance_data;
 		SBO_chunk_data			sbo_chunk_data;
+		SBO_material_data		sbo_material_data;
 		u32 					num_block_to_render;
 	};
 

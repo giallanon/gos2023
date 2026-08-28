@@ -1,6 +1,8 @@
 #include "map.h"
+#include "land.h"
 #include "gosImageBufferRGBA.h"
 #include "gosGeomIntersect3D.h"
+#include "../gosGameUtils/gosGameUtils.h"
 
 using namespace gos;
 using namespace land;
@@ -98,7 +100,7 @@ bool Map::create (const char *save_path, const CreateData &create)
 	//L'altezza nei chunk e' espressa in step da 0.1m
 	{
 		ChunkData *chunk = GOSALLOCT(ChunkData*, localAllocator, lod0__sizeof);
-		memset (chunk, 0, lod0__sizeof);
+		//memset (chunk, 0, lod0__sizeof);
 
 		const u16 default_h = (u16) (create.map__default_height__m * 10.0f);
 		u32 ct_chunk = 0;
@@ -114,6 +116,10 @@ bool Map::create (const char *save_path, const CreateData &create)
 					for (u32 x=0; x<chunk__num_vtx_lato; x++)
 					{
 						chunk[ct].height = default_h;
+						
+						chunk[ct].ao = 0;
+						chunk[ct].materialID = MATERIAL_ID__LUSH_GRASS;
+						chunk[ct].encoded_norm = utils::normal_encode_octahedral(vec3f(0,1,0));
 
 						if (chunk[ct].height < height_min)	height_min=chunk[ct].height;
 						if (chunk[ct].height > height_max)	height_max=chunk[ct].height;
@@ -121,8 +127,7 @@ bool Map::create (const char *save_path, const CreateData &create)
 					}
 				}
 
-				sprintf_s (s, sizeof(s), "%s/chunk_%03d_%03d", save_path, cx, cy);
-				fs::fileSaveBuffer (s, chunk, lod0__sizeof);
+				priv__save_chunk_data (save_path, cx, cy, chunk, lod0__sizeof);
 
 				if (height_max == height_min)
 					height_max++;
@@ -135,8 +140,7 @@ bool Map::create (const char *save_path, const CreateData &create)
 	}
 
 	//salvo chunk info
-	sprintf_s (s, sizeof(s), "%s/chunk_info", save_path);
-	fs::fileSaveBuffer (s, chunk_info, sizeof__chunk_info);
+	priv__save_chunk_info (save_path, chunk_info, sizeof__chunk_info);
 	GOSFREE(localAllocator, chunk_info);
 
 
@@ -144,6 +148,83 @@ bool Map::create (const char *save_path, const CreateData &create)
 	return !err::anyError();
 }
 
+//********************************
+bool Map::priv__save_chunk_data (const char *folder, u32 cx, u32 cy, const ChunkData *chunkIN, u32 sizeof_chunk)
+{
+	assert (NULL != chunkIN);
+
+	char s[1024];
+	sprintf_s (s, sizeof(s), "%s/chunk_%03d_%03d", folder, cx, cy);
+	return fs::fileSaveBuffer (s, chunkIN, sizeof_chunk);
+}
+
+//********************************
+bool Map::priv__save_chunk_info (const char *folder, const ChunkInfo *ciIN, u32 sizeof__chunk_info)
+{
+	assert (NULL != ciIN);
+
+	char s[1024];
+	sprintf_s (s, sizeof(s), "%s/chunk_info", folder);
+	return fs::fileSaveBuffer (s, ciIN, sizeof__chunk_info);
+}
+
+//********************************
+bool Map::create_from_hmap (const char *path_to_hmap, f32 height_resolution)
+{
+	err::clear();
+
+	image::BufferRGBA im;
+	if (!im.loadFromFile (gos::getScrapAllocator(), path_to_hmap))
+	{
+		logger::err ("can't load %s\n", path_to_hmap);
+		return false;
+	}
+
+	const f32 RESOLUTION = 0.5f;
+	CreateData create;
+	create.lod0__scala_xz__m = RESOLUTION;
+	create.lod0__num_vtx_lato = 129;
+	create.map__border_size__m = RESOLUTION * GOSMAX( im.getW(), im.getH());
+	create.map__default_height__m = 0;
+
+
+	char save_path[1024];
+	sprintf_s (save_path, sizeof(save_path), "%s", path_to_hmap);
+	fs::remove_ext_in_place (save_path);
+	if (!Map::create (save_path, create))
+	{
+		im.free (gos::getScrapAllocator());
+		return false;
+	}
+
+	//carico la mappa e centro la hmap
+	Map map;
+	map.load (save_path);
+	const u32 map__num_vtx = 1 + map.chunk__num * (map.chunk__num_vtx_lato-1);
+	const u32 x1 = (map__num_vtx - im.getW()) / 2;
+	const u32 y1 = (map__num_vtx - im.getH()) / 2;
+
+	Map::MapUpdate mu;
+	mu.setup (gos::getScrapAllocator());
+	map.begin_update(mu);
+	{
+		u32 hmap_ct = 0;
+		const u8 *hmap_buffer = im.getBuffer();
+		for (u32 y=0; y<im.getH(); y++)
+		{
+			for (u32 x=0; x<im.getW(); x++)
+			{
+				const u8 red = hmap_buffer[hmap_ct];
+				hmap_ct+=4;
+				map.set_height (mu, x1 + x, y1 + y, (f32)red * height_resolution);
+			}
+		}
+	}
+	map.end_update(mu);
+
+	im.free (gos::getScrapAllocator());
+	return true;
+}
 
 //********************************
 Map::Map()
@@ -303,6 +384,14 @@ const Map::ChunkInfo* Map::priv__chunk_get_info (u32 cx, u32 cy) const
 	return &chunk_info[cy * chunk__num + cx];
 }
 
+//********************************
+Map::ChunkInfo* Map::priv__chunk_get_info (u32 cx, u32 cy)
+{
+	if (cx >= chunk__num)	return NULL;
+	if (cy >= chunk__num)	return NULL;;
+	return &chunk_info[cy * chunk__num + cx];
+}
+
 //***********************************
 const Map::ChunkData* Map::chunk__get (u32 cx, u32 cy) const
 {
@@ -310,6 +399,15 @@ const Map::ChunkData* Map::chunk__get (u32 cx, u32 cy) const
 	if (cy >= chunk__num)	return NULL;
 	return reinterpret_cast<const ChunkData*>( &chunk_data[lod0__sizeof * (cy * chunk__num + cx)] );
 }
+
+//***********************************
+Map::ChunkData* Map::priv_chunk__get (u32 cx, u32 cy)
+{
+	if (cx >= chunk__num)	return NULL;
+	if (cy >= chunk__num)	return NULL;
+	return reinterpret_cast<ChunkData*>( &chunk_data[lod0__sizeof * (cy * chunk__num + cx)] );
+}
+
 
 //***********************************
 u32 Map::calc_visible_chunk (gos::geom::Camera3 *cam, gos::FastArray<ChunkCoord> *out) const
@@ -374,3 +472,297 @@ u32 Map::calc_visible_chunk (gos::geom::Camera3 *cam, gos::FastArray<ChunkCoord>
 	return out->getNElem();
 }
 
+
+//********************************
+bool Map::priv_chunk__set_height (u32 cx, u32 cy, u32 vtx_x, u32 vtx_y, f32 height_m)
+{
+	ChunkData *c = priv_chunk__get(cx, cy);
+	if (NULL == c)
+		return false;
+
+	assert (vtx_x < chunk__num_vtx_lato);
+	assert (vtx_y < chunk__num_vtx_lato);
+	c[vtx_x + vtx_y * chunk__num_vtx_lato].height = (u16)math::floor( 10.0f * height_m );
+	return true;
+}
+
+//********************************
+void Map::begin_update(MapUpdate &mu)
+{
+	mu.list_of_modified_chunk.reset();
+
+}
+
+//********************************
+void Map::set_height (MapUpdate &mu, u32 vtx_x, u32 vtx_y, f32 height_m)
+{
+#define STORE_IN_MODIFIED_LIST(cx,cy)		mu.list_of_modified_chunk.insertIfNotExists (  ((u64)(cx) << 32) | (cy)  );
+
+
+	const u32 cx = vtx_x / (chunk__num_vtx_lato - 1);
+	const u32 cy = vtx_y / (chunk__num_vtx_lato - 1);
+	const u32 vx = vtx_x - cx * (chunk__num_vtx_lato - 1);
+	const u32 vy = vtx_y - cy * (chunk__num_vtx_lato - 1);
+
+	if (priv_chunk__set_height (cx, cy, vx, vy, height_m))
+		STORE_IN_MODIFIED_LIST(cx,cy);
+
+	if (vx == 0)
+	{
+		//sto modificando un vtx che e' sharato anche dal chunk alla mia sx
+		if (priv_chunk__set_height (cx-1, cy, (chunk__num_vtx_lato - 1), vy, height_m))
+			STORE_IN_MODIFIED_LIST(cx-1, cy);
+			
+
+		if (vy == 0)
+		{
+			//sto modificando un vtx che e' sharato anche dal chunk sotto di me e da quello sotto a destra
+			if (priv_chunk__set_height (cx, cy-1, vx, (chunk__num_vtx_lato - 1), height_m))
+				STORE_IN_MODIFIED_LIST(cx, cy-1);
+			if (priv_chunk__set_height (cx-1, cy-1, (chunk__num_vtx_lato - 1), (chunk__num_vtx_lato - 1), height_m))
+				STORE_IN_MODIFIED_LIST(cx-1, cy-1);
+		}
+	}
+	else if (vy == 0)
+	{
+		//sto modificando un vtx che e' sharato anche dal chunk sopra di me
+		if (priv_chunk__set_height (cx, cy-1, vx, (chunk__num_vtx_lato - 1), height_m))
+			STORE_IN_MODIFIED_LIST(cx, cy-1);
+	}
+
+#undef STORE_IN_MODIFIED_LIST
+}
+
+//********************************
+void Map::end_update(MapUpdate &mu)
+{
+	const u32 NUM_VTX_IN_CHUNK = chunk__num_vtx_lato * chunk__num_vtx_lato;
+
+	const f32 HMAP_NUM_VTX_PER_LATO = chunk__num_vtx_lato + 2;
+	f32	*hmap = GOSALLOCT(f32*, gos::getScrapAllocator(), sizeof(f32) * HMAP_NUM_VTX_PER_LATO * HMAP_NUM_VTX_PER_LATO);
+	memset (hmap, 0, sizeof(f32) * HMAP_NUM_VTX_PER_LATO * HMAP_NUM_VTX_PER_LATO);
+
+
+	//per tutti i chunk modificati, devo:
+	//	- ricalcolare hmin hmax
+	//	- ricalcolare le normali
+	const FastArray<u64> *list = mu.list_of_modified_chunk._queryList();
+	for (u32 i=0; i<list->getNElem(); i++)
+	{
+		const u64 key = list->queryElem(i);
+		const u32 cx = (u32)((key >> 32) & 0x00000000FFFFFFFF);
+		const u32 cy = (u32)(key & 0x00000000FFFFFFFF);
+
+		ChunkData *chunk = priv_chunk__get(cx, cy);
+		assert (NULL != chunk);
+
+		//copio in hmap le altezze del chunk
+		u32 ct = 0;
+		for (u32 y=0; y<chunk__num_vtx_lato; y++)
+		{
+			u32 ct_hmap = 1 + (y+1) * HMAP_NUM_VTX_PER_LATO;
+			for (u32 x=0; x<chunk__num_vtx_lato; x++)
+			{
+				hmap[ct_hmap++] = 0.1f * (f32)chunk[ct++].height;
+			}
+		}
+
+		//fillo i bordi di hmap con info relative ai chunk adiacenti
+		{
+			ChunkData *c2 = priv_chunk__get(cx, cy-1);
+			if (NULL != c2)
+			{
+				u32 ct = chunk__num_vtx_lato * (chunk__num_vtx_lato-1);
+				u32 ct_hmap = 1;
+				for (u32 x=0; x<chunk__num_vtx_lato; x++)
+					hmap[ct_hmap++] = 0.1f * (f32)c2[ct++].height;
+			}
+
+			c2 = priv_chunk__get(cx, cy+1);
+			if (NULL != c2)
+			{
+				u32 ct = 0;
+				u32 ct_hmap = 1 + HMAP_NUM_VTX_PER_LATO * (HMAP_NUM_VTX_PER_LATO-1);
+				for (u32 x=0; x<chunk__num_vtx_lato; x++)
+					hmap[ct_hmap++] = 0.1f * (f32)c2[ct++].height;
+			}			
+
+			c2 = priv_chunk__get(cx+1, cy);
+			if (NULL != c2)
+			{
+				u32 ct = 0;
+				u32 ct_hmap = 2 * HMAP_NUM_VTX_PER_LATO -1;
+				for (u32 x=0; x<chunk__num_vtx_lato; x++)
+				{
+					hmap[ct_hmap] = 0.1f * (f32)c2[ct].height;
+					ct_hmap += HMAP_NUM_VTX_PER_LATO;
+					ct+=chunk__num_vtx_lato;
+				}
+			}
+
+			c2 = priv_chunk__get(cx-1, cy);
+			if (NULL != c2)
+			{
+				u32 ct = chunk__num_vtx_lato - 1;
+				u32 ct_hmap = HMAP_NUM_VTX_PER_LATO;
+				for (u32 x=0; x<chunk__num_vtx_lato; x++)
+				{
+					hmap[ct_hmap] = 0.1f * (f32)c2[ct].height;
+					ct_hmap += HMAP_NUM_VTX_PER_LATO;
+					ct+=chunk__num_vtx_lato;
+				}
+			}
+
+			//i 4 pixel ai corner
+			c2 = priv_chunk__get(cx-1, cy-1);
+			if (NULL != c2)
+			{
+				u32 ct = chunk__num_vtx_lato * chunk__num_vtx_lato - 1;
+				u32 ct_hmap = 0;
+				hmap[ct_hmap] = 0.1f * (f32)c2[ct].height;
+			}
+
+			c2 = priv_chunk__get(cx+1, cy-1);
+			if (NULL != c2)
+			{
+				u32 ct = chunk__num_vtx_lato * (chunk__num_vtx_lato -1);
+				u32 ct_hmap = HMAP_NUM_VTX_PER_LATO -1;
+				hmap[ct_hmap] = 0.1f * (f32)c2[ct].height;
+			}
+
+			c2 = priv_chunk__get(cx-1, cy+1);
+			if (NULL != c2)
+			{
+				u32 ct = chunk__num_vtx_lato - 1;
+				u32 ct_hmap = HMAP_NUM_VTX_PER_LATO * (HMAP_NUM_VTX_PER_LATO-1);
+				hmap[ct_hmap] = 0.1f * (f32)c2[ct].height;
+			}
+			
+			c2 = priv_chunk__get(cx+1, cy+1);
+			if (NULL != c2)
+			{
+				u32 ct = 0;
+				u32 ct_hmap = HMAP_NUM_VTX_PER_LATO * HMAP_NUM_VTX_PER_LATO -1;
+				hmap[ct_hmap] = 0.1f * (f32)c2[ct].height;
+			}				
+		}
+
+		//calcolo delle normali
+		ct = 0;
+		for (u32 y=1; y<HMAP_NUM_VTX_PER_LATO-1; y++)
+		{
+			u32 ct_hmap = 1+ y * HMAP_NUM_VTX_PER_LATO;
+			u32 ct_hmap_su = ct_hmap - HMAP_NUM_VTX_PER_LATO;
+			u32 ct_hmap_giu = ct_hmap + HMAP_NUM_VTX_PER_LATO;
+			for (u32 x=1; x<HMAP_NUM_VTX_PER_LATO-1; x++)
+			{
+				const f32 h[3][3] {
+					hmap[ct_hmap_su - 1], 	hmap[ct_hmap_su], 	hmap[ct_hmap_su + 1],
+					hmap[ct_hmap - 1], 		hmap[ct_hmap], 		hmap[ct_hmap + 1],
+					hmap[ct_hmap_giu - 1], 	hmap[ct_hmap_giu], 	hmap[ct_hmap_giu + 1]
+				};
+
+				const f32 x0 = 0;
+				const f32 x1 = lod0__scala_xz__m;
+				const f32 x2 = x1 + lod0__scala_xz__m;
+
+				const f32 z2 = 0;
+				const f32 z1 = lod0__scala_xz__m;
+				const f32 z0 = z1 + lod0__scala_xz__m;
+
+				vec3f nn[4];
+				geom::Plane3 pl1;
+				geom::Plane3 pl2;
+				pl1.set_from_3points ( vec3f(x0, h[0][0], z0), vec3f(x1, h[1][0], z0), vec3f(x1, h[1][1], z1));
+				pl2.set_from_3points ( vec3f(x0, h[0][0], z0), vec3f(x1, h[1][1], z1), vec3f(x0, h[0][1], z1));
+				nn[0] = (pl1.n + pl2.n);
+
+				pl1.set_from_3points ( vec3f(x1, h[1][0], z0), vec3f(x2, h[2][0], z0), vec3f(x2, h[2][1], z1));
+				pl2.set_from_3points ( vec3f(x1, h[1][0], z0), vec3f(x2, h[2][1], z1), vec3f(x1, h[1][1], z1));
+				//nn[1] = (pl1.n + pl2.n);
+				nn[1] = pl2.n;
+
+				pl1.set_from_3points ( vec3f(x0, h[0][1], z1), vec3f(x1, h[1][1], z1), vec3f(x1, h[1][2], z2));
+				pl2.set_from_3points ( vec3f(x0, h[0][1], z1), vec3f(x1, h[1][2], z2), vec3f(x0, h[0][2], z2));
+				//nn[2] = (pl1.n + pl2.n);
+				nn[2] = pl1.n;
+
+				pl1.set_from_3points ( vec3f(x1, h[1][1], z1), vec3f(x2, h[2][1], z1), vec3f(x2, h[2][2], z2));
+				pl2.set_from_3points ( vec3f(x1, h[1][1], z1), vec3f(x2, h[2][2], z2), vec3f(x1, h[1][2], z2));
+				nn[3] = (pl1.n + pl2.n);
+
+				vec3f norm = (nn[0] + nn[1] +nn[2] +nn[3]) / 6.0f;
+				norm.normalize();
+				//chunk[ct].norm = norm;
+				chunk[ct].encoded_norm = utils::normal_encode_octahedral(norm);
+
+				//poor man AO
+				{
+					geom::Pos3 pos;
+					pos.identity();
+					pos.o.set (0, h[1][1], 0);
+					pos.alignAsseY (norm);
+
+
+					vec3f vIN[8];
+					vIN[0].set (-lod0__scala_xz__m, h[0][0],  lod0__scala_xz__m);	
+					vIN[1].set ( 0, 				h[1][0],  lod0__scala_xz__m);	
+					vIN[2].set ( lod0__scala_xz__m, h[2][0],  lod0__scala_xz__m);
+					
+					vIN[3].set (-lod0__scala_xz__m, h[0][1],  0);									
+					vIN[4].set ( lod0__scala_xz__m, h[2][1],  0);
+					
+					vIN[5].set (-lod0__scala_xz__m, h[0][2], -lod0__scala_xz__m);	
+					vIN[6].set ( 0, 				h[1][2], -lod0__scala_xz__m);	
+					vIN[7].set ( lod0__scala_xz__m, h[2][2], -lod0__scala_xz__m);
+
+					vec3f vOUT[8];
+					pos.vect_ToWorld (vIN, vOUT, 8);
+
+
+					u8 ao = 0;					
+					pl1.set_from_point_and_normal (vec3f(0, h[1][1], 0), norm);
+					for (u8 i=0; i<8; i++)
+					{
+						if (pl1.signed_distance (vOUT[i]) > 0.2f)
+							ao++;
+					}
+
+					//ao va da 0 a 8.  Se == 8 e' super occulso
+					chunk[ct].ao = 31*ao;
+				}
+
+				ct_hmap++;
+				ct_hmap_su++;
+				ct_hmap_giu++;
+
+				ct++;
+			}
+		}
+
+
+
+		//altezza min/max
+		u16 hmin = u16MAX;
+		u16 hmax = 0;
+		for (u32 i2=0; i2<NUM_VTX_IN_CHUNK; i2++)
+		{
+			if (chunk[i2].height < hmin)	hmin = chunk[i2].height;
+			if (chunk[i2].height > hmax)	hmax = chunk[i2].height;
+		}
+		
+
+		//salvo chunkinfo con le altezze min-max
+		ChunkInfo *ci = priv__chunk_get_info(cx, cy);
+		assert (NULL != ci);
+		ci->min_height__m = 0.1f * (f32)hmin;
+		ci->max_height__m = 0.1f * (f32)hmax;
+
+
+		priv__save_chunk_data (path_to_folder, cx, cy, chunk, sizeof(ChunkData) * NUM_VTX_IN_CHUNK);
+	}
+
+	GOSFREE(gos::getScrapAllocator(), hmap);
+
+	priv__save_chunk_info (path_to_folder, chunk_info, sizeof(ChunkInfo) * chunk__num * chunk__num);
+}

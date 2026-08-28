@@ -8,7 +8,7 @@ layout(set = 0, binding = 0) uniform sampler   PIPE3_samplerList[2];
 layout(set = 0, binding = 1) uniform texture2D PIPE3_textureList[];
 
 //**** utils
-vec3 color_sRGB_to_linear (float r, float g, float b)
+vec3 color_sRGB_to_linear (uint r, uint g, uint b)
 {
     vec3 ret;
     ret.x = pow (r/255.0f, 2.2f);
@@ -62,3 +62,4 @@ float PIPE3_calcLight_01 (const vec4 lightDir_and_ambient, const vec3 norm)
     //clamp
     return min(max(c, 0), 1);
 }
+

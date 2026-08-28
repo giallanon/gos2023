@@ -7,6 +7,7 @@ using namespace gos;
 App::App()
 {
 	query_cam = NULL;
+	enable_asset_monitor();
 }
 
 //***************************************
@@ -18,20 +19,25 @@ void App::on__unsetup()
 //***************************************
 void App::on__setup ()
 {
-	land::Map::CreateData data;
-	land::Map::create ("@w/assets/asset_src/heightmap/map2_1", data);
+	material_list.add (MATERIAL_ID__DEEP_WATER, 0x000d233a);
+	material_list.add (MATERIAL_ID__SHALLOW_WATER, 0x00285973);
+	material_list.add (MATERIAL_ID__SAND, 0x00d2b48c);
+	material_list.add (MATERIAL_ID__LUSH_GRASS, 0x004a703b);
+	material_list.add (MATERIAL_ID__FOREST, 0x002d4a22);
+	material_list.add (MATERIAL_ID__DIRT, 0x005a4d41);
+	material_list.add (MATERIAL_ID__ROCK, 0x007a7a7a);
+	material_list.add (MATERIAL_ID__SNOW, 0x00f0f4f7);
 
-	map.load ("@w/assets/asset_src/heightmap/map2_1");
 
-	// land::Map::create ("@w/assets/asset_src/heightmap/Hills_01.png", 129, 0.5f, 0.1f);
-	// map.load ("@w/assets/asset_src//heightmap/Hills_01");
+	// land::Map::CreateData data;
+	// land::Map::create ("@w/assets/asset_src/heightmap/map2_1", data);
+	// map.load ("@w/assets/asset_src/heightmap/map2_1");
 
-	// land::Map::create ("@w/assets/asset_src/heightmap/radial.png", 129, 0.5f, 0.1f);
-	// map.load ("@w/assets/asset_src//heightmap/radial");
-
-	// land::Map::create ("@w/assets/asset_src/heightmap/anorway_30m.png", 129, 1.0f, 0.1f);
-	// map.load ("@w/assets/asset_src//heightmap/anorway_30m");
+	land::Map::create_from_hmap ("@w/assets/asset_src/heightmap/anorway_30m.png", 0.06f);
+	map.load ("@w/assets/asset_src//heightmap/anorway_30m");
 	
+	// land::Map::create_from_hmap ("@w/assets/asset_src/heightmap/radial.png", 0.15f);
+	// map.load ("@w/assets/asset_src//heightmap/radial");
 	
 
 
@@ -42,6 +48,7 @@ void App::on__setup ()
 		line_ctx2 = renderer_line3d->ctx__create_new("ctx2", 32);
 
 	renderer_land->map__bind (&map);
+	renderer_land->materialList__bind (&material_list);
 	
 	gos::ENGModel3d		handle_model_cubo1x1x1;
 	engine->model_createFromAsset ("model_cubo1x1x1", &handle_model_cubo1x1x1, res::eLoadMode::asap);
@@ -52,7 +59,7 @@ void App::on__setup ()
 	{
 		mat4x4f matW;
 		matW.buildTranslation (0, 0.5f, 0);
-		matW.buildTranslation (-451.97, 10.47, 567.51);
+		//matW.buildTranslation (-451.97, 10.47, 567.51);
 		engine->modelinst_applyTransform (handle_mi_cubo1x1x1, matW);
 	}
 	

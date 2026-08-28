@@ -2,6 +2,7 @@
 #define _land_map2_h_
 #include "enumAndDefine.h"
 #include "gosMagicUID.h"
+#include "gosUniqueSortedList.h"
 
 namespace land
 {
@@ -30,15 +31,34 @@ namespace land
 
 	public:
 		static bool			create (const char *save_path, const CreateData &create);
+		static bool			create_from_hmap (const char *path_to_hmap, f32 height_resolution);
 
 
 
 	public:
-		struct ChunkData
+		struct ChunkData	//ogni vtx di un chunk contiene queste info
 		{
+			u32	encoded_norm;
+			u8	ao;
+			u8	materialID;
 			u16	height;	//espressa in step da 0.1m
 		};
 
+		class MapUpdate
+		{
+		public:
+					MapUpdate()										{ }
+					~MapUpdate()									{ priv_free(); }
+			void	setup (gos::Allocator *allocator)				{ list_of_modified_chunk.setup(allocator, 1024); }
+
+		protected:
+			gos::UniqueSortedList<u64>	list_of_modified_chunk;
+
+		private:
+			void 	priv_free()										{ }
+
+		friend Map;
+		};
 
 	public:
 						Map();
@@ -54,6 +74,10 @@ namespace land
 		const ChunkData*	chunk__get (u32 cx, u32 cy) const;
 
 
+		void	begin_update(MapUpdate &mu);
+		void 	set_height (MapUpdate &mu, u32 vtx_x, u32 vtx_y, f32 height_m);
+		void	end_update(MapUpdate &mu);
+
 	private:
 		static constexpr u32 VERSION = gos::magic::_makeID (0x01A781, 0x01);
 
@@ -65,10 +89,19 @@ namespace land
 		};
 
 	private:
+		static bool 	priv__save_chunk_data (const char *folder, u32 cx, u32 cy, const ChunkData *c, u32 sizeof_chunk);
+		static bool 	priv__save_chunk_info (const char *folder, const ChunkInfo *c, u32 sizeof__chunk_info);
+		
+
 		void			priv__free();
 		bool			priv__world_to_chunk (f32 wx, f32 wz, u32 *out__cx, u32 *out__cy) const;
 		bool			priv__chunk_to_world (u32 cx, u32 cy, f32 *out__wx, f32 *out__wz) const;
 		const ChunkInfo* priv__chunk_get_info (u32 cx, u32 cy) const;
+		ChunkInfo* 		priv__chunk_get_info (u32 cx, u32 cy);
+		ChunkData*		priv_chunk__get (u32 cx, u32 cy);
+		bool 			priv_chunk__set_height (u32 cx, u32 cy, u32 vtx_x, u32 vtx_y, f32 height_m);
+
+		
 
 	private:
 		gos::Allocator	*localAllocator;

@@ -18,7 +18,7 @@ int main()
         if (!engine.setup (1600, 700, "land20260814"))
             return -2;
 
-        if (!engine.asset_build())  return -3;
+        //if (!engine.asset_build())  return -3;
         //if (!engine.asset_rebuildAll())  return -3;
 
 

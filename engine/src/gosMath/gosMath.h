@@ -25,9 +25,14 @@ namespace gos
 		 * generic
 		 *
 		 *=========================================================*/
-		inline f32			floor(f32 a)												{ return floorf(a);  }
-		inline f32			round(f32 a)												{ return roundf(a);  }
-		inline f32			trunc(f32 a)												{ return truncf(a); }
+		constexpr f32		gradToRad (f32 grad)									{ return grad*0.01745329251994f; }
+		constexpr f32		radToGrad (f32 rad)										{ return rad*57.295779513082320876798154814105f; }
+		constexpr f32		sign (f32 f)											{ if (f>=0.0f) return 1.0f; return -1.0f; }
+
+		inline f32			floor(f32 a)											{ return floorf(a); }
+		inline f32			round(f32 a)											{ return roundf(a); }
+		inline f32			trunc(f32 a)											{ return truncf(a); }
+		inline f32			abs(f32 a)												{ return fabs(a); }
 
 	
 		inline f32			dot (const Quat &q1, const Quat &q2)					{return (q1.x*q2.x + q1.y*q2.y + q1.z*q2.z + q1.w*q2.w);}
