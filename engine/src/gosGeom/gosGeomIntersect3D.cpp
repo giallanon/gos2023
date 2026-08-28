@@ -55,8 +55,8 @@ eClipResult	geom::AABB3__intersect_plane3 (const AABB3 &aabb, const Plane3 &pl)
 	if(pl.n.y<0) 		{ posPt.y = aabb.vmin.y; negPt.y = aabb.vmax.y; }
 	if(pl.n.z<0) 		{ posPt.z = aabb.vmin.z; negPt.z = aabb.vmax.z; }
 
-	if (pl.distance (posPt) < 0)	return eClipResult::outside;
-	if (pl.distance (negPt) >= 0)	return eClipResult::inside;
+	if (pl.signed_distance (posPt) < 0)		return eClipResult::outside;
+	if (pl.signed_distance (negPt) >= 0)	return eClipResult::inside;
 	return eClipResult::intersect;
 }
 
@@ -69,7 +69,7 @@ eClipResult	geom::AABB3__intersect_frustum3 (const AABB3 &aabb, const Frustum3 &
 	{
 	case eClipResult::outside:		return eClipResult::outside;
 	case eClipResult::intersect:	ret = eClipResult::intersect; break;
-	case eClipResult::inside:
+	case eClipResult::inside:	
 		switch (AABB3__intersect_plane3 (aabb, fr.get_plane(Frustum3::ePlane::back)))
 		{
 		case eClipResult::inside:		break;
@@ -79,36 +79,33 @@ eClipResult	geom::AABB3__intersect_frustum3 (const AABB3 &aabb, const Frustum3 &
 		break;
 	}
 
-
 	switch (AABB3__intersect_plane3 (aabb, fr.get_plane(Frustum3::ePlane::left)))
 	{
+	case eClipResult::inside:		break;
 	case eClipResult::outside:		return eClipResult::outside;
 	case eClipResult::intersect:	ret = eClipResult::intersect; break;
+	}
 
-	case  eClipResult::inside:
-		switch (AABB3__intersect_plane3 (aabb, fr.get_plane(Frustum3::ePlane::right)))
-		{
-		case eClipResult::inside:		break;
-		case eClipResult::outside:		return eClipResult::outside;
-		case eClipResult::intersect:	ret = eClipResult::intersect; break;
-		}
-		break;
+	switch (AABB3__intersect_plane3 (aabb, fr.get_plane(Frustum3::ePlane::right)))
+	{
+	case eClipResult::inside:		break;
+	case eClipResult::outside:		return eClipResult::outside;
+	case eClipResult::intersect:	ret = eClipResult::intersect; break;
 	}
 
 
 	switch (AABB3__intersect_plane3 (aabb, fr.get_plane(Frustum3::ePlane::top)))
 	{
+	case eClipResult::inside:		break;
 	case eClipResult::outside:		return eClipResult::outside;
 	case eClipResult::intersect:	ret = eClipResult::intersect; break;
+	}
 
-	case  eClipResult::inside:
-		switch (AABB3__intersect_plane3 (aabb, fr.get_plane(Frustum3::ePlane::bottom)))
-		{
-		case eClipResult::inside:		break;
-		case eClipResult::outside:		return eClipResult::outside;
-		case eClipResult::intersect:	ret = eClipResult::intersect; break;
-		}
-		break;
+	switch (AABB3__intersect_plane3 (aabb, fr.get_plane(Frustum3::ePlane::bottom)))
+	{
+	case eClipResult::inside:		break;
+	case eClipResult::outside:		return eClipResult::outside;
+	case eClipResult::intersect:	ret = eClipResult::intersect; break;
 	}
 
 	return ret;

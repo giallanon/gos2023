@@ -9,7 +9,7 @@ namespace gos
 	{
 		/********************************************
 		 * @brief 	Frustum3
-		 *			E' un KDop con 6 planes
+		 *			E' un KDop con 6 planes le cui normali punti all'interno 
 		 */
 		class Frustum3 : public KDop<6>
 		{
@@ -39,8 +39,8 @@ namespace gos
 			const vec3f&		get_normal (ePlane p) const							{ return planes[(u8)p].n; }
 			const vec3f&		get_normal (u8 i) const								{ assert(i<6); return planes[i].n; }
 
-			const vec3f&		get_near_center() const								{ return planes[(u8)ePlane::front].p; }
-			const vec3f&		get_far_center() const								{ return planes[(u8)ePlane::back].p; }
+			const vec3f&		get_near_center() const								{ return nearCenter; }
+			const vec3f&		get_far_center() const								{ return farCenter; }
 			f32					get_far_distance() const							{ return farDistance;}
 
 			// ritorna un vettore che e' lungo meta' della larghezza del farplane e punto in direzione x del farplane 
@@ -62,8 +62,10 @@ namespace gos
 			void				calc_AABB (AABB3 *out) const;
 
 		private:
+			vec3f				nearCenter;
 			vec3f				nearPlaneHalfAsseX;
 			vec3f				nearPlaneHalfAsseY;
+			vec3f				farCenter;
 			vec3f				farPlaneHalfAsseX;
 			vec3f				farPlaneHalfAsseY;
 			f32					farDistance;

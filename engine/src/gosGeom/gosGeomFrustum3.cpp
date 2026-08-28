@@ -16,20 +16,20 @@ void Frustum3::build_perspective (const vec3f &o, const vec3f &asseZ, const vec3
 	vec3f	halfDimY;
 
 	//calcolo dei punti del nearplane
-	vec3f	nearCenter = o + nearDistance*asseZ;
+	this->nearCenter = o + nearDistance*asseZ;
 	f = nearDistance * tanFOV;
 	nearPlaneHalfAsseY = halfDimY = f*asseY;
-	nearPlaneHalfAsseX = halfDimX = (f*aspect)* asseX;
+	nearPlaneHalfAsseX = halfDimX = (f*aspect) * asseX;
 	vec3f	p4near[4] = {	nearCenter +halfDimY -halfDimX,
 							nearCenter +halfDimY +halfDimX,
 							nearCenter -halfDimY +halfDimX,
 							nearCenter -halfDimY -halfDimX};
 
 	//calcolo dei punti del nearplane
-	vec3f	farCenter = o + farDistance*asseZ;
+	this->farCenter = o + farDistance*asseZ;
 	f = farDistance * tanFOV;
 	farPlaneHalfAsseY = halfDimY = f*asseY;
-	farPlaneHalfAsseX = halfDimX = (f*aspect)* asseX;
+	farPlaneHalfAsseX = halfDimX = (f*aspect) * asseX;
 	vec3f	p4far[4]  = {	farCenter +halfDimY -halfDimX,
 							farCenter +halfDimY +halfDimX,
 							farCenter -halfDimY +halfDimX,
@@ -60,10 +60,10 @@ void Frustum3::build_ortho (const vec3f &o, const vec3f &asseZ, const vec3f &ass
 	width/=zoom;
 	height/=zoom;
 
-	vec3f	nearCenter = o + nearDistance*asseZ;
+	this->nearCenter = o + nearDistance*asseZ;
 	planes[(u8)ePlane::front].set_from_point_and_normal (nearCenter, asseZ);
 	
-	vec3f	farCenter  = o + farDistance*asseZ;
+	this->farCenter  = o + farDistance*asseZ;
 	planes[(u8)ePlane::back].set_from_point_and_normal (farCenter, -asseZ);
 
 	farPlaneHalfAsseX = nearPlaneHalfAsseX = (width * 0.5f) * asseX;
@@ -81,8 +81,6 @@ void Frustum3::build_ortho (const vec3f &o, const vec3f &asseZ, const vec3f &ass
 //************************************************************************
 void Frustum3::calc_8points (vec3f *vtx) const
 {
-	vec3f	nearCenter = get_near_center();
-	vec3f	farCenter = get_far_center();
 	vec3f	farAx = get_farPlane_half_asseX ();
 	vec3f	farAy = get_farPlane_half_asseY();
 	vec3f	nearAx = get_nearPlane_half_asseX();

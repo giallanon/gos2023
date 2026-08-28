@@ -442,8 +442,10 @@ namespace gos
 								const f32 tanHalfFov = tanf (fovY_rad * 0.5f);
 								const f32 m00 = 1.0f / (aspectRatio * tanHalfFov);
 								const f32 m11 = 1.0f / tanHalfFov;
-								const f32 m22 = (-nearplane - farplane) / (nearplane - farplane);
-								const f32 m23 = (2.0f*farplane*nearplane) / (nearplane - farplane);
+								//const f32 m22 = (-nearplane - farplane) / (nearplane - farplane);
+								//const f32 m23 = (2.0f*farplane*nearplane) / (nearplane - farplane);
+								const f32 m22 = (farplane) / (farplane - nearplane);
+								const f32 m23 = - nearplane *m22;
 
 								values[ADDR(0, 0)] = m00;	values[ADDR(0, 1)] = 0;		values[ADDR(0, 2)] = 0;		values[ADDR(0, 3)] = 0;
 								values[ADDR(1, 0)] = 0;		values[ADDR(1, 1)] = -m11;	values[ADDR(1, 2)] = 0;		values[ADDR(1, 3)] = 0;

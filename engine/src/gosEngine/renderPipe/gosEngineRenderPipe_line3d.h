@@ -21,7 +21,7 @@ namespace gos
 			/*****************
 			 * @brief	Ctx
 			 * 			un contex contiene un elenco di punti, linee, colori e settaggi vari
-			 * 			Per renderizzare un ctx, utilizzare Renderer_line3d->appendToCommandBuffer()
+			 * 			Tutti i ctx creati con ctx__create_new() vengono automaticamente renderizzati 
 			 */
 			class Ctx
 			{

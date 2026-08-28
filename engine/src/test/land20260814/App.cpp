@@ -1,5 +1,4 @@
 #include "App.h"
-
 using namespace gos;
 
 
@@ -19,14 +18,19 @@ void App::on__unsetup()
 //***************************************
 void App::on__setup ()
 {
+	land::Map::CreateData data;
+	land::Map::create ("@w/assets/asset_src/heightmap/map2_1", data);
+
+	map.load ("@w/assets/asset_src/heightmap/map2_1");
+
 	// land::Map::create ("@w/assets/asset_src/heightmap/Hills_01.png", 129, 0.5f, 0.1f);
 	// map.load ("@w/assets/asset_src//heightmap/Hills_01");
 
 	// land::Map::create ("@w/assets/asset_src/heightmap/radial.png", 129, 0.5f, 0.1f);
 	// map.load ("@w/assets/asset_src//heightmap/radial");
 
-	land::Map::create ("@w/assets/asset_src/heightmap/anorway_30m.png", 129, 1.0f, 0.1f);
-	map.load ("@w/assets/asset_src//heightmap/anorway_30m");
+	// land::Map::create ("@w/assets/asset_src/heightmap/anorway_30m.png", 129, 1.0f, 0.1f);
+	// map.load ("@w/assets/asset_src//heightmap/anorway_30m");
 	
 	
 
@@ -47,7 +51,8 @@ void App::on__setup ()
 	//posiziono il player
 	{
 		mat4x4f matW;
-		matW.buildTranslation (0, 10.5f, 0);
+		matW.buildTranslation (0, 0.5f, 0);
+		matW.buildTranslation (-451.97, 10.47, 567.51);
 		engine->modelinst_applyTransform (handle_mi_cubo1x1x1, matW);
 	}
 	
@@ -70,7 +75,7 @@ void App::on__setup ()
 	//camera 1 per il movimento dell'entity ma con camera di default
 	navigation__create_mode(NAV_MODE__ENTITY_FIXED_CAM);
 	{
-		cam = camera__create (2, math::gradToRad(45), 0.1f, land::LAND__VIEW_DISTANCE_m);
+		cam = camera__create (2, math::gradToRad(45), 0.1f, 1500);
 	}
 	
 }
@@ -89,6 +94,38 @@ void App::on__render()
 	renderer_PIPE3->begin();
 	renderer_PIPE3->add (handle_mi_cubo1x1x1);
 	renderer_PIPE3->end();
+
+	line_ctx1->clear();
+	if (NAV_MODE__ENTITY == navigation__get_mode())
+	{
+		geom::Frustum3	fr = query_cam->get_frustumWC();
+
+		vec3f vv[8];
+		fr.calc_8points(vv);
+		for (u32 i=0; i<8; i++)
+			line_ctx1->vtx_add(vv[i]);
+
+		line_ctx1->set_color_ARGB (0xFFFF00FF)	
+			.line_begin().line_add_vtx(0).line_add_vtx(1).line_add_vtx(2).line_add_vtx(3).line_add_vtx(0).line_end()
+			//.line_begin().line_add_vtx(4).line_add_vtx(5).line_add_vtx(6).line_add_vtx(7).line_add_vtx(4).line_end()
+			;
+	}
+
+	if (NAV_MODE__ENTITY_FIXED_CAM == navigation__get_mode())
+	{
+		geom::Frustum3	fr = query_cam->get_frustumWC();
+
+		vec3f vv[8];
+		fr.calc_8points(vv);
+		for (u32 i=0; i<8; i++)
+			line_ctx1->vtx_add(vv[i]);
+
+		line_ctx1->set_color_ARGB (0xFFFF00FF)	
+			.line (0, 4)
+			.line (1, 5)
+			.line (2, 6)
+			.line (3, 7);
+	}
 }
 
 //***************************************
@@ -164,7 +201,7 @@ void App::on__update (u64 timenow_msec)
 				geom::Camera3 *cam = camera__get(2);
 				cam->pos.identity();
 				cam->pos.o = ctrl_entity.entity_pos->o;
-				cam->pos.o.y += 950;
+				cam->pos.o.y += 1450;
 				cam->pos.lookAt (ctrl_entity.entity_pos->o);
 				cam->mark_updated();
 			}
