@@ -8,162 +8,139 @@ using namespace land;
 typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Unsafe>	LandMapMemAllocator;
 
 //********************************
-bool Map::create (const char *fullpath_to_png, u32 chunk__num_vtx_per_lato, f32 scala_xz__m, f32 scala_h__m)
+bool Map::create (const char *save_path, const CreateData &create)
 {
+	gos::Allocator *localAllocator = gos::getSysHeapAllocator();
 	gos::err::clear();
 
 
-	if (chunk__num_vtx_per_lato < 5)
+	if (create.lod0__num_vtx_lato < 5)
 	{
-		logger::err ("chunk__num_vtx_per_lato must be at least 5\n");
+		logger::err ("lod0__num_vtx_lato must be at least 5\n");
 		return false;
 	}
-	if (!GOS_IS_POWER_OF_TWO(chunk__num_vtx_per_lato-1))
+	if (!GOS_IS_POWER_OF_TWO(create.lod0__num_vtx_lato -1))
 	{
-		logger::err ("chunk__num_vtx_per_lato must be equal to '1 + a power of 2 '\n");
+		logger::err ("lod0__num_vtx_lato must be equal to '1 + a power of 2 '\n");
 		return false;
 	}
 
 
-	u16 *height = NULL;
-	u32 height_dimx = 0;
-	u32 height_dimy = 0;
-
-	//carico l'immagine e genero height[]
-	{
-		image::BufferRGBA src_image;
-		if (!src_image.loadFromFile (gos::getScrapAllocator(), fullpath_to_png))
-			return false;
+	//la mappa e' quadrata di lato <map__border_size__m> con risoluzione <lod0__scala_xz__m>
+	const u32 chunk__num_vtx_lato = create.lod0__num_vtx_lato;
+	const f32 chunk__border_size__m = (chunk__num_vtx_lato -1) * create.lod0__scala_xz__m;
 	
-		//converto l'altezza
-		//La risoluzione e di 0.1m
-		height_dimx = src_image.getW();
-		height_dimy = src_image.getH();
-		height = GOSALLOCT(u16*, gos::getScrapAllocator(), height_dimx * height_dimy * sizeof(u16) );
+	//numero di chunk x (e y)
+	//voglio che siano dispari in modo che dal chunk centrale (0,0) si estendano N chuml in ogni direzione
+	u32 chunk__num = (u32)math::floor (create.map__border_size__m / chunk__border_size__m);
+	if (chunk__num * chunk__border_size__m < create.map__border_size__m)
+		chunk__num++;
+	if (0 == chunk__num % 2) chunk__num++;
+
+	const f32 map__border_size__m = chunk__num * chunk__border_size__m;
+
+	//voglio che il chunk 0,0 abbia origine in world coordinate 0,0
+	const u32 mid_chunk = chunk__num / 2;
+	const f32 map__min = -(mid_chunk * chunk__border_size__m);
+	const f32 map__max = -map__min + chunk__border_size__m;
+	
+	//calcolo la dimensione in byte di un chunk
+	//per questioni di allineamento memoria, voglio che <sizeof__chunk> sia uym multiplo di 64
+	u32 lod0__sizeof = chunk__num_vtx_lato * chunk__num_vtx_lato * sizeof(ChunkData);
+	lod0__sizeof = GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(lod0__sizeof, 64);
+
+
+
+	//se esiste gia' un folder in <save_path>, elimino tutto e poi lo ricreo
+	fs::folderDeleteAllFileRecursively (save_path, eFolderDeleteMode::deleteAlsoTheSubfolder);
+	if (!fs::folderCreate (save_path))
+	{
+		logger::err ("Unable to create folder %s\n", save_path);
+		return false;
+	}
+
+	//creo il file .map con le info sulla mappa
+	char s[1024];
+	{
+		sprintf_s (s, sizeof(s), "%s/map", save_path);
+		gos::File f;
+		if (!fs::fileOpenForW (&f, s))
 		{
-			const u8 *buffer = src_image.getBuffer();
-			
-			u32 ct1 = 0;
-			u32 ct2 = 0;
-			while (ct1 < height_dimx * height_dimy)
-			{
-				const u8 red = buffer[ct2];
-				ct2+=4;
-
-				f32 h = (f32)red * scala_h__m;
-				h = math::floor (h*10.0);
-
-				u32 h2 = (u32)h;
-				if (h2 > 0xFFFF)
-				{
-					DBGBREAK;
-					h2 = 0xFFFF;
-				}
-
-				height[ct1++] = (u16)h2;
-			}
+			logger::err ("Unable to create file %s\n", s);
+			return false;
 		}
-		src_image.free (gos::getScrapAllocator());
+
+		u8 buffer[1024];
+		u32 ct = 0;
+		ct += utils::bufferWriteU32 (&buffer[ct], Map::VERSION);
+		ct += utils::bufferWriteU32 (&buffer[ct], chunk__num_vtx_lato);
+		ct += utils::bufferWriteU32 (&buffer[ct], chunk__num);
+		ct += utils::bufferWriteU32 (&buffer[ct], mid_chunk);
+		ct += utils::bufferWriteU32 (&buffer[ct], lod0__sizeof);
+
+		ct += utils::bufferWriteF32 (&buffer[ct], create.lod0__scala_xz__m);
+		ct += utils::bufferWriteF32 (&buffer[ct], chunk__border_size__m);
+		ct += utils::bufferWriteF32 (&buffer[ct], map__border_size__m);
+		ct += utils::bufferWriteF32 (&buffer[ct], map__min);
+		ct += utils::bufferWriteF32 (&buffer[ct], map__max);
+
+		fs::fileWrite (f, buffer, ct);
+		fs::fileClose(f);
 	}
 
 
-	while (1)
+	//preparo l'array che conterra' le info sui chunk
+	const u32 sizeof__chunk_info = chunk__num * chunk__num * sizeof(ChunkInfo);
+	ChunkInfo *chunk_info = GOSALLOCT(ChunkInfo*, localAllocator, sizeof__chunk_info);
+
+
+	//genero i chunk
+	//L'altezza nei chunk e' espressa in step da 0.1m
 	{
-		char s[1024];
+		ChunkData *chunk = GOSALLOCT(ChunkData*, localAllocator, lod0__sizeof);
+		memset (chunk, 0, lod0__sizeof);
 
-		//salvo tutte le info in una directory che ha come nome lo stesso nome dell'immagine di input
-		char out_folder[1024];
-		fs::resolvePath (fullpath_to_png, out_folder, sizeof(out_folder));
-		fs::remove_ext_in_place (out_folder);
-		fs::folderDeleteAllFileRecursively (out_folder, eFolderDeleteMode::deleteAlsoTheSubfolderAndTheMainFolder);
-		if (!fs::folderCreate (out_folder))
+		const u16 default_h = (u16) (create.map__default_height__m * 10.0f);
+		u32 ct_chunk = 0;
+		for (u32 cy=0; cy<chunk__num; cy++)
 		{
-			logger::err ("Unable to create folder %s\n", out_folder);
-			break;
-		}
-
-		Map::Header header;
-		header.version = Map::VERSION;
-		header.chunk__num_vtx_per_lato = chunk__num_vtx_per_lato;
-		header.chunk__num_x = (height_dimx-1) / (chunk__num_vtx_per_lato-1);
-		header.chunk__num_y = (height_dimy-1) / (chunk__num_vtx_per_lato-1);
-		header.scala_xz__m = scala_xz__m;
-		header.chunk__border_len__m = (f32)(chunk__num_vtx_per_lato-1) * scala_xz__m;
-		header.chunk__size_in_byte = sizeof(ChunkData) * chunk__num_vtx_per_lato * chunk__num_vtx_per_lato;
-
-		//voglio che <header.chunk__size_in_byte> sia un multiplo di 64 per questioni di allocazione memoria
-		header.chunk__size_in_byte = GOS_ALIGN_NUMBER_TO_POWER_OF_TWO(header.chunk__size_in_byte, 64);
-
-		//inizio a creare i chunk
-		if (header.chunk__num_x < 1 || header.chunk__num_y < 1)
-		{
-			logger::err ("heightmap is too small for a chunk size of %d", chunk__num_vtx_per_lato);
-			break;
-		}
-
-		ChunkData *data = GOSALLOCT(ChunkData*, gos::getScrapAllocator(), header.chunk__size_in_byte);
-		for (u32 cy=0; cy<header.chunk__num_y; cy++)
-		{
-			for (u32 cx=0; cx<header.chunk__num_x; cx++)
+			for (u32 cx=0; cx<chunk__num; cx++)
 			{
-				const u32 ct_hmap = cy * (height_dimx * (chunk__num_vtx_per_lato-1)) +
-									cx * (chunk__num_vtx_per_lato-1);
-
-				u32 ct_data = 0;
-				for (u32 y=0; y<chunk__num_vtx_per_lato; y++)
+				u16 height_min = u16MAX;
+				u16 height_max = 0;
+				u32 ct = 0;
+				for (u32 y=0; y<chunk__num_vtx_lato; y++)
 				{
-					u32 ct = ct_hmap + y*height_dimx;
-					for (u32 x=0; x<chunk__num_vtx_per_lato; x++)
+					for (u32 x=0; x<chunk__num_vtx_lato; x++)
 					{
-						assert (ct < height_dimx * height_dimy);
-						data[ct_data].height = height[ct++];
-						ct_data++;
+						chunk[ct].height = default_h;
+
+						if (chunk[ct].height < height_min)	height_min=chunk[ct].height;
+						if (chunk[ct].height > height_max)	height_max=chunk[ct].height;
+						ct++;
 					}
 				}
 
-				//salvo il chunk
-				const u32 out_cx = cx;
-				const u32 out_cy = header.chunk__num_y - cy -1;
-				sprintf_s (s, sizeof(s), "%s/chunk_%05d_%05d", out_folder, out_cx, out_cy);
-				fs::fileSaveBuffer (s, data, header.chunk__size_in_byte);
+				sprintf_s (s, sizeof(s), "%s/chunk_%03d_%03d", save_path, cx, cy);
+				fs::fileSaveBuffer (s, chunk, lod0__sizeof);
 
-				// //debug
-				// if (out_cx == 0 && out_cy == 0)
-				// {
-				// 	sprintf_s (s, sizeof(s), "%s/chunk_%05d_%05d.txt", out_folder, out_cx, out_cy);
-				// 	gos::File f;
-				// 	fs::fileOpenForW (&f, s);
-				// 	ct_data = 0;
-				// 	for (u32 y=0; y<chunk__num_vtx_per_lato; y++)
-				// 	{
-				// 		for (u32 x=0; x<chunk__num_vtx_per_lato; x++)
-				// 		{
-				// 			sprintf_s (s, sizeof(s), "%05d ", data[ct_data++].height);
-				// 			fs::fileWrite (f, s, 6);
-				// 		}
-
-				// 		s[0] = '\n';
-				// 		fs::fileWrite (f, s, 1);
-				// 	}
-				// 	fs::fileClose(f);
-				// }
+				if (height_max == height_min)
+					height_max++;
+				chunk_info[ct_chunk].min_height__m = 0.1f * height_min;
+				chunk_info[ct_chunk].max_height__m = 0.1f * height_max;
+				ct_chunk++;
 			}
 		}
-		GOSFREE(gos::getScrapAllocator(), data);
+		GOSFREE(localAllocator, chunk);
+	}
+
+	//salvo chunk info
+	sprintf_s (s, sizeof(s), "%s/chunk_info", save_path);
+	fs::fileSaveBuffer (s, chunk_info, sizeof__chunk_info);
+	GOSFREE(localAllocator, chunk_info);
 
 
-		//salvo l'header
-		sprintf_s (s, sizeof(s), "%s/map", out_folder);
-		fs::fileSaveBuffer (s, &header, sizeof(Map::Header));
-
-
-
-
-		//fine
-		break;
-	} //while(1);
-	
-	GOSFREE(gos::getScrapAllocator(), height);
+	//fine
 	return !err::anyError();
 }
 
@@ -176,6 +153,8 @@ Map::Map()
 	this->localAllocator = myAllocator;
 
 	chunk_data = NULL;
+	chunk_info = NULL;
+	memset (path_to_folder, 0, sizeof(path_to_folder));
 }
 
 //********************************
@@ -190,114 +169,146 @@ Map::~Map()
 void Map::priv__free()
 {
 	if (NULL != chunk_data)			GOSFREE_AND_NULL (localAllocator, chunk_data);
-}
-
-//********************************
-u32 Map::priv__chunk_calc_offset  (u32 cx, u32 cy) const
-{
-	return cx * header.chunk__size_in_byte  +  cy * header.chunk__size_in_byte * header.chunk__num_x;
-}
-
-//********************************
-Map::ChunkData*	Map::priv__get_pointer_to_chunk (u32 cx, u32 cy)
-{
-	return reinterpret_cast<Map::ChunkData*>( &chunk_data[priv__chunk_calc_offset(cx, cy)] );
-}
-
-//********************************
-const Map::ChunkData* Map::chunk__get (u32 cx, u32 cy) const
-{
-	if (cx >= header.chunk__num_x || cy >= header.chunk__num_y)
-		return NULL;
-	return reinterpret_cast<const Map::ChunkData*>( &chunk_data[priv__chunk_calc_offset(cx, cy)] );
+	if (NULL != chunk_info)			GOSFREE_AND_NULL (localAllocator, chunk_info);
 }
 
 //********************************
 bool Map::load (const char *path_to_folderIN)
 {
-	err::clear();
-	fs::resolvePath (path_to_folderIN, path_to_folder, sizeof(path_to_folder));
+	priv__free();
 	
 	char s[1024];
+	fs::resolvePath (path_to_folderIN, path_to_folder, sizeof(path_to_folder));
+
+	//carico il file <map>	
 	{
 		sprintf_s (s, sizeof(s), "%s/map", path_to_folder);
 		u32 fsize;
-		u8 * buffer = fs::fileLoadInMemory (gos::getScrapAllocator(), s, &fsize);
+		u8 *buffer = fs::fileLoadInMemory (gos::getScrapAllocator(), s, &fsize);
 		if (NULL == buffer)
 		{
-			logger::err ("unable to load %s/map\n", path_to_folder);
+			logger::err ("can't open %s\n", s);
 			return false;
 		}
-		memcpy (&header, buffer, sizeof(header));
-		GOSFREE(gos::getScrapAllocator(), buffer);
-	}
 
-	//verifica versione
-	if (!magic::signatureMatch (header.version, Map::VERSION) || !magic::versionMatch (header.version, Map::VERSION))
-	{
-		logger::err ("invalid signature or version\n");
-		return false;
-	}
-
-	//alloco i chucnk e li carico tutti (per ora)
-	chunk_data = GOSALLOCT(u8*, localAllocator, header.chunk__size_in_byte * header.chunk__num_x * header.chunk__num_y);
-	for (u32 cy=0; cy<header.chunk__num_y; cy++)
-	{
-		for (u32 cx=0; cx<header.chunk__num_x; cx++)
+		u32 ct = 0;
+		u32 ver = utils::bufferReadU32 (&buffer[ct]);
+		ct+=4;
+		if (!magic::signatureMatch(ver, Map::VERSION) || !magic::versionMatch(ver, Map::VERSION))
 		{
-			sprintf_s (s, sizeof(s), "%s/chunk_%05d_%05d", path_to_folder, cx, cy);
-			
-			gos::File f;
-			if (!fs::fileOpenForR(&f, s))
+			logger::err ("Invalid magic or version [%s]\n", s);
+			ver = 0;
+		}
+		else
+		{
+			chunk__num_vtx_lato = utils::bufferReadU32 (&buffer[ct]);	ct+=4;
+			chunk__num = utils::bufferReadU32 (&buffer[ct]);	ct+=4;
+			mid_chunk = utils::bufferReadU32 (&buffer[ct]);	ct+=4;
+			lod0__sizeof = utils::bufferReadU32 (&buffer[ct]);	ct+=4;
+
+			lod0__scala_xz__m = utils::bufferReadF32 (&buffer[ct]);		ct+=4;
+			chunk__border_size__m = utils::bufferReadF32 (&buffer[ct]);		ct+=4;
+			map__border_size__m = utils::bufferReadF32 (&buffer[ct]);		ct+=4;
+			map__min = utils::bufferReadF32 (&buffer[ct]);	ct+=4;
+			map__max = utils::bufferReadF32 (&buffer[ct]);	ct+=4;
+		}
+
+		GOSFREE(gos::getScrapAllocator(), buffer);
+		if (0 == ver)
+			return false;
+	}
+
+	//alloco e carico chunk_info
+	sprintf_s (s, sizeof(s), "%s/chunk_info", path_to_folder);
+	{
+		u32 fsize;
+		chunk_info = reinterpret_cast<ChunkInfo*> (fs::fileLoadInMemory (localAllocator, s, &fsize));
+		if (NULL == chunk_info)
+		{
+			logger::err ("can't open %s\n");
+			return false;
+		}
+	}
+
+
+	//alloco e carico i chunk
+	chunk_data = GOSALLOCT(u8*, localAllocator, lod0__sizeof * chunk__num * chunk__num);
+	{
+		u32 ct = 0;
+		for (u32 cy=0; cy<chunk__num; cy++)
+		{
+			for (u32 cx=0; cx<chunk__num; cx++)
 			{
-				logger::err ("can't find %s", s);
-			}
-			else
-			{
-				fs::fileRead (f, priv__get_pointer_to_chunk(cx, cy), header.chunk__size_in_byte);
+				sprintf_s (s, sizeof(s), "%s/chunk_%03d_%03d", path_to_folder, cx, cy);
+				gos::File f;
+				if (!fs::fileOpenForR (&f, s))
+				{
+					logger::err ("can't open %s\n");
+					return false;
+				}
+
+				fs::fileRead (f, &chunk_data[ct], lod0__sizeof);
+				ct += lod0__sizeof;
 				fs::fileClose(f);
 			}
 		}
 	}
-
-	return !err::anyError();
+	
+	return true;
 }
 
 //********************************
-f32 Map::get_height (f32 wx, f32 wz) const
+bool Map::priv__world_to_chunk (f32 wx, f32 wz, u32 *out__cx, u32 *out__cy) const
 {
-	const i32 cx = math::floor( wx / header.chunk__border_len__m);
-	const i32 cy = math::floor( wz / header.chunk__border_len__m);
-	const ChunkData *chunk = chunk__get (cx, cy);
-	if (NULL == chunk)
-		return 0;
+	assert (NULL != out__cx);
+	assert (NULL != out__cy);
 
-	wx -= cx * header.chunk__border_len__m;
-	wz -= cy * header.chunk__border_len__m;
+	//la mappa e' un quadrato (map__min, map__min) (map__max, map__max)
+	//Il chunk (0,0) e' il primo in alto a sinistra
+	//il chunk (mid_chunk, mid_chunk) e' quello che ha origine in woorld coord (0,0)
+	if (wx < map__min || wx >= map__max) return false;
+	if (wz < map__min || wz >= map__max) return false;
+	wx -= map__min;
+	wz -= map__min;
 
-	assert (wx >= 0);
-	assert (wz >= 0);
+	*out__cx = (u32) math::floor(wx / chunk__border_size__m);
+	assert (*out__cx >= 0 && *out__cx < chunk__num);
 
-	// wx,wz e' nel quad qx,qz del chunk dove il quad 0,0 e' quello in alto a sx
-	const u32 qx = (u32)math::floor( wx / header.scala_xz__m);
-	const u32 qz = (header.chunk__num_vtx_per_lato - 1) - (u32)math::floor( wz / header.scala_xz__m);
-	assert (qx < header.chunk__num_vtx_per_lato);
-	assert (qz < header.chunk__num_vtx_per_lato);
+	*out__cy = (chunk__num - 1) - (u32)math::floor(wz / chunk__border_size__m);
+	assert (*out__cy >= 0 && *out__cy < chunk__num);
+	return true;
+}
 
+//********************************
+bool Map::priv__chunk_to_world (u32 cx, u32 cy, f32 *out__wx, f32 *out__wz) const
+{
+	if (cx >= chunk__num)	return false;
+	if (cy >= chunk__num)	return false;
 
-	const f32 x0 = header.scala_xz__m * qx;
-	const f32 x1 = x0 + header.scala_xz__m;
-	const f32 z0 = header.scala_xz__m * qz;
-	const f32 z1 = z0 - header.scala_xz__m;
-	assert (wx >= x0 && wx <= x1);
-	assert (wz >= z0 && wz <= z1);
+	*out__wx = map__min + cx * chunk__border_size__m;
+	*out__wz = map__max - (cy+1) * chunk__border_size__m;
 
-	const vec3f v0 (x0, z0, chunk[qz     * header.chunk__num_vtx_per_lato + qx].height);
-	const vec3f v1 (x1, z0, chunk[qz     * header.chunk__num_vtx_per_lato + (qx + 1)].height);
-	const vec3f v2 (x1, z1, chunk[(qz+1) * header.chunk__num_vtx_per_lato + (qx + 1)].height);
-	const vec3f v3 (x0, z1, chunk[(qz+1) * header.chunk__num_vtx_per_lato + qx].height);
+	assert (*out__wx >= map__min);
+	assert (*out__wx < map__max);
+	assert (*out__wz >= map__min);
+	assert (*out__wz < map__max);
+	return true;
+}
 
-	return ( (v0.y + v1.y + v2.y + v3.y) * 0.25f) * 0.1f;
+//********************************
+const Map::ChunkInfo* Map::priv__chunk_get_info (u32 cx, u32 cy) const
+{
+	if (cx >= chunk__num)	return NULL;
+	if (cy >= chunk__num)	return NULL;;
+	return &chunk_info[cy * chunk__num + cx];
+}
+
+//***********************************
+const Map::ChunkData* Map::chunk__get (u32 cx, u32 cy) const
+{
+	if (cx >= chunk__num)	return NULL;
+	if (cy >= chunk__num)	return NULL;
+	return reinterpret_cast<const ChunkData*>( &chunk_data[lod0__sizeof * (cy * chunk__num + cx)] );
 }
 
 //***********************************
@@ -310,33 +321,49 @@ u32 Map::calc_visible_chunk (gos::geom::Camera3 *cam, gos::FastArray<ChunkCoord>
 	const f32 VIEW_DISTANCE_SQUARED = fr.get_far_distance() * fr.get_far_distance();
 
 	geom::AABB3 aabb;
-	fr.calc_AABB (&aabb);
-
-	const i32 xmin = 0; //math::floor( aabb.vmin.x / header.chunk__border_len__m);
-	const i32 xmax = 7; //math::floor( aabb.vmax.x / header.chunk__border_len__m);
-	const i32 zmin = 0; //math::floor( aabb.vmin.z / header.chunk__border_len__m);
-	const i32 zmax = 7; //math::floor( aabb.vmax.z / header.chunk__border_len__m);
-
-	for (i32 z=zmin; z<=zmax; z++)
 	{
-		for (i32 x=xmin; x<=xmax; x++)
+		geom::AABB3 fr_aabb;
+		fr.calc_AABB (&fr_aabb);
+
+		geom::AABB3 map_aabb ( vec3f(map__min, -1e36f, map__min), vec3f(map__max - lod0__scala_xz__m, 1e36f, map__max - lod0__scala_xz__m) );
+		if (!geom::AABB3::clip (fr_aabb, map_aabb, &aabb))
+			return 0;
+
+		assert (aabb.vmin.x >= map__min);
+		assert (aabb.vmin.z >= map__min);
+		assert (aabb.vmax.x <= map__max);
+		assert (aabb.vmax.z <= map__max);
+	}
+
+	u32 cx_min, cx_max, cy_min, cy_max;
+	GOS_DEBUG_ASSERT(  priv__world_to_chunk (aabb.vmin.x, aabb.vmin.z, &cx_min, &cy_max)   );
+	GOS_DEBUG_ASSERT(  priv__world_to_chunk (aabb.vmax.x, aabb.vmax.z, &cx_max, &cy_min)   );
+
+
+	for (u32 cy = cy_min; cy<=cy_max; cy++)
+	{
+		for (u32 cx = cx_min; cx<=cx_max; cx++)
 		{
-			aabb.vmin.set (x*header.chunk__border_len__m, -1e36f, z*header.chunk__border_len__m);
-			aabb.vmax.x = aabb.vmin.x + header.chunk__border_len__m;
-			aabb.vmax.y = 1e36f;
-			aabb.vmax.z = aabb.vmin.z + header.chunk__border_len__m;
+			const ChunkInfo *ci = priv__chunk_get_info(cx, cy);
+			assert (ci);
+
+			f32 x,z;
+			GOS_DEBUG_ASSERT(  priv__chunk_to_world (cx, cy, &x, &z)   );
+			aabb.vmin.set (x, ci->min_height__m, z);
+			aabb.vmax.set (x + chunk__border_size__m, ci->max_height__m, z + chunk__border_size__m);
 
 			if (eClipResult::outside != geom::AABB3__intersect_frustum3 (aabb, fr) )
 			{
+				const f32 height_mid = ci->min_height__m + (ci->max_height__m - ci->min_height__m) * 0.5f;
 				ChunkCoord cc;
-				cc.origin.set (aabb.vmin.x, aabb.vmin.z);
-				cc.center.set (cc.origin.x + header.chunk__border_len__m*0.5f, cc.origin.y + header.chunk__border_len__m*0.5f);
+				cc.originWC.set (x, height_mid, z);
+				cc.centerWC.set (x + chunk__border_size__m*0.5f, height_mid, z + chunk__border_size__m*0.5f);
 				
-				cc.distance2_from_pov = math::distance2 (cam->pos.o, vec3f(cc.center.x, 0, cc.center.y));
-				//if (cc.distance2_from_pov < VIEW_DISTANCE_SQUARED)
+				cc.distance2_from_pov = math::distance2 (cam->pos.o, cc.centerWC);
+				if (cc.distance2_from_pov < VIEW_DISTANCE_SQUARED)
 				{
-					cc.x = (i16)x;
-					cc.z = (i16)z;
+					cc.chunk_x = (u16)cx;
+					cc.chunk_y = (u16)cy;
 					out->append (cc);
 				}
 			}
@@ -346,3 +373,4 @@ u32 Map::calc_visible_chunk (gos::geom::Camera3 *cam, gos::FastArray<ChunkCoord>
 
 	return out->getNElem();
 }
+

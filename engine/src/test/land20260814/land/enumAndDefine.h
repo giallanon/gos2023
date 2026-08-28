@@ -9,16 +9,12 @@ namespace land
 
 	struct ChunkCoord
 	{
-		i16		x;
-		i16		z;
-		f32 	distance2_from_pov;
-		gos::vec2f	center;
-		gos::vec2f	origin;
+		gos::vec3f	centerWC;			//centro del chunk in woorld coordinate
+		gos::vec3f	originWC;			//origine del chunk in woorld coordinate
+		f32 distance2_from_pov;
+		u16	chunk_x, chunk_y;		//coordinate del chunk
 	};
 
-
-	u32 	calc_visible_chunk (const gos::vec3f pov, gos::FastArray<ChunkCoord> *out);
-	u32 	calc_visible_chunk (gos::geom::Camera3 *cam, gos::FastArray<ChunkCoord> *out);
 
 } //namespace land
 

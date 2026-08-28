@@ -111,6 +111,11 @@ template<typename UINT_TYPE>
 #define GOSMIN(x, y)    ((x) < (y) ? (x) : (y))
 #define GOSMAX(x, y)    ((x) > (y) ? (x) : (y))
 
+#ifdef _DEBUG
+	#define GOS_DEBUG_ASSERT(whatever)	assert(whatever)
+#else
+	#define GOS_DEBUG_ASSERT(x)	whatever
+#endif
 
 //================================================================
 typedef void (*GOS_ConsoleTrap_CTRL_C)(void *userParam);

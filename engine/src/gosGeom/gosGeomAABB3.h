@@ -28,6 +28,12 @@ namespace gos
 			static	void			matrixTransform (const AABB3 &aabb, const mat4x4f &b, AABB3 *out);
 			static	void			matrixTransform (const AABB3 &aabb, const mat3x4f &b, AABB3 *out);
 
+			//clippa <a> contro <b> e ritorna in out il AABB3 risultante
+			//Ritorna false se il risultato del clip e' un AABB nullo. Questo capita se <a> e <b> non si interescano
+			static	bool			clip (const AABB3 &a, const AABB3 &b, AABB3 *out);
+
+					bool			is_point_inside (const vec3f p) const;
+
 									//=========================== operators
 					AABB3&			operator= (const AABB3 &b)												{ setFromAABB3(b); return *this; }
 					AABB3&			operator+=(const AABB3 &b);

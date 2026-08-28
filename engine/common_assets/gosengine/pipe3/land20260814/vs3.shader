@@ -21,7 +21,7 @@ void main()
  	const uint height_and_pad = chunk_data.data[chunk_offset + gl_VertexIndex].height_and_pad;
  	const float height = (height_and_pad & 0x0000FFFF) * 0.1f;
 
-	const vec2 chunk_origin = in_position + instance_data.data[gl_InstanceIndex].chunk_origin;
+	const vec2 chunk_origin = in_position + instance_data.data[gl_InstanceIndex].chunk_originXZ;
 	const vec3 world_origin = vec3(chunk_origin.x, height, chunk_origin.y);
 
 	//gl_Position = (vec4(in_position, 1.0) * matW) * scene.camVP;
@@ -35,7 +35,7 @@ void main()
 	{
 	default:  	out_diffuse_col = vec3(0,0,0); break;
 	case 0: 	out_diffuse_col = vec3(1,1,1); break;
-	case 1: 	out_diffuse_col = vec3(1,1,1); break;
+	case 1: 	out_diffuse_col = vec3(0.6f,0.6f,0.6f); break;
 	case 2: 	out_diffuse_col = vec3(1,0,0); break;
 	case 3: 	out_diffuse_col = vec3(0,1,0); break;
 	case 4: 	out_diffuse_col = vec3(0,0,1); break;

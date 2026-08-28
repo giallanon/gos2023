@@ -18,6 +18,7 @@
 *
 *****************************************************************************/
 #include "gosGeomAABB3.h"
+#include "gosGeomIntersect3D.h"
 #include "../gosMath/gosMath.h"
 
 using namespace gos;
@@ -135,4 +136,35 @@ void AABB3::matrixTransform (const AABB3 &aabb, const mat3x4f &b, AABB3 *out)
 	}
 
 	*out = ret;
+}
+
+//*******************************************************************
+bool AABB3::clip (const AABB3 &a, const AABB3 &b, AABB3 *out)
+{
+	assert (NULL != out);
+	if (eClipResult::outside == geom::AABB3__intersect_AABB3(a, b))
+		return false;
+
+	out->vmin.x = GOSMAX(a.vmin.x, b.vmin.x);
+	out->vmin.y = GOSMAX(a.vmin.y, b.vmin.y);
+	out->vmin.z = GOSMAX(a.vmin.z, b.vmin.z);
+
+	out->vmax.x = GOSMIN(a.vmax.x, b.vmax.x);
+	out->vmax.y = GOSMIN(a.vmax.y, b.vmax.y);
+	out->vmax.z = GOSMIN(a.vmax.z, b.vmax.z);
+	return true;
+}
+
+//*******************************************************************
+bool AABB3::is_point_inside (const vec3f p) const
+{
+	if (p.x < vmin.x) return false;
+	if (p.y < vmin.y) return false;
+	if (p.z < vmin.z) return false;
+
+	if (p.x > vmax.x) return false;
+	if (p.y > vmax.y) return false;
+	if (p.z > vmax.z) return false;	
+
+	return true;
 }

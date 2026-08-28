@@ -1,7 +1,7 @@
 //////////////////// descr-set 2
 struct sInstanceData
 {
-    vec2	chunk_origin;		// (x,z) in world coordinate
+    vec2	chunk_originXZ;		// (x,z) in world coordinate
     uint    chunk_data_offset;	//indica l'offset all'interno di chunk_data[]
     uint 	pad0;
 };

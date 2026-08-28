@@ -28,7 +28,7 @@ void Renderer::map__bind (const land::Map *mapIN)
 	
 	assert (handle_vb.isInvalid());
 	priv__calc_LOD_details (map->chunk__get_num_vtx_per_lato(), map->chunk__get_border_length__m());
-	priv__create_block_geometry (map->chunk__get_num_vtx_per_lato(), map->chunk__get_scala_xz__m());
+	priv__create_block_geometry (map->chunk__get_num_vtx_per_lato(), map->chunk__get_lod0_scala_xz__m());
 
 	const u32 NUM_VTX_PER_CHUNK = map->chunk__get_num_vtx_per_lato() * map->chunk__get_num_vtx_per_lato();
 
@@ -305,15 +305,15 @@ void Renderer::add (const gos::FastArray<ChunkCoord> &list)
 		for (u32 i=0; i<n; i++)
 		{
 			const u32 index = lod_bucket_list[lod].chunk_index_list->queryElem(i);
-			pInstanceData[ct].chunk_origin.x = list(index).origin.x;
-			pInstanceData[ct].chunk_origin.y = list(index).origin.y;
+			pInstanceData[ct].chunk_originXZ.x = list(index).originWC.x;
+			pInstanceData[ct].chunk_originXZ.y = list(index).originWC.z;
 			pInstanceData[ct].chunk_data_offset = 0;
 			pInstanceData[ct].pad0 = lod;
 
 
 			//altezze
-			const Map::ChunkData *chunk_data = map->chunk__get(list(index).x, list(index).z);
-			if (NULL != chunk_data)
+			const Map::ChunkData *chunk_data = map->chunk__get(list(index).chunk_x, list(index).chunk_y);
+			assert (NULL != chunk_data);
 			{
 				pInstanceData[ct].chunk_data_offset = ct_chunkData;
 

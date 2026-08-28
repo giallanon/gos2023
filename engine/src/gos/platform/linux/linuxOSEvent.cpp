@@ -60,12 +60,14 @@ void platform::signal_fire (const OSEvent &ev)
 }
 
 //*******************************************************
-bool platform::signal_wait (const OSEvent &ev, u32 timeout_msec)
+bool platform::signal_wait (const OSEvent &ev, u32 timeout_msecIN)
 {
-    /*struct epoll_event events;
-    if (epoll_pwait(ev.h, &events, 1, timeoutMSec, NULL) <= 0)
-        return false;
-    return true;*/
+    int timeout_msec;
+	if (u32MAX == timeout_msecIN)
+		timeout_msec = -1;
+	else
+		timeout_msec = (u32)timeout_msecIN;
+
     while(1)
     {
         struct epoll_event events;
@@ -73,8 +75,13 @@ bool platform::signal_wait (const OSEvent &ev, u32 timeout_msec)
         if (ret > 0)
             return true;
 
-        if (errno == EINTR)
-            continue;
+        if (EINTR == errno)
+		{
+			if (-1 == timeout_msec)
+            	continue;
+
+			return false;
+		}
         return false;
     }    
 }

@@ -45,7 +45,7 @@ namespace land
 		{
 			struct Elem
 			{
-				gos::vec2f	chunk_origin;
+				gos::vec2f	chunk_originXZ;
 				u32			chunk_data_offset;
 				u32			pad0;
 			};
