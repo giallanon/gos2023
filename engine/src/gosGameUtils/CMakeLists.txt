@@ -33,6 +33,7 @@ examap/gosExamap_CoordConverter.cpp
 examap/gosExamap.cpp
 examap/gosExamap.h
 
+gosGameUtils.cpp
 gosGameUtils.h
 )
 

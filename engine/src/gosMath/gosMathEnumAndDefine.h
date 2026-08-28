@@ -13,14 +13,6 @@ namespace gos
 		static const f32	PIQUARTI			= 0.78539816339744f;
 		static const f32	DUEPI				= 6.28318530717958f;
 
-		/*=========================================================
-		 * 
-		 * utils
-		 *
-		 *=========================================================*/
-		constexpr f32				gradToRad (f32 grad)									{ return grad*0.01745329251994f; }
-		constexpr f32				radToGrad (f32 rad)										{ return rad*57.295779513082320876798154814105f; }
-		constexpr f32				sign (f32 f)											{ if (f<0) return -1.0f; return 1.0f; }
 	} //namespace math
 } //namespace gos
 #endif//_gosMathEnumAndDefine_h_

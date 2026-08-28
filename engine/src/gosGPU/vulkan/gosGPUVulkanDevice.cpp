@@ -599,9 +599,11 @@ bool VulkanDevice::priv__do_allocMemory (const VkMemoryAllocateInfo *pAllocateIn
 #ifdef _DEBUG
         char debug_m1[32];
         char debug_m2[32];
+		char debug_m3[32];
         gos::string::format::memoryToKB_MB_GB(pAllocateInfo->allocationSize, debug_m1, sizeof(debug_m1));
         gos::string::format::memoryToKB_MB_GB(memory_curAllocated, debug_m2, sizeof(debug_m2));
-        gos::logger::log_3 (eTextColor::cyan, "VulkanDevice::allocMemory(%s) [%s], cur allocated:%s\n", debug_m1, debug_from_who, debug_m2);
+		gos::string::format::memoryToKB_MB_GB(memory_maxAllocated, debug_m3, sizeof(debug_m3));
+        gos::logger::log_3 (eTextColor::cyan, "VulkanDevice::allocMemory(%s) [%s], cur: %s, max: %s\n", debug_m1, debug_from_who, debug_m2, debug_m3);
 #endif
         return true;
     }
@@ -628,9 +630,11 @@ void VulkanDevice::priv__do_freeMemory (VkDeviceMemory memory, u64 memSize)
 #ifdef _DEBUG
         char debug_m1[32];
         char debug_m2[32];
+		char debug_m3[32];
         gos::string::format::memoryToKB_MB_GB(memSize, debug_m1, sizeof(debug_m1));
         gos::string::format::memoryToKB_MB_GB(memory_curAllocated, debug_m2, sizeof(debug_m2));
-        gos::logger::log_3 (eTextColor::cyan, "VulkanDevice::freeMemory(%s), cur allocated:%s\n", debug_m1, debug_m2);
+		gos::string::format::memoryToKB_MB_GB(memory_maxAllocated, debug_m3, sizeof(debug_m3));
+        gos::logger::log_3 (eTextColor::cyan, "VulkanDevice::freeMemory(%s), cur: %s, max: %s\n", debug_m1, debug_m2, debug_m3);
 #endif
 }
 

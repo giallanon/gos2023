@@ -38,6 +38,7 @@ namespace gos
                 //======================================= memory
         void	setup (Allocator *backingallocator, u32 preallocNumElem=0)              { list.setup (backingallocator, preallocNumElem); }
         void	unsetup ()																{ list.unsetup (); }
+		bool	is_setup() const 														{ return list.getAllocator() != NULL; }
         void	prealloc (u32 n)														{ list.prealloc (n); }
 
         void    reset()                                                                 { list.reset(); }

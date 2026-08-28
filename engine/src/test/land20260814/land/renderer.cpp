@@ -12,6 +12,7 @@ Renderer::Renderer()
 	gpu = NULL;
 	num_block_to_render = 0;
 	map = NULL;
+	material_list = NULL;
 }
 
 //********************************
@@ -46,7 +47,16 @@ void Renderer::map__bind (const land::Map *mapIN)
     	sbo_chunk_data.sizeof_buffer = NUM_MAX_CHUNK * NUM_VTX_PER_CHUNK * sizeof(SBO_chunk_data::Elem);
 	    gpu->storageBuffer_create (sbo_chunk_data.sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &sbo_chunk_data.handle_sbo);
     	gpu->map (sbo_chunk_data.handle_sbo, 0, u32MAX, &sbo_chunk_data.mapped_buffer);
-	}	
+	}
+
+	//SBO_material_data
+	assert (sbo_material_data.handle_sbo.isInvalid());
+	{
+    	sbo_material_data.sizeof_buffer = MATERIAL__NUM_MAX * sizeof(SBO_material_data::Elem);
+	    gpu->storageBuffer_create (sbo_material_data.sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &sbo_material_data.handle_sbo);
+    	gpu->map (sbo_material_data.handle_sbo, 0, u32MAX, &sbo_material_data.mapped_buffer);
+	}
+
 
 	//mi serve che la pipe sia loaded
     const res::Pipeline *res_pipeline;
@@ -66,11 +76,41 @@ void Renderer::map__bind (const land::Map *mapIN)
 			dsw.begin (gpu, handle_descrSet2)
 				.bindStorageBuffer (0, sbo_instance_data.handle_sbo)
 				.bindStorageBuffer (1, sbo_chunk_data.handle_sbo)
-				//.bindStorageBuffer (2, sbo_packedInstanceData.handle_sbo)
+				.bindStorageBuffer (2, sbo_material_data.handle_sbo)
 				//.bindStorageBuffer (3, sbo_meshInstanceData.handle_sbo)
 				.end();
 		}
 	}
+}
+
+//********************************
+void Renderer::materialList__bind (const MaterialList *ml)
+{
+	material_list = ml;
+
+	const Material *materials = material_list->get_list();
+	u32 n = material_list->get_num();
+	assert (n <= MATERIAL__NUM_MAX);
+
+	SBO_material_data::Elem *buffer = reinterpret_cast<SBO_material_data::Elem*>( sbo_material_data.mapped_buffer.host_pt );
+	for (u8 i=0; i<n; i++)
+	{
+		buffer[i].color_r = materials[i].diffuse_r;
+		buffer[i].color_g = materials[i].diffuse_g;
+		buffer[i].color_b = materials[i].diffuse_b;
+	}
+	
+
+	//aggiornamento sbo_material_data
+	{
+		u32 size = n * sizeof(SBO_material_data::Elem);
+		const u32 r = size % gpu->limits_get_nonCoherentAtomSize();
+		if (r)
+			size += gpu->limits_get_nonCoherentAtomSize() - r;
+		
+		assert (size <= sbo_material_data.sizeof_buffer);
+		gpu->buffer_manualSync_cpuWrite (sbo_material_data.mapped_buffer, 0, size);
+	}		
 }
 
 //********************************
@@ -86,6 +126,10 @@ void Renderer::on__detach (const gos::engine::RenderPipe::Context &ctx)
 
 	gpu->buffer_unmap (sbo_chunk_data.mapped_buffer);
 	gpu->deleteResource(sbo_chunk_data.handle_sbo);
+
+	gpu->buffer_unmap (sbo_material_data.mapped_buffer);
+	gpu->deleteResource(sbo_material_data.handle_sbo);
+
 
 	gpu->deleteResource(handle_descrSet2);
 	gpu->deleteResource(handle_vb);
@@ -263,6 +307,7 @@ void Renderer::priv__create_block_geometry (u32 num_vtx_per_lato_max_LOD, f32 sc
 void Renderer::begin()
 {
 	assert (NULL != map);
+	assert (NULL != material_list);
 
 	num_block_to_render = 0;
 	for (u32 i=0; i<num_lod; i++)
@@ -323,8 +368,15 @@ void Renderer::add (const gos::FastArray<ChunkCoord> &list)
 				{
 					for (u32 x=0; x<N; x++)
 					{
-						const u16 h = chunk_data[ct_map++].height;
-						pChunkData[ct_chunkData].height_and_pad = (u32)h;
+						//pChunkData[ct_chunkData].norm = chunk_data[ct_map].norm;
+						pChunkData[ct_chunkData].encoded_norm = chunk_data[ct_map].encoded_norm;
+						
+						u32 aa = chunk_data[ct_map].height;
+						aa |= ((u32)chunk_data[ct_map].materialID) << 16;
+						aa |= ((u32)chunk_data[ct_map].ao) << 24;
+						pChunkData[ct_chunkData].height_and_pad = aa;
+						
+						ct_map++;
 						ct_chunkData++;
 					}
 				}				
@@ -363,8 +415,6 @@ void Renderer::end()
 		assert (size <= sbo_instance_data.sizeof_buffer);
 		gpu->buffer_manualSync_cpuWrite (sbo_instance_data.mapped_buffer, 0, size);
 	}
-
-
 }
 
 //********************************
