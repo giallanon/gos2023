@@ -23,10 +23,14 @@ add_executable(${BINARY_OUTPUT_FILENAME}
 App.cpp
 App.h
 
+land/bigFile.cpp
+land/bigFile.h
 land/enumAndDefine.h
+land/land.cpp
 land/land.h
 land/map.cpp
 land/map.h
+land/MapQTree.cpp
 land/materialList.cpp
 land/materialList.h
 land/renderer.h

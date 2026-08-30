@@ -32,9 +32,11 @@ private:
 	gos::engine::Renderer_line3d::Ctx	*line_ctx1;
 	gos::engine::Renderer_line3d::Ctx	*line_ctx2;
 	
-	land::Map			map;
-	land::MaterialList	material_list;
-	land::Renderer		*renderer_land;
+	land::Map				map;
+	land::MapQTree			mapQTree;
+	land::MaterialList		material_list;
+	land::Renderer			*renderer_land;
+	land::ChunkCoordList	ccList;
 
 	gos::geom::Pos3			pos;
 	gos::Ctrl3rdPersMove	ctrl_entity;

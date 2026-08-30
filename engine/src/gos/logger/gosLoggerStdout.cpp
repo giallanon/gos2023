@@ -293,7 +293,7 @@ LoggerStdout::LogToFile::~LogToFile()
 
 void LoggerStdout::LogToFile::priv_openForAppend ()
 { 
-    bIsOpen = gos::fs::fileOpenForAppend (&f, filename); 
+    bIsOpen = gos::fs::fileOpenForWriteAppend (&f, filename); 
     flushCounter = 0;
     checkFileSizeCounter = 0;
 }

@@ -1,131 +1,147 @@
-#ifndef _land_map2_h_
-#define _land_map2_h_
+#ifndef _land_map_h_
+#define _land_map_h_
 #include "enumAndDefine.h"
+#include "bigFile.h"
 #include "gosMagicUID.h"
 #include "gosUniqueSortedList.h"
+
 
 namespace land
 {
 	/****************************************
 	 * @brief	Map
-	 * 
+	 * 			Idealmente dovrebbe fornire in tempo "reale" info su un qualunque punto della mappa
+	 *			ad una qualunque risoluzione.
+	 *			Internamente cacha la mappa in chunk e LOD ma questo non dovrebbe essere importante per
+	 *			l'utilizzatore il quale sostanzialmente dovrebbe solo usare get_point (x,y)
+
+		8192 x 8192 = 64M   x 8 byte a punto = 512M
+		4096 x 4096 = 16M   x 8 byte a punto = 128M
+		2048 x 2048 =  4M   x 8 byte a punto =  32M
+		1024 x 1024 =  1M   x 8 byte a punto =   8M
+
+
 	 */
 	class Map
 	{
 	public:
+		//**************************************
 		struct CreateData
 		{
-			f32 map__border_size__m;	//una mappa quadrata di lato == map__border_size__m
-			f32	map__default_height__m;	//altezza di default della mappa
-			f32	lod0__scala_xz__m;		//distanza tra un vtx e l'altro in metri nel LOD 0
-			u32	lod0__num_vtx_lato;		//deve essere == a 1 + una potenza del 2 (es: 129)
+			u32		default_map__border_size__point;		//potenza del 2
+			f32		default_height__m;
+			Resol	default_map__resolution;
+			Resol	resolution_min;
 
 			CreateData()
 			{
-				map__border_size__m = 1000.0f;
-				map__default_height__m = 10.0f;
-				lod0__scala_xz__m = 0.5f;
-				lod0__num_vtx_lato = 129;
+				default_map__border_size__point = 4096;
+				default_map__resolution = Resol::_4m;
+
+				default_height__m = 10.0f;
+				resolution_min = Resol::_05m;
 			}
 		};
 
-	public:
-		static bool			create (const char *save_path, const CreateData &create);
-		static bool			create_from_hmap (const char *path_to_hmap, f32 height_resolution);
-
-
-
-	public:
-		struct ChunkData	//ogni vtx di un chunk contiene queste info
-		{
-			u32	encoded_norm;
-			u8	ao;
-			u8	materialID;
-			u16	height;	//espressa in step da 0.1m
-		};
-
-		class MapUpdate
+		//**************************************
+		struct PointData	//ogni punto della mappa contiene le seguenti info
 		{
 		public:
-					MapUpdate()										{ }
-					~MapUpdate()									{ priv_free(); }
-			void	setup (gos::Allocator *allocator)				{ list_of_modified_chunk.setup(allocator, 1024); }
-
-		protected:
-			gos::UniqueSortedList<u64>	list_of_modified_chunk;
-
-		private:
-			void 	priv_free()										{ }
-
-		friend Map;
+			CompressedNorm	norm;
+			CompressedH		height;
+			u8				ao;
+			u8				materialID;
 		};
+
+
+	public:
+		static bool		create (const char *save_path, const CreateData &create);
 
 	public:
 						Map();
 						~Map();
 
-		bool			load (const char *path_to_folder);
-		u32 			calc_visible_chunk (gos::geom::Camera3 *cam, gos::FastArray<ChunkCoord> *out) const;
+		bool			open (const char *folder_path);
 
 
-		u32					chunk__get_num_vtx_per_lato() const			{ return chunk__num_vtx_lato; }
-		f32					chunk__get_border_length__m() const			{ return chunk__border_size__m; }
-		f32					chunk__get_lod0_scala_xz__m() const			{ return lod0__scala_xz__m; }
-		const ChunkData*	chunk__get (u32 cx, u32 cy) const;
-
-
-		void	begin_update(MapUpdate &mu);
-		void 	set_height (MapUpdate &mu, u32 vtx_x, u32 vtx_y, f32 height_m);
-		void	end_update(MapUpdate &mu);
+		u32 			map__get_num_points_per_lato() const					{ return mapInfo[0].num_point_per_lato; }
+		u32 			map__get_num_lod() const 								{ return num_mapInfo; }
+		f32				map__get_border_size__m() const 						{ return map_border_size__m; }
+		land::Resol		map__get_best_resolution() const						{ return mapInfo[num_mapInfo-1].resolution; }
+		land::Resol		map__get_worst_resolution() const						{ return mapInfo[0].resolution; }
+		gos::vec2f		map__get_topLeft_WC() const								{ return map_topLeft_WC; }
 
 	private:
-		static constexpr u32 VERSION = gos::magic::_makeID (0x01A781, 0x01);
+		static constexpr u32 VERSION = gos::magic::_makeID (0x01A782, 0x01);
 
 	private:
+		struct MapInfo
+		{
+			u32		num_point_per_lato;
+			u32		num_chunk_per_lato;
+			f32		border_size__m;
+			Resol 	resolution;
+			BigFile	*chunkData;
+		};
+
 		struct ChunkInfo
 		{
 			f32	min_height__m;
 			f32	max_height__m;
 		};
 
+
 	private:
-		static bool 	priv__save_chunk_data (const char *folder, u32 cx, u32 cy, const ChunkData *c, u32 sizeof_chunk);
-		static bool 	priv__save_chunk_info (const char *folder, const ChunkInfo *c, u32 sizeof__chunk_info);
-		
-
-		void			priv__free();
-		bool			priv__world_to_chunk (f32 wx, f32 wz, u32 *out__cx, u32 *out__cy) const;
-		bool			priv__chunk_to_world (u32 cx, u32 cy, f32 *out__wx, f32 *out__wz) const;
-		const ChunkInfo* priv__chunk_get_info (u32 cx, u32 cy) const;
-		ChunkInfo* 		priv__chunk_get_info (u32 cx, u32 cy);
-		ChunkData*		priv_chunk__get (u32 cx, u32 cy);
-		bool 			priv_chunk__set_height (u32 cx, u32 cy, u32 vtx_x, u32 vtx_y, f32 height_m);
-
-		
+		void 				priv__free();
+		const ChunkInfo*	priv__get_chunkInfo (u32 lod, u32 cx, u32 cy);
 
 	private:
 		gos::Allocator	*localAllocator;
-		u8				*chunk_data;
-		ChunkInfo		*chunk_info;
-		char			path_to_folder[1024];
-
-		f32 map__border_size__m;	//l'intera mappa e' un quadrato di di bordo <map__border_size__m>
-		f32 map__min;				//l'angolo in basso a sx della mappa ha coordinate world (map__min, map__min)
-		f32 map__max;				//l'angolo in alto a dx della mappa ha coordinate world (map__max, map__max)
-
-		u32 chunk__num;				//l'intera mappa e' un quadrato di <chunk__num> x <chunk__num> chunk
-		f32 chunk__border_size__m;	//ogni chunk e' un quadrato di lato <chunk__border_size__m>
-		u32 chunk__num_vtx_lato;	//ogni chunk e' un quadrato di lato <chunk__num_vtx_lato> x <chunk__num_vtx_lato> vertici
-		u32 mid_chunk;				//il chunk (mid_chunk, mid_chunk) e' quello con origine in woorld coord (0,0)
-
-		u32 lod0__sizeof;			//dimensioni in byte di un chunk a lod 0 su disco
-		f32 lod0__scala_xz__m;		//distanza tra un vtx e l'altro in un chunk a lod 0
-		
-
-
-			
+		u32				num_mapInfo;
+		MapInfo 		*mapInfo;
+		f32				map_border_size__m;
+		gos::vec2f		map_topLeft_WC;			//coordinate dell'angolo in alto a sx della mappa (world coodinate)
 	};
 
+
+	/****************************************
+	 * @brief	MapQTree
+	 */
+	class MapQTree
+	{
+	public:
+				MapQTree();
+				~MapQTree();
+		void 	setup (const Map *map);
+
+		u32 	calc_visibility (gos::geom::Camera3 *cam, ChunkCoordList *out);
+
+		void 	aabb_from_chunkCoord (const ChunkCoord cc, gos::geom::AABB3 *out) const;
+		u32 	get_num_vtx_per_chunk_side () const 										{ return num_vtx_per_chunk_side; }
+		land::Resol get_resolution_from_chunkCoord (const ChunkCoord cc) const;
+		
+	private:
+		static constexpr u8 NUM_MAX_LOD = 32;
+
+	private:
+		struct LODInfo
+		{
+			u32	num_chunk_per_lato;
+			f32 chunk_border_size__m;
+			f32 min_visible_dist_squared__m;
+			land::Resol resol;
+		};
+
+	private:
+		
+
+	private:
+		LODInfo				lodInfo[NUM_MAX_LOD];
+		u32 				num_lod;
+		u32 				num_vtx_per_chunk_side;
+		gos::geom::AABB3	map_aabb;
+		ChunkCoordList		tmp_ccList1, tmp_ccList2;
+	};	
 } //namespace land
 
 

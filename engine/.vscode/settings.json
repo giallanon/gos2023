@@ -95,7 +95,8 @@
 		"__split_buffer": "cpp",
 		"__tree": "cpp",
 		"__node_handle": "cpp",
-		"filesystem": "cpp"
+		"filesystem": "cpp",
+		"locale": "cpp"
 	},
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.compilerPath": "",

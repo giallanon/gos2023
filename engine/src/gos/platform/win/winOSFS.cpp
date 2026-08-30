@@ -333,17 +333,17 @@ u64 platform::FS_fileLength (const char *utf8_filePathAndName)
 }
 
 //*****************************************************
-void platform::FS_fileSeek(OSFile &h, u64 position, eSeek seekMode)
+bool platform::FS_fileSeek(OSFile &h, u64 position, eSeek seekMode)
 {
 	LARGE_INTEGER s;
 	s.QuadPart = position;
 
 	switch (seekMode)
 	{
-	case eSeek::current:	::SetFilePointerEx (h, s, NULL, FILE_CURRENT); break;
-	case eSeek::start:		::SetFilePointerEx (h, s, NULL, FILE_BEGIN); break;
-	case eSeek::end:		::SetFilePointerEx (h, s, NULL, FILE_END); break;
-	default:				break;
+	case eSeek::current:	return (0 != ::SetFilePointerEx (h, s, NULL, FILE_CURRENT));
+	case eSeek::start:		return (0 != ::SetFilePointerEx (h, s, NULL, FILE_BEGIN));
+	case eSeek::end:		return (0 != ::SetFilePointerEx (h, s, NULL, FILE_END));
+	default:				DBGBREAK; return false;
 	}
 }
 
