@@ -832,7 +832,7 @@ void GPU::deleteResource (GPURenderTargetHandle &handle)
 bool GPU::priv_renderTarget_createFromStruct (gos::gpu::RenderTarget &rt)
 {
     assert (VK_NULL_HANDLE == rt.image);
-    assert (VK_NULL_HANDLE == rt.vkMemHandle);
+    assert (VK_NULL_HANDLE == rt._vkMemHandle);
     assert (VK_NULL_HANDLE == rt.view);
     assert (VK_FORMAT_UNDEFINED != rt.format);
 
@@ -840,11 +840,12 @@ bool GPU::priv_renderTarget_createFromStruct (gos::gpu::RenderTarget &rt)
     rt.resolve ((i16)swapchain.getWidth(), (i16)swapchain.getHeight());
 
     //chiedo a Vulkan di creare img
-    if (!vulkan.image_create2D (rt.resolvedW, rt.resolvedH, 1, rt.format, rt.memAccessMode, rt.usage, &rt.image, &rt.vkMemHandle, &rt.memoryAllocated))
+    if (!vulkan.image_create2D (rt.resolvedW, rt.resolvedH, 1, rt.format, rt.memAccessMode, rt.usage, &rt.image, &rt._vkMemHandle, &rt.memoryAllocated, &rt.memFlags))
     {
         gos::logger::err ("GPU::priv_renderTarget_createFromStruct() => failed\n");
         return false;
     }
+	
 
     VkImageViewCreateInfo imageViewCI{};
 	imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -878,9 +879,9 @@ void GPU::priv_renderTarget_deleteFromStruct (gos::gpu::RenderTarget &rt)
     
     if (VK_NULL_HANDLE != rt.image)
     {
-        vulkan.image_delete (rt.image, rt.vkMemHandle, rt.memoryAllocated);
+        vulkan.image_delete (rt.image, rt._vkMemHandle, rt.memoryAllocated);
         rt.image = VK_NULL_HANDLE;
-        rt.vkMemHandle = VK_NULL_HANDLE;
+        rt._vkMemHandle = VK_NULL_HANDLE;
     }
 }
 
@@ -906,9 +907,9 @@ bool GPU::map (const GPURenderTargetHandle handle, gpu::sMappedImage *out) const
 
     memset (out, 0, sizeof(gpu::sMappedImage));
 
-    if (eMemAccessMode::readback != s->memAccessMode)
+    if (eMemAccessMode::shared_cpuR != s->memAccessMode && eMemAccessMode::shared_cpuRW != s->memAccessMode)
     {
-        gos::logger::err ("GPU::render_target::map() => invalid mem accesso mode. Buffer mode must be [readback], current mode is %s\n", gpu::enumToString(s->memAccessMode));
+        gos::logger::err ("GPU::render_target::map() => invalid mem accesso mode. Buffer mode must be [shared_cpuR or shared_cpuRW], current mode is %s\n", gpu::enumToString(s->memAccessMode));
         return false;
     }
 
@@ -918,7 +919,7 @@ bool GPU::map (const GPURenderTargetHandle handle, gpu::sMappedImage *out) const
     vulkan.image_getSubresourceLayout (s->image, &subResource, &subResourceLayout);
 
     // Map image memory so we can start copying from it
-    VkResult result = vulkan.memory_map (s->vkMemHandle, (u32)subResourceLayout.offset, (u32)subResourceLayout.size, 0, &out->host_image_pt);
+    VkResult result = vulkan.memory_map (s->_vkMemHandle, (u32)subResourceLayout.offset, (u32)subResourceLayout.size, 0, &out->host_image_pt);
     if (VK_SUCCESS != result)
     {
         out->host_image_pt = NULL;
@@ -929,7 +930,7 @@ bool GPU::map (const GPURenderTargetHandle handle, gpu::sMappedImage *out) const
     out->size = subResourceLayout.size;
     out->offset = static_cast<u32>(subResourceLayout.offset);
     out->row_stride = static_cast<u32>(subResourceLayout.rowPitch);
-    out->_vkMemHandle = s->vkMemHandle;
+    out->_vkMemHandle = s->_vkMemHandle;
     return true;
 }
 
@@ -994,7 +995,7 @@ void GPU::deleteResource (GPUZBufferHandle &handle)
 bool GPU::priv_depthStencil_createFromStruct (gos::gpu::DepthStencil &depthStencil)
 {
     assert (VK_NULL_HANDLE == depthStencil.image);
-    assert (VK_NULL_HANDLE == depthStencil.vkMemHandle);
+    assert (VK_NULL_HANDLE == depthStencil._vkMemHandle);
     assert (VK_NULL_HANDLE == depthStencil.view);
     assert (VK_FORMAT_UNDEFINED != depthStencil.depthFormat);
 
@@ -1002,7 +1003,7 @@ bool GPU::priv_depthStencil_createFromStruct (gos::gpu::DepthStencil &depthStenc
     depthStencil.resolve ((i16)swapchain.getWidth(), (i16)swapchain.getHeight());
 
 
-    if (!vulkan.image_create2D (depthStencil.resolvedW, depthStencil.resolvedH, 1, depthStencil.depthFormat, eMemAccessMode::onGPU, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &depthStencil.image, &depthStencil.vkMemHandle, &depthStencil.memoryAllocated))
+    if (!vulkan.image_create2D (depthStencil.resolvedW, depthStencil.resolvedH, 1, depthStencil.depthFormat, eMemAccessMode::onGPU, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &depthStencil.image, &depthStencil._vkMemHandle, &depthStencil.memoryAllocated, &depthStencil.memFlags))
     {
         gos::logger::err ("GPU::priv_depthStenicl_createFromStruct() => failed\n");
         return false;
@@ -1043,9 +1044,9 @@ void GPU::priv_depthStencil_deleteFromStruct (gos::gpu::DepthStencil &depthStenc
     
     if (VK_NULL_HANDLE != depthStencil.image)
     {
-        vulkan.image_delete (depthStencil.image, depthStencil.vkMemHandle, depthStencil.memoryAllocated);
+        vulkan.image_delete (depthStencil.image, depthStencil._vkMemHandle, depthStencil.memoryAllocated);
         depthStencil.image = VK_NULL_HANDLE;
-        depthStencil.vkMemHandle = VK_NULL_HANDLE;
+        depthStencil._vkMemHandle = VK_NULL_HANDLE;
     }
 }
 
@@ -1122,7 +1123,9 @@ const gpu::CommandBuffer* GPU::get_info (const GPUCmdBufferHandle handle) const
 //************************************************************************************************************
 bool GPU::priv_bufferCreate (VkBufferUsageFlags vkUsage, u32 sizeInByte, bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ, eMemAccessMode mode, gpu::Buffer *out)
 {
-    VkMemoryPropertyFlags vkMemProperties;
+    VkMemoryPropertyFlags vkMemPropertiesList[4];
+	u32 num_memProp = 0;
+
     switch (mode)
     {
     default:
@@ -1131,30 +1134,34 @@ bool GPU::priv_bufferCreate (VkBufferUsageFlags vkUsage, u32 sizeInByte, bool bC
         break;
 
     case eMemAccessMode::onGPU:
-        vkMemProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        vkMemPropertiesList[num_memProp++] = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         break;
 
-    case eMemAccessMode::shared_cpuW_autoSync:
-        vkMemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    case eMemAccessMode::shared_cpuW:
+        vkMemPropertiesList[num_memProp++] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		vkMemPropertiesList[num_memProp++] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         break;
 
-    case eMemAccessMode::shared_cpuW_manualSync:
-        vkMemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    case eMemAccessMode::shared_cpuR:
+	case eMemAccessMode::shared_cpuRW:
+		vkMemPropertiesList[num_memProp++] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		vkMemPropertiesList[num_memProp++] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
         break;
     
     } 
 
 
     //chiedo a Vulkan di creare il buffer
-    VkBuffer        vkHandle;
-    VkDeviceMemory  vkMemHandle = VK_NULL_HANDLE;
+    VkBuffer        		vkHandle;
+    VkDeviceMemory  		vkMemHandle = VK_NULL_HANDLE;
+	VkMemoryPropertyFlags	memFlags;
     u32 realMemAllocated;
     if (!vulkan.buffer_create (sizeInByte, 
                         vkUsage,
-                        vkMemProperties,
+                        vkMemPropertiesList, num_memProp,
                         bCanBeUsedBy_gfxQ, bCanBeUsedBy_computeQ, bCanBeUsedBy_transferQ,
                         &vkHandle,
-                        &vkMemHandle, &realMemAllocated))
+                        &vkMemHandle, &realMemAllocated, &memFlags))
     {
         gos::logger::err ("GPU::priv_bufferCreate() => failed to vulkanCreateBuffer()\n");
         return false;
@@ -1164,6 +1171,7 @@ bool GPU::priv_bufferCreate (VkBufferUsageFlags vkUsage, u32 sizeInByte, bool bC
     out->reset();
     out->vkHandle = vkHandle;
     out->_vkMemHandle = vkMemHandle;
+	out->memFlags = memFlags;
     out->mode = mode;
     out->bufferSize = sizeInByte;
     out->memoryAllocated = realMemAllocated;
@@ -1173,12 +1181,12 @@ bool GPU::priv_bufferCreate (VkBufferUsageFlags vkUsage, u32 sizeInByte, bool bC
 
     switch (mode)
     {
-    default:
-    case eMemAccessMode::shared_cpuW_manualSync:
-    case eMemAccessMode::onGPU:
-        break;
-
-    case eMemAccessMode::shared_cpuW_autoSync:
+	default:
+		break;
+		
+	case eMemAccessMode::shared_cpuR:
+    case eMemAccessMode::shared_cpuW:
+	case eMemAccessMode::shared_cpuRW:
         //mappo la memoria del buffer direttamente qui, visto che questo buffer e' sempre HOST_MAPPABLE e COHERENT
         {
             void *mappedPt;
@@ -1227,45 +1235,6 @@ void GPU::image_manualSync_cpuRead (const gpu::sMappedImage *list, u32 numElemIn
     vulkan.memory_invalidateRanges (numElemInList, flush_range);
 }
 
-//************************************************************************************************************
-void GPU::buffer_unmap (gpu::sMappedBuffer &m)
-{
-    if (NULL != m.host_pt)
-    {
-        vulkan.memory_unmap(m._vkMemHandle);
-        memset (&m ,0, sizeof(gpu::sMappedBuffer));
-    }
-}
-
-//************************************************************************************************************
-void GPU::buffer_manualSync_cpuWrite (const gpu::sMappedBuffer &mapped_buffer, u32 offset, u32 size)
-{
-    VkMappedMemoryRange flush_range;
-    flush_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    flush_range.pNext = NULL;
-    flush_range.memory = mapped_buffer._vkMemHandle;
-    flush_range.offset = offset;
-
-    if (u32MAX == size)
-        flush_range.size = VK_WHOLE_SIZE;
-    else
-        flush_range.size = size;
-
-    vulkan.memory_flushRanges (1, &flush_range);
-}
-
-//************************************************************************************************************
-void GPU::buffer_manualSync_cpuRead (const gpu::sMappedBuffer &mapped_buffer, u32 offset, u32 size)
-{
-    VkMappedMemoryRange flush_range;
-    flush_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    flush_range.pNext = NULL;
-    flush_range.memory = mapped_buffer._vkMemHandle;
-    flush_range.offset = offset;
-    flush_range.size = size;
-
-    vulkan.memory_invalidateRanges (1, &flush_range);
-}
 
 /************************************************************************************************************
  * Staging buffer
@@ -1285,7 +1254,7 @@ bool GPU::stagingBuffer_create (u32 sizeInByte, GPUStgBufferHandle *out_handle)
         return false;
     }
 
-    if (!priv_bufferCreate (VK_BUFFER_USAGE_TRANSFER_SRC_BIT, sizeInByte, false, false, false, eMemAccessMode::shared_cpuW_autoSync, s))
+    if (!priv_bufferCreate (VK_BUFFER_USAGE_TRANSFER_SRC_BIT, sizeInByte, false, false, false, eMemAccessMode::shared_cpuW, s))
     {
         staginBufferList.release (*out_handle);
         out_handle->setInvalid();
@@ -1729,7 +1698,8 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
     VkDeviceMemory  vkMemHandle = VK_NULL_HANDLE;
     u32             imageMemSize = 0;
 
-    if (!vulkan.image_create2D (dimx, dimy, nMipMap, gos::gpu::toVulkan(fmt), memAccessMode, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &vkImageHandle, &vkMemHandle, &imageMemSize))
+	VkMemoryPropertyFlags memFlags;
+    if (!vulkan.image_create2D (dimx, dimy, nMipMap, gos::gpu::toVulkan(fmt), memAccessMode, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &vkImageHandle, &vkMemHandle, &imageMemSize, &memFlags))
     {
         gos::logger::err ("GPU::texture_create2D() => failed\n");
         return false;
@@ -1815,7 +1785,8 @@ bool GPU::texture_create2D (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eM
     s->nMipMap = nMipMap;
     s->nArray = 1;
     s->vkHandle = vkImageHandle;
-    s->vkMemHandle = vkMemHandle;
+    s->_vkMemHandle = vkMemHandle;
+	s->memFlags = memFlags;
     s->memoryAllocated = imageMemSize;
 
 
@@ -1870,7 +1841,7 @@ void GPU::deleteResource (GPUTextureHandle &handle)
             vulkan.imageView_delete (s->view);
 
         if (VK_NULL_HANDLE != s->vkHandle)
-            vulkan.image_delete (s->vkHandle, s->vkMemHandle, s->memoryAllocated);
+            vulkan.image_delete (s->vkHandle, s->_vkMemHandle, s->memoryAllocated);
 
         s->reset();
         textureList.release (handle);

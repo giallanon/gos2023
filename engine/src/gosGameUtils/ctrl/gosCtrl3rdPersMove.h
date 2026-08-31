@@ -18,15 +18,18 @@ namespace gos
 
         void    bind (geom::Pos3 *entity_pos, geom::Camera3 *camera);
 
-        void    set_linear_speed__m_sec (f32 m_sec)				{ lin_speed__m_sec = m_sec; }
-        void    set_rot_speed__grad_s (f32 grad_s)				{ rot_speed__rad_s = gos::math::gradToRad(grad_s); }
+        void    set_linear_speed__m_sec (f32 m_sec)					{ lin_speed__m_sec = m_sec; }
+        void    set_rot_speed__grad_s (f32 grad_s)					{ rot_speed__rad_s = gos::math::gradToRad(grad_s); }
 		
-		void 	set_zoom_limits (f32 min_zoom, f32 max_zoom)	{ this->zoom_min=zoom_min; this->zoom_max=zoom_max; set_zoom(zoom); }
+		void 	set_zoom_limits (f32 min_zoomIN, f32 max_zoomIN)	{ zoom_min=min_zoomIN; zoom_max=max_zoomIN; set_zoom(zoom); }
 		void 	set_zoom (f32 zoom);
-		void	camera__set_POV_offset (f32 y)					{ camera_offset_y = y; }
+		void	camera__set_POV_offset (f32 y)						{ camera_offset_y = y; }
 		void	camera__set_rotation_limits (f32 min_grad, f32 max_grad);
 
 		void 	update (u64 timenow_msec, CtrlAction &ctrl);
+
+		void 	multiply_linear_speed (f32 factor)					{ set_linear_speed__m_sec(factor * lin_speed__m_sec); }
+		f32 	get_linear_speed__m_sec() const 					{ return lin_speed__m_sec; }
 
 	public:
 		geom::Pos3 	*entity_pos;

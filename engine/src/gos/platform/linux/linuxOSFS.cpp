@@ -215,14 +215,14 @@ u64 platform::FS_fileLength (const char *utf8_filePathAndName)
 }
 
 //*****************************************************
-void platform::FS_fileSeek(OSFile &h, u64 position, eSeek seekMode)
+bool platform::FS_fileSeek(OSFile &h, u64 position, eSeek seekMode)
 {
     int w;
     switch (seekMode)
     {
     default:
         DBGBREAK;
-        return;
+        return false;
         
     case eSeek::start: 
         w = SEEK_SET;
@@ -237,7 +237,7 @@ void platform::FS_fileSeek(OSFile &h, u64 position, eSeek seekMode)
         break;
     }
 
-    lseek (h, position, w);
+    return ((off_t)-1 != lseek (h, position, w));
 }
 
 //*****************************************************

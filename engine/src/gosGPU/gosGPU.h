@@ -27,6 +27,7 @@
 #include "pipe2/gosGPUPipe2_pipeline_def.h"
 #include "pipe2/gosGPUPipe2_cmdBufferWriter.h"
 #include "GOSGPUStageHelper.h"
+#include "gosGPUMappedBuffer.h"
 
 namespace gos
 {
@@ -231,11 +232,6 @@ namespace gos
                 //memcopia <dataSRC> in <&handleDST[offsetDST]>
         bool                stagingBuffer_memcpy (GPUStgBufferHandle &handleDST, u32 offsetDST, const void *dataSRC, u32 sizeof_dataSRC);
 
-        //================ buffer unmapping / manualSync
-        void                buffer_unmap (gpu::sMappedBuffer &m);
-        void                buffer_manualSync_cpuWrite (const gpu::sMappedBuffer &mapped_buffer, u32 offset, u32 size);
-        void                buffer_manualSync_cpuRead (const gpu::sMappedBuffer &mapped_buffer, u32 offset, u32 size);
-
         //================ image unmapping / manualSync
         void                image_unmap (gpu::sMappedImage &m);
         void                image_manualSync_cpuRead (const gpu::sMappedImage *list, u32 numElemInList);
@@ -244,29 +240,25 @@ namespace gos
         bool                vertexBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUVtxBufferHandle *out_handle);
         void                deleteResource (GPUVtxBufferHandle &handle)                                                             { priv_bufferDestroy (vtxBufferList, handle); }
         const gpu::Buffer*  get_info (const GPUVtxBufferHandle handle) const;
-        bool                writeAndSync (const GPUVtxBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (vtxBufferList, handle, offsetDST, src, sizeInByte); }
-        bool                map (const GPUVtxBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (vtxBufferList, handle, offsetDST, sizeInByte, out); }
+		bool 				begin_write (const GPUVtxBufferHandle handle, gpu::MappedBufW *out)										{ return priv_buffer_begin_write (vtxBufferList, handle, out); }
         
         //================ index buffer
         bool                indexBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUIdxBufferHandle *out_handle);
         void                deleteResource (GPUIdxBufferHandle &handle)                                                             { priv_bufferDestroy (idxBufferList, handle); }
         const gpu::Buffer*  get_info (const GPUIdxBufferHandle handle) const;
-        bool                writeAndSync (const GPUIdxBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (idxBufferList, handle, offsetDST, src, sizeInByte); }
-        bool                map (const GPUIdxBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (idxBufferList, handle, offsetDST, sizeInByte, out); }
+		bool				begin_write (const GPUIdxBufferHandle handle, gpu::MappedBufW *out)										{ return priv_buffer_begin_write (idxBufferList, handle, out); }
 
         //================ uniform buffer
         bool                uniformBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUUniformBufferHandle *out_handle);
-        void                deleteResource (GPUUniformBufferHandle &handle)                                                             { priv_bufferDestroy (uniformBufferList, handle); }
+        void                deleteResource (GPUUniformBufferHandle &handle)															{ priv_bufferDestroy (uniformBufferList, handle); }
         const gpu::Buffer*  get_info (const GPUUniformBufferHandle handle) const;
-        bool                writeAndSync (const GPUUniformBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (uniformBufferList, handle, offsetDST, src, sizeInByte); }
-        bool                map (const GPUUniformBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (uniformBufferList, handle, offsetDST, sizeInByte, out); }
+		bool				begin_write (const GPUUniformBufferHandle handle, gpu::MappedBufW *out)									{ return priv_buffer_begin_write (uniformBufferList, handle, out); }
 
         //================ storage buffer
         bool                storageBuffer_create (u32 sizeInByte, eMemAccessMode mode, GPUStorageBufferHandle *out_handle);
-        void                deleteResource (GPUStorageBufferHandle &handle)                                                             { priv_bufferDestroy (storageBufferList, handle); }
+        void                deleteResource (GPUStorageBufferHandle &handle)															{ priv_bufferDestroy (storageBufferList, handle); }
         const gpu::Buffer*  get_info (const GPUStorageBufferHandle handle) const;
-        bool                writeAndSync (const GPUStorageBufferHandle handle, u32 offsetDST, const void *src, u32 sizeInByte) const    { return priv_bufferWriteAndSync (storageBufferList, handle, offsetDST, src, sizeInByte); }
-        bool                map (const GPUStorageBufferHandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const     { return priv_bufferMap (storageBufferList, handle, offsetDST, sizeInByte, out); }
+		bool				begin_write (const GPUStorageBufferHandle handle, gpu::MappedBufW *out)									{ return priv_buffer_begin_write (storageBufferList, handle, out); }
 
         //================ shader
         bool                vtxshader_createFromMemory (const void *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)      { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::vtxShader, mainFnName, out_shaderHandle); }
@@ -299,6 +291,42 @@ namespace gos
 
     public:
         void                _internal__onWindowResized (int w, int h);
+
+		void				_internal__buffer_end_write (const gpu::Buffer *s, u32 offset_start, u32 size)
+							{
+                                assert (NULL != s);
+
+								//se il buffer in questione non ha "VK_MEMORY_PROPERTY_HOST_COHERENT_BIT", devo fare flushare manualmente
+								if (0 == (s->memFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+								{
+									
+									DBGBREAK; //ho messo il break peche' qui non ci sono mai passato
+									//dato che la mia GPU non suporta questo tipo di memoria.
+									//Non sono sicuro che funzioni quindi :)
+
+
+									VkMappedMemoryRange flush_range;
+									flush_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+									flush_range.pNext = NULL;
+									flush_range.memory = s->_vkMemHandle;
+									flush_range.offset = offset_start;
+
+									if (u32MAX == size || s->bufferSize == size)
+										flush_range.size = VK_WHOLE_SIZE;
+									else
+									{
+										flush_range.size = size;
+
+										const u32 r = size % this->limits_get_nonCoherentAtomSize();
+										if (r)
+											flush_range.size += this->limits_get_nonCoherentAtomSize() - r;
+										
+										assert (flush_range.size <= s->bufferSize);
+									}
+
+									vulkan.memory_flushRanges (1, &flush_range);
+								}
+							}
 
     private:
         struct sWindow
@@ -425,6 +453,9 @@ namespace gos
                                 gpu::Buffer *s;
                                 if (list.fromHandleToPointer (handle, &s))
                                 {
+									if (NULL != s->mapped_host_pt)
+										vulkan.memory_unmap(s->_vkMemHandle);
+
                                     vulkan.buffer_delete (s->vkHandle, s->_vkMemHandle, s->memoryAllocated);
                                     s->reset();
                                     list.release (handle);
@@ -432,86 +463,75 @@ namespace gos
                                 handle.setInvalid();
                             }
 
-                            
-        /**
-         * @brief valido solo per i buffer creati con eMemAccessMode::shared_cpuW_autoSync
-         * <out> viene memcpiato nel buffer a partire da <offsetDST> per un totale di <sizeInByte> byte.
-         * La sincronizzazione con GPU e' automatica
-         */
-                            template<class THandleList, class THandle>
-        bool                priv_bufferWriteAndSync (const THandleList &list, const THandle &handle, u32 offsetDST, const void *src, u32 sizeInByte) const
-                            {
-                                assert (NULL != src);
-                                assert (sizeInByte > 0);
-
+           
+		/**
+		 * @brief	priv_buffer_begin_write
+		 * 			In input prende un handle di un buffer (VtxBuffer, Idxbuffer, SBO..) e, posto che questo sia stato creato in modalita
+		 * 			eMemAccessMode::shared_cpuW o eMemAccessMode::shared_cpuRW, filla <out> con i necessari dettagli.
+		 * 			Tramite <out>, il chiamante puo' fare delle memcpy nel buffer.
+		 * 			Al termine, il chiamante chiama <out>.end() per consolidare le scritture
+		 * 
+		 * 			Vedi anche _internal__buffer_end_write() che e' la fn chiamata da <out>.end()
+		 */
+							template<class THandleList, class THandle>
+		bool				priv_buffer_begin_write (const THandleList &list, const THandle &handle, gpu::MappedBufW *out)
+							{
+								assert (NULL != out);
                                 gpu::Buffer *s;
                                 if (!priv_fromHandleToPointer(list, handle, &s))
                                 {
-                                    gos::logger::err ("GPU::priv_bufferWriteAndSync() => invalid handle\n");
+                                    gos::logger::err ("GPU::priv_buffer_begin_write() => invalid handle\n");
                                     return false;
                                 }
 
-                                if (eMemAccessMode::shared_cpuW_autoSync != s->mode)
-                                {
-                                    gos::logger::err ("GPU::priv_bufferWriteAndSync() => invalid buffer mode [%s]\n", gpu::enumToString(s->mode));
-                                    return false;
-                                }
+								if (eMemAccessMode::shared_cpuW != s->mode && eMemAccessMode::shared_cpuRW != s->mode)
+								{
+									gos::logger::err ("GPU::priv_buffer_begin_write() => invalid buffer mode [%s]\n", gpu::enumToString(s->mode));
+									return false;
+								}
 
-                                //i buffer eMemAccessMode::shared_cpuW_autoSync sono sempre totalmente mappati all'atto della creazione
-                                if (sizeInByte > s->bufferSize)
-                                {
-                                    gos::logger::err ("GPU::priv_bufferWriteAndSync() => invalid params1 (%d, %d). Buffer size is %d\n", offsetDST, sizeInByte, s->bufferSize);
-                                    return false;
-                                }
+								return out->bind (this, s);
+							}
 
-                                if (offsetDST + sizeInByte > s->bufferSize)
-                                {
-                                    gos::logger::err ("GPU::priv_bufferWriteAndSync() => invalid params2 (%d, %d). Buffer size is %d, mapped from %d\n", offsetDST, sizeInByte, s->bufferSize, s->mapped_offset);
-                                    return false;
-                                }
 
-                                memcpy (&s->mapped_host_pt[offsetDST], src, sizeInByte);
-                                return true;
-                            }    
-
-                            
-                            template<class THandleList, class THandle>
-        bool                priv_bufferMap (const THandleList &list, const THandle handle, u32 offsetDST, u32 sizeInByte, gpu::sMappedBuffer *out) const
-                            {
-                                memset (out, 0, sizeof(gpu::sMappedBuffer));
-
+							template<class THandleList, class THandle>
+		const void*			priv_buffer_begin_read (const THandleList &list, const THandle &handle, u32 offset_start=0, u32 size=u32MAX)
+							{
+								//non l'ho mai provata... in linea di massima dovrebbe funzionare
                                 gpu::Buffer *s;
                                 if (!priv_fromHandleToPointer(list, handle, &s))
                                 {
-                                    gos::logger::err ("GPU::priv_bufferMap() => invalid handle\n");
-                                    return false;
+                                    gos::logger::err ("GPU::priv_buffer_begin_read() => invalid handle\n");
+                                    return NULL;
                                 }
 
-                                if (eMemAccessMode::shared_cpuW_manualSync != s->mode)
-                                {
-                                    gos::logger::err ("GPU::priv_bufferMap() => invalid buffer mode. Buffer mode must be [shared_cpuW_manualSync], current mode is %s\n", gpu::enumToString(s->mode));
-                                    return false;
-                                }
+								if (eMemAccessMode::shared_cpuR != s->mode && eMemAccessMode::shared_cpuRW != s->mode)
+								{
+									gos::logger::err ("GPU::priv_buffer_begin_read() => invalid buffer mode [%s]\n", gpu::enumToString(s->mode));
+									return NULL;
+								}
 
-                                if (NULL != s->mapped_host_pt)
-                                {
-                                    gos::logger::err ("GPU::priv_bufferMap(d) => buffer is already mapped\n");
-                                    return false;
-                                }
+								//se il buffer in questione non ha "VK_MEMORY_PROPERTY_HOST_COHERENT_BIT", devo fare invalidare manualmente
+								if (0 == (s->memFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+								{
+									VkMappedMemoryRange flush_range;
+									flush_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+									flush_range.pNext = NULL;
+									flush_range.memory = s->_vkMemHandle;
+									flush_range.offset = offset_start;
 
-                                const VkResult result = vulkan.memory_map (s->_vkMemHandle, offsetDST, sizeInByte, 0, &out->host_pt);
-                                if (VK_SUCCESS != result)
-                                {
-                                    out->host_pt = NULL;
-                                    gos::logger::err ("GPU::priv_bufferMap(d) => vkMapMemory() => %s\n", string_VkResult(result));
-                                    return false;
-                                }
+									if (u32MAX == size)
+										flush_range.size = VK_WHOLE_SIZE;
+									else
+										flush_range.size = size;
 
-                                out->offset = offsetDST;
-                                out->size = sizeInByte;
-                                out->_vkMemHandle = s->_vkMemHandle;
-                                return true;
-                            }
+									vulkan.memory_invalidateRanges (1, &flush_range);
+								}								
+								//questo dovrebbe essere garantito durante la creazione del buffer
+								assert (NULL != s->mapped_host_pt);
+								return s->mapped_host_pt;
+							}
+
 
 
         bool                priv_descrSetLayout_build_v2 (const gpu::Pipeline_def::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle, VkDescriptorSetLayout *out_vkHandle);

@@ -4,7 +4,7 @@
 #include "../gos/dataTypes/gosColorHDR.h"
 #include "../gos/gosHandle.h"
 #include "../gosShape/gosShapeEnumAndDefine.h"
-//#include "vulkan/gosGPUVulkanEnumAndDefine.h"
+#include "vulkan/gosGPUVulkanEnumAndDefine.h"
 
 #define 	GOSGPU__NUM_MAX_VTXDECL_ATTR					32
 #define 	GOSGPU__NUM_MAX_VXTDECL_STREAM					16
@@ -46,14 +46,10 @@ enum class eVtxStreamInputRate : u8
 enum class eMemAccessMode : u8
 {
 	invalid 				= 0,
-	onGPU					= 1,	//risiede in memoria GPU quindi per essere updatato necessita di uno stagin buffer e di una transferQ
-	shared_cpuW_autoSync	= 2,	//cpu puo' scrivere nel buffer tramite writeAndSync()
-									//Questa modalita' e' buona per buffer piccoli, tipo gli uniform
-
-	shared_cpuW_manualSync	= 3,	//cpu puo' scrivere nel buffer ma deve prima map()/unmap() e infine chiamare buffer_manualSync_cpuWrite()
-									//Utile per buffer di grosse dimensioni che vengono (raramente) aggiornati a "pezzi"
-
-	readback				= 4,	//cpu puo' leggere ma deve prima map()/unmap() e infine chiamare buffer_manualSync_cpuRead()
+	onGPU					= 1,	//risiede in memoria GPU quindi per essere updatato necessita di uno staging buffer e di una transferQ
+	shared_cpuW				= 2,	//cpu puo' scrivere nel buffer
+	shared_cpuR				= 4,	//cpu puo' leggere
+	shared_cpuRW			= 5
 };
 
 enum class eSamplerFilter : u8

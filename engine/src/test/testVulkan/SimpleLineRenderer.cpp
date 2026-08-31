@@ -69,7 +69,7 @@ bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHa
     };    
 
     //creo un buffer per UBO
-    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eMemAccessMode::shared_cpuW_autoSync, &hUBO))
+    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eMemAccessMode::shared_cpuW, &hUBO))
     {
         gos::logger::err ("SimpleLineRenderer::setup() => GPU::uniformBuffer_create\n");
         return false;
@@ -170,8 +170,14 @@ bool SimpleLineRenderer::recordCommandBuffer (gpu::CmdBufferWriter2 &cw, VkImage
     //upload di UBO su GPU
     ubo.camProj = cam.get_matP();
     ubo.camView = cam.get_matV();
-    gpu->writeAndSync (hUBO, 0, &ubo, sizeof(sUniformBufferObject));            
-    gos::gpu::DescrSetInstanceWriter descrWriter;
+    //gpu->writeAndSync (hUBO, 0, &ubo, sizeof(sUniformBufferObject));            
+	gpu::MappedBufW mm;
+		gpu->begin_write (hUBO, &mm);
+		mm.write (&ubo, sizeof(sUniformBufferObject), 0);
+		mm.end();
+    
+	
+	gos::gpu::DescrSetInstanceWriter descrWriter;
     descrWriter.begin (gpu, hDescrSetInstance)
         .bindUniformBuffer (0, hUBO)
         .end();

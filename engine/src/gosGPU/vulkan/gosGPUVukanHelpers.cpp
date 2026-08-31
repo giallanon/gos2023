@@ -7,6 +7,25 @@ using namespace gos;
 
 
 
+//*********************************************
+void gos::vulkanMemoryPropertyFlagsToString (const VkMemoryPropertyFlags flags, char *s, u32 sizeof_s)
+{
+	assert (NULL != s);
+	memset (s, 0, sizeof_s);
+
+	sprintf_s (s, sizeof_s, "0x%08X", flags);
+            
+	char s2[64];
+	if ((flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0)			{ sprintf_s (s2, sizeof(s2), ", DEVICE_LOCAL"); strcat_s (s, sizeof(s), s2); }
+	if ((flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0)			{ sprintf_s (s2, sizeof(s2), ", HOST_VISIBLE"); strcat_s (s, sizeof(s), s2); }
+	if ((flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0)		{ sprintf_s (s2, sizeof(s2), ", HOST_COHERENT"); strcat_s (s, sizeof(s), s2); }
+	if ((flags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) != 0)			{ sprintf_s (s2, sizeof(s2), ", HOST_CACHED"); strcat_s (s, sizeof(s), s2); }
+	if ((flags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) != 0)		{ sprintf_s (s2, sizeof(s2), ", LAZILY_ALLOCATED"); strcat_s (s, sizeof(s), s2); }
+	if ((flags & VK_MEMORY_PROPERTY_PROTECTED_BIT) != 0)			{ sprintf_s (s2, sizeof(s2), ", PROTECTED"); strcat_s (s, sizeof(s), s2); }
+	if ((flags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD) != 0)	{ sprintf_s (s2, sizeof(s2), ", DEVICE_COHERENT_BIT_AMD"); strcat_s (s, sizeof(s), s2); }
+	if ((flags & VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD) != 0)	{ sprintf_s (s2, sizeof(s2), ", DEVICE_UNCACHED_BIT_AMD"); strcat_s (s, sizeof(s), s2); }
+	if ((flags & VK_MEMORY_PROPERTY_RDMA_CAPABLE_BIT_NV) != 0)		{ sprintf_s (s2, sizeof(s2), ", RDMA_CAPABLE");	 strcat_s (s, sizeof(s), s2); }
+}
 
 /*************************************************************************************+
  * 

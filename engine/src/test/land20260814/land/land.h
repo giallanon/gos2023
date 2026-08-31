@@ -28,6 +28,10 @@ static constexpr u8	MATERIAL_ID__SNOW = 7;
 
 namespace land
 {
+	inline	Resol	resolution_next (Resol res)		{ u8 n=(u8)res; if (n<11) n++; return static_cast<Resol>(n); }
+	inline	Resol	resolution_prev (Resol res)		{ u8 n=(u8)res; if (n>0)  n--; return static_cast<Resol>(n); }
+	inline	u8		resolution_to_u8(Resol res)		{ return static_cast<u8>(res); }
+	f32 	resolution_to_m (Resol res);
 } //namespace land
 
 

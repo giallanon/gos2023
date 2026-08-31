@@ -673,7 +673,7 @@ bool fs::fileOpenForW (gos::File *out_h, const char *utf8_filePathAndNameRESOLVA
 }
 
 //**************************************************************************
-bool fs::fileOpenForAppend (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders)
+bool fs::fileOpenForWriteAppend (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders)
 {
 	char utf8_filePathAndName[1024];
 	pathResolver.resolve (utf8_filePathAndNameRESOLVABLE, utf8_filePathAndName, sizeof(utf8_filePathAndName));
@@ -684,6 +684,20 @@ bool fs::fileOpenForAppend (gos::File *out_h, const char *utf8_filePathAndNameRE
 		fs::folderCreate(path);
 	}	
 	return FS_fileOpenRESOLVED (out_h, utf8_filePathAndName, eFileMode::writeOnly, true, true, true, true); 
+}
+
+//**************************************************************************
+bool fs::fileOpenForRW  (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders)
+{
+	char utf8_filePathAndName[1024];
+	pathResolver.resolve (utf8_filePathAndNameRESOLVABLE, utf8_filePathAndName, sizeof(utf8_filePathAndName));
+	if (bAutoCreateFolders)
+	{
+		char path[2048];
+		fs::extractFilePathWithOutSlash (utf8_filePathAndName, path, sizeof(path));
+		fs::folderCreate(path);
+	}	
+	return FS_fileOpenRESOLVED (out_h, utf8_filePathAndName, eFileMode::readWrite, true, false, true, true); 
 }
 
 //**************************************************************************

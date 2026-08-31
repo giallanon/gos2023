@@ -4,3 +4,4 @@
 @include: <common_assets>/gosengine/pipe3/PIPE3.gosasset_d
 @include: <common_assets>/gosengine/line3d/main.gosasset_d
 @include: <common_assets>/gosengine/pipe3/land20260814/main.gosasset_d
+@include: <common_assets>/gosengine/pipe3/land20260829/main.gosasset_d

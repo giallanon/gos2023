@@ -558,25 +558,70 @@ void  VulkanDevice::shader_delete (VkShaderModule vkHandle)
 
 
 //*********************************************
-bool VulkanDevice::priv_getMemoryType (uint32_t typeBits, VkMemoryPropertyFlags properties, u32 *out_index)
+bool VulkanDevice::priv_getMemoryType (uint32_t typeBits, const VkMemoryPropertyFlags *memPropertiesList, u32 num_memPropList, u32 *out_index, VkMemoryPropertyFlags *out_canBeNULL_memFlagUsed)
 {
     assert (NULL != out_index);
-    for (u32 i = 0; i < phyDevInfo.vkMemoryProperties.memoryTypeCount; i++)
-    {
-        if ((typeBits & 1) == 1) //questo vuol dire che la risorsa che voglio allocare puo' essere allocata nel "memory type i-esimo"
-        {
-            //posto che il memory-type i-esimo sia un memory type valido per questa risorsa, allora voglio che abbia anche
-            //tutti le "properties" che ho richiesto
-            if ((phyDevInfo.vkMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
-            {
-                *out_index = i;
-                return true;
-            }
-        }
-        typeBits >>= 1;
-    }
 
-    return false;
+	for (u32 m=0; m<num_memPropList; m++)
+	{
+		const VkMemoryPropertyFlags memFlags = memPropertiesList[m];
+		// char debug_s1[256];
+		// gos::vulkanMemoryPropertyFlagsToString (memFlags, debug_s1, sizeof(debug_s1));
+
+		for (u32 i = 0; i < phyDevInfo.vkMemoryProperties.memoryTypeCount; i++)
+		{
+			const u32 typeMask = (0x00000001 << i);
+			if (0 != (typeBits & typeMask)) //questo vuol dire che la risorsa che voglio allocare puo' essere allocata nel "memory type i-esimo"
+			{
+				//posto che il memory-type i-esimo sia un memory type valido per questa risorsa, allora voglio che abbia anche
+				//almeno tutte le "properties" che ho richiesto
+				const VkMemoryPropertyFlags mask = phyDevInfo.vkMemoryProperties.memoryTypes[i].propertyFlags;
+
+				// char debug_s2[256];
+				// gos::vulkanMemoryPropertyFlagsToString (mask, debug_s2, sizeof(debug_s2));
+
+				if ( (mask & memFlags) == memFlags)
+				{
+					//mi assicuro che abbia esattamente la combinazione di 
+					//  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+					//  richieste
+					bool ok = true;
+					if (0 == (memFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) && 0 != (mask & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) )	ok=false;
+					if (0 == (memFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && 0 != (mask & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) )	ok=false;
+					if (0 == (memFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) && 0 != (mask & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) )	ok=false;
+					if (0 == (memFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && 0 != (mask & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) )	ok=false;
+
+
+					if (ok)
+					{
+						*out_index = i;
+						
+						if (NULL != out_canBeNULL_memFlagUsed)
+							*out_canBeNULL_memFlagUsed = memFlags;
+						return true;
+					}
+				}
+			}
+		}
+	}
+
+
+	char s[512];
+	memset (s, 0, sizeof(s));
+	sprintf_s (s, sizeof(s), "VulkanDevice::priv_getMemoryType() => can't get a proper memory type for:\n");
+
+	char s2[256];
+	for (u32 i=0; i<num_memPropList; i++)
+	{
+		const VkMemoryPropertyFlags memFlags = memPropertiesList[i];
+
+		gos::vulkanMemoryPropertyFlagsToString (memFlags, s2, sizeof(s2));
+		strcat_s (s, sizeof(s), "    ");
+		strcat_s (s, sizeof(s), s2);
+		strcat_s (s, sizeof(s), "\n");
+	}
+	gos::logger::log (s);
+	return false;
 }
 
 //*******************************************
@@ -675,11 +720,12 @@ void VulkanDevice::memory_flushRanges (u32 numRanges, const VkMappedMemoryRange 
 }
 
 //*********************************************
-bool VulkanDevice::image_create2D (u32 dimx, u32 dimy, u8 nMipMap, VkFormat fmt, eMemAccessMode memAccessMode, VkImageUsageFlags usage, VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte)
+bool VulkanDevice::image_create2D (u32 dimx, u32 dimy, u8 nMipMap, VkFormat fmt, eMemAccessMode memAccessMode, VkImageUsageFlags usage, VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte, VkMemoryPropertyFlags *out_memFlagUsed)
 {
     assert (NULL != out_imagehandle);
     assert (NULL != out_vkMemHandle);
     assert (NULL != out_sizeInByte);
+	assert (NULL != out_memFlagUsed);
     assert (nMipMap >= 1);
     *out_imagehandle = VK_NULL_HANDLE;
     *out_vkMemHandle = VK_NULL_HANDLE;
@@ -687,7 +733,8 @@ bool VulkanDevice::image_create2D (u32 dimx, u32 dimy, u8 nMipMap, VkFormat fmt,
 
     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 
-    VkMemoryPropertyFlags vkMemProperties;
+    VkMemoryPropertyFlags vkMemPropertiesList[4];
+	u32 num_memPropList=0;
     switch (memAccessMode)
     {
     default:
@@ -696,22 +743,25 @@ bool VulkanDevice::image_create2D (u32 dimx, u32 dimy, u8 nMipMap, VkFormat fmt,
         break;
 
     case eMemAccessMode::onGPU:
-        vkMemProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        vkMemPropertiesList[num_memPropList++] = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         break;
 
-    case eMemAccessMode::shared_cpuW_autoSync:
-        vkMemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    case eMemAccessMode::shared_cpuW:
+        vkMemPropertiesList[num_memPropList++] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		vkMemPropertiesList[num_memPropList++] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         //prob qui ci vuole tiling = VK_IMAGE_TILING_LINEAR;
         break;
 
-    case eMemAccessMode::shared_cpuW_manualSync:
-        vkMemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        //prob qui ci vuole tiling = VK_IMAGE_TILING_LINEAR;
-        break;
-
-    case eMemAccessMode::readback:
-        vkMemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+    case eMemAccessMode::shared_cpuR:
+        vkMemPropertiesList[num_memPropList++] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+		vkMemPropertiesList[num_memPropList++] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         tiling = VK_IMAGE_TILING_LINEAR;
+        break;
+
+    case eMemAccessMode::shared_cpuRW:
+		vkMemPropertiesList[num_memPropList++] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        vkMemPropertiesList[num_memPropList++] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+		tiling = VK_IMAGE_TILING_LINEAR;
         break;
     }         
     
@@ -745,7 +795,11 @@ bool VulkanDevice::image_create2D (u32 dimx, u32 dimy, u8 nMipMap, VkFormat fmt,
     VkMemoryAllocateInfo memAllloc{};
 	memAllloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	memAllloc.allocationSize = memReqs.size;
-    priv_getMemoryType (memReqs.memoryTypeBits, vkMemProperties, &memAllloc.memoryTypeIndex);
+    if (!priv_getMemoryType (memReqs.memoryTypeBits, vkMemPropertiesList, num_memPropList, &memAllloc.memoryTypeIndex, out_memFlagUsed))
+	{
+		gos::logger::err ("VulkanDevice::image_create2D() => error finding a proper memory type, see previous msg for detail\n");
+        return false;
+	}
 
     if (!priv_allocMemory (&memAllloc, out_vkMemHandle, "image_create2D"))
     {
@@ -800,13 +854,14 @@ void VulkanDevice::imageView_delete (VkImageView vkHandle)
 }
 
 //*********************************************
-bool VulkanDevice::buffer_create (u32 sizeInByte, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties,
+bool VulkanDevice::buffer_create (u32 sizeInByte, VkBufferUsageFlags usage, const VkMemoryPropertyFlags *memPropertiesList, u32 num_memPropList,
                                 bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ,
-                                VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle, u32*out_realMemAllocated)
+                                VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle, u32*out_realMemAllocated, VkMemoryPropertyFlags *out_memFlagUsed)
 {
     assert (NULL != out_vkBufferHandle);
     assert (NULL != out_vkMemHandle);
     assert (NULL != out_realMemAllocated);
+	assert (NULL != out_memFlagUsed);
     *out_vkBufferHandle = VK_NULL_HANDLE;
     *out_vkMemHandle = VK_NULL_HANDLE;
 
@@ -870,17 +925,22 @@ bool VulkanDevice::buffer_create (u32 sizeInByte, VkBufferUsageFlags usage, VkMe
     vkGetBufferMemoryRequirements (vkDev, *out_vkBufferHandle, &memReqs);
     *out_realMemAllocated = static_cast<u32>(memReqs.size);
 
-    VkMemoryAllocateInfo memAllloc{};
+	VkMemoryAllocateInfo memAllloc{};
 	memAllloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	memAllloc.allocationSize = memReqs.size;
-    priv_getMemoryType (memReqs.memoryTypeBits, memProperties, &memAllloc.memoryTypeIndex);
+	if (!priv_getMemoryType (memReqs.memoryTypeBits, memPropertiesList, num_memPropList, &memAllloc.memoryTypeIndex, out_memFlagUsed))
+	{
+		gos::logger::err ("VulkanDevice::buffer_create() => error finding a proper memory type, see previous msg for detail\n");
+		return false;
+	}
+	
+	if (!priv_allocMemory (&memAllloc, out_vkMemHandle, "buffer_create"))
+	{
+		gos::logger::err ("VulkanDevice::buffer_create() => error allocating memory\n");
+		return false;
+	}
 
-    if (!priv_allocMemory (&memAllloc, out_vkMemHandle, "buffer_create"))
-    {
-        gos::logger::err ("VulkanDevice::buffer_create() => error allocating memory\n");
-        return false;
-    }
-
+			
     //bindo il buffer alla memoria allocata
     result = vkBindBufferMemory (vkDev, *out_vkBufferHandle, *out_vkMemHandle, 0);
     if (VK_SUCCESS != result)

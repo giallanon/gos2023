@@ -4,14 +4,11 @@
 using namespace gos;
 
 //******************************** 
-void test (gos::GPU *gpu, const char *subfolder)
+void test (gos::GPU *gpu, const char *baseFolder)
 {
     gos::asset2::Builder b(gpu);
 
     bool ret;
-    char baseFolder[1024];
-    sprintf_s (baseFolder, sizeof(baseFolder), "%s/%s", gos::getPhysicalPathToWritableFolder(), subfolder);
-    
 	ret = b.rebuild_all(baseFolder, true); b.save_dependencies_report (baseFolder); b.save_asset_manifest (baseFolder); return;
     
     ret = b.build(baseFolder, true); 
@@ -55,9 +52,8 @@ int main (int argc, char *argv[])
 	}
 
 #ifdef _DEBUG
-	//test (&gpu, "test1");
-	//test (&gpu, "test2");
-	test_monitor(&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/testEngine/writable/assets/");
+	test (&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/testEngine/writable/assets/");
+	//test_monitor(&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/testEngine/writable/assets/");
 #else
 	//for (u8 i=0; i<argc; i++)	printf ("arg %d: %s\n", i, argv[i]);
 

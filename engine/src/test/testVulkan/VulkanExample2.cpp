@@ -41,7 +41,7 @@ bool VulkanExample2::virtual_onInit ()
 
 
     //vertex buffer
-    if (!gpu->vertexBuffer_create (sizeof(Vertex) * NUM_VERTEX, eMemAccessMode::shared_cpuW_autoSync, &vtxBufferHandle))
+    if (!gpu->vertexBuffer_create (sizeof(Vertex) * NUM_VERTEX, eMemAccessMode::shared_cpuW, &vtxBufferHandle))
     {
         gos::logger::err ("VulkanApp::virtual_onInit() => gpu->vertexBuffer_create() failed\n");
         return false;
@@ -102,7 +102,11 @@ void VulkanExample2::moveVertex()
 
     //copio i vtx modificati nella zona mappata del vtxBuffer
     const u32 sizeInByte = sizeof(Vertex) * NUM_VERTEX;
-    gpu->writeAndSync (vtxBufferHandle, 0, vertexList, sizeInByte);
+    //gpu->writeAndSync (vtxBufferHandle, 0, vertexList, sizeInByte);
+	gpu::MappedBufW mm;
+		gpu->begin_write (vtxBufferHandle, &mm);
+		mm.write (vertexList, sizeInByte, 0);
+		mm.end();
 }
 
 //************************************

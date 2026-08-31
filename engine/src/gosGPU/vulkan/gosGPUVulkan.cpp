@@ -387,7 +387,7 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
         gos::logger::inc_indent();
         for (u32 i = 0; i < info->memoryHeapCount; i++)
         {
-            char temp[64];
+            char temp[256];
             gos::string::format::memoryToKB_MB_GB (info->memoryHeaps[i].size, temp, sizeof(temp));
             //gos::string::format::U64(info->memoryHeaps[i].size, '.', temp, sizeof(temp));
             gos::logger::log_3 ("index:%d\n  size= %s, flags=0x%08X", i, temp, info->memoryHeaps[i].flags);
@@ -405,28 +405,30 @@ bool gos::vulkanScanAndSelectAPhysicalDevices (const VkInstance &vkInstance, con
                     if (prevPropFlag != info->memoryTypes[i2].propertyFlags)
                     {
                         prevPropFlag = info->memoryTypes[i2].propertyFlags;
-                        gos::logger::log_3 ("    0x%08X", info->memoryTypes[i2].propertyFlags);
+						vulkanMemoryPropertyFlagsToString (info->memoryTypes[i2].propertyFlags, temp, sizeof(temp));
+						gos::logger::log_3 ("    %s\n", temp);
+                        // gos::logger::log_3 ("    0x%08X", info->memoryTypes[i2].propertyFlags);
             
-                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0)
-                            gos::logger::log_3 (", DEVICE_LOCAL");
-                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT ) != 0)
-                            gos::logger::log_3 (", HOST_VISIBLE");
-                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ) != 0)
-                            gos::logger::log_3 (", HOST_COHERENT");
-                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT ) != 0)
-                            gos::logger::log_3 (", HOST_CACHED");
-                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT ) != 0)
-                            gos::logger::log_3 (", LAZILY_ALLOCATED");
-                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_PROTECTED_BIT  ) != 0)
-                            gos::logger::log_3 (", PROTECTED");
-                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD  ) != 0)
-                            gos::logger::log_3 (", DEVICE_COHERENT_BIT_AMD");
-                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD  ) != 0)
-                            gos::logger::log_3 (", DEVICE_UNCACHED_BIT_AMD");
-                        if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_RDMA_CAPABLE_BIT_NV  ) != 0)
-                            gos::logger::log_3 (", RDMA_CAPABLE");
+                        // if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0)
+                        //     gos::logger::log_3 (", DEVICE_LOCAL");
+                        // if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT ) != 0)
+                        //     gos::logger::log_3 (", HOST_VISIBLE");
+                        // if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ) != 0)
+                        //     gos::logger::log_3 (", HOST_COHERENT");
+                        // if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT ) != 0)
+                        //     gos::logger::log_3 (", HOST_CACHED");
+                        // if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT ) != 0)
+                        //     gos::logger::log_3 (", LAZILY_ALLOCATED");
+                        // if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_PROTECTED_BIT  ) != 0)
+                        //     gos::logger::log_3 (", PROTECTED");
+                        // if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD  ) != 0)
+                        //     gos::logger::log_3 (", DEVICE_COHERENT_BIT_AMD");
+                        // if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD  ) != 0)
+                        //     gos::logger::log_3 (", DEVICE_UNCACHED_BIT_AMD");
+                        // if ((info->memoryTypes[i2].propertyFlags & VK_MEMORY_PROPERTY_RDMA_CAPABLE_BIT_NV  ) != 0)
+                        //     gos::logger::log_3 (", RDMA_CAPABLE");
             
-                        gos::logger::log_3 ("\n");
+                        // gos::logger::log_3 ("\n");
                     }
                 }
             }            

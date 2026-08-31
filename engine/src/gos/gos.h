@@ -199,7 +199,8 @@ namespace gos
 
 		inline bool		fileOpenForR (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE)							{ return fs::fileOpen (out_h, utf8_filePathAndNameRESOLVABLE, eFileMode::readOnly, false, false, true, true); }
 		bool			fileOpenForW (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders=false);
-		bool			fileOpenForAppend (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders=false);
+		bool			fileOpenForWriteAppend (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders=false);
+		bool			fileOpenForRW  (gos::File *out_h, const char *utf8_filePathAndNameRESOLVABLE, bool bAutoCreateFolders=false);
 		
 		inline u32		fileRead (gos::File &h, void *buffer, u32 numMaxBytesToRead)										{ return platform::FS_fileRead(h.osFile, buffer, numMaxBytesToRead); }
 		inline u32		fileReadU8 (gos::File &h, u8 *out)																	{ return fileRead (h, out, 1); }
@@ -220,7 +221,7 @@ namespace gos
 
 		inline u64		fileLength (gos::File &h)																			{ return platform::FS_fileLength(h.osFile); }
 		u64				fileLength (const char *utf8_filePathAndNameRESOLVABLE);
-	    inline void		fileSeek(gos::File &h, u64 position, eSeek seekMode)												{ platform::FS_fileSeek(h.osFile, position, seekMode); }
+	    inline bool		fileSeek(gos::File &h, u64 position, eSeek seekMode)												{ return platform::FS_fileSeek(h.osFile, position, seekMode); }
     	inline u64		fileTell(gos::File &h) 																				{ return platform::FS_fileTell(h.osFile); }
 
 		u8*				fileLoadInMemory (Allocator *allocator, const char* utf8_filePathAndNameRESOLVABLE, u32 *out_fileSize=NULL);

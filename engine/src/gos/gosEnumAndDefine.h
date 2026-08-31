@@ -114,7 +114,7 @@ template<typename UINT_TYPE>
 #ifdef _DEBUG
 	#define GOS_DEBUG_ASSERT(whatever)	assert(whatever)
 #else
-	#define GOS_DEBUG_ASSERT(x)	whatever
+	#define GOS_DEBUG_ASSERT(whatever)	whatever
 #endif
 
 //================================================================

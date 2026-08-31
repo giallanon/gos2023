@@ -104,14 +104,6 @@ namespace gos
 			u8              offset;
 		};
 
-		struct sMappedBuffer
-		{
-            void            *host_pt;
-			VkDeviceMemory  _vkMemHandle;
-            u64             size;
-            u32             offset;
-		};
-
 		struct sMappedImage
 		{
             void            *host_image_pt; //questo punta direttamente al buffer con l'immagine

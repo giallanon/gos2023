@@ -7,7 +7,10 @@ using namespace gos;
 App::App()
 {
 	query_cam = NULL;
+	ccList.setup (gos::getScrapAllocator(), 1024);
 	enable_asset_monitor();
+
+	ctrl_entity.set_zoom_limits (0.1f, 100000.0f);
 }
 
 //***************************************
@@ -29,26 +32,27 @@ void App::on__setup ()
 	material_list.add (MATERIAL_ID__SNOW, 0x00f0f4f7);
 
 
-	// land::Map::CreateData data;
-	// land::Map::create ("@w/assets/asset_src/heightmap/map2_1", data);
-	// map.load ("@w/assets/asset_src/heightmap/map2_1");
+	// land::Map::CreateData create_4096;
+	// land::Map::create ("@w/assets/asset_src/heightmap/ms_4096", create_4096);
+	// map.open ("@w/assets/asset_src/heightmap/ms_4096");
 
-	land::Map::create_from_hmap ("@w/assets/asset_src/heightmap/anorway_30m.png", 0.06f);
-	map.load ("@w/assets/asset_src//heightmap/anorway_30m");
+	land::Map::CreateData create_1024;
+	create_1024.default_map__border_size__point = 1024;
+	create_1024.default_height__m = 10;
+	land::Map::create ("@w/assets/asset_src/heightmap/ms_1024", create_1024);
+	map.open ("@w/assets/asset_src/heightmap/ms_1024");
 	
-	// land::Map::create_from_hmap ("@w/assets/asset_src/heightmap/radial.png", 0.15f);
-	// map.load ("@w/assets/asset_src//heightmap/radial");
 	
-
-
+//	land::Map::create_from_hmap ("@w/assets/asset_src/heightmap/anorway_30m.png", 0.06f);
+	
+	
 	renderer_PIPE3 = engine->renderPipe.add_renderer<engine::Renderer_PIPE3>();
 	renderer_land = engine->renderPipe.add_renderer<land::Renderer>();
 	renderer_line3d = engine->renderPipe.add_renderer<engine::Renderer_line3d>();
 		line_ctx1 = renderer_line3d->ctx__create_new("ctx1", 1024);
 		line_ctx2 = renderer_line3d->ctx__create_new("ctx2", 32);
 
-	renderer_land->map__bind (&map);
-	renderer_land->materialList__bind (&material_list);
+	renderer_land->bind_map (&map);
 	
 	gos::ENGModel3d		handle_model_cubo1x1x1;
 	engine->model_createFromAsset ("model_cubo1x1x1", &handle_model_cubo1x1x1, res::eLoadMode::asap);
@@ -76,7 +80,7 @@ void App::on__setup ()
 	//camera 1 per il movimento dell'entity
 	navigation__create_mode(NAV_MODE__ENTITY);
 	{
-		cam = camera__create (1, math::gradToRad(45), 0.1f, land::LAND__VIEW_DISTANCE_m);
+		cam = camera__create (1, math::gradToRad(45), 0.1f, 100000.0f); //land::LAND__VIEW_DISTANCE_m);
 	}
 
 	//camera 1 per il movimento dell'entity ma con camera di default
@@ -91,10 +95,9 @@ void App::on__setup ()
 void App::on__render()
 {
 	//addo dei chunk
-	FastArray<land::ChunkCoord> chunk_list(gos::getScrapAllocator(), 32);
-	map.calc_visible_chunk (query_cam, &chunk_list);
+	map.qtree__calc_visibility (query_cam, &ccList);
 	renderer_land->begin();
-	renderer_land->add (chunk_list);
+	renderer_land->add (ccList);
 	renderer_land->end();
 	
 	
@@ -138,6 +141,49 @@ void App::on__render()
 //***************************************
 void App::on__handle_input (const Engine::InputEvent &ev)
 {
+	switch (ev.actionID)
+	{
+	default:
+		break;
+
+	case COMPILE_TIME_STR_CRC32("speed++"):
+		switch (navigation__get_mode())
+		{
+		default:
+			break;
+
+		case 0:
+			ctrl_default_cam.multiply_linear_speed (1.1f);
+			logger::log ("CAM SPEED++ = %.2f m/s\n", ctrl_default_cam.get_linear_speed__m_sec());
+			break;
+
+		case NAV_MODE__ENTITY:
+		case NAV_MODE__ENTITY_FIXED_CAM:
+			ctrl_entity.multiply_linear_speed (1.1f);
+			logger::log ("CAM SPEED++ = %.2f m/s\n", ctrl_entity.get_linear_speed__m_sec());
+			break;
+		}
+		break;
+
+	case COMPILE_TIME_STR_CRC32("speed--"):
+		switch (navigation__get_mode())
+		{
+		default:
+			break;
+
+		case 0:
+			ctrl_default_cam.multiply_linear_speed (0.9f);
+			logger::log ("CAM SPEED-- = %.2f m/s\n", ctrl_default_cam.get_linear_speed__m_sec());
+			break;
+
+		case NAV_MODE__ENTITY:
+		case NAV_MODE__ENTITY_FIXED_CAM:
+			ctrl_entity.multiply_linear_speed (0.9f);
+			logger::log ("CAM SPEED-- = %.2f m/s\n", ctrl_entity.get_linear_speed__m_sec());
+			break;
+		}
+		break;		
+	}
 }
 
 //***************************************
