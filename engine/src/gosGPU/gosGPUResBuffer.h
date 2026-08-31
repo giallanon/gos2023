@@ -26,6 +26,7 @@ namespace gos
                             {
                                 vkHandle = VK_NULL_HANDLE;
                                 _vkMemHandle = VK_NULL_HANDLE;
+								memFlags = 0;
                                 mapped_host_pt = NULL;
                                 mapped_offset = 0;
                                 mapped_size = 0;
@@ -36,15 +37,16 @@ namespace gos
 
 
         public:
-            VkBuffer        vkHandle;
-            VkDeviceMemory  _vkMemHandle;
-            eMemAccessMode   mode;
-            u32             memoryAllocated;
+            VkBuffer        		vkHandle;
+            VkDeviceMemory  		_vkMemHandle;
+			VkMemoryPropertyFlags	memFlags;
+            eMemAccessMode   		mode;
+            u32             		memoryAllocated;
 
             u32             bufferSize;
             u32             mapped_offset;
             u32             mapped_size;
-            u8              *mapped_host_pt;    //se HOST_VISIBLE | HOST_COHERENT, questo pt punta alla zona di memoria in CPU. Viene gestito in automatico da map()/unmap()
+            u8              *mapped_host_pt;
 
         };
 

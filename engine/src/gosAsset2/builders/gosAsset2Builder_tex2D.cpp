@@ -1,4 +1,3 @@
-#include "gos.h"
 #include "../gos/gosString.h"
 #include "../gosAsset2Builder.h"
 #include "gosAsset2Builder_tex2D.h"
@@ -376,7 +375,7 @@ bool Builder_tex2D::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_a
             break;
         }
 
-        if (!gpu->renderTarget_create (rt_width, rt_height, eImageFormat::U8_RGBA, eMemAccessMode::readback, &rtReadback))
+        if (!gpu->renderTarget_create (rt_width, rt_height, eImageFormat::U8_RGBA, eMemAccessMode::shared_cpuR, &rtReadback))
         {
             logger->log (eTextColor::red, "gpu->renderTarget_create(rtReadback) => failed\n");
             result = false; 

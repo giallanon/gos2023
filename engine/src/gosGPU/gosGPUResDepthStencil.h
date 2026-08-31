@@ -25,7 +25,8 @@ namespace gos
                                 memoryAllocated = 0;
                                 depthFormat = VK_FORMAT_UNDEFINED;
                                 image = VK_NULL_HANDLE;
-                                vkMemHandle = VK_NULL_HANDLE;
+                                _vkMemHandle = VK_NULL_HANDLE;
+								memFlags = 0;
                                 view = VK_NULL_HANDLE;
                             }
 
@@ -46,7 +47,9 @@ namespace gos
             bool            bHasStencil;
             VkFormat        depthFormat;
             VkImage         image;
-            VkDeviceMemory  vkMemHandle;
+            VkDeviceMemory      _vkMemHandle;
+			VkMemoryPropertyFlags	memFlags;
+
             VkImageView     view;
         };
 

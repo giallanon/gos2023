@@ -13,6 +13,8 @@ namespace gos
         class VtxDecl; //fwd decl
     }
 
+	void	vulkanMemoryPropertyFlagsToString (const VkMemoryPropertyFlags flags, char *out_s, u32 sizeof_s);
+
     /*************************************************************
      * VulkanList
      * 

@@ -83,7 +83,7 @@ namespace gos
         void                    shader_delete (VkShaderModule vkHandle);
 
         //============================= images
-        bool                    image_create2D (u32 dimx, u32 dimy, u8 numMipMap, VkFormat fmt, eMemAccessMode memAccessMode, VkImageUsageFlags usage, VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte);
+        bool                    image_create2D (u32 dimx, u32 dimy, u8 numMipMap, VkFormat fmt, eMemAccessMode memAccessMode, VkImageUsageFlags usage, VkImage *out_imagehandle, VkDeviceMemory *out_vkMemHandle, u32 *out_sizeInByte, VkMemoryPropertyFlags *out_memFlagUsed);
         void                    image_delete (VkImage vkHandle, VkDeviceMemory vkMemHandle, u32 memoryAllocated);
         void                    image_getSubresourceLayout (VkImage image, const VkImageSubresource *pSubresource, VkSubresourceLayout *pLayout) const;
 
@@ -92,9 +92,10 @@ namespace gos
         void                    imageView_delete (VkImageView vkHandle);
 
         //=============================  buffer
-        bool                    buffer_create (u32 sizeInByte, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties,
+        bool                    buffer_create (u32 sizeInByte, VkBufferUsageFlags usage, 
+												const VkMemoryPropertyFlags *memPropertiesList, u32 num_memPropList,
                                                 bool bCanBeUsedBy_gfxQ, bool bCanBeUsedBy_computeQ, bool bCanBeUsedBy_transferQ,
-                                                VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle, u32 *out_realMemAllocated);
+                                                VkBuffer *out_vkBufferHandle, VkDeviceMemory *out_vkMemHandle, u32 *out_realMemAllocated, VkMemoryPropertyFlags *out_memFlagUsed);
         void                    buffer_delete (VkBuffer vkBufferHandle, VkDeviceMemory vkMemHandle, u32 realMemAllocated);
 
         //=============================  descriptor
@@ -126,7 +127,7 @@ namespace gos
         void                priv_reset();
         u8                  priv_from_family_to_index (eGPUQueueFamily type) const          { return map_qfamily_to_q[static_cast<u8>(type)]; }
         void                priv_addNativeQFamily (eGPUQueueFamily familyType, u32 familyIndex);
-        bool                priv_getMemoryType (uint32_t typeBits, VkMemoryPropertyFlags properties, u32 *out_index);
+        bool                priv_getMemoryType (uint32_t typeBits, const VkMemoryPropertyFlags *memPropertiesList, u32 num_memPropList, u32 *out_index, VkMemoryPropertyFlags *out_canBeNULL_memFlagUsed);
         bool                priv_allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory, const char *debug_from_who);
 		bool                priv__do_allocMemory (const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory, const char *debug_from_who);
         void                priv_freeMemory (VkDeviceMemory memory, u64 memSize);

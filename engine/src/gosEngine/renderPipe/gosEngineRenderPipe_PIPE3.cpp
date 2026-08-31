@@ -29,7 +29,6 @@ void Renderer_PIPE3::priv_unsetup()
 
 	engine->release (handle_pipeline);
 
-    gpu->buffer_unmap (matrix_buffer);
     GOSFREE(localAllocator, material_buffer);
     GOSFREE(localAllocator, pRenderableList);
     material_bitmask.unsetup (localAllocator);
@@ -63,8 +62,9 @@ bool Renderer_PIPE3::on__attach (const RPIPE::Context &ctx, u8 renderer_UID_IN)
     //SBO matrici
     matrix_sizeof_buffer = NUM_MAX_MATRIX * sizeof(mat4x4f);
     matrix_default.identity();
-    gpu->storageBuffer_create (matrix_sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &handle_sbo_matrixList);
-    gpu->map (handle_sbo_matrixList, 0, u32MAX, &matrix_buffer);
+    gpu->storageBuffer_create (matrix_sizeof_buffer, eMemAccessMode::shared_cpuW, &handle_sbo_matrixList);
+    //gpu->map (handle_sbo_matrixList, 0, u32MAX, &matrix_buffer);
+	
 
     //SBO materialList
     material_sizeof_buffer = NUM_MAX_MATERIAL * sizeof(Material);
@@ -74,13 +74,13 @@ bool Renderer_PIPE3::on__attach (const RPIPE::Context &ctx, u8 renderer_UID_IN)
     material_wasUpdated = 1;
     material_default.texture_index = 0;
     material_default.diffuse_col.set (1.0f, 0.1f, 1.0f);
-    gpu->storageBuffer_create (material_sizeof_buffer, eMemAccessMode::shared_cpuW_autoSync, &handle_sbo_materiaList);
+    gpu->storageBuffer_create (material_sizeof_buffer, eMemAccessMode::shared_cpuW, &handle_sbo_materiaList);
 
     ///SBO instance data
     //instance_sizeof_buffer = NUM_MAX_MATRIX * sizeof(InstanceData);
     instance_sizeof_buffer = NUM_MAX_MATRIX * sizeof(u64);
-    gpu->storageBuffer_create (instance_sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &handle_sbo_instanceData);
-    gpu->map (handle_sbo_instanceData, 0, u32MAX, &instance_buffer);
+    gpu->storageBuffer_create (instance_sizeof_buffer, eMemAccessMode::shared_cpuW, &handle_sbo_instanceData);
+    //gpu->map (handle_sbo_instanceData, 0, u32MAX, &instance_buffer);
     pRenderableList = GOSALLOCT(u64*, localAllocator, sizeof(u64) * NUM_MAX_MATRIX);
 
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
@@ -198,6 +198,7 @@ void Renderer_PIPE3::begin ()
 {
     matrix_nextIndex = 0;
     nRenderable = 0;
+	gpu->begin_write (handle_sbo_matrixList, &mapped_matrix_buffer);
 }
 
 //**********************************
@@ -229,10 +230,10 @@ void Renderer_PIPE3::add (const ENGGPUShape handle_shape, const mat4x4f &m, u32 
         return;
     const u32 matrix_index = matrix_nextIndex++;
 
-    u8 *p = reinterpret_cast<u8*>(matrix_buffer.host_pt);
-    memcpy (&p[sizeof(mat4x4f) * matrix_index], m._getValuesPtConst(), sizeof(mat4x4f));
+    //u8 *p = reinterpret_cast<u8*>(matrix_buffer.host_pt);
+    //memcpy (&p[sizeof(mat4x4f) * matrix_index], m._getValuesPtConst(), sizeof(mat4x4f));
+	mapped_matrix_buffer.write (m._getValuesPtConst(), sizeof(mat4x4f), sizeof(mat4x4f) * matrix_index);
 
-    //u64 *pRenderableList = static_cast<u64*>(instance_buffer.host_pt);
     pRenderableList[nRenderable++] = priv_pack_renderable (handle_shape, material_index, matrix_index);
 }
 
@@ -274,6 +275,40 @@ void Renderer_PIPE3::add (gos::ENGModel3dInst handle_mi)
 //**********************************
 void Renderer_PIPE3::end ()
 {
+	mapped_matrix_buffer.end();
+
+    //devo aggiornare SBO dei materiali?
+    if (material_wasUpdated)
+    {
+        material_wasUpdated = 0;
+
+        //TODO: non c'e' bisogno di uppare l'intero material_buffer tutte le volte, idealmente basta uppare solo
+        //gli elementi che sono stati modificati
+		//gpu->writeAndSync (handle_sbo_materiaList, 0, material_buffer, material_sizeof_buffer);
+		gpu::MappedBufW mm;
+		gpu->begin_write (handle_sbo_materiaList, &mm);
+			mm.write (material_buffer, material_sizeof_buffer, 0);
+			mm.end();
+        
+    }
+
+
+    //sort dei renderabili
+	if (nRenderable)
+	{
+    	std::sort (pRenderableList, &pRenderableList[nRenderable]);
+
+    	//memcpio nel SSBO
+    	//memcpy (instance_buffer.host_pt, pRenderableList, sizeof(u64) *nRenderable);
+    	//gpu->buffer_manualSync_cpuWrite (instance_buffer, 0, u32MAX);
+
+		gpu::MappedBufW mm;
+		gpu->begin_write (handle_sbo_instanceData, &mm);
+			mm.write (pRenderableList, sizeof(u64) *nRenderable, 0);
+			mm.end();
+	}
+
+	
 }
 
 //**********************************
@@ -289,33 +324,6 @@ void Renderer_PIPE3::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &
     {
         return;
     }
-
-    //devo aggiornare SBO dei materiali?
-    if (material_wasUpdated)
-    {
-        material_wasUpdated = 0;
-
-        //TODO: non c'e' bisogno di uppare l'intero material_buffer tutte le volte, idealmente basta uppare solo
-        //gli elementi che sono stati modificati
-        gpu->writeAndSync (handle_sbo_materiaList, 0, material_buffer, material_sizeof_buffer);
-    }
-
-    //devo aggiornare SBO delle matrici
-    if (matrix_nextIndex)
-    {
-        gpu->buffer_manualSync_cpuWrite (matrix_buffer, 0, sizeof(mat4x4f) * matrix_nextIndex);
-    }    
-
-    
-
-    //sort
-    std::sort (pRenderableList, &pRenderableList[nRenderable]);
-
-    //memcpio nel SSBO
-    memcpy (instance_buffer.host_pt, pRenderableList, sizeof(u64) *nRenderable);
-    gpu->buffer_manualSync_cpuWrite (instance_buffer, 0, u32MAX);
-
-
 
 
     //command

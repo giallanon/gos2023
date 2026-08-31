@@ -11,16 +11,29 @@ Renderer::Renderer()
 	localAllocator = gos::getSysHeapAllocator();
 	eng = NULL;
 	gpu = NULL;
-	num_block_to_render = 0;
+	num_instance_to_render = 0;
 	map = NULL;
+	pointData = NULL;
+	sizeof_pointData = 0;
+	
+	for (u32 i=0; i<NUM_CHUNK_DATA_ELEM_BUFFER; i++)
+		chunk_data_elem_buffer[i] = NULL;
+	num_vtx_per_lato = 0;
 }
 
 //********************************
 void Renderer::on__detach (const gos::engine::RenderPipe::Context &ctx)
 {
-	gpu->buffer_unmap (sbo_instance_data.mapped_buffer);
-	gpu->deleteResource(sbo_instance_data.handle_sbo);
+	if (NULL != pointData)	GOSFREE_AND_NULL(localAllocator, pointData);
+	
+	for (u32 i=0; i<NUM_CHUNK_DATA_ELEM_BUFFER; i++)
+	{
+		if (NULL != chunk_data_elem_buffer[i])
+			GOSFREE_AND_NULL(localAllocator, chunk_data_elem_buffer[i]);
+	}
 
+	gpu->deleteResource(sbo_instance_data.handle_sbo);
+	gpu->deleteResource(sbo_chunk_data.handle_sbo);
 	gpu->deleteResource(handle_descrSet2);
 	gpu->deleteResource(handle_vb);
 	gpu->deleteResource(handle_ib);
@@ -45,39 +58,24 @@ bool Renderer::on__attach (const gos::engine::RenderPipe::Context &ctx, u8 rende
 	//load texture LOD
 	eng->texture2D_createFromAsset ("tex_lod", &handle_texture_lod, res::eLoadMode::asap);
 
-	priv__create_block_geometry(NUM_VTX_PER_LATO);
-
 	//SBO instance data
 	assert (sbo_instance_data.handle_sbo.isInvalid());
 	{
-    	sbo_instance_data.sizeof_buffer = NUM_MAX_CHUNK * sizeof(SBO_instance_data::Elem);
-	    gpu->storageBuffer_create (sbo_instance_data.sizeof_buffer, eMemAccessMode::shared_cpuW_manualSync, &sbo_instance_data.handle_sbo);
-    	gpu->map (sbo_instance_data.handle_sbo, 0, u32MAX, &sbo_instance_data.mapped_buffer);
-	}	
-
-
+    	const u32 size = NUM_MAX_CHUNK_INSTANCE * sizeof(SBO_instance_data::Elem);
+	    gpu->storageBuffer_create (size, eMemAccessMode::shared_cpuW, &sbo_instance_data.handle_sbo);
+	}
 
 	//mi serve che la pipe sia loaded
     const res::Pipeline *res_pipeline;
-    if (eng->get (handle_pipeline, &res_pipeline, 5000))
+    GOS_DEBUG_ASSERT( eng->get (handle_pipeline, &res_pipeline, 5000) );
     {
 		//creo i descriptor set
-		gos::gpu::DescrSetInstanceWriter dsw;
-
+		
 		//descriptor set 2        
 		if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->pipeHandle, 2, &handle_descrSet2))
 		{
 			gos::logger::err ("Renderer::setup() => can't create an instance of descriptorSet_2\n");
 			return false;
-		}
-		else
-		{
-			dsw.begin (gpu, handle_descrSet2)
-				.bindStorageBuffer (0, sbo_instance_data.handle_sbo)
-				//.bindStorageBuffer (1, sbo_chunk_data.handle_sbo)
-				//.bindStorageBuffer (2, sbo_material_data.handle_sbo)
-				//.bindStorageBuffer (3, sbo_meshInstanceData.handle_sbo)
-				.end();
 		}
 	}	
 	return true;
@@ -87,6 +85,34 @@ bool Renderer::on__attach (const gos::engine::RenderPipe::Context &ctx, u8 rende
 void Renderer::bind_map (land::Map *mapIN)
 {
 	map = mapIN;
+	num_vtx_per_lato = map->qtree__get_num_vtx_per_chunk_side();
+	priv__create_block_geometry (num_vtx_per_lato);
+
+	sizeof_pointData = sizeof(land::PointData) * num_vtx_per_lato * num_vtx_per_lato;
+	pointData = GOSALLOCT(land::PointData*, localAllocator, sizeof_pointData);
+	
+	const u32 sizeof_chunkData = sizeof(SBO_chunk_data::Elem) * num_vtx_per_lato * num_vtx_per_lato;
+	for (u32 i=0; i<NUM_CHUNK_DATA_ELEM_BUFFER; i++)
+	{
+		chunk_data_elem_buffer[i] = GOSALLOCT(SBO_chunk_data::Elem*, localAllocator, sizeof_chunkData);
+	}
+	cached_chunk_data_list.setup (localAllocator, NUM_MAX_CHUNK_INSTANCE, sizeof_chunkData);
+
+	//SBO chunk data
+	assert (sbo_chunk_data.handle_sbo.isInvalid());
+	{
+    	const u32 size = NUM_MAX_CHUNK_INSTANCE * sizeof(SBO_chunk_data::Elem) * num_vtx_per_lato * num_vtx_per_lato;
+	    gpu->storageBuffer_create (size, eMemAccessMode::shared_cpuW, &sbo_chunk_data.handle_sbo);
+	}
+
+	gos::gpu::DescrSetInstanceWriter dsw;
+	dsw.begin (gpu, handle_descrSet2)
+		.bindStorageBuffer (0, sbo_instance_data.handle_sbo)
+		.bindStorageBuffer (1, sbo_chunk_data.handle_sbo)
+		//.bindStorageBuffer (2, sbo_material_data.handle_sbo)
+		//.bindStorageBuffer (3, sbo_meshInstanceData.handle_sbo)
+		.end();
+
 }
 
 //********************************
@@ -102,11 +128,12 @@ void Renderer::priv__create_block_geometry (u32 num_vtx_per_lato)
 		vec2f tutv;
 	};
 
+	this->num_tot_idx = (num_vtx_per_lato-1) * (num_vtx_per_lato-1) * 6;
+
 	gpu::StageHelper stageHelper;
 	const u32 NUM_TOT_VTX = num_vtx_per_lato * num_vtx_per_lato;
-	const u32 NUM_TOT_IDX = (num_vtx_per_lato-1) * (num_vtx_per_lato-1) * 6;
 	const u32 SIZEOF_VB = NUM_TOT_VTX * sizeof(Vertex);
-	const u32 SIZEOF_IB = NUM_TOT_IDX * sizeof(u16);
+	const u32 SIZEOF_IB = num_tot_idx * sizeof(u16);
 	stageHelper.setup (gpu, GOSMAX(SIZEOF_VB, SIZEOF_IB));
 
 	//creazione VB
@@ -164,7 +191,7 @@ void Renderer::priv__create_block_geometry (u32 num_vtx_per_lato)
 				v++;
 			}
 		}
-		assert (idx_num == NUM_TOT_IDX);
+		assert (idx_num == num_tot_idx);
 
 		stageHelper.begin()
 			.mem_to_buffer (ib, SIZEOF_IB, handle_ib, 0)
@@ -179,62 +206,136 @@ void Renderer::priv__create_block_geometry (u32 num_vtx_per_lato)
 void Renderer::begin()
 {
 	assert (NULL != map);
-	num_block_to_render = 0;
+	num_instance_to_render = 0;
+
+	gpu->begin_write (sbo_instance_data.handle_sbo, &sbo_instance_data.mapped);
+	gpu->begin_write (sbo_chunk_data.handle_sbo, &sbo_chunk_data.mapped);
 }
 
 //********************************
-void Renderer::add (const MapQTree *mapQTree, const land::ChunkCoordList &list)
+void Renderer::add (const land::QTreeCoordList &list)
 {
-	SBO_instance_data::Elem *pInstanceData = reinterpret_cast<SBO_instance_data::Elem*>( sbo_instance_data.mapped_buffer.host_pt );
+	u32 cached_offset = 0;
+
+	const u32 timenow_msec = (u32)gos::getTimeSinceStart_msec();
 	const u32 N = list.getNElem();
+	if (N > NUM_MAX_CHUNK_INSTANCE)
+	{
+		DBGBREAK;
+	}
+
+	u32 iChunkDataElemBuffer = 0;
+
 	for (u32 i=0; i<N; i++)
 	{
-		const land::ChunkCoord cc = list(i);
+		const land::QTreeCoord cc = list(i);
 
-		geom::AABB3 aabb;
-		mapQTree->aabb_from_chunkCoord (cc, &aabb);
+		// u32 cached_offset = 0;
+		// if (!cached_chunk_data_list.get_from_cache (timenow_msec, cc, &cached_offset))
+		// {
+		// 	//recupero i PointData di questo chunk
+		// 	if (map->map__get_data (cc, pointData, sizeof_pointData))
+		// 	{
+		// 		cached_offset = cached_chunk_data_list.get_a_slot (timenow_msec, cc);
 
-		const u8 lod = cc.get_lod();
-		const f32 scaleXZ = aabb.vmax.x - aabb.vmin.x;
-		const vec2f tutv_offset (0.25f *(f32)(lod % 4), 0.25f *(f32)(lod / 4));
+		// 		SBO_chunk_data::Elem *cdeb = chunk_data_elem_buffer[iChunkDataElemBuffer++];
+		// 		if (iChunkDataElemBuffer >= NUM_CHUNK_DATA_ELEM_BUFFER)
+		// 			iChunkDataElemBuffer = 0;
 
+		// 		//altezze, normali e via dicendo
+		// 		const u32 NN = num_vtx_per_lato * num_vtx_per_lato;
+		// 		for (u32 iPoint=0; iPoint<NN; iPoint++)
+		// 		{
+		// 			cdeb[iPoint].encoded_norm = pointData[iPoint].norm._encoded;
+		// 			cdeb[iPoint].height_and_stuff = pointData[iPoint].height._encoded;
+		// 			cdeb[iPoint].height_and_stuff |= (u32)pointData[iPoint].materialID << 16;
+		// 			cdeb[iPoint].height_and_stuff |= (u32)pointData[iPoint].ao << 24;
+		// 		}
+
+		// 		const u32 sizeNN = sizeof(SBO_chunk_data::Elem) * NN;
+		// 		sbo_chunk_data.mapped.write (cdeb, sizeNN, cached_offset);
+		// 	}
+		// }
+
+
+		//parametri per l'istanza
+		{
+			geom::AABB3 aabb;
+			map->qtree__aabb_from_coord (cc, &aabb);
+
+			const u8 lod = cc.get_lod();
+			const f32 scaleXZ = aabb.vmax.x - aabb.vmin.x;
+			const vec2f tutv_offset (0.25f *(f32)(lod % 4), 0.25f *(f32)(lod / 4));
+
+			SBO_instance_data::Elem elem;
+				elem.chunk_originXZ.set (aabb.vmin.x, aabb.vmax.z);
+				elem.scale_XZ = scaleXZ;
+				elem.tutv_offset = tutv_offset;
+				elem.chunk_data_offset = cached_offset;
+			
+			sbo_instance_data.mapped.writeT (elem, num_instance_to_render * sizeof(elem));
+		}
+
+		//recupero i PointData di questo chunk
+		GOS_DEBUG_ASSERT( map->map__get_data (cc, pointData, sizeof_pointData) );
+
+			SBO_chunk_data::Elem *cdeb = chunk_data_elem_buffer[iChunkDataElemBuffer++];
+			if (iChunkDataElemBuffer >= NUM_CHUNK_DATA_ELEM_BUFFER)
+				iChunkDataElemBuffer = 0;
+
+			//altezze, normali e via dicendo
+			const u32 NN = num_vtx_per_lato * num_vtx_per_lato;
+			for (u32 iPoint=0; iPoint<NN; iPoint++)
+			{
+				cdeb[iPoint].encoded_norm = pointData[iPoint].norm._encoded;
+				cdeb[iPoint].height_and_stuff = pointData[iPoint].height._encoded;
+				cdeb[iPoint].height_and_stuff |= (u32)pointData[iPoint].materialID << 16;
+				cdeb[iPoint].height_and_stuff |= (u32)pointData[iPoint].ao << 24;
+			}
+		 	const u32 sizeNN = sizeof(SBO_chunk_data::Elem) * NN;
+		 	sbo_chunk_data.mapped.write (cdeb, sizeNN, cached_offset);
+			cached_offset += sizeNN;
+
+		// SBO_chunk_data::Elem *pp = reinterpret_cast<SBO_chunk_data::Elem*>(	sbo_chunk_data.mapped.buffer->mapped_host_pt );
+		// GOS_DEBUG_ASSERT( map->map__get_data (cc, pointData, sizeof_pointData) );
+		// 	//altezze, normali e via dicendo
+		// 	const u32 NN = num_vtx_per_lato * num_vtx_per_lato;
+		// 	for (u32 iPoint=0; iPoint<NN; iPoint++)
+		// 	{
+		// 		pp[cached_offset].encoded_norm = pointData[iPoint].norm._encoded;
+		// 		pp[cached_offset].height_and_stuff = pointData[iPoint].height._encoded;
+		// 		pp[cached_offset].height_and_stuff |= (u32)pointData[iPoint].materialID << 16;
+		// 		pp[cached_offset].height_and_stuff |= (u32)pointData[iPoint].ao << 24;
+		// 		cached_offset++;
+		// 	}
+
+
+
+
+		num_instance_to_render++;
 		
-		pInstanceData[num_block_to_render].chunk_originXZ.set (aabb.vmin.x, aabb.vmax.z);
-		pInstanceData[num_block_to_render].scale_XZ.set (scaleXZ, scaleXZ);
-		pInstanceData[num_block_to_render].tutv_offset = tutv_offset;
-		pInstanceData[num_block_to_render].tutv_scale.set (0.25f, 0.25f);
-		num_block_to_render++;
 	}
 }
 
 //********************************
 void Renderer::end()
 {
-	if (0 == num_block_to_render)
-		return;
-
-    //aggiornamento SBO_instance_data
-	{
-		u32 size = num_block_to_render * sizeof(SBO_instance_data::Elem);
-		const u32 r = size % gpu->limits_get_nonCoherentAtomSize();
-		if (r)
-			size += gpu->limits_get_nonCoherentAtomSize() - r;
-		
-		assert (size <= sbo_instance_data.sizeof_buffer);
-		gpu->buffer_manualSync_cpuWrite (sbo_instance_data.mapped_buffer, 0, size);
-	}
+	sbo_instance_data.mapped.end();
+	sbo_chunk_data.mapped.end();
 }
 
 //********************************
 void Renderer::on__render (const gos::engine::RenderPipe::Context &ctx, gos::gpu::RenderCtx &rctx)
 {
-    const res::Pipeline *res_pipeline;
+	if (0 == num_instance_to_render)
+		return;
+
+	const res::Pipeline *res_pipeline;
     if (!ctx.engine->get (handle_pipeline, &res_pipeline))
     {
         return;
     }
 
-	constexpr u32 NUM_TOT_IDX = (NUM_VTX_PER_LATO-1) * (NUM_VTX_PER_LATO-1) * 6;
 	//command
     rctx.bindPipeline (res_pipeline->pipeHandle)
         .bindDescriptorSet (ctx.handle_descrSet0, 0)
@@ -243,7 +344,7 @@ void Renderer::on__render (const gos::engine::RenderPipe::Context &ctx, gos::gpu
 
 
 	rctx.bindVtxIdxBuffer (handle_vb, 0, handle_ib, 0);
-	rctx.drawIndexed (NUM_TOT_IDX, num_block_to_render, 0, 0, 0);
+	rctx.drawIndexed (num_tot_idx, num_instance_to_render, 0, 0, 0);
 }
 
 

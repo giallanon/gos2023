@@ -197,7 +197,7 @@ bool VulkanExample5::virtual_onInit ()
 
    
     //creo un buffer per UBO
-    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eMemAccessMode::shared_cpuW_autoSync, &uboHandle))
+    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eMemAccessMode::shared_cpuW, &uboHandle))
     {
         gos::logger::err ("VulkanApp::init() => GPU::uniformBuffer_create\n");
         return false;
@@ -449,7 +449,12 @@ bool VulkanExample5::recordCommandBuffer (GPUCmdBufferHandle &cmdBufferHandle, g
     //ubo.lightDir.set (-0.4f, -1, 0.2f, 0);
     ubo.lightDir.set (0, -1, 0, 0);
     ubo.lightDir.normalize();
-    gpu->writeAndSync (uboHandle, 0, &ubo, sizeof(sUniformBufferObject));            
+    
+	//gpu->writeAndSync (uboHandle, 0, &ubo, sizeof(sUniformBufferObject));            
+	gpu::MappedBufW mm;
+		gpu->begin_write (uboHandle, &mm);
+		mm.write (&ubo, sizeof(sUniformBufferObject), 0);
+		mm.end();
 
     gos::gpu::DescrSetInstanceWriter descrWriter;
     descrWriter.begin (gpu, descrSetInstancerHandle)

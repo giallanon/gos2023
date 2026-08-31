@@ -33,10 +33,9 @@ private:
 	gos::engine::Renderer_line3d::Ctx	*line_ctx2;
 	
 	land::Map				map;
-	land::MapQTree			mapQTree;
 	land::MaterialList		material_list;
 	land::Renderer			*renderer_land;
-	land::ChunkCoordList	ccList;
+	land::QTreeCoordList	ccList;
 
 	gos::geom::Pos3			pos;
 	gos::Ctrl3rdPersMove	ctrl_entity;

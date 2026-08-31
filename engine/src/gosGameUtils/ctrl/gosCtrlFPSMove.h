@@ -16,14 +16,16 @@ namespace gos
 
         void    bind (geom::Pos3 *posIN);
 
-        void    set_linear_speed__m_sec (f32 m_sec)			{ lin_speed__m_sec = m_sec; }
-        void    set_rot_speed__grad_s (f32 grad_s)			{ rot_speed__rad_s = gos::math::gradToRad(grad_s); }
+        void    set_linear_speed__m_sec (f32 m_sec)				{ lin_speed__m_sec = m_sec; }
+        void    set_rot_speed__grad_s (f32 grad_s)				{ rot_speed__rad_s = gos::math::gradToRad(grad_s); }
 
 		void 	update (u64 timenow_msec, CtrlAction &ctrl);
 
+		void 	multiply_linear_speed (f32 factor)				{ set_linear_speed__m_sec(factor * lin_speed__m_sec); }
+		f32 	get_linear_speed__m_sec() const 				{ return lin_speed__m_sec; }
+
 	public:
 		geom::Pos3 	*pos;
-
 	
 	private:
 		u64		last_time_updated__msec;

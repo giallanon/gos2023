@@ -112,20 +112,6 @@ namespace gos
                 gos::vec2f      screen_wh;
             };
 
-			struct sSBO_segment
-			{
-				GPUStorageBufferHandle      gpu_handle;
-				gpu::sMappedBuffer          mapped;
-				u32                         size;
-			};
-
-			struct sSBO_vtx
-			{
-				GPUStorageBufferHandle      gpu_handle;
-				gpu::sMappedBuffer          mapped;
-				u32                         size;
-			};
-
 		private:
 			static constexpr u32	NUM_MAX_SEGMENT_IN_BUFFER = 0xFFFF; //8192;
 			static constexpr u32	NUM_MAX_VTX_IN_BUFFER	= 0xFFFF; //8192;
@@ -168,8 +154,8 @@ namespace gos
             GPUDescrSetInstanceHandle   handle_descrSet1;
 			GPUUniformBufferHandle      handle_ubo_scene;
 			ENGGPUShape					handle_shape_segmento;
-			sSBO_segment				sbo_segment;
-			sSBO_vtx					sbo_vtx;
+			GPUStorageBufferHandle		handle_sbo_segment;
+			GPUStorageBufferHandle		handle_sbo_vtx;
 			Flag8						flag;
 			u32							num_vtx_in_buffer;
 			u32 						num_seg_in_buffer;
@@ -178,6 +164,8 @@ namespace gos
 			const res::GPUShape 		*res_shape_segmento;
 
 			gos::FastArray<sCtxEntry>	ctx_list;
+			gpu::MappedBufW			mapped_sbo_segment;
+			gpu::MappedBufW			mapped_sbo_vtx;
 		};
 
 	} //namespace engine

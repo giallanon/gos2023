@@ -70,7 +70,7 @@ namespace gos
 			GPUStorageBufferHandle      handle_sbo_instanceData;
 			
 			mat4x4f                   	matrix_default;
-			gpu::sMappedBuffer			matrix_buffer;
+			gpu::MappedBufW			mapped_matrix_buffer;
 			u32							matrix_sizeof_buffer;
 			u32							matrix_nextIndex;
 			
@@ -81,7 +81,6 @@ namespace gos
 			gos::Bitfield				material_bitmask;
 			u32							material_wasUpdated;
 
-			gpu::sMappedBuffer			instance_buffer;
 			u32							instance_sizeof_buffer;
 
 			u64							*pRenderableList;

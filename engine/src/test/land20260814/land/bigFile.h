@@ -19,7 +19,8 @@ namespace land
 	public:
 						BigFile();
 
-		bool			open (gos::Allocator *allocator, const char *filename, u32 num_max_cached_chunk);
+		bool			open_1 (gos::Allocator *allocator, const char *filename, u32 num_max_cached_chunk);
+		bool			open_2 (gos::Allocator *allocator, const char *filename, u32 max_memory_for_cache);
 		void 			close();
 
 		const void*		get_chunk (u32 chunk_num);
@@ -42,6 +43,8 @@ namespace land
 		};
 
 	private:
+		bool			priv__open (gos::Allocator *allocator, const char *filename);
+		void			priv__alloc_cache (u32 num_max_cached_chunk);
 		void 			priv__free();
 		void 			priv__load_chunk (u32 chunk_num, u32 cache_index, u32 timenow_msec);
 		u32 			priv__is_already_cached (u32 chunk_num) const;

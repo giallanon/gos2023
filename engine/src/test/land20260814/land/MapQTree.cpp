@@ -8,24 +8,37 @@ using namespace land;
 
 
 #define DEBUG__MIN_HEIGHT 0
-#define DEBUG__MAX_HEIGHT 5.0f
+#define DEBUG__MAX_HEIGHT 50.0f
 
 //********************************
-MapQTree::MapQTree()
+Map::MapQTree::MapQTree()
 {
+	localAllocator = NULL;
 	num_vtx_per_chunk_side = 1+ 64;
-	tmp_ccList1.setup (gos::getSysHeapAllocator(), 1024);
-	tmp_ccList2.setup (gos::getSysHeapAllocator(), 1024);
 }
 
 //********************************
-MapQTree::~MapQTree()
+void Map::MapQTree::unsetup()
 {
+	if (NULL == localAllocator)
+		return;
+	tmp_ccList1.unsetup();
+	tmp_ccList2.unsetup();
+	localAllocator = NULL;
 }
 
 //********************************
-void MapQTree::setup (const Map *map)
+void Map::MapQTree::setup (gos::Allocator *allocator, const Map *map, u32 num_vtx_per_chunk_sideIN)
 {
+	assert (GOS_IS_POWER_OF_TWO(num_vtx_per_chunk_sideIN-1) );
+	unsetup();
+
+	localAllocator = allocator;
+	tmp_ccList1.setup (localAllocator, 1024);
+	tmp_ccList2.setup (localAllocator, 1024);
+	num_vtx_per_chunk_side = num_vtx_per_chunk_sideIN;
+
+
 	const u32 map_num_points_per_lato = map->map__get_num_points_per_lato();
 	assert (map_num_points_per_lato > num_vtx_per_chunk_side);
 	assert (GOS_IS_POWER_OF_TWO(map_num_points_per_lato));
@@ -34,8 +47,6 @@ void MapQTree::setup (const Map *map)
 	assert (num_lod > 0);
 	assert (num_lod <= NUM_MAX_LOD);
 	
-
-
 	//divido la mappa in chunk da (num_vtx_per_chunk_side+1) vtx
 	const u32 num_chunk_per_lato = map_num_points_per_lato / (num_vtx_per_chunk_side-1);
 	assert (GOS_IS_POWER_OF_TWO(num_chunk_per_lato));
@@ -71,16 +82,7 @@ void MapQTree::setup (const Map *map)
 }
 
 //********************************
-land::Resol MapQTree::get_resolution_from_chunkCoord (const ChunkCoord cc) const
-{
-	const u8 lod = cc.get_lod();
-	assert (lod < num_lod);
-	return lodInfo[lod].resol;
-}
-
-
-//********************************
-void MapQTree::aabb_from_chunkCoord (const ChunkCoord cc, gos::geom::AABB3 *out) const
+void Map::MapQTree::aabb_from_coord (const QTreeCoord cc, gos::geom::AABB3 *out) const
 {
 	assert (NULL != out);
 	const u8 lod = cc.get_lod();
@@ -100,7 +102,7 @@ void MapQTree::aabb_from_chunkCoord (const ChunkCoord cc, gos::geom::AABB3 *out)
 }
 
 //********************************
-u32 MapQTree::calc_visibility (gos::geom::Camera3 *cam, ChunkCoordList *out)
+u32 Map::MapQTree::calc_visibility (gos::geom::Camera3 *cam, QTreeCoordList *out)
 {
 	out->reset();
 
@@ -111,8 +113,8 @@ u32 MapQTree::calc_visibility (gos::geom::Camera3 *cam, ChunkCoordList *out)
 	if (eClipResult::outside == AABB3__intersect_AABB3(map_aabb, frAABB))
 		return 0;
 
-	ChunkCoordList	*ccList1 = &tmp_ccList1;
-	ChunkCoordList	*ccList2 = &tmp_ccList2;
+	QTreeCoordList	*ccList1 = &tmp_ccList1;
+	QTreeCoordList	*ccList2 = &tmp_ccList2;
 
 
 	ccList1->reset();
@@ -121,11 +123,11 @@ u32 MapQTree::calc_visibility (gos::geom::Camera3 *cam, ChunkCoordList *out)
 	{
 		for (u32 cx=0; cx<lodInfo[0].num_chunk_per_lato; cx++)
 		{
-			ChunkCoord cc;
+			QTreeCoord cc;
 			cc.set (0, cx, cy);
 
 			geom::AABB3 aabb;
-			aabb_from_chunkCoord (cc, &aabb);
+			aabb_from_coord (cc, &aabb);
 
 			if (eClipResult::outside == AABB3__intersect_AABB3(aabb, frAABB))
 				continue;
@@ -153,7 +155,7 @@ u32 MapQTree::calc_visibility (gos::geom::Camera3 *cam, ChunkCoordList *out)
 		const u32 nChunk = ccList1->getNElem();
 		for (u32 i=0; i<nChunk; i++)
 		{
-			ChunkCoord cc = ccList1->queryElem(i);
+			QTreeCoord cc = ccList1->queryElem(i);
 			assert (lod == cc.get_lod() + 1);
 			const u32 cx = cc.get_cx() << 1;
 			const u32 cy = cc.get_cy() << 1;
@@ -167,7 +169,7 @@ u32 MapQTree::calc_visibility (gos::geom::Camera3 *cam, ChunkCoordList *out)
 					cc.set (lod, cx+x, cy+y);
 
 					geom::AABB3 aabb;
-					aabb_from_chunkCoord (cc, &aabb);
+					aabb_from_coord (cc, &aabb);
 
 					if (eClipResult::outside == AABB3__intersect_AABB3(aabb, frAABB))
 						continue;

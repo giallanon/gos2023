@@ -26,10 +26,10 @@ namespace land
 	};
 
 	/***********************************
-	 * @brief	ChunkCoord
+	 * @brief	QTreeCoord
 	 * 
 	 */
-	class ChunkCoord
+	class QTreeCoord
 	{
 	public:
 		void	set (u32 lod, u32 cx, u32 cy)
@@ -44,11 +44,14 @@ namespace land
 		u32 	get_cy() const								{ return (u32) (_encoded >> 20) & 0x000FFFFF; }
 		u32 	get_lod() const								{ return (u32) (_encoded >> 40) & 0x0000000F; }
 
+		int 	compare (const QTreeCoord &b) const			{ if (_encoded==b._encoded) return 0; if (_encoded>b._encoded) return 1; return -1; }
+		bool	operator== (const QTreeCoord &b) const		{ return (_encoded == b._encoded); }
+
 	public:
 		u64		_encoded;
 	};
 
-	typedef gos::FastArray<ChunkCoord>	ChunkCoordList;
+	typedef gos::FastArray<QTreeCoord>	QTreeCoordList;
 
 
 	/***********************************
@@ -80,6 +83,20 @@ namespace land
 		u32			_encoded;
 	};
 
+
+
+	/***********************************
+	 * @brief	PointData
+	 * 			ogni punto della mappa contiene le seguenti info
+	 */
+	struct PointData
+	{
+	public:
+		CompressedNorm	norm;
+		CompressedH		height;
+		u8				ao;
+		u8				materialID;
+	};	
 } //namespace land
 
 

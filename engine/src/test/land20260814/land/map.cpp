@@ -2,6 +2,7 @@
 #include "land.h"
 #include "gosImageBufferRGBA.h"
 #include "gosGeomIntersect3D.h"
+#include "Array2DUtils.h"
 
 
 using namespace gos;
@@ -57,16 +58,14 @@ bool Map::create (const char *save_path, const CreateData &create)
 		}
 	}
 
-	//creo e salvo le mappe
-	for (u32 mm=0; mm<num_map_info; mm++)
-	{
-		MapInfo *m = &mapInfo[mm];
 
-		//cerco di creare mappe con chunk che siano grossi circa 8-10MB
-		constexpr u32 MAX_CHUNK_SIZE_IN_BYTE = 10 * 1024 * 1024;
-		u32 num_point_per_chunk_lato = 1024;
+	//cerco di creare mappe con chunk che siano grossi circa 8-10MB
+	constexpr u32 MAX_CHUNK_SIZE_IN_BYTE = 10 * 1024 * 1024;
+	PointData *chunk_data = NULL;
+	u32 num_point_per_chunk_lato = 1024;
+	u32 sizeof_chunk = 0;
+	{
 		u32 num_tot_point_per_chunk = 0;
-		u32 sizeof_chunk = 0;
 		while (1)
 		{
 			num_tot_point_per_chunk = num_point_per_chunk_lato * num_point_per_chunk_lato;
@@ -78,30 +77,35 @@ bool Map::create (const char *save_path, const CreateData &create)
 			num_point_per_chunk_lato >>= 1;
 		}
 
+		chunk_data = GOSALLOCT(PointData*, localAllocator, sizeof_chunk);
+		for (u32 i=0; i<num_tot_point_per_chunk; i++)
+		{
+			chunk_data[i].height.set (create.default_height__m);
+			chunk_data[i].norm.set (vec3f(0,1,0));
+			chunk_data[i].ao = 0;
+			chunk_data[i].materialID = 0;
+		}
+	}
+
+	//creo e salvo le mappe
+	for (u32 mm=0; mm<num_map_info; mm++)
+	{
+		MapInfo *m = &mapInfo[mm];
+
 		sprintf_s (s, sizeof(s), "%s/lod%d", save_path, land::resolution_to_u8(m->resolution));
 		{
 			m->num_chunk_per_lato = m->num_point_per_lato / num_point_per_chunk_lato;
 			const u32 num_tot_chunk = m->num_chunk_per_lato * m->num_chunk_per_lato;
 			land::BigFile::create (s, sizeof_chunk, num_tot_chunk);
 
-
-			PointData *chunk_data = GOSALLOCT(PointData*, localAllocator, sizeof_chunk);
-				chunk_data->height.set (create.default_height__m);
-				chunk_data->norm.set (vec3f(0,1,0));
-				chunk_data->ao = 0;
-				chunk_data->materialID = 0;
-
-
 			land::BigFile bf;
-			bf.open (localAllocator, s, 1);
+			bf.open_1 (localAllocator, s, 1);
 			for (u32 i=0; i<num_tot_chunk; i++)
 				bf.write_chunk (i, chunk_data, sizeof_chunk);
 			bf.close();		
-
-			GOSFREE_AND_NULL(localAllocator, chunk_data);
 		}
 	}
-
+	GOSFREE_AND_NULL(localAllocator, chunk_data);
 
 	//creo il file .map con le info sulla mappa generata
 	{
@@ -175,6 +179,7 @@ void Map::priv__free()
 
 	GOSFREE_AND_NULL(localAllocator, mapInfo);
 	num_mapInfo = 0;
+	qtree.unsetup();
 }
 
 //********************************
@@ -235,16 +240,26 @@ bool Map::open (const char *folder_path)
 
 	//la mappa 0 la voglio sempre tutta in RAM, quindi apro il bigfile dandogli una cache suff a caricare tutta la
 	//mappa in RAM. Le altre mappe usando la stessa quantita' di cache
-	const u32 num_max_cached_chunk = mapInfo[0].num_chunk_per_lato * mapInfo[0].num_chunk_per_lato;
+	{
+		MapInfo *m = &mapInfo[0];
+		const u32 num_max_cached_chunk = m->num_chunk_per_lato * m->num_chunk_per_lato;
+		sprintf_s (s, sizeof(s), "%s/lod%d", folder_path, land::resolution_to_u8(m->resolution));
+		if (!m->chunkData->open_1 (localAllocator, s, num_max_cached_chunk))
+		{
+			logger::err ("Map => can't open chunk data [%s]\n", s);
+			return false;
+		}
+	}
 
-	//per le altre mappe, tengo un cache del 25% del totale della mappa
-	for (u32 mm=0; mm<num_mapInfo; mm++)
+	//per le altre mappe, tengo un cache di 128MB che sembra essere un buon numero
+	constexpr u32 CACHE_SIZE = 128 * 1024 * 1024;
+	for (u32 mm=1; mm<num_mapInfo; mm++)
 	{
 		MapInfo *m = &mapInfo[mm];
 
 		//chunk data
 		sprintf_s (s, sizeof(s), "%s/lod%d", folder_path, land::resolution_to_u8(m->resolution));
-		if (!m->chunkData->open (localAllocator, s, num_max_cached_chunk))
+		if (!m->chunkData->open_2 (localAllocator, s, CACHE_SIZE))
 		{
 			logger::err ("Map => can't open chunk data [%s]\n", s);
 			return false;
@@ -270,6 +285,135 @@ bool Map::open (const char *folder_path)
 	//carico tutti i chunk della mappa0
 	for (u32 i=0; i<mapInfo[0].num_chunk_per_lato * mapInfo[0].num_chunk_per_lato; i++)
 		mapInfo[0].chunkData->get_chunk(i);
+
+
+	//istanzio il QTREE
+	qtree.setup (localAllocator, this, QTREE__NUM_VTX_PER_CHUNK_SIDE);
 	return true;
 }
 
+//********************************
+bool Map::map__get_data (const QTreeCoord cc, PointData *out, u32 sizeof_out)
+{
+	assert (cc.get_lod() < num_mapInfo);
+
+	const u32 cx = cc.get_cx();
+	const u32 cy = cc.get_cy();
+	MapInfo *mi = &mapInfo[cc.get_lod()];
+
+	const u32 px = cx * (QTREE__NUM_VTX_PER_CHUNK_SIDE-1);
+	const u32 py = cy * (QTREE__NUM_VTX_PER_CHUNK_SIDE-1);
+
+	return priv__map_get_data (px, py, mi, QTREE__NUM_VTX_PER_CHUNK_SIDE, out, sizeof_out);
+}
+
+//********************************
+bool Map::map__get_data (u32 px, u32 py, land::Resol resolution, u32 num_point_per_latoIN, PointData *out, u32 sizeof_out)
+{
+	for (u32 i=0; i<num_mapInfo; i++)
+	{
+		if (mapInfo[i].resolution == resolution)
+		{
+			return priv__map_get_data (px, py, &mapInfo[i], num_point_per_latoIN, out, sizeof_out);
+		}
+	}
+
+	logger::err ("Map::get_map_data() => resolution [%.3f] is not supported\n", land::resolution_to_m(resolution));
+	return false;
+}
+
+//********************************
+bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_latoIN, PointData *out, u32 sizeof_out)
+{
+	assert (NULL != mi);
+	assert (NULL != out);
+	assert (num_point_per_latoIN > 0);
+
+	const u32 x1 = px;
+	const u32 y1 = py;
+	if (x1 >= mi->num_point_per_lato || y1 >= mi->num_point_per_lato)
+	{
+		logger::err ("Map::get_map_data() => invalid coordinate or size:  px(%d,%d)  size(%d,%d)\n", px, py, num_point_per_latoIN, num_point_per_latoIN);
+		return false;
+	}
+
+	const u32 size_needed = sizeof(PointData) * num_point_per_latoIN * num_point_per_latoIN;
+	if (sizeof_out < size_needed)
+	{
+		logger::err ("Map::get_map_data() => out is not big enough!\n");
+		return false;
+	}
+
+	//la mappa <mi> e' divisa in chunk.
+	//Devo determinare quali chunk mi servono per fillare <out>
+	const u32 chunk__num_point_per_lato = mi->num_point_per_lato / mi->num_chunk_per_lato;
+	const u32 cx1 = x1 / chunk__num_point_per_lato;
+	const u32 cy1 = y1 / chunk__num_point_per_lato;
+
+	const u32 x2 = px + num_point_per_latoIN -1;
+	u32 cx2 = x2 / chunk__num_point_per_lato;
+	if (cx2 >= mi->num_chunk_per_lato)
+		cx2 = mi->num_chunk_per_lato -1;
+
+	const u32 y2 = py + num_point_per_latoIN -1;
+	u32 cy2 = y2 / chunk__num_point_per_lato;
+	if (cy2 >= mi->num_chunk_per_lato)
+		cy2 = mi->num_chunk_per_lato -1;
+
+	//i 4 chunk ai bordi del quadrato probabilmente non sono da copiare interamente in out
+	gos::Array2D dst;
+	dst.set (num_point_per_latoIN, num_point_per_latoIN, sizeof(PointData));
+	u32 dstY = 0;
+
+	for (u32 cy=cy1; cy<=cy2; cy++)
+	{
+		//il chunk a coordinata <cy> copre i punti 
+		const u32 orig_py_top = cy * chunk__num_point_per_lato;
+		
+		u32 py_top = orig_py_top;
+		if (py_top < y1) 	py_top = y1;
+		
+		u32 py_bottom = orig_py_top + chunk__num_point_per_lato -1;
+		if (py_bottom > y2) py_bottom = y2;
+		
+		const u32 dimy = (py_bottom - py_top) +1;
+		assert (dimy > 0);
+		assert (dimy <= num_point_per_latoIN);
+
+		py_top -= orig_py_top;
+		py_bottom -= orig_py_top;
+
+		u32 dstX = 0;
+		for (u32 cx=cx1; cx<=cx2; cx++)
+		{
+			const u32 orig_px_left = cx * chunk__num_point_per_lato;
+			
+			u32 px_left = orig_px_left;
+			if (px_left < x1) 	px_left = x1;
+			
+			u32 px_right = orig_px_left + chunk__num_point_per_lato -1;
+			if (px_right > x2) 	px_right = x2;
+
+			const u32 dimx = (px_right - px_left) +1;
+			assert (dimx > 0);
+			assert (dimx <= num_point_per_latoIN);
+			
+			px_left -= orig_px_left;
+			px_right -= orig_px_left;
+
+			gos::Array2D src;
+			src.set (chunk__num_point_per_lato, chunk__num_point_per_lato, sizeof(PointData));
+
+			const PointData *psrc = (const PointData*) mi->chunkData->get_chunk(cx + cy * mi->num_chunk_per_lato);
+			array2DUtils_copy (psrc, src, px_left, py_top, dimx, dimy, 
+							   out, dst, dstX, dstY);
+			dstX += dimx;
+		}
+
+		dstY += dimy;
+	}
+
+
+	return true;
+
+}

@@ -79,7 +79,7 @@ void BigFile::priv__free()
 }
 
 //********************************
-bool BigFile::open (gos::Allocator *allocator, const char *filename, u32 num_max_cached_chunkIN)
+bool BigFile::priv__open (gos::Allocator *allocator, const char *filename)
 {
 	priv__free();
 
@@ -123,9 +123,14 @@ bool BigFile::open (gos::Allocator *allocator, const char *filename, u32 num_max
 		ct += 4;
 	}
 
-
 	localAllocator = allocator;
 	num_cached_chunk = 0;
+	return true;
+}
+
+//********************************
+void BigFile::priv__alloc_cache (u32 num_max_cached_chunkIN)
+{
 	num_max_cached_chunk = num_max_cached_chunkIN;
 
 	cached_chunk_list = GOSALLOCT(CachedChunk*, localAllocator, sizeof(CachedChunk) * num_max_cached_chunk);
@@ -136,6 +141,31 @@ bool BigFile::open (gos::Allocator *allocator, const char *filename, u32 num_max
 		cached_chunk_list[i].chunk_num = u32MAX;
 		cached_chunk_list[i].p = &cached_chunk_pt[i * chunk_size];
 	}
+}
+
+//********************************
+bool BigFile::open_1 (gos::Allocator *allocator, const char *filename, u32 num_max_cached_chunkIN)
+{
+	if (!priv__open(allocator, filename))
+		return false;
+
+	priv__alloc_cache (num_max_cached_chunkIN);
+	return true;
+}
+
+//********************************
+bool BigFile::open_2 (gos::Allocator *allocator, const char *filename, u32 max_memory_for_cache)
+{
+	if (!priv__open(allocator, filename))
+		return false;
+
+	num_max_cached_chunk = max_memory_for_cache / chunk_size;
+	if (num_max_cached_chunk * chunk_size < max_memory_for_cache)
+		num_max_cached_chunk++;
+	if (num_max_cached_chunk > num_total_chunk_in_file)
+		num_max_cached_chunk = num_total_chunk_in_file;
+	
+	priv__alloc_cache (num_max_cached_chunk);
 	return true;
 }
 

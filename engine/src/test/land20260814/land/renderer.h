@@ -2,6 +2,7 @@
 #define _land_renderer_h_
 #include "map.h"
 #include "materialList.h"
+#include "Cache.h"
 
 namespace land
 {
@@ -22,12 +23,12 @@ namespace land
 		void	bind_map (land::Map *map);
 
 		void	begin();
-		void 	add (const MapQTree *mapQTree, const land::ChunkCoordList &list);
+		void 	add (const land::QTreeCoordList &list);
 		void 	end();
 
 	private:
-		static constexpr u32 	NUM_MAX_CHUNK = 8192;
-		static constexpr u32	NUM_VTX_PER_LATO = 4;
+		static constexpr u32 	NUM_MAX_CHUNK_INSTANCE = 4096;
+		static constexpr u32 	NUM_CHUNK_DATA_ELEM_BUFFER = 2;
 
 	private:
 		struct SBO_instance_data
@@ -35,15 +36,29 @@ namespace land
 			struct Elem
 			{
 				gos::vec2f	chunk_originXZ;
-				gos::vec2f	scale_XZ;
 				gos::vec2f	tutv_offset;
-				gos::vec2f	tutv_scale;
+				f32 		scale_XZ;
+				u32 		chunk_data_offset;
 			};
 
 			GPUStorageBufferHandle	handle_sbo;
-			gos::gpu::sMappedBuffer	mapped_buffer;
-			u32						sizeof_buffer;
+			gos::gpu::MappedBufW	mapped;
 		};
+		
+		struct SBO_chunk_data
+		{
+			struct Elem
+			{
+				u32 encoded_norm;
+				u32	height_and_stuff; //8bit ao, 8bit material, 16bitLSB per height
+			};
+
+			GPUStorageBufferHandle	handle_sbo;
+			gos::gpu::MappedBufW	mapped;
+		};
+
+	
+    
 
 	private:
 		void 	priv__create_block_geometry (u32 num_vtx_per_lato);
@@ -58,11 +73,18 @@ namespace land
 		GPUVtxBufferHandle		handle_vb;
 		GPUIdxBufferHandle		handle_ib;
 		gos::ENGTexture			handle_texture_lod;
+		u32						num_tot_idx;
+		u32						num_vtx_per_lato;
 
 
 		SBO_instance_data		sbo_instance_data;
-		u32 					num_block_to_render;
+		SBO_chunk_data			sbo_chunk_data;
+		u32 					num_instance_to_render;
 		land::Map				*map;
+		land::PointData			*pointData;
+		u32 					sizeof_pointData;
+		SBO_chunk_data::Elem 	*chunk_data_elem_buffer[NUM_CHUNK_DATA_ELEM_BUFFER];
+		CacheLRU<QTreeCoord>	cached_chunk_data_list;
 	};
 
 } //namespace land

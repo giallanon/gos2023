@@ -13,9 +13,9 @@ const char* gpu::enumToString (eMemAccessMode s)
     default:                                        return "??INVALID-VALUE??";
     case eMemAccessMode::invalid:                    return "invalid";
     case eMemAccessMode::onGPU:                      return "onGPU";
-    case eMemAccessMode::shared_cpuW_autoSync:       return "shared_cpuW_autoSync";
-    case eMemAccessMode::shared_cpuW_manualSync:     return "shared_cpuW_manualSync";
-    case eMemAccessMode::readback:                  return "readback";      
+    case eMemAccessMode::shared_cpuR:       		return "shared_cpuR";
+    case eMemAccessMode::shared_cpuW:       		return "shared_cpuW";
+    case eMemAccessMode::shared_cpuRW:       		return "shared_cpuRW";   
     
     }
 }

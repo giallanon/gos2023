@@ -20,7 +20,8 @@ namespace gos
             void            reset ()
                             {
                                 vkHandle = VK_NULL_HANDLE;
-                                vkMemHandle = VK_NULL_HANDLE;
+                                _vkMemHandle = VK_NULL_HANDLE;
+								memFlags = 0;
                                 view = VK_NULL_HANDLE;
                                 dimx = dimy = 0;
                                 nMipMap = 0;
@@ -31,9 +32,11 @@ namespace gos
 
         public:
             VkImage         vkHandle;
-            VkDeviceMemory  vkMemHandle;
+            VkDeviceMemory      _vkMemHandle;
+			VkMemoryPropertyFlags	memFlags;
             VkImageView     view;
-            u32             memoryAllocated;
+
+			u32             memoryAllocated;
             u16             dimx;
             u16             dimy;
             u8              nMipMap;

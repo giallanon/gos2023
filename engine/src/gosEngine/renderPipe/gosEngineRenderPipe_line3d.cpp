@@ -37,16 +37,13 @@ void Renderer_line3d::priv_unsetup()
 	ctx_list.unsetup();
 
 
-    gpu->buffer_unmap (sbo_segment.mapped);
-    gpu->buffer_unmap (sbo_vtx.mapped);
-
     engine->release(handle_shape_segmento);
 
     
     engine->release(handle_pipeline);
         gpu->deleteResource(handle_ubo_scene);
-        gpu->deleteResource(sbo_segment.gpu_handle);
-        gpu->deleteResource(sbo_vtx.gpu_handle);
+        gpu->deleteResource(handle_sbo_segment);
+        gpu->deleteResource(handle_sbo_vtx);
         gpu->deleteResource(handle_descrSet0);
         gpu->deleteResource(handle_descrSet1);
         gpu->deleteResource(handle_descrPool);
@@ -126,21 +123,21 @@ bool Renderer_line3d::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
     }    
 
     //creo gli oggetti che poi dovro' bindare ai descrittori
-    {
-        //UBO "scene"
-        gpu->uniformBuffer_create (sizeof(SceneData), eMemAccessMode::shared_cpuW_autoSync, &handle_ubo_scene);
+	//UBO "scene"
+	gpu->uniformBuffer_create (sizeof(SceneData), eMemAccessMode::shared_cpuW, &handle_ubo_scene);
 
-        
-        ///SBO con gli index ai vertici da usare per ogni singolo segmento di linea
-        sbo_segment.size = NUM_MAX_SEGMENT_IN_BUFFER * sizeof(u32);
-        gpu->storageBuffer_create (sbo_segment.size, eMemAccessMode::shared_cpuW_manualSync, &sbo_segment.gpu_handle);
-        gpu->map (sbo_segment.gpu_handle, 0, sbo_segment.size, &sbo_segment.mapped);
+	
+	///SBO con gli index ai vertici da usare per ogni singolo segmento di linea
+	{
+		const u32 size = NUM_MAX_SEGMENT_IN_BUFFER * sizeof(u32);
+		gpu->storageBuffer_create (size, eMemAccessMode::shared_cpuW, &handle_sbo_segment);
+	}
 
-        //SBO con i vertici
-        sbo_vtx.size = NUM_MAX_VTX_IN_BUFFER * sizeof(vec3f);
-        gpu->storageBuffer_create (sbo_vtx.size, eMemAccessMode::shared_cpuW_manualSync, &sbo_vtx.gpu_handle);
-        gpu->map (sbo_vtx.gpu_handle, 0, sbo_vtx.size, &sbo_vtx.mapped);
-    }
+	//SBO con i vertici
+	{
+		const u32 size = NUM_MAX_VTX_IN_BUFFER * sizeof(vec3f);
+		gpu->storageBuffer_create (size, eMemAccessMode::shared_cpuW, &handle_sbo_vtx);
+	}
 
 
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
@@ -173,8 +170,8 @@ bool Renderer_line3d::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
         else
         {
             dsw.begin (gpu, handle_descrSet1)
-                .bindStorageBuffer (0, sbo_vtx.gpu_handle, 0)
-                .bindStorageBuffer (1, sbo_segment.gpu_handle, 0)
+                .bindStorageBuffer (0, handle_sbo_vtx, 0)
+                .bindStorageBuffer (1, handle_sbo_segment, 0)
                 .end();
         }    
     }
@@ -297,7 +294,15 @@ void Renderer_line3d::priv_begin (gos::geom::Camera3 *cam, gpu::RenderCtx *rctxI
     SceneData scene;
 	scene.matVP = cam->get_matVP();
 	scene.screen_wh.set ((f32)gpu->swapChain_getWidth(), (f32)gpu->swapChain_getHeight());
-	gpu->writeAndSync (handle_ubo_scene, 0, &scene, sizeof(scene));
+
+	gpu::MappedBufW mm;
+	gpu->begin_write (handle_ubo_scene, &mm);
+		mm.write (&scene, sizeof(scene), 0);
+		mm.end();
+
+
+	gpu->begin_write (handle_sbo_segment, &mapped_sbo_segment);
+	gpu->begin_write (handle_sbo_vtx, &mapped_sbo_vtx);
 
 }
 
@@ -310,9 +315,8 @@ void Renderer_line3d::priv_end()
 	}
 
     flag.clear(FLAG__BEGIN_INVOKED);
-    gpu->buffer_manualSync_cpuWrite (sbo_vtx.mapped, 0, u32MAX);
-    gpu->buffer_manualSync_cpuWrite (sbo_segment.mapped, 0, u32MAX);
-	//gpu->waitIdle();
+	mapped_sbo_segment.end();
+	mapped_sbo_vtx.end();
     rctx = NULL;
     res_shape_segmento = NULL;
 }
@@ -360,18 +364,14 @@ void Renderer_line3d::priv_appendToCommandBuffer (const Ctx *ctx)
     {
         const u32 offset = num_vtx_in_buffer*sizeof(vec3f);
         const u32 size =  sizeof(vec3f) * num_vtx;
-
-        u8 *pt = static_cast<u8*>(sbo_vtx.mapped.host_pt);
-        memcpy (&pt[offset], ctx->vtxList._queryPointer(), size);
-        //gpu->buffer_manualSync_cpuWrite (sbo_vtx.mapped, offset, size);
-
+		mapped_sbo_vtx.write (ctx->vtxList._queryPointer(), size, offset);
         num_vtx_in_buffer += num_vtx;
     }
     
     
 
     //parse del program di ctx
-    u32 *pt_segment_buffer = static_cast<u32*>(sbo_segment.mapped.host_pt);
+    //u32 *pt_segment_buffer = static_cast<u32*>(sbo_segment.mapped.host_pt);
     
     const u32 n = ctx->program.getNElem();
     u32 i = 0;
@@ -452,7 +452,9 @@ void Renderer_line3d::priv_appendToCommandBuffer (const Ctx *ctx)
                     const u16 vtx_index_2 = ctx->program(i++);
 
                     const u32 packed_idx_1_2 = (u32)(first_vtx_index + vtx_index_1) << 16 | (first_vtx_index + vtx_index_2);
-                    pt_segment_buffer[num_seg_in_buffer++] = packed_idx_1_2;
+                    //pt_segment_buffer[num_seg_in_buffer++] = packed_idx_1_2;
+					mapped_sbo_segment.writeT (packed_idx_1_2, sizeof(u32) * num_seg_in_buffer);
+					num_seg_in_buffer++;
 
                     state.num_seg_to_draw++;
 
@@ -479,7 +481,9 @@ void Renderer_line3d::priv_appendToCommandBuffer (const Ctx *ctx)
                 const u16 vtx_index_2 = ctx->program(i++);
 
 				const u32 packed_idx_1_2 = 0xFFFF0000 | (first_vtx_index + vtx_index_2);
-				pt_segment_buffer[num_seg_in_buffer++] = packed_idx_1_2;
+				//pt_segment_buffer[num_seg_in_buffer++] = packed_idx_1_2;
+				mapped_sbo_segment.writeT (packed_idx_1_2, sizeof(u32) * num_seg_in_buffer);
+				num_seg_in_buffer++;
 
 				state.num_seg_to_draw++;
 				assert (num_seg_in_buffer <= NUM_MAX_SEGMENT_IN_BUFFER);

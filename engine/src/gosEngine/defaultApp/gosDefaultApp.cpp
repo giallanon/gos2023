@@ -92,10 +92,14 @@ void DefaultApp::run (gos::Engine *engineIN)
 	//input
 	engine->inputCtx->
 		action_add ("toggle_ctrl_mode")
-		.action_add ("toggle_show_cam_pos");
+		.action_add ("toggle_show_cam_pos")
+		.action_add ("speed++")
+		.action_add ("speed--");
 
 	engine->inputCtx->action_bindToBtn ("toggle_ctrl_mode", input::eOrigin::keyboard, GLFW_KEY_TAB, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LSHIFT));
 	engine->inputCtx->action_bindToBtn ("toggle_show_cam_pos", input::eOrigin::keyboard, GLFW_KEY_C, input::eButtonStatus::pressed, input::sButtonModifier(input::eButtonModifier::LALT));
+	engine->inputCtx->action_bindToBtn ("speed++", input::eOrigin::keyboard, GLFW_KEY_KP_ADD, input::eButtonStatus::pressed);
+	engine->inputCtx->action_bindToBtn ("speed--", input::eOrigin::keyboard, GLFW_KEY_KP_SUBTRACT, input::eButtonStatus::pressed);
 
 	//setup camera default
 	camera__create (0, math::gradToRad(45), 0.1f, 250.0f);

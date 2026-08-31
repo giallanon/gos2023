@@ -126,7 +126,7 @@ bool RenderPipe::priv_setup (gos::Allocator *allocatorIN, Engine *engineIN)
     }
 
     //UBO "scene"
-    gpu->uniformBuffer_create (sizeof(SceneData), eMemAccessMode::shared_cpuW_autoSync, &ctx.handle_ubo_scene);
+    gpu->uniformBuffer_create (sizeof(SceneData), eMemAccessMode::shared_cpuW, &ctx.handle_ubo_scene);
 
 
 	//altre risorse
@@ -240,7 +240,10 @@ void RenderPipe::render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle
 	ctx.scene.lightDir.normalize();
 	ctx.scene.ambient_01 = 0.2f;
 
-	engine->gpu->writeAndSync (ctx.handle_ubo_scene, 0, &ctx.scene, sizeof(ctx.scene));
+	gpu::MappedBufW mm;
+	engine->gpu->begin_write (ctx.handle_ubo_scene, &mm);
+		mm.write (&ctx.scene, sizeof(ctx.scene), 0);
+		mm.end();
 
 
 	//aggiorno il ctx

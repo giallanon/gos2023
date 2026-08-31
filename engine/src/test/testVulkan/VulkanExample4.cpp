@@ -186,7 +186,7 @@ bool VulkanExample4::virtual_onInit ()
     };
 
     //creo un buffer per UBO
-    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eMemAccessMode::shared_cpuW_autoSync, &uboHandle))
+    if (!gpu->uniformBuffer_create (sizeof(sUniformBufferObject), eMemAccessMode::shared_cpuW, &uboHandle))
     {
         gos::logger::err ("VulkanApp::init() => GPU::uniformBuffer_create\n");
         return false;
@@ -301,9 +301,13 @@ void VulkanExample4::doCPUStuff ()
             }
             vOUT[0].w = 1;
 */
-
         }
-        gpu->writeAndSync (uboHandle, 0, &ubo, sizeof(sUniformBufferObject));
+
+        //gpu->writeAndSync (uboHandle, 0, &ubo, sizeof(sUniformBufferObject));
+		gpu::MappedBufW mm;
+			gpu->begin_write (uboHandle, &mm);
+			mm.write (&ubo, sizeof(sUniformBufferObject), 0);
+			mm.end();
     }
 
     //do some stuff
