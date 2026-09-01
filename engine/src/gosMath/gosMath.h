@@ -32,7 +32,7 @@ namespace gos
 		inline f32			floor(f32 a)											{ return floorf(a); }
 		inline f32			round(f32 a)											{ return roundf(a); }
 		inline f32			trunc(f32 a)											{ return truncf(a); }
-		inline f32			abs(f32 a)												{ return fabs(a); }
+		inline f32			abs(f32 a)												{ return fabsf(a); }
 
 	
 		inline f32			dot (const Quat &q1, const Quat &q2)					{return (q1.x*q2.x + q1.y*q2.y + q1.z*q2.z + q1.w*q2.w);}
