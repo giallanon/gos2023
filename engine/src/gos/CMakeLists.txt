@@ -85,6 +85,8 @@ platform/win/winOS.h
 platform/win/winOSConsole.cpp
 platform/win/winOSConsole.h
 platform/win/winOSFS.cpp
+platform/win/winOSFSWatcher.cpp
+platform/win/winOSFSWatcher.h
 platform/win/winOSInclude.h
 platform/win/winOSSocket.cpp
 platform/win/winOSThread.cpp
@@ -177,7 +179,7 @@ gosUtils.cpp
 gosUtils.h
 gosWaitableGrpInterface.h
 gosWaitableGrp.h
- )
+)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	set_source_files_properties(memory/Doug_Lea_malloc.c PROPERTIES COMPILE_OPTIONS "-Wno-expansion-to-defined;-Wno-maybe-uninitialized")

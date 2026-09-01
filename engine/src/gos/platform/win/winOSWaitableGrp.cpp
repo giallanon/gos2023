@@ -217,6 +217,22 @@ void OSWaitableGrp::msgQ__remove (const HThreadMsgR &hRead)
 }
 
 //***********************************************
+OSWaitableGrp::sRecord* OSWaitableGrp::priv_add_FSWatcher (gos::FSWatcher *fsw)
+{
+	//TODO
+	DBGBREAK;
+	return NULL;
+}
+
+//***********************************************
+void OSWaitableGrp::fsWatcher__remove(gos::FSWatcher *fsw)
+{
+	//TODO
+	DBGBREAK;
+}
+
+
+//***********************************************
 u8 OSWaitableGrp::wait(u32 timeoutMSec)
 {
 	assert(debug_bWaiting == 0);
@@ -448,7 +464,7 @@ u32 OSWaitableGrp::event__get_user_param_as_u32 (u8 iEvent) const
 }
 
 //***********************************************
-gos::Socket& OSWaitableGrp::event__get_socket_handle (u8 iEvent) const
+gos::Socket OSWaitableGrp::event__get_socket_handle (u8 iEvent) const
 {
 	assert(debug_bWaiting == 0);
     assert (event__get_origin(iEvent) == eWaitEventOrigin::socket);
@@ -456,20 +472,28 @@ gos::Socket& OSWaitableGrp::event__get_socket_handle (u8 iEvent) const
 }
 
 //***********************************************
-gos::Signal& OSWaitableGrp::event__get_signal_handle (u8 iEvent) const
+gos::Signal OSWaitableGrp::event__get_signal_handle (u8 iEvent) const
 {
 	assert(debug_bWaiting == 0);
     assert (event__get_origin(iEvent) == eWaitEventOrigin::osevent);
 	return generatedEventList[iEvent]->origin.event.evt;
 }
 
-
 //***********************************************
-HThreadMsgR& OSWaitableGrp::event__get_msgQ_handle(u8 iEvent) const
+HThreadMsgR OSWaitableGrp::event__get_msgQ_handle(u8 iEvent) const
 {
 	assert(debug_bWaiting == 0);
 	assert (event__get_origin(iEvent) == eWaitEventOrigin::msgQ);
 	return generatedEventList[iEvent]->origin.msgQ.hRead;
 }
+
+//***********************************************
+gos::FSWatcher*	OSWaitableGrp::event__get_fsWatcher_handle(u8 iEvent) const
+{
+	//TODO
+	DBGBREAK;
+	return NULL;
+}
+
 
 #endif //GOS_PLATFORM__WINDOWS

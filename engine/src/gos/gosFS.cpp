@@ -697,7 +697,7 @@ bool fs::fileOpenForRW  (gos::File *out_h, const char *utf8_filePathAndNameRESOL
 		fs::extractFilePathWithOutSlash (utf8_filePathAndName, path, sizeof(path));
 		fs::folderCreate(path);
 	}	
-	return FS_fileOpenRESOLVED (out_h, utf8_filePathAndName, eFileMode::readWrite, true, false, true, true); 
+	return FS_fileOpenRESOLVED (out_h, utf8_filePathAndName, eFileMode::readWrite, false, false, true, true); 
 }
 
 //**************************************************************************

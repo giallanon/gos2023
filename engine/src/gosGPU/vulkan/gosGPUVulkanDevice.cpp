@@ -562,10 +562,22 @@ bool VulkanDevice::priv_getMemoryType (uint32_t typeBits, const VkMemoryProperty
 {
     assert (NULL != out_index);
 
+    bool is_DEVICE_LOCAL_always_need = false;
+    if (1 == phyDevInfo.vkMemoryProperties.memoryHeapCount)
+    {
+        if ((phyDevInfo.vkMemoryProperties.memoryHeaps[0].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0)
+        {
+            //siamo nel caso di GPU "embedded" che hanno un solo heap memory che e' sempre marcato come "DEVICE_LOCAL"
+            //Qualunque allocazione si voglia fare deve per forza avere DEVICE_LOCAL come bit settato
+            is_DEVICE_LOCAL_always_need = true;
+        }
+    }
+
 	for (u32 m=0; m<num_memPropList; m++)
 	{
-		const VkMemoryPropertyFlags memFlags = memPropertiesList[m];
-		// char debug_s1[256];
+		const VkMemoryPropertyFlags memFlags = memPropertiesList[m] | ( is_DEVICE_LOCAL_always_need ? VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT : 0 );
+
+        // char debug_s1[256];
 		// gos::vulkanMemoryPropertyFlagsToString (memFlags, debug_s1, sizeof(debug_s1));
 
 		for (u32 i = 0; i < phyDevInfo.vkMemoryProperties.memoryTypeCount; i++)

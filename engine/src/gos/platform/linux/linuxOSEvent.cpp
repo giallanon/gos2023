@@ -68,6 +68,7 @@ bool platform::signal_wait (const OSEvent &ev, u32 timeout_msecIN)
 	else
 		timeout_msec = (u32)timeout_msecIN;
 
+    const u64 time_to_exit_msec = (platform::getTimeNow_usec() / 1000) + timeout_msecIN;
     while(1)
     {
         struct epoll_event events;
@@ -79,8 +80,12 @@ bool platform::signal_wait (const OSEvent &ev, u32 timeout_msecIN)
 		{
 			if (-1 == timeout_msec)
             	continue;
-
-			return false;
+            
+            const u64 timenow_msec = (platform::getTimeNow_usec() / 1000);
+            if (timenow_msec >= time_to_exit_msec)
+                return false;
+            timeout_msec =  time_to_exit_msec - timenow_msec;
+            continue;
 		}
         return false;
     }    

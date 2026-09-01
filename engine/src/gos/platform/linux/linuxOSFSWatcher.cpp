@@ -1,3 +1,4 @@
+#ifdef GOS_PLATFORM__LINUX
 #include "linuxOSFSWatcher.h"
 #include <sys/inotify.h>
 #include <poll.h>
@@ -12,7 +13,7 @@ OSFSWatcher::OSFSWatcher()
 	folder_list.setup (localAllocator, 4 * 1024 * 1024);
 	notify_map.setup (localAllocator, 256);
 	fname_list.setup (localAllocator, 1 * 1024 * 1024);
-	event_list.setup (localAllocator, 267);
+	event_list.setup (localAllocator, 256);
 }
 
 //**********************************
@@ -242,3 +243,6 @@ void OSFSWatcher::event__get_renamed_fullpath (u32 i, char *out__fullpath, u32 s
 	const char *s = fname_list.getStringAtOffset (event_list(i).fname_offset_renamed);
 	sprintf_s (out__fullpath, sizeof_out, "%s", s);
 }
+
+
+#endif // GOS_PLATFORM__LINUX

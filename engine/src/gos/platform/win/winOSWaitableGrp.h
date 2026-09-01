@@ -24,16 +24,16 @@ namespace platform
 		bool            socket__add (const gos::Socket &sok, u32 userParam)					{ sRecord *s = priv_addSocket(sok); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
 		void            socket__remove (const gos::Socket &sok);
 
-		bool            signal__add (const gos::Signal &evt, void *userParam = NULL) 			{ sRecord *s = priv_addEvent(evt); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
-		bool            signal__add (const gos::Signal &evt, u32 userParam) 					{ sRecord *s = priv_addEvent(evt); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
+		bool            signal__add (const gos::Signal &evt, void *userParam = NULL) 		{ sRecord *s = priv_addEvent(evt); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
+		bool            signal__add (const gos::Signal &evt, u32 userParam) 				{ sRecord *s = priv_addEvent(evt); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
 		void            signal__remove (const gos::Signal &event);
 
 		bool            msgQ__add (const HThreadMsgR &hRead, void *userParam = NULL) 		{ sRecord *s = priv_addMsgQ(hRead); if (s) s->userParam.asPtr = userParam; return (s != NULL); }
-		bool            msgQ__add (const HThreadMsgR &hRead, u32 userParam) 					{ sRecord *s = priv_addMsgQ(hRead); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
+		bool            msgQ__add (const HThreadMsgR &hRead, u32 userParam)					{ sRecord *s = priv_addMsgQ(hRead); if (s) s->userParam.asU32 = userParam; return (s != NULL); }
 		void            msgQ__remove (const HThreadMsgR &hRead);
 
 		bool			fsWatcher__add (gos::FSWatcher *fsw, void *userParam=NULL)			{ sRecord *s=priv_add_FSWatcher(fsw); if(s) s->userParam.asPtr=userParam; return (s != NULL); }
-        bool            fsWatcher__add (gos::FSWatcher *fsw, u32 userParam)					{ sRecord *s=priv_add_FSWatcher(fsw); if(s) s->userParam.asU32=userParam; return (s != NULL); }
+		bool            fsWatcher__add (gos::FSWatcher *fsw, u32 userParam)					{ sRecord *s=priv_add_FSWatcher(fsw); if(s) s->userParam.asU32=userParam; return (s != NULL); }
 		void            fsWatcher__remove(gos::FSWatcher *fsw);
 
 		u8              wait (u32 timeoutMSec);
@@ -97,6 +97,7 @@ namespace platform
 		sRecord*        priv_addSocket (const gos::Socket &sok);
 		sRecord*        priv_addEvent (const gos::Signal &evt);
 		sRecord*        priv_addMsgQ (const HThreadMsgR &hRead);
+		sRecord*        priv_add_FSWatcher (gos::FSWatcher *fsw);
 		u8              priv_wait (u32 timeoutMSec);
 
 	private:

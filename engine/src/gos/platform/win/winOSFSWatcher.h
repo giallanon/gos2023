@@ -1,6 +1,7 @@
-#ifdef GOS_PLATFORM__LINUX
-#ifndef _linuxOSFSWatcher_h_
-#define _linuxOSFSWatcher_h_
+#ifdef GOS_PLATFORM__WINDOWS
+#ifndef _winOSFSWatcher_h_
+#define _winOSFSWatcher_h_
+#include "winOS.h"
 #include "../../gosFSWatcherInterface.h"
 #include "../../string/gosUniqueStringList.h"
 #include "../../string/gosStringList.h"
@@ -19,7 +20,7 @@ namespace platform
     {
     public:
 				OSFSWatcher();
-				~OSFSWatcher()							{ priv_close(); }
+				~OSFSWatcher()									{ priv_close(); }
 
 		void	begin ();
 		void	add_folder (const char *folder_path);
@@ -33,12 +34,6 @@ namespace platform
 		void	event__get_renamed_fullpath (u32 i, char *out__fullpath, u32 sizeof_out) const;
 		bool	event_is_a_dir (u32 i) const;
 
-
-		//usate da WaitableGrp
-		int		internal__open_fd() 							{ if (-1 == fd) priv_create_inotify(); return fd; }
-		void	internal__close_fd()							{ priv_close(); }
-		u32 	internal__on_events_fired();
-		
 	private:
 		static constexpr u8	FLAG__IS_DIR	= 0;
 
@@ -50,23 +45,21 @@ namespace platform
 			gos::Flag8	flag;
 		};
 
+
 	private:
-		bool	priv_create_inotify();
-		
 		void 	priv_close();
 
 	private:
-		gos::Allocator						*localAllocator;
-		gos::UniqueStringList				folder_list;
-		gos::FastHashMap<int, const char*> 	notify_map;
-		gos::StringList						fname_list;
-		gos::FastArray<sEvent>				event_list;
-		int									fd;
+		gos::Allocator					*localAllocator;
+		gos::UniqueStringList			folder_list;
+		gos::StringList					fname_list;
+		gos::FastArray<sEvent>			event_list;
+		gos::FastArray<HANDLE>			handle_list;
 
 	};
 
 } //namespace platform
 
-#endif //_linuxOSFSWatcher_h_
-#endif // GOS_PLATFORM__LINUX
+#endif //_winOSFSWatcher_h_
 
+#endif //GOS_PLATFORM__WINDOWS

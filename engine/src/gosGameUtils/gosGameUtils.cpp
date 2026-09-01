@@ -23,8 +23,8 @@ u32	utils::normal_encode_octahedral (vec3f norm)
     const f32 mu = (f32) ( (1u << OCTAHEDRAL_PRECISION_BIT) - 1u );
     //uvec2 d = uvec2(floor(v*float(mu)+0.5));
 	const vec2u d (
-		math::floor( v.x * mu + 0.5f),
-		math::floor( v.y * mu + 0.5f)
+		(u32)math::floor( v.x * mu + 0.5f),
+		(u32)math::floor( v.y * mu + 0.5f)
 	);
 
     return (d.y << OCTAHEDRAL_PRECISION_BIT) | d.x;
