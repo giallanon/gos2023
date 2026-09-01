@@ -16,8 +16,7 @@ Renderer::Renderer()
 	pointData = NULL;
 	sizeof_pointData = 0;
 	
-	for (u32 i=0; i<NUM_CHUNK_DATA_ELEM_BUFFER; i++)
-		chunk_data_elem_buffer[i] = NULL;
+	chunk_data_elem_buffer = NULL;
 	num_vtx_per_lato = 0;
 }
 
@@ -26,11 +25,7 @@ void Renderer::on__detach (const gos::engine::RenderPipe::Context &ctx)
 {
 	if (NULL != pointData)	GOSFREE_AND_NULL(localAllocator, pointData);
 	
-	for (u32 i=0; i<NUM_CHUNK_DATA_ELEM_BUFFER; i++)
-	{
-		if (NULL != chunk_data_elem_buffer[i])
-			GOSFREE_AND_NULL(localAllocator, chunk_data_elem_buffer[i]);
-	}
+	if (NULL != chunk_data_elem_buffer)	GOSFREE_AND_NULL(localAllocator, chunk_data_elem_buffer);
 
 	gpu->deleteResource(sbo_instance_data.handle_sbo);
 	gpu->deleteResource(sbo_chunk_data.handle_sbo);
@@ -92,10 +87,8 @@ void Renderer::bind_map (land::Map *mapIN)
 	pointData = GOSALLOCT(land::PointData*, localAllocator, sizeof_pointData);
 	
 	const u32 sizeof_chunkData = sizeof(SBO_chunk_data::Elem) * num_vtx_per_lato * num_vtx_per_lato;
-	for (u32 i=0; i<NUM_CHUNK_DATA_ELEM_BUFFER; i++)
-	{
-		chunk_data_elem_buffer[i] = GOSALLOCT(SBO_chunk_data::Elem*, localAllocator, sizeof_chunkData);
-	}
+	chunk_data_elem_buffer = GOSALLOCT(SBO_chunk_data::Elem*, localAllocator, sizeof_chunkData);
+
 	cached_chunk_data_list.setup (localAllocator, NUM_MAX_CHUNK_INSTANCE, sizeof_chunkData);
 
 	//SBO chunk data
@@ -217,14 +210,12 @@ void Renderer::add (const land::QTreeCoordList &list)
 {
 	u32 cached_offset = 0;
 
-	const u32 timenow_msec = (u32)gos::getTimeSinceStart_msec();
+	//const u32 timenow_msec = (u32)gos::getTimeSinceStart_msec();
 	const u32 N = list.getNElem();
 	if (N > NUM_MAX_CHUNK_INSTANCE)
 	{
 		DBGBREAK;
 	}
-
-	u32 iChunkDataElemBuffer = 0;
 
 	for (u32 i=0; i<N; i++)
 	{
@@ -271,50 +262,75 @@ void Renderer::add (const land::QTreeCoordList &list)
 				elem.chunk_originXZ.set (aabb.vmin.x, aabb.vmax.z);
 				elem.scale_XZ = scaleXZ;
 				elem.tutv_offset = tutv_offset;
-				elem.chunk_data_offset = cached_offset;
+				elem.chunk_data_offset = cached_offset / sizeof(SBO_chunk_data::Elem);
 			
 			sbo_instance_data.mapped.writeT (elem, num_instance_to_render * sizeof(elem));
 		}
 
 		//recupero i PointData di questo chunk
-		GOS_DEBUG_ASSERT( map->map__get_data (cc, pointData, sizeof_pointData) );
+		// GOS_DEBUG_ASSERT( map->map__get_data (cc, pointData, sizeof_pointData) );
+		// 	SBO_chunk_data::Elem *cdeb = chunk_data_elem_buffer[iChunkDataElemBuffer++];
+		// 	if (iChunkDataElemBuffer >= NUM_CHUNK_DATA_ELEM_BUFFER)
+		// 		iChunkDataElemBuffer = 0;
 
-			SBO_chunk_data::Elem *cdeb = chunk_data_elem_buffer[iChunkDataElemBuffer++];
-			if (iChunkDataElemBuffer >= NUM_CHUNK_DATA_ELEM_BUFFER)
-				iChunkDataElemBuffer = 0;
-
-			//altezze, normali e via dicendo
-			const u32 NN = num_vtx_per_lato * num_vtx_per_lato;
-			for (u32 iPoint=0; iPoint<NN; iPoint++)
-			{
-				cdeb[iPoint].encoded_norm = pointData[iPoint].norm._encoded;
-				cdeb[iPoint].height_and_stuff = pointData[iPoint].height._encoded;
-				cdeb[iPoint].height_and_stuff |= (u32)pointData[iPoint].materialID << 16;
-				cdeb[iPoint].height_and_stuff |= (u32)pointData[iPoint].ao << 24;
-			}
-		 	const u32 sizeNN = sizeof(SBO_chunk_data::Elem) * NN;
-		 	sbo_chunk_data.mapped.write (cdeb, sizeNN, cached_offset);
-			cached_offset += sizeNN;
+		// 	//altezze, normali e via dicendo
+		// 	const u32 NN = num_vtx_per_lato * num_vtx_per_lato;
+		// 	for (u32 iPoint=0; iPoint<NN; iPoint++)
+		// 	{
+		// 		cdeb[iPoint].encoded_norm = pointData[iPoint].norm._encoded;
+		// 		cdeb[iPoint].height_and_stuff = pointData[iPoint].height._encoded;
+		// 		cdeb[iPoint].height_and_stuff |= (u32)pointData[iPoint].materialID << 16;
+		// 		cdeb[iPoint].height_and_stuff |= (u32)pointData[iPoint].ao << 24;
+		// 	}
+		//  	const u32 sizeNN = sizeof(SBO_chunk_data::Elem) * NN;
+		//  	sbo_chunk_data.mapped.write (cdeb, sizeNN, cached_offset);
+		// 	cached_offset += sizeNN;
 
 		// SBO_chunk_data::Elem *pp = reinterpret_cast<SBO_chunk_data::Elem*>(	sbo_chunk_data.mapped.buffer->mapped_host_pt );
 		// GOS_DEBUG_ASSERT( map->map__get_data (cc, pointData, sizeof_pointData) );
 		// 	//altezze, normali e via dicendo
 		// 	const u32 NN = num_vtx_per_lato * num_vtx_per_lato;
-		// 	for (u32 iPoint=0; iPoint<NN; iPoint++)
+		// 	u32 iPoint = 0;
+		// 	for (u32 yy=0; yy<num_vtx_per_lato; yy++)
 		// 	{
-		// 		pp[cached_offset].encoded_norm = pointData[iPoint].norm._encoded;
-		// 		pp[cached_offset].height_and_stuff = pointData[iPoint].height._encoded;
-		// 		pp[cached_offset].height_and_stuff |= (u32)pointData[iPoint].materialID << 16;
-		// 		pp[cached_offset].height_and_stuff |= (u32)pointData[iPoint].ao << 24;
-		// 		cached_offset++;
+		// 		for (u32 xx=0; xx<num_vtx_per_lato; xx++)
+		// 		{
+		// 			u16 height_and_stuff = pointData[iPoint].height._encoded;
+
+		// 			if (xx==1 || yy==1) height_and_stuff = 300;
+
+		// 			height_and_stuff |= (u32)pointData[iPoint].materialID << 16;
+		// 			height_and_stuff |= (u32)pointData[iPoint].ao << 24;
+
+
+		// 			pp[cached_offset].encoded_norm = pointData[iPoint].norm._encoded;
+		// 			pp[cached_offset].height_and_stuff = height_and_stuff;
+		// 			cached_offset++;
+		// 		}
 		// 	}
 
 
+		GOS_DEBUG_ASSERT( map->map__get_data (cc, pointData, sizeof_pointData) );
+			//altezze, normali e via dicendo
+			const u32 NN = num_vtx_per_lato * num_vtx_per_lato;
+			for (u32 iPoint=0; iPoint<NN; iPoint++)
+			{
+				u16 height_and_stuff = pointData[iPoint].height._encoded;
+				height_and_stuff |= (u32)pointData[iPoint].materialID << 16;
+				height_and_stuff |= (u32)pointData[iPoint].ao << 24;
 
+				chunk_data_elem_buffer[iPoint].encoded_norm = pointData[iPoint].norm._encoded;
+				chunk_data_elem_buffer[iPoint].height_and_stuff = height_and_stuff;
+			}
+		 	const u32 sizeNN = sizeof(SBO_chunk_data::Elem) * NN;
+			sbo_chunk_data.mapped.write (chunk_data_elem_buffer, sizeNN, cached_offset);
+			cached_offset += sizeNN;
 
 		num_instance_to_render++;
 		
 	}
+
+	
 }
 
 //********************************

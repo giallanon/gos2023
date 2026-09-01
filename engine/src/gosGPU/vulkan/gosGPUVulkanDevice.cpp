@@ -577,8 +577,8 @@ bool VulkanDevice::priv_getMemoryType (uint32_t typeBits, const VkMemoryProperty
 	{
 		const VkMemoryPropertyFlags memFlags = memPropertiesList[m] | ( is_DEVICE_LOCAL_always_need ? VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT : 0 );
 
-        // char debug_s1[256];
-		// gos::vulkanMemoryPropertyFlagsToString (memFlags, debug_s1, sizeof(debug_s1));
+// char debug_s1[256];
+// gos::vulkanMemoryPropertyFlagsToString (memFlags, debug_s1, sizeof(debug_s1));
 
 		for (u32 i = 0; i < phyDevInfo.vkMemoryProperties.memoryTypeCount; i++)
 		{
@@ -589,23 +589,26 @@ bool VulkanDevice::priv_getMemoryType (uint32_t typeBits, const VkMemoryProperty
 				//almeno tutte le "properties" che ho richiesto
 				const VkMemoryPropertyFlags mask = phyDevInfo.vkMemoryProperties.memoryTypes[i].propertyFlags;
 
-				// char debug_s2[256];
-				// gos::vulkanMemoryPropertyFlagsToString (mask, debug_s2, sizeof(debug_s2));
+// char debug_s2[256];
+// gos::vulkanMemoryPropertyFlagsToString (mask, debug_s2, sizeof(debug_s2));
 
 				if ( (mask & memFlags) == memFlags)
 				{
 					//mi assicuro che abbia esattamente la combinazione di 
-					//  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+					//  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_MEMORY_PROPERTY_HOST_CACHED_BIT
 					//  richieste
 					bool ok = true;
 					if (0 == (memFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) && 0 != (mask & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) )	ok=false;
 					if (0 == (memFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && 0 != (mask & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) )	ok=false;
 					if (0 == (memFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) && 0 != (mask & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) )	ok=false;
-					if (0 == (memFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && 0 != (mask & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) )	ok=false;
+					if (0 == (memFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) && 0 != (mask & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) )		ok=false;
 
 
 					if (ok)
 					{
+// char debug_s3[256];
+// gos::vulkanMemoryPropertyFlagsToString (mask, debug_s3, sizeof(debug_s3));
+
 						*out_index = i;
 						
 						if (NULL != out_canBeNULL_memFlagUsed)

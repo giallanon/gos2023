@@ -28,7 +28,6 @@ namespace land
 
 	private:
 		static constexpr u32 	NUM_MAX_CHUNK_INSTANCE = 4096;
-		static constexpr u32 	NUM_CHUNK_DATA_ELEM_BUFFER = 2;
 
 	private:
 		struct SBO_instance_data
@@ -83,7 +82,7 @@ namespace land
 		land::Map				*map;
 		land::PointData			*pointData;
 		u32 					sizeof_pointData;
-		SBO_chunk_data::Elem 	*chunk_data_elem_buffer[NUM_CHUNK_DATA_ELEM_BUFFER];
+		SBO_chunk_data::Elem 	*chunk_data_elem_buffer;
 		CacheLRU<QTreeCoord>	cached_chunk_data_list;
 	};
 

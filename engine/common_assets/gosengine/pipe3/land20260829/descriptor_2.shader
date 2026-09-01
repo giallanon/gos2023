@@ -5,7 +5,6 @@ struct sInstanceData
 	vec2	tutv_offset;
     float 	scale_XZ;
 	uint 	chunk_data_offset;
-
 };
 
 layout(std430, set = 2, binding = 0) readonly buffer SBO_2_0

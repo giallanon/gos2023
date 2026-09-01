@@ -1,0 +1,727 @@
+﻿#include "builder.h"
+#include <process.h>
+#include "GOSKernel/socket/gosSocket.h"
+#include "GOSKernel/varie/gosBitStream.h"
+#include "GOSImage/gosImage.h"
+
+using namespace gos;
+
+//*****************************************
+Builder::Builder()
+{
+	elencoFileModificati.setup (mem::getSysHeapAllocator(), 128);
+	assetToRebuildList.setup (mem::getSysHeapAllocator(), 128);
+	absoluteTempPath = NULL;
+	strList.setup (gos::getScrapAllocator(), 16);
+}
+
+//*****************************************
+Builder::~Builder()
+{
+	strList.unsetup ();
+	GOSFREE(gos::getSysHeapAllocator(), absoluteTempPath);
+}
+
+//*****************************************
+bool Builder::run (const u8* absolutePathToRootFolder)
+{
+	socket::init (&sok);
+	if (eSocketError::none != socket::openAsUDP(&sok))
+	{
+		log.log ((const u8*)"Error opening UDP socket on port %d...\n", ASSET_MANAGER_UDP_PORT);
+		return false;
+	}
+
+
+	fs::mount ((const u8*)"/root", absolutePathToRootFolder);
+
+	if (!fs::fileExists ((const u8*)"/root/assetBuilder.ini"))
+	{
+		log.log ((const u8*)"ERROR: file assetBuilder.ini not found in %s\n", absolutePathToRootFolder);
+		return false;
+	}
+
+	if (!ini.loadAndParse ((const u8*)"/root/assetBuilder.ini"))
+	{
+		log.log ((const u8*)"ERROR parsing assetBuilder.ini\n");
+		return false;
+	}
+
+
+	
+	/*
+	for (u32 i = 0; i < ini.getNSubsection(); i++)
+	{
+		gos::IniFileSection *sec = ini.getSubsectionByIndex(i);
+		log.log ((const u8*)"Subsection: %s\n",  sec->name.getBuffer());
+		for (u32 i2 = 0; i2 < sec->getNIdentifier(); i2++)
+		{
+			log.log ((const u8*)"  %s : %s\n", sec->getIdentifierByIndex(i2), sec->getValueByIndex(i2));
+		}
+
+		log.log ((const u8*)"\n\n");
+	}
+	*/
+
+
+
+	//monta la cartella "src" e la cartella "dst" che sono le cartelle che contengono i file da buildare e i file buildati
+	//Crea anche la cartella temp che uso duante la build dei vari asset
+	//Monta la cartella /tools che è dove si trovano i vari tools di compilazione
+	u8 path[1024];
+	{
+		u8 value[512];
+
+		//folder tools
+		sprintf_s ((char*)path, sizeof(path), "%s/tools", gos::getAppPath());
+		fs::mount ((const u8*)"/tools", path);
+
+
+		//folder temp
+		sprintf_s ((char*)path, sizeof(path), "%s/temp_assetBuilder", absolutePathToRootFolder);
+		platform::folderCreateRecursive (path);
+		fs::mount ((const u8*)"/temp", path);
+		fs::deleteAllFileInFolder((const u8*)"/temp", true);
+		absoluteTempPath = string::utf8::allocStr (gos::getSysHeapAllocator(), path);
+
+
+		//folder dst
+		if (!ini.get((const u8*)"config.folderDST", value, sizeof(value)))
+		{
+			log.log ((const u8*)"ERROR: config.folderDST not found\n");
+			return false;
+		}
+		sprintf_s ((char*)path, sizeof(path), "%s/%s", absolutePathToRootFolder, value);
+		
+		u32 i = 0;
+		while (path[i] != 0x00)
+		{
+			if (path[i] == '\\') path[i] = '/';
+			++i;
+		}
+
+		if (!fs::mount ((const u8*)"/dst", path))
+		{
+			log.log ((const u8*)"ERROR: mounting %s\n", path);
+			return false;
+		}
+
+		//folder src
+		if (!ini.get((const u8*)"config.folderSRC", value, sizeof(value)))
+		{
+			log.log ((const u8*)"ERROR: config.folderSRC not found\n");
+			return false;
+		}
+		sprintf_s ((char*)path, sizeof(path), "%s/%s", absolutePathToRootFolder, value);
+		
+		i = 0;
+		while (path[i] != 0x00)
+		{
+			if (path[i] == '\\') path[i] = '/';
+			++i;
+		}		
+		
+		if (!fs::mount ((const u8*)"/src", path))
+		{
+			log.log ((const u8*)"ERROR: mounting %s\n", path);
+			return false;
+		}
+	}
+
+	//inizio a "watchare" la cartella src
+	log.log ((const u8*)"READY: begin watching folder %s\n", path);
+	HANDLE hDir;
+	{
+		wchar_t wpath[512];
+		gos::win32::utf8_towchar (path, u32MAX, wpath, sizeof(wpath));
+
+		hDir = CreateFile (wpath, GENERIC_READ | FILE_LIST_DIRECTORY,
+			FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+			NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+			NULL);
+		if (hDir == INVALID_HANDLE_VALUE)
+		{
+			log.log ((const u8*)"ERROR: unable to start watching folder %s\n", path);
+			return false;
+		}
+	}
+
+	OVERLAPPED PollingOverlap;
+	PollingOverlap.OffsetHigh = 0;
+	PollingOverlap.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+
+	BOOL result=TRUE;
+	while(result)
+	{
+		char buf[2048];
+		DWORD nRet;
+		result = ReadDirectoryChangesW(
+					hDir,					// handle to the directory to be watched
+					&buf,					// pointer to the buffer to receive the read results
+					sizeof(buf),			// length of lpBuffer
+					TRUE,					// flag for monitoring directory or directory tree
+					FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE,
+					&nRet,					// number of bytes returned
+					&PollingOverlap,		// pointer to structure needed for overlapped I/O
+				NULL);
+                
+		if (WAIT_OBJECT_0 == WaitForSingleObject(PollingOverlap.hEvent, 5000))
+		{
+			int		offset = 0;
+			int		rename = 0;
+			FILE_NOTIFY_INFORMATION *pNotify;
+			do
+			{
+				u8 utf8_filename[512];
+				pNotify = (FILE_NOTIFY_INFORMATION*)((char*)buf + offset);
+				gos::win32::wchar_to_utf8 (pNotify->FileName, pNotify->FileNameLength, utf8_filename, sizeof(utf8_filename));
+
+				u32 i = 0;
+				while (utf8_filename[i] != 0x00)
+				{
+					if (utf8_filename[i] == '\\') utf8_filename[i] = '/';
+					++i;
+				}
+				
+				switch (pNotify->Action)
+				{
+				case FILE_ACTION_ADDED:
+				case FILE_ACTION_REMOVED:
+				case FILE_ACTION_MODIFIED:
+				case FILE_ACTION_RENAMED_OLD_NAME:
+				case FILE_ACTION_RENAMED_NEW_NAME:
+					priv_addFileToList (utf8_filename);
+					break;
+
+				default:
+					break;
+				}
+
+				offset += pNotify->NextEntryOffset;
+			} while (pNotify->NextEntryOffset);
+		}
+		else
+		{
+			//se sono passati 5o00ms dall'ultima volta che qualche cosa è accadura nella cartella..
+			priv_doScheduledJobs();
+		}
+	}
+
+	CloseHandle( hDir );
+	return true;
+}
+
+//*****************************************
+void Builder::priv_addFileToList (const u8* filename)
+{
+	const u32 n = elencoFileModificati.getNElem();
+	for (u32 i = 0; i < n; i++)
+	{
+		if (elencoFileModificati(i).isEqualTo(filename, false))
+			return;
+	}
+
+	//verifico che sia davvero un file (potrebbe essere una cartella)
+	u8 temp[512];
+	sprintf_s ((char*)temp, sizeof(temp), "/src/%s", filename);
+	if (!fs::fileExists (temp))
+		return;
+	elencoFileModificati[n] = filename;
+	log.log ((const u8*)"change detected: %s\n", filename);
+}
+
+//*****************************************
+void Builder::priv_doScheduledJobs()
+{
+	u32 n = elencoFileModificati.getNElem();
+	if (n == 0)
+		return;
+
+	gos::utf8::String			str1;
+	
+	log.log ((const u8*)"working...\n");
+	log.incIndent();
+
+	assetToRebuildList.reset();
+	for (u32 i = 0; i < n; i++)
+	{
+		//verifico che il file esista ancora, non si sa mai che sia stato cancellato
+		const u8 *filename = elencoFileModificati(i).getBuffer();
+		{
+			u8 temp[512];
+			sprintf_s ((char*)temp, sizeof(temp), "/src/%s", filename);
+			if (!fs::fileExists (temp))
+				continue;
+		}
+
+		//vediamo questo file se interessa qualche asset
+		const u32 nSubsection = ini.getNSubsection();
+		for (u32 i = 0; i < nSubsection; i++)
+		{
+			gos::IniFileSection *sec = ini.getSubsectionByIndex(i);
+			if (sec->name.isEqualTo("config", false))
+				continue;
+
+			if (!sec->get((const u8*)"src", str1))
+				continue;
+
+			//[src] potrebbe contenere un elenco di nomi di file, li devo considerare tutti quanti
+			strList.reset();
+			const u32 nFileName = str1.explode(UTF8Char(','), strList);
+			for (u32 i2 = 0; i2 < nFileName; i2++)
+			{
+				strList[i2].trim();
+				if (strList(i2).isEqualTo(filename, true))
+				{
+					if (u32MAX == assetToRebuildList.simpleSearch(sec))
+						assetToRebuildList.append(sec);
+				}
+			}
+		}
+	}
+
+#define BUILD(nomeDaVisualizzare, nomeFnDaChiamare) {\
+				fs::deleteAllFileInFolder((const u8*)"/temp", true);\
+				log.log ((const u8*)nomeDaVisualizzare"\n");\
+				log.incIndent();\
+				nomeFnDaChiamare(sec);\
+				log.decIndent();\
+			}\
+
+
+
+	//ora buildo tutti gli asset che lo necessitano
+	n = assetToRebuildList.getNElem();
+	log.log ((const u8*)"Building %d assets...\n", n);
+	for (u32 i = 0; i < n; i++)
+	{
+		const gos::IniFileSection *sec = assetToRebuildList(i);
+		
+		log.incIndent();
+		if (sec->name.isEqualToWithLen((const u8*)"shader", 6, false))					BUILD("SHADER", priv_shader)
+		else if (sec->name.isEqualToWithLen((const u8*)"vtxShader", 9, false))			BUILD("VERTEX SHADER", priv_vtxShader)
+		else if (sec->name.isEqualToWithLen((const u8*)"pxlShader", 9, false))			BUILD("PIXEL SHADER", priv_pxlShader)
+		else if (sec->name.isEqualToWithLen((const u8*)"texture2D", 9, false))			BUILD("TEXTURE2D", priv_texture2D)
+		else if (sec->name.isEqualToWithLen((const u8*)"cubemap", 7, false))			BUILD("CUBE MAP", priv_cubeMap)
+		else
+		{
+			log.log ((const u8*)"ERROR: section %s in assetBuilder.ini file is not a valid section name\n", sec->name.getBuffer());
+		}
+		log.decIndent();
+	}
+	log.decIndent();
+	printf ("working DONE\n\n");
+	
+#undef BUILD
+
+	elencoFileModificati.reset();
+}
+
+//****************************************************************************
+void Builder::priv_runBat (const u8 *const path, const u8* batName, const u8* param1, ...) const
+{
+	char args[1024];
+	sprintf_s (args, sizeof(args), "cmd.exe /C \"%s\\%s\"", path, batName);
+	if (NULL != param1)
+	{
+		strcat_s (args, sizeof(args), " ");
+		strcat_s (args, sizeof(args), (const char*)param1);
+
+		va_list ap;
+		va_start(ap, param1);
+		while (1)
+		{
+			const u8 *params = va_arg(ap, const u8*);
+			if (NULL == params)
+				break;
+			strcat_s (args, sizeof(args), " ");
+			strcat_s (args, sizeof(args), (const char*)params);
+		}
+		va_end(ap);
+	}
+
+	wchar_t wargs[1024];
+	gos::win32::utf8_towchar ((const u8*)args, u32MAX, wargs, sizeof(wargs));
+
+
+
+	PROCESS_INFORMATION pif;
+	STARTUPINFO si;
+ 	ZeroMemory(&si,sizeof(si));
+	si.cb = sizeof(si);
+ 
+	CreateProcess(
+        NULL, //Path to executable file
+        wargs,   //Command string - not needed here
+        NULL,   //Process handle not inherited
+        NULL,   //Thread handle not inherited
+        FALSE,  //No inheritance of handles
+        0,      //No special flags
+        NULL,   //Same environment block as this prog
+        NULL,   //Current directory - no separate path
+        &si,    //Pointer to STARTUPINFO
+        &pif);   //Pointer to PROCESS_INFORMATION
+
+	WaitForSingleObject (pif.hProcess, INFINITE);
+	CloseHandle(pif.hProcess);   //Close handle to process
+	CloseHandle(pif.hThread);    //Close handle to thread
+}
+
+//****************************************************************************
+void Builder::priv_signalToGame (const u8* filename, eAssetType assetType)
+{
+	/* creo un buffer
+		byte 0		= assetType
+		byte 1-2-3	= lunghezza del filename comprensivo di 0x00
+		byte 4..	= filename compensivo di 0x00
+	*/
+	const u32 len = string::utf8::lengthInBytes(filename);
+	u8 buffer[1024];
+	buffer[0] = (u8)assetType;
+	bytestream::writeU24(&buffer[1], len+2);
+	buffer[4] = '/';
+	memcpy (&buffer[5], filename, len+1);
+
+	//broadcasto via UDP in localhost
+	const u32 nBytesToSend = 4 + len+2;
+
+		
+	log.log ((const u8*)"Broadcasting [%s] changes on UDP port %d...\n", filename, ASSET_MANAGER_UDP_PORT);
+	socket::UDPSendBroadcast (sok, buffer, nBytesToSend, "127.0.0.1", ASSET_MANAGER_UDP_PORT, "255.255.255.255");
+}
+
+/*****************************************
+ [shader]
+	src:	SSAO.hlsl
+	dst:	ssao.shader
+	mainVS: mainVS		*opzionale, se non c'è si usa mainVS come nome del main
+	mainPS:	mainPS		*opzionale, se non c'è si usa mainVS come nome del main
+	debug: 0|1			*opzionale, se non c'è si usa 0
+
+
+	Lo compilo con fxc.exe che deve essere in app/tool
+*/
+bool Builder::priv_shader (const gos::IniFileSection *sec)
+{
+	utf8::String dstFilename;
+	if (!sec->get ((const u8*)"dst", dstFilename))
+	{
+		log.log ((const u8*)"ERROR: identifier 'dst' not found in section %s\n", sec->name.getBuffer());
+		return false;
+	}
+
+	utf8::String srcFilename;
+	if (!sec->get ((const u8*)"src", srcFilename))
+	{
+		log.log ((const u8*)"ERROR: identifier 'src' not found in section %s\n", sec->name.getBuffer());
+		return false;
+	}
+
+	utf8::String vsMainFnName;
+	sec->getOrDefault ((const u8*)"mainVS", (const u8*)"mainVS", vsMainFnName);
+
+	utf8::String psMainFnName;
+	sec->getOrDefault ((const u8*)"mainPS", (const u8*)"mainPS", psMainFnName);
+
+	bool isDebugVersion = false;
+	if (1 == sec->getOrDefaultAsI32 ((const u8*)"debug", 0))
+		isDebugVersion = true;
+
+
+	//copio tutti i file che mi interessano nella cartella temp
+	fs::fileCopy ((const u8*)"/tools", (const u8*)"fxc.exe", (const u8*)"/temp");
+	if (isDebugVersion)
+	{
+		fs::fileCopy ((const u8*)"/tools", (const u8*)"compileVS_debug.bat", (const u8*)"/temp");
+		fs::fileCopy ((const u8*)"/tools", (const u8*)"compilePS_debug.bat", (const u8*)"/temp");
+	}
+	else
+	{
+		fs::fileCopy ((const u8*)"/tools", (const u8*)"compileVS.bat", (const u8*)"/temp");
+		fs::fileCopy ((const u8*)"/tools", (const u8*)"compilePS.bat", (const u8*)"/temp");
+	}
+	fs::fileCopy ((const u8*)"/src", srcFilename.getBuffer(), (const u8*)"/temp");
+
+
+	//genero VS. Se funziona, al termine ho il /temp/vs
+	if (isDebugVersion)
+	{
+		log.log ((const u8*)"DEBUG version\n");
+		priv_runBat (absoluteTempPath, (const u8*)"compileVS_debug.bat", srcFilename.getBuffer(), vsMainFnName.getBuffer(), (const u8*)"vs", NULL);
+	}
+	else
+		priv_runBat (absoluteTempPath, (const u8*)"compileVS.bat", srcFilename.getBuffer(), vsMainFnName.getBuffer(), (const u8*)"vs", NULL);
+	if (!fs::fileExists ((const u8*)"/temp/vs"))
+	{
+		log.log ((const u8*)"ERROR compiling vertex shader\n");
+		return false;
+	}
+
+	//genero PS. Se funziona, al termine ho il /temp/ps
+	if (isDebugVersion)
+	{
+		log.log ((const u8*)"DEBUG version\n");
+		priv_runBat (absoluteTempPath, (const u8*)"compilePS_debug.bat", srcFilename.getBuffer(), psMainFnName.getBuffer(), (const u8*)"ps", NULL);
+	}
+	else
+		priv_runBat (absoluteTempPath, (const u8*)"compilePS.bat", srcFilename.getBuffer(), psMainFnName.getBuffer(), (const u8*)"ps", NULL);
+	if (!fs::fileExists ((const u8*)"/temp/ps"))
+	{
+		log.log ((const u8*)"ERROR compiling pixel shader\n");
+		return false;
+	}
+
+	//tutto ok, ora faccio il merge dei 2 file
+	u32 fileSize1;
+	void *buffer1 = fs::loadFileInMemory (gos::getScrapAllocator(), (const u8*)"/temp/vs", &fileSize1);
+
+	u32 fileSize2;
+	void *buffer2 = fs::loadFileInMemory (gos::getScrapAllocator(), (const u8*)"/temp/ps", &fileSize2);
+
+
+	//delete del file di destinazione
+	vsMainFnName = "/dst/" & dstFilename;
+	fs::fileDelete (vsMainFnName.getBuffer());
+
+	//copia del file di destinazione
+	HFile hFile;
+	fs::fileOpenForW (&hFile, vsMainFnName.getBuffer());
+	fs::fileWrite (hFile, &fileSize1, sizeof(fileSize1));
+	fs::fileWrite (hFile, buffer1, fileSize1);
+	fs::fileWrite (hFile, buffer2, fileSize2);
+	fs::fileClose(hFile);
+
+	GOSFREE(gos::getScrapAllocator(), buffer1);
+	GOSFREE(gos::getScrapAllocator(), buffer2);
+
+	//segnalo al game che l'asset è stato modificato
+	priv_signalToGame (dstFilename.getBuffer(), eAssetType::shader);
+	return true;
+}
+
+/*****************************************
+ [vtxShader]
+	src:	SSAO.hlsl
+	dst:	ssao.vs
+	main: mainVS		*opzionale, se non c'è si usa mainVS come nome del main
+
+	Lo compilo con fxc.exe che deve essere in app/tool
+*/
+bool Builder::priv_vtxShader (const gos::IniFileSection *sec)
+{
+	utf8::String dstFilename;
+	if (!sec->get ((const u8*)"dst", dstFilename))
+	{
+		log.log ((const u8*)"ERROR: identifier 'dst' not found in section %s\n", sec->name.getBuffer());
+		return false;
+	}
+
+	utf8::String srcFilename;
+	if (!sec->get ((const u8*)"src", srcFilename))
+	{
+		log.log ((const u8*)"ERROR: identifier 'src' not found in section %s\n", sec->name.getBuffer());
+		return false;
+	}
+
+	utf8::String mainFnName;
+	sec->getOrDefault ((const u8*)"main", (const u8*)"mainVS", mainFnName);
+
+
+	//copio tutti i file che mi interessano nella cartella temp
+	fs::fileCopy ((const u8*)"/tools", (const u8*)"fxc.exe", (const u8*)"/temp");
+	fs::fileCopy ((const u8*)"/tools", (const u8*)"compileVS.bat", (const u8*)"/temp");
+	fs::fileCopy ((const u8*)"/src", srcFilename.getBuffer(), (const u8*)"/temp");
+
+
+	//genero VS. Se funziona, al termine ho il /temp/vs
+	priv_runBat (absoluteTempPath, (const u8*)"compileVS.bat", srcFilename.getBuffer(), mainFnName.getBuffer(), (const u8*)"vs", NULL);
+	if (!fs::fileExists ((const u8*)"/temp/vs"))
+	{
+		log.log ((const u8*)"ERROR compiling vertex shader\n");
+		return false;
+	}
+
+
+	mainFnName = "/dst/" & dstFilename;
+	fs::fileDelete (mainFnName.getBuffer());
+	fs::fileCopy ((const u8*)"/temp", (const u8*)"vs", (const u8*)"/dst", dstFilename.getBuffer());
+
+	//segnalo al game che l'asset è stato modificato
+	priv_signalToGame (dstFilename.getBuffer(), eAssetType::vtxShader);
+	return true;
+}
+
+/*****************************************
+ [pxlShader]
+	src:	SSAO.hlsl
+	dst:	ssao.ps
+	main:	mainPS		*opzionale, se non c'è si usa mainVS come nome del main
+
+	Lo compilo con fxc.exe che deve essere in app/tool
+*/
+bool Builder::priv_pxlShader (const gos::IniFileSection *sec)
+{
+	utf8::String dstFilename;
+	if (!sec->get ((const u8*)"dst", dstFilename))
+	{
+		log.log ((const u8*)"ERROR: identifier 'dst' not found in section %s\n", sec->name.getBuffer());
+		return false;
+	}
+
+	utf8::String srcFilename;
+	if (!sec->get ((const u8*)"src", srcFilename))
+	{
+		log.log ((const u8*)"ERROR: identifier 'src' not found in section %s\n", sec->name.getBuffer());
+		return false;
+	}
+
+	utf8::String mainFnName;
+	sec->getOrDefault ((const u8*)"main", (const u8*)"mainPS", mainFnName);
+
+
+	//copio tutti i file che mi interessano nella cartella temp
+	fs::fileCopy ((const u8*)"/tools", (const u8*)"fxc.exe", (const u8*)"/temp");
+	fs::fileCopy ((const u8*)"/tools", (const u8*)"compilePS.bat", (const u8*)"/temp");
+	fs::fileCopy ((const u8*)"/src", srcFilename.getBuffer(), (const u8*)"/temp");
+
+
+	//genero VS. Se funziona, al termine ho il /temp/vs
+	priv_runBat (absoluteTempPath, (const u8*)"compilePS.bat", srcFilename.getBuffer(), mainFnName.getBuffer(), (const u8*)"ps", NULL);
+	if (!fs::fileExists ((const u8*)"/temp/ps"))
+	{
+		log.log ((const u8*)"ERROR compiling pixel shader\n");
+		return false;
+	}
+
+	mainFnName = "/dst/" & dstFilename;
+	fs::fileDelete (mainFnName.getBuffer());
+	fs::fileCopy ((const u8*)"/temp", (const u8*)"ps", (const u8*)"/dst", dstFilename.getBuffer());
+
+	//segnalo al game che l'asset è stato modificato
+	priv_signalToGame (dstFilename.getBuffer(), eAssetType::pxlShader);
+	return true;
+}
+
+
+/*****************************************
+ [cubemap]
+	src: forest_xneg.png, forest_xpos.png,   forest_yneg.png, forest_ypos.png,    forest_zneg.png, forest_zpos.png
+	dst: forest.cubemap.gosimage
+
+
+	in [src] devono essere indicati 6 file di immagini. L'ordine con cui sono indicati è importante e deve essere rispettato
+*/
+bool Builder::priv_cubeMap (const gos::IniFileSection *sec)
+{
+	utf8::String dstFilename;
+	if (!sec->get ((const u8*)"dst", dstFilename))
+	{
+		log.log ((const u8*)"ERROR: identifier 'dst' not found in section %s\n", sec->name.getBuffer());
+		return false;
+	}
+
+	utf8::String srcFilename;
+	if (!sec->get ((const u8*)"src", srcFilename))
+	{
+		log.log ((const u8*)"ERROR: identifier 'src' not found in section %s\n", sec->name.getBuffer());
+		return false;
+	}
+
+	strList.reset();
+	const u32 nFileName = srcFilename.explode(UTF8Char(','), strList);
+	if (nFileName != 6)
+	{
+		log.log ((const u8*)"ERROR: identifier 'src' in section %s. => we need 6 filename, %d found %s\n", sec->name.getBuffer(), nFileName);
+		return false;
+	}
+
+	gos::image::Builder b;
+	gos::image::Image img;
+	b.begin (&img, gos::getScrapAllocator());
+
+	/*l'ordine con il quale si memmano le img nella gosIMage è importante e deve rispettare l'ordine dell'enum gpu::eTexCubeFace
+			_top = 0,
+			_bottom = 1,
+			_left = 2,
+			_right = 3,
+			_front = 4,
+			_back = 5,
+
+		L'ordine con cui sono indicate nel membro src: è:
+			0	_xneg
+			1	_xpos
+			2	_yneg
+			3	_ypos
+			4	_zneg
+			5	_zpos
+	*/
+	u8 remap[6] = {3,2 ,0,1, 5,4};
+	for (u8 i = 0; i < 6; i++)
+	{
+		const u8 idx = remap[i];
+		strList[idx].trim();
+		srcFilename = "/src/" & strList(idx);
+		log.log ((const u8*)"adding %s\n", srcFilename.getBuffer());
+		if (!b.addFromFile (srcFilename.getBuffer()))
+		{
+			log.log ((const u8*)"ERROR: loading %s\n", srcFilename.getBuffer());
+			gos::image::free (img, gos::getScrapAllocator());
+			return false;
+		}
+	}
+	b.end();
+
+	srcFilename = "/dst/" & dstFilename;
+	gos::image::save (img, srcFilename.getBuffer());
+	gos::image::free (img, gos::getScrapAllocator());
+
+
+	//segnalo al game che l'asset è stato modificato
+	priv_signalToGame (dstFilename.getBuffer(), eAssetType::texCube);
+	return true;
+}
+
+/*****************************************
+ [texture2D]
+	src: texture/hex-terra-diffuse.png
+	dst: hex-terra-diffuse.gosimage
+*/
+bool Builder::priv_texture2D(const gos::IniFileSection *sec)
+{
+	utf8::String dstFilename;
+	if (!sec->get ((const u8*)"dst", dstFilename))
+	{
+		log.log ((const u8*)"ERROR: identifier 'dst' not found in section %s\n", sec->name.getBuffer());
+		return false;
+	}
+
+	utf8::String srcFilename;
+	if (!sec->get ((const u8*)"src", srcFilename))
+	{
+		log.log ((const u8*)"ERROR: identifier 'src' not found in section %s\n", sec->name.getBuffer());
+		return false;
+	}
+
+	gos::image::Builder b;
+	gos::image::Image img;
+	b.begin (&img, gos::getScrapAllocator());
+
+	srcFilename = "/src/" & srcFilename;
+	log.log ((const u8*)"adding %s\n", srcFilename.getBuffer());
+	if (!b.addFromFile (srcFilename.getBuffer()))
+	{
+		log.log ((const u8*)"ERROR: loading %s\n", srcFilename.getBuffer());
+		gos::image::free (img, gos::getScrapAllocator());
+		return false;
+	}
+	b.end();
+
+	srcFilename = "/dst/" & dstFilename;
+	gos::image::save (img, srcFilename.getBuffer());
+	gos::image::free (img, gos::getScrapAllocator());
+
+
+	//segnalo al game che l'asset è stato modificato
+	priv_signalToGame (dstFilename.getBuffer(), eAssetType::tex2D);
+	return true;
+}

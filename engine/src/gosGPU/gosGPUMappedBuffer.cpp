@@ -42,6 +42,7 @@ void MappedBufW::write (const void *src, u32 howManyBytes, u32 dst_offset)
 	if (o > max_offset) 			max_offset = o;
 	if (dst_offset < min_offset)	min_offset = dst_offset;
 
+	assert (o < buffer->bufferSize);
 	memcpy (&buffer->mapped_host_pt[dst_offset], src, howManyBytes);
 }
 
