@@ -123,6 +123,7 @@ namespace gos
                             }
                         }
 
+        void			copyFrom (const UniqueSortedList<T> &source)                    { list.copyFrom(source.list); }
 
     private:
         struct sSearchRange

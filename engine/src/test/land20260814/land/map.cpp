@@ -153,15 +153,16 @@ Map::Map()
 	mapInfo = NULL;
 	num_mapInfo = 0;
 	
+	ccList.setup (localAllocator, 256);
 	upd.mi = NULL;
-	upd.updated_chunk_list.setup (localAllocator, 256);
+	upd.updated_chunk_list = &ccList;
 }
 
 //********************************
 Map::~Map()
 { 
 	priv__free();
-	upd.updated_chunk_list.unsetup();
+	ccList.unsetup();
 
 	GOSDELETE(gos::getSysHeapAllocator(), localAllocator);
 	localAllocator = NULL;
@@ -184,6 +185,17 @@ void Map::priv__free()
 	GOSFREE_AND_NULL(localAllocator, mapInfo);
 	num_mapInfo = 0;
 	qtree.unsetup();
+}
+
+//********************************
+u32 Map::priv__from_resol_to_mapInfoIndex (land::Resol res) const
+{
+	for (u32 i = 0; i < num_mapInfo; i++)
+	{
+		if (mapInfo[i].resolution == res)
+			return i;
+	}
+	return u32MAX;
 }
 
 //********************************
@@ -294,6 +306,49 @@ bool Map::open (const char *folder_path)
 	//istanzio il QTREE
 	qtree.setup (localAllocator, this, QTREE__NUM_VTX_PER_CHUNK_SIDE);
 	return true;
+}
+
+//********************************
+void Map::apply_heightmap (const char *filename, land::Resol resol, f32 scaleY__m)
+{
+	if (!map__begin_update(resol))
+	{
+		DBGBREAK;
+		return;
+	}
+
+	image::BufferRGBA image;
+	if (!image.loadFromFile (gos::getScrapAllocator(), filename))
+	{
+		DBGBREAK;
+		return;
+	}
+
+	u32 dimx = image.getW();
+	u32 dimy = image.getH();
+	if (dimx > upd.mi->num_point_per_lato)	dimx = upd.mi->num_point_per_lato;
+	if (dimy > upd.mi->num_point_per_lato)	dimy = upd.mi->num_point_per_lato;
+
+	const u32 px = (upd.mi->num_point_per_lato - dimx) / 2;
+	const u32 py = (upd.mi->num_point_per_lato - dimy) / 2;
+	assert (px + dimx <= upd.mi->num_point_per_lato);
+	assert (py + dimy <= upd.mi->num_point_per_lato);
+
+	const u8 *rgba = image.getBuffer();
+	const u32 rgba_size_of_a_row = image.getW() * 4;
+	for (u32 y = 0; y < dimy; y++)
+	{
+		u32 rgba_ct = y * rgba_size_of_a_row;
+		for (u32 x = 0; x < dimx; x++)
+		{
+			const f32 h = scaleY__m * (f32)rgba[rgba_ct];
+			rgba_ct += 4;
+
+			map__update (px + x, py + y, h);
+		}
+	}
+	image.free (gos::getScrapAllocator());
+	map__end_update();
 }
 
 //********************************
@@ -424,69 +479,127 @@ bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_lat
 
 //********************************
 bool Map::map__begin_update (land::Resol resolution)
-{
+{ 
 	if (NULL != upd.mi)
 	{
 		DBGBREAK;
 		return false;
 	}
 
-	for (u32 i = 0; i < num_mapInfo; i++)
-	{
-		if (mapInfo[i].resolution == resolution)
-		{
-			upd.mi = &mapInfo[i];
-			break;
-		}
-	}
-
-	if (NULL == upd.mi)
+	const u32 lod = priv__from_resol_to_mapInfoIndex(resolution);
+	if (u32MAX == lod)
 	{
 		DBGBREAK;
 		return false;
 	}
 
-	upd.updated_chunk_list.reset();
+	upd.resolution = resolution;
+	upd.mi = &mapInfo[lod];
+	return priv__map_begin_update (&upd); 
+}
+
+//********************************
+bool Map::priv__map_begin_update (UpdateInfo *upd)
+{
+	assert (NULL != upd->mi);
+	assert (upd->mi == &mapInfo[priv__from_resol_to_mapInfoIndex(upd->resolution)]);
+	upd->updated_chunk_list->reset();
+
+	logger::log ("======= MAP begin update resol=%.3f =======\n", land::resolution_to_m(upd->resolution));
+
 	return true;
 }
 
 //********************************
-void Map::map__end_update()
+void Map::priv__map_update (UpdateInfo *upd, u32 px, u32 py, f32 height__m)
 {
-	if (NULL == upd.mi)
+	assert (NULL != upd->mi);
+	if (px >= upd->mi->num_point_per_lato || py >= upd->mi->num_point_per_lato)
 	{
 		DBGBREAK;
 		return;
 	}
 
-	upd.mi->chunkData->save_all_updated_chunk();
-	upd.mi = NULL;
-}
-
-//********************************
-void Map::map__update (u32 px, u32 py, f32 height__m)
-{
-	assert (NULL != upd.mi);
-	if (px >= upd.mi->num_point_per_lato || py >= upd.mi->num_point_per_lato)
-	{
-		DBGBREAK;
-		return;
-	}
-
-	const u32 chunk__num_point_per_lato = upd.mi->num_point_per_lato / upd.mi->num_chunk_per_lato;
+	const u32 chunk__num_point_per_lato = upd->mi->num_point_per_lato / upd->mi->num_chunk_per_lato;
 	const u32 cx = px / chunk__num_point_per_lato;
 	const u32 cy = py / chunk__num_point_per_lato;
-	upd.updated_chunk_list.insertIfNotExists (ChunkCoord(cx, cy));
+	upd->updated_chunk_list->insertIfNotExists (ChunkCoord(cx, cy));
 
 	const u32 orig_px_left = cx * chunk__num_point_per_lato;
 	const u32 orig_py_top = cy * chunk__num_point_per_lato;
 	px -= orig_px_left;
 	py -= orig_py_top;
 
-	PointData *p = static_cast<PointData*>( upd.mi->chunkData->get_chunk_for_update (cx + cy * upd.mi->num_chunk_per_lato) );
+	PointData *p = static_cast<PointData*>( upd->mi->chunkData->get_chunk_for_update (cx + cy * upd->mi->num_chunk_per_lato) );
 	const u32 offset = px + py * chunk__num_point_per_lato;
 	p[offset].height.set (height__m);
 }
 
+//********************************
+void Map::priv__map_end_update(UpdateInfo *upd, bool bPropagaPrevResolution, bool bPropagaNextResolution)
+{
+	if (NULL == upd->mi)
+	{
+		DBGBREAK;
+		return;
+	}
+	upd->mi->chunkData->save_all_updated_chunk();
+	upd->mi = NULL;
+
+	CCList ccList (gos::getScrapAllocator(), 1024);
+	const u32 lod = priv__from_resol_to_mapInfoIndex(upd->resolution);
+
+	//propago verso LOD a risoluzione maggiore
+	if (bPropagaPrevResolution && lod < num_mapInfo-1)
+	{
+		UpdateInfo upd2;
+		upd2.resolution = land::resolution_prev(upd->resolution);
+		const u32 index = priv__from_resol_to_mapInfoIndex(upd2.resolution);
+		if (u32MAX != index && upd2.resolution != upd->resolution)
+		{
+			upd2.mi = &mapInfo[index];
+			upd2.updated_chunk_list = &ccList;
+			GOS_DEBUG_ASSERT(priv__map_begin_update(&upd2));
+			priv__map_end_update(&upd2, true, false);
+		}
+	}
+
+	//propago verso a LOD a risoluzione inferiore
+	if (bPropagaNextResolution)
+	{
+		UpdateInfo upd2;
+		upd2.resolution = land::resolution_next(upd->resolution);
+		const u32 index = priv__from_resol_to_mapInfoIndex(upd2.resolution);
+		if (u32MAX != index && upd2.resolution != upd->resolution)
+		{
+			upd2.mi = &mapInfo[index];
+			upd2.updated_chunk_list = &ccList;
+			GOS_DEBUG_ASSERT(priv__map_begin_update(&upd2));
+			priv__map_end_update(&upd2, false, true);
+		}
+	}
+}
 
 
+
+
+
+
+//********************************
+void Map::priv__map_update_propagate_down (u32 lodSRC, const CCList &listSRC, u32 lodDST, CCList &listDST)
+{
+	listDST.reset();
+	const FastArray<ChunkCoord> *list = listSRC._queryList();
+	for (u32 i = 0; i < list->getNElem(); i++)
+	{
+		const ChunkCoord ccSRC = list->queryElem(i);
+		const u32 cxSRC = ccSRC.get_cx();
+		const u32 cySRC = ccSRC.get_cy();
+
+		//dato che sto andando in un LOD a piu' alta risoluzione, ad ogni cc SRC corrispondono 4 cc DST
+		listDST.insertIfNotExists (ChunkCoord(cxSRC,    cySRC));
+		listDST.insertIfNotExists (ChunkCoord(cxSRC +1, cySRC));
+		listDST.insertIfNotExists (ChunkCoord(cxSRC,    cySRC +1));
+		listDST.insertIfNotExists (ChunkCoord(cxSRC +1, cySRC +1));
+	}
+}

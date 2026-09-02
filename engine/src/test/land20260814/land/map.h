@@ -50,6 +50,7 @@ namespace land
 						~Map();
 
 		bool			open (const char *folder_path);
+		void			apply_heightmap (const char *filename, land::Resol resol, f32 scaleY__m);
 
 		/**
 		 * @brief	get_map_data
@@ -60,8 +61,8 @@ namespace land
 		bool 			map__get_data (const QTreeCoord cc, PointData *out, u32 sizeof_out);
 
 		bool			map__begin_update (land::Resol resolution);
-		void			map__update (u32 px, u32 py, f32 height__m);
-		void			map__end_update();
+		void			map__update (u32 px, u32 py, f32 height__m)				{ priv__map_update (&upd, px, py, height__m); }
+		void			map__end_update()										{ priv__map_end_update(&upd, true, true); }
 
 		u32 			map__get_num_points_per_lato() const					{ return mapInfo[0].num_point_per_lato; }
 		u32 			map__get_num_lod() const 								{ return num_mapInfo; }
@@ -131,17 +132,24 @@ namespace land
 			BigFile	*chunkData;
 		};
 
+		typedef gos::UniqueSortedList<ChunkCoord>	CCList;
 		struct UpdateInfo
 		{
-			land::Resol							resolution;
-			MapInfo								*mi;
-			gos::UniqueSortedList<ChunkCoord>	updated_chunk_list;
+			land::Resol	resolution;
+			MapInfo		*mi;
+			CCList		*updated_chunk_list;
 		};
 
 
 	private:
 		void 				priv__free();
 		bool 				priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_latoIN, PointData *out, u32 sizeof_out);
+		u32					priv__from_resol_to_mapInfoIndex (land::Resol res) const;
+		
+		bool				priv__map_begin_update (UpdateInfo *upd);
+		void				priv__map_update (UpdateInfo *upd, u32 px, u32 py, f32 height__m);
+		void				priv__map_end_update(UpdateInfo *upd, bool bPropagaPrevResolution, bool bPropagaNextResolution);
+		void				priv__map_update_propagate_down (u32 lodSRC, const CCList &ccListSRC, u32 lodDST, CCList &ccListDST);
 
 	private:
 		gos::Allocator	*localAllocator;
@@ -150,6 +158,7 @@ namespace land
 		f32				map_border_size__m;
 		gos::vec2f		map_topLeft_WC;			//coordinate dell'angolo in alto a sx della mappa (world coodinate)
 		UpdateInfo		upd;
+		CCList			ccList;
 		MapQTree		qtree;
 	};
 
