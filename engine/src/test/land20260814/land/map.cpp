@@ -101,7 +101,7 @@ bool Map::create (const char *save_path, const CreateData &create)
 			land::BigFile bf;
 			bf.open_1 (localAllocator, s, 1);
 			for (u32 i=0; i<num_tot_chunk; i++)
-				bf.write_chunk (i, chunk_data, sizeof_chunk);
+				bf.update_whole_chunk (i, chunk_data, sizeof_chunk);
 			bf.close();		
 		}
 	}
@@ -152,12 +152,16 @@ Map::Map()
 
 	mapInfo = NULL;
 	num_mapInfo = 0;
+	
+	upd.mi = NULL;
+	upd.updated_chunk_list.setup (localAllocator, 256);
 }
 
 //********************************
 Map::~Map()
 { 
 	priv__free();
+	upd.updated_chunk_list.unsetup();
 
 	GOSDELETE(gos::getSysHeapAllocator(), localAllocator);
 	localAllocator = NULL;
@@ -417,3 +421,72 @@ bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_lat
 	return true;
 
 }
+
+//********************************
+bool Map::map__begin_update (land::Resol resolution)
+{
+	if (NULL != upd.mi)
+	{
+		DBGBREAK;
+		return false;
+	}
+
+	for (u32 i = 0; i < num_mapInfo; i++)
+	{
+		if (mapInfo[i].resolution == resolution)
+		{
+			upd.mi = &mapInfo[i];
+			break;
+		}
+	}
+
+	if (NULL == upd.mi)
+	{
+		DBGBREAK;
+		return false;
+	}
+
+	upd.updated_chunk_list.reset();
+	return true;
+}
+
+//********************************
+void Map::map__end_update()
+{
+	if (NULL == upd.mi)
+	{
+		DBGBREAK;
+		return;
+	}
+
+	upd.mi->chunkData->save_all_updated_chunk();
+	upd.mi = NULL;
+}
+
+//********************************
+void Map::map__update (u32 px, u32 py, f32 height__m)
+{
+	assert (NULL != upd.mi);
+	if (px >= upd.mi->num_point_per_lato || py >= upd.mi->num_point_per_lato)
+	{
+		DBGBREAK;
+		return;
+	}
+
+	const u32 chunk__num_point_per_lato = upd.mi->num_point_per_lato / upd.mi->num_chunk_per_lato;
+	const u32 cx = px / chunk__num_point_per_lato;
+	const u32 cy = py / chunk__num_point_per_lato;
+	upd.updated_chunk_list.insertIfNotExists (ChunkCoord(cx, cy));
+
+	const u32 orig_px_left = cx * chunk__num_point_per_lato;
+	const u32 orig_py_top = cy * chunk__num_point_per_lato;
+	px -= orig_px_left;
+	py -= orig_py_top;
+
+	PointData *p = static_cast<PointData*>( upd.mi->chunkData->get_chunk_for_update (cx + cy * upd.mi->num_chunk_per_lato) );
+	const u32 offset = px + py * chunk__num_point_per_lato;
+	p[offset].height.set (height__m);
+}
+
+
+

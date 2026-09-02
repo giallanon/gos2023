@@ -3,6 +3,7 @@
 #include "../gosGameUtils/gosGameUtils.h"
 #include "gosEngine.h"
 #include "gosMath.h"
+#include "gosUniqueSortedList.h"
 
 namespace land
 {
@@ -52,6 +53,29 @@ namespace land
 	};
 
 	typedef gos::FastArray<QTreeCoord>	QTreeCoordList;
+
+
+	/***********************************
+	 * @brief	ChunkCoord
+	 * 
+	 */
+	class ChunkCoord
+	{
+	public:
+				ChunkCoord ()								{ _encoded = 0; }
+				ChunkCoord (u32 cx, u32 cy)					{ set (cx, cy); }
+
+		void	set (u32 cx, u32 cy)						{ _encoded = cx; _encoded |= (u64)cy << 32; }
+		
+		u32 	get_cx() const								{ return (u32) (_encoded & 0x00000000FFFFFFFF); }
+		u32 	get_cy() const								{ return (u32) (_encoded >> 32); }
+
+		int 	compare (const ChunkCoord &b) const			{ if (_encoded==b._encoded) return 0; if (_encoded>b._encoded) return 1; return -1; }
+		bool	operator== (const ChunkCoord &b) const		{ return (_encoded == b._encoded); }
+
+	public:
+		u64		_encoded;
+	};
 
 
 	/***********************************

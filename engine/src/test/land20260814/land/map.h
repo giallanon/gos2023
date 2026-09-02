@@ -4,6 +4,7 @@
 #include "bigFile.h"
 #include "gosMagicUID.h"
 #include "gosUniqueSortedList.h"
+#include "gosBit.h"
 
 
 namespace land
@@ -57,6 +58,10 @@ namespace land
 		 */
 		bool 			map__get_data (u32 px, u32 py, land::Resol resolution, u32 num_point_per_lato, PointData *out, u32 sizeof_out);
 		bool 			map__get_data (const QTreeCoord cc, PointData *out, u32 sizeof_out);
+
+		bool			map__begin_update (land::Resol resolution);
+		void			map__update (u32 px, u32 py, f32 height__m);
+		void			map__end_update();
 
 		u32 			map__get_num_points_per_lato() const					{ return mapInfo[0].num_point_per_lato; }
 		u32 			map__get_num_lod() const 								{ return num_mapInfo; }
@@ -126,6 +131,13 @@ namespace land
 			BigFile	*chunkData;
 		};
 
+		struct UpdateInfo
+		{
+			land::Resol							resolution;
+			MapInfo								*mi;
+			gos::UniqueSortedList<ChunkCoord>	updated_chunk_list;
+		};
+
 
 	private:
 		void 				priv__free();
@@ -137,6 +149,7 @@ namespace land
 		MapInfo 		*mapInfo;
 		f32				map_border_size__m;
 		gos::vec2f		map_topLeft_WC;			//coordinate dell'angolo in alto a sx della mappa (world coodinate)
+		UpdateInfo		upd;
 		MapQTree		qtree;
 	};
 

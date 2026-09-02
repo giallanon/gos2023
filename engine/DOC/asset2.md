@@ -1,3 +1,35 @@
+Pensate 2026-09-02
+
+concrete-asset-UID (aka signature)
+	Dipende esclusivamente dai parametri di build definiti in un gosasset_d.
+	Grazie a questo posso capire se 2 asset sono di fatto lo stesso asset solo con rtName differenti
+	
+	
+virtual-asset-UID
+	Ogni dichiarazione in un file gosasset_d viene identificata da questo UID
+	PROPOSTA: 	al momento l'UID viene calcolato come crc di rtName + uid_del_gosasset_d_dove_e'_stato_dichiarato + linea dove e' stato dichiarato
+				Lasciamo solo rtName in modo che l'UID non dipenda "anche" dalla riga e dal file in cui e' stato dichiarato
+				In questo modo, se sposto di un paio di linee la dichiarazione, la cosa non dovrebbe triggherare un rebuild
+				
+				
+Alla fine di un rebuild, 
+	
+	
+	
+da rtName => assetUID (che dipende esclusivamente dal rtName)
+da assetUID a Signature
+da Signature a file da caricare
+				
+				
+				
+				
+				
+
+
+
+
+
+
 ### GOS ASSET 2 ###
 
 ## Struttura delle directory

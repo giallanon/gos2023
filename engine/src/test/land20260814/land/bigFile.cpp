@@ -66,6 +66,7 @@ void BigFile::priv__free()
 	if (NULL == localAllocator)
 		return;
 
+	save_all_updated_chunk ();
 	fs::fileClose(hFile);
 
 	if (NULL != cached_chunk_list)
@@ -140,6 +141,7 @@ void BigFile::priv__alloc_cache (u32 num_max_cached_chunkIN)
 		cached_chunk_list[i].lru = 0;
 		cached_chunk_list[i].chunk_num = u32MAX;
 		cached_chunk_list[i].p = &cached_chunk_pt[i * chunk_size];
+		cached_chunk_list[i].flag.zero();
 	}
 }
 
@@ -176,14 +178,22 @@ void BigFile::close()
 }
 
 //********************************
-void BigFile::priv__load_chunk (u32 chunk_num, u32 cache_index, u32 timenow_msec)
+void BigFile::priv__load_chunk_into_cache (u32 chunk_num, u32 cache_index, u32 timenow_msec)
 {
 	assert (chunk_num < num_total_chunk_in_file);
 	assert (cache_index < num_max_cached_chunk);
 	CachedChunk *p = &cached_chunk_list[cache_index];
 	
+	//se il chunk che sto per un-cachare era marcato come "to be saved", lo salvo su disco
+	if (p->flag.isBitSet (CachedChunk::FLAG__TO_BE_SAVED))
+	{
+		priv__save_chunk (p->chunk_num, p->p, chunk_size);
+	}
+
+	//carico il nuovo chunk in cache
 	p->lru = timenow_msec;
 	p->chunk_num = chunk_num;
+	p->flag.zero();
 
 	GOS_DEBUG_ASSERT( fs::fileSeek (hFile, start_of_chunk_data + chunk_num * chunk_size, eSeek::start) );
 	GOS_DEBUG_ASSERT( fs::fileRead (hFile, p->p, chunk_size) );
@@ -197,6 +207,7 @@ void BigFile::priv__save_chunk (u32 chunk_num, const void *src, u32 sizeof_chunk
 {
 	assert (chunk_num < num_total_chunk_in_file);
 	
+	logger::log_7 (eTextColor::cyan, "BigFile [%s] => save chunk %d\n", debug_only_fname, chunk_num);
 	GOS_DEBUG_ASSERT( fs::fileSeek (hFile, start_of_chunk_data + chunk_num * chunk_size, eSeek::start) );
 	GOS_DEBUG_ASSERT( fs::fileWrite (hFile, src, sizeof_chunk) );
 }
@@ -214,21 +225,28 @@ u32 BigFile::priv__is_already_cached (u32 chunk_num) const
 }
 
 //********************************
-const void* BigFile::get_chunk (u32 chunk_num)
+u32 BigFile::priv__get_chunk_or_load (u32 chunk_num)
 {
+	assert (chunk_num < num_total_chunk_in_file);
+
 	const u32 timenow_msec = (u32)gos::getTimeSinceStart_msec();
-	u32 index = priv__is_already_cached(chunk_num);
-	if (u32MAX != index)
+
+	//se e' gia' in cache, lo ritorno
+	for (u32 i=0; i<num_cached_chunk; i++)
 	{
-		cached_chunk_list[index].lru = timenow_msec;
-		return cached_chunk_list[index].p;
+		if (cached_chunk_list[i].chunk_num == chunk_num)
+		{
+			cached_chunk_list[i].lru = timenow_msec;
+			return i;
+		}
 	}
 
+	//altrimenti lo carico e lo cacho
 	if (num_cached_chunk < num_max_cached_chunk)
 	{
-		index = num_cached_chunk++;
-		priv__load_chunk (chunk_num, index, timenow_msec);
-		return cached_chunk_list[index].p;
+		const u32 index = num_cached_chunk++;
+		priv__load_chunk_into_cache (chunk_num, index, timenow_msec);
+		return index;
 	}
 
 	//scanno alla ricerca di un chunk da discardare
@@ -243,28 +261,26 @@ const void* BigFile::get_chunk (u32 chunk_num)
 		}
 	}
 
-	priv__load_chunk (chunk_num, worst_index, timenow_msec);
-	return cached_chunk_list[worst_index].p;
+	priv__load_chunk_into_cache (chunk_num, worst_index, timenow_msec);
+	return worst_index;
 }
 
 //********************************
-void BigFile::memcpy_chunk (u32 chunk_num, void *dest, u32 sizeof_dest)
+const void* BigFile::get_chunk (u32 chunk_num)
 {
-	assert (NULL != dest);
-	assert (sizeof_dest <= chunk_size);
-	const void *p = get_chunk(chunk_num);
-	memcpy (dest, p, sizeof_dest);
+	const u32 index = priv__get_chunk_or_load (chunk_num);
+	return cached_chunk_list[index].p;
 }
 
 //********************************
-void BigFile::write_chunk (u32 chunk_num, const void *src, u32 sizeof_chunk)
+void BigFile::update_whole_chunk (u32 chunk_num, const void *src, u32 sizeof_chunk)
 {
 	assert (chunk_num < num_total_chunk_in_file);
 	assert (NULL != src);
 	assert (sizeof_chunk <= chunk_size);
 
 	//se e' in cache, aggiorna anche quella
-	u32 index = priv__is_already_cached(chunk_num);
+	u32 index = priv__is_already_cached (chunk_num);
 	if (u32MAX != index)
 	{
 		cached_chunk_list[index].lru = (u32)gos::getTimeSinceStart_msec();
@@ -274,3 +290,26 @@ void BigFile::write_chunk (u32 chunk_num, const void *src, u32 sizeof_chunk)
 	//salvo su disco
 	priv__save_chunk (chunk_num, src, sizeof_chunk);
 }
+
+//********************************
+void BigFile::save_all_updated_chunk()
+{
+	for (u32 i = 0; i < num_cached_chunk; i++)
+	{
+		if (cached_chunk_list[i].flag.isBitSet (CachedChunk::FLAG__TO_BE_SAVED))
+		{
+			priv__save_chunk (cached_chunk_list[i].chunk_num, cached_chunk_list[i].p, chunk_size);
+			cached_chunk_list[i].flag.clear(CachedChunk::FLAG__TO_BE_SAVED);
+		}
+	}
+}
+
+//********************************
+void* BigFile::get_chunk_for_update (u32 chunk_num)
+{
+	const u32 index = priv__get_chunk_or_load (chunk_num);
+	cached_chunk_list[index].flag.set (CachedChunk::FLAG__TO_BE_SAVED);
+	return cached_chunk_list[index].p;
+}
+
+		
