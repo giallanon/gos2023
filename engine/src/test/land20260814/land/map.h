@@ -136,6 +136,7 @@ namespace land
 		struct UpdateInfo
 		{
 			land::Resol	resolution;
+			u32			chunk__num_point_per_lato;
 			MapInfo		*mi;
 			CCList		*updated_chunk_list;
 		};
@@ -149,7 +150,8 @@ namespace land
 		bool				priv__map_begin_update (UpdateInfo *upd);
 		void				priv__map_update (UpdateInfo *upd, u32 px, u32 py, f32 height__m);
 		void				priv__map_end_update(UpdateInfo *upd, bool bPropagaPrevResolution, bool bPropagaNextResolution);
-		void				priv__map_update_propagate_down (u32 lodSRC, const CCList &ccListSRC, u32 lodDST, CCList &ccListDST);
+		void				priv__map_update_propagate_down (const UpdateInfo &src, UpdateInfo &dst);
+		void				priv__setup_updateInfo (UpdateInfo *dst, land::Resol resolution, CCList *list) const;
 
 	private:
 		gos::Allocator	*localAllocator;
