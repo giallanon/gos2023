@@ -39,7 +39,7 @@ bool Map::create (const char *save_path, const CreateData &create)
 	u32 num_map_info = 0;
 	{
 		mapInfo[num_map_info].resolution = create.default_map__resolution;
-		mapInfo[num_map_info].num_point_per_lato = create.default_map__border_size__point;
+		mapInfo[num_map_info].num_point_per_row = create.default_map__border_size__point;
 		num_map_info++;
 
 		Resol res = mapInfo[0].resolution;
@@ -47,14 +47,14 @@ bool Map::create (const char *save_path, const CreateData &create)
 		{
 			res = land::resolution_prev(res);
 			mapInfo[num_map_info].resolution = res;
-			mapInfo[num_map_info].num_point_per_lato = mapInfo[num_map_info-1].num_point_per_lato * 2;
+			mapInfo[num_map_info].num_point_per_row = mapInfo[num_map_info-1].num_point_per_row * 2;
 			num_map_info++;
 		}
 
 		//info addizionali sulla mappa
 		for (u32 i=0; i<num_map_info; i++)
 		{
-			mapInfo[i].border_size__m = (mapInfo[i].num_point_per_lato - 1) * land::resolution_to_m(mapInfo[i].resolution);
+			mapInfo[i].border_size__m = (mapInfo[i].num_point_per_row - 1) * land::resolution_to_m(mapInfo[i].resolution);
 		}
 	}
 
@@ -94,8 +94,9 @@ bool Map::create (const char *save_path, const CreateData &create)
 
 		sprintf_s (s, sizeof(s), "%s/lod%d", save_path, land::resolution_to_u8(m->resolution));
 		{
-			m->num_chunk_per_lato = m->num_point_per_lato / num_point_per_chunk_lato;
-			const u32 num_tot_chunk = m->num_chunk_per_lato * m->num_chunk_per_lato;
+			m->num_chunk_per_row = m->num_point_per_row / num_point_per_chunk_lato;
+			m->chunk__num_point_per_row = num_point_per_chunk_lato;
+			const u32 num_tot_chunk = m->num_chunk_per_row * m->num_chunk_per_row;
 			land::BigFile::create (s, sizeof_chunk, num_tot_chunk);
 
 			land::BigFile bf;
@@ -125,8 +126,9 @@ bool Map::create (const char *save_path, const CreateData &create)
 
 		for (u32 mm=0; mm<num_map_info; mm++)
 		{
-			ct += utils::bufferWriteU32 (&buffer[ct], mapInfo[mm].num_point_per_lato);
-			ct += utils::bufferWriteU32 (&buffer[ct], mapInfo[mm].num_chunk_per_lato);
+			ct += utils::bufferWriteU32 (&buffer[ct], mapInfo[mm].num_point_per_row);
+			ct += utils::bufferWriteU32 (&buffer[ct], mapInfo[mm].num_chunk_per_row);
+			ct += utils::bufferWriteU32 (&buffer[ct], mapInfo[mm].chunk__num_point_per_row);
 			ct += utils::bufferWriteF32 (&buffer[ct], mapInfo[mm].border_size__m);
 			ct += utils::bufferWriteU8 (&buffer[ct], (u8)mapInfo[mm].resolution);
 		}
@@ -233,12 +235,15 @@ bool Map::open (const char *folder_path)
 		mapInfo = GOSALLOCT(MapInfo*, localAllocator, sizeof(MapInfo) * num_mapInfo);
 		for (u32 i=0; i<num_mapInfo; i++)
 		{
-			mapInfo[i].num_point_per_lato = utils::bufferReadU32 (&buffer[ct]);
+			mapInfo[i].num_point_per_row = utils::bufferReadU32 (&buffer[ct]);
 			ct += 4;
 
-			mapInfo[i].num_chunk_per_lato = utils::bufferReadU32 (&buffer[ct]);
+			mapInfo[i].num_chunk_per_row = utils::bufferReadU32 (&buffer[ct]);
 			ct += 4;
 			
+			mapInfo[i].chunk__num_point_per_row = utils::bufferReadU32 (&buffer[ct]);
+			ct += 4;
+
 			mapInfo[i].border_size__m = utils::bufferReadF32 (&buffer[ct]);
 			ct += 4;
 
@@ -258,7 +263,7 @@ bool Map::open (const char *folder_path)
 	//mappa in RAM. Le altre mappe usando la stessa quantita' di cache
 	{
 		MapInfo *m = &mapInfo[0];
-		const u32 num_max_cached_chunk = m->num_chunk_per_lato * m->num_chunk_per_lato;
+		const u32 num_max_cached_chunk = m->num_chunk_per_row * m->num_chunk_per_row;
 		sprintf_s (s, sizeof(s), "%s/lod%d", folder_path, land::resolution_to_u8(m->resolution));
 		if (!m->chunkData->open_1 (localAllocator, s, num_max_cached_chunk))
 		{
@@ -299,7 +304,7 @@ bool Map::open (const char *folder_path)
 
 
 	//carico tutti i chunk della mappa0
-	for (u32 i=0; i<mapInfo[0].num_chunk_per_lato * mapInfo[0].num_chunk_per_lato; i++)
+	for (u32 i=0; i<mapInfo[0].num_chunk_per_row * mapInfo[0].num_chunk_per_row; i++)
 		mapInfo[0].chunkData->get_chunk(i);
 
 
@@ -326,13 +331,13 @@ void Map::apply_heightmap (const char *filename, land::Resol resol, f32 scaleY__
 
 	u32 dimx = image.getW();
 	u32 dimy = image.getH();
-	if (dimx > upd.mi->num_point_per_lato)	dimx = upd.mi->num_point_per_lato;
-	if (dimy > upd.mi->num_point_per_lato)	dimy = upd.mi->num_point_per_lato;
+	if (dimx > upd.mi->num_point_per_row)	dimx = upd.mi->num_point_per_row;
+	if (dimy > upd.mi->num_point_per_row)	dimy = upd.mi->num_point_per_row;
 
-	const u32 px = (upd.mi->num_point_per_lato - dimx) / 2;
-	const u32 py = (upd.mi->num_point_per_lato - dimy) / 2;
-	assert (px + dimx <= upd.mi->num_point_per_lato);
-	assert (py + dimy <= upd.mi->num_point_per_lato);
+	const u32 px = (upd.mi->num_point_per_row - dimx) / 2;
+	const u32 py = (upd.mi->num_point_per_row - dimy) / 2;
+	assert (px + dimx <= upd.mi->num_point_per_row);
+	assert (py + dimy <= upd.mi->num_point_per_row);
 
 	const u8 *rgba = image.getBuffer();
 	const u32 rgba_size_of_a_row = image.getW() * 4;
@@ -382,6 +387,34 @@ bool Map::map__get_data (u32 px, u32 py, land::Resol resolution, u32 num_point_p
 }
 
 //********************************
+void Map::priv__point_to_chunk (const MapInfo *mi, u32 px, u32 py, u32 *out_cx, u32 *out_cy) const
+{
+	assert (NULL != mi);
+	assert (NULL != out_cx);
+	assert (NULL != out_cy);
+	*out_cx = px / mi->chunk__num_point_per_row;
+	*out_cy = py / mi->chunk__num_point_per_row;
+}
+
+//********************************
+void Map::priv__chunk_to_point (const MapInfo *mi, u32 cx, u32 cy, u32 *out_px, u32 *out_py) const
+{
+	assert (NULL != out_px);
+	assert (NULL != out_py);
+	*out_px = priv__chunk_to_point (mi, cx);
+	*out_py = priv__chunk_to_point (mi, cy);
+}
+
+//********************************
+u32 Map::priv__chunk_to_point (const MapInfo *mi, u32 cx_or_cy) const
+{
+	assert (NULL != mi);
+	return cx_or_cy * mi->chunk__num_point_per_row;
+}
+
+/********************************
+ * In <out> copio tutti i punti del quadrato definito da (px,py) - (px+num_point_per_latoIN-1, py+num_point_per_latoIN-1)
+ */
 bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_latoIN, PointData *out, u32 sizeof_out)
 {
 	assert (NULL != mi);
@@ -390,7 +423,7 @@ bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_lat
 
 	const u32 x1 = px;
 	const u32 y1 = py;
-	if (x1 >= mi->num_point_per_lato || y1 >= mi->num_point_per_lato)
+	if (x1 >= mi->num_point_per_row || y1 >= mi->num_point_per_row)
 	{
 		logger::err ("Map::get_map_data() => invalid coordinate or size:  px(%d,%d)  size(%d,%d)\n", px, py, num_point_per_latoIN, num_point_per_latoIN);
 		return false;
@@ -405,19 +438,17 @@ bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_lat
 
 	//la mappa <mi> e' divisa in chunk.
 	//Devo determinare quali chunk mi servono per fillare <out>
-	const u32 chunk__num_point_per_lato = mi->num_point_per_lato / mi->num_chunk_per_lato;
-	const u32 cx1 = x1 / chunk__num_point_per_lato;
-	const u32 cy1 = y1 / chunk__num_point_per_lato;
+	u32 cx1, cy1;
+	priv__point_to_chunk (mi, x1, y1, &cx1, &cy1);
 
-	const u32 x2 = px + num_point_per_latoIN -1;
-	u32 cx2 = x2 / chunk__num_point_per_lato;
-	if (cx2 >= mi->num_chunk_per_lato)
-		cx2 = mi->num_chunk_per_lato -1;
-
-	const u32 y2 = py + num_point_per_latoIN -1;
-	u32 cy2 = y2 / chunk__num_point_per_lato;
-	if (cy2 >= mi->num_chunk_per_lato)
-		cy2 = mi->num_chunk_per_lato -1;
+	u32 cx2, cy2;
+	const u32 x2 = x1 + num_point_per_latoIN -1;
+	const u32 y2 = y1 + num_point_per_latoIN -1;
+	priv__point_to_chunk (mi, x2, y2, &cx2, &cy2);
+	if (cx2 >= mi->num_chunk_per_row)
+		cx2 = mi->num_chunk_per_row -1;
+	if (cy2 >= mi->num_chunk_per_row)
+		cy2 = mi->num_chunk_per_row -1;
 
 	//i 4 chunk ai bordi del quadrato probabilmente non sono da copiare interamente in out
 	gos::Array2D dst;
@@ -427,12 +458,12 @@ bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_lat
 	for (u32 cy=cy1; cy<=cy2; cy++)
 	{
 		//il chunk a coordinata <cy> copre i punti 
-		const u32 orig_py_top = cy * chunk__num_point_per_lato;
+		const u32 orig_py_top = priv__chunk_to_point (mi, cy);
 		
 		u32 py_top = orig_py_top;
 		if (py_top < y1) 	py_top = y1;
 		
-		u32 py_bottom = orig_py_top + chunk__num_point_per_lato -1;
+		u32 py_bottom = orig_py_top + mi->chunk__num_point_per_row -1;
 		if (py_bottom > y2) py_bottom = y2;
 		
 		const u32 dimy = (py_bottom - py_top) +1;
@@ -445,12 +476,12 @@ bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_lat
 		u32 dstX = 0;
 		for (u32 cx=cx1; cx<=cx2; cx++)
 		{
-			const u32 orig_px_left = cx * chunk__num_point_per_lato;
+			const u32 orig_px_left = priv__chunk_to_point (mi, cx);			
 			
 			u32 px_left = orig_px_left;
 			if (px_left < x1) 	px_left = x1;
 			
-			u32 px_right = orig_px_left + chunk__num_point_per_lato -1;
+			u32 px_right = orig_px_left + mi->chunk__num_point_per_row -1;
 			if (px_right > x2) 	px_right = x2;
 
 			const u32 dimx = (px_right - px_left) +1;
@@ -461,17 +492,31 @@ bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_lat
 			px_right -= orig_px_left;
 
 			gos::Array2D src;
-			src.set (chunk__num_point_per_lato, chunk__num_point_per_lato, sizeof(PointData));
+			src.set (mi->chunk__num_point_per_row, mi->chunk__num_point_per_row, sizeof(PointData));
 
-			const PointData *psrc = (const PointData*) mi->chunkData->get_chunk(cx + cy * mi->num_chunk_per_lato);
+			const PointData *psrc = (const PointData*) mi->chunkData->get_chunk(cx + cy * mi->num_chunk_per_row);
 			array2DUtils_copy (psrc, src, px_left, py_top, dimx, dimy, 
 							   out, dst, dstX, dstY);
 			dstX += dimx;
 		}
 
+		if (dstX < num_point_per_latoIN)
+		{
+			u32 ct = dstX + dstY * num_point_per_latoIN;
+			while (dstX < num_point_per_latoIN)
+			{
+				out[ct].set_default();
+				ct++;
+				dstX++;
+			}
+		}
+
 		dstY += dimy;
 	}
 
+	if (dstY < num_point_per_latoIN)
+	{
+	}
 
 	return true;
 
@@ -501,7 +546,6 @@ bool Map::map__begin_update (land::Resol resolution)
 void Map::priv__setup_updateInfo (UpdateInfo *dst, land::Resol resolution, CCList *list) const
 {
 	assert (NULL != dst);
-	assert (NULL == dst->mi);
 	
 	dst->resolution = resolution;
 
@@ -511,8 +555,6 @@ void Map::priv__setup_updateInfo (UpdateInfo *dst, land::Resol resolution, CCLis
 	
 	dst->updated_chunk_list = list;
 	dst->updated_chunk_list->reset();
-	
-	dst->chunk__num_point_per_lato = dst->mi->num_point_per_lato / dst->mi->num_chunk_per_lato;
 }
 
 //********************************
@@ -528,23 +570,23 @@ bool Map::priv__map_begin_update (UpdateInfo *upd)
 void Map::priv__map_update (UpdateInfo *upd, u32 px, u32 py, f32 height__m)
 {
 	assert (NULL != upd->mi);
-	if (px >= upd->mi->num_point_per_lato || py >= upd->mi->num_point_per_lato)
+	if (px >= upd->mi->num_point_per_row || py >= upd->mi->num_point_per_row)
 	{
 		DBGBREAK;
 		return;
 	}
 
-	const u32 cx = px / upd->chunk__num_point_per_lato;
-	const u32 cy = py / upd->chunk__num_point_per_lato;
+	u32 cx, cy;
+	priv__point_to_chunk (upd->mi, px, py, &cx, &cy);
 	upd->updated_chunk_list->insertIfNotExists (ChunkCoord(cx, cy));
 
-	const u32 orig_px_left = cx * upd->chunk__num_point_per_lato;
-	const u32 orig_py_top = cy * upd->chunk__num_point_per_lato;
+	const u32 orig_px_left = priv__chunk_to_point (upd->mi, cx);
+	const u32 orig_py_top = priv__chunk_to_point (upd->mi, cy);
 	px -= orig_px_left;
 	py -= orig_py_top;
 
-	PointData *p = static_cast<PointData*>( upd->mi->chunkData->get_chunk_for_update (cx + cy * upd->mi->num_chunk_per_lato) );
-	const u32 offset = px + py * upd->chunk__num_point_per_lato;
+	PointData *p = static_cast<PointData*>( upd->mi->chunkData->get_chunk_for_update (cx + cy * upd->mi->num_chunk_per_row) );
+	const u32 offset = px + py * upd->mi->chunk__num_point_per_row;
 	p[offset].height.set (height__m);
 }
 
@@ -558,34 +600,28 @@ void Map::priv__map_end_update(UpdateInfo *upd, bool bPropagaPrevResolution, boo
 	}
 	upd->mi->chunkData->save_all_updated_chunk();
 
-	CCList ccList (gos::getScrapAllocator(), 1024);
-	const u32 lod = priv__from_resol_to_mapInfoIndex(upd->resolution);
 
-	//propago verso LOD a risoluzione maggiore
-	if (bPropagaPrevResolution && lod < num_mapInfo-1)
-	{
-		const land::Resol r = land::resolution_prev(upd->resolution);
-		if (r != upd->resolution)
-		{
-			UpdateInfo upd2;
-			priv__setup_updateInfo (&upd2, r, &ccList);
-			GOS_DEBUG_ASSERT(priv__map_begin_update(&upd2));
-			priv__map_update_propagate_down (*upd, upd2);
-			priv__map_end_update(&upd2, true, false);
-		}
-	}
+	MapInfo *mi = upd->mi;
+	const u32 mi_lod = priv__from_resol_to_mapInfoIndex (mi->resolution);
+	const u32 sizeof_chunk_data = sizeof(PointData) * mi->chunk__num_point_per_row * mi->chunk__num_point_per_row;
+	PointData *chunk_data = GOSALLOCT(PointData*, gos::getScrapAllocator(), sizeof_chunk_data);
 
-	//propago verso a LOD a risoluzione inferiore
-	if (bPropagaNextResolution)
+
+	const FastArray<ChunkCoord> *ccList = upd->updated_chunk_list->_queryList();
+	for (u32 chunk=0; chunk<ccList->getNElem(); chunk++)
 	{
-		const land::Resol r = land::resolution_next(upd->resolution);
-		if (u32MAX != priv__from_resol_to_mapInfoIndex(r))
+		ChunkCoord cc = ccList->queryElem(chunk);
+
+		//di questo chunk devo calcolare le normali e AO
+		const u32 cxSRC = cc.get_cx();
+		const u32 cySRC = cc.get_cy();
+		const u32 px = priv__chunk_to_point (mi, cxSRC);
+		const u32 py = priv__chunk_to_point (mi, cySRC);
+		GOS_DEBUG_ASSERT( map__get_data (px, py, mi->resolution, mi->chunk__num_point_per_row, chunk_data, sizeof_chunk_data) );
+
+		//aggiorno i LOD a risoluzione piu' dettagliata
+		for (u32 lod=mi_lod+1; lod < num_mapInfo; lod++)
 		{
-			UpdateInfo upd2;
-			priv__setup_updateInfo (&upd2, r, &ccList);
-			GOS_DEBUG_ASSERT(priv__map_begin_update(&upd2));
-			//priv__map_update_propagate_up (*upd, upd2);
-			priv__map_end_update(&upd2, false, true);
 		}
 	}
 
@@ -594,46 +630,23 @@ void Map::priv__map_end_update(UpdateInfo *upd, bool bPropagaPrevResolution, boo
 }
 
 //********************************
-void Map::priv__map_update_propagate_down (const UpdateInfo &src, UpdateInfo &dst)
+void Map::priv__map_update_nextres_chunk (const MapInfo *miSRC, u32 cxSRC, u32 cySRC)
 {
-	assert (NULL != src.mi);
-	assert (NULL != src.updated_chunk_list);
-	assert (NULL != dst.mi);
-	assert (NULL != dst.updated_chunk_list);
-	assert (0 == dst.updated_chunk_list->getNElem());
+	assert (NULL != miSRC);
+	assert (cxSRC < miSRC->num_chunk_per_row);
+	assert (cySRC < miSRC->num_chunk_per_row);
 
-	assert (land::resolution_prev(src.resolution) == dst.resolution);
+	u32 lodSRC = priv__from_resol_to_mapInfoIndex(miSRC->resolution);
+	if (0 == lodSRC)
+		return;
 
-	//per ogni chunk modificato in src, devo lavorare 4 chunk di dst
-	const FastArray<ChunkCoord> *ccListSRC = src.updated_chunk_list->_queryList();
-	for (u32 i = 0; i < ccListSRC->getNElem(); i++)
+	MapInfo *miDST = &mapInfo[lodSRC-1];
+	const u32 cxDST = cxSRC << 1;
+	const u32 cyDST = cySRC << 1;
+	for (u32 ccy=0; ccy<2; ccy++)
 	{
-		const ChunkCoord ccSRC = ccListSRC->queryElem(i);
-		const u32 cxSRC = ccSRC.get_cx();
-		const u32 cySRC = ccSRC.get_cy();
-
-		const u32 cxDST = ccSRC.get_cx() * 2;
-		const u32 cyDST = ccSRC.get_cy() * 2;
-		//dato che sto andando in un LOD a piu' alta risoluzione, ad ogni cc SRC corrispondono 4 cc DST
-		dst.updated_chunk_list->insertIfNotExists (ChunkCoord(cxDST,    cyDST));
-		dst.updated_chunk_list->insertIfNotExists (ChunkCoord(cxDST +1, cyDST));
-		dst.updated_chunk_list->insertIfNotExists (ChunkCoord(cxDST,    cyDST +1));
-		dst.updated_chunk_list->insertIfNotExists (ChunkCoord(cxDST +1, cyDST +1));
-
-		const u32 px = cxDST * dst.chunk__num_point_per_lato;
-		const u32 py = cyDST * dst.chunk__num_point_per_lato;
-		const PointData *psrc = (const PointData*) src.mi->chunkData->get_chunk(cxSRC + cySRC * src.mi->num_chunk_per_lato);
-		u32 ctSRC = 0;
-		for (u32 y = 0; y < src.chunk__num_point_per_lato; y++)
+		for (u32 ccx=0; ccx<2; ccx++)
 		{
-			for (u32 x = 0; x < src.chunk__num_point_per_lato; x++)
-			{
-				const f32 height__m = psrc[ctSRC].height.decode();
-				priv__map_update (&dst, px+x, py+y, height__m);
-				priv__map_update (&dst, px+x+1, py+y, height__m);
-				priv__map_update (&dst, px+x, py +y+1, height__m);
-				priv__map_update (&dst, px+x+1, py+y+1, height__m);
-			}
 		}
 	}
 }

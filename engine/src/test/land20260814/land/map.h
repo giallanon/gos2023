@@ -64,7 +64,7 @@ namespace land
 		void			map__update (u32 px, u32 py, f32 height__m)				{ priv__map_update (&upd, px, py, height__m); }
 		void			map__end_update()										{ priv__map_end_update(&upd, true, true); }
 
-		u32 			map__get_num_points_per_lato() const					{ return mapInfo[0].num_point_per_lato; }
+		u32 			map__get_num_points_per_lato() const					{ return mapInfo[0].num_point_per_row; }
 		u32 			map__get_num_lod() const 								{ return num_mapInfo; }
 		f32				map__get_border_size__m() const 						{ return map_border_size__m; }
 		land::Resol		map__get_best_resolution() const						{ return mapInfo[num_mapInfo-1].resolution; }
@@ -119,14 +119,15 @@ namespace land
 
 
 	private:
-		static constexpr u32 VERSION = gos::magic::_makeID (0x01A782, 0x01);
+		static constexpr u32 VERSION = gos::magic::_makeID (0x01A782, 0x02);
 		static constexpr u32 QTREE__NUM_VTX_PER_CHUNK_SIDE = 65;
 
 	private:
 		struct MapInfo
 		{
-			u32		num_point_per_lato;		//totale dei punti della mappa
-			u32		num_chunk_per_lato;		//internamente la mappa e' in <num_chunk_per_lato> x <num_chunk_per_lato> chunk
+			u32		num_point_per_row;			//totale dei punti della mappa
+			u32		num_chunk_per_row;			//internamente la mappa e' in <num_chunk_per_lato> x <num_chunk_per_lato> chunk
+			u32		chunk__num_point_per_row;	//ogni chunk e0 composto da N x N punti
 			f32		border_size__m;
 			Resol 	resolution;
 			BigFile	*chunkData;
@@ -136,7 +137,6 @@ namespace land
 		struct UpdateInfo
 		{
 			land::Resol	resolution;
-			u32			chunk__num_point_per_lato;
 			MapInfo		*mi;
 			CCList		*updated_chunk_list;
 		};
@@ -150,8 +150,12 @@ namespace land
 		bool				priv__map_begin_update (UpdateInfo *upd);
 		void				priv__map_update (UpdateInfo *upd, u32 px, u32 py, f32 height__m);
 		void				priv__map_end_update(UpdateInfo *upd, bool bPropagaPrevResolution, bool bPropagaNextResolution);
-		void				priv__map_update_propagate_down (const UpdateInfo &src, UpdateInfo &dst);
+		void				priv__map_update_nextres_chunk (const MapInfo *miSRC, u32 cxSRC, u32 cySRC);
+
 		void				priv__setup_updateInfo (UpdateInfo *dst, land::Resol resolution, CCList *list) const;
+		void				priv__point_to_chunk (const MapInfo *mi, u32 px, u32 py, u32 *out_cx, u32 *out_cy) const;
+		void				priv__chunk_to_point (const MapInfo *mi, u32 cx, u32 cy, u32 *out_px, u32 *out_py) const;
+		u32					priv__chunk_to_point (const MapInfo *mi, u32 cx_or_cy) const;
 
 	private:
 		gos::Allocator	*localAllocator;
