@@ -2,7 +2,7 @@
 #include "land.h"
 #include "gosImageBufferRGBA.h"
 #include "gosGeomIntersect3D.h"
-#include "Array2DUtils.h"
+#include "gosImageBuffer.h"
 
 
 using namespace gos;
@@ -368,17 +368,17 @@ bool Map::map__get_data (const QTreeCoord cc, PointData *out, u32 sizeof_out)
 	const u32 px = cx * (QTREE__NUM_VTX_PER_CHUNK_SIDE-1);
 	const u32 py = cy * (QTREE__NUM_VTX_PER_CHUNK_SIDE-1);
 
-	return priv__map_get_data (px, py, mi, QTREE__NUM_VTX_PER_CHUNK_SIDE, out, sizeof_out);
+	return priv__map_get_data (mi, (i32)px, (i32)py, QTREE__NUM_VTX_PER_CHUNK_SIDE, out, sizeof_out);
 }
 
 //********************************
-bool Map::map__get_data (u32 px, u32 py, land::Resol resolution, u32 num_point_per_latoIN, PointData *out, u32 sizeof_out)
+bool Map::map__get_data (i32 px, i32 py, land::Resol resolution, u32 num_point_per_latoIN, PointData *out, u32 sizeof_out)
 {
 	for (u32 i=0; i<num_mapInfo; i++)
 	{
 		if (mapInfo[i].resolution == resolution)
 		{
-			return priv__map_get_data (px, py, &mapInfo[i], num_point_per_latoIN, out, sizeof_out);
+			return priv__map_get_data (&mapInfo[i], px, py, num_point_per_latoIN, out, sizeof_out);
 		}
 	}
 
@@ -414,15 +414,29 @@ u32 Map::priv__chunk_to_point (const MapInfo *mi, u32 cx_or_cy) const
 
 /********************************
  * In <out> copio tutti i punti del quadrato definito da (px,py) - (px+num_point_per_latoIN-1, py+num_point_per_latoIN-1)
+ * Sono consentite coordinate (px,py) < 0
  */
-bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_latoIN, PointData *out, u32 sizeof_out)
+bool Map::priv__map_get_data (MapInfo *mi, i32 px, i32 py, u32 num_point_per_latoIN, PointData *out, u32 sizeof_out)
 {
 	assert (NULL != mi);
 	assert (NULL != out);
 	assert (num_point_per_latoIN > 0);
 
-	const u32 x1 = px;
-	const u32 y1 = py;
+	bool out_need_memset_to_default = false;
+	u32 x1, dimx, start_dstX;
+	if (px >= 0)	{ start_dstX = 0; x1 = (u32)px; dimx = num_point_per_latoIN; }
+	else			{ start_dstX = (u32)(-px); x1 = 0; dimx = num_point_per_latoIN - (u32)(-px); out_need_memset_to_default=true; }
+
+	u32 y1, dimy, start_dstY;
+	if (py >= 0)	{ start_dstY = 0; y1 = (u32)py; dimy = num_point_per_latoIN; }
+	else			{ start_dstY = (u32)(-py); y1 = 0; dimy = num_point_per_latoIN - (u32)(-py); out_need_memset_to_default=true; }
+
+	if (0 == dimx || 0 == dimy)
+	{
+		DBGBREAK;
+		return false;
+	}
+
 	if (x1 >= mi->num_point_per_row || y1 >= mi->num_point_per_row)
 	{
 		logger::err ("Map::get_map_data() => invalid coordinate or size:  px(%d,%d)  size(%d,%d)\n", px, py, num_point_per_latoIN, num_point_per_latoIN);
@@ -436,14 +450,21 @@ bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_lat
 		return false;
 	}
 
+	if (out_need_memset_to_default)
+	{
+		const u32 n = num_point_per_latoIN * num_point_per_latoIN;
+		for (u32 i=0; i<n; i++)
+			out[i].set_default();
+	}
+
 	//la mappa <mi> e' divisa in chunk.
 	//Devo determinare quali chunk mi servono per fillare <out>
 	u32 cx1, cy1;
 	priv__point_to_chunk (mi, x1, y1, &cx1, &cy1);
 
 	u32 cx2, cy2;
-	const u32 x2 = x1 + num_point_per_latoIN -1;
-	const u32 y2 = y1 + num_point_per_latoIN -1;
+	const u32 x2 = x1 + dimx -1;
+	const u32 y2 = y1 + dimy -1;
 	priv__point_to_chunk (mi, x2, y2, &cx2, &cy2);
 	if (cx2 >= mi->num_chunk_per_row)
 		cx2 = mi->num_chunk_per_row -1;
@@ -451,9 +472,9 @@ bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_lat
 		cy2 = mi->num_chunk_per_row -1;
 
 	//i 4 chunk ai bordi del quadrato probabilmente non sono da copiare interamente in out
-	gos::Array2D dst;
-	dst.set (num_point_per_latoIN, num_point_per_latoIN, sizeof(PointData));
-	u32 dstY = 0;
+	image::BufferDescr dstDescr;
+	dstDescr.setup (num_point_per_latoIN, num_point_per_latoIN, sizeof(PointData));
+	u32 dstY = start_dstY;
 
 	for (u32 cy=cy1; cy<=cy2; cy++)
 	{
@@ -473,7 +494,7 @@ bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_lat
 		py_top -= orig_py_top;
 		py_bottom -= orig_py_top;
 
-		u32 dstX = 0;
+		u32 dstX = start_dstX;
 		for (u32 cx=cx1; cx<=cx2; cx++)
 		{
 			const u32 orig_px_left = priv__chunk_to_point (mi, cx);			
@@ -491,12 +512,11 @@ bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_lat
 			px_left -= orig_px_left;
 			px_right -= orig_px_left;
 
-			gos::Array2D src;
-			src.set (mi->chunk__num_point_per_row, mi->chunk__num_point_per_row, sizeof(PointData));
+			image::BufferDescr srcDescr;
+			srcDescr.setup (mi->chunk__num_point_per_row, mi->chunk__num_point_per_row, sizeof(PointData));
 
 			const PointData *psrc = (const PointData*) mi->chunkData->get_chunk(cx + cy * mi->num_chunk_per_row);
-			array2DUtils_copy (psrc, src, px_left, py_top, dimx, dimy, 
-							   out, dst, dstX, dstY);
+			image::blt (srcDescr, psrc, px_left, py_top, dimx, dimy, dstDescr, out, dstX, dstY);
 			dstX += dimx;
 		}
 
@@ -516,6 +536,15 @@ bool Map::priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_lat
 
 	if (dstY < num_point_per_latoIN)
 	{
+		const u32 dimx = x2 - x1 +1;
+		while (dstY < num_point_per_latoIN)
+		{
+			u32 ct = x1 + dstY * num_point_per_latoIN;
+			for (u32 x=0; x<dimx; x++)
+				out[ct++].set_default();
+
+			dstY++;
+		}
 	}
 
 	return true;
@@ -591,7 +620,7 @@ void Map::priv__map_update (UpdateInfo *upd, u32 px, u32 py, f32 height__m)
 }
 
 //********************************
-void Map::priv__map_end_update(UpdateInfo *upd, bool bPropagaPrevResolution, bool bPropagaNextResolution)
+void Map::priv__map_end_update (UpdateInfo *upd, bool bPropagaPrevResolution, bool bPropagaNextResolution)
 {
 	if (NULL == upd->mi)
 	{
@@ -603,27 +632,32 @@ void Map::priv__map_end_update(UpdateInfo *upd, bool bPropagaPrevResolution, boo
 
 	MapInfo *mi = upd->mi;
 	const u32 mi_lod = priv__from_resol_to_mapInfoIndex (mi->resolution);
-	const u32 sizeof_chunk_data = sizeof(PointData) * mi->chunk__num_point_per_row * mi->chunk__num_point_per_row;
+	const u32 sizeof_chunk_data = sizeof(PointData) * (mi->chunk__num_point_per_row + 2) * (mi->chunk__num_point_per_row + 2);
 	PointData *chunk_data = GOSALLOCT(PointData*, gos::getScrapAllocator(), sizeof_chunk_data);
 
-
+	//per tutti i chunk di mi che sono stati aggiornati...
 	const FastArray<ChunkCoord> *ccList = upd->updated_chunk_list->_queryList();
 	for (u32 chunk=0; chunk<ccList->getNElem(); chunk++)
 	{
 		ChunkCoord cc = ccList->queryElem(chunk);
 
-		//di questo chunk devo calcolare le normali e AO
+		//di questo chunk devo calcolare le normali e AO quindi prelevo un pezzo di mappa che abbia un "bordo di 1 px attorno al chunk"
 		const u32 cxSRC = cc.get_cx();
 		const u32 cySRC = cc.get_cy();
 		const u32 px = priv__chunk_to_point (mi, cxSRC);
 		const u32 py = priv__chunk_to_point (mi, cySRC);
-		GOS_DEBUG_ASSERT( map__get_data (px, py, mi->resolution, mi->chunk__num_point_per_row, chunk_data, sizeof_chunk_data) );
+		GOS_DEBUG_ASSERT( map__get_data ((i32)px -1, (i32)py -1, mi->resolution, mi->chunk__num_point_per_row + 2, chunk_data, sizeof_chunk_data) );
 
-		//aggiorno i LOD a risoluzione piu' dettagliata
+		//Aggiorno i LOD a risoluzione piu' dettagliata
+		//Da ogni chunk ne devo creare 4 a risoluzione aumentata
 		for (u32 lod=mi_lod+1; lod < num_mapInfo; lod++)
 		{
 		}
+
+
 	}
+
+	GOSFREE(gos::getScrapAllocator(), chunk_data);
 
 	//fine
 	upd->mi = NULL;

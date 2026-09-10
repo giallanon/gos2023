@@ -24,12 +24,13 @@ main.cpp
 testAllocTracker.cpp
 testDataBlob.cpp
 testGos.cpp
+testImages.cpp
 testIniFile.cpp
 testMath.cpp
 testThread.cpp
 testSparseSet.cpp
 TTest.h
-)
+ "testImages.cpp")
 
 #====================================================
 # info a video

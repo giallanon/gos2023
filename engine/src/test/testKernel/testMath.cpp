@@ -200,8 +200,8 @@ namespace test_math
         q.buildRotationAboutAsseX(math::gradToRad(90));
         q.toAxis(&ax, &ay, &az);
         TEST_ASSERT(vecAreVeryClose(ax, vec3f(1, 0, 0), EPSILON));
-        TEST_ASSERT(vecAreVeryClose(ay, vec3f(0, 0, -1), EPSILON));
-        TEST_ASSERT(vecAreVeryClose(az, vec3f(0, 1, 0), EPSILON));
+        TEST_ASSERT(vecAreVeryClose(ay, vec3f(0, 0, 1), EPSILON));
+        TEST_ASSERT(vecAreVeryClose(az, vec3f(0, -1, 0), EPSILON));
         TEST_ASSERT(vecAreVeryClose(math::vecTransform (q, vec3f(1,0,0)), vec3f(1, 0, 0), EPSILON));
         TEST_ASSERT(vecAreVeryClose(math::vecTransform (q, vec3f(0,1,0)), vec3f(0, 0, -1), EPSILON));
         TEST_ASSERT(vecAreVeryClose(math::vecTransform (q, vec3f(0,0,1)), vec3f(0, 1, 0), EPSILON));
@@ -209,8 +209,8 @@ namespace test_math
         q.buildFromEuler_YXZ (0, math::gradToRad(90), 0);
         q.toAxis(&ax, &ay, &az);
         TEST_ASSERT(vecAreVeryClose(ax, vec3f(1, 0, 0), EPSILON));
-        TEST_ASSERT(vecAreVeryClose(ay, vec3f(0, 0, -1), EPSILON));
-        TEST_ASSERT(vecAreVeryClose(az, vec3f(0, 1, 0), EPSILON));
+        TEST_ASSERT(vecAreVeryClose(ay, vec3f(0, 0, 1), EPSILON));
+        TEST_ASSERT(vecAreVeryClose(az, vec3f(0, -1, 0), EPSILON));
         TEST_ASSERT(vecAreVeryClose(math::vecTransform (q, vec3f(1,0,0)), vec3f(1, 0, 0), EPSILON));
         TEST_ASSERT(vecAreVeryClose(math::vecTransform (q, vec3f(0,1,0)), vec3f(0, 0, -1), EPSILON));
         TEST_ASSERT(vecAreVeryClose(math::vecTransform (q, vec3f(0,0,1)), vec3f(0, 1, 0), EPSILON));

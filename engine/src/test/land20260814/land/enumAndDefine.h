@@ -122,7 +122,7 @@ namespace land
 		u8				materialID;
 
 
-		void 	set_default()	{ norm.set(vec3f(0,1,0)); height._encoded=0; ao=0; materialID=0; }
+		void 	set_default()	{ norm.set(gos::vec3f(0,1,0)); height._encoded=0; ao=0; materialID=0; }
 	};	
 } //namespace land
 

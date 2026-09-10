@@ -27,6 +27,8 @@ loader/stb_image.h
 
 gosImage.cpp
 gosImage.h
+gosImageBuffer.cpp
+gosImageBuffer.h
 gosImageBufferA.cpp
 gosImageBufferA.h
 gosImageBufferRGBA.cpp
@@ -36,7 +38,7 @@ gosImageBuilder.h
 gosImageEnumAndDefine.h
 gosImageUtils.cpp
 gosImageUtils.h
-)
+ "gosImageBuffer.h")
 
 #stb_image.cpp tira un sacco di warning per cui aggiungo queste opzioni di compilazione per non vederli
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

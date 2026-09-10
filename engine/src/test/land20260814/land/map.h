@@ -57,7 +57,7 @@ namespace land
 		 * 			Dato un punto <px,py> sulla mappa di risoluzione <resolution>, filla <out> con tutti i PointData rilevanti.
 		 * 			<out> deve essere un array di PointData grosso almeno <num_point_per_lato> * <num_point_per_lato> * sizeof(PointData)
 		 */
-		bool 			map__get_data (u32 px, u32 py, land::Resol resolution, u32 num_point_per_lato, PointData *out, u32 sizeof_out);
+		bool 			map__get_data (i32 px, i32 py, land::Resol resolution, u32 num_point_per_lato, PointData *out, u32 sizeof_out);
 		bool 			map__get_data (const QTreeCoord cc, PointData *out, u32 sizeof_out);
 
 		bool			map__begin_update (land::Resol resolution);
@@ -144,7 +144,7 @@ namespace land
 
 	private:
 		void 				priv__free();
-		bool 				priv__map_get_data (u32 px, u32 py, MapInfo *mi, u32 num_point_per_latoIN, PointData *out, u32 sizeof_out);
+		bool 				priv__map_get_data (MapInfo *mi, i32 px, i32 py, u32 num_point_per_latoIN, PointData *out, u32 sizeof_out);
 		u32					priv__from_resol_to_mapInfoIndex (land::Resol res) const;
 		
 		bool				priv__map_begin_update (UpdateInfo *upd);

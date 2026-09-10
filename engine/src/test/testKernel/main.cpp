@@ -10,6 +10,7 @@ void testIniFile (Tester &tester);
 void testAllocTracker (Tester &tester);
 void testDataBlob (Tester &tester);
 void testSparseSet (Tester &tester);
+void testImages (Tester &tester);
 
 //********************************
 #include "protocol/gosProtocolChSocketTCP.h"
@@ -59,6 +60,7 @@ void runAllTest()
         testAllocTracker (tester);
         testDataBlob (tester);
         testSparseSet (tester);
+        testImages (tester);
     }
     tester.printReport();
 }
