@@ -75,7 +75,7 @@ include_directories(${PROJECT_SOURCE_DIR}/../../external/glfw-3.3.8/include)
 
 #====================================================
 # additional library to be linked
-set(LIBRARY_LIST "glfw3;gosGameUtils;gosAsset2;gosGPU;gosDB;gosImage;gosInput;gosShape;gosGeom;gosMath;gos")
+set(LIBRARY_LIST "gosGameUtils;gosAsset2;gosGPU;gosDB;gosImage;gosInput;gosShape;gosGeom;gosMath;gos;glfw3")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
     message("         linking additional libray [${libName}] => ${finalLibNameAndPath}")
