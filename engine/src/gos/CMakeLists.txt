@@ -10,14 +10,17 @@ project(gos VERSION 1.0.0 LANGUAGES C CXX)
 
 #====================================================
 # path di output di questo progetto
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "$<1:${PROJECT_SOURCE_DIR}/../../lib>")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "$<1:${PROJECT_SOURCE_DIR}/../../lib>")
 
 
 
 #====================================================
 # nome del file di output
-set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM__FILE_POSTFIX}")
+composeBINARY_OUTPUT_FILENAME(${PROJECT_NAME} composedBinaryOutputFilename)
+set(BINARY_OUTPUT_FILENAME ${composedBinaryOutputFilename})
+
+
 
 #====================================================
 # file da compilare
@@ -195,5 +198,6 @@ message("GIXINFO: prj name = ${PROJECT_NAME} v${PROJECT_VERSION}")
 message("         prj src dir = ${PROJECT_SOURCE_DIR}")
 message("         current config = ${GOS_PLATFORM__NAME} / ${CMAKE_BUILD_TYPE}")
 message("         ouput file = ${BINARY_OUTPUT_FILENAME}")
+message("         output dir = ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 get_target_property(MAIN_CFLAGS ${BINARY_OUTPUT_FILENAME} COMPILE_OPTIONS)
 message("         compiler flags: ${MAIN_CFLAGS}")

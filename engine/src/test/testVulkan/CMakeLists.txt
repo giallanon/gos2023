@@ -10,11 +10,12 @@ project(testVulkan VERSION 1.0.0 LANGUAGES C CXX)
 
 #====================================================
 # path di output di questo progetto
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../../bin/${PROJECT_NAME})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "$<1:${PROJECT_SOURCE_DIR}/../../../bin/${PROJECT_NAME}>")
 
 #====================================================
 # nome del file di output
-set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM__FILE_POSTFIX}")
+composeBINARY_OUTPUT_FILENAME(${PROJECT_NAME} composedBinaryOutputFilename)
+set(BINARY_OUTPUT_FILENAME ${composedBinaryOutputFilename})
 
 
 #====================================================
@@ -70,10 +71,11 @@ include_directories(${PROJECT_SOURCE_DIR}/../../gosImage)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosGPU)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosAsset2)
 include_directories(${PROJECT_SOURCE_DIR}/../../gosDB.h)
+include_directories(${PROJECT_SOURCE_DIR}/../../external/glfw-3.3.8/include)
 
 #====================================================
 # additional library to be linked
-set(LIBRARY_LIST "gosGameUtils;gosAsset2;gosGPU;gosDB;gosImage;gosInput;gosShape;gosGeom;gosMath;gos")
+set(LIBRARY_LIST "glfw3;gosGameUtils;gosAsset2;gosGPU;gosDB;gosImage;gosInput;gosShape;gosGeom;gosMath;gos")
 foreach(libName IN LISTS LIBRARY_LIST)
     makeLibraryName(finalLibNameAndPath ${libName})
     message("         linking additional libray [${libName}] => ${finalLibNameAndPath}")
@@ -81,12 +83,6 @@ foreach(libName IN LISTS LIBRARY_LIST)
 endforeach()
 
 
-#===================================
-# GLFW-3.38 library
-set(PATH_TO_GLFW "${PROJECT_SOURCE_DIR}/../../external/glfw-3.3.8")
-include_directories(${PATH_TO_GLFW}/include)
-makeLibraryName(glfwLibraryFilename glfw3)
-target_link_libraries(${BINARY_OUTPUT_FILENAME} "${glfwLibraryFilename}")
 
 
 #===================================

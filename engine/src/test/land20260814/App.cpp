@@ -41,7 +41,7 @@ void App::on__setup ()
 	//create_1024.default_map__resolution = land::Resol::_4m;
 	//land::Map::create ("@w/assets/asset_src/heightmap/ms_1024", create_1024);
 	map.open ("@w/assets/asset_src/heightmap/ms_1024");
-	map.apply_heightmap ("@w/assets/asset_src/heightmap/radial.png", land::Resol::_1m, 0.2f);
+	//map.apply_heightmap ("@w/assets/asset_src/heightmap/radial.png", land::Resol::_1m, 0.2f);
 
 	
 	

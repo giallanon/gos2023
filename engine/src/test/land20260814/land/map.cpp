@@ -539,7 +539,7 @@ bool Map::priv__map_get_data (MapInfo *mi, i32 px, i32 py, u32 num_point_per_lat
 		const u32 dimx = x2 - x1 +1;
 		while (dstY < num_point_per_latoIN)
 		{
-			u32 ct = x1 + dstY * num_point_per_latoIN;
+			u32 ct = start_dstX + dstY * num_point_per_latoIN;
 			for (u32 x=0; x<dimx; x++)
 				out[ct++].set_default();
 

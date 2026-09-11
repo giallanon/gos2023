@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 4.00)
 
 #====================================================
 # path di output di questo progetto
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../../lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../../lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "$<1:${PROJECT_SOURCE_DIR}/../../../lib>")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "$<1:${PROJECT_SOURCE_DIR}/../../../lib>")
 
 
 set(common_HEADERS internal.h mappings.h

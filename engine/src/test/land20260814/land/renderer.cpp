@@ -83,6 +83,7 @@ void Renderer::bind_map (land::Map *mapIN)
 	num_vtx_per_lato = map->qtree__get_num_vtx_per_chunk_side();
 	priv__create_block_geometry (num_vtx_per_lato);
 
+	assert (NULL == pointData);
 	sizeof_pointData = sizeof(land::PointData) * num_vtx_per_lato * num_vtx_per_lato;
 	pointData = GOSALLOCT(land::PointData*, localAllocator, sizeof_pointData);
 	

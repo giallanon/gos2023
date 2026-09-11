@@ -39,15 +39,35 @@ set(BUILD_IS_DEBUG 0)
 set(BUILD_IS_RELEASE 0)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(BUILD_IS_DEBUG 1)
-    set(GOS_PLATFORM__FILE_POSTFIX "_d")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(BUILD_IS_RELEASE 1)
+endif()
+
+message("COMPILE_DEFINITIONS is ${COMPILE_DEFINITIONS}")
+message("CMAKE_CONFIGURATION_TYPES  is ${CMAKE_CONFIGURATION_TYPES}")
+message("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
+message("CMAKE_BINARY_DIR is ${CMAKE_BINARY_DIR}")
+if(MSVC AND BUILD_IS_DEBUG EQUAL 0 AND BUILD_IS_RELEASE EQUAL 0)
+    SET(var_temp 0)
+    string(FIND ${CMAKE_BINARY_DIR} "Debug" var_temp)
+    if (var_temp EQUAL -1)
+        set(BUILD_IS_RELEASE 1)
+        set(CMAKE_BUILD_TYPE "Release")
+    else()
+        set(BUILD_IS_DEBUG 1)
+        set(CMAKE_BUILD_TYPE "Debug")
+    endif()
+endif()
+
+
+if(BUILD_IS_DEBUG)
+    set(GOS_PLATFORM__FILE_POSTFIX "_d")
+elseif(BUILD_IS_RELEASE)
     set(GOS_PLATFORM__FILE_POSTFIX "")
     
     #la seguente dovrebbe abilitare le ottimizzazioni link time (LTO) su tutte le piattaforme
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
-
 
 #====================================================
 # opzioni di compilazione
@@ -89,7 +109,16 @@ elseif(BUILD_IS_RELEASE)
 
         add_compile_options(-Wno-maybe-uninitialized)
     endif()
+else()
+    message(FATAL_ERROR "BUILD_IS_DEBUG is not set and BUILD_IS_RELEASE is not set either")
 endif()
+
+#====================================================
+# composeBINARY_OUTPUT_FILENAME
+# fn di comodo che ritorna il nome dell'exe/lib in base ai vari parametri di piattaforma
+function(composeBINARY_OUTPUT_FILENAME projectName out__var)
+    set(${out__var} "${projectName}__${GOS_PLATFORM__NAME}${GOS_PLATFORM__FILE_POSTFIX}" PARENT_SCOPE)
+endfunction()
 
 
 #====================================================
@@ -97,15 +126,17 @@ endif()
 # fn di comodo che ritorna il nome delle librerie a seconda che siamo in platform linux o windows
 set(ABS_PATH_TO_LIB_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/lib")
 function(makeLibraryName varName libName)
+    composeBINARY_OUTPUT_FILENAME(${libName} composedLibName)
     if(GOS_PLATFORM__NAME STREQUAL "linux")
-        set(temp "${ABS_PATH_TO_LIB_FOLDER}/lib${libName}__${GOS_PLATFORM__NAME}${GOS_PLATFORM__FILE_POSTFIX}.a")
+        set(temp "${ABS_PATH_TO_LIB_FOLDER}/lib${composedLibName}.a")
     elseif(GOS_PLATFORM__NAME STREQUAL "windows")
-        set(temp "${ABS_PATH_TO_LIB_FOLDER}/${libName}__${GOS_PLATFORM__NAME}${GOS_PLATFORM__FILE_POSTFIX}.lib")
+        set(temp "${ABS_PATH_TO_LIB_FOLDER}/${composedLibName}.lib")
     endif()
 
-    set(${varName} "${temp}" PARENT_SCOPE)
     if(NOT EXISTS ${temp})
-        message(WARNING "Can't find ${temp}")
+        set(${varName} "WARNING: Can't find ${temp}" PARENT_SCOPE)
+    else()
+        set(${varName} "${temp}" PARENT_SCOPE)
     endif()    
 endfunction()
 

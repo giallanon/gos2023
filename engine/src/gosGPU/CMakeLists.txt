@@ -9,13 +9,14 @@ project(gosGPU VERSION 1.0.0 LANGUAGES C CXX)
 
 #====================================================
 # path di output di questo progetto
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "$<1:${PROJECT_SOURCE_DIR}/../../lib>")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "$<1:${PROJECT_SOURCE_DIR}/../../lib>")
 
 
 #====================================================
 # nome del file di output
-set(BINARY_OUTPUT_FILENAME "${PROJECT_NAME}__${GOS_PLATFORM__NAME}${GOS_PLATFORM__FILE_POSTFIX}")
+composeBINARY_OUTPUT_FILENAME(${PROJECT_NAME} composedBinaryOutputFilename)
+set(BINARY_OUTPUT_FILENAME ${composedBinaryOutputFilename})
 
 #====================================================
 # file da compilare
