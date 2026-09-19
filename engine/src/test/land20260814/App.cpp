@@ -35,13 +35,14 @@ void App::on__setup ()
 	// land::Map::create ("@w/assets/asset_src/heightmap/ms_4096", create_4096);
 	// map.open ("@w/assets/asset_src/heightmap/ms_4096");
 
-	//land::Map::CreateData create_1024;
-	//create_1024.default_map__border_size__point = 1024;
-	//create_1024.default_height__m = 10;
-	//create_1024.default_map__resolution = land::Resol::_4m;
-	//land::Map::create ("@w/assets/asset_src/heightmap/ms_1024", create_1024);
+	// land::Map::CreateData create_1024;
+	// create_1024.default_map__border_size__point = 1024;
+	// create_1024.default_height__m = 10;
+	// create_1024.default_map__resolution = land::Resol::_4m;
+	// land::Map::create ("@w/assets/asset_src/heightmap/ms_1024", create_1024);
 	map.open ("@w/assets/asset_src/heightmap/ms_1024");
-	//map.apply_heightmap ("@w/assets/asset_src/heightmap/radial.png", land::Resol::_1m, 0.2f);
+//	map.apply_heightmap ("@w/assets/asset_src/heightmap/radial.png", land::Resol::_4m, 0.2f);
+	//map.apply_heightmap ("@w/assets/asset_src/heightmap/anorway_30m.png", land::Resol::_4m, 1.0f);
 
 	
 	

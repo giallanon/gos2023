@@ -145,14 +145,13 @@ namespace land
 	private:
 		void 				priv__free();
 		bool 				priv__map_get_data (MapInfo *mi, i32 px, i32 py, u32 num_point_per_latoIN, PointData *out, u32 sizeof_out);
-		u32					priv__from_resol_to_mapInfoIndex (land::Resol res) const;
+		u8					priv__from_resol_to_mapInfoIndex (land::Resol res) const;
 		
+		void				priv__setup_updateInfo (UpdateInfo *dst, land::Resol resolution, CCList *list) const;
 		bool				priv__map_begin_update (UpdateInfo *upd);
 		void				priv__map_update (UpdateInfo *upd, u32 px, u32 py, f32 height__m);
-		void				priv__map_end_update(UpdateInfo *upd, bool bPropagaPrevResolution, bool bPropagaNextResolution);
-		void				priv__map_update_nextres_chunk (const MapInfo *miSRC, u32 cxSRC, u32 cySRC);
+		void				priv__map_end_update(UpdateInfo *upd, bool bPropagaPrevLOD, bool bPropagaNextLOD);
 
-		void				priv__setup_updateInfo (UpdateInfo *dst, land::Resol resolution, CCList *list) const;
 		void				priv__point_to_chunk (const MapInfo *mi, u32 px, u32 py, u32 *out_cx, u32 *out_cy) const;
 		void				priv__chunk_to_point (const MapInfo *mi, u32 cx, u32 cy, u32 *out_px, u32 *out_py) const;
 		u32					priv__chunk_to_point (const MapInfo *mi, u32 cx_or_cy) const;
@@ -160,7 +159,7 @@ namespace land
 	private:
 		gos::Allocator	*localAllocator;
 		u32				num_mapInfo;
-		MapInfo 		*mapInfo;
+		MapInfo 		*mapInfo;				//un mapInfo per ogni LOD. LOD0=poco dettaglio, LODn=tanto dettaglio
 		f32				map_border_size__m;
 		gos::vec2f		map_topLeft_WC;			//coordinate dell'angolo in alto a sx della mappa (world coodinate)
 		UpdateInfo		upd;

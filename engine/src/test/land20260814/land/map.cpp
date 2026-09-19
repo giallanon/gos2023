@@ -190,14 +190,14 @@ void Map::priv__free()
 }
 
 //********************************
-u32 Map::priv__from_resol_to_mapInfoIndex (land::Resol res) const
+u8 Map::priv__from_resol_to_mapInfoIndex (land::Resol res) const
 {
 	for (u32 i = 0; i < num_mapInfo; i++)
 	{
 		if (mapInfo[i].resolution == res)
-			return i;
+			return (u8)i;
 	}
-	return u32MAX;
+	return u8MAX;
 }
 
 //********************************
@@ -560,8 +560,8 @@ bool Map::map__begin_update (land::Resol resolution)
 		return false;
 	}
 
-	const u32 lod = priv__from_resol_to_mapInfoIndex(resolution);
-	if (u32MAX == lod)
+	const u8 lod = priv__from_resol_to_mapInfoIndex(resolution);
+	if (0xFF == lod)
 	{
 		DBGBREAK;
 		return false;
@@ -578,8 +578,8 @@ void Map::priv__setup_updateInfo (UpdateInfo *dst, land::Resol resolution, CCLis
 	
 	dst->resolution = resolution;
 
-	const u32 mapIndex = priv__from_resol_to_mapInfoIndex(resolution);
-	assert (u32MAX != mapIndex);
+	const u8 mapIndex = priv__from_resol_to_mapInfoIndex(resolution);
+	assert (0xFF != mapIndex);
 	dst->mi = &mapInfo[mapIndex];
 	
 	dst->updated_chunk_list = list;
@@ -620,20 +620,38 @@ void Map::priv__map_update (UpdateInfo *upd, u32 px, u32 py, f32 height__m)
 }
 
 //********************************
-void Map::priv__map_end_update (UpdateInfo *upd, bool bPropagaPrevResolution, bool bPropagaNextResolution)
+void Map::priv__map_end_update (UpdateInfo *upd, bool bPropagaPrevLOD, bool bPropagaNextLOD)
 {
 	if (NULL == upd->mi)
 	{
 		DBGBREAK;
 		return;
 	}
-	upd->mi->chunkData->save_all_updated_chunk();
 
-
+	//info sul LOD che e' stato modificato
 	MapInfo *mi = upd->mi;
-	const u32 mi_lod = priv__from_resol_to_mapInfoIndex (mi->resolution);
-	const u32 sizeof_chunk_data = sizeof(PointData) * (mi->chunk__num_point_per_row + 2) * (mi->chunk__num_point_per_row + 2);
-	PointData *chunk_data = GOSALLOCT(PointData*, gos::getScrapAllocator(), sizeof_chunk_data);
+	const u8  mi_lod = priv__from_resol_to_mapInfoIndex (mi->resolution);
+	const u32 chunk_data_num_pt_per_row = mi->chunk__num_point_per_row + 2;
+	const u32 chunk_data_sizeof = sizeof(PointData) * chunk_data_num_pt_per_row * chunk_data_num_pt_per_row;
+	PointData *chunk_data = GOSALLOCT(PointData*, gos::getScrapAllocator(), chunk_data_sizeof);
+
+
+	//se devo propagare al LOD successivo...
+	u8 			nextlod = mi_lod+1;
+	CCList		nextlod_ccList;
+	UpdateInfo 	nextlod_upd;
+	if (bPropagaNextLOD && nextlod < num_mapInfo)
+	{
+		nextlod_ccList.setup (localAllocator, 256);
+
+		priv__setup_updateInfo (&nextlod_upd, mapInfo[nextlod].resolution, &nextlod_ccList);
+		priv__map_begin_update (&nextlod_upd);
+	}
+	else
+		nextlod = 0xFF;
+
+
+
 
 	//per tutti i chunk di mi che sono stati aggiornati...
 	const FastArray<ChunkCoord> *ccList = upd->updated_chunk_list->_queryList();
@@ -646,41 +664,59 @@ void Map::priv__map_end_update (UpdateInfo *upd, bool bPropagaPrevResolution, bo
 		const u32 cySRC = cc.get_cy();
 		const u32 px = priv__chunk_to_point (mi, cxSRC);
 		const u32 py = priv__chunk_to_point (mi, cySRC);
-		GOS_DEBUG_ASSERT( map__get_data ((i32)px -1, (i32)py -1, mi->resolution, mi->chunk__num_point_per_row + 2, chunk_data, sizeof_chunk_data) );
+		GOS_DEBUG_ASSERT( map__get_data ((i32)px -1, (i32)py -1, mi->resolution, mi->chunk__num_point_per_row + 2, chunk_data, chunk_data_sizeof) );
 
-		//Aggiorno i LOD a risoluzione piu' dettagliata
+		//TODO:
+		//operare su chunk_data per il calcolo delle normali e AO
+
+
+		//Aggiorno il LOD a risoluzione piu' dettagliata
 		//Da ogni chunk ne devo creare 4 a risoluzione aumentata
-		for (u32 lod=mi_lod+1; lod < num_mapInfo; lod++)
+		if (0xFF != nextlod)
 		{
+			const u32 nextlod_px = priv__chunk_to_point (nextlod_upd.mi, cxSRC * 2);
+			const u32 nextlod_py = priv__chunk_to_point (nextlod_upd.mi, cySRC * 2);
+			
+			u32 dstY = nextlod_py;
+			for (u32 yy=0; yy<mi->chunk__num_point_per_row; yy++)
+			{
+				u32 ct = (yy+1) * chunk_data_num_pt_per_row + 1;
+
+				u32 dstX = nextlod_px;
+				for (u32 xx=0; xx<mi->chunk__num_point_per_row; xx++)
+				{
+					const PointData *p0 = &chunk_data[ct];
+					const PointData *p1 = &chunk_data[ct +1];
+					const PointData *p2 = &chunk_data[ct +1 +chunk_data_num_pt_per_row];
+					const PointData *p3 = &chunk_data[ct    +chunk_data_num_pt_per_row];
+					ct++;
+
+					const f32 h0 = p0->height.decode();
+					const f32 h1 = (h0 + p1->height.decode()) * 0.5f;
+					const f32 h2 = (h0 + p2->height.decode()) * 0.5f;
+					const f32 h3 = (h0 + p3->height.decode()) * 0.5f;
+					priv__map_update (&nextlod_upd, dstX,   dstY,   h0);
+					priv__map_update (&nextlod_upd, dstX+1, dstY,   h1);
+					priv__map_update (&nextlod_upd, dstX+1, dstY+1, h2);
+					priv__map_update (&nextlod_upd, dstX,   dstY+1, h3);
+
+					dstX+=2;
+				}
+
+				dstY += 2;
+			}
+
 		}
-
-
 	}
 
 	GOSFREE(gos::getScrapAllocator(), chunk_data);
 
 	//fine
+	upd->mi->chunkData->save_all_updated_chunk();
 	upd->mi = NULL;
+
+	if (0xFF != nextlod)
+		priv__map_end_update (&nextlod_upd, false, true);
+
 }
 
-//********************************
-void Map::priv__map_update_nextres_chunk (const MapInfo *miSRC, u32 cxSRC, u32 cySRC)
-{
-	assert (NULL != miSRC);
-	assert (cxSRC < miSRC->num_chunk_per_row);
-	assert (cySRC < miSRC->num_chunk_per_row);
-
-	u32 lodSRC = priv__from_resol_to_mapInfoIndex(miSRC->resolution);
-	if (0 == lodSRC)
-		return;
-
-	MapInfo *miDST = &mapInfo[lodSRC-1];
-	const u32 cxDST = cxSRC << 1;
-	const u32 cyDST = cySRC << 1;
-	for (u32 ccy=0; ccy<2; ccy++)
-	{
-		for (u32 ccx=0; ccx<2; ccx++)
-		{
-		}
-	}
-}

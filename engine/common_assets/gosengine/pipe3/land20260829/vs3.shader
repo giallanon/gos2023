@@ -13,7 +13,7 @@ layout(location = 1) in vec2 in_texCoord;
 layout(location = 0) out vec3 out_normal;
 layout(location = 1) out vec3 out_diffuse_col;
 layout(location = 2) out vec2 out_texCoord;
-
+layout(location = 3) out float out_AO;
 
 
 void main() 
@@ -26,18 +26,19 @@ void main()
 	//const uint height_and_stuff = chunk_data.data[chunk_offset + gl_VertexIndex].height_and_stuff;
 	const uint height_and_stuff = chunk_data.data[chunk_offset + gl_VertexIndex].height_and_stuff;
 		const float height_m = (height_and_stuff & 0x0000FFFF) * 0.1f;
-		//const float AO = ((height_and_stuff & 0xFF000000) >> 24) / 255.0f;
+		const float AO = ((height_and_stuff & 0xFF000000) >> 24) / 255.0f;
 		//const uint materialID = (height_	and_stuff & 0x00FF0000) >> 16;
 
 
 	const vec2 world_origin = chunk_origin + in_position * scale_XZ;
 	gl_Position = ( vec4(world_origin.x, height_m, world_origin.y, 1.0) ) * scene.camVP;
 
-	out_normal = vec3(0,1,0);
-	//out_normal = octahedral_decode (chunk_data.data[chunk_offset + gl_VertexIndex].encoded_norm, 16);
+	//out_normal = vec3(0,1,0);
+	out_normal = octahedral_decode (chunk_data.data[chunk_offset + gl_VertexIndex].encoded_norm, 16);
 
 	out_texCoord = tutv_offset + in_texCoord * 0.25f;
 
 	out_diffuse_col.rgb = vec3(1,1,1);
+	out_AO = (1.0f - AO);
 }
 
