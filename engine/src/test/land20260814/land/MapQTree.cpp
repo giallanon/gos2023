@@ -8,7 +8,7 @@ using namespace land;
 
 
 #define DEBUG__MIN_HEIGHT 0
-#define DEBUG__MAX_HEIGHT 50.0f
+#define DEBUG__MAX_HEIGHT 300.0f
 
 //********************************
 Map::MapQTree::MapQTree()

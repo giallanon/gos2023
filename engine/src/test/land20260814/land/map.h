@@ -31,6 +31,7 @@ namespace land
 			f32		default_height__m;
 			Resol	default_map__resolution;
 			Resol	resolution_min;
+			Resol	resolution_max;
 
 			CreateData()
 			{
@@ -39,6 +40,7 @@ namespace land
 
 				default_height__m = 10.0f;
 				resolution_min = Resol::_05m;
+				resolution_max = Resol::_256m;
 			}
 		};
 
@@ -119,7 +121,7 @@ namespace land
 
 
 	private:
-		static constexpr u32 VERSION = gos::magic::_makeID (0x01A782, 0x02);
+		static constexpr u32 VERSION = gos::magic::_makeID (0x01A782, 0x03);
 		static constexpr u32 QTREE__NUM_VTX_PER_CHUNK_SIDE = 65;
 
 	private:
@@ -159,6 +161,7 @@ namespace land
 	private:
 		gos::Allocator	*localAllocator;
 		u32				num_mapInfo;
+		u32 			default_map_index;		//indice in mapInfo[] della mappa che e' perennemente in memoria
 		MapInfo 		*mapInfo;				//un mapInfo per ogni LOD. LOD0=poco dettaglio, LODn=tanto dettaglio
 		f32				map_border_size__m;
 		gos::vec2f		map_topLeft_WC;			//coordinate dell'angolo in alto a sx della mappa (world coodinate)

@@ -235,8 +235,8 @@ void RenderPipe::render (gos::gpu::SwapchainImg swapchainImg, GPUCmdBufferHandle
     //aggiorno UBO descrittore scena
 	ctx.scene.matVP = cam->get_matVP();
 	//ctx.scene.lightDir = cam->pos.getAsseZ();
-	//ctx.scene.lightDir.set (0, -1.0f, 0);
-	ctx.scene.lightDir.set (0-0.3f, -1.0f, 0.3f);
+	ctx.scene.lightDir.set (0, -1.0f, 0);
+	//ctx.scene.lightDir.set (0.3f, -1.0f, 0.3f);
 	ctx.scene.lightDir.normalize();
 	ctx.scene.ambient_01 = 0.2f;
 

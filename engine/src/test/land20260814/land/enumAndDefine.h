@@ -108,7 +108,6 @@ namespace land
 	};
 
 
-
 	/***********************************
 	 * @brief	PointData
 	 * 			ogni punto della mappa contiene le seguenti info

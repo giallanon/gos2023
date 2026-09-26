@@ -37,17 +37,23 @@ void App::on__setup ()
 
 	// land::Map::CreateData create_1024;
 	// create_1024.default_map__border_size__point = 1024;
-	// create_1024.default_height__m = 10;
+	// create_1024.default_height__m = 0;
 	// create_1024.default_map__resolution = land::Resol::_4m;
+	// create_1024.resolution_min = land::Resol::_1m;
 	// land::Map::create ("@w/assets/asset_src/heightmap/ms_1024", create_1024);
 	map.open ("@w/assets/asset_src/heightmap/ms_1024");
-//	map.apply_heightmap ("@w/assets/asset_src/heightmap/radial.png", land::Resol::_4m, 0.2f);
-	//map.apply_heightmap ("@w/assets/asset_src/heightmap/anorway_30m.png", land::Resol::_4m, 1.0f);
+	//map.apply_heightmap ("@w/assets/asset_src/heightmap/anorway_30m.png", land::Resol::_4m, 0.5f);
+	map.apply_heightmap ("@w/assets/asset_src/heightmap/anorway_256.png", land::Resol::_4m, 0.5f);
 
 	
-	
-//	land::Map::create_from_hmap ("@w/assets/asset_src/heightmap/anorway_30m.png", 0.06f);
-	
+	// land::Map::CreateData create_8192;
+	// create_8192.default_map__border_size__point = 2048;
+	// create_8192.default_height__m = 0;
+	// create_8192.default_map__resolution = land::Resol::_4m;
+	// land::Map::create ("@w/assets/asset_src/heightmap/ms_8192", create_8192);
+	//map.open ("@w/assets/asset_src/heightmap/ms_8192");
+	//map.apply_heightmap ("@w/assets/asset_src/heightmap/anorway_30m.png", land::Resol::_8m, 0.5f);
+
 	
 	renderer_PIPE3 = engine->renderPipe.add_renderer<engine::Renderer_PIPE3>();
 	renderer_land = engine->renderPipe.add_renderer<land::Renderer>();
@@ -109,20 +115,20 @@ void App::on__render()
 	renderer_PIPE3->end();
 
 	line_ctx1->clear();
-	if (NAV_MODE__ENTITY == navigation__get_mode())
-	{
-		geom::Frustum3	fr = query_cam->get_frustumWC();
+	// if (NAV_MODE__ENTITY == navigation__get_mode())
+	// {
+	// 	geom::Frustum3	fr = query_cam->get_frustumWC();
 
-		vec3f vv[8];
-		fr.calc_8points(vv);
-		for (u32 i=0; i<8; i++)
-			line_ctx1->vtx_add(vv[i]);
+	// 	vec3f vv[8];
+	// 	fr.calc_8points(vv);
+	// 	for (u32 i=0; i<8; i++)
+	// 		line_ctx1->vtx_add(vv[i]);
 
-		line_ctx1->set_color_ARGB (0xFFFF00FF)	
-			.line_begin().line_add_vtx(0).line_add_vtx(1).line_add_vtx(2).line_add_vtx(3).line_add_vtx(0).line_end()
-			//.line_begin().line_add_vtx(4).line_add_vtx(5).line_add_vtx(6).line_add_vtx(7).line_add_vtx(4).line_end()
-			;
-	}
+	// 	line_ctx1->set_color_ARGB (0xFFFF00FF)	
+	// 		.line_begin().line_add_vtx(0).line_add_vtx(1).line_add_vtx(2).line_add_vtx(3).line_add_vtx(0).line_end()
+	// 		//.line_begin().line_add_vtx(4).line_add_vtx(5).line_add_vtx(6).line_add_vtx(7).line_add_vtx(4).line_end()
+	// 		;
+	// }
 
 	if (NAV_MODE__ENTITY_FIXED_CAM == navigation__get_mode())
 	{

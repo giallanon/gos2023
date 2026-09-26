@@ -24,11 +24,12 @@ void main()
     //sun light
     float sunLight = max(-dot(scene.lightDir_and_ambient.xyz, normal), 0);
 	vec3 final_col = (in_diffuse_col * texCol) * sunLight;
+	//vec3 final_col = (in_diffuse_col) * sunLight;
 
 	//ambient color
-	const vec3 sky_color = color_sRGB_to_linear(0x6e, 0xc8, 0xd4);
-	const vec3 ground_color = color_sRGB_to_linear(0x8d, 0x92, 0x84);
-	final_col += scene.lightDir_and_ambient.w * mix(ground_color, sky_color, normal.y);
+ 	const vec3 sky_color = color_sRGB_to_linear(0x6e, 0xc8, 0xd4);
+ 	const vec3 ground_color = color_sRGB_to_linear(0x8d, 0x92, 0x84);
+ 	final_col += scene.lightDir_and_ambient.w * mix(ground_color, sky_color, normal.y);
 
 	//AO
 	final_col *= in_AO;

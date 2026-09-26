@@ -15,6 +15,7 @@ bool Map::create (const char *save_path, const CreateData &create)
 {
 	assert (GOS_IS_POWER_OF_TWO(create.default_map__border_size__point));
 	assert (create.default_map__resolution > create.resolution_min);
+	assert (create.default_map__resolution <= create.resolution_max);
 	
 	char s[1024];
 	gos::Allocator *localAllocator = gos::getSysHeapAllocator();
@@ -35,14 +36,44 @@ bool Map::create (const char *save_path, const CreateData &create)
 	//a risoluzione <default_resolution>.
 	//Questa e' la mappa di default, perennemente storata in RAM
 	//Sotto a questa mappa, ne esistono altre + grandi a risoluzione + dettaglita che vengono cachate alla bisogna
+	//Sopra a questa ne esistono altre a risoluzione + bassa, fino a dove e' pssibile
 	MapInfo mapInfo[32];
 	u32 num_map_info = 0;
-	{
-		mapInfo[num_map_info].resolution = create.default_map__resolution;
-		mapInfo[num_map_info].num_point_per_row = create.default_map__border_size__point;
-		num_map_info++;
 
-		Resol res = mapInfo[0].resolution;
+	//calcolo i LOD a risoluzione inferiore
+	{
+		u32 num_point = create.default_map__border_size__point;
+		Resol resol = create.default_map__resolution;
+		u32 n = 0;
+		while (num_point > 128)
+		{
+			num_point /= 2;
+			Resol r = land::resolution_next(resol);
+			if (resol == r)
+				break;
+			resol = r;
+			n++;
+		}
+
+		for (u32 i=0; i<n; i++)
+		{
+			mapInfo[num_map_info].resolution = resol;
+			mapInfo[num_map_info].num_point_per_row = num_point;
+			num_map_info++;
+
+			num_point *= 2;
+			resol = land::resolution_prev(resol);
+		}
+	}
+
+	const u32 default_map_index = num_map_info;
+	mapInfo[num_map_info].resolution = create.default_map__resolution;
+	mapInfo[num_map_info].num_point_per_row = create.default_map__border_size__point;
+	num_map_info++;
+
+	//lod a risoluzione maggiore
+	{
+		Resol res = mapInfo[default_map_index].resolution;
 		while (res != create.resolution_min)
 		{
 			res = land::resolution_prev(res);
@@ -77,6 +108,10 @@ bool Map::create (const char *save_path, const CreateData &create)
 			num_point_per_chunk_lato >>= 1;
 		}
 
+		if (num_point_per_chunk_lato > mapInfo[0].num_point_per_row)
+			num_point_per_chunk_lato = mapInfo[0].num_point_per_row;
+		num_tot_point_per_chunk = num_point_per_chunk_lato * num_point_per_chunk_lato;
+
 		chunk_data = GOSALLOCT(PointData*, localAllocator, sizeof_chunk);
 		for (u32 i=0; i<num_tot_point_per_chunk; i++)
 		{
@@ -94,8 +129,10 @@ bool Map::create (const char *save_path, const CreateData &create)
 
 		sprintf_s (s, sizeof(s), "%s/lod%d", save_path, land::resolution_to_u8(m->resolution));
 		{
-			m->num_chunk_per_row = m->num_point_per_row / num_point_per_chunk_lato;
 			m->chunk__num_point_per_row = num_point_per_chunk_lato;
+			m->num_chunk_per_row = m->num_point_per_row / m->chunk__num_point_per_row;
+			assert (m->num_chunk_per_row >= 1);
+			
 			const u32 num_tot_chunk = m->num_chunk_per_row * m->num_chunk_per_row;
 			land::BigFile::create (s, sizeof_chunk, num_tot_chunk);
 
@@ -123,6 +160,7 @@ bool Map::create (const char *save_path, const CreateData &create)
 
 		ct += utils::bufferWriteU32 (&buffer[ct], Map::VERSION);
 		ct += utils::bufferWriteU32 (&buffer[ct], num_map_info);
+		ct += utils::bufferWriteU32 (&buffer[ct], default_map_index);
 
 		for (u32 mm=0; mm<num_map_info; mm++)
 		{
@@ -232,6 +270,9 @@ bool Map::open (const char *folder_path)
 		num_mapInfo = utils::bufferReadU32 (&buffer[ct]);
 		ct+=4;
 
+		default_map_index = utils::bufferReadU32 (&buffer[ct]);
+		ct+=4;
+
 		mapInfo = GOSALLOCT(MapInfo*, localAllocator, sizeof(MapInfo) * num_mapInfo);
 		for (u32 i=0; i<num_mapInfo; i++)
 		{
@@ -259,10 +300,10 @@ bool Map::open (const char *folder_path)
 	map_border_size__m = mapInfo[0].border_size__m;
 	map_topLeft_WC.set (-map_border_size__m * 0.5f, map_border_size__m * 0.5f);
 
-	//la mappa 0 la voglio sempre tutta in RAM, quindi apro il bigfile dandogli una cache suff a caricare tutta la
+	//la mappa "default_map_index" la voglio sempre tutta in RAM, quindi apro il bigfile dandogli una cache suff a caricare tutta la
 	//mappa in RAM. Le altre mappe usando la stessa quantita' di cache
 	{
-		MapInfo *m = &mapInfo[0];
+		MapInfo *m = &mapInfo[default_map_index];
 		const u32 num_max_cached_chunk = m->num_chunk_per_row * m->num_chunk_per_row;
 		sprintf_s (s, sizeof(s), "%s/lod%d", folder_path, land::resolution_to_u8(m->resolution));
 		if (!m->chunkData->open_1 (localAllocator, s, num_max_cached_chunk))
@@ -274,8 +315,10 @@ bool Map::open (const char *folder_path)
 
 	//per le altre mappe, tengo un cache di 128MB che sembra essere un buon numero
 	constexpr u32 CACHE_SIZE = 128 * 1024 * 1024;
-	for (u32 mm=1; mm<num_mapInfo; mm++)
+	for (u32 mm=0; mm<num_mapInfo; mm++)
 	{
+		if (default_map_index == mm)
+			continue;
 		MapInfo *m = &mapInfo[mm];
 
 		//chunk data
@@ -303,9 +346,12 @@ bool Map::open (const char *folder_path)
 	logger::dec_indent();
 
 
-	//carico tutti i chunk della mappa0
-	for (u32 i=0; i<mapInfo[0].num_chunk_per_row * mapInfo[0].num_chunk_per_row; i++)
-		mapInfo[0].chunkData->get_chunk(i);
+	//carico tutti i chunk della mappa default-index
+	{
+		MapInfo *m = &mapInfo[default_map_index];
+		for (u32 i=0; i<m->num_chunk_per_row * m->num_chunk_per_row; i++)
+			m->chunkData->get_chunk(i);
+	}
 
 
 	//istanzio il QTREE
@@ -631,9 +677,9 @@ void Map::priv__map_end_update (UpdateInfo *upd, bool bPropagaPrevLOD, bool bPro
 	//info sul LOD che e' stato modificato
 	MapInfo *mi = upd->mi;
 	const u8  mi_lod = priv__from_resol_to_mapInfoIndex (mi->resolution);
-	const u32 chunk_data_num_pt_per_row = mi->chunk__num_point_per_row + 2;
-	const u32 chunk_data_sizeof = sizeof(PointData) * chunk_data_num_pt_per_row * chunk_data_num_pt_per_row;
-	PointData *chunk_data = GOSALLOCT(PointData*, gos::getScrapAllocator(), chunk_data_sizeof);
+	const u32 hmap_num_pt_per_row = mi->chunk__num_point_per_row + 2;
+	const u32 hmap_sizeof = sizeof(PointData) * hmap_num_pt_per_row * hmap_num_pt_per_row;
+	PointData *hmap = GOSALLOCT(PointData*, gos::getScrapAllocator(), hmap_sizeof);
 
 
 	//se devo propagare al LOD successivo...
@@ -664,11 +710,86 @@ void Map::priv__map_end_update (UpdateInfo *upd, bool bPropagaPrevLOD, bool bPro
 		const u32 cySRC = cc.get_cy();
 		const u32 px = priv__chunk_to_point (mi, cxSRC);
 		const u32 py = priv__chunk_to_point (mi, cySRC);
-		GOS_DEBUG_ASSERT( map__get_data ((i32)px -1, (i32)py -1, mi->resolution, mi->chunk__num_point_per_row + 2, chunk_data, chunk_data_sizeof) );
+		GOS_DEBUG_ASSERT( map__get_data ((i32)px -1, (i32)py -1, mi->resolution, hmap_num_pt_per_row, hmap, hmap_sizeof) );
 
-		//TODO:
-		//operare su chunk_data per il calcolo delle normali e AO
 
+		//calcolo delle normali e AO del chunk modificato
+		{
+			PointData *p = static_cast<PointData*>( mi->chunkData->get_chunk_for_update (cxSRC + cySRC * mi->num_chunk_per_row) );
+
+			for (u32 yy=0; yy<mi->chunk__num_point_per_row; yy++)
+			{
+				u32 ct = yy * mi->chunk__num_point_per_row;
+				
+				u32 ct_hmap = 1+ (yy+1) * hmap_num_pt_per_row;
+				u32 ct_hmap_su = ct_hmap - hmap_num_pt_per_row;
+				u32 ct_hmap_giu = ct_hmap + hmap_num_pt_per_row;			
+
+				for (u32 xx=0; xx<mi->chunk__num_point_per_row; xx++)
+				{
+					const f32 h[3][3] {
+						hmap[ct_hmap_su - 1].height.decode(), 	hmap[ct_hmap_su].height.decode(), 	hmap[ct_hmap_su + 1].height.decode(),
+						hmap[ct_hmap - 1].height.decode(), 		hmap[ct_hmap].height.decode(), 		hmap[ct_hmap + 1].height.decode(),
+						hmap[ct_hmap_giu - 1].height.decode(), 	hmap[ct_hmap_giu].height.decode(), 	hmap[ct_hmap_giu + 1].height.decode()
+					};
+
+					const f32 step = land::resolution_to_m(mi->resolution);
+					const f32 x0 = 0;
+					const f32 x1 = step;
+					const f32 x2 = x1 + step;
+
+					const f32 z0 = 0;
+					const f32 z1 = -step;
+					const f32 z2 = z1 - step;
+
+
+					//normalVector = normalize((R - L) x (U - D)) where x = cross product and R,L,U,D are the 3
+					// const vec3f L = vec3f (x0, h[0][1], z1);
+					// const vec3f R = vec3f (x2, h[2][1], z1);
+					// const vec3f U = vec3f (x1, h[1][0], z0);
+					// const vec3f D = vec3f (x1, h[1][2], z2);
+					// vec3f norm = -math::cross ( (R-L), (U-D) );
+					// norm.normalize();
+
+
+					vec3f nn[4];
+					geom::Plane3 pl1;
+					geom::Plane3 pl2;
+					pl1.set_from_3points ( vec3f(x0, h[0][0], z0), vec3f(x1, h[1][0], z0), vec3f(x1, h[1][1], z1));
+					pl2.set_from_3points ( vec3f(x0, h[0][0], z0), vec3f(x1, h[1][1], z1), vec3f(x0, h[0][1], z1));
+					nn[0] = (pl1.n + pl2.n);
+
+					pl1.set_from_3points ( vec3f(x1, h[1][0], z0), vec3f(x2, h[2][0], z0), vec3f(x2, h[2][1], z1));
+					pl2.set_from_3points ( vec3f(x1, h[1][0], z0), vec3f(x2, h[2][1], z1), vec3f(x1, h[1][1], z1));
+					//nn[1] = (pl1.n + pl2.n);
+					nn[1] = pl2.n;
+
+					pl1.set_from_3points ( vec3f(x0, h[0][1], z1), vec3f(x1, h[1][1], z1), vec3f(x1, h[1][2], z2));
+					pl2.set_from_3points ( vec3f(x0, h[0][1], z1), vec3f(x1, h[1][2], z2), vec3f(x0, h[0][2], z2));
+					//nn[2] = (pl1.n + pl2.n);
+					nn[2] = pl1.n;
+
+					pl1.set_from_3points ( vec3f(x1, h[1][1], z1), vec3f(x2, h[2][1], z1), vec3f(x2, h[2][2], z2));
+					pl2.set_from_3points ( vec3f(x1, h[1][1], z1), vec3f(x2, h[2][2], z2), vec3f(x1, h[1][2], z2));
+					nn[3] = (pl1.n + pl2.n);
+
+					vec3f norm = (nn[0] + nn[1] +nn[2] +nn[3]) / 4.0f;
+					norm.normalize();
+					
+					
+					ct_hmap++;
+					ct_hmap_su++;
+					ct_hmap_giu++;
+
+
+					//riporto le info nel chunk
+					p[ct].norm.set(norm);
+					p[ct].ao = 0;
+					ct++;
+
+				}
+			}
+		}
 
 		//Aggiorno il LOD a risoluzione piu' dettagliata
 		//Da ogni chunk ne devo creare 4 a risoluzione aumentata
@@ -680,15 +801,15 @@ void Map::priv__map_end_update (UpdateInfo *upd, bool bPropagaPrevLOD, bool bPro
 			u32 dstY = nextlod_py;
 			for (u32 yy=0; yy<mi->chunk__num_point_per_row; yy++)
 			{
-				u32 ct = (yy+1) * chunk_data_num_pt_per_row + 1;
+				u32 ct = (yy+1) * hmap_num_pt_per_row + 1;
 
 				u32 dstX = nextlod_px;
 				for (u32 xx=0; xx<mi->chunk__num_point_per_row; xx++)
 				{
-					const PointData *p0 = &chunk_data[ct];
-					const PointData *p1 = &chunk_data[ct +1];
-					const PointData *p2 = &chunk_data[ct +1 +chunk_data_num_pt_per_row];
-					const PointData *p3 = &chunk_data[ct    +chunk_data_num_pt_per_row];
+					const PointData *p0 = &hmap[ct];
+					const PointData *p1 = &hmap[ct +1];
+					const PointData *p2 = &hmap[ct +1 +hmap_num_pt_per_row];
+					const PointData *p3 = &hmap[ct    +hmap_num_pt_per_row];
 					ct++;
 
 					const f32 h0 = p0->height.decode();
@@ -708,15 +829,62 @@ void Map::priv__map_end_update (UpdateInfo *upd, bool bPropagaPrevLOD, bool bPro
 
 		}
 	}
+	GOSFREE(gos::getScrapAllocator(), hmap);
 
-	GOSFREE(gos::getScrapAllocator(), chunk_data);
-
-	//fine
+	//salvo tutti i chunk
 	upd->mi->chunkData->save_all_updated_chunk();
-	upd->mi = NULL;
+	
 
 	if (0xFF != nextlod)
 		priv__map_end_update (&nextlod_upd, false, true);
+
+
+	//propago verso i lod a risoluzione minore
+	if (bPropagaPrevLOD && mi_lod > 0)
+	{
+		const u8 prev_lod = mi_lod - 1;
+		CCList		prevlod_ccList;
+		prevlod_ccList.setup (localAllocator, 256);
+		
+		UpdateInfo 	prevlod_upd;
+		priv__setup_updateInfo (&prevlod_upd, mapInfo[prev_lod].resolution, &prevlod_ccList);
+		priv__map_begin_update (&prevlod_upd);
+
+		for (u32 chunk=0; chunk<ccList->getNElem(); chunk++)
+		{
+			ChunkCoord cc = ccList->queryElem(chunk);
+
+			const u32 cxSRC = cc.get_cx();
+			const u32 cySRC = cc.get_cy();
+			const u32 px = priv__chunk_to_point (mi, cxSRC);
+			const u32 py = priv__chunk_to_point (mi, cySRC);
+			
+
+			const PointData *p = (const PointData*) mi->chunkData->get_chunk(cxSRC + cySRC * mi->num_chunk_per_row);
+
+			u32 pyDST = py / 2;
+			for (u32 yy=0; yy<mi->chunk__num_point_per_row; yy+=2)
+			{
+				u32 ct = yy * mi->chunk__num_point_per_row;
+				
+				u32 pxDST = px / 2;
+				for (u32 xx=0; xx<mi->chunk__num_point_per_row; xx+=2)
+				{			
+					const f32 h = p[ct].height.decode();
+					ct+=2;
+					
+					priv__map_update (&prevlod_upd, pxDST, pyDST, h);
+					pxDST++;
+				}
+				pyDST++;
+			}
+		}
+		priv__map_end_update (&prevlod_upd, true, false);
+	}
+
+
+	//fine
+	upd->mi = NULL;
 
 }
 
