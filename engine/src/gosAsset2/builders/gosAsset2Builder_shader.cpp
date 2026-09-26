@@ -66,7 +66,7 @@ bool Builder_shader::priv_extractParams (DBContext &ctx, const UniqueUIDList &li
 #ifdef _DEBUG
         //per lo meno nella versione WINDOWS, la sprintf_s in versione DEBUG riempe params.def di 0xFE, probabilmente per detectare
         //i buffer overflow. Il fatto di avere degli 0xFE al posto dei normali 0x00 che ci dovrebbero essere, altera il calcolo dell'asset UID visto
-        //che il buffer che fornisco a prot_setupVirtualAsset() e' diverso nella versione debug rispetto alla versione release.
+        //che il buffer che fornisco a prot_setupAsset() e' diverso nella versione debug rispetto alla versione release.
         //Per fixare la cosa, riempo di 0x00 la parte non usata di params.def
         n = (u32)strlen(params.def);
         memset (&params.def[n], 0x00, sizeof(params.def)-n);
@@ -104,7 +104,7 @@ bool Builder_shader::build_begin (DBContext &ctx, const UniqueUIDList &listof_UI
         return false;
 
     //il parametro src indica una risorsa eResType::shader_txt da cui io dipendo
-    //La risorsa deve esistere nel DB. Se non c'e' gia', al devo inserire
+    //La risorsa deve esistere nel DB. Se non c'e' gia', la devo inserire
     if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::shader_txt, params.src, &params.uid__resource_shader_txt))
     {
         logger->log (eTextColor::red, "resource [%s] '%s' not found in DB\n", asset2::enumToString(eResType::shader_txt), params.src);
@@ -130,16 +130,15 @@ bool Builder_shader::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *
 	out_result->reset();
 
 
-    //setup di virtual-asset
     //All'uscita da questa fn:
-    //  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
-    //  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
-    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
-    if (!prot_setupVirtualAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
+    //  out_result->assetUID       			contiene l'assetUID di questo asset, gia' inserito nel DB
+    //  out_result->signatureUID      		contiene la signatureUID a cui questo assetUID punta
+    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
+    if (!prot_setupAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
         return false;
 
-    //aggiungo le dipendenze di virtual-asset dalla risorsa shader_txt
-    if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__resource_shader_txt)) return false;
+    //aggiungo le dipendenze di assetUID dalla risorsa shader_txt
+    if (!dependency_add (ctx, out_result->assetUID, params.uid__resource_shader_txt)) return false;
     
 
 
@@ -148,13 +147,13 @@ bool Builder_shader::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *
     if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
     {
         char shaderStage[8];
-        if (eAssetType::vtx_shader == getAssetType())
+        if (eAssetType::vtx_shader == getSignatureType())
             sprintf_s (shaderStage, sizeof(shaderStage), "vert");
         else
             sprintf_s (shaderStage, sizeof(shaderStage), "frag");
 
         char filenameDST[1024];
-        asset2::asset_manufacture_fullFilename (ctx, out_result->uid_concrete_asset, filenameDST, sizeof(filenameDST));
+        asset2::signature_manufacture_fullFilename (ctx, out_result->signatureUID, filenameDST, sizeof(filenameDST));
 
         //creo la versione ottimizzata e la versione con le debug-info. Quest'ultima
         //serve per esempio alle pipeline_def per recuprare i nomi e il formato dei descrittori

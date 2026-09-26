@@ -18,6 +18,7 @@ Builder::Builder(gos::GPU *gpuIN)
 	logger = &loggerStdout;
 
 	build_result_list.setup (localAllocator, 256);
+	list_of_touched_assets.setup (localAllocator, 256);
 
 	memset(builderList, 0, sizeof(builderList));
 	add_builder<Builder_vtxShader>();
@@ -46,7 +47,7 @@ bool Builder::priv_addBuilder(BuilderInterface *builder)
 {
 	assert(NULL != builder);
 
-	const u32 index = static_cast<u8>(builder->getAssetType());
+	const u32 index = static_cast<u8>(builder->getSignatureType());
 	assert(index < NUM_MAX_BUILDERS);
 
 	if (NULL == builderList[index])
@@ -56,7 +57,7 @@ bool Builder::priv_addBuilder(BuilderInterface *builder)
 		return true;
 	}
 
-	logger->err("Builder::priv_addBuilder() => a builder for res %s already exists\n", asset2::enumToString(builder->getAssetType()));
+	logger->err("Builder::priv_addBuilder() => a builder for res %s already exists\n", asset2::enumToString(builder->getSignatureType()));
 	return false;
 }
 
@@ -161,7 +162,7 @@ bool Builder::debug_sanityCheck(const char *baseFolderIN)
 
 	logger->log("building...\n");
 	loggerStdout.disableStdouLogging();
-	bool ret = priv_build(ctxSanity, false, false);
+	bool ret = priv_build(ctxSanity, NULL, false, false);
 	loggerStdout.enableStdouLogging();
 
 	if (!ret)
@@ -212,8 +213,8 @@ bool Builder::debug_sanityCheck__compareDB(DBContext &ctxSanity, const char *bas
 	}
 
 	char s[1024];
-	sprintf_s(s, sizeof(s), "SELECT UID FROM " GOS_ASSET2__TABLE_ASSET_LIST " ORDER BY UID");
-	if (!debug_sanityCheck__cmp_table(ctxSanity, ctx, s, GOS_ASSET2__TABLE_ASSET_LIST))
+	sprintf_s(s, sizeof(s), "SELECT Signature FROM " GOS_ASSET2__TABLE_SIGNATURE " ORDER BY Signature");
+	if (!debug_sanityCheck__cmp_table(ctxSanity, ctx, s, GOS_ASSET2__TABLE_SIGNATURE))
 		ret = false;
 
 	sprintf_s(s, sizeof(s), "SELECT UID,childUID FROM " GOS_ASSET2__TABLE_DEPENDS " ORDER BY UID");
@@ -224,12 +225,12 @@ bool Builder::debug_sanityCheck__compareDB(DBContext &ctxSanity, const char *bas
 	if (!debug_sanityCheck__cmp_table(ctxSanity, ctx, s, GOS_ASSET2__TABLE_RES))
 		ret = false;
 
-	sprintf_s(s, sizeof(s), "SELECT UID,childUID FROM " GOS_ASSET2__TABLE_DEPENDS_RUNTIME " ORDER BY UID");
-	if (!debug_sanityCheck__cmp_table(ctxSanity, ctx, s, GOS_ASSET2__TABLE_DEPENDS_RUNTIME))
+	sprintf_s(s, sizeof(s), "SELECT Signature,childSIG FROM " GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME " ORDER BY Signature");
+	if (!debug_sanityCheck__cmp_table(ctxSanity, ctx, s, GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME))
 		ret = false;
 
 	sprintf_s(s, sizeof(s), "	");
-	if (!debug_sanityCheck__cmp_table(ctxSanity, ctx, s, GOS_ASSET2__TABLE_VIRTUAL_ASSET))
+	if (!debug_sanityCheck__cmp_table(ctxSanity, ctx, s, GOS_ASSET2__TABLE_ASSET_LIST))
 		ret = false;
 
 	asset2::dbcontext_close(ctx);
@@ -303,21 +304,21 @@ bool Builder::debug_sanityCheck__cmp_table(DBContext &ctx_sanity, DBContext &ctx
 }
 
 //******************************
-bool Builder::rebuild_all(const char *baseFolderIN, bool bVerbose)
+bool Builder::rebuild_all (const char *baseFolderIN, bool bVerbose)
 {
 	char baseFolder[1024];
 	fs::resolvePath (baseFolderIN, baseFolder, sizeof(baseFolder));
 	fs::pathSanitizeInPlace (baseFolder);
-
 
 	if (bVerbose)
 		logger = &loggerStdout;
 	else
 		logger = &loggerNull;
 
+
 	char s[1024];
 
-	// del del database
+	// delete del database
 	sprintf_s(s, sizeof(s), "%s/" GOS_ASSET2__DEFAULT_DB_NAME "", baseFolder);
 	fs::fileDelete(s);
 
@@ -330,7 +331,7 @@ bool Builder::rebuild_all(const char *baseFolderIN, bool bVerbose)
 
 	// build
 	logger->log("rebuild all...\n");
-	const bool ret = priv_build(ctx, true, false);
+	const bool ret = priv_build(ctx, NULL, true, false);
 	asset2::dbcontext_close(ctx);
 	return ret;
 }
@@ -348,27 +349,48 @@ bool Builder::build(const char *baseFolderIN, bool bVerbose)
 	else
 		logger = &loggerNull;
 
-	bool ret = false;
-
-	// faccio un backup del DB
 	char s[512];
-	char backupDB[512];
+	sprintf_s(s, sizeof(s), "%s/" GOS_ASSET2__DEFAULT_DB_NAME "", baseFolder);
+	if (!fs::fileExists(s))
 	{
-		sprintf_s(s, sizeof(s), "%s/" GOS_ASSET2__DEFAULT_DB_NAME "", baseFolder);
-		sprintf_s(backupDB, sizeof(backupDB), "%s.backup", s);
-		fs::fileCopy(s, backupDB);
+		return rebuild_all (baseFolderIN, bVerbose);
 	}
 
+
+	// faccio un backup del DB
+	DBContext backup_ctx;
+	char backupDB[512];
+	{
+		sprintf_s(backupDB, sizeof(backupDB), "%s.backup", s);
+		if (!fs::fileCopy(s, backupDB))
+		{
+			logger::err ("can't backup db [%s]\n", backupDB);
+			return false;
+		}
+		
+		sprintf_s(s, sizeof(s), "" GOS_ASSET2__DEFAULT_DB_NAME ".backup");
+		if (!asset2::dbcontext_open_ex (baseFolder, s, false, &backup_ctx))
+		{
+			logger::err ("can't open backup db [%s]\n", backupDB);
+			return false;
+		}
+	}
+
+	bool ret = false;
 	DBContext ctx;
-	if (asset2::dbcontext_open(baseFolder, true, &ctx))
+	if (asset2::dbcontext_open (baseFolder, true, &ctx))
 	{
 		logger->log("building %s\n", baseFolder);
-		ret = priv_build(ctx, true, true);
+		ret = priv_build(ctx, &backup_ctx, true, true);
 		asset2::dbcontext_close(ctx);
 	}
 
+	asset2::dbcontext_close(backup_ctx);
+
+
 	if (!ret)
 	{
+		char s[512];
 		logger->log(eTextColor::yellow, "\n\nrestoring previous DB\n");
 
 		sprintf_s(s, sizeof(s), "%s/" GOS_ASSET2__DEFAULT_DB_NAME "", baseFolder);
@@ -381,9 +403,10 @@ bool Builder::build(const char *baseFolderIN, bool bVerbose)
 }
 
 //******************************
-bool Builder::priv_build (DBContext &ctx, bool bDoCreateAssetFile, bool bGenerateListOfUpdatedUID)
+bool Builder::priv_build (DBContext &ctx, DBContext *ctx_backup, bool bDoCreateAssetFile, bool bGenerateListOfUpdatedUID)
 {
 	gos::err::clear();
+	list_of_touched_assets.reset();
 	
 	if (bGenerateListOfUpdatedUID)
 		build_result_list.reset();
@@ -392,7 +415,7 @@ bool Builder::priv_build (DBContext &ctx, bool bDoCreateAssetFile, bool bGenerat
 	dt.setNow_UTC();
 
 	HashedStringList listof_gosAssetd_toBeRebuilt(localAllocator, 256);
-	UniqueUIDList listof_possibile_concrete_assets_to_be_deleted(localAllocator, 256);
+	UniqueUIDList listof_possibile_signatureUID_to_be_deleted(localAllocator, 256);
 	UniqueUIDList listof_possibile_resources_to_be_deleted(localAllocator, 256);
 	UniqueUIDList listof_deleted_gosassetd(localAllocator, 256);
 	
@@ -409,7 +432,7 @@ bool Builder::priv_build (DBContext &ctx, bool bDoCreateAssetFile, bool bGenerat
 
 		// scanno tutte le risorse gia' presenti nel DB
 		if (ret)
-			ret = priv_resource_scan_DB(ctx, &listof_gosAssetd_toBeRebuilt, &listof_deleted_gosassetd, &listof_possibile_concrete_assets_to_be_deleted, &listof_possibile_resources_to_be_deleted);
+			ret = priv_resource_scan_DB(ctx, &listof_gosAssetd_toBeRebuilt, &listof_deleted_gosassetd, &listof_possibile_signatureUID_to_be_deleted, &listof_possibile_resources_to_be_deleted);
 
 		logger->log("finished\n");
 	}
@@ -417,20 +440,20 @@ bool Builder::priv_build (DBContext &ctx, bool bDoCreateAssetFile, bool bGenerat
 	if (!ret)
 		return false;
 
-	// dalla lista dei possibili concrete-asset da deletare, verifico quali sono effettivamente da cancellare
-	UniqueUIDList listof_deleted_assets(localAllocator, 256);
-	listof_possibile_concrete_assets_to_be_deleted.forEach([&ctx, &listof_deleted_assets](u32 index, const UID uid)
+	// dalla lista delle possibili signature da deletare, verifico quali sono effettivamente da cancellare
+	UniqueUIDList listof_deleted_signature(localAllocator, 256);
+	listof_possibile_signatureUID_to_be_deleted.forEach([&ctx, &listof_deleted_signature](u32 index, const UID uid)
 	{
-		if (!asset_is_still_in_use(ctx, uid))
+		if (!signature_is_still_in_use(ctx, uid))
 		{
-			listof_deleted_assets.insertIfNotExists(uid);
-			asset_delete(ctx, uid);
+			listof_deleted_signature.insertIfNotExists(uid);
+			signature_delete(ctx, uid);
 		}
 		return true;
 	});
 
 	// ora ho una lista di gosasset_d che devo rebuildare, la processo
-	UniqueUIDList listof_builtAssets(localAllocator, 256);
+	UniqueUIDList listof_built_signature(localAllocator, 256);
 	logger->log("\nList of .gosasset_d to be rebuilt:\n");
 	{
 		logger->inc_indent();
@@ -460,7 +483,7 @@ bool Builder::priv_build (DBContext &ctx, bool bDoCreateAssetFile, bool bGenerat
 				{
 					logger->log("\nbuilding %016" PRIX64 " %s\n", uid._uid, absFilename);
 					logger->inc_indent();
-					ret = priv_gosassetd_build(ctx, bDoCreateAssetFile, absFilename, &listof_builtAssets);
+					ret = priv_gosassetd_build(ctx, bDoCreateAssetFile, absFilename, &listof_built_signature);
 					logger->dec_indent();
 				}
 				if (!ret)
@@ -471,6 +494,8 @@ bool Builder::priv_build (DBContext &ctx, bool bDoCreateAssetFile, bool bGenerat
 
 	if (ret)
 	{
+		logger->log(eTextColor::yellow, "\n============== FINAL REPORT ===========:\n");
+
 		//elimino dal DB eventuali risorse che non servono piu'
 		if (listof_possibile_resources_to_be_deleted.getNElem())
 		{
@@ -489,34 +514,168 @@ bool Builder::priv_build (DBContext &ctx, bool bDoCreateAssetFile, bool bGenerat
 			logger->dec_indent();
 		}
 
-		// clean up del DB
-		if (listof_deleted_assets.getNElem())
+		//report
+		//in listof_deleted_signature ho un elenco di signature che ho deletato e in listof_built_signature un elenco di quelle
+		//che ho creato.
+		//E' possibile che una signature sia sta deletata e poi rebuildata semplicemente perche' quando processo un gosasset_d processo tutto quando
+		//c'e' li dentro, inclusi gli asset che di fatto sono rimasti identici
+		//Le signature che sono presenti sia in listof_deleted_signature che in listof_built_signature non ha senso "reportarle" perche' di fatto
+		//non sono state modificate, le ho solo deletare e rebuildate ma la sostanza non e' cambiata
+		UniqueUIDList listof_really_deleted_signature(localAllocator, 256);
+		UniqueUIDList listof_really_built_signature(localAllocator, 256);
+		UniqueUIDList listof_really_updated_asset(localAllocator, 256);
 		{
-			logger->log("\nlist of deleted assets:\n");
-			logger->inc_indent();
-			listof_deleted_assets.forEach([bGenerateListOfUpdatedUID, logger = this->logger, &build_result_list=this->build_result_list](u32 index, const UID uid)
+			const asset2::FastUIDList *list = listof_deleted_signature._queryList();
+			for (u32 i=0; i<list->getNElem(); i++)
 			{
-				logger->log ("[%-12s] %016" PRIX64 "\n", asset2::enumToString (uid.getAssetType()), uid._uid);
-				if (bGenerateListOfUpdatedUID)
-					build_result_list.insertIfNotExists(uid);
-				return true; 
-			});
-			logger->dec_indent();
+				const UID uid = list->queryElem(i);
+
+				if (listof_built_signature.exists(uid))
+				{
+					//UID esiste sia in listof_deleted_signature che in listof_built_signature.
+					//vuol dire che di fatto non ci ho fatto niente
+				}
+				else
+				{
+					//UID esiste in listof_deleted_signature ma non in listof_built_signature.
+					//vuol dire che l'ho davvero deletata
+					listof_really_deleted_signature.insertIfNotExists(uid);
+				}
+			}
+
+			list = listof_built_signature._queryList();
+			for (u32 i=0; i<list->getNElem(); i++)
+			{
+				const UID uid = list->queryElem(i);
+
+				if (listof_deleted_signature.exists(uid))
+				{
+					//UID esiste sia in listof_deleted_signature che in listof_built_signature.
+					//vuol dire che di fatto non ci ho fatto niente
+				}
+				else
+				{
+					//UID esiste in listof_built_signature ma non in listof_deleted_signature.
+					//vuol dire che l'ho davvero rebuildata
+					listof_really_built_signature.insertIfNotExists(uid);
+				}
+			}			
 		}
 
-		if (listof_builtAssets.getNElem())
+
+		logger->log(eTextColor::green,"\nlist of deleted signature:\n");
+		logger->inc_indent();
+		if (listof_really_deleted_signature.getNElem())
 		{
-			logger->log("\nlist of built assets:\n");
-			logger->inc_indent();
-			listof_builtAssets.forEach([bGenerateListOfUpdatedUID, logger = this->logger, &build_result_list=this->build_result_list](u32 index, const UID uid)
+			//ho una lista delle signature deletate per davvero.
+			//Apro il DB di backup per recuperare gli UID degli asset che sono stati deletati
+			listof_really_deleted_signature.forEach([bGenerateListOfUpdatedUID, logger = this->logger, &build_result_list=this->build_result_list, ctx_backup, &listof_really_updated_asset=listof_really_updated_asset](u32 index, const UID uid)
 			{
-				logger->log ("[%-12s] %016" PRIX64 "\n", asset2::enumToString (uid.getAssetType()), uid._uid);
-				if (bGenerateListOfUpdatedUID)
-					build_result_list.insertIfNotExists(uid);
+				logger->log ("[%-12s] %016" PRIX64 "\n", asset2::enumToString (uid.getSignatureType()), uid._uid);
+				if (NULL != ctx_backup)
+				{
+					logger->inc_indent();
+					char s[128];
+					db::RST rst;
+					sprintf_s (s, sizeof(s), "SELECT UID,rtname FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE Signature=%" PRIu64 "", uid._uid);
+					asset2::dbcontext_query (*ctx_backup, s, rst);
+					while (rst.fetchRow())
+					{
+						UID uid; uid._uid = rst.getValAsU64(0);
+						logger->log ("asset uid:%016" PRIX64 ", rtname=%s\n", uid._uid, rst.getVal(1));
+						listof_really_updated_asset.insertIfNotExists (uid);
+					}
+					logger->dec_indent();	
+				}
+				return true; 
+			});
+
+		}
+		logger->dec_indent();
+
+
+		logger->log(eTextColor::green, "\nlist of built signature:\n");
+		logger->inc_indent();
+		if (listof_really_built_signature.getNElem())
+		{
+			listof_really_built_signature.forEach([bGenerateListOfUpdatedUID, logger = this->logger, &build_result_list=this->build_result_list, &ctx=ctx, &listof_really_updated_asset=listof_really_updated_asset](u32 index, const UID uid)
+			{
+				logger->log ("[%-12s] %016" PRIX64 "\n", asset2::enumToString (uid.getSignatureType()), uid._uid);
+
+				logger->inc_indent();
+				char s[128];
+				db::RST rst;
+				sprintf_s (s, sizeof(s), "SELECT UID,rtname FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE Signature=%" PRIu64 "", uid._uid);
+				asset2::dbcontext_query (ctx, s, rst);
+				while (rst.fetchRow())
+				{
+					UID uid; uid._uid = rst.getValAsU64(0);
+					logger->log ("asset uid:%016" PRIX64 ", rtname=%s\n", uid._uid, rst.getVal(1));
+					listof_really_updated_asset.insertIfNotExists (uid);
+				}
+				logger->dec_indent();	
+
+
 				return true;
 			});
-			logger->dec_indent();
 		}
+		logger->dec_indent();
+
+
+
+		logger->log(eTextColor::green, "\nlist of updated assets:\n");
+		logger->inc_indent();
+		if (list_of_touched_assets.getNElem())
+		{
+			list_of_touched_assets.forEach( [bGenerateListOfUpdatedUID, logger=this->logger, &ctx=ctx, ctx_backup, &build_result_list=this->build_result_list] (const UID assetUID, const UID signatureUID) {
+
+				//cerco nel DB di backup l'assert UID e verifico se la sua signature e' cambiata
+				char s[128];
+				db::RST rst;
+				bool bWasUpdated = false;
+				char rtname[1024];
+
+				rtname[0] = 0x00;
+				if (NULL != ctx_backup)
+				{
+					sprintf_s (s, sizeof(s), "SELECT Signature,rtname FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", assetUID._uid);
+					if (asset2::dbcontext_query (*ctx_backup, s, rst))
+					{
+						if (rst.fetchRow())
+						{
+							UID sigUID;
+							sigUID._uid = rst.getValAsU64(0);
+							sprintf_s (rtname, sizeof(rtname), "%s", rst.getVal(1));
+
+							if (sigUID != signatureUID)
+								bWasUpdated = true;
+						}
+					}
+				}
+
+				if (0 == rtname[0])
+				{
+					//Nel backup non esisteva, deve quindi essere un nuovo asset o, per lo meno, un asset che ha subito una modifica
+					bWasUpdated = true;
+					sprintf_s (s, sizeof(s), "SELECT rtname FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", assetUID._uid);
+					asset2::dbcontext_query (ctx, s, rst);
+					rst.fetchRow();
+					sprintf_s (rtname, sizeof(rtname), "%s", rst.getVal(0));
+					
+				}
+
+				if (bWasUpdated)
+				{
+					logger->log ("asset uid:%016" PRIX64 ", rtname=%s\n", assetUID._uid, rtname);
+					if (bGenerateListOfUpdatedUID)
+						build_result_list.insertIfNotExists(assetUID);
+				}
+
+				return true;
+			});
+		}
+		logger->dec_indent();
+
 	}
 	// fine
 	return ret;
@@ -525,7 +684,7 @@ bool Builder::priv_build (DBContext &ctx, bool bDoCreateAssetFile, bool bGenerat
 /******************************
  * Recupero tutte le risorse storate nel DB e per ciascuna di queste verifico se sono state modificate o eliminate.
  */
-bool Builder::priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listof_gosassetd_toRebuild, UniqueUIDList *out_listof_deleted_gosassetd, UniqueUIDList *out_listOfPossibileConcreteAssetsToBeDeleted, UniqueUIDList *out_listOfPossibileResourceToBeDeleted) const
+bool Builder::priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listof_gosassetd_toRebuild, UniqueUIDList *out_listof_deleted_gosassetd, UniqueUIDList *out_listOfPossibileSignatureToBeDeleted, UniqueUIDList *out_listOfPossibileResourceToBeDeleted) const
 {
 	char s[1024];
 	sprintf_s(s, sizeof(s), "SELECT UID,lastTimeMod,abspath FROM " GOS_ASSET2__TABLE_RES " ORDER BY abspath");
@@ -541,7 +700,6 @@ bool Builder::priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listo
 	{
 		sResListElem elem;
 		elem.uid._uid = rst.getValAsU64(0);
-		;
 		elem.lastTimeModified = rst.getValAsU64(1);
 		sprintf_s(elem.abspath, sizeof(elem.abspath), "%s", rst.getVal(2));
 		elem.status = eBuildStatus::UNCHANGED;
@@ -582,7 +740,7 @@ bool Builder::priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listo
 			UniqueUIDList uidList(localAllocator, 1024);
 			dependency_get_requireBy_list(ctx, elem.uid, true, &uidList);
 
-			uidList.forEach([&ctx, out_listof_gosassetd_toRebuild, out_listof_deleted_gosassetd, out_listOfPossibileConcreteAssetsToBeDeleted](u32 index, const UID uid)
+			uidList.forEach([&ctx, out_listof_gosassetd_toRebuild, out_listof_deleted_gosassetd, out_listOfPossibileSignatureToBeDeleted](u32 index, const UID uid)
 			{
 				if (uid.isAResource())
 				{
@@ -596,26 +754,26 @@ bool Builder::priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listo
 						}
 					}
 				}
-				else if (uid.isVirtualAsset())
+				else if (uid.isAnAsset())
 				{
 					UID uid_ini;
-					UID uid_concrete_asset;
-					if (virtasset_get_info (ctx, uid, &uid_ini, &uid_concrete_asset))
+					UID signatureUID;
+					if (asset_get_info (ctx, uid, &uid_ini, &signatureUID))
 					{
 						char s[1024];
 						if (res_get_info (ctx, uid_ini, s, sizeof(s), NULL, NULL))
 						{
 							if (out_listof_deleted_gosassetd->insertIfNotExists(uid_ini))
 								out_listof_gosassetd_toRebuild->insertIfNotExists (uid_ini, s);
-							out_listOfPossibileConcreteAssetsToBeDeleted->insertIfNotExists (uid_concrete_asset);
+							out_listOfPossibileSignatureToBeDeleted->insertIfNotExists (signatureUID);
 						}
 					}
 				}
 				else
 				{
-					//in questa lista non ci possono essere dei concrete-asset perche' i
-					//concrete sono "required" solo dai virtual-asset
-					assert (uid.isAnAsset());
+					//in questa lista non ci possono essere delle signatureUID perche'
+					//signatureUID sono "required" solo dagli assetUID
+					assert (uid.isASignature());
 					DBGBREAK;
 				}
 				return true; 
@@ -631,8 +789,8 @@ bool Builder::priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listo
 			{
 				if (uid.isAResource())
 					res_delete (ctx, uid);
-				else if (uid.isVirtualAsset())
-					virtasset_delete (ctx, uid);
+				else if (uid.isAnAsset())
+					asset_delete (ctx, uid);
 				return true; 
 			});
 			
@@ -718,7 +876,7 @@ BuilderInterface *Builder::priv_findBuilderByClassName(const char *assetClassNam
 		if (NULL == builderList[i])
 			continue;
 
-		if (0 == strcmp(asset2::enumToString(builderList[i]->getAssetType()), assetClassName))
+		if (0 == strcmp(asset2::enumToString(builderList[i]->getSignatureType()), assetClassName))
 			return builderList[i];
 	}
 	return NULL;
@@ -743,7 +901,7 @@ void Builder::priv_fromDirectiveNameToAssetClassName(const char *directiveName, 
 }
 
 //******************************
-bool Builder::priv_gosassetd_build(DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UniqueUIDList *out_listOfBuiltAssets)
+bool Builder::priv_gosassetd_build (DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UniqueUIDList *out_listOfBuiltSignature)
 {
 	// se esisto gia' nel DB, vuol dire che sono gia' stato rebuildato
 	UID uid_of_iniFile;
@@ -790,7 +948,7 @@ bool Builder::priv_gosassetd_build(DBContext &ctx, bool bDoCreateAssetFile, cons
 		// se non e' una @include o una @alias, skippo la sezione
 		if (0 == strcmp(assetClass, "include"))
 		{
-			if (!priv_gosassetd_build_parseIncludeSection(ctx, bDoCreateAssetFile, absFilename, uid_of_iniFile, sub, listof_knownRTname, listof_UID_of_known_ini_file, out_listOfBuiltAssets))
+			if (!priv_gosassetd_build_parseIncludeSection(ctx, bDoCreateAssetFile, absFilename, uid_of_iniFile, sub, listof_knownRTname, listof_UID_of_known_ini_file, out_listOfBuiltSignature))
 				return false;
 		}
 		else if (0 == strcmp(assetClass, "alias"))
@@ -802,11 +960,11 @@ bool Builder::priv_gosassetd_build(DBContext &ctx, bool bDoCreateAssetFile, cons
 
 	// buildo tutte le sezioni
 	u32 nextAnonymAssetName = 0;
-	return priv_gosassetd_buildSection(ctx, bDoCreateAssetFile, nextAnonymAssetName, listof_knownRTname, listof_UID_of_known_ini_file, absFilename, uid_of_iniFile, ini.getRoot(), out_listOfBuiltAssets);
+	return priv_gosassetd_buildSection(ctx, bDoCreateAssetFile, nextAnonymAssetName, listof_knownRTname, listof_UID_of_known_ini_file, absFilename, uid_of_iniFile, ini.getRoot(), out_listOfBuiltSignature);
 }
 
 //******************************
-bool Builder::priv_gosassetd_build_parseIncludeSection(DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sub, UniqueStringList &in_out__listof_knownRTname, UniqueUIDList &in_out__listof_UID_of_known_ini_file, UniqueUIDList *out_listOfBuiltAssets)
+bool Builder::priv_gosassetd_build_parseIncludeSection(DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sub, UniqueStringList &in_out__listof_knownRTname, UniqueUIDList &in_out__listof_UID_of_known_ini_file, UniqueUIDList *out_listOfBuiltSignature)
 {
 	// recupero il path dell'include
 	char s[512];
@@ -841,7 +999,7 @@ bool Builder::priv_gosassetd_build_parseIncludeSection(DBContext &ctx, bool bDoC
 		// non e' nel DB, vuol dire che devo prima buildarlo e poi posso proseguire con il build di me stesso
 		logger->log("building included file %s\n", absIncludePath);
 		logger->inc_indent();
-		const bool ret = priv_gosassetd_build(ctx, bDoCreateAssetFile, absIncludePath, out_listOfBuiltAssets);
+		const bool ret = priv_gosassetd_build(ctx, bDoCreateAssetFile, absIncludePath, out_listOfBuiltSignature);
 		logger->dec_indent();
 		if (!ret)
 			return false;
@@ -869,7 +1027,7 @@ bool Builder::priv_gosassetd_build_parseIncludeSection(DBContext &ctx, bool bDoC
 			
 
 		char s[512];
-		sprintf_s (s, sizeof(s), "SELECT rtname FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE UID_ini=%" PRIu64 "", uid._uid);
+		sprintf_s (s, sizeof(s), "SELECT rtname FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID_ini=%" PRIu64 "", uid._uid);
 
 		db::RST rst;
 		if (db::query (ctx.db, s, &rst))
@@ -921,7 +1079,7 @@ bool Builder::priv_gosassetd_build_parseAliasSection(DBContext &ctx, UID uid_of_
 }
 
 //******************************
-bool Builder::priv_gosassetd_buildSection(DBContext &ctx, bool bDoCreateAssetFile, u32 &in_out_nextAnonymAssetName, UniqueStringList &in_out_listof_knownRTname, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets)
+bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFile, u32 &in_out_nextAnonymAssetName, UniqueStringList &in_out_listof_knownRTname, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltSignature)
 {
 	UniqueUIDList hashList1(localAllocator, 256);
 
@@ -991,7 +1149,7 @@ bool Builder::priv_gosassetd_buildSection(DBContext &ctx, bool bDoCreateAssetFil
 			// di poter buildare l'asset
 			if (sub->getNSubsection())
 			{
-				if (!priv_gosassetd_buildSection(ctx, bDoCreateAssetFile, in_out_nextAnonymAssetName, in_out_listof_knownRTname, listof_UID_of_known_ini_file, absFilename, uid_of_iniFile, sub, out_listOfBuiltAssets))
+				if (!priv_gosassetd_buildSection(ctx, bDoCreateAssetFile, in_out_nextAnonymAssetName, in_out_listof_knownRTname, listof_UID_of_known_ini_file, absFilename, uid_of_iniFile, sub, out_listOfBuiltSignature))
 					break;
 			}
 
@@ -1013,22 +1171,24 @@ bool Builder::priv_gosassetd_buildSection(DBContext &ctx, bool bDoCreateAssetFil
 					eTextColor color = eTextColor::green;
 					if (eBuildResult::was_already_built == result.result)
 						color = eTextColor::darkBlue;
-					logger->log(color, "[%-17s] %016" PRIX64 " [%016" PRIX64 "]\n", asset2::enumToString(result.result), result.uid_virtual_asset._uid, result.uid_concrete_asset._uid);
+					logger->log(color, "[%-17s] uid: %016" PRIX64 " [sig: %016" PRIX64 "]\n", asset2::enumToString(result.result), result.assetUID._uid, result.signatureUID._uid);
 
+					//mi salvo il fatto che questo asset in qualche modo e' stato "considerato"
+					list_of_touched_assets.insertIfNotExists (result.assetUID, result.signatureUID);
 
 					// calcolo e scrivo le dipendenze runtime di questo asset
 					// Per "dipendenze runtime" intendo una lista di altri asset (e non risorse) dai quali questo asset dipende
 					if (eBuildResult::just_built == result.result)
 					{
-						out_listOfBuiltAssets->insertIfNotExists(result.uid_concrete_asset);
+						out_listOfBuiltSignature->insertIfNotExists(result.signatureUID);
 
-						dependency_get_dependecies_list(ctx, result.uid_concrete_asset, true, &hashList1);
+						dependency_get_dependecies_list(ctx, result.signatureUID, true, &hashList1);
 						auto list = hashList1._queryList();
 						for (u32 i = 0; i < list->getNElem(); i++)
 						{
 							const UID childUID = list->queryElem(i);
-							if (childUID.isAnAsset())
-								dependencyRT_add(ctx, result.uid_concrete_asset, childUID);
+							if (childUID.isASignature())
+								signature_add_dependencyRT(ctx, result.signatureUID, childUID);
 						}
 					}
 				}

@@ -34,12 +34,12 @@ static u32 Builder__print_dependencies (gos::UTF8String &out, DBContext &ctx, UI
 
         //uid, tipo di asset
         char childType[16];
-        if (childUID.isAnAsset())
-            sprintf_s (childType, sizeof(childType), "asset");
+        if (childUID.isASignature())
+            sprintf_s (childType, sizeof(childType), "signature");
         else if (childUID.isAResource())
             sprintf_s (childType, sizeof(childType), "resource");
         else
-            sprintf_s (childType, sizeof(childType), "v-asset");
+            sprintf_s (childType, sizeof(childType), "assetUID");
 
 
         out << indent << STRFMT("%016" PRIX64 "", childUID._uid) << " | "
@@ -64,33 +64,33 @@ static u32 Builder__print_dependencies (gos::UTF8String &out, DBContext &ctx, UI
                 out << "!!ERROR!!";
             }
         }
-        else if (childUID.isVirtualAsset())
+        else if (childUID.isAnAsset())
         {
-            //virtual asset dichiarto in:
-            sprintf_s (s, sizeof(s), "SELECT line, UID_asset, rtname, abspath "\
-"FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " as t1 LEFT JOIN " GOS_ASSET2__TABLE_RES " as t2 ON t1.UID_ini=t2.UID "\
+            //assetUID dichiarto in:
+            sprintf_s (s, sizeof(s), "SELECT line, Signature, rtname, abspath "\
+"FROM " GOS_ASSET2__TABLE_ASSET_LIST " as t1 LEFT JOIN " GOS_ASSET2__TABLE_RES " as t2 ON t1.UID_ini=t2.UID "\
 "WHERE t1.UID=%" PRIu64 "", childUID._uid);
             db::query (ctx.db, s, &rst2);
             rst2.fetchRow();
             {
-                UID UID_concrete_asset;
+                UID signatureUID;
                 
-                const eAssetType childAssType = childUID.getVirtualAssetType();
+                const eAssetType childAssType = childUID.getAssetType();
                 const u32 line = rst2.getValAsU32(0);
-                UID_concrete_asset._uid = rst2.getValAsU64(1);
+                signatureUID._uid = rst2.getValAsU64(1);
                 const char *rtname = rst2.getVal(2);
                 const char *absIniPath = rst2.getVal(3);
 
                 out << STRFMT("%-12s", asset2::enumToString (childAssType)) << " | "
                     << absIniPath << "@" << line << " | "
                     << "\"" << rtname << "\" | "
-                    << STRFMT("%016" PRIX64 "", UID_concrete_asset._uid);
+                    << STRFMT("%016" PRIX64 "", signatureUID._uid);
             }
         }
         else
         {
             //TODO
-            assert (childUID.isAnAsset());
+            assert (childUID.isASignature());
         }
         out << "\n";
 
@@ -128,12 +128,12 @@ static u32 Builder__print_requiredBy  (gos::UTF8String &out, DBContext &ctx, UID
         
         //uid, tipo di asset
         char childType[16];
-        if (childUID.isAnAsset())
+        if (childUID.isASignature())
             sprintf_s (childType, sizeof(childType), "asset");
         else if (childUID.isAResource())
             sprintf_s (childType, sizeof(childType), "resource");
         else
-            sprintf_s (childType, sizeof(childType), "v-asset");
+            sprintf_s (childType, sizeof(childType), "assetUID");
 
 
 
@@ -159,33 +159,33 @@ static u32 Builder__print_requiredBy  (gos::UTF8String &out, DBContext &ctx, UID
                 out << "!!ERROR!!";
             }
         }
-        else if (childUID.isVirtualAsset())
+        else if (childUID.isAnAsset())
         {
-            //virtual asset dichiarto in:
-            sprintf_s (s, sizeof(s), "SELECT line, UID_asset, rtname, abspath "\
-"FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " as t1 LEFT JOIN " GOS_ASSET2__TABLE_RES " as t2 ON t1.UID_ini=t2.UID "\
+            //assetUID dichiarto in:
+            sprintf_s (s, sizeof(s), "SELECT line, Signature, rtname, abspath "\
+"FROM " GOS_ASSET2__TABLE_ASSET_LIST " as t1 LEFT JOIN " GOS_ASSET2__TABLE_RES " as t2 ON t1.UID_ini=t2.UID "\
 "WHERE t1.UID=%" PRIu64 "", childUID._uid);
             db::query (ctx.db, s, &rst2);
             rst2.fetchRow();
             {
-                UID UID_concrete_asset;
+                UID signatureUID;
                 
-                const eAssetType childAssType = childUID.getVirtualAssetType();
+                const eAssetType childAssType = childUID.getAssetType();
                 const u32 line = rst2.getValAsU32(0);
-                UID_concrete_asset._uid = rst2.getValAsU64(1);
+                signatureUID._uid = rst2.getValAsU64(1);
                 const char *rtname = rst2.getVal(2);
                 const char *absIniPath = rst2.getVal(3);
 
                 out << STRFMT("%-12s", asset2::enumToString (childAssType)) << " | "
                     << absIniPath << "@" << line << " | "
                     << "\"" << rtname << "\" | "
-                    << STRFMT("%016" PRIX64 "", UID_concrete_asset._uid);
+                    << STRFMT("%016" PRIX64 "", signatureUID._uid);
             }
         }
         else
         {
             //TODO
-            assert (childUID.isAnAsset());
+            assert (childUID.isASignature());
         }
         out << "\n";
 
@@ -214,9 +214,9 @@ static void Builder__do_print (DBContext &ctx, gos::UTF8String &out, db::RST &rs
             << STRFMT("%016" PRIX64 "", uid._uid) << " | ";
 
         //asset/resource type
-        if (uid.isVirtualAsset())
+        if (uid.isAnAsset())
         {
-            eAssetType assType = static_cast<eAssetType> (uid.getVirtualAssetType());
+            eAssetType assType = static_cast<eAssetType> (uid.getAssetType());
             out << STRFMT("%-12s", asset2::enumToString (assType)) << " | ";
         }
         else if (uid.isAResource())
@@ -227,17 +227,17 @@ static void Builder__do_print (DBContext &ctx, gos::UTF8String &out, db::RST &rs
         else
         {
             //TODO
-            assert(uid.isAnAsset());
+            assert(uid.isASignature());
             continue;
         }
 
         db::RST rst;
         char s[256];
 
-        if (uid.isVirtualAsset())
+        if (uid.isAnAsset())
         {
             //nome-del-file-src / runtimename
-            sprintf_s (s, sizeof(s), "SELECT abspath,line,rtname FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " as T1 LEFT JOIN " GOS_ASSET2__TABLE_RES " as T2 \
+            sprintf_s (s, sizeof(s), "SELECT abspath,line,rtname FROM " GOS_ASSET2__TABLE_ASSET_LIST " as T1 LEFT JOIN " GOS_ASSET2__TABLE_RES " as T2 \
 ON T1.UID_ini = T2.UID \
 WHERE T1.UID=%" PRIu64 "", uid._uid);
             db::query (ctx.db, s, &rst);
@@ -255,7 +255,7 @@ WHERE T1.UID=%" PRIu64 "", uid._uid);
         else
         {
             //TODO
-            assert (uid.isAnAsset());
+            assert (uid.isASignature());
         }
         out << "\n";
         
@@ -290,9 +290,9 @@ WHERE T1.UID=%" PRIu64 "", uid._uid);
         }        
 
         //lista delle "dipendenze runtime"
-        if (uid.isAnAsset())
+        if (uid.isASignature())
         {
-            asset2::asset_get_runtime_dependecies_list (ctx, uid, true, &fastUIDList);
+            asset2::signature_get_runtime_dependecies_list (ctx, uid, true, &fastUIDList);
 
             out << "\n" << "  runtime dep list: ";
             for (u32 i=0; i<fastUIDList.getNElem(); i++)
@@ -343,7 +343,7 @@ void Builder::get_dependencies_report (gos::UTF8String &out, const char *dbName,
             << "========================== VIRTUAL ASSETS LIST ==========================\n\n"
             << "Asset UID        | Type         | Declared in                | runtimeName-list\n";
 
-        db::query (ctx.db, "SELECT UID FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " ORDER BY UID", &rstAssetList);
+        db::query (ctx.db, "SELECT UID FROM " GOS_ASSET2__TABLE_ASSET_LIST " ORDER BY UID", &rstAssetList);
         Builder__do_print (ctx, out, rstAssetList);
     }
 
@@ -405,13 +405,14 @@ void Builder::save_asset_manifest (const char *baseFolder, const char *dbName)
 
     //asset list
     {
-        out << "Asset UID        | Type         | Lasttime built UTC  | runtimeName-list\n"
+        out << "Signature        | Type         | Lasttime built UTC  | runtimeName-list\n"
             << "-----------------+--------------+--------------------------------------------------------------\n";
 
-        db::query (ctx.db, "SELECT UID,lastTimeBuilt FROM " GOS_ASSET2__TABLE_ASSET_LIST " ORDER BY UID", &rstAssetList);
+        db::query (ctx.db, "SELECT Signature,lastTimeBuilt FROM " GOS_ASSET2__TABLE_SIGNATURE " ORDER BY Signature", &rstAssetList);
         while (rstAssetList.fetchRow())
         {
-            UID uid;  uid._uid = rstAssetList.getValAsU64(0);
+            UID signatureUID;
+			signatureUID._uid = rstAssetList.getValAsU64(0);
 
             gos::DateTime dt;
             dt.setFromNiceU64 (rstAssetList.getValAsU64(1));
@@ -419,12 +420,12 @@ void Builder::save_asset_manifest (const char *baseFolder, const char *dbName)
             char lastTimeBuilt[64];
             dt.formatAs_YYYYMMDDHHMMSS (lastTimeBuilt, sizeof(lastTimeBuilt), ' ', '-', ':');
 
-            out << STRFMT("%016" PRIX64 "", uid._uid) << " | " 
-                << STRFMT("%-12s", asset2::enumToString (uid.getAssetType())) << " | "
+            out << STRFMT("%016" PRIX64 "", signatureUID._uid) << " | " 
+                << STRFMT("%-12s", asset2::enumToString (signatureUID.getSignatureType())) << " | "
                 << lastTimeBuilt << " | ";
 
             char s[512];
-            sprintf_s (s, sizeof(s), "SELECT rtname FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE UID_asset=%" PRIu64 " ORDER BY rtname", uid._uid);
+            sprintf_s (s, sizeof(s), "SELECT rtname FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE Signature=%" PRIu64 " ORDER BY rtname", signatureUID._uid);
             db::query (ctx.db, s, &rst2);
             while (rst2.fetchRow())
             {
@@ -434,7 +435,7 @@ void Builder::save_asset_manifest (const char *baseFolder, const char *dbName)
             }
             out << "\n";
             
-            sprintf_s (s, sizeof(s), "SELECT childUID FROM " GOS_ASSET2__TABLE_DEPENDS_RUNTIME " WHERE UID=%" PRIu64 " ORDER BY childUID", uid._uid);
+            sprintf_s (s, sizeof(s), "SELECT childSIG FROM " GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME " WHERE Signature=%" PRIu64 " ORDER BY childSIG", signatureUID._uid);
             db::query (ctx.db, s, &rst2);
             if (rst2.fetchRow())
             {

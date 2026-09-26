@@ -18,7 +18,7 @@ namespace gos
                     gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
 
                     char s[1024];
-                    asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
+                    asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
 
                     gos::Image image;
                     if (!image::load (thread_allocator, s, &image))
@@ -50,7 +50,7 @@ namespace gos
                 //     gos::GPU *gpu = loaderInfo.gpu;
 
                 //     char s[1024];
-                //     asset2::asset_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
+                //     asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
 
                 //     gos::Image image;
                 //     if (!image::load (thread_allocator, s, &image))

@@ -203,27 +203,26 @@ bool Monitor::priv_handle_fswEvents (const char *path_to_DB, gos::FSWatcher *fsw
 }
 
 //************************************************
-void Monitor::priv_build(const char *path_to_DB)
+void Monitor::priv_build (const char *path_to_DB)
 {
     asset2::Builder b(gpu);
     if (b.build (path_to_DB, true))
     {
-		//elenco degli UID che sono stati influenzati dalla build
-		const asset2::UniqueUIDList *list = b.get_list_of_built_UID();
+		logger::log ("\n");
+
+		//elenco degli assetUID che sono stati influenzati dalla build
+		const asset2::UniqueUIDList *list = b.get_list_of_updated_assetUID();
 		if (0 == list->getNElem())
 		{
 			logger::log ("No asset has been updated\n");
 		}
 		else
 		{
-			logger::log ("List of updated assets:\n");
-			logger::inc_indent();
-
 			const gos::FastArray<asset2::UID> *the_list = list->_queryList();
 			for (u32 i=0; i<the_list->getNElem(); i++)
 			{
 				asset2::UID uid = the_list->queryElem(i);
-				logger::log ("%016" PRIX64 "\n", uid._uid);
+				logger::log ("Sending notification for asset UID %016" PRIX64 "\n", uid._uid);
 
 				//preparo il msg per i client
 				u32 ct = 0;

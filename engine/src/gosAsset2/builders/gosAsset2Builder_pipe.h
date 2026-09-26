@@ -72,13 +72,13 @@ namespace gos
                 u32             numRT;
                 eImageFormat    renderTargetFormat[GOSGPU__NUM_MAX_ATTACHMENT];
 
-                UID             uid__virtual_vtxshader;
-                UID             uid__virtual_pxlshader;
+                UID             vtxshader_assetUID;
+                UID             pxlshader_assetUID;
             };
 
         private:
             bool    priv_extractParams ();
-            bool    priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const Params &params, const char *filenameDST) const;
+            bool    priv_do_create_assetFile (DBContext &ctx, UID signatureUID, const Params &params, const char *filenameDST) const;
             u32     priv_writePushConstant_rec (gos::BufferW_linear &buffer, gos::datablob::DefElem &elem) const;
             
 		private:

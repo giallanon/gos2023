@@ -35,10 +35,10 @@ bool BuilderInterface::prot_isOneOfThis (const char *paramName, ...) const
 }
 
 //******************************************
-bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::IniFileSection *sec, eAssetType assType, UID *out__virtual_uid) const
+bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::IniFileSection *sec, eAssetType assType, UID *out__assetUID) const
 {
     assert (NULL != sec);
-    assert (NULL != out__virtual_uid);
+    assert (NULL != out__assetUID);
 
     char s[128];
     const char *assTypeName = asset2::enumToString (assType);
@@ -54,7 +54,7 @@ bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::I
             if (s[0] == '!')
                 return false;
 
-            if (!asset2::virtasset_rtname_exists (ctx, s, out__virtual_uid))
+            if (!asset2::asset_rtname_exists (ctx, s, out__assetUID))
             {
                 logger->log (eTextColor::red, "invalid rtname: %s\n", s);
                 return false;
@@ -152,43 +152,45 @@ bool BuilderInterface::priv_extractAllInludePaths (DBContext &ctx, const UniqueU
 }
 
 /****************************** 
- * <params> e' usato per determinare UID del concrete-asset
- * <rtname
+ * <params> e' usato per determinare la uid-signature a partire dai parametri specificati in un gosasset_d
  */
-bool BuilderInterface::prot_setupVirtualAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const
+bool BuilderInterface::prot_setupAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const
 {
-    //recuper il rtname del virtual asset
+    //recupero il rtname dell'asset
 	char rtname[128];
     memset (rtname, 0, sizeof(rtname));
     sec->get("__value", rtname, sizeof(rtname));
 
-	return prot_setupVirtualAsset_ex (ctx, getAssetType(), params, sizeof_params, rtname, uid_of_iniFile, sec->getLineStarted(), out_result);
+	return prot_setupAsset_ex (ctx, getSignatureType(), params, sizeof_params, rtname, uid_of_iniFile, sec->getLineStarted(), out_result);
 }
 
 
 /****************************** 
- * <params> e' usato per determinare UID del concrete-asset
- * <rtname> + <virtual_asset__declared_at_uid_of_iniFile> + <virtual_asset__declared_on_lineNum> sono usate per creare UID del virtual asseet
+ * <params> e' usato per determinare la uid-signature a partire dai parametri specificati in un gosasset_d
+ * <uid_of_iniFile> e' UID dell'inifile nel quale questo asset e' dichiarato
  */
-bool BuilderInterface::prot_setupVirtualAsset_ex (DBContext &ctx, eAssetType assetType, const void *params, u32 sizeof_params, const char *rtname, UID virtual_asset__declared_at_uid_of_iniFile, u32 virtual_asset__declared_on_lineNum, sBuildResult *out_result) const
+bool BuilderInterface::prot_setupAsset_ex (DBContext &ctx, eAssetType assetType, const void *params, u32 sizeof_params, const char *rtname, 
+	UID uid_of_iniFile, 
+	u32 asset__declared_on_lineNum, 
+	sBuildResult *out_result) const
 {
-    //calcolo assetUID
-    if (!asset_createUID (assetType, params, sizeof_params, &out_result->uid_concrete_asset))
+    //calcolo uid-signature
+    if (!signature_createUID (assetType, params, sizeof_params, &out_result->signatureUID))
     {
-        gos::logger::err ("error generating UID of concrete asset\n");
+        gos::logger::err ("error generating signatureUID\n");
         return false;
     }
 
 
     //inserisco il virtual asset nel DB
-    if (!virtasset_insert (ctx, assetType, rtname, virtual_asset__declared_at_uid_of_iniFile, virtual_asset__declared_on_lineNum, out_result->uid_concrete_asset, &out_result->uid_virtual_asset))
+    if (!asset_insert (ctx, assetType, rtname, uid_of_iniFile, asset__declared_on_lineNum, out_result->signatureUID, &out_result->assetUID))
     {
         logger->log (eTextColor::red, "error inserting UID of virtual asset\n");
         return false;
     }    
 
-    //vediamo se il concrete-asset esiste gia' nel DB
-    if (asset2::asset_exists (ctx, out_result->uid_concrete_asset))
+    //vediamo se la signature esiste gia' nel DB
+    if (asset2::signature_exists (ctx, out_result->signatureUID))
     {
         out_result->result = eBuildResult::was_already_built;
     }
@@ -196,16 +198,16 @@ bool BuilderInterface::prot_setupVirtualAsset_ex (DBContext &ctx, eAssetType ass
     {
         //non esisteva nel DB, ottimo, lo aggiungo e poi lo buildo
         out_result->result = eBuildResult::just_built;
-        if (!asset_insert (ctx, out_result->uid_concrete_asset))
+        if (!signature_insert (ctx, out_result->signatureUID))
         {
-            logger->log (eTextColor::red, "error inserting asset in DB\n");
+            logger->log (eTextColor::red, "error inserting signatureUID in DB\n");
             return false;
         }        
     }
 
-    //aggiungo le dipendenze di virtual-asset verso l'inifile e il concrete asset
-    if (!dependency_add (ctx, out_result->uid_virtual_asset, virtual_asset__declared_at_uid_of_iniFile)) return false;
-    if (!dependency_add (ctx, out_result->uid_virtual_asset, out_result->uid_concrete_asset)) return false;
+    //aggiungo le dipendenze di assetUID verso l'inifile e il concrete asset
+    if (!dependency_add (ctx, out_result->assetUID, uid_of_iniFile)) return false;
+    if (!dependency_add (ctx, out_result->assetUID, out_result->signatureUID)) return false;
 
     return true;
 }

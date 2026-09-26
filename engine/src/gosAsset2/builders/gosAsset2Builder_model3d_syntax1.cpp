@@ -17,8 +17,8 @@ Builder_model3d::Syntax1::Syntax1 () : BuilderInterface (eAssetType::model3d)
 {
 	localAllocator = gos::getSysHeapAllocator();
 
-	listof_uid_of_concreste_shape.setup (localAllocator, 64);
-	listof_uid_of_concrete_material.setup (localAllocator, 64);
+	listof_shape_signatureUID.setup (localAllocator, 64);
+	listof_material_signatureUID.setup (localAllocator, 64);
     buildCtx.bAModelWasImported = false;
 }
 
@@ -58,11 +58,11 @@ bool Builder_model3d::Syntax1::build_begin (DBContext &ctx, const UniqueUIDList 
 	sec = secIN;
 
 
-	uid_of_concrete_model3d.setInvalid();
-	uid_of_virtual_model3d.setInvalid();
-	uid_of_concrete_skeleton.setInvalid();
-	listof_uid_of_concreste_shape.reset();
-	listof_uid_of_concrete_material.reset();
+	model3d_signatureUID.setInvalid();
+	model3d_assetUID.setInvalid();
+	skeleton_signatureUID.setInvalid();
+	listof_shape_signatureUID.reset();
+	listof_material_signatureUID.reset();
     
     //parse della sezione
     if (!priv_extractParams(ctx, listof_UID_of_known_ini_file, absFilename))
@@ -119,20 +119,19 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 		//e' la prima volta che si chiama build_exe()
 
 
-		//setup di virtual-asset
 		//All'uscita da questa fn:
-		//  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
-		//  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
-		//  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
-		if (!prot_setupVirtualAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
+		//  out_result->assetUID       			contiene l'assetUID di questo asset, gia' inserito nel DB
+		//  out_result->signatureUID      		contiene la signatureUID a cui questo assetUID punta
+		//  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
+		if (!prot_setupAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
 			return false;
 
 		//mi salvo UID del model3D
-		uid_of_concrete_model3d = out_result->uid_concrete_asset;
-		uid_of_virtual_model3d = out_result->uid_virtual_asset;
+		model3d_signatureUID = out_result->signatureUID;
+		model3d_assetUID = out_result->assetUID;
 
-		//aggiungo le dipendenze di virtual-asset dalla risorsa model_glb
-		if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__resource_file_glb)) return false;
+		//aggiungo le dipendenze di assetUID dalla risorsa model_glb
+		if (!dependency_add (ctx, out_result->assetUID, params.uid__resource_file_glb)) return false;
 
 
 
@@ -242,14 +241,14 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 				//ho importato tutte le shape e anche lo skeletro, non c'e' altro da fare, ho finito
 				*out_bCallMeAgain = false;
 				out_result->result = eBuildResult::was_already_built;
-				out_result->uid_concrete_asset = uid_of_concrete_model3d;
-				out_result->uid_virtual_asset = uid_of_virtual_model3d;
+				out_result->signatureUID = model3d_signatureUID;
+				out_result->assetUID = model3d_assetUID;
 
 				//a questo punto devo davvero creare il file dell'asset
 				if (doCreateAnAssetFile)
 				{
 					char filenameDST[1024];
-					asset_manufacture_fullFilename (ctx, uid_of_concrete_model3d, filenameDST, sizeof(filenameDST));
+					signature_manufacture_fullFilename (ctx, model3d_signatureUID, filenameDST, sizeof(filenameDST));
 
 					priv_print_report (filenameDST);
 
@@ -257,19 +256,19 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 					assetFile.begin (localAllocator);
 
 					//skeleton
-					if (uid_of_concrete_skeleton.isValid())
-						assetFile.skeleton_set (uid_of_concrete_skeleton);
+					if (skeleton_signatureUID.isValid())
+						assetFile.skeleton_set (skeleton_signatureUID);
 
 					//shapes
-					for (u32 i = 0; i < listof_uid_of_concreste_shape.getNElem(); i++)
+					for (u32 i = 0; i < listof_shape_signatureUID.getNElem(); i++)
 					{
-						assetFile.shape_add (listof_uid_of_concreste_shape(i), buildCtx.imported.shapeNameList[i]);
+						assetFile.shape_add (listof_shape_signatureUID(i), buildCtx.imported.shapeNameList[i]);
 					}
 
 					//material
-					for (u32 i = 0; i < listof_uid_of_concrete_material.getNElem(); i++)
+					for (u32 i = 0; i < listof_material_signatureUID.getNElem(); i++)
 					{
-						assetFile.material_add (listof_uid_of_concrete_material(i), buildCtx.imported.materialNameList[i]);
+						assetFile.material_add (listof_material_signatureUID(i), buildCtx.imported.materialNameList[i]);
 					}
 
 					//meshes
@@ -305,32 +304,31 @@ bool Builder_model3d::Syntax1::priv_build_shape (DBContext &ctx, bool doCreateAn
 	assert (buildCtx.iToBuild < buildCtx.imported.numShapes);
 
 
-	//setup di virtual-asset
-	//All'uscita da questa fn:
-	//  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
-	//  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
-	//  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
+    //All'uscita da questa fn:
+    //  out_result->assetUID       			contiene l'assetUID di questo asset, gia' inserito nel DB
+    //  out_result->signatureUID      		contiene la signatureUID a cui questo assetUID punta
+    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
 	params.subresource_type = eAssetType::shape;
 	params.subresource_index = buildCtx.iToBuild;
 
 	char shape_rtName[256];
 	sprintf_s (shape_rtName, sizeof(shape_rtName), "%s.%s", glb_rtname, buildCtx.imported.shapeNameList[buildCtx.iToBuild]);
-	if (!prot_setupVirtualAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), shape_rtName, uid_of_iniFile, sec->getLineStarted(), out_result))
+	if (!prot_setupAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), shape_rtName, uid_of_iniFile, sec->getLineStarted(), out_result))
 		return false;
 
-	//aggiungo le dipendenze di virtual-asset dalla risorsa model_glb
-	if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__resource_file_glb)) return false;
+	//aggiungo le dipendenze di assetUID dalla risorsa model_glb
+	if (!dependency_add (ctx, out_result->assetUID, params.uid__resource_file_glb)) return false;
 
-	listof_uid_of_concreste_shape.append (out_result->uid_concrete_asset);
+	listof_shape_signatureUID.append (out_result->signatureUID);
 
 	//il model3d che sto costruendo, dipende da questa shape
-	if (!dependency_add (ctx, uid_of_virtual_model3d, out_result->uid_virtual_asset))		return false;
-	if (!dependencyRT_add (ctx, uid_of_concrete_model3d, out_result->uid_concrete_asset))	return false;
+	if (!dependency_add (ctx, model3d_assetUID, out_result->assetUID))		return false;
+	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out_result->signatureUID))	return false;
 
 	if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
 	{
 		char filenameDST[1024];
-		asset_manufacture_fullFilename (ctx, out_result->uid_concrete_asset, filenameDST, sizeof(filenameDST));
+		signature_manufacture_fullFilename (ctx, out_result->signatureUID, filenameDST, sizeof(filenameDST));
 		
 		const u32 i = buildCtx.iToBuild;
 		const u32 n = shape::serialize (&buildCtx.imported.shapeList[i], NULL, 0);
@@ -351,34 +349,33 @@ bool Builder_model3d::Syntax1::priv_build_skeleton (DBContext &ctx, bool doCreat
 	assert (buildCtx.iToBuild == 0);
 
 
-	//setup di virtual-asset
-	//All'uscita da questa fn:
-	//  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
-	//  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
-	//  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
+    //All'uscita da questa fn:
+    //  out_result->assetUID       			contiene l'assetUID di questo asset, gia' inserito nel DB
+    //  out_result->signatureUID      		contiene la signatureUID a cui questo assetUID punta
+    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
 	params.subresource_type = eAssetType::skeleton;
 	params.subresource_index = buildCtx.iToBuild;
 
 	char skeleton_rtName[256];
 	sprintf_s (skeleton_rtName, sizeof(skeleton_rtName), "%s.skeleton%d", glb_rtname, buildCtx.iToBuild);
-	if (!prot_setupVirtualAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), skeleton_rtName, uid_of_iniFile, sec->getLineStarted(), out_result))
+	if (!prot_setupAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), skeleton_rtName, uid_of_iniFile, sec->getLineStarted(), out_result))
 		return false;
 
-	//aggiungo le dipendenze di virtual-asset dalla risorsa model_glb
-	if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__resource_file_glb)) return false;
+	//aggiungo le dipendenze di assetUID dalla risorsa model_glb
+	if (!dependency_add (ctx, out_result->assetUID, params.uid__resource_file_glb)) return false;
 
 
-	uid_of_concrete_skeleton = out_result->uid_concrete_asset;
+	skeleton_signatureUID = out_result->signatureUID;
 
 	//il model3d che sto costruendo, dipende da questo skeleton
-	if (!dependency_add (ctx, uid_of_virtual_model3d, out_result->uid_virtual_asset))		return false;
-	if (!dependencyRT_add (ctx, uid_of_concrete_model3d, out_result->uid_concrete_asset))	return false;
+	if (!dependency_add (ctx, model3d_assetUID, out_result->assetUID))		return false;
+	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out_result->signatureUID))	return false;
 
 
 	if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
 	{
 		char filenameDST[1024];
-		asset_manufacture_fullFilename (ctx, out_result->uid_concrete_asset, filenameDST, sizeof(filenameDST));
+		signature_manufacture_fullFilename (ctx, out_result->signatureUID, filenameDST, sizeof(filenameDST));
 		
 		const u32 n = skeleton::serialize (buildCtx.imported.skeleton, NULL, 0);
 		u8 *p = GOSALLOCT(u8*, gos::getScrapAllocator(), n);
@@ -398,32 +395,31 @@ bool Builder_model3d::Syntax1::priv_build_material (DBContext &ctx, bool doCreat
 	assert (buildCtx.iToBuild < buildCtx.imported.num_material);
 
 
-	//setup di virtual-asset
-	//All'uscita da questa fn:
-	//  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
-	//  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
-	//  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
+    //All'uscita da questa fn:
+    //  out_result->assetUID       			contiene l'assetUID di questo asset, gia' inserito nel DB
+    //  out_result->signatureUID      		contiene la signatureUID a cui questo assetUID punta
+    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
 	params.subresource_type = eAssetType::materialPBR;
 	params.subresource_index = buildCtx.iToBuild;
 
 	char material_rtName[256];
 	sprintf_s (material_rtName, sizeof(material_rtName), "%s.%s", glb_rtname, buildCtx.imported.materialNameList[buildCtx.iToBuild]);
-	if (!prot_setupVirtualAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), material_rtName, uid_of_iniFile, sec->getLineStarted(), out_result))
+	if (!prot_setupAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), material_rtName, uid_of_iniFile, sec->getLineStarted(), out_result))
 		return false;
 
-	//aggiungo le dipendenze di virtual-asset dalla risorsa model_glb
-	if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__resource_file_glb)) return false;
+	//aggiungo le dipendenze di assetUID dalla risorsa model_glb
+	if (!dependency_add (ctx, out_result->assetUID, params.uid__resource_file_glb)) return false;
 
-	listof_uid_of_concrete_material.append (out_result->uid_concrete_asset);
+	listof_material_signatureUID.append (out_result->signatureUID);
 
 	//il model3d che sto costruendo, dipende da questo material
-	if (!dependency_add (ctx, uid_of_virtual_model3d, out_result->uid_virtual_asset))		return false;
-	if (!dependencyRT_add (ctx, uid_of_concrete_model3d, out_result->uid_concrete_asset))	return false;
+	if (!dependency_add (ctx, model3d_assetUID, out_result->assetUID))		return false;
+	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out_result->signatureUID))	return false;
 
 	if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
 	{
 		char filenameDST[1024];
-		asset_manufacture_fullFilename (ctx, out_result->uid_concrete_asset, filenameDST, sizeof(filenameDST));
+		signature_manufacture_fullFilename (ctx, out_result->signatureUID, filenameDST, sizeof(filenameDST));
 		
 		const u32 i = buildCtx.iToBuild;
 

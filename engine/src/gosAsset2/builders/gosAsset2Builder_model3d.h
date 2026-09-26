@@ -144,11 +144,11 @@ namespace gos
 				char 						glb_rtname[128];
 				sBuildCtx					buildCtx;
 
-				UID 						uid_of_concrete_model3d;
-				UID 						uid_of_virtual_model3d;
-				UID							uid_of_concrete_skeleton;
-				FastArray<UID>				listof_uid_of_concreste_shape;
-				FastArray<UID>				listof_uid_of_concrete_material;
+				UID 						model3d_signatureUID;
+				UID 						model3d_assetUID;
+				UID							skeleton_signatureUID;
+				FastArray<UID>				listof_shape_signatureUID;
+				FastArray<UID>				listof_material_signatureUID;
 
 			}; //class Sintax1
 
@@ -174,7 +174,7 @@ namespace gos
 							sShapeInfo()		{ my_shape_name = src_shape_name = NULL; }
 					char	*my_shape_name;
 					char 	*src_shape_name;
-					UID		uid_of_concrete_shape_asset;
+					UID		shape_signatureUID;
 				};
 
 				struct sMeshInfo
@@ -204,7 +204,7 @@ namespace gos
 			private:
 				void 	priv_reset_parsed_params();
 				bool    priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename);
-				bool 	priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const char *filenameDST, const FastArray<sFinalMeshInfo> &listof_final_meshes) const;
+				bool 	priv_do_create_assetFile (DBContext &ctx, UID signatureUID, const char *filenameDST, const FastArray<sFinalMeshInfo> &listof_final_meshes) const;
 
 			private:
 				gos::Allocator				*localAllocator;
@@ -212,10 +212,10 @@ namespace gos
 				UID 						uid_of_iniFile;
 				const gos::IniFileSection 	*sec;
 
-				UniqueUIDList				listof_UID_of_virtual_shape_that_I_need;
-				FastArray<asset2::UID>		listof_UID_of_concrete_shape_that_I_need;
-				UID							uid_of_virtual_skeleton;
-				UID							uid_of_concrete_skeleton;
+				UniqueUIDList				listof_shape_assetUID_that_I_need;
+				FastArray<asset2::UID>		listof_shape_signatureUID_that_I_need;
+				UID							skeleton_assetUID;
+				UID							skeleton_signatureUID;
 
 			}; //class Sintax2
 

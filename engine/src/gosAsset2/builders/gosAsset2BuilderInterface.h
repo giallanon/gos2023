@@ -23,7 +23,7 @@ namespace gos
                             BuilderInterface (eAssetType assetTypeIN)                                   { assetType=assetTypeIN; logger=NULL; }
             virtual         ~BuilderInterface()                                                         { }
 
-            eAssetType      getAssetType() const                                                        { return assetType; }
+            eAssetType      getSignatureType() const                                                        { return assetType; }
 
             virtual void    initOnce (gos::GPU *gpu)                                                    { }
             virtual void    deinitOnce()                                                                { }
@@ -38,9 +38,9 @@ namespace gos
         protected:
             bool            prot_isOneOfThis (const char *paramName, ...) const;
             bool            prot_needResource (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, eResType resType, const char *absFilenameIN, UID *out_uid) const;
-            bool            prot_needResolvedSubsection (DBContext &ctx, const gos::IniFileSection *sec, eAssetType assType, UID *out__virtual_uid) const;
-            bool            prot_setupVirtualAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const;
-			bool 			prot_setupVirtualAsset_ex (DBContext &ctx, eAssetType assetType, const void *params, u32 sizeof_params, const char *rtname, UID virtual_asset__declared_at_uid_of_iniFile, u32 virtual_asset__declared_on_lineNum, sBuildResult *out_result) const;
+            bool            prot_needResolvedSubsection (DBContext &ctx, const gos::IniFileSection *sec, eAssetType assType, UID *out__assetUID) const;
+            bool            prot_setupAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const;
+			bool 			prot_setupAsset_ex (DBContext &ctx, eAssetType assetType, const void *params, u32 sizeof_params, const char *rtname, UID uid_of_iniFile, u32 asset__declared_on_lineNum, sBuildResult *out_result) const;
 
         protected:
             gos::Logger     *logger;

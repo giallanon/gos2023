@@ -160,14 +160,14 @@ bool Builder_pipe::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_
     }
 
     //devo avere una subsection di tipo @vtx_shader, gia' risolta
-    if (!prot_needResolvedSubsection (ctx, sec, eAssetType::vtx_shader, &params.uid__virtual_vtxshader))
+    if (!prot_needResolvedSubsection (ctx, sec, eAssetType::vtx_shader, &params.vtxshader_assetUID))
     {
         gos::logger::err ("section [vtx_shader] is error or missing\n");
         return false;
     }
 
     //devo avere una subsection di tipo @pxl_shader, gia' risolta
-    if (!prot_needResolvedSubsection (ctx, sec, eAssetType::pxl_shader, &params.uid__virtual_pxlshader))
+    if (!prot_needResolvedSubsection (ctx, sec, eAssetType::pxl_shader, &params.pxlshader_assetUID))
     {
         gos::logger::err ("section [pxl_shader] is error or missing\n");
         return false;
@@ -184,33 +184,32 @@ bool Builder_pipe::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *ou
 	*out_bCallMeAgain = false;
     out_result->reset();
 
-	//setup di virtual-asset
-    //All'uscita da questa fn:
-    //  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
-    //  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
-    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
-    if (!prot_setupVirtualAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
+	//All'uscita da questa fn:
+	//  out_result->assetUID       			contiene l'assetUID di questo asset, gia' inserito nel DB
+	//  out_result->signatureUID      		contiene la signatureUID a cui questo assetUID punta
+	//  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
+    if (!prot_setupAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
         return false;
 
 
 
-    //aggiungo le dipendenze di virtual-asset dai virtual-asset degli shader
-    if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__virtual_vtxshader)) return false;
-    if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__virtual_pxlshader)) return false;
+    //aggiungo le dipendenze di questo assetUID dagli assetUID degli shader
+    if (!dependency_add (ctx, out_result->assetUID, params.vtxshader_assetUID)) return false;
+    if (!dependency_add (ctx, out_result->assetUID, params.pxlshader_assetUID)) return false;
 
 
-    //l'asset concreto dipende dagli asseti concreti di vtx/pxl shader
-    if (params.uid__virtual_vtxshader.isValid())
+    //la signatureUID dipende dalle signatureUID di vtx/pxl shader
+    if (params.vtxshader_assetUID.isValid())
     {
-        UID uid__concrete_vtxShader;
-        if (!virtasset_get_info (ctx, params.uid__virtual_vtxshader, NULL, &uid__concrete_vtxShader))   return false;
-        if (!dependencyRT_add (ctx, out_result->uid_concrete_asset, uid__concrete_vtxShader)) return false;
+        UID signatureUID;
+        if (!asset_get_info (ctx, params.vtxshader_assetUID, NULL, &signatureUID))   return false;
+        if (!signature_add_dependencyRT (ctx, out_result->signatureUID, signatureUID)) return false;
     }
-    if (params.uid__virtual_pxlshader.isValid())
+    if (params.pxlshader_assetUID.isValid())
     {
-        UID uid__concrete_pxlShader;
-        if (!virtasset_get_info (ctx, params.uid__virtual_pxlshader, NULL, &uid__concrete_pxlShader))   return false;
-        if (!dependencyRT_add (ctx, out_result->uid_concrete_asset, uid__concrete_pxlShader)) return false;
+        UID signatureUID;
+        if (!asset_get_info (ctx, params.pxlshader_assetUID, NULL, &signatureUID))   return false;
+        if (!signature_add_dependencyRT (ctx, out_result->signatureUID, signatureUID)) return false;
     }       
 
     
@@ -218,15 +217,15 @@ bool Builder_pipe::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *ou
     if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
     {
         char filenameDST[1024];
-        asset_manufacture_fullFilename (ctx, out_result->uid_concrete_asset, filenameDST, sizeof(filenameDST));
-        return priv_do_create_assetFile (ctx, out_result->uid_concrete_asset, params, filenameDST);
+        signature_manufacture_fullFilename (ctx, out_result->signatureUID, filenameDST, sizeof(filenameDST));
+        return priv_do_create_assetFile (ctx, out_result->signatureUID, params, filenameDST);
     }
 
 	return true;
 }
 
 //************************************
-bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const Params &params, const char *filenameDST) const
+bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID signatureUID, const Params &params, const char *filenameDST) const
 {
     SPVReflect reflect;
     reflect.beginParseFromMemory();
@@ -234,14 +233,14 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_as
     //il vtx/pxl shader esistono gia' e sono gia' stati compilati.
     //A me pero' serve la versione con le debug info
     char s[1024];
-    UID uid__concrete_vtxShader;
-    uid__concrete_vtxShader.setInvalid();
-    if (params.uid__virtual_vtxshader.isValid())
+    UID vtxShader_signatureUID;
+    vtxShader_signatureUID.setInvalid();
+    if (params.vtxshader_assetUID.isValid())
     {
-        if (!virtasset_get_info (ctx, params.uid__virtual_vtxshader, NULL, &uid__concrete_vtxShader))
+        if (!asset_get_info (ctx, params.vtxshader_assetUID, NULL, &vtxShader_signatureUID))
             return false;
 
-        asset_manufacture_fullFilename (ctx, uid__concrete_vtxShader, s, sizeof(s));
+        signature_manufacture_fullFilename (ctx, vtxShader_signatureUID, s, sizeof(s));
         strcat_s (s, sizeof(s), "d");
 
         u32 fsize = 0;
@@ -259,14 +258,14 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_as
         GOSFREE_SCRAP(buffer);
     }
 
-    UID uid__concrete_pxlShader;
-    uid__concrete_pxlShader.setInvalid();
-    if (params.uid__virtual_pxlshader.isValid())
+    UID pxlShader_signatureUID;
+    pxlShader_signatureUID.setInvalid();
+    if (params.pxlshader_assetUID.isValid())
     {
-        if (!virtasset_get_info (ctx, params.uid__virtual_pxlshader, NULL, &uid__concrete_pxlShader))
+        if (!asset_get_info (ctx, params.pxlshader_assetUID, NULL, &pxlShader_signatureUID))
             return false;
 
-        asset_manufacture_fullFilename (ctx, uid__concrete_pxlShader, s, sizeof(s));
+        signature_manufacture_fullFilename (ctx, pxlShader_signatureUID, s, sizeof(s));
         strcat_s (s, sizeof(s), "d");
 
         u32 fsize = 0;
@@ -300,10 +299,10 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_as
         buffer.writeU32 (GOS_MAGIC__ASSET_PIPELINE_DEF);
 
         //uid vtx shader
-        buffer.writeU64 (uid__concrete_vtxShader._uid);
+        buffer.writeU64 (vtxShader_signatureUID._uid);
 
         //uid pxl shader
-        buffer.writeU64 (uid__concrete_pxlShader._uid);
+        buffer.writeU64 (pxlShader_signatureUID._uid);
 
         //cull/draw
         buffer.writeU8 (static_cast<u8>(params.cullMode));

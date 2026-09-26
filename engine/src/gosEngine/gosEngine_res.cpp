@@ -125,33 +125,33 @@ res::Descr* Engine::res__createHandle (res::eType res_typeIN, res::eStatus statu
 res::Descr* Engine::res__getOrCreateHandleFromAsset (const char *uid_runtimeName, res::Handle *out_handle, bool *out_bWasNew)
 {
 	assert (NULL != out_handle);
-	asset2::UID uid;
-	if (!asset2::asset_getBy_rtname (asset_ctx, uid_runtimeName, &uid))
+	asset2::UID signatureUID;
+	if (!asset2::signature_getBy_rtname (asset_ctx, uid_runtimeName, &signatureUID))
 	{
 		logger::err ("Engine::res__getOrCreateHandleFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
 		return NULL;
 	}
 
-	return res__getOrCreateHandleFromAsset (uid, out_handle, out_bWasNew);
+	return res__getOrCreateHandleFromAsset (signatureUID, out_handle, out_bWasNew);
 }
 
-res::Descr* Engine::res__getOrCreateHandleFromAsset (asset2::UID uid, res::Handle *out_handle, bool *out_bWasNew)
+res::Descr* Engine::res__getOrCreateHandleFromAsset (asset2::UID signatureUID, res::Handle *out_handle, bool *out_bWasNew)
 {
-	assert (uid.isValid());
+	assert (signatureUID.isValid());
 	assert (NULL != out_handle);
 	assert (NULL != out_bWasNew);
 
 	res::eType res_type;
-	if (!res__assetUID_to_resUID (uid, &res_type))
+	if (!res__assetUID_to_resUID (signatureUID, &res_type))
 	{
-		logger::err ("Engine::res__getOrCreateHandleFromAsset() => can't deduct res_type frome assert uid [%016]" PRIX64 "\n", uid._uid);
+		logger::err ("Engine::res__getOrCreateHandleFromAsset() => can't deduct res_type frome assert uid [%016]" PRIX64 "\n", signatureUID._uid);
 		return NULL;
 	}
 
 
 	HashListOfLoadedUID::Position pos;
 	u32 handle_asU32;
-	if (listof_knownUID.findWithPos (uid, &handle_asU32, &pos))
+	if (listof_knownUID.findWithPos (signatureUID, &handle_asU32, &pos))
 	{
 		//l'asset e' gia' noto e quindi e' gia' stato associato ad un handle.
 		//Ritorno quell'handle stesso
@@ -168,14 +168,14 @@ res::Descr* Engine::res__getOrCreateHandleFromAsset (asset2::UID uid, res::Handl
 
 	//l'asset e' nuovo, devo quindi creare un nuovo handle
 	*out_bWasNew = true;
-	res::Descr *res = res__createHandle (res_type, res::eStatus::notLoaded, uid, out_handle);
+	res::Descr *res = res__createHandle (res_type, res::eStatus::notLoaded, signatureUID, out_handle);
 	if (NULL == res)
 	{
-		logger::err ("Engine::res__getOrCreateHandleFromAsset() => can't create handle for res type=%d and asset uid=%016" PRIX64 "\n", (u8)res_type, uid._uid);
+		logger::err ("Engine::res__getOrCreateHandleFromAsset() => can't create handle for res type=%d and asset uid=%016" PRIX64 "\n", (u8)res_type, signatureUID._uid);
 		return NULL;
 	}
 
-	//inserisco la coppia <uid, handle> in hashlist
+	//inserisco la coppia <signatureUID, handle> in hashlist
 	listof_knownUID.insertInPosition (pos, out_handle->viewAsU32());
 
 	//se questo asset ha delle dipendenze runtime, recupero/creo i relativi handle
@@ -184,7 +184,7 @@ res::Descr* Engine::res__getOrCreateHandleFromAsset (asset2::UID uid, res::Handl
 	fastUIDList.setupWithBase (memblock, sizeof(memblock), gos::getScrapAllocator());
 
 	asset_logger->inc_indent();
-	asset2::asset_get_runtime_dependecies_list (asset_ctx, uid, false, &fastUIDList);
+	asset2::signature_get_runtime_dependecies_list (asset_ctx, signatureUID, false, &fastUIDList);
 	for (u32 i=0; i<fastUIDList.getNElem(); i++)
 	{
 		const asset2::UID child_uid = fastUIDList(i);
@@ -364,8 +364,8 @@ bool Engine::res__release (res::Descr *res)
 //**************************************************************** 
 bool Engine::res__assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) const
 {
-	assert (uid.isAnAsset());
-	switch (uid.getAssetType())
+	assert (uid.isASignature());
+	switch (uid.getSignatureType())
 	{
 	default:
 		DBGBREAK;

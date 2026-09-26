@@ -1,35 +1,3 @@
-Pensate 2026-09-02
-
-concrete-asset-UID (aka signature)
-	Dipende esclusivamente dai parametri di build definiti in un gosasset_d.
-	Grazie a questo posso capire se 2 asset sono di fatto lo stesso asset solo con rtName differenti
-	
-	
-virtual-asset-UID
-	Ogni dichiarazione in un file gosasset_d viene identificata da questo UID
-	PROPOSTA: 	al momento l'UID viene calcolato come crc di rtName + uid_del_gosasset_d_dove_e'_stato_dichiarato + linea dove e' stato dichiarato
-				Lasciamo solo rtName in modo che l'UID non dipenda "anche" dalla riga e dal file in cui e' stato dichiarato
-				In questo modo, se sposto di un paio di linee la dichiarazione, la cosa non dovrebbe triggherare un rebuild
-				
-				
-Alla fine di un rebuild, 
-	
-	
-	
-da rtName => assetUID (che dipende esclusivamente dal rtName)
-da assetUID a Signature
-da Signature a file da caricare
-				
-				
-				
-				
-				
-
-
-
-
-
-
 ### GOS ASSET 2 ###
 
 ## Struttura delle directory
@@ -46,31 +14,32 @@ Ad esempio:
   - uno o più file di testo possono dare origine ad un vtx/pxl shader in formato spv
   - una o più immagine (jpg, bmp, tga..) possono dare origine ad un texture, magari con mipmap, magari una texture 3D
 
-## Virtual-asset
-All'interno dei file di tipo .gosasset_d ci sono le descrizioni dei virtual-asset. Ogni virtual-asset puo' avere un runtime-name ad
-esso associato.
-Si chiamano virtual-asset perchè non tutti i virtual-asset corrispondono ad un diverso concrete-asset.
-E' possibile per esempio descrivere lo stesso identico shader in file gosasset_d differenti, con runtime-name differenti.
-Il builder si accorge di questa cosa e associa lo stesso concrete-asset ai 2 virtual-asset i quali, in sostanza, puntano allo stesso
-concrete-asset anche se lo fanno utilizzando 2 diversi runtime-name.
-Ai fini del runtime, caricare lo shader usando il runtime-name-1 o il runtime-name-2 equivale a caricare lo stesso identico concrete-shader
-
-## Concrete-asset
+## SignatureUID (ex concrete-asset)
 E' l'unica risorsa direttamente consumabile dall'engine e viene creata dal processo di BUILD assemblando varie <Resource>.
-Per creare un asset, è necessario creare una sezione all'interno di un file .gosasset_d.
-Ogni <Asset> ha bisogno di un <AssetBuilder> e di un <AssetLoader> che si occupano rispettivamente di buildare la risorsa
-durante il processo di build, e di caricarla a runtime durante il normale funzionamento dell'engine.
+Una <SignatureUID> dipende solo ed esclusivamente dall'insieme dei parametri che definiscono un asset.
+Se cambi un parametro, cambia di conseguenza anche la SignatureUID.
+
+
+## assetUID
+All'interno dei file di tipo .gosasset_d ci sono le descrizioni degii asset. Ogni asset puo' avere un runtime-name ad esso associato.
+I parametri che definiscono un certo asset, ne definiscono anche la sua SignatureUID.
+Diversi AssetUID possono "puntare" alla stessa SignatureUID e il builder se ne accorge automaticamente.
+E' possibile per esempio descrivere lo stesso identico shader in file gosasset_d differenti, con runtime-name differenti.
+Il builder si accorge di questa cosa e associa lo stesso SignatureUID ai 2 diversi assetUID i quali, in sostanza, puntano allo stesso
+SignatureUID anche se lo fanno utilizzando 2 diversi runtime-name.
+Ai fini del runtime, caricare lo shader usando il runtime-name-1 o il runtime-name-2 equivale a caricare lo stesso identico SignatureUID
+
 
 
 ## RuntimeName
-Ogni <asset> puo' avere uno o più runtimeName.
+Ogni <SignatureUID> puo' essere associato ad uno o più runtimeName.
 Un runtimeName è una stringa che puo' essere utilizzata dall'engine per caricare un asset.
-I runtimeName sono definiti all'interno dei file .gosasset_d insieme alla dichiarazione del virtual-asset.
-Diversi runtimeName possono puntare allo stesso asset.
+I runtimeName sono definiti all'interno dei file .gosasset_d insieme alla dichiarazione degli asset.
+Diversi runtimeName possono puntare allo stesso SignatureUID.
 
 
-## Asset UID
-Ogni asset/risorsa/virtual-asset è identificato da un UID a 64bit.
+## UID
+Ogni assetUID/risorsa/signatureUID è identificato da un UID a 64bit.
 I 32 bit LSB sono un CRC32 dei parametri di build dell'asset stesso oppure, nel caso delle risorse, sono un crc32 del filename.
 I 32 bit MSB assumono il seguente significato (da MSB verso LSB):
   - 0x00 oppure 0x01        (0x01 solo se si tratta di virtual-asset)

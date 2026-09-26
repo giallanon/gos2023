@@ -9,7 +9,7 @@ void test (gos::GPU *gpu, const char *baseFolder)
     gos::asset2::Builder b(gpu);
 
     bool ret;
-	ret = b.rebuild_all(baseFolder, true); b.save_dependencies_report (baseFolder); b.save_asset_manifest (baseFolder); return;
+	//ret = b.rebuild_all(baseFolder, true); b.save_dependencies_report (baseFolder); b.save_asset_manifest (baseFolder); return;
     
     ret = b.build(baseFolder, true); 
     if (ret)
@@ -41,7 +41,7 @@ int main (int argc, char *argv[])
 	}
 
 	logger::log (eTextColor::green, "====================================\n");
-	logger::log (eTextColor::green, "GOS Asset Monitor, V 1.0\n");
+	logger::log (eTextColor::green, "GOS Asset Monitor, V 1.1\n");
 	logger::log (eTextColor::green, "====================================\n");
 	
 	gos::GPU gpu;
@@ -52,8 +52,10 @@ int main (int argc, char *argv[])
 	}
 
 #ifdef _DEBUG
-	test (&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/testEngine/writable/assets/");
-	//test_monitor(&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/testEngine/writable/assets/");
+	//test (&gpu, "@w/test_assets_1");
+	//test (&gpu, "@w/test_assets_2");
+	//test (&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/land20260814/writable/assets/");
+	test_monitor(&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/land20260814/writable/assets/");
 #else
 	//for (u8 i=0; i<argc; i++)	printf ("arg %d: %s\n", i, argv[i]);
 

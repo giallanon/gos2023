@@ -56,12 +56,11 @@ namespace gos
                 u16             dstNumMipMap;
                 eImageFormat    dstFmt;
                 UID             uid__resource_image;
-                UID             uid__concrete_asset;
             };
 
         private:
             bool    priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename);
-            bool    priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const Params &params, const char *filenameDST);
+            bool    priv_do_create_assetFile (DBContext &ctx, UID signatureUID, const Params &params, const char *filenameDST);
             bool    priv_create_GPUResourceOnce();
             bool    priv_save (const gpu::sMappedImage &src, gos::image::Builder &builder, eImageFormat dstFmt, u32 srcW, u32 srcH, u32 mipMapNum_0toN, u32 numPallini);
             bool    priv_apply_post_op (image::BufferRGBA *img);

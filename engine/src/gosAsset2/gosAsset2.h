@@ -5,10 +5,12 @@
 #define GOS_ASSET2__DEFAULT_DB_NAME         "assets2.sqlite3"
 #define GOS_ASSET2__TABLE_RES               "res"
 #define GOS_ASSET2__TABLE_DEPENDS           "dependencies"
-#define GOS_ASSET2__TABLE_ASSET_LIST        "assetList"
-#define GOS_ASSET2__TABLE_DEPENDS_RUNTIME   "dependsRT"
-#define GOS_ASSET2__TABLE_VIRTUAL_ASSET     "virtasset"
 #define GOS_ASSET2__TABLE_ALIAS             "aliases"
+#define GOS_ASSET2__TABLE_SIGNATURE         "signature"
+#define GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME   "sig_dependsRT"
+#define GOS_ASSET2__TABLE_ASSET_LIST     "asset_list"
+
+
 
 namespace gos
 {
@@ -37,26 +39,27 @@ namespace gos
         bool        res_delete (DBContext &ctx, const UID &uid);
 
 
-        //================ virtual asset
-        bool        virtasset_insert (DBContext &ctx, eAssetType assType, const char *rtname, UID uid_of_inifile, u32 declared_on_line, UID uid_of_concrete_asset, UID *out_uid);
-        bool        virtasset_get_info (DBContext &ctx, UID uid, UID *out_CAN_BE_NULL_uid_ini, UID *out_CAN_BE_NULL_uid_concrete_asset);
-        bool        virtasset_delete (DBContext &ctx, const UID &uid);
-        bool        virtasset_rtname_exists (DBContext &ctx, const char *rtname, UID *out__virtual_uid, UID *out_CAN_BE_NULL_uid_of_inifile = NULL, UID *out_CAN_BE_NULL_uid_of_concrete_asset = NULL);
-		
+        //================ signature
+        void        signature_manufacture_fullFilename (const DBContext &ctx, UID signatureUID, char *out, u32 sizeof_out);
+        bool        signature_createUID (eAssetType assTypeIN, const void *buffer, u32 sizeof_buffer, UID *out);
+		bool        signature_exists (DBContext &ctx, UID signatureUID);
+		bool        signature_insert (DBContext &ctx, UID signatureUID);
+
+                    //elimina l'asset signatureUID dal DB e da filesystem, eliminando anche le sue dipendenze
+        bool        signature_delete (DBContext &ctx, UID signatureUID);
+		bool        signature_is_still_in_use (DBContext &ctx, UID signatureUID);
+
+		bool        signature_getBy_rtname (DBContext &ctx, const char *rtname, UID *out__signatureUID);
+        bool        signature_get_runtime_dependecies_list (DBContext &ctx, UID signatureUID, bool bClearListOnStart, FastUIDList *out);
+        bool        signature_add_dependencyRT (DBContext &ctx, UID signature_padre, UID signature_figlio);
 
 
-        //================ asset
-        void        asset_manufacture_fullFilename (const DBContext &ctx, UID uid, char *out, u32 sizeof_out);
-        bool        asset_createUID (eAssetType assTypeIN, const void *buffer, u32 sizeof_buffer, UID *out);
-        bool        asset_exists (DBContext &ctx, UID uid);
-        bool        asset_insert (DBContext &ctx, UID uid);
-        bool        asset_is_still_in_use (DBContext &ctx, UID uid);
-        bool        asset_getBy_rtname (DBContext &ctx, const char *rtname, UID *out__uid_concrete_asset);
-
-        bool        asset_get_runtime_dependecies_list (DBContext &ctx, UID uid, bool bClearListOnStart, FastUIDList *out);
-
-                    //elimina l'assety UID dal DB e da filesystem, eliminando anche le sue dipendenze
+		//================ asset
+        bool        asset_insert (DBContext &ctx, eAssetType assType, const char *rtname, UID uid_of_inifile, u32 declared_on_line, UID signatureUID, UID *out_uid);
+        bool        asset_get_info (DBContext &ctx, UID uid, UID *out_CAN_BE_NULL_uid_ini, UID *out_CAN_BE_NULL_signatureUID);
         bool        asset_delete (DBContext &ctx, const UID &uid);
+        bool        asset_rtname_exists (DBContext &ctx, const char *rtname, UID *out__assetUID, UID *out_CAN_BE_NULL_uid_of_inifile = NULL, UID *out_CAN_BE_NULL_signatureUID = NULL);
+		
 
 
         //================ alias
@@ -67,7 +70,6 @@ namespace gos
         //================ dependencies
         bool        dependency_exists (DBContext &ctx, UID father, UID child);
         bool        dependency_add (DBContext &ctx, UID father, UID child);
-        bool        dependencyRT_add (DBContext &ctx, UID asset_padre, UID asset_figlio);
         
                     //ritorna in <out> un elenco di risorse/asset da cui <uid> dipende (ricorsivamente)
                     template<typename LAMBDA>

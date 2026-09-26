@@ -45,7 +45,7 @@ namespace gos
 			bool		rebuild_all (const char *baseFolder, bool bVerbose);
 			bool		build (const char *baseFolder, bool bVerbose);
 			
-			const asset2::UniqueUIDList*	get_list_of_built_UID () const	{ return &build_result_list; }
+			const asset2::UniqueUIDList*	get_list_of_updated_assetUID () const	{ return &build_result_list; }
 
             bool        debug_sanityCheck (const char *baseFolder);
 
@@ -89,25 +89,25 @@ namespace gos
             void            priv_printResList (const ResList &list) const;
             void            priv_printResListElem (const sResListElem &elem) const;
             void            priv_fromDirectiveNameToAssetClassName (const char *directiveName, char *out_asseetClassName, u32 sizeof_out) const;
-
-		private:
-            bool		priv_build (DBContext &ctx, bool bDoCreateAssetFile, bool bGenerateListOfUpdatedUID);
+		
+            bool		priv_build (DBContext &ctx, DBContext *ctx_backup, bool bDoCreateAssetFile, bool bGenerateListOfUpdatedUID);
             bool		priv_resource_scan_DB (DBContext &ctx, HashedStringList *out_listof_gosassetd_toRebuild, UniqueUIDList *out_listof_deleted_gosassetd, 
-												UniqueUIDList *out_listOfPossibileConcreteAssetsToBeDeleted,
+												UniqueUIDList *out_listOfPossibileSignatureToBeDeleted,
 												UniqueUIDList *out_listOfPossibileResourceToBeDeleted) const;
             
 			bool		priv_gosassetd_scan_folder (DBContext &ctx, const char *folder_path, HashedStringList *out_listof_gosassetd_toRebuild) const;
             bool        priv_gosassetd_scan_folder_parse (DBContext &ctx, const char *filename, HashedStringList *out_listof_gosassetd_toRebuild) const;
-            bool        priv_gosassetd_build (DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UniqueUIDList *out_listOfBuiltAssets);
+            bool        priv_gosassetd_build (DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UniqueUIDList *out_listOfBuiltSignature);
             bool        priv_gosassetd_build_parseIncludeSection (DBContext &ctx, bool bDoCreateAssetFile, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sub, 
                                                                     UniqueStringList &in_out__listof_knownRTname, 
                                                                     UniqueUIDList &in_out__listof_UID_of_known_ini_file,
-                                                                    UniqueUIDList *out_listOfBuiltAssets);
+                                                                    UniqueUIDList *out_listOfBuiltSignature);
             bool        priv_gosassetd_build_parseAliasSection (DBContext &ctx, UID uid_of_iniFile, const char *absFilename, const gos::IniFileSection *sub);
             bool        priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFile, u32 &in_out_nextAnonymAssetName, 
                                                      UniqueStringList &in_out_listof_knownRTname, 
                                                      const UniqueUIDList &listof_UID_of_known_ini_file, 
-                                                     const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section, UniqueUIDList *out_listOfBuiltAssets);
+                                                     const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section,
+													 UniqueUIDList *out_listOfBuiltSignature);
 
             BuilderInterface*   priv_findBuilderByClassName (const char *assetClassName) const;
             
@@ -123,6 +123,7 @@ namespace gos
             gos::LoggerNull     	loggerNull;
             gos::LoggerStdout   	loggerStdout;
             BuilderInterface    	*builderList[NUM_MAX_BUILDERS];
+			gos::FastHashMap<UID,UID>	list_of_touched_assets;
 			asset2::UniqueUIDList	build_result_list;
 		};
 

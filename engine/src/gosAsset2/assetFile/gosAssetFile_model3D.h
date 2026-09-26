@@ -21,11 +21,11 @@ namespace gos
 
             void    begin (gos::Allocator *localAllocator);
 
-            void    skeleton_set (UID uid_of_concrete_skeleton);
+            void    skeleton_set (UID signatureUID);
 
                     //ritorna l'index della shape addata  (eventuali shape duplicate vengono gestite evitando la duplicazione)
-            u32     shape_add (UID uid_of_concrete_shape, const char *shape_name);
-			u32     material_add (UID uid_of_concrete_material, const char *material_name);
+            u32     shape_add (UID signatureUID, const char *shape_name);
+			u32     material_add (UID signatureUID, const char *material_name);
 
             bool    mesh_add (u32 shape_index, u32 bone_index, u32 material_index, const char *mesh_name);
 
@@ -47,7 +47,7 @@ namespace gos
 
         private:
             gos::Allocator          *localAllocator;
-            UID                     uid_of_concrete_skeleton;
+            UID                     skeleton_signatureUID;
             FastArray<UID>          listof_shape;
             FastArray<sMeshInfo>    listof_mesh;
 			FastArray<UID>          listof_material;

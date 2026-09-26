@@ -42,41 +42,44 @@ void AssetFile_model3D::begin(gos::Allocator *localAllocatorIN)
 	shape_name_list.reset();
 	mesh_name_list.reset();
 	material_name_list.reset();
-	uid_of_concrete_skeleton.setInvalid();
+	skeleton_signatureUID.setInvalid();
 }
 
 //************************************
-void AssetFile_model3D::skeleton_set (UID uid_of_concrete_skeleton__IN)
+void AssetFile_model3D::skeleton_set (UID signatureUID)
 {
-	uid_of_concrete_skeleton = uid_of_concrete_skeleton__IN;
+	assert(signatureUID.isASignatureOfType(eAssetType::skeleton));
+	skeleton_signatureUID = signatureUID;
 }
 
 //************************************
-u32 AssetFile_model3D::shape_add (UID uid_of_concrete_shape, const char *shape_name)
+u32 AssetFile_model3D::shape_add (UID signatureUID, const char *shape_name)
 {
+	assert(signatureUID.isASignatureOfType(eAssetType::shape));
 	const u32 n = listof_shape.getNElem();
 	for (u32 i = 0; i < n; i++)
 	{
-		if (listof_shape(i) == uid_of_concrete_shape)
+		if (listof_shape(i) == signatureUID)
 			return i;
 	}
 
-	listof_shape.append (uid_of_concrete_shape);
+	listof_shape.append (signatureUID);
 	shape_name_list.append (shape_name);
 	return n;
 }
 
 //************************************
-u32 AssetFile_model3D::material_add (UID uid_of_concrete_material, const char *material_name)
+u32 AssetFile_model3D::material_add (UID signatureUID, const char *material_name)
 {
+	assert(signatureUID.isASignatureOfType(eAssetType::materialPBR));
 	const u32 n = listof_material.getNElem();
 	for (u32 i = 0; i < n; i++)
 	{
-		if (listof_material(i) == uid_of_concrete_material)
+		if (listof_material(i) == signatureUID)
 			return i;
 	}
 
-	listof_material.append (uid_of_concrete_material);
+	listof_material.append (signatureUID);
 	material_name_list.append(material_name);
 	return n;
 }
@@ -113,23 +116,23 @@ bool AssetFile_model3D::save (const char *filenameDST)
 	//magic
 	buffer.writeU32 (GOS_MAGIC__ASSET_MODEL3D);
 
-	//skeleton (concrete asset UID)
-	buffer.writeU64 (uid_of_concrete_skeleton._uid);
+	//skeleton (signatureUID)
+	buffer.writeU64 (skeleton_signatureUID._uid);
 
 
-	//num shape e relativi UID concreti
+	//num shape e relativi signatureUID
 	buffer.writeU32 (listof_shape.getNElem());
 	for (u32 i=0; i<listof_shape.getNElem(); i++)
 	{
-		assert (listof_shape(i).isAnAssetOfType(eAssetType::shape));
+		assert (listof_shape(i).isASignatureOfType(eAssetType::shape));
 		buffer.writeU64 (listof_shape(i)._uid);
 	}
 
-	//num materiali e relativi UID concreti
+	//num materiali e relativi signatureUID
 	buffer.writeU32 (listof_material.getNElem());
 	for (u32 i=0; i<listof_material.getNElem(); i++)
 	{
-		assert (listof_material(i).isAnAssetOfType(eAssetType::materialPBR));
+		assert (listof_material(i).isASignatureOfType(eAssetType::materialPBR));
 		buffer.writeU64 (listof_material(i)._uid);
 	}
 

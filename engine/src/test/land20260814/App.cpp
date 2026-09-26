@@ -43,7 +43,7 @@ void App::on__setup ()
 	// land::Map::create ("@w/assets/asset_src/heightmap/ms_1024", create_1024);
 	map.open ("@w/assets/asset_src/heightmap/ms_1024");
 	//map.apply_heightmap ("@w/assets/asset_src/heightmap/anorway_30m.png", land::Resol::_4m, 0.5f);
-	map.apply_heightmap ("@w/assets/asset_src/heightmap/anorway_256.png", land::Resol::_4m, 0.5f);
+	//map.apply_heightmap ("@w/assets/asset_src/heightmap/anorway_256.png", land::Resol::_4m, 0.5f);
 
 	
 	// land::Map::CreateData create_8192;

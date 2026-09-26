@@ -78,12 +78,11 @@ bool Builder_materialPBR::build_exe (DBContext &ctx, bool doCreateAnAssetFile, b
     out_result->reset();
 
 
-    //setup di virtual-asset
     //All'uscita da questa fn:
-    //  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
-    //  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
-    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
-    if (!prot_setupVirtualAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
+    //  out_result->assetUID       			contiene l'assetUID di questo asset, gia' inserito nel DB
+    //  out_result->signatureUID      		contiene la signatureUID a cui questo assetUID punta
+    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
+    if (!prot_setupAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
         return false;
 
    
@@ -91,7 +90,7 @@ bool Builder_materialPBR::build_exe (DBContext &ctx, bool doCreateAnAssetFile, b
     if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
     {
         char filenameDST[1024];
-        asset_manufacture_fullFilename (ctx, out_result->uid_concrete_asset, filenameDST, sizeof(filenameDST));
+        signature_manufacture_fullFilename (ctx, out_result->signatureUID, filenameDST, sizeof(filenameDST));
 		return params.mat.save (filenameDST);
     }
 

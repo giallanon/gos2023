@@ -1,0 +1,14 @@
+//UID: 010100007970B463, signature: 00010000ADB67723
+@vtx_shader
+{
+	src: res/shader/es1.vert
+}
+
+
+//UID:01010000600AF498, signature: 000100004CECD830
+@vtx_shader
+{
+	src: res/shader/es1.vert
+	def: d20200965
+}
+

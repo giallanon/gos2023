@@ -213,7 +213,7 @@ namespace gos
 
 		res::Descr*		res__createHandle (res::eType res_type, res::eStatus status, asset2::UID uid, res::Handle *out_handle);
 		res::Descr*		res__getOrCreateHandleFromAsset (const char *uid_runtimeName, res::Handle *out_handle, bool *out_bWasNew);
-		res::Descr*		res__getOrCreateHandleFromAsset (asset2::UID uid, res::Handle *out_handle, bool *out_bWasNew);
+		res::Descr*		res__getOrCreateHandleFromAsset (asset2::UID signatureUID, res::Handle *out_handle, bool *out_bWasNew);
 		void 			res__bindEvents (res::Handle handle, res::Descr *res);
 		res::Descr*		res__getDescriptor (res::Handle handle);
 		bool            res__release (res::Handle handle);
