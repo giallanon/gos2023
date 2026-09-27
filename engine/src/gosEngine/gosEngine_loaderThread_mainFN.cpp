@@ -20,8 +20,8 @@ typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Threa
 static void LoaderThread__do_load (HThreadMsgW msgqW, loaders::LoaderInfo &loaderInfo, loaders::BaseLoader **loaderList, res::Descr *res)
 {
 	const res::eType res_type = res->get_type();
-	const asset2::UID uid = res->uid;
-	loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] [%08X] uid=%016" PRIX64 " load started\n", res::enumToString(res_type), res->handle.viewAsU32(), uid._uid);
+	const asset2::UID signatureUID = res->signatureUID;
+	loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] [%08X] signatureUID=%016" PRIX64 " load started\n", res::enumToString(res_type), res->handle.viewAsU32(), signatureUID._uid);
 
 	loaders::BaseLoader *loader = loaderList[(u32)res_type];
 	assert (NULL != loader);
@@ -40,17 +40,17 @@ static void LoaderThread__do_load (HThreadMsgW msgqW, loaders::LoaderInfo &loade
 		break;
 
 	case loaders::BaseLoader::eResult::failed:
-		loaderInfo.logger->log (eTextColor::red, "res::MT  [%s] [%08X] uid=%016" PRIX64 " error loading\n", res::enumToString(res_type), res->handle.viewAsU32(), uid._uid);
+		loaderInfo.logger->log (eTextColor::red, "res::MT  [%s] [%08X] signatureUID=%016" PRIX64 " error loading\n", res::enumToString(res_type), res->handle.viewAsU32(), signatureUID._uid);
 		thread::pushMsg (msgqW, Engine::MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO, 0, res);
 		break;
 
 	case loaders::BaseLoader::eResult::success:
-		loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] [%08X] uid=%016" PRIX64 " loaded\n", res::enumToString(res_type), res->handle.viewAsU32(), uid._uid);
+		loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] [%08X] signatureUID=%016" PRIX64 " loaded\n", res::enumToString(res_type), res->handle.viewAsU32(), signatureUID._uid);
 		thread::pushMsg (msgqW, Engine::MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK, 0, res);
 		break;
 
 	case loaders::BaseLoader::eResult::callback:
-		loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] [%08X] uid=%016" PRIX64 " callback\n", res::enumToString(res_type), res->handle.viewAsU32(), uid._uid);
+		loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] [%08X] signatureUID=%016" PRIX64 " callback\n", res::enumToString(res_type), res->handle.viewAsU32(), signatureUID._uid);
 		thread::pushMsg (msgqW, Engine::MSG_FROM_LOADER_THREAD__ON_LOAD_CALLBACK, 0, &callback_data, sizeof(callback_data));
 		break;
 	}
@@ -162,8 +162,8 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
 						else
 						{
 							const res::eType res_type = res->get_type();
-							const asset2::UID uid = res->uid;
-							loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] [%08X] uid=%016" PRIX64 " load continued\n", res::enumToString(res_type), res->handle.viewAsU32(), uid._uid);
+							const asset2::UID signatureUID = res->signatureUID;
+							loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] [%08X] signatureUID=%016" PRIX64 " load continued\n", res::enumToString(res_type), res->handle.viewAsU32(), signatureUID._uid);
 
 							loaders::BaseLoader *loader = loaderList[(u32)res_type];
 							assert (NULL != loader);
@@ -171,7 +171,7 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
 							{
 								if (0 == callback_data->reschedule_load_at_time_msec)
 								{
-									loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] [%08X] uid=%016" PRIX64 " loaded\n", res::enumToString(res_type), res->handle.viewAsU32(), uid._uid);
+									loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] [%08X] signatureUID=%016" PRIX64 " loaded\n", res::enumToString(res_type), res->handle.viewAsU32(), signatureUID._uid);
 									thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK, 0, res);
 								}
 								else
@@ -182,13 +182,13 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
 										.res = res
 									};
 
-									loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] [%08X] uid=%016" PRIX64 " rescheduling @%" PRIu64 "\n", res::enumToString(res_type), res->handle.viewAsU32(), uid._uid, m.time_msec);
+									loaderInfo.logger->log (eTextColor::darkGreen, "res::MT  [%s] [%08X] signatureUID=%016" PRIX64 " rescheduling @%" PRIu64 "\n", res::enumToString(res_type), res->handle.viewAsU32(), signatureUID._uid, m.time_msec);
 									reschedule_list.append (m);
 								}
 							}
 							else
 							{
-								loaderInfo.logger->log (eTextColor::red, "res::MT  [%s] [%08X] uid=%016" PRIX64 " error loading\n", res::enumToString(res_type), res->handle.viewAsU32(), uid._uid);
+								loaderInfo.logger->log (eTextColor::red, "res::MT  [%s] [%08X] signatureUID=%016" PRIX64 " error loading\n", res::enumToString(res_type), res->handle.viewAsU32(), signatureUID._uid);
 								thread::pushMsg (msgqW, MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO, 0, res);
 							}
 						}

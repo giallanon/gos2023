@@ -351,11 +351,19 @@ void Renderer::on__render (const gos::engine::RenderPipe::Context &ctx, gos::gpu
         return;
     }
 
+	const res::Texture2d *res_texture_lod;
+    if (!ctx.engine->get (handle_texture_lod, &res_texture_lod))
+    {
+        return;
+    }
+
+
 	//command
     rctx.bindPipeline (res_pipeline->pipeHandle)
         .bindDescriptorSet (ctx.handle_descrSet0, 0)
         .bindDescriptorSet (ctx.handle_descrSet1, 1)
-        .bindDescriptorSet (handle_descrSet2, 2);
+        .bindDescriptorSet (handle_descrSet2, 2)
+		.pushConstant(0, &res_texture_lod->index, sizeof(u32));
 
 
 	rctx.bindVtxIdxBuffer (handle_vb, 0, handle_ib, 0);

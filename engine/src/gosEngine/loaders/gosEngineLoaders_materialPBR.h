@@ -21,7 +21,7 @@ namespace gos
 					//Engine *eng = loaderInfo.engine;
 
                     char s[1024];
-                    asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
+                    asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.signatureUID, s, sizeof(s));
 
                     u32 fsize;
                     u8 *buffer = fs::fileLoadInMemory (thread_allocator, s, &fsize);

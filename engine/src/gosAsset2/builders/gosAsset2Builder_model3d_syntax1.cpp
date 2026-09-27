@@ -73,16 +73,16 @@ bool Builder_model3d::Syntax1::build_begin (DBContext &ctx, const UniqueUIDList 
 
     //il parametro <import_name> indica una risorsa eResType::model_glb da cui io dipendo
     //La risorsa deve esistere nel DB
-    if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::model_glb, params.import_name, &params.uid__resource_file_glb))
+    if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::model_glb, params.import_name, &params.resource_file_glb))
     {
         logger->log (eTextColor::red, "resource [%s] '%s' not found in DB\n", asset2::enumToString(eResType::model_glb), params.import_name);
         return false;
     }     
 
     //questo file gosasset_d dipende dalla risorsa params.uid__resource_file_glb)
-    if (!asset2::dependency_exists(ctx, uid_of_iniFile, params.uid__resource_file_glb))
+    if (!asset2::dependency_exists(ctx, uid_of_iniFile, params.resource_file_glb.uid))
     {
-        if (!asset2::dependency_add (ctx, uid_of_iniFile, params.uid__resource_file_glb)) 
+        if (!asset2::dependency_add (ctx, uid_of_iniFile, params.resource_file_glb.uid)) 
             return false;  
     }
 
@@ -131,7 +131,7 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 		model3d_assetUID = out_result->assetUID;
 
 		//aggiungo le dipendenze di assetUID dalla risorsa model_glb
-		if (!dependency_add (ctx, out_result->assetUID, params.uid__resource_file_glb)) return false;
+		if (!dependency_add (ctx, out_result->assetUID, params.resource_file_glb.uid)) return false;
 
 
 
@@ -317,7 +317,7 @@ bool Builder_model3d::Syntax1::priv_build_shape (DBContext &ctx, bool doCreateAn
 		return false;
 
 	//aggiungo le dipendenze di assetUID dalla risorsa model_glb
-	if (!dependency_add (ctx, out_result->assetUID, params.uid__resource_file_glb)) return false;
+	if (!dependency_add (ctx, out_result->assetUID, params.resource_file_glb.uid)) return false;
 
 	listof_shape_signatureUID.append (out_result->signatureUID);
 
@@ -362,7 +362,7 @@ bool Builder_model3d::Syntax1::priv_build_skeleton (DBContext &ctx, bool doCreat
 		return false;
 
 	//aggiungo le dipendenze di assetUID dalla risorsa model_glb
-	if (!dependency_add (ctx, out_result->assetUID, params.uid__resource_file_glb)) return false;
+	if (!dependency_add (ctx, out_result->assetUID, params.resource_file_glb.uid)) return false;
 
 
 	skeleton_signatureUID = out_result->signatureUID;
@@ -408,7 +408,7 @@ bool Builder_model3d::Syntax1::priv_build_material (DBContext &ctx, bool doCreat
 		return false;
 
 	//aggiungo le dipendenze di assetUID dalla risorsa model_glb
-	if (!dependency_add (ctx, out_result->assetUID, params.uid__resource_file_glb)) return false;
+	if (!dependency_add (ctx, out_result->assetUID, params.resource_file_glb.uid)) return false;
 
 	listof_material_signatureUID.append (out_result->signatureUID);
 

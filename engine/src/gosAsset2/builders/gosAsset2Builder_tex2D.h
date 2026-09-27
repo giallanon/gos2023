@@ -55,7 +55,7 @@ namespace gos
                 u16             srcIs_sRGB;
                 u16             dstNumMipMap;
                 eImageFormat    dstFmt;
-                UID             uid__resource_image;
+				ResourceDep		resource_image;
             };
 
         private:

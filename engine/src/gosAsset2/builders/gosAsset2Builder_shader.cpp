@@ -89,6 +89,7 @@ bool Builder_shader::priv_extractParams (DBContext &ctx, const UniqueUIDList &li
     return true;
 }
 
+
 //************************************
 bool Builder_shader::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
 {
@@ -105,18 +106,25 @@ bool Builder_shader::build_begin (DBContext &ctx, const UniqueUIDList &listof_UI
 
     //il parametro src indica una risorsa eResType::shader_txt da cui io dipendo
     //La risorsa deve esistere nel DB. Se non c'e' gia', la devo inserire
-    if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::shader_txt, params.src, &params.uid__resource_shader_txt))
+    if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::shader_txt, params.src, &params.resource_shader_txt))
     {
         logger->log (eTextColor::red, "resource [%s] '%s' not found in DB\n", asset2::enumToString(eResType::shader_txt), params.src);
         return false;
     }
 
-    //questo file gosasset_d dipende dalla risorsa params.uid__resource_shader_txt) che e' il src dello shader
-    if (!asset2::dependency_exists(ctx, uid_of_iniFile, params.uid__resource_shader_txt))
+    //questo file gosasset_d dipende dalla risorsa params.resource_shader_txt) che e' il src dello shader
+    if (!asset2::dependency_exists(ctx, uid_of_iniFile, params.resource_shader_txt.uid))
     {
-        if (!asset2::dependency_add (ctx, uid_of_iniFile, params.uid__resource_shader_txt)) 
+        if (!asset2::dependency_add (ctx, uid_of_iniFile, params.resource_shader_txt.uid)) 
             return false;  
     }
+
+
+	//la fn prot_needResource() ha generato un elenco di nested resources, ovvero di shader_txt inclusi da params.resource_shader_txt (ricorsivamente)
+	//Devo tenere conto di questi include durante il calcolo del SignatureUID
+	for (u32 i=0; i<num_nested_resources; i++)
+		params.nested_resource_list[i] = list_of_nested_resources[i];
+
 
 	return true;
 }
@@ -138,7 +146,7 @@ bool Builder_shader::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *
         return false;
 
     //aggiungo le dipendenze di assetUID dalla risorsa shader_txt
-    if (!dependency_add (ctx, out_result->assetUID, params.uid__resource_shader_txt)) return false;
+    if (!dependency_add (ctx, out_result->assetUID, params.resource_shader_txt.uid)) return false;
     
 
 

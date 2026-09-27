@@ -18,7 +18,7 @@ namespace gos
                     gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
 
                     char s[1024];
-                    asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
+                    asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.signatureUID, s, sizeof(s));
 
                     gos::Image image;
                     if (!image::load (thread_allocator, s, &image))

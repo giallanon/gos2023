@@ -52,10 +52,10 @@ int main (int argc, char *argv[])
 	}
 
 #ifdef _DEBUG
-	//test (&gpu, "@w/test_assets_1");
+	test (&gpu, "@w/test_assets_1");
 	//test (&gpu, "@w/test_assets_2");
 	//test (&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/land20260814/writable/assets/");
-	test_monitor(&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/land20260814/writable/assets/");
+	//test_monitor(&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/land20260814/writable/assets/");
 #else
 	//for (u8 i=0; i<argc; i++)	printf ("arg %d: %s\n", i, argv[i]);
 

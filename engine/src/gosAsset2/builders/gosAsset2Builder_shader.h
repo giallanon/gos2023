@@ -41,9 +41,10 @@ namespace gos
         private:
             struct Params
             {
-                char    src[1024];
-                char    def[1024];
-                UID     uid__resource_shader_txt;
+                char    	src[1024];
+                char    	def[1024];
+                ResourceDep resource_shader_txt;
+				ResourceDep	nested_resource_list[NUM_MAX_NESTED_RESOURCES];
             };
 
         private:

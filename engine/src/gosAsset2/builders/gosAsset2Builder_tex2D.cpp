@@ -224,7 +224,7 @@ bool Builder_tex2D::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID
 
     //il parametro src indica una risorsa eResType::image da cui io dipendo
     //La risorsa deve esistere nel DB
-    if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::image, params.src, &params.uid__resource_image))
+    if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::image, params.src, &params.resource_image))
     {
         logger->log (eTextColor::red, "resource [%s] '%s' not found in DB\n", asset2::enumToString(eResType::image), params.src);
         return false;
@@ -242,9 +242,9 @@ bool Builder_tex2D::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *o
     out_result->reset();
 
 	//questo file gosasset_d dipende dalla risorsa params.uid__resource_image)
-    if (!asset2::dependency_exists(ctx, uid_of_iniFile, params.uid__resource_image))
+    if (!asset2::dependency_exists(ctx, uid_of_iniFile, params.resource_image.uid))
     {
-        if (!asset2::dependency_add (ctx, uid_of_iniFile, params.uid__resource_image)) 
+        if (!asset2::dependency_add (ctx, uid_of_iniFile, params.resource_image.uid)) 
             return false;  
     }
     
@@ -258,7 +258,7 @@ bool Builder_tex2D::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *o
 
 
     //aggiungo le dipendenze di assetUID dalla risorsa IMMAGINE
-    if (!dependency_add (ctx, out_result->assetUID, params.uid__resource_image)) return false;
+    if (!dependency_add (ctx, out_result->assetUID, params.resource_image.uid)) return false;
 
 
     

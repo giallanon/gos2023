@@ -1,5 +1,6 @@
 #ifndef _gosEngineEnumAndDefine_h_
 #define _gosEngineEnumAndDefine_h_
+#include "../gos/gosHandle.h"
 #include "../gos/gosFastArray.h"
 #include "../gosGPU/gosGPU.h"
 #include "../gosInput/gosInput.h"
@@ -28,14 +29,39 @@ struct HANDLE_TYPE\
 };\
 
 
+#define GOS_DECL_PROXYRES_HANDLE(HANDLE_TYPE)\
+struct HANDLE_TYPE\
+{\
+	u32	index;\
+\
+	void	setInvalid()							{ index = u32MAX; }\
+	bool	isInvalid() const						{ return index == u32MAX; }\
+	bool	isValid() const							{ return index != u32MAX; }\
+};\
+
+
 namespace gos
 {
-	GOS_DECL_RES_HANDLE(ENGVtxBuffer);
-	GOS_DECL_RES_HANDLE(ENGIdxBuffer);
-	GOS_DECL_RES_HANDLE(ENGVtxShader);
-	GOS_DECL_RES_HANDLE(ENGPxlShader);
-	GOS_DECL_RES_HANDLE(ENGPipeline);
-	GOS_DECL_RES_HANDLE(ENGTexture);
+	struct ProxyRes
+	{
+		gos::res::Handle 	res_handle;	//questo "punta" alla risorsa SignatureUID associata a questo assetUID
+		gos::asset2::UID	assetUID;
+	};
+
+	GOS_DECL_PROXYRES_HANDLE(ENGVtxBuffer2);
+	GOS_DECL_PROXYRES_HANDLE(ENGIdxBuffer2);
+	GOS_DECL_PROXYRES_HANDLE(ENGVtxShader2);
+	GOS_DECL_PROXYRES_HANDLE(ENGPxlShader2);
+	GOS_DECL_PROXYRES_HANDLE(ENGPipeline);
+	GOS_DECL_PROXYRES_HANDLE(ENGTexture2);
+	
+
+	//GOS_DECL_RES_HANDLE(ENGVtxBuffer2);
+	//GOS_DECL_RES_HANDLE(ENGIdxBuffer2);
+	//GOS_DECL_RES_HANDLE(ENGVtxShader2);
+	//GOS_DECL_RES_HANDLE(ENGPxlShader2);
+	//GOS_DECL_RES_HANDLE(ENGPipeline);
+	//GOS_DECL_RES_HANDLE(ENGTexture);
 	GOS_DECL_RES_HANDLE(ENGShape);
 	GOS_DECL_RES_HANDLE(ENGGPUShape);
 	GOS_DECL_RES_HANDLE(ENGSkeleton);
@@ -43,6 +69,8 @@ namespace gos
 	GOS_DECL_RES_HANDLE(ENGModel3dInst);
 	GOS_DECL_RES_HANDLE(ENGMaterialPBR);
 	
+
+
 } //namespace gos
 
 

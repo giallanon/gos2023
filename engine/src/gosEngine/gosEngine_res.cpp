@@ -9,13 +9,13 @@ void Engine::res__printInfo (const void *resIN, const char *debug_info) const
 {
 	 const res::Descr *res = (const res::Descr*)resIN;
 
-	 asset_logger->log (eTextColor::darkYellow, "res::[%-20s] [%08X] [%03d] [%02d/%-12s] [%-12s] [uid: %016" PRIX64 "]\n",
+	 asset_logger->log (eTextColor::darkYellow, "res::[%-20s] [%08X] [%03d] [%02d/%-12s] [%-12s] [signatureUID: %016" PRIX64 "]\n",
 		debug_info,
 		res->handle.viewAsU32(),
 		res->refCount,
 		res->_num_child_not_ready, res::enumToString(res->_status), 
 		res::enumToString((res::eType)res->handle.get_value_TYPE()),
-		res->uid._uid);
+		res->signatureUID._uid);
 }
 
 //**************************************************************** 
@@ -94,7 +94,7 @@ void Engine::res__on_children_become_notready (res::Descr *res_padre)
 }
 
 //**************************************************************** 
-res::Descr* Engine::res__createHandle (res::eType res_typeIN, res::eStatus statusIN, asset2::UID uid, res::Handle *out_handle)
+res::Descr* Engine::res__createHandle (res::eType res_typeIN, res::eStatus statusIN, asset2::UID signatureUID, res::Handle *out_handle)
 {
 	assert (NULL != out_handle);
 
@@ -109,7 +109,7 @@ res::Descr* Engine::res__createHandle (res::eType res_typeIN, res::eStatus statu
 	res->handle = *out_handle;
 	res->refCount = 1;
 	res->_status = statusIN;
-	res->uid = uid;
+	res->signatureUID = signatureUID;
 	
 	res__bindEvents (*out_handle, res);
 	
@@ -122,40 +122,47 @@ res::Descr* Engine::res__createHandle (res::eType res_typeIN, res::eStatus statu
 }
 
 //**************************************************************** 
-res::Descr* Engine::res__getOrCreateHandleFromAsset (const char *uid_runtimeName, res::Handle *out_handle, bool *out_bWasNew)
+res::Descr* Engine::res__getOrCreateHandleFromRuntimeName (const char *uid_runtimeName, res::eLoadMode loadMode, res::Handle *out_handle)
 {
 	assert (NULL != out_handle);
 	asset2::UID signatureUID;
 	if (!asset2::signature_getBy_rtname (asset_ctx, uid_runtimeName, &signatureUID))
 	{
-		logger::err ("Engine::res__getOrCreateHandleFromAsset(%s) => invalid runtime name\n", uid_runtimeName);
+		logger::err ("Engine::res__getOrCreateHandleFromRuntimeName(%s) => invalid runtime name\n", uid_runtimeName);
 		return NULL;
 	}
 
-	return res__getOrCreateHandleFromAsset (signatureUID, out_handle, out_bWasNew);
+	res::Descr *res = res__getOrCreateHandleFromSignatureUID (signatureUID, out_handle);
+	if (NULL != res)
+	{
+		//schedula load se richiesto
+		if (res::eLoadMode::asap == loadMode)
+			res__scheduleLoadIfNeeded (res, 0);
+	}
+	
+	return res;
 }
 
-res::Descr* Engine::res__getOrCreateHandleFromAsset (asset2::UID signatureUID, res::Handle *out_handle, bool *out_bWasNew)
+//**************************************************************** 
+res::Descr* Engine::res__getOrCreateHandleFromSignatureUID (asset2::UID signatureUID, res::Handle *out_handle)
 {
 	assert (signatureUID.isValid());
 	assert (NULL != out_handle);
-	assert (NULL != out_bWasNew);
 
 	res::eType res_type;
-	if (!res__assetUID_to_resUID (signatureUID, &res_type))
+	if (!res__signatureUID_to_resType (signatureUID, &res_type))
 	{
-		logger::err ("Engine::res__getOrCreateHandleFromAsset() => can't deduct res_type frome assert uid [%016]" PRIX64 "\n", signatureUID._uid);
+		logger::err ("Engine::res__getOrCreateHandleFromSignatureUID() => can't deduct res_type frome signatureUID [%016]" PRIX64 "\n", signatureUID._uid);
 		return NULL;
 	}
 
 
 	HashListOfLoadedUID::Position pos;
 	u32 handle_asU32;
-	if (listof_knownUID.findWithPos (signatureUID, &handle_asU32, &pos))
+	if (listof_known_signatureUID.findWithPos (signatureUID, &handle_asU32, &pos))
 	{
 		//l'asset e' gia' noto e quindi e' gia' stato associato ad un handle.
 		//Ritorno quell'handle stesso
-		*out_bWasNew = false;
 		out_handle->setFromU32(handle_asU32);
 		assert (out_handle->get_value_TYPE() == (u32)res_type);
 
@@ -167,16 +174,15 @@ res::Descr* Engine::res__getOrCreateHandleFromAsset (asset2::UID signatureUID, r
 	}
 
 	//l'asset e' nuovo, devo quindi creare un nuovo handle
-	*out_bWasNew = true;
 	res::Descr *res = res__createHandle (res_type, res::eStatus::notLoaded, signatureUID, out_handle);
 	if (NULL == res)
 	{
-		logger::err ("Engine::res__getOrCreateHandleFromAsset() => can't create handle for res type=%d and asset uid=%016" PRIX64 "\n", (u8)res_type, signatureUID._uid);
+		logger::err ("Engine::res__getOrCreateHandleFromSignatureUID() => can't create handle for res type=%d and signatureUID=%016" PRIX64 "\n", (u8)res_type, signatureUID._uid);
 		return NULL;
 	}
 
 	//inserisco la coppia <signatureUID, handle> in hashlist
-	listof_knownUID.insertInPosition (pos, out_handle->viewAsU32());
+	listof_known_signatureUID.insertInPosition (pos, out_handle->viewAsU32());
 
 	//se questo asset ha delle dipendenze runtime, recupero/creo i relativi handle
 	u8 memblock[256];
@@ -189,11 +195,8 @@ res::Descr* Engine::res__getOrCreateHandleFromAsset (asset2::UID signatureUID, r
 	{
 		const asset2::UID child_uid = fastUIDList(i);
 		   
-		bool bWasNew;
 		res::Handle child_handle;
-		res::Descr *child_res = res__getOrCreateHandleFromAsset (child_uid, &child_handle, &bWasNew);
-		if (!bWasNew)
-			child_res->refCount++;
+		res::Descr *child_res = res__getOrCreateHandleFromSignatureUID (child_uid, &child_handle);
 
 		//child_handle diventa uno dei miei figli
 		res__addChild (res, child_res);
@@ -362,10 +365,10 @@ bool Engine::res__release (res::Descr *res)
 }
 
 //**************************************************************** 
-bool Engine::res__assetUID_to_resUID (asset2::UID uid, res::eType *out_res_type) const
+bool Engine::res__signatureUID_to_resType (asset2::UID signatureUID, res::eType *out_res_type) const
 {
-	assert (uid.isASignature());
-	switch (uid.getSignatureType())
+	assert (signatureUID.isASignature());
+	switch (signatureUID.getSignatureType())
 	{
 	default:
 		DBGBREAK;
@@ -416,7 +419,7 @@ void Engine::res__freeHandleChain (res::HandleChain *p)
 /**************************************************************** 
 * Ritorna true solo se <handle> punta ad una valida risorsa che al momento e':
 *	- in stato eReady
-*	- tutti i suoi figli sono in stato eRerady
+*	- tutti i suoi figli sono in stato eReady
 */
 bool Engine::res__getOrScheduleLoad (res::Handle handle, const res::Descr **out, u64 timeout_msec)
 {
@@ -505,6 +508,7 @@ void Engine::res__do_destroy (res::Descr *res)
 		(this->*res->on_destroy)(res);
 	}
 	res__set_status (res, res::eStatus::notLoaded);
+	listof_known_signatureUID.remove (res->signatureUID);
 
 	//se ho dei figli, faccio il release
 	asset_logger->inc_indent();
@@ -540,7 +544,7 @@ bool Engine::res__hotreload (res::Handle handle)
 	res::Descr *res = res__getDescriptor(handle);
 	if (NULL == res)
 	{
-		DBGBREAK;
+		//DBGBREAK;
 		return false;
 	}
 
@@ -564,12 +568,13 @@ bool Engine::res__hotreload (res::Handle handle)
 	//aggiungo la risorsa alle lista delle risorsa di cui fare l'hot-reload
 	const sUnloadInfo info = {
 		.res_handle = handle,
-		.timer_msec = (u32)gos::getTimeSinceStart_msec() + 10,
+		.timer_msec = (u32)gos::getTimeSinceStart_msec() + 100,
 	};
+
 	list_of_res_to_be_hotreloaded.append (info);
 
 
-	//se questa risorsa ha dei padri, anche loro dovranon essere ricaricati dato che
+	//se questa risorsa ha dei padri, anche loro dovranno essere ricaricati dato che
 	//il padre dipende da me e, se io cambio, anche mio padre deve potersi ricorstruire e cambiare a sua volta
 	p = res->padri;
 	while (p)

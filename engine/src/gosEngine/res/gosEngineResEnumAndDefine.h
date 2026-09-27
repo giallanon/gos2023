@@ -140,14 +140,14 @@ namespace gos
 		public:
 			void 	reset()
 			{
-				uid.setInvalid(); _status=eStatus::error; refCount = 0; _num_child_not_ready=0; figli=padri=NULL; 
+				signatureUID.setInvalid(); _status=eStatus::error; refCount = 0; _num_child_not_ready=0; figli=padri=NULL; 
 				on_afterCreate=NULL; on_afterLoad=NULL; on_unload=NULL; on_destroy=NULL; on_loadCallback=NULL;
 			}
 
 			eType	get_type() const 			{ return static_cast<eType>(handle.get_value_TYPE()); }
 
 		public:
-			asset2::UID			uid;					//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
+			asset2::UID			signatureUID;			//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
 			Handle				handle;
 			res::eStatus		_status;				//stato della risorsa dal punto di vista dell'engine  (non cambiare direttamente il valore, usa res__set_status()
 			u8					_num_child_not_ready;	//se ho dei figli, questo mi dice quanti di loro sono in stato != da eReady

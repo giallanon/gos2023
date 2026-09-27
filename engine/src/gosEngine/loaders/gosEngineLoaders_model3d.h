@@ -20,7 +20,7 @@ namespace gos
 					Engine *eng = loaderInfo.engine;
 
                     char s[1024];
-                    asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, res_model->_descr.uid, s, sizeof(s));
+                    asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, res_model->_descr.signatureUID, s, sizeof(s));
 
                     u32 fsize;
                     u8 *buffer = fs::fileLoadInMemory (thread_allocator, s, &fsize);
@@ -44,8 +44,8 @@ namespace gos
                         }
 
 
-                        asset2::UID uid_of_skeleton;
-                        uid_of_skeleton._uid = reader.readU64();
+                        asset2::UID skeleton_signatureUID;
+                        skeleton_signatureUID._uid = reader.readU64();
 
                         const u32 num_shapes = reader.readU32();
                         const u32 start_of_list_of_shape_uid = reader.tell();
@@ -66,9 +66,9 @@ namespace gos
 						//skeleton
 						ENGSkeleton handle_skeleton;
 						res::Skeleton *res_skeleton;
-						if (!eng->internal__getResFromUID (uid_of_skeleton, &res_skeleton, &handle_skeleton))
+						if (!eng->internal__getResFromSignatureUID (skeleton_signatureUID, &res_skeleton, &handle_skeleton))
 						{
-							logger::log (eTextColor::red, "resMT::  Loader_model3d::load() => unable to match skeleton %016" PRIX64 " with raw data\n", uid_of_skeleton._uid);
+							logger::log (eTextColor::red, "resMT::  Loader_model3d::load() => unable to match skeleton signatureUID %016" PRIX64 " with raw data\n", skeleton_signatureUID._uid);
 							break;
 						}
 						model::set_skeleton (res_model->model, handle_skeleton);
@@ -79,14 +79,14 @@ namespace gos
 						reader.moveCursorTo(start_of_list_of_shape_uid);
 						for (u32 i=0; i<num_shapes; i++)
 						{
-							asset2::UID uid_shape;
-							uid_shape._uid = reader.readU64();
+							asset2::UID shape_signatureUID;
+							shape_signatureUID._uid = reader.readU64();
 
 							ENGShape handle_shape;
 							res::Shape *res_shape;
-							if (!eng->internal__getResFromUID(uid_shape, &res_shape, &handle_shape))
+							if (!eng->internal__getResFromSignatureUID(shape_signatureUID, &res_shape, &handle_shape))
 							{
-								logger::log (eTextColor::red, "resMT::  Loader_model3d::load() => unable to match shape %016" PRIX64 " with raw data\n", uid_shape._uid);
+								logger::log (eTextColor::red, "resMT::  Loader_model3d::load() => unable to match shape signatureUID %016" PRIX64 " with raw data\n", shape_signatureUID._uid);
 								ret = eResult::failed;
 								break;
 							}
@@ -102,14 +102,14 @@ namespace gos
 						reader.moveCursorTo(start_of_list_of_material_uid);
 						for (u32 i=0; i<num_materials; i++)
 						{
-							asset2::UID uid_materialPBR;
-							uid_materialPBR._uid = reader.readU64();
+							asset2::UID materialPBR_signatureUID;
+							materialPBR_signatureUID._uid = reader.readU64();
 
 							ENGMaterialPBR handle_materialPBR;
 							res::MaterialPBR *res_materialPBR;
-							if (!eng->internal__getResFromUID(uid_materialPBR, &res_materialPBR, &handle_materialPBR))
+							if (!eng->internal__getResFromSignatureUID(materialPBR_signatureUID, &res_materialPBR, &handle_materialPBR))
 							{
-								logger::log (eTextColor::red, "resMT::  Loader_model3d::load() => unable to match material %016" PRIX64 " with raw data\n", uid_materialPBR._uid);
+								logger::log (eTextColor::red, "resMT::  Loader_model3d::load() => unable to match material signatureUID %016" PRIX64 " with raw data\n", materialPBR_signatureUID._uid);
 								ret = eResult::failed;
 								break;
 							}

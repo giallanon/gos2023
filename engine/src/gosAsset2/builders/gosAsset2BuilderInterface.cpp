@@ -68,32 +68,41 @@ bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::I
 
 }
 
-//******************************************
-bool BuilderInterface::prot_needResource (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, eResType resTypeIN, const char *absFilenameIN, UID *out_uid) const
+/******************************************
+ * In caso di risorse che includo a loro volta altre risorse (al momento solo gli shader_txt), all'uscita di questa
+ * fn l'array <list_of_nested_resources> contiene un elenco delle risorse incluse
+ */
+bool BuilderInterface::prot_needResource (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, eResType resTypeIN, const char *absFilenameIN, ResourceDep *out)
+{
+	num_nested_resources = 0;
+	return priv_do_needResource (ctx, listof_UID_of_known_ini_file, resTypeIN, absFilenameIN, out);
+}
+
+bool BuilderInterface::priv_do_needResource (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, eResType resTypeIN, const char *absFilenameIN, ResourceDep *out)
 {
     assert (NULL != absFilenameIN);
-    assert (NULL != out_uid);
+    assert (NULL != out);
     assert (fs::isPathAbsolute(absFilenameIN));
 
-    if (asset2::res_exists (ctx, resTypeIN, absFilenameIN, out_uid))
-        return true;
+    if (!asset2::res_exists (ctx, resTypeIN, absFilenameIN, &out->uid, &out->lastTimeMod))
+	{
+		//<absFilenameIN> non esiste nel DB, la devo aggiungere
+		if (!fs::fileExists(absFilenameIN))
+		{
+			logger->log (eTextColor::red, "can't open file %s\n", absFilenameIN);
+			return false;
+		}
 
-    //<absFilenameIN> non esiste nel DB, la devo aggiungere
-    if (!fs::fileExists(absFilenameIN))
-    {
-        logger->log (eTextColor::red, "can't open file %s\n", absFilenameIN);
-        return false;
-    }
-
-    const u64 lastTimeMod = fs::fileGetLastTimeModified_UTC_niceu64(absFilenameIN);
-    if (!asset2::res_insert (ctx, resTypeIN, absFilenameIN, lastTimeMod, out_uid))
-    {
-        logger->log (eTextColor::red, "error inserting resource %s\n", absFilenameIN);
-        return false;
-    }
-
+		out->lastTimeMod = fs::fileGetLastTimeModified_UTC_niceu64(absFilenameIN);
+		if (!asset2::res_insert (ctx, resTypeIN, absFilenameIN, out->lastTimeMod, &out->uid))
+		{
+			logger->log (eTextColor::red, "error inserting resource %s\n", absFilenameIN);
+			return false;
+		}
+	}
+	
     //le risorse shader possono avere delle include.
-    //DEvo aggiungere la dipendenza di this dalle sue include
+    //Devo aggiungere la dipendenza di this dalle sue include
     if (eResType::shader_txt == resTypeIN)
     {
         gos::StringList includeList(gos::getScrapAllocator(), 1024);
@@ -108,12 +117,18 @@ bool BuilderInterface::prot_needResource (DBContext &ctx, const UniqueUIDList &l
         includeList.toStart(&iter);
         while (NULL != (absIncludePath = includeList.next(&iter)))
         {
-            UID shaderUID;
-            if (prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::shader_txt, absIncludePath, &shaderUID))
+			ResourceDep *nested_res = &list_of_nested_resources[num_nested_resources++];
+            if (priv_do_needResource (ctx, listof_UID_of_known_ini_file, eResType::shader_txt, absIncludePath, nested_res))
             {
-                if (!dependency_exists (ctx, *out_uid, shaderUID))
-                    dependency_add (ctx, *out_uid, shaderUID);
+                if (!dependency_exists (ctx, out->uid, nested_res->uid))
+                    dependency_add (ctx, out->uid, nested_res->uid);
             }
+
+			if (num_nested_resources >= NUM_MAX_NESTED_RESOURCES)
+			{
+				logger->log (eTextColor::red, "error, too many nested resources while working with %s\n", absFilenameIN);
+				return false;
+			}
         }
     }
 

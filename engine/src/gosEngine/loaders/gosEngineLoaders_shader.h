@@ -19,7 +19,7 @@ namespace gos
                     gos::GPU *gpu = loaderInfo.gpu;
 
                     char s[1024];
-                    asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
+                    asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.signatureUID, s, sizeof(s));
 
                     u32 fsize;
                     u8 *buffer = fs::fileLoadInMemory (thread_allocator, s, &fsize);
@@ -50,7 +50,7 @@ namespace gos
                     gos::GPU *gpu = loaderInfo.gpu;
 
                     char s[1024];
-                    asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.uid, s, sizeof(s));
+                    asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, res->_descr.signatureUID, s, sizeof(s));
                     
 					u32 fsize;
                     u8 *buffer = fs::fileLoadInMemory (thread_allocator, s, &fsize);

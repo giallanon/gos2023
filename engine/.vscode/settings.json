@@ -96,7 +96,10 @@
 		"__tree": "cpp",
 		"__node_handle": "cpp",
 		"filesystem": "cpp",
-		"locale": "cpp"
+		"locale": "cpp",
+		"regex": "cpp",
+		"__locale": "cpp",
+		"__string": "cpp"
 	},
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.compilerPath": "",

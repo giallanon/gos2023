@@ -332,7 +332,7 @@ bool asset2::res_update (DBContext &ctx, UID uid, u64 lastTimeMod)
 }
 
 //********************************************************** 
-bool asset2::res_exists (DBContext &ctx, eResType resType, const char *absFilenameIN, UID *out_CAN_BE_NULL_uid)
+bool asset2::res_exists (DBContext &ctx, eResType resType, const char *absFilenameIN, UID *out_CAN_BE_NULL_uid, u64 *out_CAN_BE_NULL_lastTimeMod)
 {
     if (!ctx.isValid())
     {
@@ -343,12 +343,12 @@ bool asset2::res_exists (DBContext &ctx, eResType resType, const char *absFilena
     db::RST rst;
     char s[256];
     
-    sprintf_s (s, sizeof(s), "SELECT UID FROM " GOS_ASSET2__TABLE_RES " WHERE type=%d AND abspath='%s'", static_cast<u8>(resType), absFilenameIN);
+    sprintf_s (s, sizeof(s), "SELECT UID,lastTimeMod FROM " GOS_ASSET2__TABLE_RES " WHERE type=%d AND abspath='%s'", static_cast<u8>(resType), absFilenameIN);
     if (!db::query (ctx.db, s, &rst)) return false;
     if (rst.fetchRow())
     {
-        if (NULL != out_CAN_BE_NULL_uid)
-            out_CAN_BE_NULL_uid->_uid = rst.getValAsU64(0);
+        if (NULL != out_CAN_BE_NULL_uid)			out_CAN_BE_NULL_uid->_uid = rst.getValAsU64(0);
+		if (NULL != out_CAN_BE_NULL_lastTimeMod)	*out_CAN_BE_NULL_lastTimeMod = rst.getValAsU64(1);
         return true;
     }
 

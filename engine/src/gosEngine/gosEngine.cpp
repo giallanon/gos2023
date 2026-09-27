@@ -63,10 +63,11 @@ void Engine::unsetup()
 	resHandleChainPool.unsetup();
 	vtxBufferMan.unsetup();
 	idxBufferMan.unsetup();
-	listof_knownUID.unsetup();
+	listof_known_signatureUID.unsetup();
 
 	
 	//handle lists
+	proxyResInfo.unsetup();
 	map_of_shape_to_gpushape.unsetup();
 	stageHelper.unsetup();
 
@@ -233,11 +234,13 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 
 	map_of_shape_to_gpushape.setup (allocator, 8192);
 	resHandleChainPool.setup (allocator, 8192);
+
+	proxyResInfo.setup (engAllocator);
 	
 	//resource manager
 	vtxBufferMan.setup (allocator, gpu);
 	idxBufferMan.setup (allocator, gpu);
-	listof_knownUID.setup (allocator, 8192);
+	listof_known_signatureUID.setup (allocator, 8192);
 
 
 	//attendo che il loader-thread abbia segnalato che e' partito
@@ -342,12 +345,13 @@ void Engine::priv_handle_res_hotreload()
 
 		//faccio il release dato che ho incrementato il ref-count durante la chiamata a "hotreload()"
 		//Se a seguito del mio release la risorsa e' stata eliminata, non sto a schedulare il load
-		if (!res__release (res))
-		{
-			//schedulo il reload
-			const res::Descr *descr;
-			res__getOrScheduleLoad (info.res_handle, &descr);
-		}
+		res__release (res);
+		// if (!res__release (res))
+		// {
+		// 	//schedulo il reload
+		// 	const res::Descr *descr;
+		// 	res__getOrScheduleLoad (info.res_handle, &descr);
+		// }
 	}
 }
 
@@ -503,25 +507,52 @@ bool Engine::asset_build()
 }
 
 //******************************** 
-void Engine::asset_hotreload (asset2::UID uid)
+void Engine::asset_hotreload (asset2::UID assetUID)
 {
-	u32 handle_asU32;
-	if (listof_knownUID.find (uid, &handle_asU32))
+	u32 index;
+	if (!proxyResInfo.get_index_from_assetUID (assetUID, &index))
+		return;
+
+	ProxyRes *proxyRes = proxyResInfo.get(index);
+	if (NULL == proxyRes)
+		return;
+
+	
+	assert (assetUID == proxyRes->assetUID);
+	asset2::UID signatureUID;
+	if (!asset2::asset_get_info (asset_ctx, assetUID, NULL, &signatureUID))
 	{
-		res::Handle res_handle;
-		res_handle.setFromU32 (handle_asU32);
-		res__hotreload (res_handle);
+		DBGBREAK;
+		return;
 	}
+
+	res__release (proxyRes->res_handle);
+
+
+	res::Handle res_handle;
+	res::Descr *res_descr =	res__getOrCreateHandleFromSignatureUID (signatureUID, &res_handle);
+	if (NULL == res_descr)
+	{
+		DBGBREAK;
+		return;
+	}
+
+	proxyRes->res_handle = res_handle;
+
+	res__hotreload (proxyRes->res_handle);
 }
 
 /**************************************************************** 
  * VTX BUFFER
  *****************************************************************/
-bool Engine::vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer *out_handle)
+bool Engine::vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer2 *out_handle)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::VtxBuffer *res = (res::VtxBuffer*)res__createHandle(res::eType::vtx_buffer, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID invalid_UID;
+	invalid_UID.setInvalid();
+
+	ProxyRes *proxyRes = proxyResInfo.reserve (invalid_UID, &out_handle->index);
+
+	res::VtxBuffer *res = (res::VtxBuffer*)res__createHandle(res::eType::vtx_buffer, res::eStatus::ready, invalid_UID, &proxyRes->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::vtxBuffer_create() => can't create handle\n");
@@ -549,11 +580,14 @@ void Engine::internal__vtxBuffer_on_destroy (void *resIN)
 /**************************************************************** 
  * IDX BUFFER
  *****************************************************************/
-bool Engine::idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGIdxBuffer *out_handle)
+bool Engine::idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGIdxBuffer2 *out_handle)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::IdxBuffer *res = (res::IdxBuffer*)res__createHandle(res::eType::idx_buffer, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID invalid_UID;
+	invalid_UID.setInvalid();
+
+	ProxyRes *proxyRes = proxyResInfo.reserve (invalid_UID, &out_handle->index);
+
+	res::IdxBuffer *res = (res::IdxBuffer*)res__createHandle(res::eType::idx_buffer, res::eStatus::ready, invalid_UID, &proxyRes->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::idxBuffer_create() => can't create handle\n");
@@ -581,11 +615,14 @@ void Engine::internal__idxBuffer_on_destroy (void *resIN)
 /**************************************************************** 
  * VTX SHADER
  *****************************************************************/
-bool Engine::vtxshader_createFromFile (const char *filename, const char *mainFnName, ENGVtxShader *out_handle)
+bool Engine::vtxshader_createFromFile (const char *filename, const char *mainFnName, ENGVtxShader2 *out_handle)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::Shader *res = (res::Shader*)res__createHandle(res::eType::vtx_shader, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID invalid_UID;
+	invalid_UID.setInvalid();
+
+	ProxyRes *proxyRes = proxyResInfo.reserve (invalid_UID, &out_handle->index);
+
+	res::Shader *res = (res::Shader*)res__createHandle(res::eType::vtx_shader, res::eStatus::ready, invalid_UID, &proxyRes->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::vtxshader_createFromFile() => can't create handle\n");
@@ -595,11 +632,14 @@ bool Engine::vtxshader_createFromFile (const char *filename, const char *mainFnN
 	return gpu->vtxshader_createFromFile (filename, mainFnName, &res->shaderHandle);
 }
 
-bool Engine::vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGVtxShader *out_handle)
+bool Engine::vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGVtxShader2 *out_handle)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::Shader *res = (res::Shader*)res__createHandle(res::eType::vtx_shader, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID invalid_UID;
+	invalid_UID.setInvalid();
+
+	ProxyRes *proxyRes = proxyResInfo.reserve (invalid_UID, &out_handle->index);
+
+	res::Shader *res = (res::Shader*)res__createHandle(res::eType::vtx_shader, res::eStatus::ready, invalid_UID, &proxyRes->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::vtxshader_createFromMemory() => can't create handle\n");
@@ -634,11 +674,14 @@ void Engine::internal__vtxshader_on_unload (void *resIN)
 /**************************************************************** 
  * PXL SHADER
  *****************************************************************/
-bool Engine::pxlshader_createFromFile (const char *filename, const char *mainFnName, ENGPxlShader *out_handle)
+bool Engine::pxlshader_createFromFile (const char *filename, const char *mainFnName, ENGPxlShader2 *out_handle)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::Shader *res = (res::Shader*)res__createHandle(res::eType::pxl_shader, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID invalid_UID;
+	invalid_UID.setInvalid();
+
+	ProxyRes *proxyRes = proxyResInfo.reserve (invalid_UID, &out_handle->index);
+
+	res::Shader *res = (res::Shader*)res__createHandle(res::eType::pxl_shader, res::eStatus::ready, invalid_UID, &proxyRes->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::pxlshader_createFromFile() => can't create handle\n");
@@ -648,11 +691,14 @@ bool Engine::pxlshader_createFromFile (const char *filename, const char *mainFnN
 	return gpu->pxlshader_createFromFile (filename, mainFnName, &res->shaderHandle);
 }
 
-bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGPxlShader *out_handle)
+bool Engine::pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGPxlShader2 *out_handle)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::Shader *res = (res::Shader*)res__createHandle(res::eType::pxl_shader, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID invalid_UID;
+	invalid_UID.setInvalid();
+
+	ProxyRes *proxyRes = proxyResInfo.reserve (invalid_UID, &out_handle->index);
+
+	res::Shader *res = (res::Shader*)res__createHandle(res::eType::pxl_shader, res::eStatus::ready, invalid_UID, &proxyRes->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::pxlshader_createFromMemory() => can't create handle\n");
@@ -690,9 +736,12 @@ void Engine::internal__pxlshader_on_unload (void *resIN)
  *****************************************************************/
 bool Engine::pipeline_create (const gpu::Pipeline_def &def, ENGPipeline *out_handle)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::Pipeline *res = (res::Pipeline*)res__createHandle(res::eType::pipeline, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID invalid_UID;
+	invalid_UID.setInvalid();
+
+	ProxyRes *proxyRes = proxyResInfo.reserve (invalid_UID, &out_handle->index);
+
+	res::Pipeline *res = (res::Pipeline*)res__createHandle(res::eType::pipeline, res::eStatus::ready, invalid_UID, &proxyRes->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::pipeline_create() => can't create handle\n");
@@ -724,11 +773,10 @@ void Engine::internal__pipeline_on_unload (void *resIN)
 	res->pipeHandle.setInvalid();
 }
 
-
 /**************************************************************** 
  * TEXTURE 2D
  *****************************************************************/
-bool Engine::texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle, gpu::StageHelper &stageHelper)
+bool Engine::texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture2 *out_handle, gpu::StageHelper &stageHelper)
 {
 	if (priv_texture2D_create_ex (dimx, dimy, nMipMap, fmt, memAccessMode, srcDATA, out_handle, stageHelper, u32MAX))
 		return true;
@@ -736,11 +784,14 @@ bool Engine::texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt,
 	return false;
 }
 
-bool Engine::priv_texture2D_create_ex (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture *out_handle, gpu::StageHelper &stageHelper, u32 desired_texture_index)
+bool Engine::priv_texture2D_create_ex (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture2 *out_handle, gpu::StageHelper &stageHelper, u32 desired_texture_index)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::Texture2d *res = (res::Texture2d*)res__createHandle(res::eType::texture_2d, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID invalid_UID;
+	invalid_UID.setInvalid();
+
+	ProxyRes *proxyRes = proxyResInfo.reserve (invalid_UID, &out_handle->index);
+
+	res::Texture2d *res = (res::Texture2d*)res__createHandle(res::eType::texture_2d, res::eStatus::ready, invalid_UID, &proxyRes->res_handle);
 	if (NULL == res)
 		return false;
 
@@ -752,11 +803,14 @@ bool Engine::priv_texture2D_create_ex (u16 dimx, u16 dimy, u8 nMipMap, eImageFor
 	return false;
 }
 
-bool Engine::texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture *out_handle, gpu::StageHelper &stageHelper)
+bool Engine::texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture2 *out_handle, gpu::StageHelper &stageHelper)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::Texture2d *res = (res::Texture2d*)res__createHandle(res::eType::texture_2d, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID invalid_UID;
+	invalid_UID.setInvalid();
+
+	ProxyRes *proxyRes = proxyResInfo.reserve (invalid_UID, &out_handle->index);
+
+	res::Texture2d *res = (res::Texture2d*)res__createHandle(res::eType::texture_2d, res::eStatus::ready, invalid_UID, &proxyRes->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::texture2D_create() => can't create handle\n");
@@ -857,9 +911,9 @@ void Engine::priv_texture2D__remove_from_mega_array (res::Texture2d *res)
  *****************************************************************/
 bool Engine::shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, ENGShape *out_handle)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::Shape *res = (res::Shape*)res__createHandle(res::eType::shape, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID signatureUID;
+	signatureUID.setInvalid();
+	res::Shape *res = (res::Shape*)res__createHandle(res::eType::shape, res::eStatus::ready, signatureUID, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::shape_create() => can't create handle\n");
@@ -932,9 +986,9 @@ bool Engine::GPUShape_create (ENGShape handle_shapeSRC, ENGGPUShape *out_handle)
 	//devo creare una nuova GPUShape che diventa padre di handle_shapeSRC
 	//Se handle_shapeSRC e' ready o loaded, allora gpu_shape e' a sua volta ready, altrimenti vuol
 	//dire che handle_shapeSRC non e' stata ancora caricata e quindi devo posticipare la creazione della gpu_shape
-	asset2::UID uid;
-	uid.setInvalid();
-	res::GPUShape *res = (res::GPUShape*)res__createHandle(res::eType::gpu_shape, res::eStatus::notLoaded, uid, &out_handle->res_handle);
+	asset2::UID signatureUID;
+	signatureUID.setInvalid();
+	res::GPUShape *res = (res::GPUShape*)res__createHandle(res::eType::gpu_shape, res::eStatus::notLoaded, signatureUID, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::GPUShape_create() => can't create handle\n");
@@ -952,9 +1006,9 @@ bool Engine::GPUShape_create (ENGShape handle_shapeSRC, ENGGPUShape *out_handle)
 
 bool Engine::GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::GPUShape *res = (res::GPUShape*)res__createHandle(res::eType::gpu_shape, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID signatureUID;
+	signatureUID.setInvalid();
+	res::GPUShape *res = (res::GPUShape*)res__createHandle(res::eType::gpu_shape, res::eStatus::ready, signatureUID, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::GPUShape_create() => can't create handle\n");
@@ -1094,9 +1148,9 @@ bool Engine::skeleton_create (const Skeleton &sk, ENGSkeleton *out_handle)
 
 bool Engine::skeleton_createFromMemory (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *out_handle)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::Skeleton *res = (res::Skeleton*)res__createHandle(res::eType::skeleton, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID signatureUID;
+	signatureUID.setInvalid();
+	res::Skeleton *res = (res::Skeleton*)res__createHandle(res::eType::skeleton, res::eStatus::ready, signatureUID, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::skeleton_createFromMemory() => can't create handle\n");
@@ -1141,9 +1195,9 @@ void Engine::internal__skeleton_on_unload (void *resIN)
  *****************************************************************/
 gos::Model*	Engine::model_create (ENGSkeleton handle_skeleton, u16 num_shape, u16 num_material, u16 num_meshes, ENGModel3d *out_handle)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::Model3d *res = (res::Model3d*)res__createHandle(res::eType::model_3d, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID signatureUID;
+	signatureUID.setInvalid();
+	res::Model3d *res = (res::Model3d*)res__createHandle(res::eType::model_3d, res::eStatus::ready, signatureUID, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::model_create() => can't create handle\n");
@@ -1208,7 +1262,7 @@ bool Engine::internal__model_on_loadCallback (void *callback_dataIN)
 
 		ENGShape handle_shape;
 		res::Shape *res_shape;
-		if (!internal__getResFromUID(uid_shape, &res_shape, &handle_shape))
+		if (!internal__getResFromSignatureUID(uid_shape, &res_shape, &handle_shape))
 		{
 			logger::err ("engine::internal__model_on_loadCallback() => can't find shape for UID %016" PRIX64 "\n", uid_shape._uid);
 			ret = false;
@@ -1256,9 +1310,9 @@ bool Engine::modelinst_create (ENGModel3d handle_modelSRC, ENGModel3dInst *out_h
 	}
 
 	//creo istanza
-	asset2::UID uid;
-	uid.setInvalid();
-	res::Model3dInst *res = (res::Model3dInst*)res__createHandle (res::eType::model_instance, res::eStatus::notLoaded, uid, &out_handle->res_handle);
+	asset2::UID signatureUID;
+	signatureUID.setInvalid();
+	res::Model3dInst *res = (res::Model3dInst*)res__createHandle (res::eType::model_instance, res::eStatus::notLoaded, signatureUID, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::modelinst_create() => can't create handle\n");
@@ -1420,9 +1474,9 @@ void Engine::priv_modelinst_applyTransform_ric (const gos::Bone *model__listof_b
  *****************************************************************/
 bool Engine::materialPBR_create (ENGMaterialPBR *out_handle)
 {
-	asset2::UID uid;
-	uid.setInvalid();
-	res::MaterialPBR *res = (res::MaterialPBR*)res__createHandle(res::eType::materialPBR, res::eStatus::ready, uid, &out_handle->res_handle);
+	asset2::UID signatureUID;
+	signatureUID.setInvalid();
+	res::MaterialPBR *res = (res::MaterialPBR*)res__createHandle(res::eType::materialPBR, res::eStatus::ready, signatureUID, &out_handle->res_handle);
 	if (NULL == res)
 	{
 		logger::err ("Engine::materialPBR_create() => can't create handle\n");

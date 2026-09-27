@@ -25,3 +25,11 @@ layout(std430, set = 2, binding = 1) readonly buffer SBO_2_1
 {
     sChunkData   data[];
 } chunk_data;
+
+
+
+//////////////////// push constant
+layout(push_constant) uniform PushConstantData
+{
+    uint    lod_texture_index;
+} pc;

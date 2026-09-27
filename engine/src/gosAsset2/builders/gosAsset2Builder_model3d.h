@@ -114,7 +114,7 @@ namespace gos
 				struct Params
 				{
 					char            import_name[512];
-					UID             uid__resource_file_glb;
+					ResourceDep		resource_file_glb;
 					eAssetType		subresource_type;
 					u32 			subresource_index;
 				};

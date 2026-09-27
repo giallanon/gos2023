@@ -44,34 +44,7 @@ layout(set = 1, binding = 4) uniform UBO_4
 } dyn_ubo4_simple_type;
 
 
-layout(set = 2, binding = 0) readonly buffer SBO_0
-{
-    uint    pippo;
-    vec2    screenWH;
-
-} sbo0_complex_type_bindless[];
-
-
-/*
-struct sElem1
-{
-    uint    pippo;
-    vec2    screenWH;
-};
-layout(set = 2, binding = 1) readonly buffer SBO_1
-{
-    sElem1 elem1;
-} sbo1_external_struct_type;
-*/
-
-/*
-layout(set = 2, binding = 2) readonly buffer SBO_2
-{
-    uint    pippo;
-    vec2    screenWH;
-} sbo0_complex_type_bindless[];
-*/
-
+#include "descriptor_2.shader"
 
 
 //Input

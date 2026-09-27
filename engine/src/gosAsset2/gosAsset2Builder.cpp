@@ -582,7 +582,7 @@ bool Builder::priv_build (DBContext &ctx, DBContext *ctx_backup, bool bDoCreateA
 					while (rst.fetchRow())
 					{
 						UID uid; uid._uid = rst.getValAsU64(0);
-						logger->log ("asset uid:%016" PRIX64 ", rtname=%s\n", uid._uid, rst.getVal(1));
+						logger->log ("asset [%-12s] uid:%016" PRIX64 ", rtname=%s\n", asset2::enumToString (uid.getAssetType()), uid._uid, rst.getVal(1));
 						listof_really_updated_asset.insertIfNotExists (uid);
 					}
 					logger->dec_indent();	
@@ -610,7 +610,7 @@ bool Builder::priv_build (DBContext &ctx, DBContext *ctx_backup, bool bDoCreateA
 				while (rst.fetchRow())
 				{
 					UID uid; uid._uid = rst.getValAsU64(0);
-					logger->log ("asset uid:%016" PRIX64 ", rtname=%s\n", uid._uid, rst.getVal(1));
+					logger->log ("asset [%-12s] uid:%016" PRIX64 ", rtname=%s\n", asset2::enumToString (uid.getAssetType()), uid._uid, rst.getVal(1));
 					listof_really_updated_asset.insertIfNotExists (uid);
 				}
 				logger->dec_indent();	
@@ -622,53 +622,87 @@ bool Builder::priv_build (DBContext &ctx, DBContext *ctx_backup, bool bDoCreateA
 		logger->dec_indent();
 
 
-
-		logger->log(eTextColor::green, "\nlist of updated assets:\n");
-		logger->inc_indent();
+		//produco un elenco di asset che sono stati modificati.
+		//Partendo da <list_of_touched_assets>, verifico se la signature e' cambiata rispetto alla precedente build.
+		//Se e' cambiata, vuol dire che l'asset e' stato modificato.
+		//Se e' cambiata, allora sono cambiate anche tutti gli asset da cui dipende
+		asset2::UniqueUIDList	list_of_updated_asset(gos::getScrapAllocator(), 64);
 		if (list_of_touched_assets.getNElem())
 		{
-			list_of_touched_assets.forEach( [bGenerateListOfUpdatedUID, logger=this->logger, &ctx=ctx, ctx_backup, &build_result_list=this->build_result_list] (const UID assetUID, const UID signatureUID) {
+			list_of_touched_assets.forEach( [&ctx, &ctx_backup, &list_of_updated_asset] (const UID assetUID, const UID signatureUID) {
 
 				//cerco nel DB di backup l'assert UID e verifico se la sua signature e' cambiata
 				char s[128];
 				db::RST rst;
 				bool bWasUpdated = false;
-				char rtname[1024];
+				bool bFoundInBackupDB = false;
 
-				rtname[0] = 0x00;
 				if (NULL != ctx_backup)
 				{
-					sprintf_s (s, sizeof(s), "SELECT Signature,rtname FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", assetUID._uid);
+					sprintf_s (s, sizeof(s), "SELECT Signature FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", assetUID._uid);
 					if (asset2::dbcontext_query (*ctx_backup, s, rst))
 					{
 						if (rst.fetchRow())
 						{
+							bFoundInBackupDB = true;
+
 							UID sigUID;
 							sigUID._uid = rst.getValAsU64(0);
-							sprintf_s (rtname, sizeof(rtname), "%s", rst.getVal(1));
-
 							if (sigUID != signatureUID)
 								bWasUpdated = true;
 						}
 					}
 				}
 
-				if (0 == rtname[0])
+				if (!bFoundInBackupDB)
 				{
 					//Nel backup non esisteva, deve quindi essere un nuovo asset o, per lo meno, un asset che ha subito una modifica
 					bWasUpdated = true;
-					sprintf_s (s, sizeof(s), "SELECT rtname FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", assetUID._uid);
-					asset2::dbcontext_query (ctx, s, rst);
-					rst.fetchRow();
-					sprintf_s (rtname, sizeof(rtname), "%s", rst.getVal(0));
-					
 				}
 
 				if (bWasUpdated)
 				{
-					logger->log ("asset uid:%016" PRIX64 ", rtname=%s\n", assetUID._uid, rtname);
-					if (bGenerateListOfUpdatedUID)
-						build_result_list.insertIfNotExists(assetUID);
+					list_of_updated_asset.insertIfNotExists(assetUID);
+
+					//se <assetUID> e' stato aggiornato, allora anche tutti quelli che dipendono da lui sono da dichiarare aggiornati, visto
+					//che una delle loro dipendenze e' stata modificata
+					asset2::UniqueUIDList list(gos::getScrapAllocator(), 64);
+					if (asset2::dependency_get_requireBy_list (ctx, assetUID, true, &list))
+					{
+						list.forEach( [&list_of_updated_asset](u32 index, const UID uid) {
+							if (uid.isAnAsset())
+								list_of_updated_asset.insertIfNotExists(uid);
+							return true;
+						});
+					}
+				}
+				return true;
+			});
+		}
+
+
+		logger->log(eTextColor::green, "\nlist of updated assets:\n");
+		logger->inc_indent();
+		{
+			list_of_updated_asset.forEach( [bGenerateListOfUpdatedUID, logger=this->logger, &ctx, &build_result_list=this->build_result_list] (u32 index, const UID assetUID) {
+
+				//cerco nel DB di backup l'assert UID e verifico se la sua signature e' cambiata
+				char s[128];
+				db::RST rst;
+
+				sprintf_s (s, sizeof(s), "SELECT rtname,Signature FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE UID=%" PRIu64 "", assetUID._uid);
+				if (asset2::dbcontext_query (ctx, s, rst))
+				{
+					if (rst.fetchRow())
+					{
+						const char *rtname = rst.getVal(0);
+						UID signatureUID;
+						signatureUID._uid = rst.getValAsU64(1);
+						
+						logger->log ("asset [%-12s] uid:%016" PRIX64 ", sig:%016" PRIX64 ",rtname=%s\n", asset2::enumToString (assetUID.getAssetType()), assetUID._uid, signatureUID._uid, rtname);
+						if (bGenerateListOfUpdatedUID)
+							build_result_list.insertIfNotExists(assetUID);
+					}
 				}
 
 				return true;
