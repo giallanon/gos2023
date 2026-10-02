@@ -65,6 +65,14 @@ res/gosEngineResList.h
 res/gosEngineResMan.cpp
 res/gosEngineResMan.h
 
+res2/enumAndDefine.h
+res2/res2.cpp
+res2/res2.h
+res2/res2_asset.h
+res2/res2_res.h
+res2/ResList.cpp
+res2/ResList.h
+
 
 gosEngine_dynTextureArray.cpp
 gosEngine_dynTextureArray.h

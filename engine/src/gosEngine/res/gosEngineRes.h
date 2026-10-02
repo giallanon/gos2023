@@ -1,5 +1,5 @@
-#ifndef _gosEngineRes2_h_
-#define _gosEngineRes2_h_
+#ifndef _gosEngineRes_h_
+#define _gosEngineRes_h_
 #include "../gosEngineEnumAndDefine.h"
 #include "gosEngineResMan.h"
 #include "../model/gosModelInstance.h"
@@ -120,4 +120,4 @@ namespace gos
 	} //namespace res
 } //namespace gos
 
-#endif //_gosEngineRes2_h_
+#endif //_gosEngineRes_h_
