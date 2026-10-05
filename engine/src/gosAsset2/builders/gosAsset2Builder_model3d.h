@@ -146,9 +146,9 @@ namespace gos
 
 				UID 						model3d_signatureUID;
 				UID 						model3d_assetUID;
-				UID							skeleton_signatureUID;
-				FastArray<UID>				listof_shape_signatureUID;
-				FastArray<UID>				listof_material_signatureUID;
+				UID							skeleton_assetUID;
+				FastArray<UID>				listof_shape_assetUID;
+				FastArray<UID>				listof_material_assetUID;
 
 			}; //class Sintax1
 

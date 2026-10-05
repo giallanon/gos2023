@@ -242,11 +242,8 @@ bool Builder_tex2D::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *o
     out_result->reset();
 
 	//questo file gosasset_d dipende dalla risorsa params.uid__resource_image)
-    if (!asset2::dependency_exists(ctx, uid_of_iniFile, params.resource_image.uid))
-    {
-        if (!asset2::dependency_add (ctx, uid_of_iniFile, params.resource_image.uid)) 
-            return false;  
-    }
+    if (!asset2::dependency_add_if_not_exists (ctx, uid_of_iniFile, params.resource_image.resourceUID))
+		return false;  
     
     
     //All'uscita da questa fn:
@@ -258,7 +255,7 @@ bool Builder_tex2D::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *o
 
 
     //aggiungo le dipendenze di assetUID dalla risorsa IMMAGINE
-    if (!dependency_add (ctx, out_result->assetUID, params.resource_image.uid)) return false;
+    if (!dependency_add (ctx, out_result->assetUID, params.resource_image.resourceUID)) return false;
 
 
     

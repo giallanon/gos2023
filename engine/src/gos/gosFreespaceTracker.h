@@ -8,7 +8,7 @@ namespace gos
     /*******************************
      * @brief   FreespaceTracker
      *          Gestisce un ipotetico buffer di dimensioni pari a <totalSizeToHandle> byte e lo suddivide in slota
-     *          da <sizeofABlock> byte ciascuno.
+     *          da <sizeof_block> byte ciascuno.
      *          Tramite alloc() e' possibile riservare un certo numero di byte (internamente riserva un certo numero di slot)
      */
     class FreespaceTracker
@@ -22,12 +22,16 @@ namespace gos
 
     public:
                 FreespaceTracker();
-                ~FreespaceTracker();
+                ~FreespaceTracker()									{ unsetup(); }
 
-        void    setup (u32 totalSizeToHandle, u32 sizeofABlock);
+        void    setup (u32 totalSizeToHandle, u32 sizeof_block, gos::Allocator *allocator = NULL);
+		void	unsetup();
         
         bool    alloc (u32 sizeInByte, AllocInfo *out);
         void    free (AllocInfo &info);
+
+		u32		get_num_free_bytes() const 								{ return (num_max_blocks - num_allocated_block) * sizeof_block; }
+		u32		get_num_allocated_bytes() const 						{ return num_allocated_block * sizeof_block; }
 
     private:
         struct sRange
@@ -39,11 +43,14 @@ namespace gos
     private:
         void    priv_removeEntry (u32 at);
         void    priv_tryMerge (u32 iEntry);
+		u32    	priv__free (AllocInfo &info);
 
     private:
+		gos::Allocator			*localAllocator;
         gos::FastArray<sRange>  freerangeList;
-        u32                     sizeofABlock;
-        u32                     numMaxBlocks;
+        u32                     sizeof_block;
+        u32                     num_max_blocks;
+		u32						num_allocated_block;
 
     }; //FreespaceTracker
 

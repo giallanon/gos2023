@@ -31,7 +31,7 @@ namespace gos
         bool        res_createUID (eResType resType, const char *absFilenameIN, UID *out);
         bool        res_insert (DBContext &ctx, eResType resType, const char *absFilenameIN, u64 lastTimeMod, UID *out_CAN_BE_NULL_uid = NULL);
         bool        res_update (DBContext &ctx, UID uid, u64 lastTimeMod);
-        bool        res_exists (DBContext &ctx, eResType resType, const char *absFilenameIN, UID *out_CAN_BE_NULL_uid = NULL,  u64 *out_CAN_BE_NULL_lastTimeMod = NULL);
+        bool        res_exists (DBContext &ctx, eResType resType, const char *absFilenameIN, UID *out_CAN_BE_NULL_resourceUID = NULL,  u64 *out_CAN_BE_NULL_lastTimeMod = NULL);
         bool        res_get_info (DBContext &ctx, UID uid, char *out_CAN_BE_NULL_abspath, u32 sizeof_outabspath, eResType *out_CAN_BE_NULL_resType, u64 *out_CAN_BE_NULL_lastTimeMod);
 		bool 		res_is_still_in_use(DBContext &ctx, UID uid);
         
@@ -70,6 +70,7 @@ namespace gos
         //================ dependencies
         bool        dependency_exists (DBContext &ctx, UID father, UID child);
         bool        dependency_add (DBContext &ctx, UID father, UID child);
+		bool        dependency_add_if_not_exists (DBContext &ctx, UID father, UID child);
         
                     //ritorna in <out> un elenco di risorse/asset da cui <uid> dipende (ricorsivamente)
                     template<typename LAMBDA>

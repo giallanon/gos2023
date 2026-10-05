@@ -332,7 +332,7 @@ bool asset2::res_update (DBContext &ctx, UID uid, u64 lastTimeMod)
 }
 
 //********************************************************** 
-bool asset2::res_exists (DBContext &ctx, eResType resType, const char *absFilenameIN, UID *out_CAN_BE_NULL_uid, u64 *out_CAN_BE_NULL_lastTimeMod)
+bool asset2::res_exists (DBContext &ctx, eResType resType, const char *absFilenameIN, UID *out_CAN_BE_NULL_resourceUID, u64 *out_CAN_BE_NULL_lastTimeMod)
 {
     if (!ctx.isValid())
     {
@@ -347,7 +347,7 @@ bool asset2::res_exists (DBContext &ctx, eResType resType, const char *absFilena
     if (!db::query (ctx.db, s, &rst)) return false;
     if (rst.fetchRow())
     {
-        if (NULL != out_CAN_BE_NULL_uid)			out_CAN_BE_NULL_uid->_uid = rst.getValAsU64(0);
+        if (NULL != out_CAN_BE_NULL_resourceUID)	out_CAN_BE_NULL_resourceUID->_uid = rst.getValAsU64(0);
 		if (NULL != out_CAN_BE_NULL_lastTimeMod)	*out_CAN_BE_NULL_lastTimeMod = rst.getValAsU64(1);
         return true;
     }
@@ -943,3 +943,11 @@ bool asset2::dependency_add (DBContext &ctx, UID father, UID child)
     return db::exec (ctx.db, s);
 }
 
+//********************************************************** 
+bool asset2::dependency_add_if_not_exists (DBContext &ctx, UID father, UID child)
+{
+    if (dependency_exists(ctx, father, child))
+		return true;
+
+	return dependency_add (ctx, father, child);
+}

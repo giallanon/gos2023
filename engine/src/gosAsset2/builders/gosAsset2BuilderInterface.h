@@ -19,7 +19,7 @@ namespace gos
          */
 		struct ResourceDep
 		{
-			UID	uid;
+			UID	resourceUID;
 			u64	lastTimeMod;
 		};
 

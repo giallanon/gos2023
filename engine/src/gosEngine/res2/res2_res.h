@@ -1,7 +1,9 @@
-#ifndef _gosEngineRes2_res_h_
-#define _gosEngineRes2_res_h_
+#ifndef _gosEngineRes2_res2_res_h_
+#define _gosEngineRes2_res2_res_h_
 #include "enumAndDefine.h"
-#include "../gosEngineEnumAndDefine.h"
+#include "../../gosGPU/gosGPU.h"
+#include "../gosShape/gosShape.h"
+#include "../gosShape/skeleton/gosSkeleton.h"
 
 
 namespace gos
@@ -11,8 +13,11 @@ namespace gos
 		//************************************
 		struct ResVtxBuffer
 		{
+			static constexpr eResType type = eResType::vtx_buffer;
+
 			struct Data
 			{
+				void 	reset()		{ vbHandle.setInvalid(); }
 				GPUVtxBufferHandle	vbHandle;
 			};
 
@@ -23,8 +28,11 @@ namespace gos
 		//************************************
 		struct ResIdxBuffer
 		{
+			static constexpr eResType type = eResType::idx_buffer;
+
 			struct Data
 			{
+				void 	reset()		{ ibHandle.setInvalid(); }
 				GPUIdxBufferHandle	ibHandle;
 			};
 
@@ -33,10 +41,13 @@ namespace gos
 		};
 
 		//************************************
-		struct ResShader
+		struct ResVtxShader
 		{
+			static constexpr eResType type = eResType::vtx_shader;
+
 			struct Data
 			{
+				void 	reset()		{ shaderHandle.setInvalid(); }
 				GPUShaderHandle		shaderHandle;
 			};
 
@@ -45,10 +56,28 @@ namespace gos
 		};
 
 		//************************************
-		struct ResPipeline
+		struct ResPxlShader
 		{
+			static constexpr eResType type = eResType::pxl_shader;
+
 			struct Data
 			{
+				void 	reset()		{ shaderHandle.setInvalid(); }
+				GPUShaderHandle		shaderHandle;
+			};
+
+			ResDescr	base;
+			Data		data;
+		};		
+
+		//************************************
+		struct ResPipeline
+		{
+			static constexpr eResType type = eResType::pipeline;
+
+			struct Data
+			{
+				void 	reset()		{ pipeHandle.setInvalid(); }
 				GPUPipelineHandle	pipeHandle;
 			};
 
@@ -59,8 +88,11 @@ namespace gos
 		//************************************
 		struct ResTexture2d
 		{
+			static constexpr eResType type = eResType::texture_2d;
+
 			struct Data
 			{
+				void 	reset()		{ texHandle.setInvalid(); index=u32MAX; }
 				GPUTextureHandle	texHandle;
 				u32					index;
 			};
@@ -72,8 +104,11 @@ namespace gos
 		//************************************
 		struct ResShape
 		{
+			static constexpr eResType type = eResType::shape;
+
 			struct Data
 			{
+				void 	reset()		{ shape.reset(); }
 				gos::Shape	shape;
 			};
 
@@ -84,8 +119,22 @@ namespace gos
 		//************************************
 		struct ResGPUShape
 		{
+			static constexpr eResType type = eResType::gpu_shape;
+
 			struct Data
 			{
+				void 	reset()
+				{ 
+					vbHandle.setInvalid();
+					ibHandle.setInvalid();
+					numIndices = 0;
+					numVertex=0;
+					alloc_vtxbuf_offset = 0;
+					alloc_vtxbuf_size = 0;
+					alloc_idxbuf_offset = 0;
+					alloc_idxbuf_size = 0;						
+				}
+				
 				GPUVtxBufferHandle	vbHandle;
 				GPUIdxBufferHandle	ibHandle;
 				u32					indexStart;		//posizione del primo idx di questa shape all'interno di vbHandle
@@ -106,8 +155,11 @@ namespace gos
 		//************************************
 		struct ResSkeleton
 		{
+			static constexpr eResType type = eResType::skeleton;
+
 			struct Data
 			{
+				void 	reset()		{ skeleton.reset();; }
 				gos::Skeleton	skeleton;
 			};
 
@@ -122,4 +174,4 @@ namespace gos
 	} //namespace res2
 } //namespace gos
 
-#endif //_gosEngineRes2_res_h_
+#endif //_gosEngineRes2_res2_res_h_

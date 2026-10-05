@@ -1,23 +1,36 @@
 #ifndef _gosEngineRes2_asset_h_
 #define _gosEngineRes2_asset_h_
-#include "res2.h"
-
+#include "../../gosGPU/gosGPU.h"
+#include "../gosShape/gosShape.h"
+#include "../gosShape/skeleton/gosSkeleton.h"
 
 namespace gos
 {
 	namespace res2
 	{
 		//************************************
-		struct AssetShader
+		struct AssetVtxShader
 		{
-			AssetDescr		base;
-			ResShader::Data	data;
+			static constexpr eAssetType type = eAssetType::vtx_shader;
+
+			AssetDescr			base;
+			ResVtxShader::Data	data;
 		};
+
+		//************************************
+		struct AssetPxlShader
+		{
+			static constexpr eAssetType type = eAssetType::pxl_shader;
+
+			AssetDescr			base;
+			ResPxlShader::Data	data;
+		};		
 
 		//************************************
 		struct AssetPipeline
 		{
-		public:
+			static constexpr eAssetType type = eAssetType::pipeline;
+
 			AssetDescr			base;
 			ResPipeline::Data	data;
 		};
@@ -25,7 +38,8 @@ namespace gos
 		//************************************
 		struct AssetTexture2d
 		{
-		public:
+			static constexpr eAssetType type = eAssetType::texture_2d;
+
 			AssetDescr			base;
 			ResTexture2d::Data	data;
 		};
@@ -33,6 +47,8 @@ namespace gos
 		//************************************
 		struct AssetShape
 		{
+			static constexpr eAssetType type = eAssetType::shape;
+
 			AssetDescr		base;
 			ResShape::Data	data;
 		};
@@ -40,7 +56,8 @@ namespace gos
 		//************************************
 		struct AssetSkeleton
 		{
-		public:
+			static constexpr eAssetType type = eAssetType::skeleton;
+
 			AssetDescr			base;
 			ResSkeleton::Data	skeleton;
 		};		
@@ -48,6 +65,8 @@ namespace gos
 		//************************************
 		struct AssetMaterialPBR
 		{
+			static constexpr eAssetType type = eAssetType::materialPBR;
+
 			struct Data
 			{
 				gos::vec4f			diffuse_col_HDR_RGBA;

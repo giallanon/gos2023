@@ -49,13 +49,13 @@ namespace gos
 
                         //uid vtx shader
                         //L'asset dovrebbe gia' essere stato caricato perche' engine ha schedulato i vari load in maniera intelligente.
-                        asset2::UID signatureUID;
-                        signatureUID._uid = reader.readU64 ();
+                        asset2::UID assetUID;
+                        assetUID._uid = reader.readU64 ();
                         {
 							const res::Shader *shader;
-							if (!engine->internal__getResFromSignatureUID(signatureUID, &shader))
+							if (!engine->internal__getProxyResFromAssetUID(assetUID, &shader))
                             {
-                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => unable to match vtx_shader signatureUID %016" PRIX64 " with raw data\n", signatureUID._uid);
+                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => unable to match vtx_shader assetUID %016" PRIX64 " with raw data\n", assetUID._uid);
                                 break;
                             }                            
                             def.shader_add (shader->shaderHandle);
@@ -63,12 +63,12 @@ namespace gos
                         
 
                         //uid pxl shader
-                        signatureUID._uid = reader.readU64 ();
+                        assetUID._uid = reader.readU64 ();
                         {
 							const res::Shader *shader;
-							if (!engine->internal__getResFromSignatureUID(signatureUID, &shader))
+							if (!engine->internal__getProxyResFromAssetUID(assetUID, &shader))
                             {
-                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => unable to match pxl_shader signatureUID %016" PRIX64 " with raw data\n", signatureUID._uid);
+                                logger::log (eTextColor::red, "asset::  Loader_pipeline::load() => unable to match pxl_shader assetUID %016" PRIX64 " with raw data\n", assetUID._uid);
                                 break;
                             }                            
                             def.shader_add (shader->shaderHandle);

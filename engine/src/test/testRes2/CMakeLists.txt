@@ -1,0 +1,89 @@
+#[[====================================================
+#
+#  PROJECT: testRes2
+#
+=====================================================]]
+cmake_minimum_required(VERSION 4.00)
+
+#project name and version
+project(testRes2 VERSION 1.0.0 LANGUAGES C CXX)
+
+#====================================================
+# path di output di questo progetto
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "$<1:${PROJECT_SOURCE_DIR}/../../../bin/${PROJECT_NAME}>")
+
+#====================================================
+# nome del file di output
+composeBINARY_OUTPUT_FILENAME(${PROJECT_NAME} composedBinaryOutputFilename)
+set(BINARY_OUTPUT_FILENAME ${composedBinaryOutputFilename})
+
+
+#====================================================
+#nome del file generato, elenco dei src
+add_executable(${BINARY_OUTPUT_FILENAME}
+App.cpp
+App.h
+main.cpp
+)
+
+
+ #====================================================
+# info a video
+message(" ")
+message(" ")
+message("GIXINFO: prj name = ${PROJECT_NAME} v${PROJECT_VERSION}")
+message("         prj src dir = ${PROJECT_SOURCE_DIR}")
+message("         current config = ${CMAKE_BUILD_TYPE}")
+message("         ouput file = ${BINARY_OUTPUT_FILENAME}")
+get_target_property(MAIN_CFLAGS ${BINARY_OUTPUT_FILENAME} COMPILE_OPTIONS)
+message("         compiler flags: ${MAIN_CFLAGS}")
+
+
+#====================================================
+# additional include path
+include_directories(${PROJECT_SOURCE_DIR}/../../gos)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosMath)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosGeom)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosShape)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosInput)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosImage)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosGPU)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosAsset2)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosDB.h)
+include_directories(${PROJECT_SOURCE_DIR}/../../gosEngine)
+include_directories(${PROJECT_SOURCE_DIR}/../../external/glfw-3.3.8/include)
+
+#====================================================
+# additional library to be linked
+set(LIBRARY_LIST "gosEngine;gosGameUtils;gosAsset2;gosGPU;gosDB;gosImage;gosInput;gosShape;gosGeom;gosMath;gos;glfw3")
+foreach(libName IN LISTS LIBRARY_LIST)
+    makeLibraryName(finalLibNameAndPath ${libName})
+    message("         linking additional libray [${libName}] => ${finalLibNameAndPath}")
+    target_link_libraries(${BINARY_OUTPUT_FILENAME} ${finalLibNameAndPath})
+endforeach()
+
+
+
+#===================================
+# vulkan library
+find_package(Vulkan REQUIRED)
+if (NOT Vulkan_FOUND)
+    message(FATAL_ERROR "Vulkan development package not found")
+endif()
+target_include_directories(${BINARY_OUTPUT_FILENAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
+target_link_libraries(${BINARY_OUTPUT_FILENAME} "${Vulkan_LIBRARIES}")
+include_directories(${Vulkan_INCLUDE_DIRS})
+message("         vulkan version: ${Vulkan_VERSION}")
+message("         vulkan found, path is ${Vulkan_LIBRARIES}")
+message("         vulkan include dirs: ${Vulkan_INCLUDE_DIRS}")
+message("         vulkan SPIRV tools found: ${Vulkan_SPIRV-Tools_FOUND}")
+
+#===================================
+# x11 library
+if(GOS_PLATFORM__NAME STREQUAL "linux")
+    find_package(X11 REQUIRED)
+    if (NOT X11_FOUND)
+        message(FATAL_ERROR "X11 development package not found")
+    endif()
+    target_link_libraries(${BINARY_OUTPUT_FILENAME} "${X11_LIBRARIES}")
+endif()

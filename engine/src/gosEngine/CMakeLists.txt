@@ -65,13 +65,15 @@ res/gosEngineResList.h
 res/gosEngineResMan.cpp
 res/gosEngineResMan.h
 
+res2/loaders/Loader.h
+res2/loaders/Loader_tex2D.h
 res2/enumAndDefine.h
+res2/MemManager.cpp
+res2/MemManager.h
 res2/res2.cpp
 res2/res2.h
 res2/res2_asset.h
 res2/res2_res.h
-res2/ResList.cpp
-res2/ResList.h
 
 
 gosEngine_dynTextureArray.cpp
@@ -80,6 +82,8 @@ gosEngine_idxBufferMan.cpp
 gosEngine_idxBufferMan.h
 gosEngine_loaderThread_mainFN.cpp
 gosEngine_res.cpp
+gosEngine_res2_loaderThread_mainFN.cpp
+gosEngine_res2.cpp
 gosEngine_scene.cpp
 gosEngine_scene.h
 gosEngine_vtxBufferMan.cpp

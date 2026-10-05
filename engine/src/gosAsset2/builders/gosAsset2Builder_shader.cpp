@@ -113,11 +113,8 @@ bool Builder_shader::build_begin (DBContext &ctx, const UniqueUIDList &listof_UI
     }
 
     //questo file gosasset_d dipende dalla risorsa params.resource_shader_txt) che e' il src dello shader
-    if (!asset2::dependency_exists(ctx, uid_of_iniFile, params.resource_shader_txt.uid))
-    {
-        if (!asset2::dependency_add (ctx, uid_of_iniFile, params.resource_shader_txt.uid)) 
-            return false;  
-    }
+	if (!asset2::dependency_add_if_not_exists(ctx, uid_of_iniFile, params.resource_shader_txt.resourceUID))
+		return false;  
 
 
 	//la fn prot_needResource() ha generato un elenco di nested resources, ovvero di shader_txt inclusi da params.resource_shader_txt (ricorsivamente)
@@ -146,7 +143,7 @@ bool Builder_shader::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *
         return false;
 
     //aggiungo le dipendenze di assetUID dalla risorsa shader_txt
-    if (!dependency_add (ctx, out_result->assetUID, params.resource_shader_txt.uid)) return false;
+    if (!dependency_add (ctx, out_result->assetUID, params.resource_shader_txt.resourceUID)) return false;
     
 
 

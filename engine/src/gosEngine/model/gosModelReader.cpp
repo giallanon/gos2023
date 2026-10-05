@@ -18,7 +18,7 @@ ENGSkeleton Reader::skeleton_get_handle() const
 	assert (model::isValid(*m));
 	
 	ENGSkeleton ret;
-	ret.setFromU32 (utils::bufferReadU32 (&m->blob[SKELETON]));
+	ret.index = utils::bufferReadU32 (&m->blob[SKELETON]);
 	return ret;
 }
 

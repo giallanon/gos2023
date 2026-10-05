@@ -233,14 +233,13 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID signatureUID, c
     //il vtx/pxl shader esistono gia' e sono gia' stati compilati.
     //A me pero' serve la versione con le debug info
     char s[1024];
-    UID vtxShader_signatureUID;
-    vtxShader_signatureUID.setInvalid();
     if (params.vtxshader_assetUID.isValid())
     {
-        if (!asset_get_info (ctx, params.vtxshader_assetUID, NULL, &vtxShader_signatureUID))
+		UID signatureUID;
+        if (!asset_get_info (ctx, params.vtxshader_assetUID, NULL, &signatureUID))
             return false;
 
-        signature_manufacture_fullFilename (ctx, vtxShader_signatureUID, s, sizeof(s));
+        signature_manufacture_fullFilename (ctx, signatureUID, s, sizeof(s));
         strcat_s (s, sizeof(s), "d");
 
         u32 fsize = 0;
@@ -258,14 +257,13 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID signatureUID, c
         GOSFREE_SCRAP(buffer);
     }
 
-    UID pxlShader_signatureUID;
-    pxlShader_signatureUID.setInvalid();
     if (params.pxlshader_assetUID.isValid())
     {
-        if (!asset_get_info (ctx, params.pxlshader_assetUID, NULL, &pxlShader_signatureUID))
+		UID signatureUID;
+        if (!asset_get_info (ctx, params.pxlshader_assetUID, NULL, &signatureUID))
             return false;
 
-        signature_manufacture_fullFilename (ctx, pxlShader_signatureUID, s, sizeof(s));
+        signature_manufacture_fullFilename (ctx, signatureUID, s, sizeof(s));
         strcat_s (s, sizeof(s), "d");
 
         u32 fsize = 0;
@@ -299,10 +297,10 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID signatureUID, c
         buffer.writeU32 (GOS_MAGIC__ASSET_PIPELINE_DEF);
 
         //uid vtx shader
-        buffer.writeU64 (vtxShader_signatureUID._uid);
+        buffer.writeU64 (params.vtxshader_assetUID._uid);
 
         //uid pxl shader
-        buffer.writeU64 (pxlShader_signatureUID._uid);
+        buffer.writeU64 (params.pxlshader_assetUID._uid);
 
         //cull/draw
         buffer.writeU8 (static_cast<u8>(params.cullMode));

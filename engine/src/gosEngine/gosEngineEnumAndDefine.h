@@ -9,6 +9,7 @@
 #include "../gosShape/gosShape.h"
 #include "../gosShape/skeleton/gosSkeleton.h"
 #include "res/gosEngineResEnumAndDefine.h"
+#include "res2/res2.h"
 
 
 #define GOS_DECL_RES_HANDLE(HANDLE_TYPE)\
@@ -37,8 +38,9 @@ struct HANDLE_TYPE\
 	void	setInvalid()							{ index = u32MAX; }\
 	bool	isInvalid() const						{ return index == u32MAX; }\
 	bool	isValid() const							{ return index != u32MAX; }\
+\
+	int		compare (const HANDLE_TYPE b) const		{ if (index == b.index) return 0; if (index > b.index) return 1; return -1; }\
 };\
-
 
 namespace gos
 {
@@ -48,13 +50,18 @@ namespace gos
 		gos::asset2::UID	assetUID;
 	};
 
-	GOS_DECL_PROXYRES_HANDLE(ENGVtxBuffer2);
-	GOS_DECL_PROXYRES_HANDLE(ENGIdxBuffer2);
+	//GOS_DECL_PROXYRES_HANDLE(ENGVtxBuffer2);
+	//GOS_DECL_PROXYRES_HANDLE(ENGIdxBuffer2);
 	GOS_DECL_PROXYRES_HANDLE(ENGVtxShader2);
 	GOS_DECL_PROXYRES_HANDLE(ENGPxlShader2);
 	GOS_DECL_PROXYRES_HANDLE(ENGPipeline);
-	GOS_DECL_PROXYRES_HANDLE(ENGTexture2);
-	
+	//GOS_DECL_PROXYRES_HANDLE(ENGTexture2);
+	GOS_DECL_PROXYRES_HANDLE(ENGShape);
+	//GOS_DECL_PROXYRES_HANDLE(ENGGPUShape);
+	GOS_DECL_PROXYRES_HANDLE(ENGSkeleton);
+	GOS_DECL_PROXYRES_HANDLE(ENGModel3d);
+	//GOS_DECL_PROXYRES_HANDLE(ENGModel3dInst);
+	GOS_DECL_PROXYRES_HANDLE(ENGMaterialPBR);	
 
 	//GOS_DECL_RES_HANDLE(ENGVtxBuffer2);
 	//GOS_DECL_RES_HANDLE(ENGIdxBuffer2);
@@ -62,16 +69,33 @@ namespace gos
 	//GOS_DECL_RES_HANDLE(ENGPxlShader2);
 	//GOS_DECL_RES_HANDLE(ENGPipeline);
 	//GOS_DECL_RES_HANDLE(ENGTexture);
-	GOS_DECL_RES_HANDLE(ENGShape);
+	//GOS_DECL_RES_HANDLE(ENGShape);
 	GOS_DECL_RES_HANDLE(ENGGPUShape);
-	GOS_DECL_RES_HANDLE(ENGSkeleton);
-	GOS_DECL_RES_HANDLE(ENGModel3d);
+	//GOS_DECL_RES_HANDLE(ENGSkeleton);
+	//GOS_DECL_RES_HANDLE(ENGModel3d);
 	GOS_DECL_RES_HANDLE(ENGModel3dInst);
-	GOS_DECL_RES_HANDLE(ENGMaterialPBR);
-	
-
-
+	//GOS_DECL_RES_HANDLE(ENGMaterialPBR);
 } //namespace gos
+
+
+
+#define GOS_DECL_RES2_HANDLE(HANDLE_TYPE)\
+struct HANDLE_TYPE: public res2::ResHandle\
+{\
+};\
+
+
+namespace gos
+{
+	GOS_DECL_RES2_HANDLE(VtxBufferH);
+	typedef res2::ResVtxBuffer::Data	VtxBufferData;
+
+	GOS_DECL_RES2_HANDLE(IdxBufferH);
+	typedef res2::ResIdxBuffer::Data	IdxBufferData;
+
+	GOS_DECL_RES2_HANDLE(TextureH);
+	typedef res2::ResTexture2d::Data	TextureData;
+}
 
 
 #endif //_gosEngineEnumAndDefine_h_

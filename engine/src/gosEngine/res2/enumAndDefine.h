@@ -1,5 +1,5 @@
-#ifndef _gosEngineRes2EnumAndDefine_h_
-#define _gosEngineRes2EnumAndDefine_h_
+#ifndef _gosEngineRes2_enumAndDefine_h_
+#define _gosEngineRes2_enumAndDefine_h_
 #include "../../gos/gos.h"
 #include "../../gosAsset2/gosAsset2EnumAndDefine.h"
 #include "../../gos/gosBit.h"
@@ -59,79 +59,62 @@ namespace gos
 			NUM_MAX 		= 10	//questo deve essre uguale all'ultimo valore +1
 		};
 
-		/******************************
-		 * @brief	Handle
-		 * 			 A bit per "tipo di risorsa"
-		 *			 B bit per "counter"
-		 *			 C bit per "page"	(32)
-		 *			 D bit per "index"	(8192)
+
+		class MemManager; //fwd
+		struct ResDescr; //fwd
+		struct AssetDescr; //fwd
+
+		/*********************************
+		 * @brief	BaseHandle
 		 */
-		template<int A, int B, int C, int D>
-		struct HandleT
+		struct BaseHandle
 		{
-		private:
-			static const constexpr u32	MASKSHIFT_0 = D + C + B;
-			static const constexpr u32	MASKSHIFT_1 = D + C;
-			static const constexpr u32	MASKSHIFT_2 = D;
-			static const constexpr u32	MASKSHIFT_3 = 0;
+			void		set_invalid()									{ _handle = u64MAX; }
+			bool		is_valid() const								{ return _handle != u64MAX; }
+			bool		is_invalid() const								{ return _handle == u64MAX; }
 
-			static_assert (A + B + C + D == 32);
-			static_assert (A>0);
-			static_assert (B>0);
-			static_assert (C>0);
-			static_assert (D>0);
-			
-			static const constexpr u32	MASK_0 = static_cast<u32> (((u64)((0x0000000000000001 << A) - 1) << (u64)MASKSHIFT_0) & 0x00000000FFFFFFFF);
-			static const constexpr u32	MASK_1 = static_cast<u32> (((u64)((0x0000000000000001 << B) - 1) << (u64)MASKSHIFT_1) & 0x00000000FFFFFFFF);
-			static const constexpr u32	MASK_2 = static_cast<u32> (((u64)((0x0000000000000001 << C) - 1) << (u64)MASKSHIFT_2) & 0x00000000FFFFFFFF);
-			static const constexpr u32	MASK_3 = static_cast<u32> (((u64)((0x0000000000000001 << D) - 1) << (u64)MASKSHIFT_3) & 0x00000000FFFFFFFF);
+			u64 		viewAsU64() const 								{ return _handle; }
+			void 		setFromU64(u64 h)								{ _handle = h; }
 
-		public:
-			static constexpr u32 MAX_NUM_TYPE 		= (u32)(0x0001 << A);
-			static constexpr u32 MAX_NUM_COUNTER 	= (u32)(0x0001 << B);
-			static constexpr u32 MAX_NUM_PAGE		= (u32)(0x0001 << C);
-			static constexpr u32 MAX_NUM_INDEX		= (u32)(0x0001 << D);
+		protected:
+			void 		make_handle (u8 guard, u32 page_index, u32 offset, u32 num_slot, u8 type, bool is_a_resource);
+			u32			get_offset() const								{ return (u32)( _handle & 0x00000000FFFFFFFF ); }
+			u8			get_page_index() const							{ return (u8)( (_handle >> 32) & 0x00000000000000FF ); }
+			u16			get_num_slot() const							{ return (u16)( (_handle >> 40) & 0x00000000000007FF ); }
+			u8			get_type() const								{ return (u8)( (_handle >> 51) & 0x00000000000000FF ); }
 
-			typedef HandleT<A, B, C, D> ThisHandle;
+			bool		is_a_resource() const							{ return (_handle & 0x8000000000000000) != 0; }
+			eResType	get_res_type() const							{ assert(is_a_resource()); return static_cast<eResType>( get_type() ); }
+			bool		is_a_resource_of_type(eResType t) const			{ return get_res_type() == t; }
 
-		public:
-			static ThisHandle			INVALID()				{ static ThisHandle hINVALID; hINVALID.setInvalid(); return hINVALID; }
-
-		public:
-						HandleT()								{ setInvalid(); }
-
-			bool		operator== (const ThisHandle b) const  	{ return (id == b.id); }
-			bool		operator!= (const ThisHandle b) const  	{ return (id != b.id); }
-			int			compare (const ThisHandle b) const 		{ if (id==b.id) return 0; if (id>b.id) return 1; return -1; }
-						
-			void		setInvalid()							{ id = u32MAX; }
-			bool		isInvalid() const						{ return (id == u32MAX); }
-			bool		isValid() const							{ return (id != u32MAX); }
-
-			void		setFromU32 (u32 u)						{ id = u; }
-			u32			viewAsU32() const						{ return id; }
-
-			u32			get_value_TYPE() const					{ return ((id & MASK_0) >> MASKSHIFT_0); }
-			u32			get_value_COUNTER() const				{ return ((id & MASK_1) >> MASKSHIFT_1); }
-			u32			get_value_PAGE() const					{ return ((id & MASK_2) >> MASKSHIFT_2); }
-			u32			get_value_INDEX() const					{ return ((id & MASK_3) >> MASKSHIFT_3); }
-
-			void		set_value_TYPE (u32 value)				{ assert(value<MAX_NUM_TYPE); 	id &= ~(MASK_0);  id |= ((value << MASKSHIFT_0) & MASK_0); }
-			void		set_value_COUNTER(u32 value)			{ assert(value<MAX_NUM_COUNTER);id &= ~(MASK_1);  id |= ((value << MASKSHIFT_1) & MASK_1); }
-			void		set_value_PAGE(u32 value)				{ assert(value<MAX_NUM_PAGE); 	id &= ~(MASK_2);  id |= ((value << MASKSHIFT_2) & MASK_2); }
-			void		set_value_INDEX(u32 value)				{ assert(value<MAX_NUM_INDEX); 	id &= ~(MASK_3);  id |= ((value << MASKSHIFT_3) & MASK_3); }
+			bool		is_an_asset() const								{ return !is_a_resource(); }
+			eAssetType	get_asset_type() const							{ assert(is_an_asset()); return static_cast<eAssetType>( get_type() ); }
+			bool		is_an_asset_of_type(eAssetType t) const			{ return get_asset_type() == t; }
 
 		private:
-			u32	id;
+			u64		_handle;
+
+			friend 	MemManager;
 		};
 
 
-		typedef struct HandleT<7,4,9,12> ResHandle;		//2^12=4096 risorse per pagina, 2^9=512 pagine, counter=2^4  => max 2.097.152 handler
-		typedef struct HandleT<7,4,8,13> AssetHandle;	//2^13=8192 risorse per pagina, 2^8=256 pagine, counter=2^4  => max 2.097.152 handler
+		//************************************************
+		struct	ResHandle: public BaseHandle
+		{
+			eResType	get_type() const							{ return get_res_type(); }
+			bool		is_a_resource_of_type(eResType t) const		{ return get_type() == t; }
+		};
 
-		struct ResDescr; //fwd
-		struct AssetDescr; //fwd
 		
+		//************************************************
+		struct	AssetHandle : public BaseHandle
+		{
+			eAssetType	get_type() const							{ return get_asset_type(); }
+			bool		is_an_asset_of_type(eAssetType t) const		{ return get_type() == t; }
+		};
+
+
+		//*********************************
 		struct AssetHandleChain
 		{
 			AssetDescr			*asset;
@@ -146,14 +129,14 @@ namespace gos
 		struct ResDescr
 		{
 		public:
-			void 		reset()					{ signatureUID.setInvalid(); res_handle.setInvalid(); refCount = 0; status = eStatus::error; asset_owner_list = NULL; on_destroy=NULL; }
-			eResType	get_type() const		{ return static_cast<eResType>(res_handle.get_value_TYPE()); }
+			void 		reset()					{ signatureUID.setInvalid(); res_handle.set_invalid(); refCount = 0; status = eStatus::error; asset_owner_list = NULL; }
+			eResType	get_type() const		{ return res_handle.get_type(); }
 
 		public:
+			ResHandle			res_handle;			//IMPORTANTE: deve essere il primo elemento della struct
 			eStatus				status;				//stato della risorsa dal punto di vista dell'engine  (non cambiare direttamente il valore, usa res__set_status()
 			u8					pad0;
-			i16					refCount;
-			ResHandle			res_handle;
+			u16					refCount;
 			asset2::UID			signatureUID;		//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
 			AssetHandleChain	*asset_owner_list;	//lista di asset di cui io sono figlio (che vengono notificati ogni volta che io cambio di stato)
 		};
@@ -165,25 +148,23 @@ namespace gos
 		struct AssetDescr
 		{
 		public:
-			void 	reset()
-			{
-				assetUID.setInvalid(); asset_handle.setInvalid(); refCount = 0; status=eStatus::error; num_child_not_ready=0; asset_owner_list=NULL; child_list=NULL;
-			}
-
-			eAssetType	get_type() const 			{ return static_cast<eAssetType>(asset_handle.get_value_TYPE()); }
+			void 	reset()					{ assetUID.setInvalid(); asset_handle.set_invalid(); refCount = 0; status=eStatus::error; num_child_not_ready=0; asset_owner_list=NULL; child_list=NULL; }
+			eAssetType	get_type() const 	{ return asset_handle.get_type(); }
 
 		public:
+			AssetHandle			asset_handle;			//IMPORTANTE: deve essere il primo elemento della struct
 			eStatus				status;					
 			u8					num_child_not_ready;	//se ho dei figli, questo mi dice quanti di loro sono in stato != da eReady
-			i16					refCount;
-			AssetHandle			asset_handle;
+			u16					refCount;
 			asset2::UID			assetUID;				//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
 			AssetHandleChain	*asset_owner_list;		//lista di asset di cui io sono figlio (che vengono notificati ogni volta che io cambio di stato)
 			AssetHandleChain	*child_list;			//lista degli asset figli
 		};
 
 
+
+
 	} //namespace res
 } //namespace gos
 
-#endif //_gosEngineRes2EnumAndDefine_h_
+#endif //_gosEngineRes2_enumAndDefine_h_

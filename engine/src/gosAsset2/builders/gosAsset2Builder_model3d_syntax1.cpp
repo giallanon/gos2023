@@ -17,8 +17,8 @@ Builder_model3d::Syntax1::Syntax1 () : BuilderInterface (eAssetType::model3d)
 {
 	localAllocator = gos::getSysHeapAllocator();
 
-	listof_shape_signatureUID.setup (localAllocator, 64);
-	listof_material_signatureUID.setup (localAllocator, 64);
+	listof_shape_assetUID.setup (localAllocator, 64);
+	listof_material_assetUID.setup (localAllocator, 64);
     buildCtx.bAModelWasImported = false;
 }
 
@@ -45,6 +45,10 @@ bool Builder_model3d::Syntax1::priv_extractParams (DBContext &ctx, const UniqueU
     if (!asset2::Builder::makeABSPathFromFilename (ctx, logger, listof_UID_of_known_ini_file, absFilename, s, params.import_name, sizeof(params.import_name)))
         return false;
 
+
+	//TODO: ai params vanno aggiunte le post op altrimenti due import con lo stesso modello ma diverse post op finiscono per avere la stessa signature
+
+
     return true;
 }
 
@@ -60,9 +64,9 @@ bool Builder_model3d::Syntax1::build_begin (DBContext &ctx, const UniqueUIDList 
 
 	model3d_signatureUID.setInvalid();
 	model3d_assetUID.setInvalid();
-	skeleton_signatureUID.setInvalid();
-	listof_shape_signatureUID.reset();
-	listof_material_signatureUID.reset();
+	skeleton_assetUID.setInvalid();
+	listof_shape_assetUID.reset();
+	listof_material_assetUID.reset();
     
     //parse della sezione
     if (!priv_extractParams(ctx, listof_UID_of_known_ini_file, absFilename))
@@ -80,11 +84,8 @@ bool Builder_model3d::Syntax1::build_begin (DBContext &ctx, const UniqueUIDList 
     }     
 
     //questo file gosasset_d dipende dalla risorsa params.uid__resource_file_glb)
-    if (!asset2::dependency_exists(ctx, uid_of_iniFile, params.resource_file_glb.uid))
-    {
-        if (!asset2::dependency_add (ctx, uid_of_iniFile, params.resource_file_glb.uid)) 
-            return false;  
-    }
+    if (!asset2::dependency_add_if_not_exists(ctx, uid_of_iniFile, params.resource_file_glb.resourceUID))
+		return false;  
 
 
 	//recupero il mio rtname
@@ -131,7 +132,7 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 		model3d_assetUID = out_result->assetUID;
 
 		//aggiungo le dipendenze di assetUID dalla risorsa model_glb
-		if (!dependency_add (ctx, out_result->assetUID, params.resource_file_glb.uid)) return false;
+		if (!dependency_add (ctx, out_result->assetUID, params.resource_file_glb.resourceUID)) return false;
 
 
 
@@ -256,19 +257,19 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 					assetFile.begin (localAllocator);
 
 					//skeleton
-					if (skeleton_signatureUID.isValid())
-						assetFile.skeleton_set (skeleton_signatureUID);
+					if (skeleton_assetUID.isValid())
+						assetFile.skeleton_set (skeleton_assetUID);
 
 					//shapes
-					for (u32 i = 0; i < listof_shape_signatureUID.getNElem(); i++)
+					for (u32 i = 0; i < listof_shape_assetUID.getNElem(); i++)
 					{
-						assetFile.shape_add (listof_shape_signatureUID(i), buildCtx.imported.shapeNameList[i]);
+						assetFile.shape_add (listof_shape_assetUID(i), buildCtx.imported.shapeNameList[i]);
 					}
 
 					//material
-					for (u32 i = 0; i < listof_material_signatureUID.getNElem(); i++)
+					for (u32 i = 0; i < listof_material_assetUID.getNElem(); i++)
 					{
-						assetFile.material_add (listof_material_signatureUID(i), buildCtx.imported.materialNameList[i]);
+						assetFile.material_add (listof_material_assetUID(i), buildCtx.imported.materialNameList[i]);
 					}
 
 					//meshes
@@ -297,7 +298,7 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 
 
 //************************************
-bool Builder_model3d::Syntax1::priv_build_shape (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result)
+bool Builder_model3d::Syntax1::priv_build_shape (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out__shape_result)
 {
 	assert (buildCtx.bAModelWasImported);
 	assert (buildCtx.whatToBuild == eWhatToBuild::shapes);
@@ -305,30 +306,30 @@ bool Builder_model3d::Syntax1::priv_build_shape (DBContext &ctx, bool doCreateAn
 
 
     //All'uscita da questa fn:
-    //  out_result->assetUID       			contiene l'assetUID di questo asset, gia' inserito nel DB
-    //  out_result->signatureUID      		contiene la signatureUID a cui questo assetUID punta
-    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
+    //  out__shape_result->assetUID				contiene l'assetUID di questo asset, gia' inserito nel DB
+    //  out__shape_result->signatureUID			contiene la signatureUID a cui questo assetUID punta
+    //  out__shape_result->result				vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
 	params.subresource_type = eAssetType::shape;
 	params.subresource_index = buildCtx.iToBuild;
 
 	char shape_rtName[256];
 	sprintf_s (shape_rtName, sizeof(shape_rtName), "%s.%s", glb_rtname, buildCtx.imported.shapeNameList[buildCtx.iToBuild]);
-	if (!prot_setupAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), shape_rtName, uid_of_iniFile, sec->getLineStarted(), out_result))
+	if (!prot_setupAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), shape_rtName, uid_of_iniFile, sec->getLineStarted(), out__shape_result))
 		return false;
 
-	//aggiungo le dipendenze di assetUID dalla risorsa model_glb
-	if (!dependency_add (ctx, out_result->assetUID, params.resource_file_glb.uid)) return false;
+	//aggiungo le dipendenze dell'asset shape dalla risorsa model_glb
+	if (!dependency_add (ctx, out__shape_result->assetUID, params.resource_file_glb.resourceUID)) return false;
 
-	listof_shape_signatureUID.append (out_result->signatureUID);
+	listof_shape_assetUID.append (out__shape_result->assetUID);
 
 	//il model3d che sto costruendo, dipende da questa shape
-	if (!dependency_add (ctx, model3d_assetUID, out_result->assetUID))		return false;
-	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out_result->signatureUID))	return false;
+	if (!dependency_add (ctx, model3d_assetUID, out__shape_result->assetUID))		return false;
+	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out__shape_result->signatureUID))	return false;
 
-	if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
+	if (doCreateAnAssetFile && eBuildResult::just_built == out__shape_result->result)
 	{
 		char filenameDST[1024];
-		signature_manufacture_fullFilename (ctx, out_result->signatureUID, filenameDST, sizeof(filenameDST));
+		signature_manufacture_fullFilename (ctx, out__shape_result->signatureUID, filenameDST, sizeof(filenameDST));
 		
 		const u32 i = buildCtx.iToBuild;
 		const u32 n = shape::serialize (&buildCtx.imported.shapeList[i], NULL, 0);
@@ -342,7 +343,7 @@ bool Builder_model3d::Syntax1::priv_build_shape (DBContext &ctx, bool doCreateAn
 }
 
 //************************************
-bool Builder_model3d::Syntax1::priv_build_skeleton (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result)
+bool Builder_model3d::Syntax1::priv_build_skeleton (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out__skeleton_result)
 {
 	assert (buildCtx.bAModelWasImported);
 	assert (buildCtx.whatToBuild == eWhatToBuild::skeleton);
@@ -350,32 +351,31 @@ bool Builder_model3d::Syntax1::priv_build_skeleton (DBContext &ctx, bool doCreat
 
 
     //All'uscita da questa fn:
-    //  out_result->assetUID       			contiene l'assetUID di questo asset, gia' inserito nel DB
-    //  out_result->signatureUID      		contiene la signatureUID a cui questo assetUID punta
-    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
+    //  out__skeleton_result->assetUID				contiene l'assetUID di questo asset, gia' inserito nel DB
+    //  out__skeleton_result->signatureUID      	contiene la signatureUID a cui questo assetUID punta
+    //  out__skeleton_result->result				vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
 	params.subresource_type = eAssetType::skeleton;
 	params.subresource_index = buildCtx.iToBuild;
 
 	char skeleton_rtName[256];
 	sprintf_s (skeleton_rtName, sizeof(skeleton_rtName), "%s.skeleton%d", glb_rtname, buildCtx.iToBuild);
-	if (!prot_setupAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), skeleton_rtName, uid_of_iniFile, sec->getLineStarted(), out_result))
+	if (!prot_setupAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), skeleton_rtName, uid_of_iniFile, sec->getLineStarted(), out__skeleton_result))
 		return false;
 
-	//aggiungo le dipendenze di assetUID dalla risorsa model_glb
-	if (!dependency_add (ctx, out_result->assetUID, params.resource_file_glb.uid)) return false;
+	//aggiungo le dipendenze dell'asset skeleton dalla risorsa model_glb
+	if (!dependency_add (ctx, out__skeleton_result->assetUID, params.resource_file_glb.resourceUID)) return false;
 
-
-	skeleton_signatureUID = out_result->signatureUID;
+	skeleton_assetUID = out__skeleton_result->assetUID;
 
 	//il model3d che sto costruendo, dipende da questo skeleton
-	if (!dependency_add (ctx, model3d_assetUID, out_result->assetUID))		return false;
-	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out_result->signatureUID))	return false;
+	if (!dependency_add (ctx, model3d_assetUID, out__skeleton_result->assetUID))		return false;
+	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out__skeleton_result->signatureUID))	return false;
 
 
-	if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
+	if (doCreateAnAssetFile && eBuildResult::just_built == out__skeleton_result->result)
 	{
 		char filenameDST[1024];
-		signature_manufacture_fullFilename (ctx, out_result->signatureUID, filenameDST, sizeof(filenameDST));
+		signature_manufacture_fullFilename (ctx, out__skeleton_result->signatureUID, filenameDST, sizeof(filenameDST));
 		
 		const u32 n = skeleton::serialize (buildCtx.imported.skeleton, NULL, 0);
 		u8 *p = GOSALLOCT(u8*, gos::getScrapAllocator(), n);
@@ -388,7 +388,7 @@ bool Builder_model3d::Syntax1::priv_build_skeleton (DBContext &ctx, bool doCreat
 }
 
 //************************************
-bool Builder_model3d::Syntax1::priv_build_material (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result)
+bool Builder_model3d::Syntax1::priv_build_material (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out__material_result)
 {
 	assert (buildCtx.bAModelWasImported);
 	assert (buildCtx.whatToBuild == eWhatToBuild::materials);
@@ -396,30 +396,30 @@ bool Builder_model3d::Syntax1::priv_build_material (DBContext &ctx, bool doCreat
 
 
     //All'uscita da questa fn:
-    //  out_result->assetUID       			contiene l'assetUID di questo asset, gia' inserito nel DB
-    //  out_result->signatureUID      		contiene la signatureUID a cui questo assetUID punta
-    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
+    //  out__material_result->assetUID				contiene l'assetUID di questo asset, gia' inserito nel DB
+    //  out__material_result->signatureUID			contiene la signatureUID a cui questo assetUID punta
+    //  out__material_result->result				vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
 	params.subresource_type = eAssetType::materialPBR;
 	params.subresource_index = buildCtx.iToBuild;
 
 	char material_rtName[256];
 	sprintf_s (material_rtName, sizeof(material_rtName), "%s.%s", glb_rtname, buildCtx.imported.materialNameList[buildCtx.iToBuild]);
-	if (!prot_setupAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), material_rtName, uid_of_iniFile, sec->getLineStarted(), out_result))
+	if (!prot_setupAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), material_rtName, uid_of_iniFile, sec->getLineStarted(), out__material_result))
 		return false;
 
-	//aggiungo le dipendenze di assetUID dalla risorsa model_glb
-	if (!dependency_add (ctx, out_result->assetUID, params.resource_file_glb.uid)) return false;
+	//aggiungo le dipendenze di questo Material dalla risorsa model_glb
+	if (!dependency_add (ctx, out__material_result->assetUID, params.resource_file_glb.resourceUID)) return false;
 
-	listof_material_signatureUID.append (out_result->signatureUID);
+	listof_material_assetUID.append (out__material_result->assetUID);
 
 	//il model3d che sto costruendo, dipende da questo material
-	if (!dependency_add (ctx, model3d_assetUID, out_result->assetUID))		return false;
-	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out_result->signatureUID))	return false;
+	if (!dependency_add (ctx, model3d_assetUID, out__material_result->assetUID))						return false;
+	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out__material_result->signatureUID))	return false;
 
-	if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
+	if (doCreateAnAssetFile && eBuildResult::just_built == out__material_result->result)
 	{
 		char filenameDST[1024];
-		signature_manufacture_fullFilename (ctx, out_result->signatureUID, filenameDST, sizeof(filenameDST));
+		signature_manufacture_fullFilename (ctx, out__material_result->signatureUID, filenameDST, sizeof(filenameDST));
 		
 		const u32 i = buildCtx.iToBuild;
 

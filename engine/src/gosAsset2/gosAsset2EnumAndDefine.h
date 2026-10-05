@@ -61,6 +61,7 @@ namespace gos
         public:
             void        setInvalid()                                            { _uid=0; }
             bool        isValid() const                                         { return (_uid != 0); }
+			bool 		isInvalid() const 										{ return !isValid(); }
 
             bool        isAResource() const                                     { return ( priv_extractResourceType() != 0); }
             eResType    getResourceType() const                                 { return static_cast<eResType>(priv_extractResourceType()); }

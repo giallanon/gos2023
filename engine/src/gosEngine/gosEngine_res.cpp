@@ -220,16 +220,6 @@ void Engine::res__bindEvents (res::Handle handle, res::Descr *res)
 		DBGBREAK;
 		return;
 
-	case res::eType::vtx_buffer:	
-		res->on_afterCreate = &Engine::internal__vtxBuffer_on_afterCreate;
-		res->on_destroy = &Engine::internal__vtxBuffer_on_destroy;
-		return;
-
-	case res::eType::idx_buffer:
-		res->on_afterCreate = &Engine::internal__idxBuffer_on_afterCreate;
-		res->on_destroy = &Engine::internal__idxBuffer_on_destroy;
-		return;
-
 	case res::eType::vtx_shader:
 		res->on_afterCreate = &Engine::internal__vtxshader_on_afterCreate;
 		res->on_destroy = &Engine::internal__vtxshader_on_destroy;
@@ -246,14 +236,6 @@ void Engine::res__bindEvents (res::Handle handle, res::Descr *res)
 		res->on_afterCreate = &Engine::internal__pipeline_on_afterCreate;
 		res->on_destroy = &Engine::internal__pipeline_on_destroy;
 		res->on_unload = &Engine::internal__pipeline_on_unload;
-		return;
-
-	case res::eType::texture_2d:
-		res->on_afterCreate = &Engine::internal__texture2D_on_afterCreate;
-		res->on_destroy = &Engine::internal__texture2D_on_destroy;
-		res->on_afterLoad = &Engine::internal__texture2D_on_afterLoad;
-		res->on_unload = &Engine::internal__texture2D_on_unload;
-		res->on_loadCallback = &Engine::internal__texture2D_loadCallback;
 		return;
 
 	case res::eType::shape:

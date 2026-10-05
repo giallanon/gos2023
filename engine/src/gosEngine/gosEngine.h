@@ -11,8 +11,7 @@
 #include "../gosAsset2/gosAsset2.h"
 #include "../gos/gosThreadMsgQ.h"
 #include "../gos/memory/gosAllocatorHeap.h"
-
-
+#include "res2/loaders/Loader.h"
 
 namespace gos
 {
@@ -65,26 +64,49 @@ namespace gos
 
 
 		//============================= vtxBuffer
-		bool            vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGVtxBuffer2 *out_handle);
-		void            release (ENGVtxBuffer2 handle)																{ proxyRes__releaseT(handle); }
-		bool            get (ENGVtxBuffer2 handle, const res::VtxBuffer **out)										{ return proxyRes__getT(handle, out, 0); }
-		void            internal__vtxBuffer_on_afterCreate (void *res);
-		void            internal__vtxBuffer_on_destroy (void *res);
+		bool            vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, VtxBufferH *out_handle);
+		void            release (VtxBufferH &handle)															{ res2__release(handle); }
+		bool            get (VtxBufferH handle, const VtxBufferData **out)										{ return res2__get_or_schedule_loadT<res2::ResVtxBuffer>(handle, out, 0); }
+		void            res2__vtxBufferRes_callback_on_destroy (res2::ResDescr *descr);
 
 		//============================= idxBuffer
-		bool            idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, ENGIdxBuffer2 *out_handle);
-		void            release (ENGIdxBuffer2 handle)																{ proxyRes__releaseT(handle); }
-		bool            get (ENGIdxBuffer2 handle, const res::IdxBuffer **out)										{ return proxyRes__getT(handle, out, 0); }
-		void 			internal__idxBuffer_on_afterCreate (void *res);
-		void            internal__idxBuffer_on_destroy (void *res);
+		bool            idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, IdxBufferH *out_handle);
+		void            release (IdxBufferH handle)																{ res2__release(handle); }
+		bool            get (IdxBufferH handle, const IdxBufferData **out)										{ return res2__get_or_schedule_loadT<res2::ResIdxBuffer>(handle, out, 0); }
+		void            res2__idxBufferRes_callback_on_destroy (res2::ResDescr *descr);
 
+		//============================= texture2D
+		bool            texture2D_createFromAsset (const char *runtimeName, TextureH *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand);
+		bool            texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, TextureH *out_handle, gpu::StageHelper &stageHelper);
+		bool            texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, TextureH *out_handle, gpu::StageHelper &stageHelper);
+		void            release (TextureH &handle)																{ res2__release(handle); }
+		bool            get (TextureH handle, const TextureData **out, u64 timeout_msec = 0)					{ return res2__get_or_schedule_loadT<res2::ResTexture2d>(handle, out, timeout_msec); }
+		bool            res2__textureRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
+		void            res2__textureRes_callback_on_unload (res2::ResDescr *descr);
+		void            res2__textureRes_callback_on_destroy (res2::ResDescr *descr);
+
+		bool            get_texture_bianca (const TextureData **out)											{ return get(handle_texture_bianca, out, 0); }
+
+		//============================= GPUShape
+		bool            GPUShape_create (ENGShape handle_shape, ENGGPUShape *out_handle);
+		bool            GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle);
+		void            release (ENGGPUShape &handle);
+		bool            get (ENGGPUShape handle, const res::GPUShape **out)                                  	{ return res__getOrScheduleLoadT(handle, out, 0); }
+		bool            get (ENGShape handle, const res::GPUShape **out);
+		void 			internal__GPUShape_reset (res::GPUShape *res);
+		void 			internal__GPUShape_on_afterCreate (void *res);
+		bool 			internal__GPUShape_on_loadCallback(void *callback_data);
+		void            internal__GPUShape_on_destroy (void *res);
+		void			internal__GPUShape_on_unload (void *resIN);
+
+		
 		//============================= vtxshader
 		bool            vtxshader_createFromAsset (const char *runtimeName, ENGVtxShader2 *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)	{ return proxyRes__createFromRuntimeNameT (runtimeName, out_handle, loadMode); }
 		bool            vtxshader_createFromFile (const char *filename, const char *mainFnName, ENGVtxShader2 *out_handle);
 		bool            vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, ENGVtxShader2 *out_handle);
-		void            release (ENGVtxShader2 handle)                                                            	{ proxyRes__releaseT(handle); }
-		bool            get (ENGVtxShader2 handle, const res::Shader **out, u64 timeout_msec = 0)            		{ return proxyRes__getT(handle, out, timeout_msec); }
-		bool            hotreload (ENGVtxShader2 handle)															{ return proxyRes__hotReloadT(handle); }
+		void            release (ENGVtxShader2 handle)                                                            		{ proxyRes__releaseT(handle); }
+		bool            get (ENGVtxShader2 handle, const res::Shader **out, u64 timeout_msec = 0)            			{ return proxyRes__getT(handle, out, timeout_msec); }
+		bool            hotreload (ENGVtxShader2 handle)																{ return proxyRes__hotReloadT(handle); }
 		void 			internal__vtxshader_on_afterCreate (void *res);
 		void            internal__vtxshader_on_destroy (void *res);
 		void            internal__vtxshader_on_unload (void *resIN);
@@ -110,72 +132,46 @@ namespace gos
 		void            internal__pipeline_on_destroy (void *res);
 		void			internal__pipeline_on_unload (void *resIN);
 
-		//============================= texture2D
-		bool            texture2D_createFromAsset (const char *runtimeName, ENGTexture2 *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)	{ return proxyRes__createFromRuntimeNameT (runtimeName, out_handle, loadMode); }
-		bool            texture2D_create (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture2 *out_handle, gpu::StageHelper &stageHelper);
-		bool            texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, ENGTexture2 *out_handle, gpu::StageHelper &stageHelper);
-		void            release (ENGTexture2 &handle)																{ proxyRes__releaseT(handle); }
-		bool            get (ENGTexture2 handle, const res::Texture2d **out, u64 timeout_msec = 0)					{ return proxyRes__getT (handle, out, timeout_msec); }
-		bool            hotreload (ENGTexture2 handle)																{ return proxyRes__hotReloadT(handle); }
-		void 			internal__texture2D_on_afterCreate (void *res);
-		bool 			internal__texture2D_loadCallback(void *callback_data);
-		void            internal__texture2D_on_destroy (void *res);
-		void            internal__texture2D_on_afterLoad(void *res);
-		void            internal__texture2D_on_unload (void *resIN);
-
-		bool            get_texture_bianca (const res::Texture2d **out)               								{ return get(handle_texture_bianca, out, 0); }
 
 		//============================= shape
-		bool            shape_createFromAsset (const char *runtimeName, ENGShape *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)		{ return res__getOrCreateHandleFromRuntimeName  (runtimeName, loadMode, &out_handle->res_handle); }
+		bool            shape_createFromAsset (const char *runtimeName, ENGShape *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)		{ return proxyRes__createFromRuntimeNameT (runtimeName, out_handle, loadMode); }
 		bool            shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, ENGShape *out_handle);
-		void			release (ENGShape &handle)																	{ res__release(handle.res_handle); handle.res_handle.setInvalid(); }
-		bool            get (ENGShape handle, const res::Shape **out, u64 timeout_msec = 0)							{ return res__getOrScheduleLoadT(handle, out, timeout_msec); }
-		bool            hotreload (ENGShape handle)																	{ return res__hotreload (handle.res_handle); }
+		void			release (ENGShape handle)																	{ proxyRes__releaseT(handle); }
+		bool            get (ENGShape handle, const res::Shape **out, u64 timeout_msec = 0)							{ return proxyRes__getT (handle, out, timeout_msec); }
+		bool            hotreload (ENGShape handle)																	{ return proxyRes__hotReloadT(handle); }
 		void 			internal__shape_on_afterCreate (void *res);
 		void            internal__shape_on_destroy (void *res);
 		void			internal__shape_on_unload (void *resIN);
 
-		//============================= GPUShape
-		bool            GPUShape_create (ENGShape handle_shape, ENGGPUShape *out_handle);
-		bool            GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, ENGGPUShape *out_handle);
-		void            release (ENGGPUShape &handle);
-		bool            get (ENGGPUShape handle, const res::GPUShape **out)                                  		{ return res__getOrScheduleLoadT(handle, out, 0); }
-		bool            get (ENGShape handle, const res::GPUShape **out);
-		void 			internal__GPUShape_reset (res::GPUShape *res);
-		void 			internal__GPUShape_on_afterCreate (void *res);
-		bool 			internal__GPUShape_on_loadCallback(void *callback_data);
-		void            internal__GPUShape_on_destroy (void *res);
-		void			internal__GPUShape_on_unload (void *resIN);
-		
-
 		//============================= skeleton
-		bool            skeleton_createFromAsset (const char *runtimeName, ENGSkeleton *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)	{ return res__getOrCreateHandleFromRuntimeName  (runtimeName, loadMode, &out_handle->res_handle); }
+		bool            skeleton_createFromAsset (const char *runtimeName, ENGSkeleton *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)	{ return proxyRes__createFromRuntimeNameT (runtimeName, out_handle, loadMode); }
 		bool            skeleton_createFromMemory (const u8 *buffer, u32 sizeof_buffer, ENGSkeleton *out_handle);
 		bool            skeleton_create (const Skeleton &sk, ENGSkeleton *out_handle);
-		void            release (ENGSkeleton &handle)																{ res__release(handle.res_handle); handle.res_handle.setInvalid(); }
-		bool            get (ENGSkeleton handle, const res::Skeleton **out, u64 timeout_msec = 0)        			{ return res__getOrScheduleLoadT(handle, out, timeout_msec); }
-		bool            hotreload (ENGSkeleton handle)																{ return res__hotreload (handle.res_handle); }
+		void            release (ENGSkeleton handle)																{ proxyRes__releaseT(handle); }
+		bool            get (ENGSkeleton handle, const res::Skeleton **out, u64 timeout_msec = 0)        			{ return proxyRes__getT (handle, out, timeout_msec); }
+		bool            hotreload (ENGSkeleton handle)																{ return proxyRes__hotReloadT(handle); }
 		void 			internal__skeleton_on_afterCreate (void *res);
 		void            internal__skeleton_on_destroy (void *res);
 		void            internal__skeleton_on_unload (void *resIN);
 
 		//============================= material
-		bool            materialPBR_createFromAsset (const char *runtimeName, ENGMaterialPBR *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)		{ return res__getOrCreateHandleFromRuntimeName  (runtimeName, loadMode, &out_handle->res_handle); }
+		bool            materialPBR_createFromAsset (const char *runtimeName, ENGMaterialPBR *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)		{ return proxyRes__createFromRuntimeNameT (runtimeName, out_handle, loadMode); }
 						//TODO: l'idea e' che dopo "create" devo poter ottenere un pt al materiale per poterlo modificare
 		bool            materialPBR_create (ENGMaterialPBR *out_handle);
-		void			release (ENGMaterialPBR &handle)															{ res__release(handle.res_handle); handle.res_handle.setInvalid(); }
-		bool            get (ENGMaterialPBR handle, const res::MaterialPBR **out, u64 timeout_msec = 0)				{ return res__getOrScheduleLoadT(handle, out, timeout_msec); }
+		void			release (ENGMaterialPBR handle)																{ proxyRes__releaseT(handle); }
+		bool            get (ENGMaterialPBR handle, const res::MaterialPBR **out, u64 timeout_msec = 0)				{ return proxyRes__getT (handle, out, timeout_msec); }
+		bool            hotreload (ENGMaterialPBR handle)															{ return proxyRes__hotReloadT(handle); }
 		void 			internal__materialPBR_on_afterCreate (void *res);
 		void            internal__materialPBR_on_destroy (void *res);
 		bool 			internal__materialPBR_update_renderer_binding (ENGMaterialPBR handle, u8 renderer_uid, u32 data);
 
 
 		//============================= model3d
-		bool            model_createFromAsset (const char *runtimeName, ENGModel3d *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)	{ return res__getOrCreateHandleFromRuntimeName  (runtimeName, loadMode, &out_handle->res_handle); }
+		bool            model_createFromAsset (const char *runtimeName, ENGModel3d *out_handle, res::eLoadMode loadMode = res::eLoadMode::onDemand)	{ return proxyRes__createFromRuntimeNameT (runtimeName, out_handle, loadMode); }
 		gos::Model*		model_create (ENGSkeleton handle_skeleton, u16 num_shape, u16 num_material, u16 num_meshes, ENGModel3d *out_handle);
-		void            release (ENGModel3d &handle)																{ res__release(handle.res_handle); handle.res_handle.setInvalid(); }
-		bool            get (ENGModel3d handle, const res::Model3d **out, u64 timeout_msec = 0)        				{ return res__getOrScheduleLoadT(handle, out, timeout_msec); }
-		bool            hotreload (ENGModel3d handle)                                                               { return res__hotreload (handle.res_handle); }
+		void            release (ENGModel3d handle)																	{ proxyRes__releaseT(handle); }
+		bool            get (ENGModel3d handle, const res::Model3d **out, u64 timeout_msec = 0)        				{ return proxyRes__getT (handle, out, timeout_msec); }
+		bool            hotreload (ENGModel3d handle)                                                               { return proxyRes__hotReloadT(handle); }
 		void 			internal__model_on_afterCreate (void *res);
 		bool 			internal__model_on_loadCallback(void *callback_data);
 		void            internal__model_on_destroy (void *res);
@@ -193,32 +189,6 @@ namespace gos
 		void            internal__modelinst_on_unload (void *resIN);
 
 	public:
-						template<class RESOURCE>
-		bool 			internal__getResFromSignatureUID (asset2::UID signatureUID, RESOURCE **out)
-						{
-							u32 handle_asU32;
-							if (!listof_known_signatureUID.find (signatureUID, &handle_asU32))
-								return false;
-							
-							res::Handle handle;
-							handle.setFromU32(handle_asU32);
-							(*out) = (RESOURCE*)res__getDescriptor (handle);
-							return true;
-						}
-
-						template<class RESOURCE, class HANDLE>
-		bool 			internal__getResFromSignatureUID (asset2::UID signatureUID, RESOURCE **out, HANDLE *out_handle)
-						{
-							assert (NULL != out_handle);
-							u32 handle_asU32;
-							if (!listof_known_signatureUID.find (signatureUID, &handle_asU32))
-								return false;
-							
-							out_handle->res_handle.setFromU32(handle_asU32);
-							(*out) = (RESOURCE*)res__getDescriptor (out_handle->res_handle);
-							return true;
-						}
-						
 						template<class RESOURCE_PADRE, class RESOURCE_FIGLIO>
 		void 			internal__resAddChild (RESOURCE_PADRE *padre, RESOURCE_FIGLIO *figlio)
 						{
@@ -233,7 +203,42 @@ namespace gos
 							res__addChild (&padre->_descr, figlio);
 						}						
 
-	
+						template<class RESOURCE>
+		bool 			internal__getProxyResFromAssetUID (asset2::UID assetUID, RESOURCE **out)
+						{
+							assert (assetUID.isAnAsset());
+
+							//se l'assetUID e' gia' stato mappato, ritorno il suo proxy handle
+							u32 index;
+							if (!proxyResInfo.get_index_from_assetUID (assetUID, &index))
+								return false;
+							
+							const ProxyRes *proxyRes = proxyResInfo.query(index);
+							if (NULL == proxyRes)
+								return false;
+
+							(*out) = (RESOURCE*)res__getDescriptor (proxyRes->res_handle);
+							return true;
+						}	
+
+						template<class RESOURCE, class PROXYRES_HANDLE>
+		bool 			internal__getProxyResFromAssetUID (asset2::UID assetUID, RESOURCE **out, PROXYRES_HANDLE *out_handle)
+						{
+							assert (NULL != out_handle);
+							assert (assetUID.isAnAsset());
+							out_handle->setInvalid();
+
+							//se l'assetUID e' gia' stato mappato, ritorno il suo proxy handle
+							if (!proxyResInfo.get_index_from_assetUID (assetUID, &out_handle->index))
+								return false;
+							
+							const ProxyRes *proxyRes = proxyResInfo.query(out_handle->index);
+							if (NULL == proxyRes)
+								return false;
+
+							(*out) = (RESOURCE*)res__getDescriptor (proxyRes->res_handle);
+							return true;
+						}		
 
 	private:
 		typedef FastHashMap<asset2::UID, u32> HashListOfLoadedUID;
@@ -290,9 +295,9 @@ namespace gos
 		bool 			priv_GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, res::GPUShape *res);
 		void			priv_modelinst_applyTransform_ric (const gos::Bone *model_listof_bones, gos::Bone *listof_bones, u32 boneIndex, const mat4x4f &parent_matW) const;
 
-		void            priv_texture2D__add_to_mega_array (res::Texture2d *res, u32 desired_index=u32MAX);
-		void            priv_texture2D__remove_from_mega_array (res::Texture2d *res);
-		bool            priv_texture2D_create_ex (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, ENGTexture2 *out_handle, gpu::StageHelper &stageHelper, u32 desired_texture_index);
+		void            priv_texture2D__add_to_mega_array (TextureData *data, u32 desired_index=u32MAX);
+		void            priv_texture2D__remove_from_mega_array (TextureData *data);
+		bool            priv_texture2D_create_ex (u16 dimx, u16 dimy, u8 nMipMap, eImageFormat fmt, eMemAccessMode memAccessMode, const void *srcDATA, TextureH *out_handle, gpu::StageHelper &stageHelper, u32 desired_texture_index);
 
 		void 			res__printInfo (const void *res, const char *debug_info) const;
 		void            res__set_status (res::Descr *res, res::eStatus new_status);
@@ -323,6 +328,15 @@ namespace gos
 							const bool ret = res__getOrScheduleLoad(handle.res_handle, &res, timeout_msec);
 							(*out) = reinterpret_cast<const RESOURCE*>(res);
 							return ret;
+						}
+
+
+						template<class PROXYRES_HANDLE>
+		res::Descr*		proxyRes__getDescriptorT (PROXYRES_HANDLE handle)
+						{
+							const ProxyRes *proxyRes = proxyResInfo.query(handle.index);
+							if (NULL == proxyRes) return NULL;
+							return res__getDescriptor(proxyRes->res_handle);
 						}
 
 						template<class PROXYRES_HANDLE>
@@ -388,6 +402,8 @@ namespace gos
 							return res__hotreload (proxyRes->res_handle); 
 						}
 
+
+
 	private:
 		gos::Allocator                              *allocator;
 		bool                                        bQuitEngine;
@@ -405,27 +421,31 @@ namespace gos
 		FastHashMap<ENGShape, ENGGPUShape>			map_of_shape_to_gpushape;
 		gos::ObjectPool<res::HandleChain>			resHandleChainPool;
 		gos::FastArray<sUnloadInfo>                 list_of_res_to_be_hotreloaded;
-		ENGTexture2		                            handle_texture_bianca;
+		TextureH		                            handle_texture_bianca;
 		ProxyResInfo								proxyResInfo;
 		
-		
-
-
 
 	//================= loader thread stuff ============
-private:
+	private:
 		static constexpr u8         LOADER_THREAD__NUM_MAX_MESSAGES_TO_READ = 32;
 
 		static constexpr u32		MSG_FOR_LOADER_THREAD__DIE		        = 0xff;
 		static constexpr u32		MSG_FOR_LOADER_THREAD__LOAD	            = 0x01;
 		static constexpr u32		MSG_FOR_LOADER_THREAD__LOAD_CONTINUE	= 0x02;
 
-public:
+	public:
 		static constexpr u32		MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK 	= 0x01;
 		static constexpr u32		MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO 	= 0x02;
 		static constexpr u32		MSG_FROM_LOADER_THREAD__ON_LOAD_CALLBACK		= 0x03;
 
-private:		
+		struct res2__loaderThreadAnswer_onResFileLoaded
+		{
+			res2::ResDescr	*descr;
+			u64 			file_size;
+			const void 		*file_buffer;
+		};
+
+	private:		
 		struct sLoaderThreadInitParams
 		{
 			gos::Signal		    hEvent_started;
@@ -438,15 +458,80 @@ private:
 			Engine				*engine;
 		};
 		
-		static i16	        LoaderThread_mainFN (void *params);       
-		
-	
+		static i16	        LoaderThread_mainFN (void *params);
 		thread::sMsg        loaderMsgList[LOADER_THREAD__NUM_MAX_MESSAGES_TO_READ];
 		GOSThreadHandle 	hThreadLoader;
 		HThreadMsgR     	msgq_1R;
 		HThreadMsgW     	msgq_1W;
 		HThreadMsgR     	msgq_2R;
 		HThreadMsgW     	msgq_2W;           
+
+
+		//============= res 2 =============
+	private:
+		typedef gos::FastHashMap<asset2::UID, res2::ResHandle>	Res2_Resource_vs_signatureUID_HashMap;
+		typedef bool (Engine::*FN_res2__on_file_loaded) (const res2::CallbackData_onLoad *data);
+		typedef void (Engine::*FN_res2__on_destroy) (res2::ResDescr *descr);
+		typedef void (Engine::*FN_res2__on_unload) (res2::ResDescr *descr);
+
+	private:		
+		void 			res2__flushLoaderThreadMsg();
+		void 			res2__register_resource (res2::eResType type, FN_res2__on_file_loaded on_file_loaded, FN_res2__on_unload on_unload, FN_res2__on_destroy on_destroy);
+		void 			res2__callbak_on_file_loaded (res2::CallbackData_onLoad *data);
+		void 			res2__callbak_on_destroy (res2::ResDescr *descr);
+		bool 			res2__get_or_schedule_load (res2::ResDescr *descr, u32 timeout_msec);
+		
+		void 			res2__release (res2::ResHandle &handle);
+		res2::ResDescr*	res2__get_descriptor (res2::ResHandle handle)	{ return res2MemManager.get(handle); }
+
+						template<class RES2_TYPE>
+		RES2_TYPE*		res2__getT (res2::ResHandle handle)
+						{
+							assert (handle.is_a_resource_of_type(RES2_TYPE::type));
+							return res2MemManager.getT<RES2_TYPE> (handle);
+						}
+
+						template<class RES2_TYPE, class RES2_TYPE_DATA=decltype(RES2_TYPE::Data)>
+		bool 			res2__get_or_schedule_loadT (res2::ResHandle handle, const RES2_TYPE_DATA **out, u32 timeout_msec)
+						{
+							RES2_TYPE *res = res2__getT<RES2_TYPE> (handle);
+							if (NULL == res)
+								return false;
+
+							if (res2__get_or_schedule_load(&res->base, timeout_msec))
+							{
+								*out = &res->data; 
+								return true; 
+							}
+							return false;
+						}
+
+	private:
+		res2::MemManager		res2MemManager;
+		Res2_Resource_vs_signatureUID_HashMap	res2_resource_vs_signatureUID_HashMap;
+		FN_res2__on_file_loaded	res2FNList_resFileLoaded[(u8)res2::eResType::NUM_MAX];
+		FN_res2__on_destroy		res2FNList_resDestroy[(u8)res2::eResType::NUM_MAX];
+		FN_res2__on_unload		res2FNList_resUnload[(u8)res2::eResType::NUM_MAX];
+
+		//================= res2  loader thread stuff ============
+	private:
+		static constexpr u32		RES2__MSG_FOR_LOADER_THREAD__DIE		        	= 0xff;
+		static constexpr u32		RES2__MSG_FOR_LOADER_THREAD__RESOURCE_LOAD			= 0x10;
+		static constexpr u32		RES2__MSG_FOR_LOADER_THREAD__RESOURCE_LOAD_FINISHED	= 0x11;
+
+	public:
+		static constexpr u32		RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK 	= 0x01;
+		static constexpr u32		RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO 	= 0x02;
+
+	private:		
+		static i16	        res2__LoaderThread_mainFN (void *params);
+		thread::sMsg        res2__loaderMsgList[LOADER_THREAD__NUM_MAX_MESSAGES_TO_READ];
+		GOSThreadHandle 	res2__hThreadLoader;
+		HThreadMsgR     	res2__msgq_1R;
+		HThreadMsgW     	res2__msgq_1W;
+		HThreadMsgR     	res2__msgq_2R;
+		HThreadMsgW     	res2__msgq_2W;           
+
 
 	}; //class Engine
 } //namespace gos

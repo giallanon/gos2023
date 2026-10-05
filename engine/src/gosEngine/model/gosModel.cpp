@@ -96,7 +96,7 @@ bool model::alloc (gos::Allocator *allocator, u16 num_shape, u16 num_material, u
 	assert (ct == Reader::SKELETON);
 	ENGSkeleton handle_sk;
 	handle_sk.setInvalid();
-	ct += utils::bufferWriteU32 (&out->blob[ct], handle_sk.viewAsU32());
+	ct += utils::bufferWriteU32 (&out->blob[ct], handle_sk.index);
 
 	//gpu shapes
 	ct = Reader::ENGSHAPE;
@@ -113,7 +113,7 @@ bool model::alloc (gos::Allocator *allocator, u16 num_shape, u16 num_material, u
 	{
 		ENGMaterialPBR handle;
 		handle.setInvalid();
-		ct += utils::bufferWriteU32 (&out->blob[ct], handle.viewAsU32());
+		ct += utils::bufferWriteU32 (&out->blob[ct], handle.index);
 	}
 	
 	
@@ -150,7 +150,7 @@ static void model__do_set_name (Model &m, u16 index, const char *name__can_be_NU
 bool model::set_skeleton (Model &m, ENGSkeleton handle)
 {
 	assert (model::isValid(m));
-	utils::bufferWriteU32 (&m.blob[Reader::SKELETON], handle.viewAsU32());
+	utils::bufferWriteU32 (&m.blob[Reader::SKELETON], handle.index);
 	return true;
 }
 

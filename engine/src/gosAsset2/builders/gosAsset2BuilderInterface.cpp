@@ -84,7 +84,7 @@ bool BuilderInterface::priv_do_needResource (DBContext &ctx, const UniqueUIDList
     assert (NULL != out);
     assert (fs::isPathAbsolute(absFilenameIN));
 
-    if (!asset2::res_exists (ctx, resTypeIN, absFilenameIN, &out->uid, &out->lastTimeMod))
+    if (!asset2::res_exists (ctx, resTypeIN, absFilenameIN, &out->resourceUID, &out->lastTimeMod))
 	{
 		//<absFilenameIN> non esiste nel DB, la devo aggiungere
 		if (!fs::fileExists(absFilenameIN))
@@ -94,7 +94,7 @@ bool BuilderInterface::priv_do_needResource (DBContext &ctx, const UniqueUIDList
 		}
 
 		out->lastTimeMod = fs::fileGetLastTimeModified_UTC_niceu64(absFilenameIN);
-		if (!asset2::res_insert (ctx, resTypeIN, absFilenameIN, out->lastTimeMod, &out->uid))
+		if (!asset2::res_insert (ctx, resTypeIN, absFilenameIN, out->lastTimeMod, &out->resourceUID))
 		{
 			logger->log (eTextColor::red, "error inserting resource %s\n", absFilenameIN);
 			return false;
@@ -120,8 +120,7 @@ bool BuilderInterface::priv_do_needResource (DBContext &ctx, const UniqueUIDList
 			ResourceDep *nested_res = &list_of_nested_resources[num_nested_resources++];
             if (priv_do_needResource (ctx, listof_UID_of_known_ini_file, eResType::shader_txt, absIncludePath, nested_res))
             {
-                if (!dependency_exists (ctx, out->uid, nested_res->uid))
-                    dependency_add (ctx, out->uid, nested_res->uid);
+				dependency_add_if_not_exists(ctx, out->resourceUID, nested_res->resourceUID);
             }
 
 			if (num_nested_resources >= NUM_MAX_NESTED_RESOURCES)

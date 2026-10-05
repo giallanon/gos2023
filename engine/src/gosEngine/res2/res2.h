@@ -1,6 +1,6 @@
-#ifndef _gosEngineRes2_h_
-#define _gosEngineRes2_h_
-#include "enumAndDefine.h"
+#ifndef _gosEngineRes2_res2_h_
+#define _gosEngineRes2_res2_h_
+#include "MemManager.h"
 #include "res2_res.h"
 #include "res2_asset.h"
 
@@ -16,16 +16,16 @@ namespace gos
 
 		void	debug__set_logger (gos::Logger *logger);
 		
-		void	res_setup (ResDescr *res, asset2::UID signatureUID, ResHandle res_handle);
-		bool	res_is_ready (const ResDescr *res);
-		void	res_change_state (ResDescr *res, res2::eStatus new_status, const char *reason = "cng state");
-		bool	res_release (ResDescr *res);
+		bool	is_ready (const ResDescr *res);
+		void	change_state (ResDescr *res, res2::eStatus new_status, const char *reason = "cng state");
+		bool	release (ResDescr *res);
+		void 	inc_refCount (ResDescr *res);
 		
 
-		void	asset_setup (AssetDescr *asset, asset2::UID assetUID, AssetHandle asset_handle);
-		bool	asset_is_ready (const AssetDescr *asset);
-		void	asset_change_state (AssetDescr *asset, res2::eStatus new_status, const char *reason = "cng state");
-		bool	asset_release (AssetDescr *asset);
+		bool	is_ready (const AssetDescr *asset);
+		void	change_state (AssetDescr *asset, res2::eStatus new_status, const char *reason = "cng state");
+		bool	release (AssetDescr *asset);
+		void 	inc_refCount (AssetDescr *res);
 		
 
 
@@ -34,4 +34,4 @@ namespace gos
 	} //namespace res2
 } //namespace gos
 
-#endif //_gosEngineRes2_h_
+#endif //_gosEngineRes2_res2_h_

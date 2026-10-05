@@ -21,7 +21,7 @@ void AssetFile_model3D::priv_free()
 }
 
 //************************************
-void AssetFile_model3D::begin(gos::Allocator *localAllocatorIN)
+void AssetFile_model3D::begin (gos::Allocator *localAllocatorIN)
 {
 	if (localAllocatorIN != localAllocator)
 	{
@@ -42,44 +42,44 @@ void AssetFile_model3D::begin(gos::Allocator *localAllocatorIN)
 	shape_name_list.reset();
 	mesh_name_list.reset();
 	material_name_list.reset();
-	skeleton_signatureUID.setInvalid();
+	skeleton_assetUID.setInvalid();
 }
 
 //************************************
-void AssetFile_model3D::skeleton_set (UID signatureUID)
+void AssetFile_model3D::skeleton_set (UID assetUID)
 {
-	assert(signatureUID.isASignatureOfType(eAssetType::skeleton));
-	skeleton_signatureUID = signatureUID;
+	assert(assetUID.isAnAssetOfType(eAssetType::skeleton));
+	skeleton_assetUID = assetUID;
 }
 
 //************************************
-u32 AssetFile_model3D::shape_add (UID signatureUID, const char *shape_name)
+u32 AssetFile_model3D::shape_add (UID assetUID, const char *shape_name)
 {
-	assert(signatureUID.isASignatureOfType(eAssetType::shape));
+	assert(assetUID.isAnAssetOfType(eAssetType::shape));
 	const u32 n = listof_shape.getNElem();
 	for (u32 i = 0; i < n; i++)
 	{
-		if (listof_shape(i) == signatureUID)
+		if (listof_shape(i) == assetUID)
 			return i;
 	}
 
-	listof_shape.append (signatureUID);
+	listof_shape.append (assetUID);
 	shape_name_list.append (shape_name);
 	return n;
 }
 
 //************************************
-u32 AssetFile_model3D::material_add (UID signatureUID, const char *material_name)
+u32 AssetFile_model3D::material_add (UID assetUID, const char *material_name)
 {
-	assert(signatureUID.isASignatureOfType(eAssetType::materialPBR));
+	assert(assetUID.isAnAssetOfType(eAssetType::materialPBR));
 	const u32 n = listof_material.getNElem();
 	for (u32 i = 0; i < n; i++)
 	{
-		if (listof_material(i) == signatureUID)
+		if (listof_material(i) == assetUID)
 			return i;
 	}
 
-	listof_material.append (signatureUID);
+	listof_material.append (assetUID);
 	material_name_list.append(material_name);
 	return n;
 }
@@ -117,7 +117,7 @@ bool AssetFile_model3D::save (const char *filenameDST)
 	buffer.writeU32 (GOS_MAGIC__ASSET_MODEL3D);
 
 	//skeleton (signatureUID)
-	buffer.writeU64 (skeleton_signatureUID._uid);
+	buffer.writeU64 (skeleton_assetUID._uid);
 
 
 	//num shape e relativi signatureUID
