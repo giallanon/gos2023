@@ -26,7 +26,13 @@ bool Builder_pipe::priv_extractParams ()
     params.zbuffer_format = eImageFormat::_DEPTH_BEST;
     params.zbuffer_cmpFn = eZFunc::LESS;
 
-    //parse dell'ini
+	params.vtxshader_assetUID.setInvalid();
+	params.vtxshader_signatureUID.setInvalid();
+
+	params.pxlshader_assetUID.setInvalid();
+	params.pxlshader_signatureUID.setInvalid();
+
+	//parse dell'ini
     string::utf8::StringListParser stringParser;
 
     //param: cullMode
@@ -194,23 +200,8 @@ bool Builder_pipe::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *ou
 
 
     //aggiungo le dipendenze di questo assetUID dagli assetUID degli shader
-    if (!dependency_add (ctx, out_result->assetUID, params.vtxshader_assetUID)) return false;
-    if (!dependency_add (ctx, out_result->assetUID, params.pxlshader_assetUID)) return false;
-
-
-    //la signatureUID dipende dalle signatureUID di vtx/pxl shader
-    if (params.vtxshader_assetUID.isValid())
-    {
-        UID signatureUID;
-        if (!asset_get_info (ctx, params.vtxshader_assetUID, NULL, &signatureUID))   return false;
-        if (!signature_add_dependencyRT (ctx, out_result->signatureUID, signatureUID)) return false;
-    }
-    if (params.pxlshader_assetUID.isValid())
-    {
-        UID signatureUID;
-        if (!asset_get_info (ctx, params.pxlshader_assetUID, NULL, &signatureUID))   return false;
-        if (!signature_add_dependencyRT (ctx, out_result->signatureUID, signatureUID)) return false;
-    }       
+	if (!prot_add_asset_to_asset_dependency (ctx, out_result, params.vtxshader_assetUID, &params.vtxshader_signatureUID))	return false;
+	if (!prot_add_asset_to_asset_dependency (ctx, out_result, params.pxlshader_assetUID, &params.pxlshader_signatureUID))	return false;
 
     
     //a questo punto devo davvero creare il file dell'asset
@@ -235,11 +226,7 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID signatureUID, c
     char s[1024];
     if (params.vtxshader_assetUID.isValid())
     {
-		UID signatureUID;
-        if (!asset_get_info (ctx, params.vtxshader_assetUID, NULL, &signatureUID))
-            return false;
-
-        signature_manufacture_fullFilename (ctx, signatureUID, s, sizeof(s));
+        signature_manufacture_fullFilename (ctx, params.vtxshader_signatureUID, s, sizeof(s));
         strcat_s (s, sizeof(s), "d");
 
         u32 fsize = 0;
@@ -259,11 +246,7 @@ bool Builder_pipe::priv_do_create_assetFile (DBContext &ctx, UID signatureUID, c
 
     if (params.pxlshader_assetUID.isValid())
     {
-		UID signatureUID;
-        if (!asset_get_info (ctx, params.pxlshader_assetUID, NULL, &signatureUID))
-            return false;
-
-        signature_manufacture_fullFilename (ctx, signatureUID, s, sizeof(s));
+        signature_manufacture_fullFilename (ctx, params.pxlshader_signatureUID, s, sizeof(s));
         strcat_s (s, sizeof(s), "d");
 
         u32 fsize = 0;

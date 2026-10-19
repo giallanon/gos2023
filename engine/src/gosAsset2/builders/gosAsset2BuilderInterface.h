@@ -54,6 +54,8 @@ namespace gos
             bool            prot_needResolvedSubsection (DBContext &ctx, const gos::IniFileSection *sec, eAssetType assType, UID *out__assetUID) const;
             bool            prot_setupAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const;
 			bool 			prot_setupAsset_ex (DBContext &ctx, eAssetType assetType, const void *params, u32 sizeof_params, const char *rtname, UID uid_of_iniFile, u32 asset__declared_on_lineNum, sBuildResult *out_result) const;
+			bool 			prot_add_asset_to_asset_dependency (DBContext &ctx, sBuildResult *padre, UID uid_asset_figlio, UID *out__uid_signature_figlio = NULL);
+			bool 			prot_add_asset_to_resouce_dependency (DBContext &ctx, sBuildResult *padre, UID uid_resource_figlio);
 
         protected:
             gos::Logger     *logger;

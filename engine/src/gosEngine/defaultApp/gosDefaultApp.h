@@ -3,6 +3,7 @@
 #include "../gosEngine.h"
 #include "../../gosAsset2/gosAsset2MonitorClient.h"
 #include "../renderPipe/gosEngineRenderPipe_PIPE3.h"
+#include "../renderPipe/gosEngineRenderPipe_line3d.h"
 #include "../../gosGameUtils/ctrl/gosCtrlFreeMove.h"
 #include "../../gosGameUtils/ctrl/gosCtrlFPSMove.h"
 #include "../../gosGameUtils/ctrl/gosCtrl3rdPersMove.h"

@@ -10,23 +10,23 @@ namespace gos
 		class Loader_tex2D : public res2::BaseLoader
 		{
 		public:
-			bool load (LoaderInfo &loaderInfo, res2::ResDescr *descrIN, CallbackData_onLoad *in_out__callback_data)
+			eResult load (LoaderInfo &loaderInfo, res2::ResDescr *descrIN, CallbackData_onLoad *in_out__callback_data)
 			{
 				gos::Allocator *thread_allocator = loaderInfo.thread_allocator;
 
 				char s[1024];
-				asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, descrIN->signatureUID, s, sizeof(s));
+				asset2::signature_manufacture_fullFilename (*loaderInfo.ctx, descrIN->UID, s, sizeof(s));
 
 				gos::Image image;
 				if (!image::load (thread_allocator, s, &image))
 				{
 					logger::err ("Loader_tex2D::load() => file not found %s\n", s);
-					return false;
+					return eResult::failed;
 				}
 
 				//torno all'engine per creare la texture
 				in_out__callback_data->user_data_pt = image.p;
-				return true;
+				return eResult::callback;
 			}
 
 			void load_finished (LoaderInfo &loaderInfo, CallbackData_onLoad *callback_data)

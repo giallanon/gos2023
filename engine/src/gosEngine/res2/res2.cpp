@@ -1,9 +1,11 @@
 #include "res2.h"
 #include "../gosEngine.h"
+#include "../../gos/gosObjectPool.h"
 
 using namespace gos;
 
-static gos::Logger *res_debug_logger = NULL;
+static gos::Logger 								*res_debug_logger = NULL;
+static gos::ObjectPool<res2::ResHandleChain>	res_handleChainPool;
 
 //*************************************
 const char* res2::enumToString (res2::eLoadMode s)
@@ -25,8 +27,9 @@ const char* res2::enumToString (res2::eStatus s)
     case res2::eStatus::ready:		return "ready";
     case res2::eStatus::unloaded:	return "unloaded";
 	case res2::eStatus::loading:	return "loading";
-	case res2::eStatus::loaded:		return "loaded";
 	case res2::eStatus::unloading:	return "hot_reload";
+	case res2::eStatus::deleting:	return "deleting";
+	case res2::eStatus::deleted:	return "deleted";
 	case res2::eStatus::error:      return "error";
 	}
 }
@@ -49,55 +52,50 @@ const char* res2::enumToString (res2::eResType s)
 	case res2::eResType::shape:				return "shape";
 	case res2::eResType::gpu_shape:			return "gpu_shape";
 	case res2::eResType::skeleton:			return "skeleton";
+	case res2::eResType::materialPBR:		return "materialPBR";
 	case res2::eResType::model_3d:			return "model_3d";
+	case res2::eResType::model_instance:	return "model_instance";
 	}
 }
 
-//*************************************
-const char* res2::enumToString (res2::eAssetType s)
-{
-	switch (s)
-	{
-    default: DBGBREAK;						return "!!res2::eAssetType::ERR";
-	case res2::eAssetType::_unused_zero:	return "_unused_zero";
-	case res2::eAssetType::NUM_MAX:			return "NUM_MAX";
-	
-	case res2::eAssetType::vtx_shader:		return "vtx_shader";
-	case res2::eAssetType::pxl_shader:		return "pxl_shader";
-	case res2::eAssetType::pipeline:		return "pipeline";
-	case res2::eAssetType::texture_2d:		return "texture_2d";
-	case res2::eAssetType::shape:			return "shape";
-	case res2::eAssetType::skeleton:		return "skeleton";
-	case res2::eAssetType::materialPBR:		return "materialPBR";
-	case res2::eAssetType::model_3d:		return "model_3d";
-	case res2::eAssetType::model_instance:	return "model_instance";
-	}
-}
 
 //***********************************
-void res2::BaseHandle::make_handle (u8 guard, u32 page_index, u32 offset, u32 num_slot, u8 type, bool isResource)
+void res2::ResHandle::make_handle (u8 guard, u32 start_slot, u32 num_slot, u8 type)
 {
-	assert (num_slot <= 0x7FF);
-	_handle = offset;									//32 bit
-	_handle |= (((u64)page_index) & 0xFF) << 32;		//8 bit per page_index
-	_handle |= (((u64)num_slot) & 0x07FF) << 40;		//11 bit per <num_slot>  == 64 * 2048 = 128 MB allocazione max
-	_handle |= (((u64)type) & 0xFF) << 51;				//8 bit per <type>
-	_handle |= (((u64)guard) & 0x0F) << 59;				//4 bit per <guard>
-	if (isResource)	_handle |= 0x8000000000000000;	//1 bit (MSB) per <is_a_resource>
+	/*
+	start_slot 	max = 262.143 	> 18 bit
+	num_slot	max = 16		> 4 bit
+	res_type	max = 64		> 6 bit
+	guard						> 4 bit
+	*/		
+	assert (start_slot <= 0x3FFFF);
+	assert (num_slot <= 16);
+	assert (type <= 64);
 
-	assert (get_offset() == offset);
-	assert (get_page_index() == page_index);
+	_handle = start_slot;
+	_handle |= (num_slot << 18);
+	_handle |= (type << 22);
+	_handle |= ( (guard & 0x0F) << 28);
+
+	assert (get_start_slot() == start_slot);
 	assert (get_num_slot() == num_slot);
 	assert (get_type() == type);
-	assert ( (isResource && is_a_resource()) || (!isResource && is_an_asset()) );
+	assert (get_gard() == (guard & 0x0F));
 }
 
 
 
 //**************************************************************** 
-void res2::debug__set_logger (gos::Logger *logger)
+void res2::setup (gos::Allocator *allocator, gos::Logger *logger)
 {
 	res_debug_logger = logger;
+	res_handleChainPool.setup (allocator, 8192);
+}
+
+//**************************************************************** 
+void res2::unsetup()
+{
+	res_handleChainPool.unsetup();
 }
 
 
@@ -107,75 +105,107 @@ static void  internal__debug__printInfo (const res2::ResDescr *res, const char *
 	if (NULL == res_debug_logger)
 		return;
 
-	 res_debug_logger->log (eTextColor::darkYellow, "res2::[%-12s] [%-20s] [st:%-12s] [ref:%03d] [h:%016" PRIX64 "] [sigUID: %016" PRIX64 "]\n",
+	char tipo_prefix[4] = { 'r', 'e', 's', 0x00 };
+	if (res->UID.isValid())
+	{
+		if (res->UID.isAnAsset())	
+			sprintf_s (tipo_prefix, sizeof(tipo_prefix), "ass");
+	}
+
+	char status_prefix=' ';
+	if (res->num_child_not_ready != 0)
+		status_prefix='~';
+	
+	res_debug_logger->log (eTextColor::darkYellow, "%s::[%-12s] [%-20s] [ref:%03d] [st:%c%-12s/%03d] [h:%016" PRIX32 "] ",
+		tipo_prefix,
 		res2::enumToString(res->get_type()),
 		debug_info,
-		res2::enumToString(res->status), 
 		res->refCount,
-		res->res_handle.viewAsU64(),
-		res->signatureUID._uid);
+		status_prefix, res2::enumToString(res->status), res->num_child_not_ready,
+		res->res_handle.viewAsU32());
+
+	
+	if (res->UID.isValid())
+	{
+		if (res->UID.isAnAsset())
+			res_debug_logger->log (eTextColor::darkYellow, "[assUID: %016" PRIX64 "]\n", res->UID._uid);
+		else
+			res_debug_logger->log (eTextColor::darkYellow, "[sigUID: %016" PRIX64 "]\n", res->UID._uid);
+	}
+	else
+		res_debug_logger->log ("\n");
 }
 
 //**************************************************************** 
-static void  internal__debug__printInfo (const res2::AssetDescr *asset, const char *debug_info)
+static void internal__on_children_become_notready (res2::ResDescr *padre)
 {
-	if (NULL == res_debug_logger)
-		return;
+	//uno dei figli di <padre> era "ready" e ora e' diventato "not ready"
+	assert (NULL != padre);
 
-	const char *status = res2::enumToString(asset->status);
-	char status_prefix=' ';
-	if (0 != asset->num_child_not_ready)
-		status_prefix='~';
+	const bool was_ready = is_ready(padre);
+	padre->num_child_not_ready++;
+	const bool now_ready = is_ready(padre);
+	internal__debug__printInfo (padre, "child unrdy");
 
-
-	 res_debug_logger->log (eTextColor::darkGreen, "asset2::[%-12s] [%-20s] [st:%c%-12s] [ref:%03d] [h:%016" PRIX64 "] [assUID: %016" PRIX64 "]\n",
-		res2::enumToString(asset->get_type()),
-		debug_info,
-		status_prefix, status, 
-		asset->refCount,
-		asset->asset_handle.viewAsU64(),
-		asset->assetUID._uid);
-}
-
-
-//**************************************************************** 
-static void internal__asset__on_children_become_notready (res2::AssetDescr *asset)
-{
-	//uno dei figli di <asset> era "ready" e ora e' diventato "not ready"
-	assert (NULL != asset);
-
-	asset->num_child_not_ready++;
-	internal__debug__printInfo (asset, "child unrdy");
+	if (was_ready && !now_ready)
+	{
+		//se ero "ready" e ora non lo sono +, devo informare i miei padri
+		res2::ResHandleChain *p = padre->list_padri;
+		while (p)
+		{
+			internal__on_children_become_notready (p->descr);
+			p = p->next;
+		}		
+	}	
 }
 
 //**************************************************************** 
-static void internal__asset__on_children_become_ready (res2::AssetDescr *asset)
+static void internal__on_children_become_ready (res2::ResDescr *padre)
 {
-	//uno dei figli di <asset> era "not ready" e ora e' diventato "ready"
-	assert (NULL != asset);
+	//uno dei figli di <padre> era "not ready" e ora e' diventato "ready"
+	assert (NULL != padre);
 
-	assert (asset->num_child_not_ready > 0);
-	asset->num_child_not_ready--;
-	internal__debug__printInfo (asset, "child rdy");
+	assert (padre->num_child_not_ready > 0);
+
+	const bool was_ready = is_ready(padre);
+	padre->num_child_not_ready--;
+	const bool now_ready = is_ready(padre);
+
+	internal__debug__printInfo (padre, "child rdy");
+
+	if (!was_ready && now_ready)
+	{
+		//se ero "non ready" e adesso invece sono "ready", devo informare i miei padri
+		res2::ResHandleChain *p = padre->list_padri;
+		while (p)
+		{
+			internal__on_children_become_ready (p->descr);
+			p = p->next;
+		}		
+	}
 }
 
+//**************************************************************** 
+static res2::ResHandleChain* new_handleChain ()
+{
+	return res_handleChainPool.alloc();
+}
 
+//**************************************************************** 
+static void free_handleChain (res2::ResHandleChain *p)
+{
+	res_handleChainPool.free(p);
+}
 
-
-
-/***********************************************************************************************
-* 
-*							R E S O U R C E S
-* 
-************************************************************************************************/
+//**************************************************************** 
 bool res2::is_ready (const res2::ResDescr *res)
 {
 	assert (NULL != res);
-	return (res2::eStatus::ready == res->status);
+	return (res2::eStatus::ready == res->status && 0 == res->num_child_not_ready);
 }
 
 //*************************************
-void res2::change_state (ResDescr *res, res2::eStatus new_status, const char *reason)
+void res2::change_state (res2::ResDescr *res, res2::eStatus new_status, const char *reason)
 {
 	assert (NULL != res);
 	if (res->status == new_status)
@@ -188,21 +218,21 @@ void res2::change_state (ResDescr *res, res2::eStatus new_status, const char *re
 
 	if (was_ready && !now_ready)
 	{
-		//se ero "ready" e ora non lo sono +, devo informare i miei owner
-		res2::AssetHandleChain *p = res->asset_owner_list;
+		//se ero "ready" e ora non lo sono +, devo informare i miei padri
+		res2::ResHandleChain *p = res->list_padri;
 		while (p)
 		{
-			internal__asset__on_children_become_notready (p->asset);
+			internal__on_children_become_notready (p->descr);
 			p = p->next;
 		}
 	}
 	else if (now_ready && !was_ready)
 	{
-		//se ero "non ready" e adesso invece sono "ready", devo informare i miei owner
-		res2::AssetHandleChain *p = res->asset_owner_list;
+		//se ero "non ready" e adesso invece sono "ready", devo informare i miei padri
+		res2::ResHandleChain *p = res->list_padri;
 		while (p)
 		{
-			internal__asset__on_children_become_ready (p->asset);
+			internal__on_children_become_ready (p->descr);
 			p = p->next;
 		}
 	}
@@ -217,18 +247,36 @@ bool res2::release (res2::ResDescr *res)
 	assert (NULL != res);
 	assert (res->refCount > 0);
 	res->refCount--;	
+	internal__debug__printInfo (res, "ref--");
 	if (res->refCount > 0)
-	{
-		internal__debug__printInfo (res, "ref--");
 		return false;
-	}
-
-	internal__debug__printInfo (res, "destroyed");
 	return true;
 }
 
+/*************************************
+ * a seguito di un release che ha ritornato true, 
+ * chiamare questa per eliminare del tutto la risorsa
+ */
+void res2::destroy (ResDescr *res)
+{
+	assert (NULL != res);
+	assert (res->refCount == 0);
+
+	res2::ResHandleChain *p;
+
+	p = res->list_figli;
+	while (p)
+	{
+		res2::ResHandleChain *q = p;
+		p = p->next;
+
+		free_handleChain(q);
+	}
+	change_state (res, res2::eStatus::deleted, "deleted");
+}
+
 //*************************************
-void res2::inc_refCount (ResDescr *res)
+void res2::inc_refCount (res2::ResDescr *res)
 {
 	assert (NULL != res);
 	assert (res->refCount < u16MAX);
@@ -236,76 +284,70 @@ void res2::inc_refCount (ResDescr *res)
 	internal__debug__printInfo (res, "ref++");
 }
 
-
-/***********************************************************************************************
-* 
-*							A S S E T
-* 
-************************************************************************************************/
-bool res2::is_ready (const res2::AssetDescr *asset)
+//*************************************
+void res2::add_child (res2::ResDescr *padre, res2::ResDescr *child)
 {
-	assert (NULL != asset);
-	return (res2::eStatus::ready == asset->status && 0 == asset->num_child_not_ready);
+	//child diventa figlio di padre
+	res2::ResHandleChain *chain = new_handleChain();
+	chain->descr = child;
+	chain->next = padre->list_figli;
+	padre->list_figli = chain;
+
+	//padre diventa "padre" di child
+	chain = new_handleChain();
+	chain->descr = padre;
+	chain->next = child->list_padri;
+	child->list_padri = chain;
+
+	//se child e' not-ready, lo comunico al mio nuovo padre
+	if (!is_ready(child))
+		internal__on_children_become_notready (padre);
 }
 
 //*************************************
-void res2::change_state (res2::AssetDescr *asset, res2::eStatus new_status, const char *reason)
+void res2::remove_child (res2::ResDescr *padre, res2::ResDescr *child)
 {
-	assert (NULL != asset);
-	if (asset->status == new_status)
-		return;
-
-	const bool was_ready = is_ready(asset);
-	asset->status = new_status;
-	const bool now_ready = is_ready(asset);
-	internal__debug__printInfo (asset, reason);
-
-	if (was_ready && !now_ready)
+	res2::ResHandleChain *figlio = padre->list_figli;
+	res2::ResHandleChain *q = NULL;
+	while (figlio)
 	{
-		//se ero "ready" e ora non lo sono +, devo informare i miei owner
-		res2::AssetHandleChain *p = asset->asset_owner_list;
-		while (p)
+		if (figlio->descr == child)
 		{
-			internal__asset__on_children_become_notready (p->asset);
-			p = p->next;
+			if (NULL == q)
+				padre->list_figli = figlio->next;
+			else
+				q->next = figlio->next;
+
+			//se child era "non ready", decremento il ct di padre visto
+			//che sto eliminando il figlio
+			if (!is_ready(child))
+			{
+				assert (padre->num_child_not_ready>0);
+				padre->num_child_not_ready--;
+			}
+
+			//rimuovo padre dalla lista dei padri di child
+			res2::ResHandleChain *p = child->list_padri;
+			q = NULL;
+			while (p)
+			{
+				if (p->descr == padre)
+				{
+					if (NULL == q)
+						child->list_padri = p->next;
+					else
+						q->next = p->next;
+					break;
+				}
+				p = p->next;
+			}
+			
+			
+			return;
 		}
-	}
-	else if (now_ready && !was_ready)
-	{
-		//se ero "non ready" e adesso invece sono "ready", devo informare i miei owner
-		res2::AssetHandleChain *p = asset->asset_owner_list;
-		while (p)
-		{
-			internal__asset__on_children_become_ready (p->asset);
-			p = p->next;
-		}
+
+		q = figlio;
+		figlio = figlio->next;
 	}
 }
 
-/*************************************
-* Ritorna true se il ref_count e' andato a 0 e quindi la risorsa e' stata freed.
-* Eventuali operazioni di free da farsi su risorse allocate dall'engine, le deve fare l'engine stesso
-*/
-bool res2::release (res2::AssetDescr *asset)
-{
-	assert (NULL != asset);
-	assert (asset->refCount > 0);
-	asset->refCount--;
-	if (asset->refCount > 0)
-	{
-		internal__debug__printInfo (asset, "ref--");
-		return false;
-	}
-
-	internal__debug__printInfo (asset, "destroyed");
-	return true;
-}
-
-//*************************************
-void res2::inc_refCount (AssetDescr *asset)
-{
-	assert (NULL != asset);
-	assert (asset->refCount < u16MAX);
-	asset->refCount++;
-	internal__debug__printInfo (asset, "ref++");
-}

@@ -225,3 +225,43 @@ bool BuilderInterface::prot_setupAsset_ex (DBContext &ctx, eAssetType assetType,
 
     return true;
 }
+
+//****************************** 
+bool BuilderInterface::prot_add_asset_to_asset_dependency (DBContext &ctx, sBuildResult *padre, UID uid_asset_figlio, UID *out__uid_signature_figlio)
+{
+	assert (NULL != padre);
+	
+	UID signature_figlio;
+	if (uid_asset_figlio.isInvalid())
+	{
+		signature_figlio.setInvalid();
+	}
+	else
+	{
+		assert(uid_asset_figlio.isAnAsset());
+		assert(padre->assetUID.isValid() && padre->assetUID.isAnAsset());
+		assert(padre->signatureUID.isValid() && padre->signatureUID.isASignature());
+		
+
+		if (!dependency_add (ctx, padre->assetUID, uid_asset_figlio)) return false;
+
+		if (!asset_get_info (ctx, uid_asset_figlio, NULL, &signature_figlio))   return false;
+		if (!signature_add_dependencyRT (ctx, padre->signatureUID, signature_figlio)) return false;
+	}
+
+	if (NULL != out__uid_signature_figlio)
+		out__uid_signature_figlio->_uid = signature_figlio._uid;
+	return true;
+}
+
+//****************************** 
+bool BuilderInterface::prot_add_asset_to_resouce_dependency (DBContext &ctx, sBuildResult *padre, UID uid_resource_figlio)
+{
+	if (uid_resource_figlio.isInvalid())	return true;
+
+	assert(uid_resource_figlio.isAResource());
+	assert (NULL != padre);
+	assert(padre->assetUID.isValid() && padre->assetUID.isAnAsset());
+
+	return dependency_add (ctx, padre->assetUID, uid_resource_figlio);
+}

@@ -40,13 +40,13 @@ void Renderer_line3d::priv_unsetup()
     engine->release(handle_shape_segmento);
 
     
-    engine->release(handle_pipeline);
-        gpu->deleteResource(handle_ubo_scene);
-        gpu->deleteResource(handle_sbo_segment);
-        gpu->deleteResource(handle_sbo_vtx);
-        gpu->deleteResource(handle_descrSet0);
-        gpu->deleteResource(handle_descrSet1);
-        gpu->deleteResource(handle_descrPool);
+	engine->release(handle_pipeline);
+	gpu->deleteResource(handle_ubo_scene);
+	gpu->deleteResource(handle_sbo_segment);
+	gpu->deleteResource(handle_sbo_vtx);
+	gpu->deleteResource(handle_descrSet0);
+	gpu->deleteResource(handle_descrSet1);
+	gpu->deleteResource(handle_descrPool);
 
 
     engine = NULL;
@@ -141,14 +141,14 @@ bool Renderer_line3d::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
 
 
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
-    const res::Pipeline *res_pipeline;
-    if (engine->get (handle_pipeline, &res_pipeline, 5000))
+    const PipelineData *pipeline_data;
+    if (engine->get (handle_pipeline, &pipeline_data, 5000))
     {
         //alloco una istanza dei descriptor-set
         gos::gpu::DescrSetInstanceWriter dsw;
 
         //descriptor set 0
-        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->pipeHandle, 0, &handle_descrSet0))
+        if (!gpu->descrSetInstance_create (handle_descrPool, pipeline_data->pipe_handle, 0, &handle_descrSet0))
         {
             gos::logger::err ("Renderer_line3d::setup() => can't create an instance of descriptorSet_0\n");
             return false;
@@ -162,7 +162,7 @@ bool Renderer_line3d::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
         
 
         //descriptor set 1
-        if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->pipeHandle, 1, &handle_descrSet1))
+        if (!gpu->descrSetInstance_create (handle_descrPool, pipeline_data->pipe_handle, 1, &handle_descrSet1))
         {
             gos::logger::err ("Renderer_line3d::setup() => can't create an instance of descriptorSet_0\n");
             return false;
@@ -261,8 +261,8 @@ void Renderer_line3d::priv_begin (gos::geom::Camera3 *cam, gpu::RenderCtx *rctxI
         return;
     }
 
-    const res::Pipeline *res_pipeline;
-    if (!engine->get (handle_pipeline, &res_pipeline))
+    const PipelineData *pipeline_data;
+    if (!engine->get (handle_pipeline, &pipeline_data))
         return;
 
     if (!engine->get (handle_shape_segmento, &res_shape_segmento))
@@ -285,7 +285,7 @@ void Renderer_line3d::priv_begin (gos::geom::Camera3 *cam, gpu::RenderCtx *rctxI
 
 
     (*rctx)
-		.bindPipeline (res_pipeline->pipeHandle)
+		.bindPipeline (pipeline_data->pipe_handle)
 		.bindDescriptorSet (handle_descrSet0, 0)
 		.bindDescriptorSet (handle_descrSet1, 1)
         .bindVtxIdxBuffer (res_shape_segmento->vbHandle, 0, res_shape_segmento->ibHandle, 0);

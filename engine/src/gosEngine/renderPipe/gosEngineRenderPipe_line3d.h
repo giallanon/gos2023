@@ -148,12 +148,12 @@ namespace gos
             gos::Allocator              *localAllocator;
             gos::Engine                 *engine;
             gos::GPU                    *gpu;
-            ENGPipeline                 handle_pipeline;
+            PipelineH                 	handle_pipeline;
 			GPUDescrPoolHandle          handle_descrPool;
             GPUDescrSetInstanceHandle   handle_descrSet0;
             GPUDescrSetInstanceHandle   handle_descrSet1;
 			GPUUniformBufferHandle      handle_ubo_scene;
-			ENGGPUShape					handle_shape_segmento;
+			GPUShapeH					handle_shape_segmento;
 			GPUStorageBufferHandle		handle_sbo_segment;
 			GPUStorageBufferHandle		handle_sbo_vtx;
 			Flag8						flag;
@@ -161,7 +161,7 @@ namespace gos
 			u32 						num_seg_in_buffer;
 			sState 						state;
 			gpu::RenderCtx 				*rctx;
-			const res::GPUShape 		*res_shape_segmento;
+			const GPUShapeData 			*res_shape_segmento;
 
 			gos::FastArray<sCtxEntry>	ctx_list;
 			gpu::MappedBufW			mapped_sbo_segment;

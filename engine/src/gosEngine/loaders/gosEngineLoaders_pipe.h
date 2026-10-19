@@ -1,6 +1,6 @@
 #ifndef _gosEngineLoaders_pipe_h_
 #define _gosEngineLoaders_pipe_h_
-#include "gosEngineLoaders_shader.h"
+#include "gosEngineLoaders.h"
 
 namespace gos
 {

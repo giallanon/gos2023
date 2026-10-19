@@ -2,4 +2,4 @@
 
 //renderer per gos-engine
 @include: <common_assets>/gosengine/pipe3/PIPE3.gosasset_d
-//@include: <common_assets>/gosengine/line3d/main.gosasset_d
+@include: <common_assets>/gosengine/line3d/main.gosasset_d

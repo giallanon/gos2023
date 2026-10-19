@@ -8,7 +8,10 @@
 @materialPBR: runtimeName							=> il runtimeName e' opzionale come sempre
 {
     (optional)  diffuse_col_RGBA_HDR: r,g,b,a
+	(optional)	diffuse_texture: texture2d_asset_nome
+	(optional)	normal_texture: texture2d_asset_nome
 	(optional)  metallic_factor: value_0_1
+	
 }
 */
 
@@ -34,7 +37,7 @@ namespace gos
         private:
             struct Params
             {
-                AssetFile_materialPBR 	mat;
+                MaterialPBR mat;
             };
 
         private:

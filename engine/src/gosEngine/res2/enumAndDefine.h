@@ -21,8 +21,9 @@ namespace gos
 			ready			= 0,
 			unloaded		= 1,
 			loading			= 2,
-			loaded			= 3,
 			unloading		= 4,
+			deleting		= 5,
+			deleted			= 6,
 			error 			= 0xff		//errore fatale. Esiste nell'engine ma probabilmente il loader non e' riuscito a caricarla, questo asset e' spacciato per sempre
 		};
 
@@ -38,87 +39,52 @@ namespace gos
 			shape			= 7,
 			gpu_shape 		= 8,
 			skeleton 		= 9,
-			model_3d 		= 10,
+			materialPBR		= 10,
+			model_3d 		= 11,
+			model_instance 	= 12,
 			
-			NUM_MAX 		= 11	//questo deve essre uguale all'ultimo valore +1
-		};
-
-		enum class eAssetType : u8
-		{
-			_unused_zero 	= 0,
-			vtx_shader 		= 1,
-			pxl_shader 		= 2,
-			pipeline 		= 3,
-			texture_2d 		= 4,
-			shape 			= 5,
-			skeleton 		= 6,
-			materialPBR		= 7,
-			model_3d 		= 8,
-			model_instance 	= 9,
-
-			NUM_MAX 		= 10	//questo deve essre uguale all'ultimo valore +1
+			NUM_MAX 		= 13	//questo deve essre uguale all'ultimo valore +1
 		};
 
 
 		class MemManager; //fwd
 		struct ResDescr; //fwd
-		struct AssetDescr; //fwd
 
 		/*********************************
-		 * @brief	BaseHandle
+		 * @brief	ResHandle
 		 */
-		struct BaseHandle
+		struct ResHandle
 		{
-			void		set_invalid()									{ _handle = u64MAX; }
-			bool		is_valid() const								{ return _handle != u64MAX; }
-			bool		is_invalid() const								{ return _handle == u64MAX; }
+						ResHandle()										{ _handle = u32MAX; }
+			void		set_invalid()									{ _handle = u32MAX; }
+			bool		is_valid() const								{ return _handle != u32MAX; }
+			bool		is_invalid() const								{ return _handle == u32MAX; }
 
-			u64 		viewAsU64() const 								{ return _handle; }
-			void 		setFromU64(u64 h)								{ _handle = h; }
+			eResType	get_res_type() const							{ return static_cast<eResType>( get_type() ); }
+			bool		is_of_type(eResType t) const					{ return get_res_type() == t; }
+
+			u32 		viewAsU32() const 								{ return _handle; }
+			void 		setFromU32(u64 h)								{ _handle = h; }
 
 		protected:
-			void 		make_handle (u8 guard, u32 page_index, u32 offset, u32 num_slot, u8 type, bool is_a_resource);
-			u32			get_offset() const								{ return (u32)( _handle & 0x00000000FFFFFFFF ); }
-			u8			get_page_index() const							{ return (u8)( (_handle >> 32) & 0x00000000000000FF ); }
-			u16			get_num_slot() const							{ return (u16)( (_handle >> 40) & 0x00000000000007FF ); }
-			u8			get_type() const								{ return (u8)( (_handle >> 51) & 0x00000000000000FF ); }
-
-			bool		is_a_resource() const							{ return (_handle & 0x8000000000000000) != 0; }
-			eResType	get_res_type() const							{ assert(is_a_resource()); return static_cast<eResType>( get_type() ); }
-			bool		is_a_resource_of_type(eResType t) const			{ return get_res_type() == t; }
-
-			bool		is_an_asset() const								{ return !is_a_resource(); }
-			eAssetType	get_asset_type() const							{ assert(is_an_asset()); return static_cast<eAssetType>( get_type() ); }
-			bool		is_an_asset_of_type(eAssetType t) const			{ return get_asset_type() == t; }
+			void 		make_handle (u8 guard, u32 start_slot, u32 num_slot, u8 type);
+			u32			get_start_slot() const							{ return ( _handle & 0x3FFFF ); }
+			u16			get_num_slot() const							{ return (u16)( (_handle >> 18) & 0x0F ); }
+			u8			get_type() const								{ return (u8)( (_handle >> 22) & 0x3F ); }
+			u8			get_gard() const								{ return (u8)( (_handle >> 28) & 0x0F ); }
 
 		private:
-			u64		_handle;
+			u32			_handle;
 
 			friend 	MemManager;
 		};
 
 
-		//************************************************
-		struct	ResHandle: public BaseHandle
-		{
-			eResType	get_type() const							{ return get_res_type(); }
-			bool		is_a_resource_of_type(eResType t) const		{ return get_type() == t; }
-		};
-
-		
-		//************************************************
-		struct	AssetHandle : public BaseHandle
-		{
-			eAssetType	get_type() const							{ return get_asset_type(); }
-			bool		is_an_asset_of_type(eAssetType t) const		{ return get_type() == t; }
-		};
-
-
 		//*********************************
-		struct AssetHandleChain
+		struct ResHandleChain
 		{
-			AssetDescr			*asset;
-			AssetHandleChain	*next;
+			 ResDescr		*descr;
+			 ResHandleChain	*next;
 		};
 		
 		
@@ -129,39 +95,19 @@ namespace gos
 		struct ResDescr
 		{
 		public:
-			void 		reset()					{ signatureUID.setInvalid(); res_handle.set_invalid(); refCount = 0; status = eStatus::error; asset_owner_list = NULL; }
-			eResType	get_type() const		{ return res_handle.get_type(); }
+			void 		reset()					{ UID.setInvalid(); res_handle.set_invalid(); refCount = 0; status = eStatus::error; num_child_not_ready=0; list_padri = list_figli = NULL; }
+			eResType	get_type() const		{ return res_handle.get_res_type(); }
+			bool 		isAnAsset() const		{ return (UID.isValid() && UID.isAnAsset()); }
 
 		public:
-			ResHandle			res_handle;			//IMPORTANTE: deve essere il primo elemento della struct
-			eStatus				status;				//stato della risorsa dal punto di vista dell'engine  (non cambiare direttamente il valore, usa res__set_status()
-			u8					pad0;
-			u16					refCount;
-			asset2::UID			signatureUID;		//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
-			AssetHandleChain	*asset_owner_list;	//lista di asset di cui io sono figlio (che vengono notificati ogni volta che io cambio di stato)
-		};
-
-		/*******************************************************
-		 * @brief	AssetDescr
-		 * 			Un descrittore di asset
-		 */
-		struct AssetDescr
-		{
-		public:
-			void 	reset()					{ assetUID.setInvalid(); asset_handle.set_invalid(); refCount = 0; status=eStatus::error; num_child_not_ready=0; asset_owner_list=NULL; child_list=NULL; }
-			eAssetType	get_type() const 	{ return asset_handle.get_type(); }
-
-		public:
-			AssetHandle			asset_handle;			//IMPORTANTE: deve essere il primo elemento della struct
-			eStatus				status;					
+			ResHandle			res_handle;		//IMPORTANTE: deve essere il primo elemento della struct
+			eStatus				status;			//stato della risorsa dal punto di vista dell'engine  (non cambiare direttamente il valore, usa res__set_status()
 			u8					num_child_not_ready;	//se ho dei figli, questo mi dice quanti di loro sono in stato != da eReady
 			u16					refCount;
-			asset2::UID			assetUID;				//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
-			AssetHandleChain	*asset_owner_list;		//lista di asset di cui io sono figlio (che vengono notificati ogni volta che io cambio di stato)
-			AssetHandleChain	*child_list;			//lista degli asset figli
+			asset2::UID			UID;			//se invalido, vuol dire che la risorsa e' stata creata 'a mano' e non e' un asset presente su disco
+			ResHandleChain		*list_padri;			
+			ResHandleChain		*list_figli;
 		};
-
-
 
 
 	} //namespace res

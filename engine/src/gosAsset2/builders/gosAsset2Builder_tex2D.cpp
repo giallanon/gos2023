@@ -255,7 +255,7 @@ bool Builder_tex2D::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *o
 
 
     //aggiungo le dipendenze di assetUID dalla risorsa IMMAGINE
-    if (!dependency_add (ctx, out_result->assetUID, params.resource_image.resourceUID)) return false;
+	if (!prot_add_asset_to_resouce_dependency (ctx, out_result, params.resource_image.resourceUID)) return false;
 
 
     

@@ -422,12 +422,7 @@ bool Builder_model3d::Syntax1::priv_build_material (DBContext &ctx, bool doCreat
 		signature_manufacture_fullFilename (ctx, out__material_result->signatureUID, filenameDST, sizeof(filenameDST));
 		
 		const u32 i = buildCtx.iToBuild;
-
-		AssetFile_materialPBR assetFile;
-		assetFile.begin();
-		assetFile.set_from_materialPBR (buildCtx.imported.material_list[i]);
-		assetFile.end();
-		return assetFile.save (filenameDST);
+		buildCtx.imported.material_list[i].save (filenameDST);
 	}
 
 	return true;

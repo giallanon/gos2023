@@ -1,11 +1,9 @@
 #include "gosEngine.h"
-#include "loaders/gosEngineLoaders_tex2D.h"
-#include "loaders/gosEngineLoaders_shader.h"
+//#include "loaders/gosEngineLoaders_tex2D.h"
 #include "loaders/gosEngineLoaders_pipe.h"
 #include "loaders/gosEngineLoaders_shape.h"
 #include "loaders/gosEngineLoaders_skeleton.h"
 #include "loaders/gosEngineLoaders_model3d.h"
-#include "loaders/gosEngineLoaders_materialPBR.h"
 #include "loaders/gosEngineLoaders_GPUShape.h"
 #include "loaders/gosEngineLoaders_modelInst.h"
 
@@ -87,14 +85,14 @@ i16	Engine::LoaderThread_mainFN (void *paramsIN)
     loaders::BaseLoader  *loaderList[NUM_MAX_LOADER];
     {
         memset (loaderList, 0, sizeof(loaderList));
-        loaderList[(u32)res::eType::vtx_shader] = GOSNEW(localAllocator, loaders::Loader_vtxShader)();
-        loaderList[(u32)res::eType::pxl_shader] = GOSNEW(localAllocator, loaders::Loader_pxlShader)();
-        loaderList[(u32)res::eType::texture_2d] = GOSNEW(localAllocator, loaders::Loader_tex2D)();
+        //loaderList[(u32)res::eType::vtx_shader] = GOSNEW(localAllocator, loaders::Loader_vtxShader)();
+        //loaderList[(u32)res::eType::pxl_shader] = GOSNEW(localAllocator, loaders::Loader_pxlShader)();
+        //loaderList[(u32)res::eType::texture_2d] = GOSNEW(localAllocator, loaders::Loader_tex2D)();
         loaderList[(u32)res::eType::pipeline] = GOSNEW(localAllocator, loaders::Loader_pipeline)();
 		loaderList[(u32)res::eType::shape] = GOSNEW(localAllocator, loaders::Loader_shape)();
 		loaderList[(u32)res::eType::skeleton] = GOSNEW(localAllocator, loaders::Loader_skeleton)();
 		loaderList[(u32)res::eType::model_3d] = GOSNEW(localAllocator, loaders::Loader_model3d)();
-		loaderList[(u32)res::eType::materialPBR] = GOSNEW(localAllocator, loaders::Loader_materialPBR)();
+		//loaderList[(u32)res::eType::materialPBR] = GOSNEW(localAllocator, loaders::Loader_materialPBR)();
 		loaderList[(u32)res::eType::gpu_shape] = GOSNEW(localAllocator, loaders::Loader_GPUShape)();
 		loaderList[(u32)res::eType::model_instance] = GOSNEW(localAllocator, loaders::Loader_modelInst)();
     }

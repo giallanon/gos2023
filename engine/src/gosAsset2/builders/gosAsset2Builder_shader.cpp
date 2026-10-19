@@ -143,10 +143,8 @@ bool Builder_shader::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *
         return false;
 
     //aggiungo le dipendenze di assetUID dalla risorsa shader_txt
-    if (!dependency_add (ctx, out_result->assetUID, params.resource_shader_txt.resourceUID)) return false;
+	if (!prot_add_asset_to_resouce_dependency (ctx, out_result, params.resource_shader_txt.resourceUID)) return false;
     
-
-
 
     //a questo punto devo compilare lo shader per davvero
     if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)

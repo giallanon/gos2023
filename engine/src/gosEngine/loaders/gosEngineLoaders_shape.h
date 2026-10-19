@@ -1,6 +1,6 @@
 #ifndef _gosEngineLoaders_shape_h_
 #define _gosEngineLoaders_shape_h_
-#include "gosEngineLoaders_shader.h"
+#include "gosEngineLoaders.h"
 #include "../../gosShape/gosShape.h"
 
 namespace gos

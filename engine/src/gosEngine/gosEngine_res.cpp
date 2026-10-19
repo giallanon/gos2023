@@ -220,35 +220,10 @@ void Engine::res__bindEvents (res::Handle handle, res::Descr *res)
 		DBGBREAK;
 		return;
 
-	case res::eType::vtx_shader:
-		res->on_afterCreate = &Engine::internal__vtxshader_on_afterCreate;
-		res->on_destroy = &Engine::internal__vtxshader_on_destroy;
-		res->on_unload = &Engine::internal__vtxshader_on_unload;
-		return;
-
-	case res::eType::pxl_shader:
-		res->on_afterCreate = &Engine::internal__pxlshader_on_afterCreate;
-		res->on_destroy = &Engine::internal__pxlshader_on_destroy;
-		res->on_unload = &Engine::internal__pxlshader_on_unload;
-		return;
-
-	case res::eType::pipeline:
-		res->on_afterCreate = &Engine::internal__pipeline_on_afterCreate;
-		res->on_destroy = &Engine::internal__pipeline_on_destroy;
-		res->on_unload = &Engine::internal__pipeline_on_unload;
-		return;
-
 	case res::eType::shape:
 		res->on_afterCreate = &Engine::internal__shape_on_afterCreate;
 		res->on_destroy = &Engine::internal__shape_on_destroy;
 		res->on_unload = &Engine::internal__shape_on_unload;
-		return;
-
-	case res::eType::gpu_shape:
-		res->on_afterCreate = &Engine::internal__GPUShape_on_afterCreate;
-		res->on_destroy = &Engine::internal__GPUShape_on_destroy;
-		res->on_destroy = &Engine::internal__GPUShape_on_unload;
-		res->on_loadCallback = &Engine::internal__GPUShape_on_loadCallback;
 		return;
 
 	case res::eType::skeleton:
@@ -270,12 +245,7 @@ void Engine::res__bindEvents (res::Handle handle, res::Descr *res)
 		res->on_unload = &Engine::internal__modelinst_on_unload;
 		res->on_loadCallback = &Engine::internal__modelinst_on_loadCallback;
 		return;
-	
-	case res::eType::materialPBR:
-		res->on_afterCreate = &Engine::internal__materialPBR_on_afterCreate;
-		res->on_destroy = &Engine::internal__materialPBR_on_destroy;
-		return;
-	
+
 	}
 }
 

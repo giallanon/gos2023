@@ -281,7 +281,7 @@ void DefaultApp::priv_loop ()
 				asset2::UID uid;
 				while ( assetMon.read(&uid) )
 				{
-					engine->asset_hotreload (uid);
+					engine->asset_hotreload(uid);
 				}
 
 				next_time_check_assetMon__msec = timenow_msec + 500;

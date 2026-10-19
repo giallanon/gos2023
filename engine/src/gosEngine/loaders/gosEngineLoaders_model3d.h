@@ -1,6 +1,6 @@
 #ifndef _gosEngineLoaders_model3d_h_
 #define _gosEngineLoaders_model3d_h_
-#include "gosEngineLoaders_shader.h"
+#include "gosEngineLoaders.h"
 #include "../gosEngine.h"
 
 namespace gos

@@ -18,14 +18,14 @@ int main()
         if (!engine.setup (1600, 600, "testRes2"))
             return -2;
 
-        if (!engine.asset_build())  return -3;
+        //if (!engine.asset_build())  return -3;
         //if (!engine.asset_rebuildAll())  return -3;
 
 
         if (engine.setup_renderPipe())
         {
 			App app;
-			//app.enable_asset_monitor();
+			app.enable_asset_monitor();
 			app.run (&engine);
         }
     }

@@ -2,7 +2,6 @@
 #define _gosEngineRes2_res2_h_
 #include "MemManager.h"
 #include "res2_res.h"
-#include "res2_asset.h"
 
 
 namespace gos
@@ -12,24 +11,18 @@ namespace gos
 		const char* 	enumToString (res2::eLoadMode s);
 		const char* 	enumToString (res2::eStatus s);
 		const char* 	enumToString (res2::eResType s);
-		const char* 	enumToString (res2::eAssetType s);
 
-		void	debug__set_logger (gos::Logger *logger);
+		void 	setup (gos::Allocator *allocator, gos::Logger *logger);
+		void	unsetup();
 		
 		bool	is_ready (const ResDescr *res);
 		void	change_state (ResDescr *res, res2::eStatus new_status, const char *reason = "cng state");
-		bool	release (ResDescr *res);
 		void 	inc_refCount (ResDescr *res);
-		
+		void 	add_child (ResDescr *padre, ResDescr *figlio);
+		void 	remove_child (ResDescr *padre, ResDescr *figlio);
 
-		bool	is_ready (const AssetDescr *asset);
-		void	change_state (AssetDescr *asset, res2::eStatus new_status, const char *reason = "cng state");
-		bool	release (AssetDescr *asset);
-		void 	inc_refCount (AssetDescr *res);
-		
-
-
-
+		bool	release (ResDescr *res);
+		void	destroy (ResDescr *res);
 
 	} //namespace res2
 } //namespace gos

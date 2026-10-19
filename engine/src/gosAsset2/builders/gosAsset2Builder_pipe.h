@@ -73,7 +73,10 @@ namespace gos
                 eImageFormat    renderTargetFormat[GOSGPU__NUM_MAX_ATTACHMENT];
 
                 UID             vtxshader_assetUID;
-                UID             pxlshader_assetUID;
+                UID             vtxshader_signatureUID;
+				
+				UID             pxlshader_assetUID;
+				UID             pxlshader_signatureUID;
             };
 
         private:

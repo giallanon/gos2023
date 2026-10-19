@@ -11,7 +11,7 @@ namespace gos
 	namespace res2
 	{
 		//************************************
-		struct ResVtxBuffer
+		struct VtxBuffer
 		{
 			static constexpr eResType type = eResType::vtx_buffer;
 
@@ -21,12 +21,25 @@ namespace gos
 				GPUVtxBufferHandle	vbHandle;
 			};
 
-			ResDescr	base;
-			Data		data;
+			struct Resource
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ data.reset(); }
+				ResDescr	base;
+				Data		data;
+			};
+
+			struct Asset
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ res_data_pt = NULL; }
+				ResDescr	base;
+				Data		*res_data_pt;
+			};
 		};
 
 		//************************************
-		struct ResIdxBuffer
+		struct IdxBuffer
 		{
 			static constexpr eResType type = eResType::idx_buffer;
 
@@ -36,59 +49,28 @@ namespace gos
 				GPUIdxBufferHandle	ibHandle;
 			};
 
-			ResDescr	base;
-			Data		data;
+			struct Resource
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ data.reset(); }
+				ResDescr	base;
+				Data		data;
+			};
+
+			struct Asset
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ res_data_pt = NULL; }
+				ResDescr	base;
+				Data		*res_data_pt;
+			};
 		};
 
 		//************************************
-		struct ResVtxShader
-		{
-			static constexpr eResType type = eResType::vtx_shader;
-
-			struct Data
-			{
-				void 	reset()		{ shaderHandle.setInvalid(); }
-				GPUShaderHandle		shaderHandle;
-			};
-
-			ResDescr	base;
-			Data		data;
-		};
-
-		//************************************
-		struct ResPxlShader
-		{
-			static constexpr eResType type = eResType::pxl_shader;
-
-			struct Data
-			{
-				void 	reset()		{ shaderHandle.setInvalid(); }
-				GPUShaderHandle		shaderHandle;
-			};
-
-			ResDescr	base;
-			Data		data;
-		};		
-
-		//************************************
-		struct ResPipeline
-		{
-			static constexpr eResType type = eResType::pipeline;
-
-			struct Data
-			{
-				void 	reset()		{ pipeHandle.setInvalid(); }
-				GPUPipelineHandle	pipeHandle;
-			};
-
-			ResDescr	base;
-			Data		data;
-		};
-
-		//************************************
-		struct ResTexture2d
+		struct Texture2d
 		{
 			static constexpr eResType type = eResType::texture_2d;
+			static constexpr eResType	get_type() 		{ return type; }
 
 			struct Data
 			{
@@ -97,29 +79,159 @@ namespace gos
 				u32					index;
 			};
 
-			ResDescr	base;
-			Data		data;
+			struct Resource
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ data.reset(); }
+				ResDescr	base;
+				Data		data;
+			};
+
+			struct Asset
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ res_data_pt = NULL; }
+				ResDescr	base;
+				Data		*res_data_pt;
+			};
 		};
 
 		//************************************
-		struct ResShape
+		struct MaterialPBR
 		{
-			static constexpr eResType type = eResType::shape;
+			static constexpr eResType type = eResType::materialPBR;
+			static constexpr eResType	get_type() 		{ return type; }
 
 			struct Data
 			{
-				void 	reset()		{ shape.reset(); }
-				gos::Shape	shape;
+				static constexpr u32 NUM_MAX_RENDERER = 4;
+				void 	reset()		{ memset(renderer_bindings, 0xff, sizeof(renderer_bindings)); update_ct=0; diffuse_col_HDR_RGBA.set(1,1,1,1); diffuse_texture = normal_texture = NULL; }
+				
+				u32				renderer_bindings[NUM_MAX_RENDERER];
+				u32				update_ct; //viene incrementato da engine ogni volta che si chiama materialPRB_get_for_updatre
+				vec4f			diffuse_col_HDR_RGBA;
+				Texture2d::Data	*diffuse_texture;
+				Texture2d::Data	*normal_texture;
 			};
 
-			ResDescr	base;
-			Data		data;
+			struct Updatable
+			{
+				ResDescr	*base;
+				Data		*data;
+			};
+
+			struct Resource
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ data.reset(); }
+				ResDescr	base;
+				Data		data;
+			};
+
+			struct Asset
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ res_data_pt = NULL; }
+				ResDescr	base;
+				Data		*res_data_pt;
+			};
+		};
+		
+		//************************************
+		struct VtxShader
+		{
+			static constexpr eResType type = eResType::vtx_shader;
+			static constexpr eResType	get_type() 		{ return type; }
+
+
+			struct Data
+			{
+				void 	reset()		{ vtxshader_handle.setInvalid(); }
+				GPUShaderHandle		vtxshader_handle;
+			};
+
+			struct Resource
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ data.reset(); }
+				ResDescr	base;
+				Data		data;
+			};
+
+			struct Asset
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ res_data_pt = NULL; }
+				ResDescr	base;
+				Data		*res_data_pt;
+			};
 		};
 
 		//************************************
-		struct ResGPUShape
+		struct PxlShader
+		{
+			static constexpr eResType type = eResType::pxl_shader;
+			static constexpr eResType	get_type() 		{ return type; }
+
+
+			struct Data
+			{
+				void 	reset()		{ pxlshader_handle.setInvalid(); }
+				GPUShaderHandle		pxlshader_handle;
+			};
+
+			struct Resource
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ data.reset(); }
+				ResDescr	base;
+				Data		data;
+			};
+
+			struct Asset
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ res_data_pt = NULL; }
+				ResDescr	base;
+				Data		*res_data_pt;
+			};
+		};
+
+		//************************************
+		struct Pipeline
+		{
+			static constexpr eResType type = eResType::pipeline;
+			static constexpr eResType	get_type() 		{ return type; }
+
+
+			struct Data
+			{
+				void 	reset()		{ pipe_handle.setInvalid(); }
+				GPUPipelineHandle	pipe_handle;
+			};
+
+			struct Resource
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ data.reset(); }
+				ResDescr	base;
+				Data		data;
+			};
+
+			struct Asset
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ res_data_pt = NULL; }
+				ResDescr	base;
+				Data		*res_data_pt;
+			};
+		};		
+
+		//************************************
+		struct GPUShape
 		{
 			static constexpr eResType type = eResType::gpu_shape;
+			static constexpr eResType	get_type() 		{ return type; }
 
 			struct Data
 			{
@@ -148,9 +260,57 @@ namespace gos
 				u32					alloc_idxbuf_size;		
 			};
 
-			ResDescr	base;
-			Data		data;
+			struct Resource
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ data.reset(); }
+				ResDescr	base;
+				Data		data;
+			};
+
+			struct Asset
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ res_data_pt = NULL; }
+				ResDescr	base;
+				Data		*res_data_pt;
+			};
 		};
+		
+		
+		/************************************
+		struct Shape
+		{
+			static constexpr eResType type = eResType::shape;
+			static constexpr eResType	get_type() 		{ return type; }
+
+
+			struct Data
+			{
+				void 	reset()		{ shape.reset(); }
+				gos::Shape	shape;
+			};
+
+			struct Resource
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ data.reset(); }
+				ResDescr	base;
+				Data		data;
+			};
+
+			struct Asset
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ res_data_pt = NULL; }
+				ResDescr	base;
+				Data		*res_data_pt;
+			};
+		};					
+	*/
+
+
+
 
 		//************************************
 		struct ResSkeleton
@@ -167,9 +327,49 @@ namespace gos
 			Data		data;
 		};
 
-		
 
+		/************************************
+		struct ResModel3d
+		{
+			static constexpr eResType type = eResType::model_3d;
+
+			struct Data
+			{
+				struct Mesh
+				{
+					u16 shape_index;
+					u16 bone_index;
+					u16 material_index;
+					u16 pad;
+				};
+
+				void 	reset()		{ skeleton.reset(); }
+				
+				ResSkeleton::Data		skeleton;
+				ResMaterialPBR::Data	material_list[4];
+				ResGPUShape::Data		gpushape_list[4];
+				Mesh					mesh_list[4];
+			};
+
+			ResDescr	base;
+			Data		data;
+		};		*/
 	
+		/************************************
+		struct ResModelInstance
+		{
+			static constexpr eResType type = eResType::model_instance;
+
+			struct Data
+			{
+				void 	reset()		{ matW.identity(); model.reset(); }
+				mat4x4f 			matW;
+				ResModel3d::Data	model;
+			};
+
+			ResDescr	base;
+			Data		data;
+		};		*/
 
 	} //namespace res2
 } //namespace gos
