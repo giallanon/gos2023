@@ -219,15 +219,19 @@ void OSWaitableGrp::msgQ__remove (const HThreadMsgR &hRead)
 //***********************************************
 OSWaitableGrp::sRecord* OSWaitableGrp::priv_add_FSWatcher (gos::FSWatcher *fsw)
 {
-	//TODO
-	DBGBREAK;
-	return NULL;
+	assert(debug_bWaiting == 0);
+
+	sRecord *s = priv_newRecord();
+	s->originType = eWaitEventOrigin::fsWatcher;
+	s->origin.isFSW.fsWatcher = fsw;
+	return s;
 }
 
 //***********************************************
 void OSWaitableGrp::fsWatcher__remove(gos::FSWatcher *fsw)
 {
 	//TODO
+	gos::logger::log_7 (eTextColor::red, "OSWaitableGrp::fsWatcher__remove() => TODO\n");
 	DBGBREAK;
 }
 
@@ -282,6 +286,16 @@ u8 OSWaitableGrp::priv_wait(u32 timeoutMSec)
 
 		case eWaitEventOrigin::msgQ:
 			eventsHandle[n++] = p->origin.msgQ.evt.osEvt.h;
+			break;
+
+		case eWaitEventOrigin::fsWatcher:
+			{
+				u32 num_handle = p->origin.isFSW.fsWatcher->internal__waitgrp_get_num_handle();
+				if (n + num_handle > MAX_EVENTS_HANDLE_PER_CALL)
+					num_handle = MAX_EVENTS_HANDLE_PER_CALL -n;
+				for (u32 i=0; i<num_handle; i++)
+					eventsHandle[n++] = p->origin.isFSW.fsWatcher->internal__waitgrp_handle_by_index(i);
+			}
 			break;
 		}
 		p = p->next;
@@ -367,6 +381,11 @@ u8 OSWaitableGrp::priv_wait(u32 timeoutMSec)
 				if (eventsHandle[index] == p->origin.msgQ.evt.osEvt.h)
 					bFound = true;
 				break;
+
+			case eWaitEventOrigin::fsWatcher:
+				if (p->origin.isFSW.fsWatcher->internal__waitgrp_is_one_of_mine (eventsHandle[index]))
+					bFound = true;
+				break;
 			}
 
 			if (bFound)
@@ -374,6 +393,11 @@ u8 OSWaitableGrp::priv_wait(u32 timeoutMSec)
 				if (p->originType == eWaitEventOrigin::osevent || p->originType == eWaitEventOrigin::msgQ)
 				{
 					generatedEventList[nEventsReady++] = p;
+				}
+				else if (p->originType == eWaitEventOrigin::fsWatcher)
+				{
+					//TODO
+					DBGBREAK;
 				}
 				else if (p->originType == eWaitEventOrigin::socket)
 				{

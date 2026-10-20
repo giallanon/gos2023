@@ -279,10 +279,13 @@ void DefaultApp::priv_loop ()
 			if (timenow_msec >= next_time_check_assetMon__msec)
 			{
 				asset2::UID uid;
+				const u64 debug_started = gos::getTimeSinceStart_msec();
 				while ( assetMon.read(&uid) )
 				{
 					engine->asset_hotreload(uid);
 				}
+				const u64 debug_elapsed = gos::getTimeSinceStart_msec() - debug_started;
+				printf ("DEBUG %" PRIu64 " ms\n", debug_elapsed);
 
 				next_time_check_assetMon__msec = timenow_msec + 500;
 			}

@@ -860,7 +860,7 @@ bool Engine::materialPBR_create (MaterialPBRH *out_handle)
 	return true;
 }
 
-bool Engine::get_for_update (MaterialPBRH handle, MaterialPBRDataUpd *out, u64 timeout_msec)
+bool Engine::get_for_update (MaterialPBRH handle, MaterialPBRDataUpd *out, u32 timeout_msec)
 { 
 	assert (NULL != out);
 	res2::ResDescr *descr = res2MemManager.get (handle);

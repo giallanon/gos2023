@@ -277,67 +277,90 @@ i32 platform::socket_read (OSSocket &sok, void *buffer, u16 bufferSizeInBytes, u
 		readFLAG = MSG_PEEK;
 
 	if (timeout_msec != sok.readTimeoutMSec)
-		platform::socket_setReadTimeoutMSec(sok, timeout_msec);
-		
-
-	//purtroppo devo pollare.... in teoria socket_setReadTimeoutMSec dovrebbe settare
-	//la socket in modalita' bloccante con il timeout deciso, ma di fatto non funziona quindi mi tocca pollare
-	u64 timeToExit_msec = gos::getTimeSinceStart_msec() + timeout_msec;
-	i32 ret = -1;
-	do
 	{
-		ret = ::recv(sok.socketID, (char*)buffer, bufferSizeInBytes, readFLAG);
+		platform::socket_setReadTimeoutMSec(sok, timeout_msec);
+	} 
+
+	if (0 == timeout_msec)
+	{
+		i32 ret = ::recv(sok.socketID, (char*)buffer, bufferSizeInBytes, readFLAG);
 		if (ret == 0)
 			return 0;	//socket closed
-		if (ret != SOCKET_ERROR)
+		if (ret > 0)
 			return ret;
 
 		assert(ret == SOCKET_ERROR);
 		int myerrno = WSAGetLastError();
 		if (myerrno == WSAEINPROGRESS || myerrno == WSAEWOULDBLOCK || myerrno == WSAETIMEDOUT)
+			return -1;	//timeout
+
+		return 0;
+	}
+	else
+	{
+
+		//purtroppo devo pollare.... in teoria socket_setReadTimeoutMSec dovrebbe settare
+		//la socket in modalita' bloccante con il timeout deciso, ma di fatto non funziona quindi mi tocca pollare
+		u64 timeToExit_msec = gos::getTimeSinceStart_msec() + timeout_msec;
+		i32 ret = -1;
+		do
 		{
-			platform::sleep_msec(100);
-			continue;
-		}
+			ret = ::recv(sok.socketID, (char*)buffer, bufferSizeInBytes, readFLAG);
+			if (ret == 0)
+				return 0;	//socket closed
+			if (ret != SOCKET_ERROR)
+				return ret;
 
-		//DBGBREAK;
-		switch (myerrno)
-		{
-		case WSANOTINITIALISED:
-			return 0;
-		case WSAENETDOWN:
-			return 0;
-		case WSAEFAULT:
-			return 0;
-		case WSAENOTCONN:
-			return 0;
-		case WSAEINTR:
-			return 0;
-		case WSAENETRESET:
-			return 0;
-		case WSAENOTSOCK:
-			return 0;
-		case WSAEOPNOTSUPP:
-			return 0;
-		case MSG_OOB:
-			return 0;
-		case WSAESHUTDOWN:
-			return 0;
-		case WSAEMSGSIZE:
-			return 0;
-		
-		case WSAECONNRESET:
-			return 0;
+			assert(ret == SOCKET_ERROR);
+			int myerrno = WSAGetLastError();
+			if (myerrno == WSAEINPROGRESS || myerrno == WSAEWOULDBLOCK || myerrno == WSAETIMEDOUT)
+			{
+//platform::sleep_msec(100);
+				if (gos::getTimeSinceStart_msec() < timeToExit_msec)
+					continue;
+				return -1;
+			}
 
-		case WSAEINVAL:
-			return 0;
+			//DBGBREAK;
+			switch (myerrno)
+			{
+			case WSANOTINITIALISED:
+				return 0;
+			case WSAENETDOWN:
+				return 0;
+			case WSAEFAULT:
+				return 0;
+			case WSAENOTCONN:
+				return 0;
+			case WSAEINTR:
+				return 0;
+			case WSAENETRESET:
+				return 0;
+			case WSAENOTSOCK:
+				return 0;
+			case WSAEOPNOTSUPP:
+				return 0;
+			case MSG_OOB:
+				return 0;
+			case WSAESHUTDOWN:
+				return 0;
+			case WSAEMSGSIZE:
+				return 0;
 
-		case WSAECONNABORTED:
-			return 0;
-		}
-	} while (gos::getTimeSinceStart_msec() < timeToExit_msec);
+			case WSAECONNRESET:
+				return 0;
 
-	return -1;  //timeout
+			case WSAEINVAL:
+				return 0;
+
+			case WSAECONNABORTED:
+				return 0;
+			}
+		} while (gos::getTimeSinceStart_msec() < timeToExit_msec);
+
+		return -1;  //timeout
+	}
+	
 }
 
 //*************************************************

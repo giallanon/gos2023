@@ -64,7 +64,7 @@ namespace gos
 			bool		is_of_type(eResType t) const					{ return get_res_type() == t; }
 
 			u32 		viewAsU32() const 								{ return _handle; }
-			void 		setFromU32(u64 h)								{ _handle = h; }
+			void 		setFromU32(u32 h)								{ _handle = h; }
 
 		protected:
 			void 		make_handle (u8 guard, u32 start_slot, u32 num_slot, u8 type);

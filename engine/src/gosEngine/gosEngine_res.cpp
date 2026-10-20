@@ -373,7 +373,7 @@ void Engine::res__freeHandleChain (res::HandleChain *p)
 *	- in stato eReady
 *	- tutti i suoi figli sono in stato eReady
 */
-bool Engine::res__getOrScheduleLoad (res::Handle handle, const res::Descr **out, u64 timeout_msec)
+bool Engine::res__getOrScheduleLoad (res::Handle handle, const res::Descr **out, u32 timeout_msec)
 {
 	res::Descr *res= res__getDescriptor(handle);
 	if (NULL == res)

@@ -99,14 +99,14 @@ void App::on__setup ()
 void App::on__update (u64 timenow_msec)
 {
 	static u64 next_time_upd__msec = 0;
-	static f32 incr = 0.1f;
+	static f32 incr = 0.02f;
 	static u8 which_texture = 0;
 
 
 	if (timenow_msec < next_time_upd__msec)
 		return;
 
-	next_time_upd__msec = timenow_msec + 100;
+	next_time_upd__msec = timenow_msec + 33;
 
 	gos::MaterialPBRDataUpd upd;
 	if (!engine->get_for_update(material_cubo_handle, &upd))

@@ -121,3 +121,4 @@ engine/bin/assetMonitor/writable/test_assets_1/assets2.sqlite3
 engine/bin/assetMonitor/writable/test_assets_2/assets2.sqlite3
 
 engine/bin/testRes2/writable/assets/assets2.sqlite3
+engine/bin/assetMonitor/win__mon_testRes2.bat
