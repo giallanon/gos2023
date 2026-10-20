@@ -4,6 +4,8 @@
 #include "res2/loaders/Loader_shader.h"
 #include "res2/loaders/Loader_pipeline.h"
 #include "res2/loaders/Loader_gpushape.h"
+#include "res2/loaders/Loader_skeleton.h"
+#include "res2/loaders/Loader_model.h"
 
 using namespace gos;
 using namespace gos::engine;
@@ -37,7 +39,7 @@ i16	Engine::res2__LoaderThread_mainFN (void *paramsIN)
     }
 
     //spawn dei loader per le risorse
-    static constexpr u32 NUM_MAX_RES_LOADER = 1 + (u32)res::eType::NUM_MAX;
+    static constexpr u32 NUM_MAX_RES_LOADER = 1 + (u32)res2::eResType::NUM_MAX;
     res2::BaseLoader  *res_loaderList[NUM_MAX_RES_LOADER];
     {
         memset (res_loaderList, 0, sizeof(res_loaderList));
@@ -47,7 +49,9 @@ i16	Engine::res2__LoaderThread_mainFN (void *paramsIN)
 		res_loaderList[(u32)res2::eResType::pxl_shader] = GOSNEW(localAllocator, res2::Loader_PxlShader)();
 		res_loaderList[(u32)res2::eResType::pipeline] = GOSNEW(localAllocator, res2::Loader_pipeline)();
 		res_loaderList[(u32)res2::eResType::gpu_shape] = GOSNEW(localAllocator, res2::Loader_gpushape)();
-    }	
+		res_loaderList[(u32)res2::eResType::skeleton] = GOSNEW(localAllocator, res2::Loader_skeleton)();
+		res_loaderList[(u32)res2::eResType::model_3d] = GOSNEW(localAllocator, res2::Loader_model)();
+    }
 
 
     //loop

@@ -1,6 +1,5 @@
 #ifndef gosEngineRenderPipe_line3d
 #define gosEngineRenderPipe_line3d
-#include "../res/gosEngineRes.h"
 #include "dataTypes/gosColorU32.h"
 #include "../renderPipe/gosEngineRenderPipe.h"
 

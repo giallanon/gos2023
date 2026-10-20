@@ -116,28 +116,34 @@ bool AssetFile_model3D::save (const char *filenameDST)
 	//magic
 	buffer.writeU32 (GOS_MAGIC__ASSET_MODEL3D);
 
-	//skeleton (signatureUID)
+	//num shape
+	buffer.writeU32 (listof_shape.getNElem());
+	
+	//num materiali
+	buffer.writeU32 (listof_material.getNElem());
+
+	//num meshes
+	buffer.writeU32 (listof_mesh.getNElem());
+
+	//skeleton assetUID
+	assert (skeleton_assetUID.isAnAssetOfType(eAssetType::skeleton));
 	buffer.writeU64 (skeleton_assetUID._uid);
 
-
-	//num shape e relativi signatureUID
-	buffer.writeU32 (listof_shape.getNElem());
+	//shape assetUID
 	for (u32 i=0; i<listof_shape.getNElem(); i++)
 	{
-		assert (listof_shape(i).isASignatureOfType(eAssetType::shape));
+		assert (listof_shape(i).isAnAssetOfType(eAssetType::shape));
 		buffer.writeU64 (listof_shape(i)._uid);
 	}
 
-	//num materiali e relativi signatureUID
-	buffer.writeU32 (listof_material.getNElem());
+	//materiali assetUID
 	for (u32 i=0; i<listof_material.getNElem(); i++)
 	{
-		assert (listof_material(i).isASignatureOfType(eAssetType::materialPBR));
+		assert (listof_material(i).isAnAssetOfType(eAssetType::materialPBR));
 		buffer.writeU64 (listof_material(i)._uid);
 	}
 
-	//num meshes e relative info
-	buffer.writeU32 (listof_mesh.getNElem());
+	//meshes e relative info
 	for (u32 i=0; i<listof_mesh.getNElem(); i++)
 	{
 		//shape index

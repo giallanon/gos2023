@@ -20,15 +20,16 @@ void App::on__unsetup()
 	engine->release (material2_handle);
 	engine->release (material1_handle);
 	engine->release (pipe1_handle);
+	engine->release (model1_handle);
 }
 
 //***************************************
-void App::test()
+void App::test1()
 {
 	engine->vtxBuffer_create (1024, eMemAccessMode::onGPU, &vtxbuffer_handle);
 	engine->idxBuffer_create (1024, eMemAccessMode::onGPU, &idxbuffer_handle);
 
-	engine->texture2D_createFromAsset ("checker1", &texture_checker_handle, res::eLoadMode::onDemand);
+	engine->texture2D_createFromAsset ("checker1", &texture_checker_handle, res2::eLoadMode::onDemand);
 	{
 		const TextureData *texture_data;
 		GOS_DEBUG_ASSERT( engine->get_texture_bianca(&texture_data) );
@@ -69,7 +70,7 @@ void App::test()
 	}
 
 	//carico un materiale
-	engine->materialPBR_createFromAsset ("material01", &material1_handle, res::eLoadMode::asap);
+	engine->materialPBR_createFromAsset ("material01", &material1_handle, res2::eLoadMode::asap);
 	{
 		const MaterialPBRData *material_data;
 		GOS_DEBUG_ASSERT( engine->get(material1_handle, &material_data, 4000) );
@@ -81,22 +82,28 @@ void App::test()
 
 	engine->pipeline_createFromAsset ("gosengine_PIPE3", &pipe1_handle);
 }
+void App::test1_on_update(u64 timenow_msec)		{ }	
+void App::test1_render()
+{
+	const MaterialPBRData *materia_data;
+	engine->get (material1_handle, &materia_data);
+	engine->get (material2_handle, &materia_data);
+}
+
 
 //***************************************
-void App::on__setup ()
+void App::test2()
 {
 	renderer_PIPE3 = engine->renderPipe.add_renderer<engine::Renderer_PIPE3>();
 	renderer_line3d = engine->renderPipe.add_renderer<engine::Renderer_line3d>();
 		line_ctx1 = renderer_line3d->ctx__create_new("ctx1", 1024);
 
 
-	engine->texture2D_createFromAsset ("checker1", &texture_checker_handle, res::eLoadMode::onDemand);
+	engine->texture2D_createFromAsset ("checker1", &texture_checker_handle, res2::eLoadMode::onDemand);
 	engine->GPUShape_createFromAsset ("model_cubo1x1x1.Cube", &shape_cubo_handle);
 	engine->materialPBR_createFromAsset ("model_cubo1x1x1.Material", &material_cubo_handle);
 }
-
-//***************************************
-void App::on__update (u64 timenow_msec)
+void App::test2_on_update(u64 timenow_msec)
 {
 	static u64 next_time_upd__msec = 0;
 	static f32 incr = 0.02f;
@@ -140,11 +147,8 @@ void App::on__update (u64 timenow_msec)
 	upd.data->diffuse_col_HDR_RGBA.values[0] = red;
 	upd.data->diffuse_col_HDR_RGBA.values[1] = red;
 	upd.data->diffuse_col_HDR_RGBA.values[2] = red;
-
-}
-
-//***************************************
-void App::on__render()
+}	
+void App::test2_render()
 {
 	renderer_PIPE3->begin();
 	{
@@ -159,12 +163,64 @@ void App::on__render()
 	renderer_PIPE3->end();
 
 	line_ctx1->clear();
+}
 
-	// const MaterialPBRData *materia_data;
-	// engine->get (material1_handle, &materia_data);
-	// engine->get (material2_handle, &materia_data);
+//***************************************
+void App::test3()
+{
+	renderer_PIPE3 = engine->renderPipe.add_renderer<engine::Renderer_PIPE3>();
+	engine->model_createFromAsset ("model_cubo1x1x1", &model1_handle, res2::eLoadMode::asap);
+}
+void App::test3_on_update(u64 timenow_msec)		{ }	
+void App::test3_render()
+{
+	renderer_PIPE3->begin();
+	{
+		mat4x4f	m;
 
-	// const PipelineData *pipe_data;
-	// engine->get (pipe1_handle, &pipe_data);
+		// m.identity();
+		// renderer_PIPE3->add (model1_handle, m);
+
+		// m.buildTranslation (0, 2, 2);
+		// renderer_PIPE3->add (model1_handle, m);
+		for (i32 y = 0; y <= 40; y+=2)
+		{
+			for (i32 z = 0; z <= 40; z+=2)
+			{
+				for (i32 x = -20; x <20; x+=2)
+				{
+					m.buildTranslation (x, y, z);
+					renderer_PIPE3->add (model1_handle, m);
+				}
+			}
+		}
+	}
+	renderer_PIPE3->end();
+}
+
+
+//***************************************
+void App::on__setup ()
+{
+	//test1();
+	//test2();
+	test3();
+}
+
+//***************************************
+void App::on__update (u64 timenow_msec)
+{
+	//test1_on_update (timenow_msec);
+	//test2_on_update (timenow_msec);
+	test3_on_update (timenow_msec);
+
+}
+
+//***************************************
+void App::on__render()
+{
+	// test1_render();
+	// test2_render();
+	test3_render();
 }
 

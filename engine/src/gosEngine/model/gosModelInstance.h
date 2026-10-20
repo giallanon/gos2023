@@ -24,7 +24,7 @@ namespace gos
 		
 	public:
 		u32 				num_gpushapes;
-		const ENGGPUShape	*listof_gpushapes;	//punta alla lista di gpushape di <model>
+		const GPUShapeH		*listof_gpushapes;	//punta alla lista di gpushape di <model>
 
 		u32 				num_bones;
 		gos::Bone			*listof_bones;
@@ -34,7 +34,7 @@ namespace gos
 		const Model::Mesh	*listof_meshes;	//punta alla lista di mesh di <model>
 
 		u32 				num_materials;
-		const ENGMaterialPBR	*listof_materials;	//punta alla lista di ENGMaterialPBR di <model>
+		const MaterialPBRH	*listof_materials;	//punta alla lista di ENGMaterialPBR di <model>
 
 		gos::Allocator		*allocator;
 	};

@@ -61,7 +61,7 @@ bool Renderer_line3d::on__attach (const RPIPE::Context &ctx, u8 renderer_UID)
     gpu = engine->gpu;
 
     //load degli assets
-    if (!engine->pipeline_createFromAsset ("gosengine_line3d", &handle_pipeline, res::eLoadMode::asap))
+    if (!engine->pipeline_createFromAsset ("gosengine_line3d", &handle_pipeline, res2::eLoadMode::asap))
         return false;    
 
     //creo la shape del singolo segmento

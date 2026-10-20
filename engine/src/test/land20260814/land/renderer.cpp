@@ -44,14 +44,14 @@ bool Renderer::on__attach (const gos::engine::RenderPipe::Context &ctx, u8 rende
 	this->handle_descrPool = ctx.handle_descrPool;
 
 	//load pipe
-	if (!ctx.engine->pipeline_createFromAsset ("land20260829", &handle_pipeline, res::eLoadMode::asap))
+	if (!ctx.engine->pipeline_createFromAsset ("land20260829", &handle_pipeline, res2::eLoadMode::asap))
 	{
 		logger::err ("Renderer::on__attach() => can't load pipeline\n");
         return false; 
 	}	
 
 	//load texture LOD
-	eng->texture2D_createFromAsset ("tex_lod", &handle_texture_lod, res::eLoadMode::asap);
+	eng->texture2D_createFromAsset ("tex_lod", &handle_texture_lod, res2::eLoadMode::asap);
 
 	//SBO instance data
 	assert (sbo_instance_data.handle_sbo.isInvalid());

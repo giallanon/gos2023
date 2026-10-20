@@ -13,12 +13,12 @@ void Reader::setup (const Model *mIN)
 }
 
 //*******************************************
-ENGSkeleton Reader::skeleton_get_handle() const
+SkeletonH Reader::skeleton_get_handle() const
 {
 	assert (model::isValid(*m));
 	
-	ENGSkeleton ret;
-	ret.index = utils::bufferReadU32 (&m->blob[SKELETON]);
+	SkeletonH ret;
+	ret.setFromU32 ( utils::bufferReadU32 (&m->blob[SKELETON]) );
 	return ret;
 }
 
@@ -46,20 +46,20 @@ u32 Reader::gpushape_get_num() const
 }
 
 //*******************************************
-ENGGPUShape Reader::gpushape_get_by_index (u32 index) const
+GPUShapeH Reader::gpushape_get_by_index (u32 index) const
 {
 	assert (index < gpushape_get_num());
-	const ENGGPUShape *list = gpushape_get_pt_to_list();
+	const GPUShapeH *list = gpushape_get_pt_to_list();
 	return list[index];
 
 }
 
 //*******************************************
-const ENGGPUShape* Reader::gpushape_get_pt_to_list () const
+const GPUShapeH* Reader::gpushape_get_pt_to_list () const
 {
 	const u32 ct = ENGSHAPE;
 	assert (0 == ct % 8);
-	return reinterpret_cast<const ENGGPUShape*>(&m->blob[ct]);
+	return reinterpret_cast<const GPUShapeH*>(&m->blob[ct]);
 }
 
 
@@ -71,19 +71,19 @@ u32 Reader::material_get_num() const
 }
 
 //*******************************************
-ENGMaterialPBR Reader::material_get_by_index (u32 index) const
+MaterialPBRH Reader::material_get_by_index (u32 index) const
 {
 	assert (index < material_get_num());
-	const ENGMaterialPBR *list = material_get_pt_to_list();
+	const MaterialPBRH *list = material_get_pt_to_list();
 	return list[index];
 }
 
 //*******************************************
-const ENGMaterialPBR* Reader::material_get_pt_to_list () const
+const MaterialPBRH* Reader::material_get_pt_to_list () const
 {
 	const u32 ct = utils::bufferReadU16 (&m->blob[OFFSET_TO_START_OF_MATERIALS]);
 	assert (0 == ct % 8);
-	return reinterpret_cast<const ENGMaterialPBR*>(&m->blob[ct]);
+	return reinterpret_cast<const MaterialPBRH*>(&m->blob[ct]);
 }
 
 

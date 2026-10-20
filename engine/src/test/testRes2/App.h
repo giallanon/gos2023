@@ -19,7 +19,17 @@ protected:
 	void	on__update (u64 timenow_msec) final;
 
 private:
-	void	test();
+	void	test1();
+	void	test1_on_update(u64 timenow_msec);
+	void 	test1_render();
+	
+	void	test2();
+	void	test2_on_update(u64 timenow_msec);
+	void 	test2_render();
+
+	void	test3();
+	void	test3_on_update(u64 timenow_msec);
+	void 	test3_render();
 
 private:
 	gos::engine::Renderer_PIPE3			*renderer_PIPE3;
@@ -38,6 +48,7 @@ private:
 	gos::MaterialPBRH	material1_handle;
 	gos::MaterialPBRH	material2_handle;
 	gos::PipelineH		pipe1_handle;
+	gos::ModelH			model1_handle;
 	
 };
 

@@ -37,8 +37,7 @@ namespace gos
 			void    begin ();
 			void    add (const GPUShapeH handle_shape, const mat4x4f &m, u32 material_index);
 			void    add (const GPUShapeH handle_shape, const mat4x4f &m, MaterialPBRH handle_material);
-			void 	add (gos::ENGModel3dInst handle_mi);
-			void    add (const ent::CompModelInstance *mi);
+			void    add (const ModelH handle_model, const mat4x4f &m);
 			void    end ();
 
 			//==================== gestione materiali

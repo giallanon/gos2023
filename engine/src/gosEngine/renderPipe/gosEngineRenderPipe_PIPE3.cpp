@@ -49,7 +49,7 @@ void Renderer_PIPE3::priv_unsetup()
 bool Renderer_PIPE3::on__attach (const RPIPE::Context &ctx, u8 renderer_UID_IN)
 {
 	//load pipe
-	if (!ctx.engine->pipeline_createFromAsset ("gosengine_PIPE3", &handle_pipeline, res::eLoadMode::asap))
+	if (!ctx.engine->pipeline_createFromAsset ("gosengine_PIPE3", &handle_pipeline, res2::eLoadMode::asap))
 	{
 		DBGBREAK;
         return false; 
@@ -266,42 +266,27 @@ void Renderer_PIPE3::add (const GPUShapeH handle_shape, const mat4x4f &m, u32 ma
 }
 
 //**********************************
-void Renderer_PIPE3::add (const ent::CompModelInstance *comp_mi)
+void Renderer_PIPE3::add (const ModelH handle_model, const mat4x4f &m)
 {
-	add (comp_mi->handle_mi);
-}
-
-//**********************************
-void Renderer_PIPE3::add (gos::ENGModel3dInst handle_mi)
-{
-	//TODO
-	DBGBREAK;
-
-/*	const res::Model3dInst *res_mi;
-	if (!engine->get (handle_mi, &res_mi))
+	const ModelData *model_data;
+	if (!engine->get (handle_model, &model_data))
 		return;
 
-    const gos::ModelInstance *mi = &res_mi->minst;
+	model::Reader reader (&model_data->model);
+	const u32 num_mesh = reader.mesh_get_num();
 
     //addo le shape al renderer
-	for (u32 i=0; i<mi->num_meshes; i++)
+	for (u32 i=0; i<num_mesh; i++)
 	{
-		const Model::Mesh *mesh = &mi->listof_meshes[i];
+		const Model::Mesh *mesh = reader.mesh_get_by_index(i);
+		const u16 shape_index = mesh->shape_index;
+        const u16 material_index = mesh->material_index;
 
-        if (u16MAX != mesh->material_index)
-        {
-            add(mi->listof_gpushapes[mesh->shape_index],
-                mi->listof_bones[mesh->bone_index].matrix,
-                mi->listof_materials[mesh->material_index]);
-        }
-        else
-        {
-            add(mi->listof_gpushapes[mesh->shape_index],
-                mi->listof_bones[mesh->bone_index].matrix,
-                material_default_index);
-        }
+		GPUShapeH shape_handle = reader.gpushape_get_by_index(shape_index);
+		MaterialPBRH material_handle = reader.material_get_by_index (material_index);
+
+		add (shape_handle, m, material_handle);
 	}
-*/
 }
 
 //**********************************

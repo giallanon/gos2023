@@ -64,7 +64,7 @@ void App::on__setup ()
 	renderer_land->bind_map (&map);
 	
 	gos::ENGModel3d		handle_model_cubo1x1x1;
-	engine->model_createFromAsset ("model_cubo1x1x1", &handle_model_cubo1x1x1, res::eLoadMode::asap);
+	engine->model_createFromAsset ("model_cubo1x1x1", &handle_model_cubo1x1x1, res2::eLoadMode::asap);
 	engine->modelinst_create (handle_model_cubo1x1x1, &handle_mi_cubo1x1x1);
 	engine->release(handle_model_cubo1x1x1);
 

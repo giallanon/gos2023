@@ -46,7 +46,7 @@ namespace gos
 		 */
 		struct CompModelInstance
 		{
-			gos::ENGModel3dInst	handle_mi;
+			//gos::ENGModel3dInst	handle_mi;
 		};
 
 

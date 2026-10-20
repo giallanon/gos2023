@@ -4,7 +4,7 @@
 #include "../../gosGPU/gosGPU.h"
 #include "../gosShape/gosShape.h"
 #include "../gosShape/skeleton/gosSkeleton.h"
-
+#include "../model/gosModelEnumAndDefine.h"
 
 namespace gos
 {
@@ -277,7 +277,64 @@ namespace gos
 			};
 		};
 		
-		
+		//************************************
+		struct Skeleton
+		{
+			static constexpr eResType type = eResType::skeleton;
+			static constexpr eResType	get_type() 		{ return type; }
+
+			struct Data
+			{
+				void 	reset()		{ skeleton.reset();; }
+				gos::Skeleton	skeleton;
+			};
+
+			struct Resource
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ data.reset(); }
+				ResDescr	base;
+				Data		data;
+			};
+
+			struct Asset
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ res_data_pt = NULL; }
+				ResDescr	base;
+				Data		*res_data_pt;
+			};
+		};		
+
+		//************************************
+		struct Model3d
+		{
+			static constexpr eResType type = eResType::model_3d;
+			static constexpr eResType	get_type() 		{ return type; }
+
+			struct Data
+			{
+				void 	reset()		{ model.reset(); }
+				gos::Model	model;
+			};
+
+			struct Resource
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ data.reset(); }
+				ResDescr	base;
+				Data		data;
+			};
+
+			struct Asset
+			{
+				static constexpr eResType	get_type() 		{ return type; }
+				void 						data_reset()	{ res_data_pt = NULL; }
+				ResDescr	base;
+				Data		*res_data_pt;
+			};
+		};
+
 		/************************************
 		struct Shape
 		{
@@ -312,20 +369,7 @@ namespace gos
 
 
 
-		//************************************
-		struct ResSkeleton
-		{
-			static constexpr eResType type = eResType::skeleton;
 
-			struct Data
-			{
-				void 	reset()		{ skeleton.reset();; }
-				gos::Skeleton	skeleton;
-			};
-
-			ResDescr	base;
-			Data		data;
-		};
 
 
 		/************************************
