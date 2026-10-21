@@ -24,6 +24,11 @@ void test (gos::GPU *gpu, const char *baseFolder)
 //******************************** 
 void test_monitor (gos::GPU *gpu, const char *path_to_DB)
 {
+	if (!fs::folderExists(path_to_DB))
+	{
+		logger::err ("Invalid path %s\n", path_to_DB);
+		return;
+	}
 	asset2::Monitor mon(gpu);
 	mon.run (path_to_DB);
 }
