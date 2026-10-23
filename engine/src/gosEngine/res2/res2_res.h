@@ -318,6 +318,15 @@ namespace gos
 				gos::Model	model;
 			};
 
+			struct Updatable
+			{
+				ResDescr	*base;
+				Data		*data;
+				u32			num_mesh;
+				u32			num_material;
+				u32 		num_gpushape;
+			};
+
 			struct Resource
 			{
 				static constexpr eResType	get_type() 		{ return type; }
@@ -335,17 +344,20 @@ namespace gos
 			};
 		};
 
-		/************************************
-		struct Shape
+		//************************************
+		struct ModelInstance
 		{
-			static constexpr eResType type = eResType::shape;
+			static constexpr eResType type = eResType::model_instance;
 			static constexpr eResType	get_type() 		{ return type; }
-
 
 			struct Data
 			{
-				void 	reset()		{ shape.reset(); }
-				gos::Shape	shape;
+				void 	reset()		{ matW.identity(); listof_bones=NULL; model_data=NULL; skeleton_data=NULL; }
+				
+				gos::mat4x4f			matW;
+				gos::Bone				*listof_bones;
+				const Model3d::Data		*model_data;
+				const Skeleton::Data	*skeleton_data;
 			};
 
 			struct Resource
@@ -362,42 +374,10 @@ namespace gos
 				void 						data_reset()	{ res_data_pt = NULL; }
 				ResDescr	base;
 				Data		*res_data_pt;
-			};
-		};					
-	*/
+			};			
+		};
 
-
-
-
-
-
-
-		/************************************
-		struct ResModel3d
-		{
-			static constexpr eResType type = eResType::model_3d;
-
-			struct Data
-			{
-				struct Mesh
-				{
-					u16 shape_index;
-					u16 bone_index;
-					u16 material_index;
-					u16 pad;
-				};
-
-				void 	reset()		{ skeleton.reset(); }
-				
-				ResSkeleton::Data		skeleton;
-				ResMaterialPBR::Data	material_list[4];
-				ResGPUShape::Data		gpushape_list[4];
-				Mesh					mesh_list[4];
-			};
-
-			ResDescr	base;
-			Data		data;
-		};		*/
+		
 	
 		/************************************
 		struct ResModelInstance

@@ -8,3 +8,9 @@
 
 }
 
+@model3d: gix_tree_1
+{
+	import: <common_assets>/model3d/albero/gix_tree_1.glb
+
+	post_op: "	skeleton-resolve;"
+}

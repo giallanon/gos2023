@@ -63,13 +63,14 @@ void Engine::res2__flushLoaderThreadMsg()
 
 
 //********************************************************
-void Engine::res2__register_resource (res2::eResType type, FN_res2__on_file_loaded on_file_loaded, FN_res2__on_destroy on_destroy, FN_res2__on_hot_reload on_hot_reload)
+void Engine::res2__register_resource (res2::eResType type, FN_res2__on_file_loaded on_file_loaded, FN_res2__on_destroy on_destroy, FN_res2__on_hot_reload on_hot_reload, FN_res2__on_become_rdy on_become_rdy)
 {
 	const u8 index = (u8)type;
 	
 	assert (NULL == res2FNList_onFileLoaded[index]);	res2FNList_onFileLoaded[index] = on_file_loaded;
 	assert (NULL == res2FNList_onDestroy[index]);		res2FNList_onDestroy[index] = on_destroy;
 	assert (NULL == res2FNList_onHotReload[index]);		res2FNList_onHotReload[index] = on_hot_reload;
+	assert (NULL == res2FNList_onBecomeRdy[index]);		res2FNList_onBecomeRdy[index] = on_become_rdy;
 }
 
 //********************************************************
@@ -104,6 +105,14 @@ void Engine::res2__callbak_on_hot_reload (res2::ResDescr *asset_descr, asset2::U
 	FN_res2__on_hot_reload fn = res2FNList_onHotReload[ (u8)asset_descr->get_type() ];
 	if (NULL != fn)
 		(this->*fn) (asset_descr, new_res_signatureUID);
+}
+
+//********************************************************
+void Engine::res2__callbak_on_resource_become_rdy (res2::ResDescr *descr)
+{
+	FN_res2__on_become_rdy fn = res2FNList_onBecomeRdy[ (u8)descr->get_type() ];
+	if (NULL != fn)
+		(this->*fn) (descr);
 }
 
 //********************************************************
@@ -172,10 +181,6 @@ bool Engine::res2__get_or_schedule_load (res2::ResDescr *descr, u32 timeout_msec
 	if (res2::is_ready(descr))
 		return true;
 
-	//se la risorsa non e' associata ad un signatureUID, non posso schedularne il load, quindi ritorna false
-	if (descr->UID.isInvalid())
-		return false;
-
 	if (res2::eStatus::error == descr->status)
 		return false;
 
@@ -208,11 +213,14 @@ bool Engine::res2__get_or_schedule_load (res2::ResDescr *descr, u32 timeout_msec
 			//schedulo il load di me stesso se necessario
 			//Incremento il ref count perche' sto passando la risorsa al loader-thread e questo garantisce che 
 			//la risorsa non verra' eliminata da eventuali release()
-			if (res2::eStatus::unloaded == descr->status)
+			if (descr->UID.isValid() && descr->UID.isASignature())
 			{
-				change_state (descr, res2::eStatus::loading, "loading");
-				res2::inc_refCount(descr);
-				thread::pushMsg (res2__msgq_1W, RES2__MSG_FOR_LOADER_THREAD__LOAD, 0, descr);
+				if (res2::eStatus::unloaded == descr->status)
+				{
+					change_state (descr, res2::eStatus::loading, "loading");
+					res2::inc_refCount(descr);
+					thread::pushMsg (res2__msgq_1W, RES2__MSG_FOR_LOADER_THREAD__LOAD, 0, descr);
+				}
 			}
 
 			if (0 == timeout_msec)

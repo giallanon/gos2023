@@ -35,9 +35,9 @@ namespace gos
 			void 	on__render (const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx) final						{ priv_do_render (ctx, rctx); }
 
 			void    begin ();
-			void    add (const GPUShapeH handle_shape, const mat4x4f &m, u32 material_index);
-			void    add (const GPUShapeH handle_shape, const mat4x4f &m, MaterialPBRH handle_material);
-			void    add (const ModelH handle_model, const mat4x4f &m);
+			void    add (const GPUShapeH handle_shape, const mat4x4f *m, u32 material_index);
+			void    add (const GPUShapeH handle_shape, const mat4x4f *m, const MaterialPBRH handle_material);
+			void    add (const ModelInstH handle_mi);
 			void    end ();
 
 			//==================== gestione materiali

@@ -39,7 +39,7 @@ namespace gos
 
 
 		private:
-			static constexpr u32		BLOB__SIZE = 8 * 1024 * 1024; //puo' diventare anche 16M senza dover cambiare nulla
+			static constexpr u32		BLOB__SIZE = 16 * 1024 * 1024;
 			static constexpr u32		SLOT_SIZE = 64;
 
 		private:

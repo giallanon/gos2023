@@ -2,10 +2,14 @@
 #include "../gosEngine.h"
 #include "../../gos/gosObjectPool.h"
 
+#undef ENABLE_DEBUG_PRINT_INFO
+
+
 using namespace gos;
 
 static gos::Logger 								*res_debug_logger = NULL;
 static gos::ObjectPool<res2::ResHandleChain>	res_handleChainPool;
+static gos::Engine 								*the_engine = NULL;
 
 //*************************************
 const char* res2::enumToString (res2::eLoadMode s)
@@ -63,33 +67,34 @@ const char* res2::enumToString (res2::eResType s)
 void res2::ResHandle::make_handle (u8 guard, u32 start_slot, u32 num_slot, u8 type)
 {
 	/*
-	start_slot 	max = 262.143 	> 18 bit
-	num_slot	max = 16		> 4 bit
-	res_type	max = 64		> 6 bit
-	guard						> 4 bit
+	start_slot 	max = 4.194.304 > 22 bit
+	num_slot	max = 8			> 3 bit
+	res_type	max = 16		> 4 bit
+	guard						> 3 bit
 	*/		
-	assert (start_slot <= 0x3FFFF);
-	assert (num_slot <= 16);
-	assert (type <= 64);
+	assert (start_slot < 0x00400000);
+	assert (num_slot < 8);
+	assert (type < 16);
 
 	_handle = start_slot;
-	_handle |= (num_slot << 18);
-	_handle |= (type << 22);
-	_handle |= ( (guard & 0x0F) << 28);
+	_handle |= (num_slot << 22);
+	_handle |= (type << 25);
+	_handle |= ( (guard & 0x07) << 29);
 
 	assert (get_start_slot() == start_slot);
 	assert (get_num_slot() == num_slot);
 	assert (get_type() == type);
-	assert (get_gard() == (guard & 0x0F));
+	assert (get_gard() == (guard & 0x07));
 }
 
 
 
 //**************************************************************** 
-void res2::setup (gos::Allocator *allocator, gos::Logger *logger)
+void res2::setup (gos::Engine *engIN, gos::Allocator *allocator, gos::Logger *logger)
 {
 	res_debug_logger = logger;
 	res_handleChainPool.setup (allocator, 8192);
+	the_engine = engIN;
 }
 
 //**************************************************************** 
@@ -99,7 +104,8 @@ void res2::unsetup()
 }
 
 
-//**************************************************************** 
+//****************************************************************
+#ifdef ENABLE_DEBUG_PRINT_INFO
 static void  internal__debug__printInfo (const res2::ResDescr *res, const char *debug_info)
 {
 	if (NULL == res_debug_logger)
@@ -135,6 +141,9 @@ static void  internal__debug__printInfo (const res2::ResDescr *res, const char *
 	else
 		res_debug_logger->log ("\n");
 }
+#else
+	static void  internal__debug__printInfo (UNUSED_PARAM( res2::ResDescr *res), UNUSED_PARAM(const char *debug_info))	{}
+#endif
 
 //**************************************************************** 
 static void internal__on_children_become_notready (res2::ResDescr *padre)
@@ -176,6 +185,8 @@ static void internal__on_children_become_ready (res2::ResDescr *padre)
 	if (!was_ready && now_ready)
 	{
 		//se ero "non ready" e adesso invece sono "ready", devo informare i miei padri
+		the_engine->res2__callbak_on_resource_become_rdy (padre);
+
 		res2::ResHandleChain *p = padre->list_padri;
 		while (p)
 		{

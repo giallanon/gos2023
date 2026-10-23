@@ -12,7 +12,7 @@ namespace gos
 		const char* 	enumToString (res2::eStatus s);
 		const char* 	enumToString (res2::eResType s);
 
-		void 	setup (gos::Allocator *allocator, gos::Logger *logger);
+		void 	setup (gos::Engine *eng, gos::Allocator *allocator, gos::Logger *logger);
 		void	unsetup();
 		
 		bool	is_ready (const ResDescr *res);

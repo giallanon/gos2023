@@ -48,14 +48,17 @@ namespace gos
 
             u32                 mesh_get_num() const;
             const Model::Mesh*  mesh_get_by_index (u32 index) const;
+			const char*			mesh_get_name_by_index (u32 i) const;
 
             u32                 gpushape_get_num() const;
             GPUShapeH         	gpushape_get_by_index (u32 i) const;
 			const GPUShapeH*  	gpushape_get_pt_to_list () const;
+			const char*			gpushape_get_name_by_index (u32 i) const;
 
             u32                 material_get_num() const;
             MaterialPBRH        material_get_by_index (u32 i) const;
 			const MaterialPBRH* material_get_pt_to_list () const;
+			const char*			material_get_name_by_index (u32 i) const;
 
         private:
             const Model *m;

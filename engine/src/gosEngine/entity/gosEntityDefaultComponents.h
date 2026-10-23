@@ -1,7 +1,6 @@
 #ifndef _gosEntityDefaultComponents_h_
 #define _gosEntityDefaultComponents_h_
 #include "gosEntityEnumAndDefine.h"
-#include "../model/gosModelInstance.h"
 
 namespace gos
 {

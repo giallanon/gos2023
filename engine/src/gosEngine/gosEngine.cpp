@@ -135,7 +135,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 	//msg dal thread a this
 	sLoaderThreadInitParams res2__thread_params;
 	{
-		res2::setup (allocator, asset_logger);
+		res2::setup (this, allocator, asset_logger);
 		res2MemManager.setup (this->allocator);
 
 		res2_known_signatureUID_HashMap.setup (allocator, 8192);
@@ -144,34 +144,35 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 		memset (res2FNList_onFileLoaded, 0, sizeof(res2FNList_onFileLoaded));
 		memset (res2FNList_onDestroy, 0, sizeof(res2FNList_onDestroy));
 		memset (res2FNList_onHotReload, 0, sizeof(res2FNList_onHotReload));
+		memset (res2FNList_onBecomeRdy, 0, sizeof(res2FNList_onHotReload));
 
-		res2__register_resource (res2::eResType::vtx_buffer, NULL, &Engine::res2__vtxBufferRes_callback_on_destroy, NULL);
-		res2__register_resource (res2::eResType::idx_buffer, NULL, &Engine::res2__idxBufferRes_callback_on_destroy, NULL);
+		res2__register_resource (res2::eResType::vtx_buffer, NULL, &Engine::res2__vtxBufferRes_callback_on_destroy, NULL, NULL);
+		res2__register_resource (res2::eResType::idx_buffer, NULL, &Engine::res2__idxBufferRes_callback_on_destroy, NULL, NULL);
 		res2__register_resource (res2::eResType::texture_2d, &Engine::res2__textureRes_callback_on_load,
 									&Engine::res2__textureRes_callback_on_destroy, 
-									&Engine::res2__textureRes_callback_on_hot_reload);
+									&Engine::res2__textureRes_callback_on_hot_reload, NULL);
 		res2__register_resource (res2::eResType::materialPBR, &Engine::res2__materialPBR_callback_on_load,
 									&Engine::res2__materialPBR_callback_on_destroy, 
-									&Engine::res2__materialPBR_callback_on_hot_reload);	
+									&Engine::res2__materialPBR_callback_on_hot_reload, NULL);	
 		res2__register_resource (res2::eResType::vtx_shader, &Engine::res2__vtxShaderRes_callback_on_load,
 									&Engine::res2__vtxShaderRes_callback_on_destroy,
-									&Engine::res2__vtxShaderRes_callback_on_hot_reload);
+									&Engine::res2__vtxShaderRes_callback_on_hot_reload, NULL);
 		res2__register_resource (res2::eResType::pxl_shader, &Engine::res2__pxlShaderRes_callback_on_load,
 									&Engine::res2__pxlShaderRes_callback_on_destroy,
-									&Engine::res2__pxlShaderRes_callback_on_hot_reload);
+									&Engine::res2__pxlShaderRes_callback_on_hot_reload, NULL);
 		res2__register_resource (res2::eResType::pipeline, &Engine::res2__pipelineRes_callback_on_load,
 									&Engine::res2__pipelineRes_callback_on_destroy,
-									&Engine::res2__pipelineRes_callback_on_hot_reload);
+									&Engine::res2__pipelineRes_callback_on_hot_reload, NULL);
 		res2__register_resource (res2::eResType::gpu_shape, &Engine::res2__gpushapeRes_callback_on_load,
 									&Engine::res2__gpushapeRes_callback_on_destroy,
-									&Engine::res2__gpushapeRes_callback_on_hot_reload);
+									&Engine::res2__gpushapeRes_callback_on_hot_reload, NULL);
 		res2__register_resource (res2::eResType::skeleton, &Engine::res2__skeletonRes_callback_on_load,
 									&Engine::res2__skeletonRes_callback_on_destroy,
-									&Engine::res2__skeletonRes_callback_on_hot_reload);
+									&Engine::res2__skeletonRes_callback_on_hot_reload, NULL);
 		res2__register_resource (res2::eResType::model_3d, &Engine::res2__modelRes_callback_on_load,
 									&Engine::res2__modelRes_callback_on_destroy,
-									&Engine::res2__modelRes_callback_on_hot_reload);
-
+									&Engine::res2__modelRes_callback_on_hot_reload, NULL);
+		res2__register_resource (res2::eResType::model_instance, NULL, &Engine::res2__modelInst_callback_on_destroy, NULL, &Engine::res2__modelInst_callback_on_become_rdy);									
 
 		//thread loader
 		thread::createMsgQ (&res2__msgq_1R, &res2__msgq_1W);
@@ -1334,6 +1335,42 @@ bool Engine::model_create (SkeletonH handle_skeleton, u16 num_shape, u16 num_mat
 	return true;
 }
 
+bool Engine::model_clone (ModelH handle_src, ModelH *out_handle, u32 timeout_msec)
+{
+	const ModelData *model_data;
+	if (!get (handle_src, &model_data, timeout_msec))
+	{
+		//il modello src deve essere ready
+		DBGBREAK;
+		return false;
+	}
+
+	model::Reader reader(&model_data->model);
+	const u16 num_material = (u16)reader.material_get_num();
+	const u16 num_mesh = (u16)reader.mesh_get_num();
+	const u16 num_shape = (u16)reader.gpushape_get_num();
+	if (!model_create (reader.skeleton_get_handle(), num_shape, num_material, num_mesh, out_handle))
+		return false;
+	 
+	//dato che ho creato una "risorsa", siamo sicuri che e' gia' ready e che get_for_update non puo' fallire
+	ModelDataUpd upd;
+	get_for_update (*out_handle, &upd);
+
+	for (u16 i=0; i<num_material; i++)
+		model_update_material (&upd, i, reader.material_get_by_index(i), reader.material_get_name_by_index(i));
+	
+	for (u16 i=0; i<num_shape; i++)
+		model_update_gpushape (&upd, i, reader.gpushape_get_by_index(i), reader.gpushape_get_name_by_index(i));
+
+	for (u16 i=0; i<num_mesh; i++)
+	{
+		const Model::Mesh *mesh = reader.mesh_get_by_index (i);
+		model_update_mesh (&upd, i, mesh->shape_index, mesh->bone_index, mesh->material_index, reader.mesh_get_name_by_index(i));
+	}
+
+	return true;
+}
+
 eRes2LoadResult	Engine::res2__modelRes_callback_on_load (const res2::CallbackData_onLoad *callback_data)
 {
 	//questa viene chiamata solo sulle risorse bindate ad una signature
@@ -1355,19 +1392,24 @@ eRes2LoadResult	Engine::res2__modelRes_callback_on_load (const res2::CallbackDat
 	const u32 num_material = reader.readU32 ();
 	const u32 num_meshes = reader.readU32 ();
 	
+	if (!model::alloc (this->allocator, (u16)num_shape, (u16)num_material, (u16)num_meshes, &res_model->data.model))
+	{
+		logger::err ("Engine::res2__modelRes_callback_on_load => can't alloc model\n");
+		return eRes2LoadResult::fail;
+	}
+
 	//skeleton asset
 	{
 		asset2::UID assetUID;
 		assetUID._uid = reader.readU64 ();
 		res2::Skeleton::Asset *asset = res2__get_or_create_asset_from_assetUID<res2::Skeleton> ("Engine::res2__modelRes_callback_on_load", assetUID, res2::eLoadMode::asap);
 		res2::add_child (&res_model->base, &asset->base);
+
+		SkeletonH asset_handle;
+		asset_handle.setFromU32 ( asset->base.res_handle.viewAsU32() );
+		model::set_skeleton (res_model->data.model, asset_handle);
 	}
 
-	if (!model::alloc (this->allocator, (u16)num_shape, (u16)num_material, (u16)num_meshes, &res_model->data.model))
-	{
-		logger::err ("Engine::res2__modelRes_callback_on_load => can't alloc model\n");
-		return eRes2LoadResult::fail;
-	}
 
 	//shape
 	for (u32 i=0; i<num_shape; i++)
@@ -1420,165 +1462,260 @@ void Engine::res2__modelRes_callback_on_destroy (res2::ResDescr *descr)
 	res->data.reset();
 }
 
+bool Engine::get_for_update (ModelH handle, ModelDataUpd *out, u32 timeout_msec)
+{ 
+	assert (NULL != out);
+	res2::ResDescr *descr = res2MemManager.get (handle);
+	if (descr->isAnAsset())
+	{
+		//gli asset hanno un solo figlio, che e' la risorsa vera e propria
+		assert (NULL == descr->list_figli->next);		
+		descr = descr->list_figli->descr;
+		handle.setFromU32 (descr->res_handle.viewAsU32());
+	}
 
+	if (!res2__get_or_schedule_load (descr, timeout_msec))
+		return false;
+
+	res2::Model3d::Resource *res = reinterpret_cast<res2::Model3d::Resource*> (descr);
+	out->data = &res->data;
+	out->base = descr;
+
+	model::Reader reader(&out->data->model);
+	out->num_mesh = reader.mesh_get_num();
+	out->num_material = reader.material_get_num();
+	out->num_gpushape = reader.gpushape_get_num();
+
+	//ritorno sempre un pt ad una risorsa
+	assert ( !out->base->isAnAsset()  );
+	return true;	
+}
+
+void Engine::model_update_material (ModelDataUpd *dataIN, u32 material_index, MaterialPBRH new_material_handle, const char *name__can_be_NULL)
+{
+	assert (!dataIN->base->isAnAsset());
+	res2::ResDescr *descr = dataIN->base;
+	res2::Model3d::Resource *res = reinterpret_cast<res2::Model3d::Resource*>( descr );
+
+	model::Reader reader (&res->data.model);
+	assert (material_index < reader.material_get_num());
+	MaterialPBRH old_material_handle = reader.material_get_by_index(material_index);
+	if (old_material_handle == new_material_handle)
+		return;
+
+	res2::ResDescr *new_descr = res2MemManager.get (new_material_handle);
+	if (NULL == new_descr)
+	{
+		DBGBREAK;
+		return;
+	}
+
+	//rimuovo <old> dalla mia lista di figli e ne faccio il release
+	if (old_material_handle.is_valid())
+	{
+		res2::ResDescr *child_descr = res2MemManager.get (old_material_handle);
+		res2::remove_child (&res->base, child_descr);
+		res2__release(child_descr->res_handle);
+	}
+
+	//addo <new> alla lista dei miei figli
+	res2::add_child (&res->base, new_descr);
+	res2::inc_refCount(new_descr);
+
+	model::set_material (res->data.model, material_index, new_material_handle, name__can_be_NULL);
+}
+
+void Engine::model_update_gpushape (ModelDataUpd *dataIN, u32 shape_index, GPUShapeH new_shape_handle, const char *name__can_be_NULL)
+{
+	assert (!dataIN->base->isAnAsset());
+	res2::ResDescr *descr = dataIN->base;
+	res2::Model3d::Resource *res = reinterpret_cast<res2::Model3d::Resource*>( descr );
+
+	model::Reader reader (&res->data.model);
+	assert (shape_index < reader.material_get_num());
+	GPUShapeH old_shape_handle = reader.gpushape_get_by_index(shape_index);
+	if (old_shape_handle == new_shape_handle)
+		return;
+
+	res2::ResDescr *new_descr = res2MemManager.get (new_shape_handle);
+	if (NULL == new_descr)
+	{
+		DBGBREAK;
+		return;
+	}
+
+	//rimuovo <old> dalla mia lista di figli e ne faccio il release
+	if (old_shape_handle.is_valid())	
+	{
+		res2::ResDescr *child_descr = res2MemManager.get (old_shape_handle);
+		res2::remove_child (&res->base, child_descr);
+		res2__release(child_descr->res_handle);
+	}
+
+	//addo <new> alla lista dei miei figli
+	res2::add_child (&res->base, new_descr);
+	res2::inc_refCount(new_descr);
+
+	model::set_gpushape (res->data.model, shape_index, new_shape_handle, name__can_be_NULL);
+}
+
+void Engine::model_update_skeleton (ModelDataUpd *dataIN, SkeletonH new_sk_handle)
+{
+	assert (!dataIN->base->isAnAsset());
+	res2::ResDescr *descr = dataIN->base;
+	res2::Model3d::Resource *res = reinterpret_cast<res2::Model3d::Resource*>( descr );
+
+	model::Reader reader (&res->data.model);
+	SkeletonH old_sk_handle = reader.skeleton_get_handle();
+	if (old_sk_handle == new_sk_handle)
+		return;
+
+	res2::ResDescr *new_descr = res2MemManager.get (new_sk_handle);
+	if (NULL == new_descr)
+	{
+		DBGBREAK;
+		return;
+	}
+
+	//rimuovo <old> dalla mia lista di figli e ne faccio il release
+	if (old_sk_handle.is_valid())
+	{
+		res2::ResDescr *child_descr = res2MemManager.get (old_sk_handle);
+		res2::remove_child (&res->base, child_descr);
+		res2__release(child_descr->res_handle);
+	}
+
+	//addo <new> alla lista dei miei figli
+	res2::add_child (&res->base, new_descr);
+	res2::inc_refCount(new_descr);
+
+	model::set_skeleton (res->data.model, new_sk_handle);
+}
+
+void Engine::model_update_mesh (ModelDataUpd *dataIN, u32 mesh_num, u16 shape_index, u16 bone_index, u16 material_index, const char *name__can_be_NULL)
+{
+	assert (!dataIN->base->isAnAsset());
+	res2::ResDescr *descr = dataIN->base;
+	res2::Model3d::Resource *res = reinterpret_cast<res2::Model3d::Resource*>( descr );
+
+	model::set_mesh (res->data.model, mesh_num, shape_index, bone_index, material_index, name__can_be_NULL);
+}
 
 /**************************************************************** 
  * MODEL INSTANCE
- *****************************************************************
-bool Engine::modelinst_create (ENGModel3d handle_modelSRC, ENGModel3dInst *out_handle)
+ ****************************************************************/
+bool Engine::modelinst_create (ModelH model_handle, ModelInstH *out_handle)
 {
-	//recupero le info sulla modelSRC,
-	//res::Descr *res_modelSRC = res__getDescriptor(handle_modelSRC.res_handle);
-	res::Descr *res_modelSRC = proxyRes__getDescriptorT(handle_modelSRC);
-	if (NULL == res_modelSRC)
-	{
-		logger::err ("Engine::modelinst_create() => invalid handle_modelSRC\n");
-		return false;
-	}
-
-	//creo istanza
-	asset2::UID signatureUID;
-	signatureUID.setInvalid();
-	res::Model3dInst *res = (res::Model3dInst*)res__createHandle (res::eType::model_instance, res::eStatus::notLoaded, signatureUID, &out_handle->res_handle);
-	if (NULL == res)
+	res2::ModelInstance::Resource *mi_res = res2MemManager.reserveT<res2::ModelInstance::Resource> (out_handle);
+	if (NULL == mi_res)
 	{
 		logger::err ("Engine::modelinst_create() => can't create handle\n");
 		return false;
 	}
 
-	//modelSRC diventa mio figlio e io divento uno dei suoi padri
-	asset_logger->inc_indent();
-		res__addChild (&res->_descr, res_modelSRC);
-		res_modelSRC->refCount++;
-		res__printInfo(res_modelSRC, "refcount++");
-	asset_logger->dec_indent();
+	res2::change_state (&mi_res->base, res2::eStatus::ready, "created");
 
+	res2::ResDescr *model_descr = res2MemManager.get (model_handle);
+	if (NULL == model_descr)
+		return false;
+
+	mi_res->data.reset();
+	if (model_descr->isAnAsset())
+	{
+		res2::Model3d::Asset *new_asset = reinterpret_cast<res2::Model3d::Asset*>( model_descr );
+		mi_res->data.model_data = new_asset->res_data_pt;
+	}
+	else
+	{
+		res2::Model3d::Resource *new_res = reinterpret_cast<res2::Model3d::Resource*>( model_descr );
+		mi_res->data.model_data = &new_res->data;
+	}	
+	
+	res2::add_child (&mi_res->base, model_descr);
+	res2::inc_refCount (model_descr);
+
+	if (res2::is_ready(model_descr))
+		res2__modelInst_callback_on_become_rdy (&mi_res->base);
 	return true;
 }
 
-void Engine::internal__modelinst_on_afterCreate (void *resIN)
+void Engine::res2__modelInst_callback_on_destroy (res2::ResDescr *descr)
 {
-	//asset_logger->log ("internal__modelinst_on_afterCreate\n");
-	res::Model3dInst *res = (res::Model3dInst*)resIN;
-	res->minst.reset();
-	res->matW.identity();
-}
+	//questa viene chiamata solo sulle risorse, non sugli asset. Essendo pero' che modelInstance
+	//e' sempre una risorsa, il suo UID deve sempre essere invalido
+	assert (descr->UID.isInvalid());
 
-void Engine::internal__modelinst_on_destroy (void *resIN)
-{
-	//asset_logger->log ("internal__modelinst_on_destroy\n");
-	res::Model3dInst *res = (res::Model3dInst*)resIN;
-	res->minst.free();
-}
-
-void Engine::internal__modelinst_on_unload (void *resIN)
-{
-	res::Model3dInst *res = (res::Model3dInst*)resIN;
-	res->minst.free();
-	res->minst.reset();
-}
-
-bool Engine::internal__modelinst_on_loadCallback (void *callback_dataIN)
-{
-	return false;
-	engine::loaders::CallbackData *callback_data = (engine::loaders::CallbackData*)callback_dataIN;
-	res::Model3dInst *res = reinterpret_cast<res::Model3dInst*>(callback_data->res);
-
-	bool ret = false;
-	asset_logger->log ("internal__modelinst_on_loadCallback [%08X]\n", res->_descr.handle.viewAsU32());
-	asset_logger->inc_indent();
+	res2::ModelInstance::Resource *res = reinterpret_cast<res2::ModelInstance::Resource*>( descr );
+	if (NULL != res->data.listof_bones)
 	{
-		//mio figlio e' un Model
-		assert (NULL != res->_descr.figli);
-		const res::Model3d *res_model = reinterpret_cast<const res::Model3d*> (res->_descr.figli->res);
-		
-
-		//il model deve essere "ready" altrimenti non posso proseguire
-		if (res::eStatus::ready == res_model->_descr._status)
-		{
-			model::Reader mr (&res_model->model);
-
-			//recupero lo skeleton
-			const res::Skeleton *res_skeleton;
-			if (!get (mr.skeleton_get_handle(), &res_skeleton))
-			{
-				//lo skeleton deve esistere ed essere "loaded"
-				asset_logger->err ("internal__modelinst_on_loadCallback => invalid skeleton handle\n");
-				ret = false;
-			}
-			else
-			{
-				skeleton::Reader sr(&res_skeleton->skeleton);
-
-
-				ModelInstance *mi = &res->minst;
-				mi->allocator = this->allocator;
-
-				mi->num_bones = sr.bone_get_num();
-				mi->model_listof_bones = sr.bone_get_by_index(0);
-
-				mi->num_meshes = mr.mesh_get_num();
-				mi->listof_meshes = mr.mesh_get_by_index(0);
-				
-				mi->num_gpushapes = mr.gpushape_get_num();
-				mi->listof_gpushapes = mr.gpushape_get_pt_to_list();
-
-				mi->listof_bones = GOSALLOCT(Bone*, allocator, sizeof(Bone) * mi->num_bones);	
-				memcpy (mi->listof_bones, mi->model_listof_bones, sizeof(Bone) * mi->num_bones);
-
-				mi->num_materials = mr.material_get_num();
-				mi->listof_materials = mr.material_get_pt_to_list();
-
-				priv_modelinst_applyTransform_ric (mi->model_listof_bones, mi->listof_bones, 0, res->matW);
-
-				ret = true;
-			}
-		}
-		else
-		{
-			if (res::eStatus::error == res_model->_descr._status)
-			{
-				//C'e' poco da fare..
-				DBGBREAK;
-				ret = false;
-			}
-			else
-			{
-				//devo rischedulare questo load in attesa che Model diventi ready
-				callback_data->reschedule_load_at_time_msec = gos::getTimeSinceStart_msec() + 100;
-				ret = true;
-			}
-		}
+		GOSFREE(this->allocator, res->data.listof_bones);
 	}
-	asset_logger->dec_indent();
-	return ret;
+	res->data.reset();
 }
 
+void Engine::res2__modelInst_callback_on_become_rdy (res2::ResDescr *descr)
+{
+	//Essendo pero' che modelInstance e' sempre una risorsa, il suo UID deve sempre essere invalido
+	assert (descr->UID.isInvalid());
+	res2::ModelInstance::Resource *res_mi = reinterpret_cast<res2::ModelInstance::Resource*>( descr );
 
-void Engine::modelinst_getWMatrix (ENGModel3dInst handle, mat4x4f *out_matW)
+	//sono diventato ready, il che vuol dire che il mio unico figlio (che e' un model) e' diventato
+	//ready.
+	//Ho finalmente tutte le info necessarie per allocare le strutture della model instance
+	//asset_logger->log (eTextColor::magenta, "res2__modelInst_callback_on_become_rdy\n");
+	
+	if (NULL != res_mi->data.listof_bones)
+	{
+		GOSFREE(this->allocator, res_mi->data.listof_bones);
+		
+	}
+
+	//model e' ready per definizione visto che siamo nell'handler di "model instance ready"
+	const model::Reader model_reader(&res_mi->data.model_data->model);
+
+	//lo sk deve essere ready visto che il model e' ready
+	const SkeletonH sk_handle = model_reader.skeleton_get_handle();
+	GOS_DEBUG_ASSERT (get(sk_handle, &res_mi->data.skeleton_data));
+
+	const skeleton::Reader skReader ( &res_mi->data.skeleton_data->skeleton );
+	const u32 num_bone = skReader.bone_get_num();
+	res_mi->data.listof_bones = GOSALLOCT(gos::Bone*, this->allocator, sizeof(gos::Bone) * num_bone);
+
+	const gos::Bone *model_bone_list = skReader.bone_get_by_index(0);
+	memcpy (res_mi->data.listof_bones, model_bone_list, sizeof(gos::Bone) * num_bone);
+	
+	//applico la world matrix allo sk
+	priv_modelinst_applyTransform_ric (model_bone_list, res_mi->data.listof_bones, 0, res_mi->data.matW);
+}
+
+void Engine::modelinst_getWMatrix (ModelInstH handle, mat4x4f *out_matW)
 {
 	assert (NULL != out_matW);
-	res::Model3dInst *res = (res::Model3dInst*)res__getDescriptor(handle.res_handle);
-	if (NULL != res)
-		*out_matW = res->matW;
-	else
+	res2::ModelInstance::Resource *res_mi = res2MemManager.getT<res2::ModelInstance::Resource>( handle );
+	if (NULL == res_mi)
 	{
 		DBGBREAK;
+		return;
 	}
+	(*out_matW) = res_mi->data.matW;
 }
 
-void Engine::modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &matW)
+void Engine::modelinst_applyTransform (ModelInstH handle, const mat4x4f &matW)
 {
-	res::Model3dInst *res = (res::Model3dInst*)res__getDescriptor(handle.res_handle);
-	if (NULL == res)
+	res2::ModelInstance::Resource *res_mi = res2MemManager.getT<res2::ModelInstance::Resource>( handle );
+	if (NULL == res_mi)
+	{
+		DBGBREAK;
 		return;
-	res->matW = matW;
+	}
+	res_mi->data.matW = matW;
 
 	//se sono gia' in stato ready, applico la matW al mio modello, altrimenti questa cosa
 	//verra' fatta non appena divento ready
-	if (res::eStatus::ready == res->_descr._status)
+	if (res2::is_ready(&res_mi->base))
 	{
-		priv_modelinst_applyTransform_ric (res->minst.model_listof_bones, res->minst.listof_bones, 0, matW);
+		const skeleton::Reader skReader ( &res_mi->data.skeleton_data->skeleton );		
+		priv_modelinst_applyTransform_ric (skReader.bone_get_by_index(0), res_mi->data.listof_bones, 0, res_mi->data.matW);
 	}
 }
 
@@ -1594,56 +1731,7 @@ void Engine::priv_modelinst_applyTransform_ric (const gos::Bone *model__listof_b
 		childrenIndex = instance__listof_bones[childrenIndex].sigblinIndex;
 	}
 }
-*/
 
 
 
 
-/**************************************************************** 
- * SHAPE
- ****************************************************************
-bool Engine::shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, ENGShape *out_handle)
-{
-	asset2::UID invalid_UID;
-	invalid_UID.setInvalid();
-
-	ProxyRes *proxyRes = proxyResInfo.reserve (invalid_UID, &out_handle->index);
-
-	res::Shape *res = (res::Shape*)res__createHandle(res::eType::shape, res::eStatus::ready, invalid_UID, &proxyRes->res_handle);
-	if (NULL == res)
-	{
-		logger::err ("Engine::shape_create() => can't create handle\n");
-		return false;
-	}
-
-	if (!shape::shapeAlloc (allocator, vtxLayout, numVtx, numIdx, &res->shape))
-	{
-		logger::err ("Engine::shape_create() => error during shapeAlloc\n");
-		return false;
-	}
-
-	return true;
-}
-
-void Engine::internal__shape_on_afterCreate (void *resIN)
-{
-	//asset_logger->log ("internal__shape_on_afterCreate\n");
-	res::Shape *res = (res::Shape*)resIN;
-	res->shape.reset();
-}
-
-void Engine::internal__shape_on_destroy (void *resIN)
-{
-	//asset_logger->log ("internal__shape_on_destroy\n");
-	res::Shape *res = (res::Shape*)resIN;
-	shape::shapeFree (allocator, &res->shape);
-}
-
-void Engine::internal__shape_on_unload (void *resIN)
-{
-	//asset_logger->log ("internal__shape_on_unload\n");
-	res::Shape *res = (res::Shape*)resIN;
-	shape::shapeFree (allocator, &res->shape);
-	res->shape.reset();
-}
-*/

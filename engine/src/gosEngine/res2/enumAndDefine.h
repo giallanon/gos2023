@@ -7,7 +7,7 @@
 namespace gos
 {
 	class Engine; //fwd
-
+	
 	namespace res2
 	{
 		enum class eLoadMode : u8
@@ -68,10 +68,10 @@ namespace gos
 
 		protected:
 			void 		make_handle (u8 guard, u32 start_slot, u32 num_slot, u8 type);
-			u32			get_start_slot() const							{ return ( _handle & 0x3FFFF ); }
-			u16			get_num_slot() const							{ return (u16)( (_handle >> 18) & 0x0F ); }
-			u8			get_type() const								{ return (u8)( (_handle >> 22) & 0x3F ); }
-			u8			get_gard() const								{ return (u8)( (_handle >> 28) & 0x0F ); }
+			u32			get_start_slot() const							{ return ( _handle & 0x003FFFFF ); }
+			u16			get_num_slot() const							{ return (u16)( (_handle >> 22) & 0x07 ); }
+			u8			get_type() const								{ return (u8)( (_handle >> 25) & 0x0F ); }
+			u8			get_gard() const								{ return (u8)( (_handle >> 29) & 0x07 ); }
 
 		private:
 			u32			_handle;
@@ -111,6 +111,8 @@ namespace gos
 
 
 	} //namespace res
+
+
 } //namespace gos
 
 #endif //_gosEngineRes2_enumAndDefine_h_

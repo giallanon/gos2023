@@ -36,7 +36,6 @@ entity/gosEntityUniqueList.h
 model/gosModel.cpp
 model/gosModel.h
 model/gosModelEnumAndDefine.h
-model/gosModelInstance.h
 model/gosModelReader.cpp
 
 renderPipe/gosEngineRenderPipe.cpp

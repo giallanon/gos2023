@@ -49,7 +49,9 @@ private:
 	gos::MaterialPBRH	material2_handle;
 	gos::PipelineH		pipe1_handle;
 	gos::ModelH			model1_handle;
-	
+	gos::ModelH			model2_handle;
+
+	gos::FastArray<gos::ModelInstH>		mi_handle_list;
 };
 
 #endif //_App_h_

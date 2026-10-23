@@ -58,9 +58,11 @@ namespace gos
 	
 	GOS_DECL_RES2_HANDLE(ModelH);
 	typedef res2::Model3d::Data			ModelData;
+	typedef res2::Model3d::Updatable	ModelDataUpd;
 
-	// GOS_DECL_RES2_HANDLE(ShapeH);
-	// typedef res2::Shape::Data			ShapeData;	
+	GOS_DECL_RES2_HANDLE(ModelInstH);
+	typedef res2::ModelInstance::Data	ModelInstData;
+
 }
 
 

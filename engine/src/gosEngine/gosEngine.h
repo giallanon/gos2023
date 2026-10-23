@@ -66,13 +66,11 @@ namespace gos
 		bool            vtxBuffer_create (u32 sizeInByte, eMemAccessMode mode, VtxBufferH *out_handle);
 		void            release (VtxBufferH &handle)															{ res2__release(handle); }
 		bool            get (VtxBufferH handle, const VtxBufferData **out)										{ return res2__get_or_schedule_loadT<res2::VtxBuffer>(handle, out, 0); }
-		void            res2__vtxBufferRes_callback_on_destroy (res2::ResDescr *descr);
 
 		//============================= idxBuffer
 		bool            idxBuffer_create (u32 sizeInByte, eMemAccessMode mode, IdxBufferH *out_handle);
 		void            release (IdxBufferH handle)																{ res2__release(handle); }
 		bool            get (IdxBufferH handle, const IdxBufferData **out)										{ return res2__get_or_schedule_loadT<res2::IdxBuffer>(handle, out, 0); }
-		void            res2__idxBufferRes_callback_on_destroy (res2::ResDescr *descr);
 
 		//============================= texture2D
 		bool            texture2D_createFromAsset (const char *runtimeName, TextureH *out_handle, res2::eLoadMode loadMode = res2::eLoadMode::onDemand);
@@ -80,9 +78,6 @@ namespace gos
 		bool            texture2D_create (const gos::Image *im, u8 srcTextureNum, eMemAccessMode memAccessMode, TextureH *out_handle, gpu::StageHelper &stageHelper);
 		void            release (TextureH &handle)																			{ res2__release(handle); }
 		bool            get (TextureH handle, const TextureData **out, u32 timeout_msec = 0)								{ return res2__get_or_schedule_loadT<res2::Texture2d>(handle, out, timeout_msec); }
-		eRes2LoadResult	res2__textureRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
-		void            res2__textureRes_callback_on_destroy (res2::ResDescr *descr);
-		void            res2__textureRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)	{ res2__callback_on_hot_reloadT<res2::Texture2d>(asset_descr, new_signatureUID); }
 
 		bool            get_texture_bianca (const TextureData **out)														{ return get(handle_texture_bianca, out, 0); }
 		TextureH		get_handle_texture_bianca()																			{ return handle_texture_bianca; }
@@ -93,9 +88,6 @@ namespace gos
 		bool            vtxshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, VtxShaderH *out_handle);
 		void            release (VtxShaderH &handle)																			{ res2__release(handle); }
 		bool            get (VtxShaderH handle, const VtxShaderData **out, u32 timeout_msec = 0)								{ return res2__get_or_schedule_loadT<res2::VtxShader>(handle, out, timeout_msec); }
-		eRes2LoadResult	res2__vtxShaderRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
-		void            res2__vtxShaderRes_callback_on_destroy (res2::ResDescr *descr);
-		void            res2__vtxShaderRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)	{ res2__callback_on_hot_reloadT<res2::VtxShader>(asset_descr, new_signatureUID); }
 
 		//============================= pxlshader
 		bool            pxlshader_createFromAsset (const char *runtimeName, PxlShaderH *out_handle, res2::eLoadMode loadMode = res2::eLoadMode::onDemand);
@@ -103,36 +95,24 @@ namespace gos
 		bool            pxlshader_createFromMemory (const void *bufferIN, u32 bufferSize, const char *mainFnName, PxlShaderH *out_handle);
 		void            release (PxlShaderH &handle)																			{ res2__release(handle); }
 		bool            get (PxlShaderH handle, const PxlShaderData **out, u32 timeout_msec = 0)								{ return res2__get_or_schedule_loadT<res2::PxlShader>(handle, out, timeout_msec); }
-		eRes2LoadResult	res2__pxlShaderRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
-		void            res2__pxlShaderRes_callback_on_destroy (res2::ResDescr *descr);
-		void            res2__pxlShaderRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)	{ res2__callback_on_hot_reloadT<res2::PxlShader>(asset_descr, new_signatureUID); }
 
 		//============================= pipeline
 		bool            pipeline_createFromAsset (const char *runtimeName, PipelineH *out_handle, res2::eLoadMode loadMode = res2::eLoadMode::onDemand);
 		bool            pipeline_create (const gpu::Pipeline_def &rpd, PipelineH *out_handle);
 		void            release (PipelineH &handle)																				{ res2__release(handle); }
 		bool            get (PipelineH handle, const PipelineData **out, u32 timeout_msec = 0)									{ return res2__get_or_schedule_loadT<res2::Pipeline>(handle, out, timeout_msec); }
-		eRes2LoadResult	res2__pipelineRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
-		void            res2__pipelineRes_callback_on_destroy (res2::ResDescr *descr);
-		void            res2__pipelineRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)	{ res2__callback_on_hot_reloadT<res2::Pipeline>(asset_descr, new_signatureUID); }
 
 		//============================= GPUShape
 		bool            GPUShape_createFromAsset (const char *runtimeName, GPUShapeH *out_handle, res2::eLoadMode loadMode = res2::eLoadMode::onDemand);
 		bool            GPUShape_create (const gos::Shape *shape, gpu::StageHelper &stageHelper, GPUShapeH *out_handle);
 		void            release (GPUShapeH &handle)																				{ res2__release(handle); }
 		bool            get (GPUShapeH handle, const GPUShapeData **out, u32 timeout_msec = 0)									{ return res2__get_or_schedule_loadT<res2::GPUShape>(handle, out, timeout_msec); }
-		eRes2LoadResult	res2__gpushapeRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
-		void            res2__gpushapeRes_callback_on_destroy (res2::ResDescr *descr);
-		void            res2__gpushapeRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)	{ res2__callback_on_hot_reloadT<res2::GPUShape>(asset_descr, new_signatureUID); }
 
 		//============================= material
 		bool            materialPBR_createFromAsset (const char *runtimeName, MaterialPBRH *out_handle, res2::eLoadMode loadMode = res2::eLoadMode::onDemand);
 		bool            materialPBR_create (MaterialPBRH *out_handle);
 		void			release (MaterialPBRH &handle)																			{ res2__release(handle); }
 		bool            get (MaterialPBRH handle, const MaterialPBRData **out, u32 timeout_msec = 0)							{ return res2__get_or_schedule_loadT<res2::MaterialPBR>(handle, out, timeout_msec); }
-		eRes2LoadResult	res2__materialPBR_callback_on_load (const res2::CallbackData_onLoad *callback_data);
-		void            res2__materialPBR_callback_on_destroy (res2::ResDescr *descr);
-		void            res2__materialPBR_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)	{ res2__callback_on_hot_reloadT<res2::MaterialPBR>(asset_descr, new_signatureUID); }
 
 		bool 			get_for_update (MaterialPBRH handle, MaterialPBRDataUpd *out, u32 timeout_msec = 0);
 		bool 			materialPBR_update_renderer_binding (MaterialPBRDataUpd *data, u8 renderer_uid, u32 user_data);
@@ -145,43 +125,28 @@ namespace gos
 		bool            skeleton_create (const Skeleton &sk, SkeletonH *out_handle);
 		void			release (SkeletonH &handle)																				{ res2__release(handle); }
 		bool            get (SkeletonH handle, const SkeletonData **out, u32 timeout_msec = 0)									{ return res2__get_or_schedule_loadT<res2::Skeleton>(handle, out, timeout_msec); }
-		eRes2LoadResult	res2__skeletonRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
-		void            res2__skeletonRes_callback_on_destroy (res2::ResDescr *descr);
-		void            res2__skeletonRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)	{ res2__callback_on_hot_reloadT<res2::Skeleton>(asset_descr, new_signatureUID); }
 
 		//============================= model3d
 		bool            model_createFromAsset (const char *runtimeName, ModelH *out_handle, res2::eLoadMode loadMode = res2::eLoadMode::onDemand);
 		bool			model_create (SkeletonH handle_skeleton, u16 num_shape, u16 num_material, u16 num_meshes, ModelH *out_handle);
+		bool			model_clone (ModelH handle_src, ModelH *out_handle, u32 timeout_msec = 0);
 		void			release (ModelH &handle)																				{ res2__release(handle); }
 		bool            get (ModelH handle, const ModelData **out, u32 timeout_msec = 0)										{ return res2__get_or_schedule_loadT<res2::Model3d>(handle, out, timeout_msec); }
-		eRes2LoadResult	res2__modelRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
-		void            res2__modelRes_callback_on_destroy (res2::ResDescr *descr);
-		void            res2__modelRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)		{ res2__callback_on_hot_reloadT<res2::Model3d>(asset_descr, new_signatureUID); }
 
-		//============================= shape
-		/*bool            shape_createFromAsset (const char *runtimeName, ENGShape *out_handle, res2::eLoadMode loadMode = res2::eLoadMode::onDemand)		{ return proxyRes__createFromRuntimeNameT (runtimeName, out_handle, loadMode); }
-		bool            shape_create (const VtxLayout &vtxLayout, u32 numVtx, u32 numIdx, ENGShape *out_handle);
-		void			release (ENGShape handle)																	{ proxyRes__releaseT(handle); }
-		bool            get (ENGShape handle, const res::Shape **out, u32 timeout_msec = 0)							{ return proxyRes__getT (handle, out, timeout_msec); }
-		bool            hotreload (ENGShape handle)																	{ return proxyRes__hotReloadT(handle); }
-		void 			internal__shape_on_afterCreate (void *res);
-		void            internal__shape_on_destroy (void *res);
-		void			internal__shape_on_unload (void *resIN);
-		*/
+		bool 			get_for_update (ModelH handle, ModelDataUpd *out, u32 timeout_msec = 0);
+		void            model_update_material (ModelDataUpd *data, u32 material_index, MaterialPBRH material_handle, const char *name__can_be_NULL = NULL);
+		void            model_update_gpushape (ModelDataUpd *data, u32 shape_index, GPUShapeH shape_handle, const char *name__can_be_NULL = NULL);
+		void            model_update_skeleton (ModelDataUpd *data, SkeletonH sk_handle);
+		void            model_update_mesh (ModelDataUpd *data, u32 mesh_num, u16 shape_index, u16 bone_index, u16 material_index, const char *name__can_be_NULL = NULL);
 
+		//============================= model instance
+		bool            modelinst_create (ModelH model_handle, ModelInstH *out_handle);
+		void			release (ModelInstH &handle)																				{ res2__release(handle); }
+		bool            get (ModelInstH handle, const ModelInstData **out, u32 timeout_msec = 0)									{ return res2__get_or_schedule_loadT<res2::ModelInstance>(handle, out, timeout_msec); }
 
-		
-		/*============================= model instance
-		bool            modelinst_create (ENGModel3d handle_model, ENGModel3dInst *out_handle);
-		void            release (ENGModel3dInst &handle)															{ res__release(handle.res_handle); handle.res_handle.setInvalid(); }
-		bool            get (ENGModel3dInst handle, const res::Model3dInst **out, u32 timeout_msec = 0)				{ return res__getOrScheduleLoadT(handle, out, timeout_msec); }
-		void            modelinst_applyTransform (ENGModel3dInst handle, const mat4x4f &matW);
-		void 			modelinst_getWMatrix (ENGModel3dInst handle, mat4x4f *out_matW);
-		void 			internal__modelinst_on_afterCreate (void *res);
-		bool 			internal__modelinst_on_loadCallback(void *callback_data);
-		void            internal__modelinst_on_destroy (void *res);
-		void            internal__modelinst_on_unload (void *resIN);
-		*/
+		void 			modelinst_getWMatrix (ModelInstH handle, mat4x4f *out_matW);
+		void            modelinst_applyTransform (ModelInstH handle, const mat4x4f &matW);
+
 
 	private:
 		void			priv_modelinst_applyTransform_ric (const gos::Bone *model_listof_bones, gos::Bone *listof_bones, u32 boneIndex, const mat4x4f &parent_matW) const;
@@ -215,10 +180,44 @@ namespace gos
 		typedef eRes2LoadResult (Engine::*FN_res2__on_file_loaded) (const res2::CallbackData_onLoad *data);
 		typedef void (Engine::*FN_res2__on_destroy) (res2::ResDescr *descr);
 		typedef void (Engine::*FN_res2__on_hot_reload) (res2::ResDescr *asset_descr, asset2::UID new_res_signatureUID);
+		typedef void (Engine::*FN_res2__on_become_rdy) (res2::ResDescr *descr);
+
+	public:
+						//chiamata da res2::internal__on_children_become_ready
+		void			res2__callbak_on_resource_become_rdy (res2::ResDescr *descr);
 
 	private:		
+		void            res2__vtxBufferRes_callback_on_destroy (res2::ResDescr *descr);
+		void            res2__idxBufferRes_callback_on_destroy (res2::ResDescr *descr);
+		eRes2LoadResult	res2__textureRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
+		void            res2__textureRes_callback_on_destroy (res2::ResDescr *descr);
+		void            res2__textureRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)		{ res2__callback_on_hot_reloadT<res2::Texture2d>(asset_descr, new_signatureUID); }
+		eRes2LoadResult	res2__vtxShaderRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
+		void            res2__vtxShaderRes_callback_on_destroy (res2::ResDescr *descr);
+		void            res2__vtxShaderRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)	{ res2__callback_on_hot_reloadT<res2::VtxShader>(asset_descr, new_signatureUID); }
+		eRes2LoadResult	res2__pxlShaderRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
+		void            res2__pxlShaderRes_callback_on_destroy (res2::ResDescr *descr);
+		void            res2__pxlShaderRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)	{ res2__callback_on_hot_reloadT<res2::PxlShader>(asset_descr, new_signatureUID); }
+		eRes2LoadResult	res2__pipelineRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
+		void            res2__pipelineRes_callback_on_destroy (res2::ResDescr *descr);
+		void            res2__pipelineRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)	{ res2__callback_on_hot_reloadT<res2::Pipeline>(asset_descr, new_signatureUID); }
+		eRes2LoadResult	res2__gpushapeRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
+		void            res2__gpushapeRes_callback_on_destroy (res2::ResDescr *descr);
+		void            res2__gpushapeRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)	{ res2__callback_on_hot_reloadT<res2::GPUShape>(asset_descr, new_signatureUID); }
+		eRes2LoadResult	res2__materialPBR_callback_on_load (const res2::CallbackData_onLoad *callback_data);
+		void            res2__materialPBR_callback_on_destroy (res2::ResDescr *descr);
+		void            res2__materialPBR_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)	{ res2__callback_on_hot_reloadT<res2::MaterialPBR>(asset_descr, new_signatureUID); }
+		eRes2LoadResult	res2__skeletonRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
+		void            res2__skeletonRes_callback_on_destroy (res2::ResDescr *descr);
+		void            res2__skeletonRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)	{ res2__callback_on_hot_reloadT<res2::Skeleton>(asset_descr, new_signatureUID); }
+		eRes2LoadResult	res2__modelRes_callback_on_load (const res2::CallbackData_onLoad *callback_data);
+		void            res2__modelRes_callback_on_destroy (res2::ResDescr *descr);
+		void            res2__modelRes_callback_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_signatureUID)		{ res2__callback_on_hot_reloadT<res2::Model3d>(asset_descr, new_signatureUID); }
+		void            res2__modelInst_callback_on_destroy (res2::ResDescr *descr);
+		void            res2__modelInst_callback_on_become_rdy (res2::ResDescr *descr);
+
 		void 			res2__flushLoaderThreadMsg();
-		void 			res2__register_resource (res2::eResType type, FN_res2__on_file_loaded on_file_loaded, FN_res2__on_destroy on_destroy, FN_res2__on_hot_reload on_hot_reload);
+		void 			res2__register_resource (res2::eResType type, FN_res2__on_file_loaded on_file_loaded, FN_res2__on_destroy on_destroy, FN_res2__on_hot_reload on_hot_reload, FN_res2__on_become_rdy on_become_rdy);
 		eRes2LoadResult	res2__callbak_on_file_loaded (res2::CallbackData_onLoad *data);
 		void 			res2__callbak_on_destroy (res2::ResDescr *descr);
 		void 			res2__callbak_on_hot_reload (res2::ResDescr *asset_descr, asset2::UID new_res_signatureUID);
@@ -416,6 +415,7 @@ namespace gos
 		FN_res2__on_file_loaded	res2FNList_onFileLoaded[(u8)res2::eResType::NUM_MAX];
 		FN_res2__on_destroy		res2FNList_onDestroy[(u8)res2::eResType::NUM_MAX];
 		FN_res2__on_hot_reload	res2FNList_onHotReload[(u8)res2::eResType::NUM_MAX];
+		FN_res2__on_become_rdy	res2FNList_onBecomeRdy[(u8)res2::eResType::NUM_MAX];
 
 		//================= res2  loader thread stuff ============
 	private:

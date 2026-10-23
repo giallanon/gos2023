@@ -39,6 +39,15 @@ const Model::Mesh* Reader::mesh_get_by_index (u32 index) const
 }
 
 //*******************************************
+const char* Reader::mesh_get_name_by_index (u32 index) const
+{
+	assert (index < mesh_get_num());
+	const u32 ABS_OFFSET_NAME_TABLE = utils::bufferReadU16 (&m->blob[OFFSET_TO_START_OF_NAME_TABLE]);
+	const u32 POS = ABS_OFFSET_NAME_TABLE + model::Reader::SIZE_OF_A_NAME * (gpushape_get_num() + material_get_num() + index);
+	return reinterpret_cast<const char*> (&m->blob[POS]);
+}
+
+//*******************************************
 u32 Reader::gpushape_get_num() const
 {
 	assert (model::isValid(*m));
@@ -61,6 +70,17 @@ const GPUShapeH* Reader::gpushape_get_pt_to_list () const
 	assert (0 == ct % 8);
 	return reinterpret_cast<const GPUShapeH*>(&m->blob[ct]);
 }
+
+//*******************************************
+const char* Reader::gpushape_get_name_by_index (u32 index) const
+{
+	assert (index < gpushape_get_num());
+	const u32 ABS_OFFSET_NAME_TABLE = utils::bufferReadU16 (&m->blob[OFFSET_TO_START_OF_NAME_TABLE]);
+	const u32 POS = ABS_OFFSET_NAME_TABLE + model::Reader::SIZE_OF_A_NAME * index;
+	return reinterpret_cast<const char*> (&m->blob[POS]);
+}
+
+
 
 
 //*******************************************
@@ -86,6 +106,13 @@ const MaterialPBRH* Reader::material_get_pt_to_list () const
 	return reinterpret_cast<const MaterialPBRH*>(&m->blob[ct]);
 }
 
-
+//*******************************************
+const char* Reader::material_get_name_by_index (u32 index) const
+{
+	assert (index < material_get_num());
+	const u32 ABS_OFFSET_NAME_TABLE = utils::bufferReadU16 (&m->blob[OFFSET_TO_START_OF_NAME_TABLE]);
+	const u32 POS = ABS_OFFSET_NAME_TABLE + model::Reader::SIZE_OF_A_NAME * (gpushape_get_num() + index);
+	return reinterpret_cast<const char*> (&m->blob[POS]);
+}
 
 

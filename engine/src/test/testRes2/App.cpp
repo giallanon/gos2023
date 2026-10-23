@@ -21,7 +21,42 @@ void App::on__unsetup()
 	engine->release (material1_handle);
 	engine->release (pipe1_handle);
 	engine->release (model1_handle);
+	engine->release (model2_handle);
+
+	for (u32 i=0; i<mi_handle_list.getNElem(); i++)
+	{
+		ModelInstH h = mi_handle_list(i);
+		engine->release(h);
+	}
 }
+
+//***************************************
+void App::on__setup ()
+{
+	mi_handle_list.setup (gos::getSysHeapAllocator(), 1000);
+
+	//test1();
+	//test2();
+	test3();
+}
+
+//***************************************
+void App::on__update (u64 timenow_msec)
+{
+	//test1_on_update (timenow_msec);
+	//test2_on_update (timenow_msec);
+	test3_on_update (timenow_msec);
+
+}
+
+//***************************************
+void App::on__render()
+{
+	// test1_render();
+	// test2_render();
+	test3_render();
+}
+
 
 //***************************************
 void App::test1()
@@ -155,10 +190,10 @@ void App::test2_render()
 		mat4x4f	m;
 
 		m.identity();
-		renderer_PIPE3->add (shape_cubo_handle, m, material_cubo_handle);
+		renderer_PIPE3->add (shape_cubo_handle, &m, material_cubo_handle);
 
 		m.buildTranslation (0, 2, 2);
-		renderer_PIPE3->add (shape_cubo_handle, m, material_cubo_handle);
+		renderer_PIPE3->add (shape_cubo_handle, &m, material_cubo_handle);
 	}
 	renderer_PIPE3->end();
 
@@ -168,59 +203,89 @@ void App::test2_render()
 //***************************************
 void App::test3()
 {
+	static constexpr i32 NUM_PER_LATO = 20;
+	static constexpr f32 SX = 2.0f;
+	static constexpr f32 SY = 2.0f;
+	static constexpr f32 SZ = 2.0f;
+
 	renderer_PIPE3 = engine->renderPipe.add_renderer<engine::Renderer_PIPE3>();
-	engine->model_createFromAsset ("model_cubo1x1x1", &model1_handle, res2::eLoadMode::asap);
+	//engine->model_createFromAsset ("model_cubo1x1x1", &model1_handle);
+	engine->model_createFromAsset ("gix_tree_1", &model1_handle);
+
+	u32 ct = 0;
+	for (i32 y = 0; y <= NUM_PER_LATO; y++)
+	{
+		for (i32 z = 0; z <= NUM_PER_LATO; z++)
+		{
+			for (i32 x = -NUM_PER_LATO/2; x <NUM_PER_LATO/2; x++)
+			{
+				gos::mat4x4f m;
+				m.buildTranslation (x*SX, y*SY, z*SZ);
+				if (0 == ct%2)
+				{
+					ModelInstH handle;
+					engine->modelinst_create (model1_handle, &handle);
+					engine->modelinst_applyTransform (handle, m);
+					mi_handle_list.append(handle);
+				}
+				ct++;
+			}
+		}
+	}
+
+	
+	engine->materialPBR_createFromAsset ("material01", &material1_handle, res2::eLoadMode::asap);
+
+	//clono il modello e gli cambio materiale
+	if (engine->model_clone (model1_handle, &model2_handle, 2000))
+	{
+		ModelDataUpd upd;
+		GOS_DEBUG_ASSERT( engine->get_for_update(model2_handle, &upd) );
+		engine->model_update_material (&upd, 1, material1_handle);
+	}
+
+
+	ct = 0;
+	for (i32 y = 0; y <= NUM_PER_LATO; y++)
+	{
+		for (i32 z = 0; z <= NUM_PER_LATO; z++)
+		{
+			for (i32 x = -NUM_PER_LATO/2; x <NUM_PER_LATO/2; x++)
+			{
+				gos::mat4x4f m;
+				m.buildTranslation (x*SX, y*SY, z*SZ);
+				if (1 == ct%2)
+				{
+					ModelInstH handle;
+					engine->modelinst_create (model2_handle, &handle);
+					engine->modelinst_applyTransform (handle, m);
+					mi_handle_list.append(handle);
+				}
+				ct++;
+			}
+		}
+	}
 }
+
 void App::test3_on_update(u64 timenow_msec)		{ }	
 void App::test3_render()
 {
 	renderer_PIPE3->begin();
 	{
-		mat4x4f	m;
-
-		// m.identity();
-		// renderer_PIPE3->add (model1_handle, m);
-
-		// m.buildTranslation (0, 2, 2);
-		// renderer_PIPE3->add (model1_handle, m);
-		for (i32 y = 0; y <= 40; y+=2)
-		{
-			for (i32 z = 0; z <= 40; z+=2)
+		static gos::TimerFPS debug_t2;
+		debug_t2.onFrameBegin();
+    	{
+			const u32 N = mi_handle_list.getNElem();
+			for (u32 i=0; i<N; i++)
 			{
-				for (i32 x = -20; x <20; x+=2)
-				{
-					m.buildTranslation (x, y, z);
-					renderer_PIPE3->add (model1_handle, m);
-				}
+				renderer_PIPE3->add (mi_handle_list(i));
 			}
 		}
+		if (debug_t2.onFrameEnd())
+			printf ("**** (%d) debug_t2 %.2f ms\n", mi_handle_list.getNElem(), debug_t2.getAvgFrameTime_ms());
 	}
 	renderer_PIPE3->end();
 }
 
 
-//***************************************
-void App::on__setup ()
-{
-	//test1();
-	//test2();
-	test3();
-}
-
-//***************************************
-void App::on__update (u64 timenow_msec)
-{
-	//test1_on_update (timenow_msec);
-	//test2_on_update (timenow_msec);
-	test3_on_update (timenow_msec);
-
-}
-
-//***************************************
-void App::on__render()
-{
-	// test1_render();
-	// test2_render();
-	test3_render();
-}
 
