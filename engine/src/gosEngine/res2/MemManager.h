@@ -39,19 +39,30 @@ namespace gos
 
 
 		private:
-			static constexpr u32		BLOB__SIZE = 16 * 1024 * 1024;
+			static constexpr u32		NUM_HANDLERS = 0x00400000; //2^22 dove 22 = bum bit riservati a "start_slot" in ResHandle
 			static constexpr u32		SLOT_SIZE = 64;
+			static constexpr u32		MAX_BLOB__SIZE = NUM_HANDLERS * SLOT_SIZE;	//268.435.456  ~250MB
+			static constexpr u32		NUM_PAGES = 16;	//4 bit MSB di ResHandle->start_slot
+			static constexpr u32		PAGE_SIZE = MAX_BLOB__SIZE / NUM_PAGES;
 
 		private:
+			struct Page
+			{
+				gos::FreespaceTracker	tracker;
+				u8						*blob;
+			};
+
+		private:
+			
+			void		priv_alloc_page (u32 index);
 			ResDescr*	priv__reserve (eResType res_type, u32 size_to_alloc, ResHandle *out_handle);
 			ResDescr* 	priv__get (ResHandle res_handle) const;
-			void* 		priv__is_valid_handle (const ResHandle handle, FreespaceTracker::AllocInfo *out_alloc_info) const;
+			void* 		priv__is_valid_handle (const ResHandle handle, u32 *out_page, FreespaceTracker::AllocInfo *out_alloc_info) const;
 
 		private:
 			gos::Allocator 	*localAllocator;
-			gos::FreespaceTracker	tracker;
-			u8						*blob;
-			u8						guard;
+			Page			pages[NUM_PAGES];
+			u8				guard;
 		};
 
 	} //namespace res

@@ -134,6 +134,8 @@ u32 FreespaceTracker::priv__free (AllocInfo &info)
 	//cerco la prima entry che inizia dopo firstBlock
 	const u32 lastBlock = firstBlockToFree + numBlockToFree;
 
+	assert (lastBlock <= num_max_blocks);
+
     const u32 n = freerangeList.getNElem();
 	for (u32 i=0; i<n; i++)
 	{
@@ -168,6 +170,16 @@ u32 FreespaceTracker::priv__free (AllocInfo &info)
 	}
 
 	//se arrivo qui vuol dire che devo aggiungere una entry a fine buffer
+	if (n>0)
+	{
+		if (freerangeList(n-1).startingBlock + freerangeList(n-1).numBlock == firstBlockToFree)
+		{
+			freerangeList[n-1].numBlock += numBlockToFree;
+			priv_tryMerge (n-1);
+			return numBlockToFree;
+		}
+	}
+	
 	freerangeList[n].startingBlock = firstBlockToFree;
 	freerangeList[n].numBlock = numBlockToFree;
 	return numBlockToFree;

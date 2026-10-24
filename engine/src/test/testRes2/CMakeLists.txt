@@ -87,3 +87,5 @@ if(GOS_PLATFORM__NAME STREQUAL "linux")
     endif()
     target_link_libraries(${BINARY_OUTPUT_FILENAME} "${X11_LIBRARIES}")
 endif()
+
+

@@ -297,6 +297,7 @@ void DefaultApp::priv_loop ()
 			}
 			mainLoop.stat_onCommandBufferEnd();
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
+			
         }
 	}
 

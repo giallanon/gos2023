@@ -11,8 +11,12 @@ void MemManager::setup (gos::Allocator *allocator)
 	assert (NULL == localAllocator);
 	localAllocator = allocator;
 
-	blob = GOSALLOCT(u8*, localAllocator, BLOB__SIZE);
-	tracker.setup (BLOB__SIZE, SLOT_SIZE, localAllocator);
+	for (u32 i=0; i<NUM_PAGES; i++)
+	{
+		pages[i].blob = NULL;
+	}
+
+	priv_alloc_page(0);
 }
 
 //***********************************
@@ -21,10 +25,26 @@ void MemManager::unsetup()
 	if (NULL == localAllocator)
 		return;
 
-	assert (0 == tracker.get_num_allocated_bytes());
-	GOSFREE(localAllocator, blob);
-	tracker.unsetup();
+	for (u32 i=0; i<NUM_PAGES; i++)
+	{
+		if (NULL == pages[i].blob)
+			continue;
+
+		assert (0 == pages[i].tracker.get_num_allocated_bytes());
+		GOSFREE(localAllocator, pages[i].blob);
+		pages[i].tracker.unsetup();
+	}
+
 	localAllocator = NULL;
+}
+
+//***********************************
+void MemManager::priv_alloc_page (u32 index)
+{
+	assert (index < NUM_PAGES);
+	assert (NULL == pages[index].blob);
+	pages[index].blob = GOSALLOCT(u8*, localAllocator, PAGE_SIZE);
+	pages[index].tracker.setup (PAGE_SIZE, SLOT_SIZE, localAllocator);
 }
 
 //***********************************
@@ -35,41 +55,58 @@ ResDescr* MemManager::priv__reserve (eResType res_type, u32 size_to_alloc, ResHa
 
 	//alloco memoria
 	FreespaceTracker::AllocInfo alloc_info;
-	if (!tracker.alloc (size_to_alloc, &alloc_info))
+	u32 page = 0;
+	for (; page < NUM_PAGES; page++)
 	{
-		DBGBREAK;
-		return NULL;
+		if (NULL == pages[page].blob)
+			priv_alloc_page(page);
+
+		if (pages[page].tracker.alloc (size_to_alloc, &alloc_info))
+		{
+			//creo l'handle
+			u32 start_slot = alloc_info.offset / SLOT_SIZE;
+			assert (start_slot * SLOT_SIZE == alloc_info.offset);
+
+			//negli ultimi 4 bit di start_slot di metto page_index
+			assert (0 == (start_slot & 0x003C0000) );
+			start_slot |= (page << 18);
+
+			const u32 num_slot_needed = alloc_info.size / SLOT_SIZE;
+			assert (num_slot_needed * SLOT_SIZE == alloc_info.size);
+			
+			out_handle->make_handle (guard++, start_slot, num_slot_needed, (u8)res_type);
+			
+			//ritorno il descrittore
+			ResDescr *ret = reinterpret_cast<ResDescr*>( &pages[page].blob[alloc_info.offset] );
+			ret->reset();
+			ret->res_handle._handle = out_handle->_handle;
+			ret->refCount = 1;
+			return ret;
+		}
 	}
 
-	//creo l'handle
-	const u32 start_slot = alloc_info.offset / SLOT_SIZE;
-	const u32 num_slot_needed = alloc_info.size / SLOT_SIZE;
-	
-	assert (start_slot * SLOT_SIZE == alloc_info.offset);
-	assert (num_slot_needed * SLOT_SIZE == alloc_info.size);
-	
-	out_handle->make_handle (guard++, start_slot, num_slot_needed, (u8)res_type);
-	
-	//ritorno il descrittore
-	ResDescr *ret = reinterpret_cast<ResDescr*>( &blob[alloc_info.offset] );
-	ret->reset();
-	ret->res_handle._handle = out_handle->_handle;
-	ret->refCount = 1;
-	return ret;
+	DBGBREAK;
+	return NULL;
 }
 
 
 //***********************************
-void* MemManager::priv__is_valid_handle (const ResHandle handle, FreespaceTracker::AllocInfo *out_alloc_info) const
+void* MemManager::priv__is_valid_handle (const ResHandle handle, u32 *out_page, FreespaceTracker::AllocInfo *out_alloc_info) const
 {
 	assert (handle.is_valid());
+	assert (NULL != out_page);
 	assert (NULL != out_alloc_info);
 	
-	out_alloc_info->offset = handle.get_start_slot() * SLOT_SIZE;
-	out_alloc_info->size = handle.get_num_slot() * SLOT_SIZE;
-	assert (out_alloc_info->offset < BLOB__SIZE);
+	const u32 s = handle.get_start_slot();
+	const u32 page = (s >> 18);
+	assert (page < NUM_PAGES);
 
-	void *ret = &blob[out_alloc_info->offset];
+	*out_page = page;
+	out_alloc_info->offset = (s & 0x0003FFFF) * SLOT_SIZE;
+	out_alloc_info->size = handle.get_num_slot() * SLOT_SIZE;
+	assert (out_alloc_info->offset < PAGE_SIZE);
+
+	void *ret = &pages[page].blob[out_alloc_info->offset];
 	const u32 *blob = reinterpret_cast<const u32*>( ret );
 	if (blob[0] != handle._handle)
 	{
@@ -85,11 +122,12 @@ void MemManager::release (ResHandle &handle)
 	if (handle.is_invalid())
 		return;
 
+	u32 page;
 	FreespaceTracker::AllocInfo alloc_info;
-	void *pt = priv__is_valid_handle (handle, &alloc_info);
+	void *pt = priv__is_valid_handle (handle, &page, &alloc_info);
 	if (NULL != pt)
 	{
-		tracker.free(alloc_info);
+		pages[page].tracker.free(alloc_info);
 		u32 *p32 = (u32*)pt;
 		p32[0] = u32MAX;
 	}
@@ -115,8 +153,9 @@ ResDescr* MemManager::priv__get (ResHandle res_handle) const
 		return NULL;
 	}
 
+	u32 page;
 	FreespaceTracker::AllocInfo alloc_info;
-	void *pt = priv__is_valid_handle (res_handle, &alloc_info);
+	void *pt = priv__is_valid_handle (res_handle, &page, &alloc_info);
 	if (NULL == pt)
 	{
 		DBGBREAK;

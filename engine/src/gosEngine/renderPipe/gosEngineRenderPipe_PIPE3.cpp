@@ -223,68 +223,69 @@ void Renderer_PIPE3::begin ()
 //**********************************
 void Renderer_PIPE3::add (const GPUShapeH handle_shape, const mat4x4f *m, u32 material_index)
 {
-    if (matrix_nextIndex >= NUM_MAX_MATRIX)
-        return;
-    const u32 matrix_index = matrix_nextIndex++;
+    if (matrix_nextIndex < NUM_MAX_MATRIX)
+	{
+		const u32 matrix_index = matrix_nextIndex++;
 
-    //u8 *p = reinterpret_cast<u8*>(matrix_buffer.host_pt);
-    //memcpy (&p[sizeof(mat4x4f) * matrix_index], m._getValuesPtConst(), sizeof(mat4x4f));
-	mapped_matrix_buffer.write (m->_getValuesPtConst(), sizeof(mat4x4f), sizeof(mat4x4f) * matrix_index);
+		//u8 *p = reinterpret_cast<u8*>(matrix_buffer.host_pt);
+		//memcpy (&p[sizeof(mat4x4f) * matrix_index], m._getValuesPtConst(), sizeof(mat4x4f));
+		mapped_matrix_buffer.write (m->_getValuesPtConst(), sizeof(mat4x4f), sizeof(mat4x4f) * matrix_index);
 
-    pRenderableList[nRenderable++] = priv_pack_renderable (handle_shape, material_index, matrix_index);
+		pRenderableList[nRenderable++] = priv_pack_renderable (handle_shape, material_index, matrix_index);
+	}
 }
 
 //**********************************
 void Renderer_PIPE3::add (const GPUShapeH handle_shape, const mat4x4f *m, const MaterialPBRH handle_material)
 {
 	const MaterialPBRData *res_mat;
-	if (!engine->get (handle_material, &res_mat))
-		return;
-
-    u32 material_index = res_mat->renderer_bindings[renderer_UID];
-    if (u32MAX == material_index)
-    {
-		MaterialPBRDataUpd upd;
-		if (engine->get_for_update (handle_material, &upd))
+	if (engine->get (handle_material, &res_mat))
+	{
+		u32 material_index = res_mat->renderer_bindings[renderer_UID];
+		if (u32MAX == material_index)
 		{
-			//questo materiale e' la prima volta che lo vedo
-			material_index = material_create_empty();
-			engine->materialPBR_update_renderer_binding (&upd, renderer_UID, material_index);
-        }
-		else
-		{
-			DBGBREAK;
-			return;
+			MaterialPBRDataUpd upd;
+			if (engine->get_for_update (handle_material, &upd))
+			{
+				//questo materiale e' la prima volta che lo vedo
+				material_index = material_create_empty();
+				engine->materialPBR_update_renderer_binding (&upd, renderer_UID, material_index);
+			}
+			else
+			{
+				DBGBREAK;
+				return;
+			}
 		}
-    }
 
-	if (res_mat->update_ct != material_update_ct[material_index])
-		priv_material_update_from_PBR (material_index, res_mat);
+		if (res_mat->update_ct != material_update_ct[material_index])
+			priv_material_update_from_PBR (material_index, res_mat);
 
-	add (handle_shape, m, material_index);
+		add (handle_shape, m, material_index);
+	}
 }
 
 //**********************************
 void Renderer_PIPE3::add (ModelInstH handle_mi)
 {
 	const ModelInstData *mi_data;
-	if (!engine->get (handle_mi, &mi_data))
-		return;
-
-    //addo le shape al renderer
-	const model::Reader reader (&mi_data->model_data->model);
-	const u32 num_mesh = reader.mesh_get_num();
-	const Model::Mesh *mesh_list = reader.mesh_get_by_index(0);
-	const GPUShapeH *shape_handle_list = reader.gpushape_get_pt_to_list();
-	const MaterialPBRH *material_handle_list = reader.material_get_pt_to_list();
-	for (u32 i=0; i<num_mesh; i++)
+	if (engine->get (handle_mi, &mi_data))
 	{
-		const u16 shape_index = mesh_list->shape_index;
-        const u16 material_index = mesh_list->material_index;
-		const u16 bone_index = mesh_list->bone_index;
-		mesh_list++;
+		//addo le shape al renderer
+		const model::Reader reader (&mi_data->model_data->model);
+		const u32 num_mesh = reader.mesh_get_num();
+		const Model::Mesh *mesh_list = reader.mesh_get_by_index(0);
+		const GPUShapeH *shape_handle_list = reader.gpushape_get_pt_to_list();
+		const MaterialPBRH *material_handle_list = reader.material_get_pt_to_list();
+		for (u32 i=0; i<num_mesh; i++)
+		{
+			const u16 shape_index = mesh_list->shape_index;
+			const u16 material_index = mesh_list->material_index;
+			const u16 bone_index = mesh_list->bone_index;
+			mesh_list++;
 
-		add (shape_handle_list[shape_index], &mi_data->listof_bones[bone_index].matrix, material_handle_list[material_index]);
+			add (shape_handle_list[shape_index], &mi_data->listof_bones[bone_index].matrix, material_handle_list[material_index]);
+		}
 	}
 }
 

@@ -50,6 +50,7 @@ private:
 	gos::PipelineH		pipe1_handle;
 	gos::ModelH			model1_handle;
 	gos::ModelH			model2_handle;
+	gos::ModelH			model3_handle;
 
 	gos::FastArray<gos::ModelInstH>		mi_handle_list;
 };
