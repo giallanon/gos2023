@@ -1,7 +1,6 @@
 #ifndef _gosEngineRenderPipe_h_
 #define _gosEngineRenderPipe_h_
 #include "../gosEngineEnumAndDefine.h"
-#include "../res/gosEngineRes.h"
 #include "../gosEngine_dynTextureArray.h"
 #include "../../gosGeom/gosGeomCamera3.h"
 #include "../entity/gosEntityDefaultComponents.h"

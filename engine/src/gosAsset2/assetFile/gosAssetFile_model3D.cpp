@@ -21,7 +21,7 @@ void AssetFile_model3D::priv_free()
 }
 
 //************************************
-void AssetFile_model3D::begin(gos::Allocator *localAllocatorIN)
+void AssetFile_model3D::begin (gos::Allocator *localAllocatorIN)
 {
 	if (localAllocatorIN != localAllocator)
 	{
@@ -42,41 +42,44 @@ void AssetFile_model3D::begin(gos::Allocator *localAllocatorIN)
 	shape_name_list.reset();
 	mesh_name_list.reset();
 	material_name_list.reset();
-	uid_of_concrete_skeleton.setInvalid();
+	skeleton_assetUID.setInvalid();
 }
 
 //************************************
-void AssetFile_model3D::skeleton_set (UID uid_of_concrete_skeleton__IN)
+void AssetFile_model3D::skeleton_set (UID assetUID)
 {
-	uid_of_concrete_skeleton = uid_of_concrete_skeleton__IN;
+	assert(assetUID.isAnAssetOfType(eAssetType::skeleton));
+	skeleton_assetUID = assetUID;
 }
 
 //************************************
-u32 AssetFile_model3D::shape_add (UID uid_of_concrete_shape, const char *shape_name)
+u32 AssetFile_model3D::shape_add (UID assetUID, const char *shape_name)
 {
+	assert(assetUID.isAnAssetOfType(eAssetType::shape));
 	const u32 n = listof_shape.getNElem();
 	for (u32 i = 0; i < n; i++)
 	{
-		if (listof_shape(i) == uid_of_concrete_shape)
+		if (listof_shape(i) == assetUID)
 			return i;
 	}
 
-	listof_shape.append (uid_of_concrete_shape);
+	listof_shape.append (assetUID);
 	shape_name_list.append (shape_name);
 	return n;
 }
 
 //************************************
-u32 AssetFile_model3D::material_add (UID uid_of_concrete_material, const char *material_name)
+u32 AssetFile_model3D::material_add (UID assetUID, const char *material_name)
 {
+	assert(assetUID.isAnAssetOfType(eAssetType::materialPBR));
 	const u32 n = listof_material.getNElem();
 	for (u32 i = 0; i < n; i++)
 	{
-		if (listof_material(i) == uid_of_concrete_material)
+		if (listof_material(i) == assetUID)
 			return i;
 	}
 
-	listof_material.append (uid_of_concrete_material);
+	listof_material.append (assetUID);
 	material_name_list.append(material_name);
 	return n;
 }
@@ -113,28 +116,34 @@ bool AssetFile_model3D::save (const char *filenameDST)
 	//magic
 	buffer.writeU32 (GOS_MAGIC__ASSET_MODEL3D);
 
-	//skeleton (concrete asset UID)
-	buffer.writeU64 (uid_of_concrete_skeleton._uid);
-
-
-	//num shape e relativi UID concreti
+	//num shape
 	buffer.writeU32 (listof_shape.getNElem());
+	
+	//num materiali
+	buffer.writeU32 (listof_material.getNElem());
+
+	//num meshes
+	buffer.writeU32 (listof_mesh.getNElem());
+
+	//skeleton assetUID
+	assert (skeleton_assetUID.isAnAssetOfType(eAssetType::skeleton));
+	buffer.writeU64 (skeleton_assetUID._uid);
+
+	//shape assetUID
 	for (u32 i=0; i<listof_shape.getNElem(); i++)
 	{
 		assert (listof_shape(i).isAnAssetOfType(eAssetType::shape));
 		buffer.writeU64 (listof_shape(i)._uid);
 	}
 
-	//num materiali e relativi UID concreti
-	buffer.writeU32 (listof_material.getNElem());
+	//materiali assetUID
 	for (u32 i=0; i<listof_material.getNElem(); i++)
 	{
 		assert (listof_material(i).isAnAssetOfType(eAssetType::materialPBR));
 		buffer.writeU64 (listof_material(i)._uid);
 	}
 
-	//num meshes e relative info
-	buffer.writeU32 (listof_mesh.getNElem());
+	//meshes e relative info
 	for (u32 i=0; i<listof_mesh.getNElem(); i++)
 	{
 		//shape index

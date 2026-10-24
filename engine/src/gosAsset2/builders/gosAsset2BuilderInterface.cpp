@@ -35,10 +35,10 @@ bool BuilderInterface::prot_isOneOfThis (const char *paramName, ...) const
 }
 
 //******************************************
-bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::IniFileSection *sec, eAssetType assType, UID *out__virtual_uid) const
+bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::IniFileSection *sec, eAssetType assType, UID *out__assetUID) const
 {
     assert (NULL != sec);
-    assert (NULL != out__virtual_uid);
+    assert (NULL != out__assetUID);
 
     char s[128];
     const char *assTypeName = asset2::enumToString (assType);
@@ -54,7 +54,7 @@ bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::I
             if (s[0] == '!')
                 return false;
 
-            if (!asset2::virtasset_rtname_exists (ctx, s, out__virtual_uid))
+            if (!asset2::asset_rtname_exists (ctx, s, out__assetUID))
             {
                 logger->log (eTextColor::red, "invalid rtname: %s\n", s);
                 return false;
@@ -68,32 +68,41 @@ bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::I
 
 }
 
-//******************************************
-bool BuilderInterface::prot_needResource (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, eResType resTypeIN, const char *absFilenameIN, UID *out_uid) const
+/******************************************
+ * In caso di risorse che includo a loro volta altre risorse (al momento solo gli shader_txt), all'uscita di questa
+ * fn l'array <list_of_nested_resources> contiene un elenco delle risorse incluse
+ */
+bool BuilderInterface::prot_needResource (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, eResType resTypeIN, const char *absFilenameIN, ResourceDep *out)
+{
+	num_nested_resources = 0;
+	return priv_do_needResource (ctx, listof_UID_of_known_ini_file, resTypeIN, absFilenameIN, out);
+}
+
+bool BuilderInterface::priv_do_needResource (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, eResType resTypeIN, const char *absFilenameIN, ResourceDep *out)
 {
     assert (NULL != absFilenameIN);
-    assert (NULL != out_uid);
+    assert (NULL != out);
     assert (fs::isPathAbsolute(absFilenameIN));
 
-    if (asset2::res_exists (ctx, resTypeIN, absFilenameIN, out_uid))
-        return true;
+    if (!asset2::res_exists (ctx, resTypeIN, absFilenameIN, &out->resourceUID, &out->lastTimeMod))
+	{
+		//<absFilenameIN> non esiste nel DB, la devo aggiungere
+		if (!fs::fileExists(absFilenameIN))
+		{
+			logger->log (eTextColor::red, "can't open file %s\n", absFilenameIN);
+			return false;
+		}
 
-    //<absFilenameIN> non esiste nel DB, la devo aggiungere
-    if (!fs::fileExists(absFilenameIN))
-    {
-        logger->log (eTextColor::red, "can't open file %s\n", absFilenameIN);
-        return false;
-    }
-
-    const u64 lastTimeMod = fs::fileGetLastTimeModified_UTC_niceu64(absFilenameIN);
-    if (!asset2::res_insert (ctx, resTypeIN, absFilenameIN, lastTimeMod, out_uid))
-    {
-        logger->log (eTextColor::red, "error inserting resource %s\n", absFilenameIN);
-        return false;
-    }
-
+		out->lastTimeMod = fs::fileGetLastTimeModified_UTC_niceu64(absFilenameIN);
+		if (!asset2::res_insert (ctx, resTypeIN, absFilenameIN, out->lastTimeMod, &out->resourceUID))
+		{
+			logger->log (eTextColor::red, "error inserting resource %s\n", absFilenameIN);
+			return false;
+		}
+	}
+	
     //le risorse shader possono avere delle include.
-    //DEvo aggiungere la dipendenza di this dalle sue include
+    //Devo aggiungere la dipendenza di this dalle sue include
     if (eResType::shader_txt == resTypeIN)
     {
         gos::StringList includeList(gos::getScrapAllocator(), 1024);
@@ -108,12 +117,17 @@ bool BuilderInterface::prot_needResource (DBContext &ctx, const UniqueUIDList &l
         includeList.toStart(&iter);
         while (NULL != (absIncludePath = includeList.next(&iter)))
         {
-            UID shaderUID;
-            if (prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::shader_txt, absIncludePath, &shaderUID))
+			ResourceDep *nested_res = &list_of_nested_resources[num_nested_resources++];
+            if (priv_do_needResource (ctx, listof_UID_of_known_ini_file, eResType::shader_txt, absIncludePath, nested_res))
             {
-                if (!dependency_exists (ctx, *out_uid, shaderUID))
-                    dependency_add (ctx, *out_uid, shaderUID);
+				dependency_add_if_not_exists(ctx, out->resourceUID, nested_res->resourceUID);
             }
+
+			if (num_nested_resources >= NUM_MAX_NESTED_RESOURCES)
+			{
+				logger->log (eTextColor::red, "error, too many nested resources while working with %s\n", absFilenameIN);
+				return false;
+			}
         }
     }
 
@@ -152,43 +166,45 @@ bool BuilderInterface::priv_extractAllInludePaths (DBContext &ctx, const UniqueU
 }
 
 /****************************** 
- * <params> e' usato per determinare UID del concrete-asset
- * <rtname
+ * <params> e' usato per determinare la uid-signature a partire dai parametri specificati in un gosasset_d
  */
-bool BuilderInterface::prot_setupVirtualAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const
+bool BuilderInterface::prot_setupAsset (DBContext &ctx, const void *params, u32 sizeof_params, UID uid_of_iniFile, const gos::IniFileSection *sec, sBuildResult *out_result) const
 {
-    //recuper il rtname del virtual asset
+    //recupero il rtname dell'asset
 	char rtname[128];
     memset (rtname, 0, sizeof(rtname));
     sec->get("__value", rtname, sizeof(rtname));
 
-	return prot_setupVirtualAsset_ex (ctx, getAssetType(), params, sizeof_params, rtname, uid_of_iniFile, sec->getLineStarted(), out_result);
+	return prot_setupAsset_ex (ctx, getSignatureType(), params, sizeof_params, rtname, uid_of_iniFile, sec->getLineStarted(), out_result);
 }
 
 
 /****************************** 
- * <params> e' usato per determinare UID del concrete-asset
- * <rtname> + <virtual_asset__declared_at_uid_of_iniFile> + <virtual_asset__declared_on_lineNum> sono usate per creare UID del virtual asseet
+ * <params> e' usato per determinare la uid-signature a partire dai parametri specificati in un gosasset_d
+ * <uid_of_iniFile> e' UID dell'inifile nel quale questo asset e' dichiarato
  */
-bool BuilderInterface::prot_setupVirtualAsset_ex (DBContext &ctx, eAssetType assetType, const void *params, u32 sizeof_params, const char *rtname, UID virtual_asset__declared_at_uid_of_iniFile, u32 virtual_asset__declared_on_lineNum, sBuildResult *out_result) const
+bool BuilderInterface::prot_setupAsset_ex (DBContext &ctx, eAssetType assetType, const void *params, u32 sizeof_params, const char *rtname, 
+	UID uid_of_iniFile, 
+	u32 asset__declared_on_lineNum, 
+	sBuildResult *out_result) const
 {
-    //calcolo assetUID
-    if (!asset_createUID (assetType, params, sizeof_params, &out_result->uid_concrete_asset))
+    //calcolo uid-signature
+    if (!signature_createUID (assetType, params, sizeof_params, &out_result->signatureUID))
     {
-        gos::logger::err ("error generating UID of concrete asset\n");
+        gos::logger::err ("error generating signatureUID\n");
         return false;
     }
 
 
     //inserisco il virtual asset nel DB
-    if (!virtasset_insert (ctx, assetType, rtname, virtual_asset__declared_at_uid_of_iniFile, virtual_asset__declared_on_lineNum, out_result->uid_concrete_asset, &out_result->uid_virtual_asset))
+    if (!asset_insert (ctx, assetType, rtname, uid_of_iniFile, asset__declared_on_lineNum, out_result->signatureUID, &out_result->assetUID))
     {
         logger->log (eTextColor::red, "error inserting UID of virtual asset\n");
         return false;
     }    
 
-    //vediamo se il concrete-asset esiste gia' nel DB
-    if (asset2::asset_exists (ctx, out_result->uid_concrete_asset))
+    //vediamo se la signature esiste gia' nel DB
+    if (asset2::signature_exists (ctx, out_result->signatureUID))
     {
         out_result->result = eBuildResult::was_already_built;
     }
@@ -196,16 +212,56 @@ bool BuilderInterface::prot_setupVirtualAsset_ex (DBContext &ctx, eAssetType ass
     {
         //non esisteva nel DB, ottimo, lo aggiungo e poi lo buildo
         out_result->result = eBuildResult::just_built;
-        if (!asset_insert (ctx, out_result->uid_concrete_asset))
+        if (!signature_insert (ctx, out_result->signatureUID))
         {
-            logger->log (eTextColor::red, "error inserting asset in DB\n");
+            logger->log (eTextColor::red, "error inserting signatureUID in DB\n");
             return false;
         }        
     }
 
-    //aggiungo le dipendenze di virtual-asset verso l'inifile e il concrete asset
-    if (!dependency_add (ctx, out_result->uid_virtual_asset, virtual_asset__declared_at_uid_of_iniFile)) return false;
-    if (!dependency_add (ctx, out_result->uid_virtual_asset, out_result->uid_concrete_asset)) return false;
+    //aggiungo le dipendenze di assetUID verso l'inifile e il concrete asset
+    if (!dependency_add (ctx, out_result->assetUID, uid_of_iniFile)) return false;
+    if (!dependency_add (ctx, out_result->assetUID, out_result->signatureUID)) return false;
 
     return true;
+}
+
+//****************************** 
+bool BuilderInterface::prot_add_asset_to_asset_dependency (DBContext &ctx, sBuildResult *padre, UID uid_asset_figlio, UID *out__uid_signature_figlio)
+{
+	assert (NULL != padre);
+	
+	UID signature_figlio;
+	if (uid_asset_figlio.isInvalid())
+	{
+		signature_figlio.setInvalid();
+	}
+	else
+	{
+		assert(uid_asset_figlio.isAnAsset());
+		assert(padre->assetUID.isValid() && padre->assetUID.isAnAsset());
+		assert(padre->signatureUID.isValid() && padre->signatureUID.isASignature());
+		
+
+		if (!dependency_add (ctx, padre->assetUID, uid_asset_figlio)) return false;
+
+		if (!asset_get_info (ctx, uid_asset_figlio, NULL, &signature_figlio))   return false;
+		if (!signature_add_dependencyRT (ctx, padre->signatureUID, signature_figlio)) return false;
+	}
+
+	if (NULL != out__uid_signature_figlio)
+		out__uid_signature_figlio->_uid = signature_figlio._uid;
+	return true;
+}
+
+//****************************** 
+bool BuilderInterface::prot_add_asset_to_resouce_dependency (DBContext &ctx, sBuildResult *padre, UID uid_resource_figlio)
+{
+	if (uid_resource_figlio.isInvalid())	return true;
+
+	assert(uid_resource_figlio.isAResource());
+	assert (NULL != padre);
+	assert(padre->assetUID.isValid() && padre->assetUID.isAnAsset());
+
+	return dependency_add (ctx, padre->assetUID, uid_resource_figlio);
 }

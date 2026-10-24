@@ -94,16 +94,16 @@ bool model::alloc (gos::Allocator *allocator, u16 num_shape, u16 num_material, u
 
 
 	assert (ct == Reader::SKELETON);
-	ENGSkeleton handle_sk;
-	handle_sk.setInvalid();
+	SkeletonH handle_sk;
+	handle_sk.set_invalid();
 	ct += utils::bufferWriteU32 (&out->blob[ct], handle_sk.viewAsU32());
 
 	//gpu shapes
 	ct = Reader::ENGSHAPE;
 	for (u32 i=0; i<num_shape; i++)
 	{
-		ENGGPUShape handle;
-		handle.setInvalid();
+		GPUShapeH handle;
+		handle.set_invalid();
 		ct += utils::bufferWriteU32 (&out->blob[ct], handle.viewAsU32());
 	}
 
@@ -111,8 +111,8 @@ bool model::alloc (gos::Allocator *allocator, u16 num_shape, u16 num_material, u
 	ct = START_of_MATERIAL;
 	for (u32 i=0; i<num_material; i++)
 	{
-		ENGMaterialPBR handle;
-		handle.setInvalid();
+		MaterialPBRH handle;
+		handle.set_invalid();
 		ct += utils::bufferWriteU32 (&out->blob[ct], handle.viewAsU32());
 	}
 	
@@ -147,7 +147,7 @@ static void model__do_set_name (Model &m, u16 index, const char *name__can_be_NU
 }
 
 //************************** 
-bool model::set_skeleton (Model &m, ENGSkeleton handle)
+bool model::set_skeleton (Model &m, SkeletonH handle)
 {
 	assert (model::isValid(m));
 	utils::bufferWriteU32 (&m.blob[Reader::SKELETON], handle.viewAsU32());
@@ -155,7 +155,7 @@ bool model::set_skeleton (Model &m, ENGSkeleton handle)
 }
 
 //************************** 
-bool model::set_gpushape (Model &m, u32 shape_num, ENGGPUShape handle, const char *name__can_be_NULL)
+bool model::set_gpushape (Model &m, u32 shape_num, GPUShapeH handle, const char *name__can_be_NULL)
 {
 	assert (model::isValid(m));
 
@@ -174,7 +174,7 @@ bool model::set_gpushape (Model &m, u32 shape_num, ENGGPUShape handle, const cha
 }
 
 //************************** 
-bool model::set_material (Model &m, u32 material_num, ENGMaterialPBR handle, const char *name__can_be_NULL)
+bool model::set_material (Model &m, u32 material_num, MaterialPBRH handle, const char *name__can_be_NULL)
 {
 	assert (model::isValid(m));
 
@@ -187,7 +187,7 @@ bool model::set_material (Model &m, u32 material_num, ENGMaterialPBR handle, con
 	}
 
 	const u32 START_of_MATERIALS = utils::bufferReadU16 (&m.blob[Reader::OFFSET_TO_START_OF_MATERIALS]);
-	ENGMaterialPBR *list = reinterpret_cast<ENGMaterialPBR*>(&m.blob[START_of_MATERIALS]);
+	MaterialPBRH *list = reinterpret_cast<MaterialPBRH*>(&m.blob[START_of_MATERIALS]);
 	list[material_num] = handle;
 
 	model__do_set_name (m, utils::bufferReadU16 (&m.blob[Reader::NUM_SHAPES]) + material_num, name__can_be_NULL);

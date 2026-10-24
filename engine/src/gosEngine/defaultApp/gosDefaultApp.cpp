@@ -231,25 +231,12 @@ void DefaultApp::priv_loop ()
 			continue;
 		}
 
+		const u64 timenow_msec = gos::getTimeSinceStart_msec();
 		mainLoop.run();
 
         //CPU jobs
 		mainLoop.stat_onCPUFrameBegin();
 		{
-			const u64 timenow_msec = gos::getTimeSinceStart_msec();
-			
-			//ogni tot verifico se ho ricevuto notifiche dall'asset monitor
-			if (timenow_msec >= next_time_check_assetMon__msec)
-			{
-				asset2::UID uid;
-				while ( assetMon.read(&uid) )
-				{
-					engine->asset_hotreload (uid);
-				}
-
-				next_time_check_assetMon__msec = timenow_msec + 500;
-			}
-
 			default_handle_input();
 
 			//gestione del movimento della camera di default
@@ -288,6 +275,21 @@ void DefaultApp::priv_loop ()
         gpu::SwapchainImg swapchainImg;
         if (mainLoop.gfxJob_canSubmit(&swapchainImg))
         {
+			//ogni tot verifico se ho ricevuto notifiche dall'asset monitor
+			if (timenow_msec >= next_time_check_assetMon__msec)
+			{
+				asset2::UID uid;
+				//const u64 debug_started = gos::getTimeSinceStart_msec();
+				while ( assetMon.read(&uid) )
+				{
+					engine->asset_hotreload(uid);
+				}
+				//const u64 debug_elapsed = gos::getTimeSinceStart_msec() - debug_started;
+				//printf ("DEBUG %" PRIu64 " ms\n", debug_elapsed);
+
+				next_time_check_assetMon__msec = timenow_msec + 500;
+			}
+
 			mainLoop.stat_onCommandBufferBegin();
 			{
 				on__render();
@@ -295,6 +297,7 @@ void DefaultApp::priv_loop ()
 			}
 			mainLoop.stat_onCommandBufferEnd();
 			mainLoop.gfxJob_submitAndPresent (cmdBufferHandle, swapchainImg);
+			
         }
 	}
 

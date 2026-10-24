@@ -16,8 +16,8 @@ Builder_model3d::Syntax2::Syntax2 (): BuilderInterface (eAssetType::model3d)
 {
 	localAllocator = gos::getSysHeapAllocator();
 
-	listof_UID_of_virtual_shape_that_I_need.setup (localAllocator, 16);
-	listof_UID_of_concrete_shape_that_I_need.setup (localAllocator, 16);
+	listof_shape_assetUID_that_I_need.setup (localAllocator, 16);
+	listof_shape_signatureUID_that_I_need.setup (localAllocator, 16);
 
 	parsed_params.listof_shapeInfo.setup (localAllocator, 256);
 	parsed_params.listof_meshes.setup (localAllocator, 256);
@@ -34,9 +34,9 @@ Builder_model3d::Syntax2::~Syntax2()
 //************************************
 void Builder_model3d::Syntax2::priv_reset_parsed_params()
 {
-	listof_UID_of_virtual_shape_that_I_need.reset();
-	listof_UID_of_concrete_shape_that_I_need.reset();
-	uid_of_concrete_skeleton.setInvalid();
+	listof_shape_assetUID_that_I_need.reset();
+	listof_shape_signatureUID_that_I_need.reset();
+	skeleton_signatureUID.setInvalid();
 
 	//shape info
 	for (u32 i=0; i<parsed_params.listof_shapeInfo.getNElem(); i++)
@@ -166,7 +166,7 @@ bool Builder_model3d::Syntax2::priv_extractParams (DBContext &ctx, const UniqueU
 		if (firstparam_part2[0] == '*')
 		{
 			assert (NULL == shapeInfo.my_shape_name);
-			sprintf_s (s, sizeof(s), "SELECT UID,rtname FROM " GOS_ASSET2__TABLE_VIRTUAL_ASSET " WHERE rtname LIKE '%s.%%'", firstparam_part1);
+			sprintf_s (s, sizeof(s), "SELECT UID,rtname FROM " GOS_ASSET2__TABLE_ASSET_LIST " WHERE rtname LIKE '%s.%%'", firstparam_part1);
 			GOSFREE(localAllocator, shapeInfo.src_shape_name);
 
 			db::RST rst;
@@ -177,7 +177,7 @@ bool Builder_model3d::Syntax2::priv_extractParams (DBContext &ctx, const UniqueU
 					UID uid;
 					uid._uid = rst.getValAsU64(0);
 
-					if (uid.isAVirtualAssetOfType(eAssetType::shape))
+					if (uid.isAnAssetOfType(eAssetType::shape))
 					{
 						sShapeInfo info;
 						info.src_shape_name = string::utf8::allocStr (localAllocator, rst.getVal(1));
@@ -325,22 +325,22 @@ bool Builder_model3d::Syntax2::build_begin (DBContext &ctx, const UniqueUIDList 
         return false;
     }
 
-	//i parametri parsati indicando uno o piu' "virtual-shape" da cui io dipendo.
+	//i parametri parsati indicando uno o piu' "shape assetUID" da cui io dipendo.
 	//Verifico che questi esistano nel DB
 	for (u32 i=0; i<parsed_params.listof_shapeInfo.getNElem(); i++)
 	{
 		const sShapeInfo *shape_info = &parsed_params.listof_shapeInfo(i);
 
-		UID uid_virtual_asset;
+		UID assetUID;
 		UID uid_of_iniFile;
-		UID uid_concrete_asset;
-		if (!virtasset_rtname_exists (ctx, shape_info->src_shape_name, &uid_virtual_asset, &uid_of_iniFile, &uid_concrete_asset))
+		UID signatureUID;
+		if (!asset_rtname_exists (ctx, shape_info->src_shape_name, &assetUID, &uid_of_iniFile, &signatureUID))
 		{
-			logger->log (eTextColor::red, "shape %d need '%s' which is not a valid virtual asset\n", i, shape_info->src_shape_name);
+			logger->log (eTextColor::red, "shape %d need '%s' which is not a valid assetUID\n", i, shape_info->src_shape_name);
 			return false;
 		}
 
-		//il rtname del virtual-asset utilizzato dalla [shape] esiste nel DB.
+		//il rtname dell'assetUID utilizzato dalla [shape] esiste nel DB.
 		//Vediamo se e' stato definito in un iniFile che io conosco
 		if (!listof_UID_of_known_ini_file.exists(uid_of_iniFile))
 		{
@@ -348,10 +348,10 @@ bool Builder_model3d::Syntax2::build_begin (DBContext &ctx, const UniqueUIDList 
 			return false;
 		}
 
-		//tutto bene, mi segno che io dipendo da questo virtual-asset
-		parsed_params.listof_shapeInfo[i].uid_of_concrete_shape_asset = uid_concrete_asset;
-		if (listof_UID_of_virtual_shape_that_I_need.insertIfNotExists(uid_virtual_asset))
-			listof_UID_of_concrete_shape_that_I_need.append(uid_concrete_asset);
+		//tutto bene, mi segno che io dipendo da questo assetUID
+		parsed_params.listof_shapeInfo[i].shape_signatureUID = signatureUID;
+		if (listof_shape_assetUID_that_I_need.insertIfNotExists(assetUID))
+			listof_shape_signatureUID_that_I_need.append(signatureUID);
 	}
 
 
@@ -359,13 +359,13 @@ bool Builder_model3d::Syntax2::build_begin (DBContext &ctx, const UniqueUIDList 
 	//lo stesso dicasi per lo skeleton
 	{
 		UID uid_of_iniFile;
-		if (!virtasset_rtname_exists (ctx, parsed_params.skeleton_name, &uid_of_virtual_skeleton, &uid_of_iniFile, &uid_of_concrete_skeleton))
+		if (!asset_rtname_exists (ctx, parsed_params.skeleton_name, &skeleton_assetUID, &uid_of_iniFile, &skeleton_signatureUID))
 		{
-			logger->log (eTextColor::red, "skeleton '%s' is not a valid virtual asset\n", parsed_params.skeleton_name);
+			logger->log (eTextColor::red, "skeleton '%s' is not a valid assetUID\n", parsed_params.skeleton_name);
 			return false;
 		}
 
-		//il rtname del virtual-asset utilizzato esiste nel DB.
+		//il rtname del asset utilizzato esiste nel DB.
 		//Vediamo se e' stato definito in un iniFile che io conosco
 		if (!listof_UID_of_known_ini_file.exists(uid_of_iniFile))
 		{
@@ -388,12 +388,12 @@ bool Builder_model3d::Syntax2::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 
 	//durante "build_begin" ho determinato che le shape e lo skeleton da cui io dipendo sono validi asset.
 	//Carico lo skeleton
-	assert (uid_of_concrete_skeleton.isAnAssetOfType(eAssetType::skeleton));
+	assert (skeleton_signatureUID.isASignatureOfType(eAssetType::skeleton));
 	Skeleton skeleton;
 	skeleton.reset();
 	{
 		char s[1024];
-		asset_manufacture_fullFilename (ctx, uid_of_concrete_skeleton, s, sizeof(s));
+		signature_manufacture_fullFilename (ctx, skeleton_signatureUID, s, sizeof(s));
 
 		u32 fsize = 0;
 		u8 *buffer = fs::fileLoadInMemory (localAllocator, s, &fsize);
@@ -436,11 +436,10 @@ bool Builder_model3d::Syntax2::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 
 
 	
-	//setup di virtual-asset
 	//All'uscita da questa fn:
-	//  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
-	//  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
-	//  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
+	//  out_result->assetUID       			contiene l'assetUID di questo asset, gia' inserito nel DB
+	//  out_result->signatureUID      		contiene la signatureUID a cui questo assetUID punta
+	//  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
 	{
 		//in questo caso, devo "buildare" uu buffer ad hoc che funga da 'Params'.
 		//Lo buildo in base ai parsed_params.
@@ -471,7 +470,7 @@ bool Builder_model3d::Syntax2::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 				ct += n;
 			}
 			
-			ct += utils::bufferWriteU64 (&params[ct], uid_of_concrete_skeleton._uid);
+			ct += utils::bufferWriteU64 (&params[ct], skeleton_signatureUID._uid);
 			for (u32 i=0; i<listof_final_meshes.getNElem(); i++)
 			{
 				ct += utils::bufferWriteU32 (&params[ct], listof_final_meshes(i).my_shape_index);
@@ -482,7 +481,7 @@ bool Builder_model3d::Syntax2::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 			assert (ct == needed);
 		}
 
-		bool ret = prot_setupVirtualAsset (ctx, &params, needed, uid_of_iniFile, sec, out_result);
+		bool ret = prot_setupAsset (ctx, &params, needed, uid_of_iniFile, sec, out_result);
 		GOSFREE(gos::getScrapAllocator(), params);
 		
 		skeleton::free (skeleton);
@@ -495,14 +494,14 @@ bool Builder_model3d::Syntax2::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 	//Aggiungo le dipendenze
 	{
 		//skeletro
-		if (!dependency_add (ctx, out_result->uid_virtual_asset, uid_of_virtual_skeleton))		return false;
-		if (!dependencyRT_add (ctx, out_result->uid_concrete_asset, uid_of_concrete_skeleton))	return false;
+		if (!dependency_add (ctx, out_result->assetUID, skeleton_assetUID))		return false;
+		if (!signature_add_dependencyRT (ctx, out_result->signatureUID, skeleton_signatureUID))	return false;
 
 		//shape
 		bool err = false;
-		listof_UID_of_virtual_shape_that_I_need.forEach ( [&ctx, out_result, &err](u32 index, const UID uid)
+		listof_shape_assetUID_that_I_need.forEach ( [&ctx, out_result, &err](u32 index, const UID uid)
 		{
-			if (!dependency_add (ctx, out_result->uid_virtual_asset, uid))
+			if (!dependency_add (ctx, out_result->assetUID, uid))
 			{
 				err = true;
 				return false;
@@ -512,9 +511,9 @@ bool Builder_model3d::Syntax2::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 		if (err)
 			return false;
 
-		listof_UID_of_concrete_shape_that_I_need.forEach ( [&ctx, out_result, &err](u32 index, const UID uid)
+		listof_shape_signatureUID_that_I_need.forEach ( [&ctx, out_result, &err](u32 index, const UID uid)
 		{
-			if (!dependencyRT_add (ctx, out_result->uid_concrete_asset, uid))
+			if (!signature_add_dependencyRT (ctx, out_result->signatureUID, uid))
 			{
 				err = true;
 				return false;
@@ -529,9 +528,9 @@ bool Builder_model3d::Syntax2::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 	if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
 	{
 		char filenameDST[1024];
-		asset_manufacture_fullFilename (ctx, out_result->uid_concrete_asset, filenameDST, sizeof(filenameDST));
+		signature_manufacture_fullFilename (ctx, out_result->signatureUID, filenameDST, sizeof(filenameDST));
 		
-		return priv_do_create_assetFile (ctx, out_result->uid_concrete_asset, filenameDST, listof_final_meshes);
+		return priv_do_create_assetFile (ctx, out_result->signatureUID, filenameDST, listof_final_meshes);
 	}
 
 	
@@ -539,18 +538,18 @@ bool Builder_model3d::Syntax2::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 }
 
 //************************************
-bool Builder_model3d::Syntax2::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const char *filenameDST, const FastArray<sFinalMeshInfo> &listof_final_meshes) const
+bool Builder_model3d::Syntax2::priv_do_create_assetFile (DBContext &ctx, UID signatureUID, const char *filenameDST, const FastArray<sFinalMeshInfo> &listof_final_meshes) const
 {
 	AssetFile_model3D	assetFile;
 
 	assetFile.begin (localAllocator);
 
 	//skeleton
-	assetFile.skeleton_set (uid_of_concrete_skeleton);
+	assetFile.skeleton_set (skeleton_signatureUID);
 
 	//shapes
-	for (u32 i=0; i<listof_UID_of_concrete_shape_that_I_need.getNElem(); i++)
-		assetFile.shape_add (listof_UID_of_concrete_shape_that_I_need(i), "");
+	for (u32 i=0; i<listof_shape_signatureUID_that_I_need.getNElem(); i++)
+		assetFile.shape_add (listof_shape_signatureUID_that_I_need(i), "");
 
 	//material
 	//TODO
@@ -560,8 +559,8 @@ bool Builder_model3d::Syntax2::priv_do_create_assetFile (DBContext &ctx, UID uid
 	{
 		//faccio il match tra "my-shape-index" e la lista delle shape concrete che ho appena salvato
 		u32 k = listof_final_meshes(i).my_shape_index;
-		UID uid = parsed_params.listof_shapeInfo(k).uid_of_concrete_shape_asset;
-		u32 index_of_concrete_shape = listof_UID_of_concrete_shape_that_I_need.simpleSearch (uid);
+		UID uid = parsed_params.listof_shapeInfo(k).shape_signatureUID;
+		u32 index_of_concrete_shape = listof_shape_signatureUID_that_I_need.simpleSearch (uid);
 
 		assetFile.mesh_add (index_of_concrete_shape, listof_final_meshes(i).bone_index, listof_final_meshes(i).my_material_index, "");
 		

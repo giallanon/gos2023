@@ -26,7 +26,7 @@ namespace gos
 	class WaitableGrpInterface
 	{
 	public:
-		static const u8 MAX_EVENTS_HANDLE_PER_CALL = 16;
+		static const u8 MAX_EVENTS_HANDLE_PER_CALL = 128;
 
 	public:
 								WaitableGrpInterface()								{ }

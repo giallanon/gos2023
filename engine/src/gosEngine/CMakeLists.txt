@@ -33,20 +33,9 @@ entity/gosEntityRegistry.cpp
 entity/gosEntityRegistry.h
 entity/gosEntityUniqueList.h
 
-loaders/gosEngineLoaders_GPUShape.h
-loaders/gosEngineLoaders_materialPBR.h
-loaders/gosEngineLoaders_model3d.h
-loaders/gosEngineLoaders_modelInst.h
-loaders/gosEngineLoaders_pipe.h
-loaders/gosEngineLoaders_shader.h
-loaders/gosEngineLoaders_shape.h
-loaders/gosEngineLoaders_skeleton.h
-loaders/gosEngineLoaders_tex2D.h
-loaders/gosEngineLoaders.h
-
 model/gosModel.cpp
 model/gosModel.h
-model/gosModelInstance.h
+model/gosModelEnumAndDefine.h
 model/gosModelReader.cpp
 
 renderPipe/gosEngineRenderPipe.cpp
@@ -57,21 +46,28 @@ renderPipe/gosEngineRenderPipe_line3d_ctx.cpp
 renderPipe/gosEngineRenderPipe_PIPE3.cpp
 renderPipe/gosEngineRenderPipe_PIPE3.h
 
-res/gosEngineRes.cpp
-res/gosEngineRes.h
-res/gosEngineResEnumAndDefine.h
-res/gosEngineResList.cpp
-res/gosEngineResList.h
-res/gosEngineResMan.cpp
-res/gosEngineResMan.h
+res2/loaders/Loader_gpushape.h
+res2/loaders/Loader_materialPBR.h
+res2/loaders/Loader_model.h
+res2/loaders/Loader_pipeline.h
+res2/loaders/Loader_shader.h
+res2/loaders/Loader_skeleton.h
+res2/loaders/Loader_tex2D.h
+res2/loaders/Loader.h
+res2/enumAndDefine.h
+res2/MemManager.cpp
+res2/MemManager.h
+res2/res2.cpp
+res2/res2.h
+res2/res2_res.h
 
 
 gosEngine_dynTextureArray.cpp
 gosEngine_dynTextureArray.h
 gosEngine_idxBufferMan.cpp
 gosEngine_idxBufferMan.h
-gosEngine_loaderThread_mainFN.cpp
-gosEngine_res.cpp
+gosEngine_res2_loaderThread_mainFN.cpp
+gosEngine_res2.cpp
 gosEngine_scene.cpp
 gosEngine_scene.h
 gosEngine_vtxBufferMan.cpp

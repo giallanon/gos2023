@@ -71,11 +71,17 @@ namespace platform
 			gos::Signal		evt;
 		};
 
+        struct sIfFSWatcher
+        {
+            gos::FSWatcher	*fsWatcher;
+        };
+
 		union sOrigin
 		{
 			sIfSocket		socket;
 			sIfEvent		event;
 			sIfMsgQ			msgQ;
+			sIfFSWatcher	isFSW;
 		};
 
 		union uUserParam

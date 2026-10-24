@@ -142,6 +142,14 @@ endfunction()
 
 
 #====================================================
+# Tracy
+# set options before add_subdirectory
+# available options: TRACY_ENABLE, TRACY_LTO, TRACY_ON_DEMAND, TRACY_NO_BROADCAST, TRACY_NO_CODE_TRANSFER, ...
+#option(TRACY_ENABLE "" ON)
+#add_subdirectory (${PROJECT_SOURCE_DIR}/src/external/tracy) # target : TracyClient or alias Tracy :: TracyClient
+
+
+#====================================================
 # sotto progetti
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/external/glfw-3.3.8)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/gos)
@@ -158,10 +166,11 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosEngine)
 
 
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
+#add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
+#add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/assetMonitor)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/land20260814)
+# add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/land20260814)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testRes2)
 
 
 

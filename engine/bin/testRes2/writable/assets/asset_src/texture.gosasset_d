@@ -1,0 +1,19 @@
+@include: common.gosasset_d
+
+@tex2D: checker1
+{
+	src: <common_assets>/images/checker_color_1k.jpg
+	srcColorSpace:	sRGB
+
+	dstNumMipMap: max
+	dstFmt:U8_RGBA
+}
+
+@tex2D: faccia512x512
+{
+	src: <common_assets>/images/faccia512x512.jpg
+	srcColorSpace:	sRGB
+
+	dstNumMipMap: max
+	dstFmt:U8_RGBA
+}

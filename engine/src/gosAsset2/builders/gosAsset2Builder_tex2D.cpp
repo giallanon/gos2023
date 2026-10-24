@@ -224,7 +224,7 @@ bool Builder_tex2D::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID
 
     //il parametro src indica una risorsa eResType::image da cui io dipendo
     //La risorsa deve esistere nel DB
-    if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::image, params.src, &params.uid__resource_image))
+    if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::image, params.src, &params.resource_image))
     {
         logger->log (eTextColor::red, "resource [%s] '%s' not found in DB\n", asset2::enumToString(eResType::image), params.src);
         return false;
@@ -242,25 +242,20 @@ bool Builder_tex2D::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *o
     out_result->reset();
 
 	//questo file gosasset_d dipende dalla risorsa params.uid__resource_image)
-    if (!asset2::dependency_exists(ctx, uid_of_iniFile, params.uid__resource_image))
-    {
-        if (!asset2::dependency_add (ctx, uid_of_iniFile, params.uid__resource_image)) 
-            return false;  
-    }
+    if (!asset2::dependency_add_if_not_exists (ctx, uid_of_iniFile, params.resource_image.resourceUID))
+		return false;  
     
     
-
-    //setup di virtual-asset
     //All'uscita da questa fn:
-    //  out_result->uid_virtual_asset       contiene l'UID di questo virtual asset, gia' inserito nel DB
-    //  out_result->uid_concrete_asset      contiene l'UID dell'asset concreto a cui questo virtual-asset punta
-    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente il concrete-asset, altrimenti vale <eBuildResult::was_already_built>
-    if (!prot_setupVirtualAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
+    //  out_result->assetUID       			contiene l'assetUID di questo asset, gia' inserito nel DB
+    //  out_result->signatureUID      		contiene la signatureUID a cui questo assetUID punta
+    //  out_result->result                  vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
+    if (!prot_setupAsset (ctx, &params, sizeof(Params), uid_of_iniFile, sec, out_result))
         return false;
 
 
-    //aggiungo le dipendenze di virtual-asset dalla risorsa IMMAGINE
-    if (!dependency_add (ctx, out_result->uid_virtual_asset, params.uid__resource_image)) return false;
+    //aggiungo le dipendenze di assetUID dalla risorsa IMMAGINE
+	if (!prot_add_asset_to_resouce_dependency (ctx, out_result, params.resource_image.resourceUID)) return false;
 
 
     
@@ -268,8 +263,8 @@ bool Builder_tex2D::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *o
     if (doCreateAnAssetFile && eBuildResult::just_built == out_result->result)
     {
         char filenameDST[1024];
-        asset_manufacture_fullFilename (ctx, out_result->uid_concrete_asset, filenameDST, sizeof(filenameDST));
-        return priv_do_create_assetFile (ctx, out_result->uid_concrete_asset, params, filenameDST);
+        signature_manufacture_fullFilename (ctx, out_result->signatureUID, filenameDST, sizeof(filenameDST));
+        return priv_do_create_assetFile (ctx, out_result->signatureUID, params, filenameDST);
     }
 
 	return true;
@@ -313,7 +308,7 @@ bool Builder_tex2D::priv_apply_post_op(image::BufferRGBA *img)
 }
 
 //************************************
-bool Builder_tex2D::priv_do_create_assetFile (DBContext &ctx, UID uid_concrete_asset, const Params &params, const char *filenameDST)
+bool Builder_tex2D::priv_do_create_assetFile (DBContext &ctx, UID signatureUID, const Params &params, const char *filenameDST)
 {
     bool result = false;
 

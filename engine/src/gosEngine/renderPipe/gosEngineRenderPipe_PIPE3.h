@@ -25,6 +25,7 @@ namespace gos
 				u32		texture_index;
 			};	
 
+
 		public:
 					Renderer_PIPE3();
 					~Renderer_PIPE3()                                                                           { priv_unsetup(); }
@@ -34,13 +35,13 @@ namespace gos
 			void 	on__render (const RPIPE::Context &ctx, gos::gpu::RenderCtx &rctx) final						{ priv_do_render (ctx, rctx); }
 
 			void    begin ();
-			void    add (const ENGGPUShape handle_shape, const mat4x4f &m, u32 material_index);
-			void    add (const ENGGPUShape handle_shape, const mat4x4f &m, ENGMaterialPBR handle_material);
-			void 	add (gos::ENGModel3dInst handle_mi);
-			void    add (const ent::CompModelInstance *mi);
+			void    add (const GPUShapeH handle_shape, const mat4x4f *m, u32 material_index);
+			void    add (const GPUShapeH handle_shape, const mat4x4f *m, const MaterialPBRH handle_material);
+			void    add (const ModelInstH handle_mi);
 			void    end ();
 
 			//==================== gestione materiali
+			u32             material_create_empty();
 			u32             material_create (u32 texture_index, const vec3f diffuse_col_HDR_RGB);
 			void            material_delete (u32 material_index);
 			Material*       material_getForUpdate (u32 material_index);
@@ -51,11 +52,26 @@ namespace gos
 			static constexpr u32    NUM_MAX_MATRIX      = 150000;
 						
 		private:
+			struct sMaterialUpdateInfo
+			{
+				u32		min_index;
+				u32 	max_index;
+
+				void 	reset()					{ min_index=u32MAX; max_index=0; }
+				bool	was_updated() const		{ return u32MAX != min_index; }
+				void 	mark_updated (u32 material_index)
+				{
+					if (material_index < min_index)	min_index = material_index;
+					if (material_index > max_index)	max_index = material_index;
+				}
+			};
+
+		private:
 			void    priv_unsetup();		
-			u64     priv_pack_renderable (ENGGPUShape shape, u32 material_index, u32 matrix_index) const;
-			void    priv_unpack_renderable (u64 packed, ENGGPUShape *out_shape, u32 *out_material_index, u32 *out_matrix_index) const;
+			u64     priv_pack_renderable (GPUShapeH shape, u32 material_index, u32 matrix_index) const;
+			void    priv_unpack_renderable (u64 packed, GPUShapeH *out_shape, u32 *out_material_index, u32 *out_matrix_index) const;
 			void    priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &rctx);
-			u32		priv_material_create_from_PBR (const res::MaterialPBR *mat);
+			void 	priv_material_update_from_PBR (u32 material_index, const MaterialPBRData *material);
 
 		private:
 			gos::Allocator              *localAllocator;
@@ -63,23 +79,24 @@ namespace gos
 			gos::GPU                    *gpu;
 			u8							renderer_UID;
 
-			ENGPipeline 				handle_pipeline;
+			PipelineH 					handle_pipeline;
 			GPUDescrSetInstanceHandle   handle_descrSet2;
 			GPUStorageBufferHandle      handle_sbo_matrixList;
 			GPUStorageBufferHandle      handle_sbo_materiaList;
 			GPUStorageBufferHandle      handle_sbo_instanceData;
 			
 			mat4x4f                   	matrix_default;
-			gpu::MappedBufW			mapped_matrix_buffer;
+			gpu::MappedBufW				mapped_matrix_buffer;
 			u32							matrix_sizeof_buffer;
 			u32							matrix_nextIndex;
 			
 			Material					material_default;
 			u32							material_default_index;
 			Material					*material_buffer;
+			u32 						*material_update_ct;
 			u32							material_sizeof_buffer;
 			gos::Bitfield				material_bitmask;
-			u32							material_wasUpdated;
+			sMaterialUpdateInfo			material_upd_info;
 
 			u32							instance_sizeof_buffer;
 

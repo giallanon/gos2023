@@ -1,0 +1,14 @@
+@include: texture.gosasset_d
+
+@materialPBR: material01
+{
+	diffuse_col_RGBA_HDR: 1, 1, 1, 1.0
+	diffuse_texture: checker1
+	//diffuse_texture: faccia512x512
+}
+
+@materialPBR: material02
+{
+	diffuse_col_RGBA_HDR: 1, 1, 1, 1.0
+	diffuse_texture: faccia512x512
+}

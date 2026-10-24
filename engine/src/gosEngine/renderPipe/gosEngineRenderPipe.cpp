@@ -206,7 +206,7 @@ void RenderPipe::priv_add_renderer (Renderer *r)
 { 
 	//ad ogni renderer associo un UID progressivo che serve a loro per conoscere quale slot di
 	//materialPBR->renderer_bindings[] utilizzare per storare informazioni personali
-	assert (next_renderer_UID < gos::res::MaterialPBR::NUM_MAX_RENDERER);
+	assert (next_renderer_UID < gos::res2::MaterialPBR::Data::NUM_MAX_RENDERER);
 
 	const u8 renderer_UID = next_renderer_UID++;
 	renderer_list.append(r);

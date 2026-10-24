@@ -1,0 +1,18 @@
+//UID:010100009F2223B1, signature 0001000018C3C796
+@vtx_shader : phong.vert.spv
+{
+  src: res/shader/phong/phong.vert.shader
+  def: parola1     parola2 parola3
+}
+
+
+@vtx_shader : phong.vert.spv_v2
+{
+  src: res/shader/phong/phong.vert.shader
+  def: parola2    parola1   parola3
+}
+
+@pxl_shader : phong.frag.spv
+{
+  src: res/shader/phong/phong.frag.shader
+}

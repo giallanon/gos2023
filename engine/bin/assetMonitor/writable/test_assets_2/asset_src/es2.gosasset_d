@@ -1,0 +1,101 @@
+@include: es1.gosasset_d
+
+//PIPE-1
+//UID atteso: 0x00030000363E07CB
+@pipe
+{
+    rt0: U8_RGBA
+
+    //questo shader è completamente nuovo, esclusivamente definito qui
+    //UID: 01010000B7BE5B6C, signature 00010000D3D5E693
+    @vtx_shader
+    {
+      src: res/shader/es2.vert
+    }
+
+     //UID: 0x00020000FDE22476
+    @pxl_shader
+    {
+      src: res/shader/es2.frag
+      //def: aa3d
+    }
+}
+
+//PIPE-2
+//UID atteso: 0x00030000363E07CB
+//identico a pipe 1, non dovrebbe creare problemi
+@pipe
+{
+    rt0: U8_RGBA
+
+    //questo shader è completamente nuovo, esclusivamente definito qui
+    //UID: 010100001A0FE3BA, signature 00010000D3D5E693
+    @vtx_shader
+    {
+      src: res/shader/es2.vert
+    }
+
+     //UID: 0x00020000FDE22476
+    @pxl_shader
+    {
+      src: res/shader/es2.frag
+    }
+}
+
+
+//PIPE-3
+//UID atteso: 0x00030000363E07CB
+//identico a pipe 1, ma con un runtimeName
+@pipe: pipedef_es2_3
+{
+    rt0: U8_RGBA
+
+    //questo shader è completamente nuovo, esclusivamente definito qui
+    //UID: 0x000100007A92635A
+    @vtx_shader
+    {
+      src: res/shader/es2.vert
+    }
+
+     //UID: 0x00020000FDE22476
+    @pxl_shader : pipedef_es2_3-pxlshader
+    {
+      src: res/shader/es2.frag
+      def: aa3ddd
+    }
+}
+
+//PIPE-4
+//UID atteso: 0x000300004879D320
+//identico a pipe 1, ma con un runtimeName
+@pipe: pipedef_es2_4
+{
+    rt0: U8_RGBA
+
+    @vtx_shader: vtxshader_es1
+
+     //UID: 0x00020000FDE22476
+    @pxl_shader: pipedef_es2_3-pxlshader
+}
+
+
+//PIPE-5
+//UID atteso: 0x000300000C7DCA31
+//use 2 eshader già definiti in es1 per cui non dovrebbero generare nuovi asset ma solo linkare agli esistenti
+@pipe : pipedef_es2_5
+{
+    rt0: U8_RGBA
+
+    @vtx_shader
+    {
+      src: res/shader/es1.vert
+      def: A1
+    }
+
+    @pxl_shader :ps2
+    {
+      src: res/shader/es1.frag
+      def: A9
+    }
+}
+

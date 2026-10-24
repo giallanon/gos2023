@@ -16,7 +16,7 @@ layout(location = 0) out vec4 out_colorRGBA;
 
 void main() 
 {
- 	const uint texture_index = 16;
+ 	const uint texture_index = pc.lod_texture_index;
  	const vec3 texCol = PIPE3_sample2D_bilinear (texture_index, in_texCoord).rgb;
 
 	vec3 normal = normalize(in_normal);
@@ -34,8 +34,6 @@ void main()
 	//AO
 	final_col *= in_AO;
 	//final_col = vec3(in_AO, in_AO, in_AO);
-
-
 
 	out_colorRGBA = vec4(final_col, 1);
 	

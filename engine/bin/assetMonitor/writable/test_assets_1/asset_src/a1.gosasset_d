@@ -1,0 +1,14 @@
+@pipe : pipe1
+{
+    rt0: U8_RGBA
+
+    @vtx_shader
+    {
+      src: res/vs1.shader
+    }
+
+    @pxl_shader
+    {
+      src: res/ps1.shader
+    }
+}

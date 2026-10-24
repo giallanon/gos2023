@@ -44,14 +44,14 @@ bool Renderer::on__attach (const gos::engine::RenderPipe::Context &ctx, u8 rende
 	this->handle_descrPool = ctx.handle_descrPool;
 
 	//load pipe
-	if (!ctx.engine->pipeline_createFromAsset ("land20260829", &handle_pipeline, res::eLoadMode::asap))
+	if (!ctx.engine->pipeline_createFromAsset ("land20260829", &handle_pipeline, res2::eLoadMode::asap))
 	{
 		logger::err ("Renderer::on__attach() => can't load pipeline\n");
         return false; 
 	}	
 
 	//load texture LOD
-	eng->texture2D_createFromAsset ("tex_lod", &handle_texture_lod, res::eLoadMode::asap);
+	eng->texture2D_createFromAsset ("tex_lod", &handle_texture_lod, res2::eLoadMode::asap);
 
 	//SBO instance data
 	assert (sbo_instance_data.handle_sbo.isInvalid());
@@ -351,11 +351,19 @@ void Renderer::on__render (const gos::engine::RenderPipe::Context &ctx, gos::gpu
         return;
     }
 
+	const res::Texture2d *res_texture_lod;
+    if (!ctx.engine->get (handle_texture_lod, &res_texture_lod))
+    {
+        return;
+    }
+
+
 	//command
     rctx.bindPipeline (res_pipeline->pipeHandle)
         .bindDescriptorSet (ctx.handle_descrSet0, 0)
         .bindDescriptorSet (ctx.handle_descrSet1, 1)
-        .bindDescriptorSet (handle_descrSet2, 2);
+        .bindDescriptorSet (handle_descrSet2, 2)
+		.pushConstant(0, &res_texture_lod->index, sizeof(u32));
 
 
 	rctx.bindVtxIdxBuffer (handle_vb, 0, handle_ib, 0);

@@ -14,6 +14,7 @@ Renderer_PIPE3::Renderer_PIPE3()
     gpu = NULL;
     localAllocator = NULL;
     material_buffer = NULL;
+	material_update_ct = NULL;
     pRenderableList = NULL;
     nRenderable = 0;
     renderer_UID = 0xFF;
@@ -30,6 +31,7 @@ void Renderer_PIPE3::priv_unsetup()
 	engine->release (handle_pipeline);
 
     GOSFREE(localAllocator, material_buffer);
+	GOSFREE(localAllocator, material_update_ct);
     GOSFREE(localAllocator, pRenderableList);
     material_bitmask.unsetup (localAllocator);
     
@@ -47,7 +49,7 @@ void Renderer_PIPE3::priv_unsetup()
 bool Renderer_PIPE3::on__attach (const RPIPE::Context &ctx, u8 renderer_UID_IN)
 {
 	//load pipe
-	if (!ctx.engine->pipeline_createFromAsset ("gosengine_PIPE3", &handle_pipeline, res::eLoadMode::asap))
+	if (!ctx.engine->pipeline_createFromAsset ("gosengine_PIPE3", &handle_pipeline, res2::eLoadMode::asap))
 	{
 		DBGBREAK;
         return false; 
@@ -69,9 +71,11 @@ bool Renderer_PIPE3::on__attach (const RPIPE::Context &ctx, u8 renderer_UID_IN)
     //SBO materialList
     material_sizeof_buffer = NUM_MAX_MATERIAL * sizeof(Material);
     material_buffer = (Material*) GOSALIGNEDALLOC(localAllocator, material_sizeof_buffer, gpu->limits_get_minStorageBufferOffsetAlignment());
+	material_update_ct = GOSALLOCT(u32*, localAllocator, sizeof(u32)* NUM_MAX_MATERIAL);
+	memset (material_update_ct, 0xFF, sizeof(u32)* NUM_MAX_MATERIAL);
     material_bitmask.setup (localAllocator, NUM_MAX_MATERIAL);
     material_bitmask.zero();
-    material_wasUpdated = 1;
+    material_upd_info.reset();
     material_default.texture_index = 0;
     material_default.diffuse_col.set (1.0f, 0.1f, 1.0f);
     gpu->storageBuffer_create (material_sizeof_buffer, eMemAccessMode::shared_cpuW, &handle_sbo_materiaList);
@@ -84,8 +88,8 @@ bool Renderer_PIPE3::on__attach (const RPIPE::Context &ctx, u8 renderer_UID_IN)
     pRenderableList = GOSALLOCT(u64*, localAllocator, sizeof(u64) * NUM_MAX_MATRIX);
 
     //attendo che la pipe sia stata caricata perche' mi servono le definizioni dei descrittori
-    const res::Pipeline *res_pipeline;
-    if (!engine->get (handle_pipeline, &res_pipeline, 5000))
+    const PipelineData *pipeline_data;
+    if (!engine->get (handle_pipeline, &pipeline_data, 5000))
 	{
 		DBGBREAK;
 		return false;
@@ -95,7 +99,7 @@ bool Renderer_PIPE3::on__attach (const RPIPE::Context &ctx, u8 renderer_UID_IN)
 	gos::gpu::DescrSetInstanceWriter dsw;
 
 	//descriptor set 2        
-	if (!gpu->descrSetInstance_create (ctx.handle_descrPool, res_pipeline->pipeHandle, 2, &handle_descrSet2))
+	if (!gpu->descrSetInstance_create (ctx.handle_descrPool, pipeline_data->pipe_handle, 2, &handle_descrSet2))
 	{
 		gos::logger::err ("Renderer_PIPE3::setup() => can't create an instance of descriptorSet_2\n");
 		return false;
@@ -114,7 +118,7 @@ bool Renderer_PIPE3::on__attach (const RPIPE::Context &ctx, u8 renderer_UID_IN)
 }
 
 //**********************************
-u32 Renderer_PIPE3::material_create (u32 texture_index, const vec3f diffuse_col_HDR_RGB)
+u32 Renderer_PIPE3::material_create_empty()
 {
     u32 material_index;
     if (!material_bitmask.findAndSetFirstFreeBit(&material_index))
@@ -124,11 +128,24 @@ u32 Renderer_PIPE3::material_create (u32 texture_index, const vec3f diffuse_col_
     }
     
     //creo il nuovo materiale
-    material_buffer[material_index].texture_index = texture_index;
-    material_buffer[material_index].diffuse_col = diffuse_col_HDR_RGB;
+	material_update_ct[material_index] = u32MAX;
+	material_buffer[material_index].diffuse_col.set(1,1,1);
+	material_buffer[material_index].texture_index = 0;
     
     //mi segno che l'array dei materiali e' da aggiornare su GPU
-    material_wasUpdated = 1;
+    material_upd_info.mark_updated (material_index);
+    return material_index;
+}
+
+//**********************************
+u32 Renderer_PIPE3::material_create (u32 texture_index, const vec3f diffuse_col_HDR_RGB)
+{
+    const u32 material_index = material_create_empty();
+    if (u32MAX == material_index)
+        return u32MAX;
+    
+    material_buffer[material_index].texture_index = texture_index;
+    material_buffer[material_index].diffuse_col = diffuse_col_HDR_RGB;
     
     return material_index;
 }
@@ -145,7 +162,7 @@ Renderer_PIPE3::Material* Renderer_PIPE3::material_getForUpdate (u32 material_in
     if (material_bitmask.isBitSet(material_index))
     {
         //mi segno che l'array dei materiali e' da aggiornare su GPU
-        material_wasUpdated = 1;        
+        material_upd_info.mark_updated (material_index);
         return &material_buffer[material_index];
     }
     DBGBREAK;
@@ -163,9 +180,9 @@ const Renderer_PIPE3::Material* Renderer_PIPE3::material_query (u32 material_ind
 }
 
 //**********************************
-u64 Renderer_PIPE3::priv_pack_renderable (ENGGPUShape shape, u32 material_index, u32 matrix_index) const
+u64 Renderer_PIPE3::priv_pack_renderable (GPUShapeH shape, u32 material_index, u32 matrix_index) const
 {
-    u64 ret = shape.viewAsU32();
+	u64 ret = shape.viewAsU32();
     ret <<= 32;
 
     //14bit per material_index (16.384)
@@ -178,7 +195,7 @@ u64 Renderer_PIPE3::priv_pack_renderable (ENGGPUShape shape, u32 material_index,
 }
 
 //**********************************
-void Renderer_PIPE3::priv_unpack_renderable (u64 packed, ENGGPUShape *out_shape, u32 *out_material_index, u32 *out_matrix_index) const
+void Renderer_PIPE3::priv_unpack_renderable (u64 packed, GPUShapeH *out_shape, u32 *out_material_index, u32 *out_matrix_index) const
 {
     out_shape->setFromU32 ( (u32)(packed >> 32) );
     *out_material_index = (u32) ((packed >> 18) & 0x3FFF);
@@ -186,11 +203,13 @@ void Renderer_PIPE3::priv_unpack_renderable (u64 packed, ENGGPUShape *out_shape,
 }
 
 //**********************************
-u32 Renderer_PIPE3::priv_material_create_from_PBR (const res::MaterialPBR *material)
+void Renderer_PIPE3::priv_material_update_from_PBR (u32 material_index, const MaterialPBRData *material)
 {
-    const vec3f diffuse_col (material->diffuse_col_HDR_RGBA[0], material->diffuse_col_HDR_RGBA[1], material->diffuse_col_HDR_RGBA[2]);
-    const u32 texture_index = 0;
-    return material_create (texture_index, diffuse_col);
+	material_upd_info.mark_updated (material_index);
+
+	material_update_ct[material_index] = material->update_ct;	
+	material_buffer[material_index].diffuse_col.set( material->diffuse_col_HDR_RGBA[0], material->diffuse_col_HDR_RGBA[1], material->diffuse_col_HDR_RGBA[2] );
+    material_buffer[material_index].texture_index = material->diffuse_texture->index;
 }
 
 //**********************************
@@ -202,73 +221,71 @@ void Renderer_PIPE3::begin ()
 }
 
 //**********************************
-void Renderer_PIPE3::add (const ENGGPUShape handle_shape, const mat4x4f &m, ENGMaterialPBR handle_material)
+void Renderer_PIPE3::add (const GPUShapeH handle_shape, const mat4x4f *m, u32 material_index)
 {
-    const res::MaterialPBR *res_mat;
-	if (!engine->get (handle_material, &res_mat))
-		return;
-
-    u32 material_index = res_mat->renderer_bindings[renderer_UID];
-    if (u32MAX == material_index)
-    {
-        //questo materiale e' la prima volta che lo vedo
-        material_index = priv_material_create_from_PBR(res_mat);
-        if (!engine->internal__materialPBR_update_renderer_binding (handle_material, renderer_UID, material_index))
-        {
-            DBGBREAK;
-            return;
-        }
-    }
-
-    add (handle_shape, m, material_index);
-}
-
-//**********************************
-void Renderer_PIPE3::add (const ENGGPUShape handle_shape, const mat4x4f &m, u32 material_index)
-{
-    if (matrix_nextIndex >= NUM_MAX_MATRIX)
-        return;
-    const u32 matrix_index = matrix_nextIndex++;
-
-    //u8 *p = reinterpret_cast<u8*>(matrix_buffer.host_pt);
-    //memcpy (&p[sizeof(mat4x4f) * matrix_index], m._getValuesPtConst(), sizeof(mat4x4f));
-	mapped_matrix_buffer.write (m._getValuesPtConst(), sizeof(mat4x4f), sizeof(mat4x4f) * matrix_index);
-
-    pRenderableList[nRenderable++] = priv_pack_renderable (handle_shape, material_index, matrix_index);
-}
-
-//**********************************
-void Renderer_PIPE3::add (const ent::CompModelInstance *comp_mi)
-{
-	add (comp_mi->handle_mi);
-}
-
-//**********************************
-void Renderer_PIPE3::add (gos::ENGModel3dInst handle_mi)
-{
-	const res::Model3dInst *res_mi;
-	if (!engine->get (handle_mi, &res_mi))
-		return;
-
-    const gos::ModelInstance *mi = &res_mi->minst;
-
-    //addo le shape al renderer
-	for (u32 i=0; i<mi->num_meshes; i++)
+    if (matrix_nextIndex < NUM_MAX_MATRIX)
 	{
-		const Model::Mesh *mesh = &mi->listof_meshes[i];
+		const u32 matrix_index = matrix_nextIndex++;
 
-        if (u16MAX != mesh->material_index)
-        {
-            add(mi->listof_gpushapes[mesh->shape_index],
-                mi->listof_bones[mesh->bone_index].matrix,
-                mi->listof_materials[mesh->material_index]);
-        }
-        else
-        {
-            add(mi->listof_gpushapes[mesh->shape_index],
-                mi->listof_bones[mesh->bone_index].matrix,
-                material_default_index);
-        }
+		//u8 *p = reinterpret_cast<u8*>(matrix_buffer.host_pt);
+		//memcpy (&p[sizeof(mat4x4f) * matrix_index], m._getValuesPtConst(), sizeof(mat4x4f));
+		mapped_matrix_buffer.write (m->_getValuesPtConst(), sizeof(mat4x4f), sizeof(mat4x4f) * matrix_index);
+
+		pRenderableList[nRenderable++] = priv_pack_renderable (handle_shape, material_index, matrix_index);
+	}
+}
+
+//**********************************
+void Renderer_PIPE3::add (const GPUShapeH handle_shape, const mat4x4f *m, const MaterialPBRH handle_material)
+{
+	const MaterialPBRData *res_mat;
+	if (engine->get (handle_material, &res_mat))
+	{
+		u32 material_index = res_mat->renderer_bindings[renderer_UID];
+		if (u32MAX == material_index)
+		{
+			MaterialPBRDataUpd upd;
+			if (engine->get_for_update (handle_material, &upd))
+			{
+				//questo materiale e' la prima volta che lo vedo
+				material_index = material_create_empty();
+				engine->materialPBR_update_renderer_binding (&upd, renderer_UID, material_index);
+			}
+			else
+			{
+				DBGBREAK;
+				return;
+			}
+		}
+
+		if (res_mat->update_ct != material_update_ct[material_index])
+			priv_material_update_from_PBR (material_index, res_mat);
+
+		add (handle_shape, m, material_index);
+	}
+}
+
+//**********************************
+void Renderer_PIPE3::add (ModelInstH handle_mi)
+{
+	const ModelInstData *mi_data;
+	if (engine->get (handle_mi, &mi_data))
+	{
+		//addo le shape al renderer
+		const model::Reader reader (&mi_data->model_data->model);
+		const u32 num_mesh = reader.mesh_get_num();
+		const Model::Mesh *mesh_list = reader.mesh_get_by_index(0);
+		const GPUShapeH *shape_handle_list = reader.gpushape_get_pt_to_list();
+		const MaterialPBRH *material_handle_list = reader.material_get_pt_to_list();
+		for (u32 i=0; i<num_mesh; i++)
+		{
+			const u16 shape_index = mesh_list->shape_index;
+			const u16 material_index = mesh_list->material_index;
+			const u16 bone_index = mesh_list->bone_index;
+			mesh_list++;
+
+			add (shape_handle_list[shape_index], &mi_data->listof_bones[bone_index].matrix, material_handle_list[material_index]);
+		}
 	}
 }
 
@@ -278,16 +295,21 @@ void Renderer_PIPE3::end ()
 	mapped_matrix_buffer.end();
 
     //devo aggiornare SBO dei materiali?
-    if (material_wasUpdated)
+    if (material_upd_info.was_updated())
     {
-        material_wasUpdated = 0;
-
-        //TODO: non c'e' bisogno di uppare l'intero material_buffer tutte le volte, idealmente basta uppare solo
+        //Non c'e' bisogno di uppare l'intero material_buffer tutte le volte, idealmente basta uppare solo
         //gli elementi che sono stati modificati
-		//gpu->writeAndSync (handle_sbo_materiaList, 0, material_buffer, material_sizeof_buffer);
+		//A tale proposito, tengo traccia degli indici dei materiali aggiornati e uppo solo quelli
+		//TODO: forse si puo' ottimizzare ulteriormante, ma non so se ne vale la pena
+
+		const u32 first_updated_material = material_upd_info.min_index;
+		const u32 size =  sizeof(Material) * (material_upd_info.max_index - material_upd_info.min_index +1);
+        material_upd_info.reset();
+
 		gpu::MappedBufW mm;
 		gpu->begin_write (handle_sbo_materiaList, &mm);
-			mm.write (material_buffer, material_sizeof_buffer, 0);
+			//mm.write (material_buffer, material_sizeof_buffer, 0);
+			mm.write (&material_buffer[first_updated_material], size, sizeof(Material) * first_updated_material);
 			mm.end();
         
     }
@@ -296,7 +318,14 @@ void Renderer_PIPE3::end ()
     //sort dei renderabili
 	if (nRenderable)
 	{
-    	std::sort (pRenderableList, &pRenderableList[nRenderable]);
+		static gos::TimerFPS debug_t1;
+		debug_t1.onFrameBegin();
+		{
+    		std::sort (pRenderableList, &pRenderableList[nRenderable]);
+		}
+		if (debug_t1.onFrameEnd())
+			printf ("**** debug_t1 %.2f ms\n", debug_t1.getAvgFrameTime_ms());
+
 
     	//memcpio nel SSBO
     	//memcpy (instance_buffer.host_pt, pRenderableList, sizeof(u64) *nRenderable);
@@ -319,15 +348,15 @@ void Renderer_PIPE3::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &
 		return;
 	}
 	
-    const res::Pipeline *res_pipeline;
-    if (!engine->get (handle_pipeline, &res_pipeline))
+    const PipelineData *pipeline_data;
+    if (!engine->get (handle_pipeline, &pipeline_data))
     {
         return;
     }
 
 
     //command
-    rctx.bindPipeline (res_pipeline->pipeHandle)
+    rctx.bindPipeline (pipeline_data->pipe_handle)
         .bindDescriptorSet (ctx.handle_descrSet0, 0)
         .bindDescriptorSet (ctx.handle_descrSet1, 1)
         .bindDescriptorSet (handle_descrSet2, 2);
@@ -338,19 +367,19 @@ void Renderer_PIPE3::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &
     u32 first_instance_index = 0;
     while (cur_index < nRenderable)
     {
-        ENGGPUShape cur_shape;
+        GPUShapeH cur_shape_handle;
         u32 material_index;
         u32 matrix_index;
-        priv_unpack_renderable (pRenderableList[cur_index], &cur_shape, &material_index, &matrix_index);
+        priv_unpack_renderable (pRenderableList[cur_index], &cur_shape_handle, &material_index, &matrix_index);
         cur_index++;
 
-        //conto quante shape identiche a cur_shape ci sono
+        //conto quante shape identiche a cur_shape_handle ci sono
         u32 numInstances = 1;
         while (cur_index < nRenderable)
         {
-            ENGGPUShape shape;
-            priv_unpack_renderable (pRenderableList[cur_index], &shape, &material_index, &matrix_index);
-            if (cur_shape == shape)
+            GPUShapeH shape_handle;
+            priv_unpack_renderable (pRenderableList[cur_index], &shape_handle, &material_index, &matrix_index);
+            if (cur_shape_handle == shape_handle)
             {
                 cur_index++;
                 numInstances++;
@@ -360,8 +389,8 @@ void Renderer_PIPE3::priv_do_render (const RPIPE::Context &ctx, gpu::RenderCtx &
         }
 
 
-        const res::GPUShape *cur_shape_info;
-        if (engine->get (cur_shape, &cur_shape_info))
+        const GPUShapeData *cur_shape_info;
+        if (engine->get (cur_shape_handle, &cur_shape_info))
         {
             rctx.bindVtxIdxBuffer (cur_shape_info->vbHandle, 0, cur_shape_info->ibHandle, 0)
                 .drawIndexed (cur_shape_info->numIndices, numInstances, cur_shape_info->indexStart, cur_shape_info->vtxStart, first_instance_index);
