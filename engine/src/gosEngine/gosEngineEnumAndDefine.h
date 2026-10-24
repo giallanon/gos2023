@@ -2,6 +2,7 @@
 #define _gosEngineEnumAndDefine_h_
 #include "../gos/gosHandle.h"
 #include "../gos/gosFastArray.h"
+#include "../gos/gosEZProfile.h"
 #include "../gosGPU/gosGPU.h"
 #include "../gosInput/gosInput.h"
 #include "../gosAsset2/gosAsset2EnumAndDefine.h"

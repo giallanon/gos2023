@@ -418,7 +418,7 @@ void Engine::asset_hotreload (asset2::UID assetUID)
 	if (!res2_known_assetUID_HashMap.find (assetUID, &asset_handle))
 		return;
 
-	asset_logger->log ("Hot reload of asset UID %016" PRIX64 "\n", assetUID);
+	asset_logger->log (eTextColor::yellow, "Hot reload of asset UID %016" PRIX64 "\n", assetUID);
 	asset_logger->inc_indent();
 	{
 		//faccio il release della risorsa associata all'asset_handle

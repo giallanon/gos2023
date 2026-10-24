@@ -152,6 +152,7 @@ gosDataFormat.cpp
 gosDataFormat.h
 gosDataTypes.h
 gosEnumAndDefine.h
+gosEZProfile.h
 gosFastArray.h
 gosFIFO.h
 gosFIFOFixedSize.h

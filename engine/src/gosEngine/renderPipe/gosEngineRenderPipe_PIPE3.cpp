@@ -318,13 +318,9 @@ void Renderer_PIPE3::end ()
     //sort dei renderabili
 	if (nRenderable)
 	{
-		static gos::TimerFPS debug_t1;
-		debug_t1.onFrameBegin();
-		{
-    		std::sort (pRenderableList, &pRenderableList[nRenderable]);
-		}
-		if (debug_t1.onFrameEnd())
-			printf ("**** debug_t1 %.2f ms\n", debug_t1.getAvgFrameTime_ms());
+		//GOS_PROFILE_BEGIN(Pipe3_sort)
+   		std::sort (pRenderableList, &pRenderableList[nRenderable]);
+		//GOS_PROFILE_END(Pipe3_sort)
 
 
     	//memcpio nel SSBO

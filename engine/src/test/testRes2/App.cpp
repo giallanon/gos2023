@@ -1,4 +1,6 @@
 #include "App.h"
+#include "gosEZProfile.h"
+
 using namespace gos;
 
 
@@ -258,15 +260,13 @@ void App::test3_render()
 {
 	renderer_PIPE3->begin();
 	{
-		static gos::TimerFPS debug_t2;
-		debug_t2.onFrameBegin();
+		//GOS_PROFILE_BEGIN(render_pipe_add);
 		const u32 N = mi_handle_list.getNElem();
 		for (u32 i=0; i<N; i++)
 		{
 			renderer_PIPE3->add (mi_handle_list(i));
 		}
-		if (debug_t2.onFrameEnd())
-			printf ("**** (%d) debug_t2 %.2f ms\n", mi_handle_list.getNElem(), debug_t2.getAvgFrameTime_ms());
+		//GOS_PROFILE_END(render_pipe_add);
 	}
 	renderer_PIPE3->end();
 }

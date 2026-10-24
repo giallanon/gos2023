@@ -25,7 +25,7 @@ int main()
         if (engine.setup_renderPipe())
         {
 			App app;
-			//app.enable_asset_monitor();
+			app.enable_asset_monitor();
 			app.run (&engine);
         }
     }
