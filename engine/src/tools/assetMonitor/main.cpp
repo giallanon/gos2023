@@ -3,6 +3,7 @@
 
 using namespace gos;
 
+
 //******************************** 
 void test (gos::GPU *gpu, const char *baseFolder)
 {
@@ -45,6 +46,7 @@ int main (int argc, char *argv[])
         return -1;
 	}
 
+
 	logger::log (eTextColor::green, "====================================\n");
 	logger::log (eTextColor::green, "GOS Asset Monitor, V 1.1\n");
 	logger::log (eTextColor::green, "====================================\n");
@@ -60,9 +62,12 @@ int main (int argc, char *argv[])
 	//test (&gpu, "@w/test_assets_1");
 	//test (&gpu, "@w/test_assets_2");
 	//test (&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/land20260814/writable/assets/");
-	//test_monitor(&gpu, "C:/rhea/rheaSRC/gos2023/engine/bin/testRes2/writable/assets");
-	//test_monitor(&gpu, "C:/rhea/rheaSRC/gos2023/engine/bin/testRes2/writable/assets");
+#ifdef GOS_PLATFORM__WINDOWS
+	test_monitor(&gpu, "C:/rhea/rheaSRC/gos2023/engine/bin/testRes2/writable/assets");
+#else
 	test_monitor(&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/testRes2/writable/assets");
+#endif
+	
 #else
 	//for (u8 i=0; i<argc; i++)	printf ("arg %d: %s\n", i, argv[i]);
 
@@ -80,7 +85,7 @@ int main (int argc, char *argv[])
     
     
 
-#ifdef GOS_PLATFORM__WINDOWS
+#if defined(GOS_PLATFORM__WINDOWS) && defined(_DEBUG)
     printf ("\n\nPress a key to terminate\n");
     _getch();
 #endif

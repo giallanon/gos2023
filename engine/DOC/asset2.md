@@ -1,10 +1,12 @@
+2026-10-30 (rev 3)
 ### GOS ASSET 2 ###
+
 
 ## Struttura delle directory
 - <BASE_FOLDER>
-  - assets2.sqlite3   ->  e' il DB
-	- asset_bin         -> tutti gli <asset> buildati e pronti all'uso finiscono qui, che e' dove il runtime si aspetta di trovarle
+  - asset_bin         -> tutti gli <asset> buildati e pronti all'uso finiscono qui, che e' dove il runtime si aspetta di trovarle
   - asset_src         -> e' dove stanno i file .gosasset_d che descrivono gli asset da buildare
+  - assets2.sqlite3   ->  e' il DB
   
 
 ## Resource
@@ -30,7 +32,6 @@ SignatureUID anche se lo fanno utilizzando 2 diversi runtime-name.
 Ai fini del runtime, caricare lo shader usando il runtime-name-1 o il runtime-name-2 equivale a caricare lo stesso identico SignatureUID
 
 
-
 ## RuntimeName
 Ogni <SignatureUID> puo' essere associato ad uno o più runtimeName.
 Un runtimeName è una stringa che puo' essere utilizzata dall'engine per caricare un asset.
@@ -42,7 +43,7 @@ Diversi runtimeName possono puntare allo stesso SignatureUID.
 Ogni assetUID/risorsa/signatureUID è identificato da un UID a 64bit.
 I 32 bit LSB sono un CRC32 dei parametri di build dell'asset stesso oppure, nel caso delle risorse, sono un crc32 del filename.
 I 32 bit MSB assumono il seguente significato (da MSB verso LSB):
-  - 0x00 oppure 0x01        (0x01 solo se si tratta di virtual-asset)
+  - 0x00 oppure 0x01        (0x01 solo se si tratta di asset, 0x00 se resource o SignatureUID)
   - asset::eAssetType       (valido sia per i concrete che per i virtual asset)
   - asset::eResType         (valido solo per le risorse)
   - 0x00
@@ -52,7 +53,7 @@ I 32 bit MSB assumono il seguente significato (da MSB verso LSB):
   | | |  |------------------------------> unused
   | | |---------------------------------> eResType
   | |-----------------------------------> eAssetType
-  |-------------------------------------> 0x00 oppure 0x01 se virtual-asset
+  |-------------------------------------> 0x00 se resource/signatureUID, 0x01 se asset
 
 
 

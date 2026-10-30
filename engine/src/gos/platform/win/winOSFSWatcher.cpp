@@ -9,9 +9,8 @@ OSFSWatcher::OSFSWatcher()
 {
 	localAllocator = gos::getSysHeapAllocator();
 	folder_list.setup (localAllocator, 4 * 1024 * 1024);
-	handle_list.setup (localAllocator, 256);
-	fname_list.setup (localAllocator, 1 * 1024 * 1024);
-	event_list.setup (localAllocator, 256);
+	handle_list.setup (localAllocator, 64);
+	folder_name_by_handle_index.setup (localAllocator, 64);
 }
 
 //**********************************
@@ -23,13 +22,13 @@ void OSFSWatcher::priv_close()
 	}
 	handle_list.reset();
 	folder_list.reset();
+	folder_name_by_handle_index.reset();
 }
 
 //**********************************
 void OSFSWatcher::begin()
 {
 	priv_close();
-	folder_list.reset();
 }
 
 //**********************************
@@ -44,9 +43,6 @@ void OSFSWatcher::add_folder (const char *folder_path)
 //**********************************
 bool OSFSWatcher::end()
 {
-	priv_close();
-
-
 	//per ogni folder da monitorare, creo un nuovo handle
 	const char *folder;
 	u32 iter;
@@ -65,6 +61,7 @@ bool OSFSWatcher::end()
 		}
 
 		handle_list.append (handle);
+		folder_name_by_handle_index.append(folder);
 	}
 
 	return true;
@@ -73,6 +70,8 @@ bool OSFSWatcher::end()
 //**********************************
 u32 OSFSWatcher::wait (u32 timeout_msecIN)
 {
+	num_event = 0;
+
 	const DWORD num_handle = (DWORD)handle_list.getNElem();
 	const HANDLE *handle_array = handle_list._queryTypedPointer();
 	DWORD timeout_msec = (DWORD)timeout_msecIN;
@@ -96,43 +95,63 @@ u32 OSFSWatcher::wait (u32 timeout_msecIN)
 	else
 		index = result - WAIT_OBJECT_0;
 
+	//info su cosa e' successo (la granularita' e' bassa, posso solo sapere che "qualcosa" e' successo
+	//in una certa directory
+	num_event = 1;
+	the_event.what = eWhat::modified;
+	the_event.folder_name = folder_name_by_handle_index(index);
+
 	//riarmo l'handle
 	HANDLE handle = handle_array[index];
 	::FindNextChangeNotification (handle);
 
-	return 1;
+	return num_event;
+}
+
+//************************************************
+void OSFSWatcher::internal__waitgrp_on_event_signaled (const HANDLE h)
+{
+	for (u32 i = 0; i < handle_list.getNElem(); i++) 
+	{
+		if (handle_list(i) == h)
+		{
+			num_event = 1;
+			the_event.what = eWhat::modified;
+			the_event.folder_name = folder_name_by_handle_index(i);
+
+			::FindNextChangeNotification (h);
+			return;
+		}
+	}
 }
 
 //************************************************
 OSFSWatcher::eWhat OSFSWatcher::event__get_what (u32 i) const
 {
-	assert (i < event_list.getNElem());
-	return event_list(i).what;
+	assert (i < num_event);
+	return the_event.what;
 }
 
 //************************************************
 bool OSFSWatcher::event_is_a_dir (u32 i) const
 {
-	assert (i < event_list.getNElem());
-	return event_list(i).flag.isBitSet (FLAG__IS_DIR);
+	assert (i < num_event);
+	return true;
 }
 
 //************************************************
 void OSFSWatcher::event__get_fullpath (u32 i, char *out__fullpath, u32 sizeof_out) const
 {
-	assert (i < event_list.getNElem());
-	const char *s = fname_list.getStringAtOffset (event_list(i).fname_offset);
-	sprintf_s (out__fullpath, sizeof_out, "%s", s);
+	assert (i < num_event);
+	sprintf_s (out__fullpath, sizeof_out, "%s", the_event.folder_name);
 }
 
 //************************************************
 void OSFSWatcher::event__get_renamed_fullpath (u32 i, char *out__fullpath, u32 sizeof_out) const
 {
-	assert (i < event_list.getNElem());
-	assert (event_list(i).what == eWhat::renamed);
-
-	const char *s = fname_list.getStringAtOffset (event_list(i).fname_offset_renamed);
-	sprintf_s (out__fullpath, sizeof_out, "%s", s);
+	assert (i < num_event);
+	assert (the_event.what == eWhat::renamed);
+	sprintf_s (out__fullpath, sizeof_out, "%s", the_event.folder_name);
 }
 
 

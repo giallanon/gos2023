@@ -230,9 +230,39 @@ OSWaitableGrp::sRecord* OSWaitableGrp::priv_add_FSWatcher (gos::FSWatcher *fsw)
 //***********************************************
 void OSWaitableGrp::fsWatcher__remove(gos::FSWatcher *fsw)
 {
-	//TODO
-	gos::logger::log_7 (eTextColor::red, "OSWaitableGrp::fsWatcher__remove() => TODO\n");
-	DBGBREAK;
+	assert(debug_bWaiting == 0);
+
+	gos::Allocator *allocator = gos::getSysHeapAllocator();
+
+	sRecord *q = NULL;
+	sRecord *p = base;
+	while (p)
+	{
+		if (p->originType == eWaitEventOrigin::fsWatcher)
+		{
+			//rimuovo eventuali eventi che sono ancora nel miobuffer di eventi-generati
+			for (u32 i = 0; i < nEventsReady; i++)
+			{
+				if (generatedEventList[i]->originType == eWaitEventOrigin::fsWatcher)
+				{
+					if (generatedEventList[i]->origin.isFSW.fsWatcher == p->origin.isFSW.fsWatcher)
+					{
+						generatedEventList[i]->originType = eWaitEventOrigin::deleted;
+					}
+				}
+			}
+
+			if (q == NULL)
+				base = base->next;
+			else
+				q->next = p->next;
+			GOSFREE(allocator, p);
+			return;
+		}
+
+		q = p;
+		p = p->next;
+	}
 }
 
 
@@ -384,20 +414,18 @@ u8 OSWaitableGrp::priv_wait(u32 timeoutMSec)
 
 			case eWaitEventOrigin::fsWatcher:
 				if (p->origin.isFSW.fsWatcher->internal__waitgrp_is_one_of_mine (eventsHandle[index]))
+				{
+					p->origin.isFSW.fsWatcher->internal__waitgrp_on_event_signaled(eventsHandle[index]);
 					bFound = true;
+				}
 				break;
 			}
 
 			if (bFound)
 			{
-				if (p->originType == eWaitEventOrigin::osevent || p->originType == eWaitEventOrigin::msgQ)
+				if (p->originType == eWaitEventOrigin::osevent || p->originType == eWaitEventOrigin::msgQ || p->originType == eWaitEventOrigin::fsWatcher)
 				{
 					generatedEventList[nEventsReady++] = p;
-				}
-				else if (p->originType == eWaitEventOrigin::fsWatcher)
-				{
-					//TODO
-					DBGBREAK;
 				}
 				else if (p->originType == eWaitEventOrigin::socket)
 				{
@@ -514,9 +542,9 @@ HThreadMsgR OSWaitableGrp::event__get_msgQ_handle(u8 iEvent) const
 //***********************************************
 gos::FSWatcher*	OSWaitableGrp::event__get_fsWatcher_handle(u8 iEvent) const
 {
-	//TODO
-	DBGBREAK;
-	return NULL;
+	assert(debug_bWaiting == 0);
+	assert (event__get_origin(iEvent) == eWaitEventOrigin::fsWatcher);
+	return generatedEventList[iEvent]->origin.isFSW.fsWatcher;
 }
 
 

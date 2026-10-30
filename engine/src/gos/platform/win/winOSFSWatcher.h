@@ -28,7 +28,7 @@ namespace platform
 		
 		u32		wait (u32 timeout_msec);
 
-		u32		event__get_num () const								{ return event_list.getNElem(); }
+		u32		event__get_num () const								{ return num_event; }
 		eWhat	event__get_what  (u32 i) const;
 		void	event__get_fullpath (u32 i, char *out__fullpath, u32 sizeof_out) const;
 		void	event__get_renamed_fullpath (u32 i, char *out__fullpath, u32 sizeof_out) const;
@@ -47,16 +47,15 @@ namespace platform
 					}
 					return false;
 				}
+		void	internal__waitgrp_on_event_signaled (const HANDLE h);
 
 	private:
 		static constexpr u8	FLAG__IS_DIR	= 0;
 
 		struct sEvent
 		{
-			u32			fname_offset;
-			u32			fname_offset_renamed;	//valido solo in caso di what==renamed
+			const char*	folder_name;
 			eWhat		what;
-			gos::Flag8	flag;
 		};
 
 
@@ -66,9 +65,10 @@ namespace platform
 	private:
 		gos::Allocator					*localAllocator;
 		gos::UniqueStringList			folder_list;
-		gos::StringList					fname_list;
-		gos::FastArray<sEvent>			event_list;
+		gos::FastArray<const char*>		folder_name_by_handle_index;
 		gos::FastArray<HANDLE>			handle_list;
+		u32								num_event;
+		sEvent							the_event;
 
 	};
 
