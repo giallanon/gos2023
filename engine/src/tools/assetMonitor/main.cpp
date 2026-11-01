@@ -3,6 +3,48 @@
 
 using namespace gos;
 
+/**************************************************************** 
+ * asset2::importe_texture2D richiede un paio di shader.
+ * Il codice qui sotto serve per trasformare gli shader gia' compilati in un file di testo
+ * che poi finisce statico in gosAsset2Builder_tex2D_shaders.h
+ */
+bool priv__do_creaTXTPerGliShaderDiBuilderTex2D(const char *shaderFile)
+{
+    u32 fsize;
+    u8 *buffer = gos::fs::fileLoadInMemory (gos::getSysHeapAllocator(), shaderFile, &fsize);
+    if (NULL == buffer)
+    {
+        gos::logger::err ("Can't open %s\n", shaderFile);
+        return false;
+    }
+
+    char s[1024];
+    sprintf_s (s, sizeof(s), "%s.txt", shaderFile);
+    gos::File f;
+    gos::fs::fileOpenForW (&f, s);
+    u32 i = 0;
+    while (i < fsize)
+    {
+        u32 left = fsize - i;
+        if (left >= 32)
+            left = 32;
+        for (u32 i2=0; i2<left; i2++)
+        {
+            sprintf_s (s, sizeof(s),"0x%02X, ", buffer[i++]);
+            gos::fs::fileWrite (f, s, 6);
+        }
+        gos::fs::fileWrite (f, "\n", 1);
+    }
+    gos::fs::fileClose(f);
+
+    GOSFREE(gos::getSysHeapAllocator(), buffer);
+    return true;
+}
+void creaTXTPerGliShaderDiBuilderTex2D()
+{
+    priv__do_creaTXTPerGliShaderDiBuilderTex2D("shader_per_Builder_tex2D/shader_builderTex2D.vert.spv");
+    priv__do_creaTXTPerGliShaderDiBuilderTex2D("shader_per_Builder_tex2D/shader_builderTex2D.frag.spv");
+}
 
 //******************************** 
 void test (gos::GPU *gpu, const char *baseFolder)

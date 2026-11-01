@@ -73,9 +73,9 @@ bool Builder_tex2D::priv_create_GPUResourceOnce()
                     .endDescriptorSet()
                 ;
 
-            if (!gpu->pipeline_createNew (def, &pipeHandle))
+            if (!gpu->pipeline_createNew_gfx (def, &pipeHandle))
             {
-                gos::logger::err ("gpu->pipeline_createNew() => failed\n");
+                gos::logger::err ("gpu->pipeline_createNew_gfx() => failed\n");
                 ret = false;
             }
         }

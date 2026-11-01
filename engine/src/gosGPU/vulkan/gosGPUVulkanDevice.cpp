@@ -1049,9 +1049,15 @@ void VulkanDevice::pipelineLayout_delete (VkPipelineLayout vkPipelineLayoutHandl
 }
 
 //*********************************************
-VkResult VulkanDevice::pipeline_create (const VkGraphicsPipelineCreateInfo &creat, VkPipeline *out)
+VkResult VulkanDevice::pipeline_create_gfx (const VkGraphicsPipelineCreateInfo &creat, VkPipeline *out)
 {
     return vkCreateGraphicsPipelines (vkDev, VK_NULL_HANDLE, 1, &creat, nullptr, out);
+}
+
+//*********************************************
+VkResult VulkanDevice::pipeline_create_compute (const VkComputePipelineCreateInfo &creat, VkPipeline *out)
+{
+    return vkCreateComputePipelines (vkDev, VK_NULL_HANDLE, 1, &creat, nullptr, out);
 }
 
 //*********************************************

@@ -159,7 +159,7 @@ bool Builder_shader::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *
         asset2::signature_manufacture_fullFilename (ctx, out_result->signatureUID, filenameDST, sizeof(filenameDST));
 
         //creo la versione ottimizzata e la versione con le debug-info. Quest'ultima
-        //serve per esempio alle pipeline_def per recuprare i nomi e il formato dei descrittori
+        //serve per esempio alle pipeline_def per recuperare i nomi e il formato dei descrittori
         if (!GPU::shader_compile (params.src, shaderStage, params.def, filenameDST, false))
             return false;
 

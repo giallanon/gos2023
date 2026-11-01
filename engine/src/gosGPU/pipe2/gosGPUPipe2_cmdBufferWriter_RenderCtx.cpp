@@ -107,6 +107,7 @@ RenderCtx& RenderCtx::bindPipeline (const GPUPipelineHandle pipelineHandle)
     {
         cache_curPipeline = pipe;
         vkCmdBindPipeline (vkCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cache_curPipeline->vkPipelineHandle);
+		flag.clear (FLAG__PC_UPDATED);
     }
     return *this;        
 }
@@ -265,6 +266,7 @@ RenderCtx& RenderCtx::pushConstant (u8 whichOne, const void *data, u32 sizeof_da
     //e pusho l'intero rnge alla GPU solo prima di una draw...
     const u32 offset = cache_curPipeline->pcList[whichOne].offset;
     memcpy (&pushConstBuffer[offset], data, sizeof_data);
+	flag.set (FLAG__PC_UPDATED);
 
     return *this;
 }
@@ -272,15 +274,20 @@ RenderCtx& RenderCtx::pushConstant (u8 whichOne, const void *data, u32 sizeof_da
 //*********************************
 void RenderCtx::priv_flushPushConst()
 {
-    for (u32 i=0; i<cache_curPipeline->pcRange_num; i++)
-    {
-        const u32 offset = cache_curPipeline->pcRange_list[i].offset;
-        vkCmdPushConstants (vkCommandBuffer, cache_curPipeline->vkPipelineLayoutHandle, 
-                                cache_curPipeline->pcRange_list[i].stageFlags,
-                                offset,
-                                cache_curPipeline->pcRange_list[i].size,
-                                &pushConstBuffer[offset]);
-    }
+	if (flag.isBitSet(FLAG__PC_UPDATED))
+	{
+		for (u32 i=0; i<cache_curPipeline->pcRange_num; i++)
+		{
+			const u32 offset = cache_curPipeline->pcRange_list[i].offset;
+			vkCmdPushConstants (vkCommandBuffer, cache_curPipeline->vkPipelineLayoutHandle, 
+									cache_curPipeline->pcRange_list[i].stageFlags,
+									offset,
+									cache_curPipeline->pcRange_list[i].size,
+									&pushConstBuffer[offset]);
+		}
+
+		flag.clear(FLAG__PC_UPDATED);
+	}
 }
 
 //*********************************

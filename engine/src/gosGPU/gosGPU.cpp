@@ -1471,7 +1471,6 @@ bool GPU::storageBuffer_create (u32 sizeInByte, eMemAccessMode modeIN, GPUStorag
     return true;
 }
 
-//************************************
 const gpu::Buffer* GPU::get_info (const GPUStorageBufferHandle handle) const
 {
     gpu::Buffer *s;
@@ -1481,7 +1480,10 @@ const gpu::Buffer* GPU::get_info (const GPUStorageBufferHandle handle) const
     return NULL;
 }
 
-
+const void* GPU::readback (const GPUStorageBufferHandle handle, u32 offset_start, u32 size)
+{
+	return priv_buffer_begin_read (storageBufferList, handle, offset_start, size);
+}
 
 
 
@@ -2114,7 +2116,7 @@ const gpu::Pipeline2* GPU::get_info (const GPUPipelineHandle handle) const
 
 
 //************************************
-bool GPU::pipeline_createNew (const gpu::Pipeline_def &rpd, GPUPipelineHandle *out_handle)
+bool GPU::pipeline_createNew_gfx (const gpu::Pipeline_def &rpd, GPUPipelineHandle *out_handle)
 {
     assert (NULL != out_handle);
     out_handle->setInvalid();
@@ -2124,14 +2126,14 @@ bool GPU::pipeline_createNew (const gpu::Pipeline_def &rpd, GPUPipelineHandle *o
     gpu::Pipeline2 *s = pipelineList.reserve (out_handle);
     if (NULL == s)
     {
-        gos::logger::err ("GPU::pipeline_createNew() => can't reserve a handle!\n");
+        gos::logger::err ("GPU::pipeline_createNew_gfx() => can't reserve a handle!\n");
         return false;
     }
     s->reset();
 
-    if (!priv_pipeline2_doCreate(rpd, s))
+    if (!priv_pipeline2_doCreate_gfx(rpd, s))
     {
-        gos::logger::err ("GPU::pipeline_createNew() => error creating the pipe!\n");
+        gos::logger::err ("GPU::pipeline_createNew_gfx() => error creating the pipe!\n");
         pipelineList.release(*out_handle);
         out_handle->setInvalid();
         return false;
@@ -2141,7 +2143,50 @@ bool GPU::pipeline_createNew (const gpu::Pipeline_def &rpd, GPUPipelineHandle *o
 }
 
 //************************************
-bool GPU::priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 *out)
+bool GPU::pipeline_createNew_compute (const gpu::Pipeline_def &rpd, GPUPipelineHandle *out_handle)
+{
+    assert (NULL != out_handle);
+    out_handle->setInvalid();
+
+
+    //riservo un handle
+    gpu::Pipeline2 *s = pipelineList.reserve (out_handle);
+    if (NULL == s)
+    {
+        gos::logger::err ("GPU::pipeline_createNew_compute() => can't reserve a handle!\n");
+        return false;
+    }
+    s->reset();
+
+    if (!priv_pipeline2_doCreate_compute(rpd, s))
+    {
+        gos::logger::err ("GPU::pipeline_createNew_compute() => error creating the pipe!\n");
+        pipelineList.release(*out_handle);
+        out_handle->setInvalid();
+        return false;
+    }
+
+    return true;
+}
+
+//************************************
+bool GPU::descrSetInstance_create (const GPUDescrPoolHandle &poolHandle, const GPUPipelineHandle pipelineHandle, u8 descrSetNum, GPUDescrSetInstanceHandle *out_handle)
+{
+    const gpu::Pipeline2 *s = get_info(pipelineHandle);
+    if (NULL == s)
+        return false;
+
+    if (descrSetNum >= s->descrset_num)
+    {
+        DBGBREAK;
+        return false;
+    }
+
+    return descrSetInstance_create (poolHandle, s->descrset_handle_defList[descrSetNum], out_handle);
+}
+
+//************************************
+bool GPU::priv_pipeline2_doCreate_gfx (const gpu::Pipeline_def &rpd, gpu::Pipeline2 *out)
 {
     assert (NULL != out);
     out->reset();
@@ -2197,16 +2242,17 @@ bool GPU::priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 
                     switch (shaderType)
                     {
                     default:
-                        gos::logger::err ("GPU::pipeline_createNew() => invalid shaderType for pushContant\n");
+                        gos::logger::err ("GPU::pipeline_createNew_gfx() => invalid shaderType for pushContant\n");
                         return false;
-                    // case eShaderType::vtxShader: stageFlags = VK_SHADER_STAGE_VERTEX_BIT; break;
-                    // case eShaderType::pxlShader: stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; break;
-                    case eShaderType::vtxShader: 
+
+					case eShaderType::vtxShader: 
                     case eShaderType::pxlShader:
                         stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
                         break;
 
-                    case eShaderType::compute:   stageFlags = VK_SHADER_STAGE_COMPUTE_BIT; break;
+                    case eShaderType::compute:
+                        stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+                        break;
                     }                    
                 }
             }
@@ -2230,7 +2276,7 @@ bool GPU::priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 
             }
             if (0xFF == whichRange)
             {
-                gos::logger::err ("GPU::pipeline_createNew() => too many ranges for pushContant\n");
+                gos::logger::err ("GPU::pipeline_createNew_gfx() => too many ranges for pushContant\n");
                 return false;
             }
 
@@ -2281,7 +2327,7 @@ bool GPU::priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 
             out->descrset_num++;
             if (!priv_descrSetLayout_build_v2 (rpd.descriptorSetList[i], &out->descrset_handle_defList[i], &descrSetLayoutHandleList[i]))
             {
-                gos::logger::err ("GPU::pipeline_createNew() => error creating descriptset\n");
+                gos::logger::err ("GPU::pipeline_createNew_gfx() => error creating descriptset\n");
                 return false;
             }
         }
@@ -2289,7 +2335,7 @@ bool GPU::priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 
         result = vulkan.pipelineLayout_create (pipelineLayoutInfo, &pipelineCreateInfo.layout);
         if (VK_SUCCESS != result)
         {
-            gos::logger::err ("GPU::pipeline_createNew() => vkCreatePipelineLayout() => %s\n", string_VkResult(result));
+            gos::logger::err ("GPU::pipeline_createNew_gfx() => vkCreatePipelineLayout() => %s\n", string_VkResult(result));
             return false;
         }
     }
@@ -2310,8 +2356,7 @@ bool GPU::priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 
             switch (shader->shaderType)
             {
             default:
-                gos::logger::err ("GPU::pipeline_createNew => unsupported shader type\n");
-                DBGBREAK;
+                gos::logger::err ("GPU::pipeline_createNew_gfx => unsupported shader type\n");
                 return false;
                 break;
 
@@ -2324,8 +2369,8 @@ bool GPU::priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 
                 break;
             
             case eShaderType::compute:
-                shadersCreateInfoArray[i].stage = VK_SHADER_STAGE_COMPUTE_BIT;
-                break;        
+                gos::logger::err ("GPU::pipeline_createNew_gfx => unsupported shader type\n");
+                return false;
             }
             
             shadersCreateInfoArray[i].module = shader->vkHandle;
@@ -2581,10 +2626,10 @@ bool GPU::priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 
 
 
     VkPipeline vkPipelineHandle;
-    result = vulkan.pipeline_create (pipelineCreateInfo, &vkPipelineHandle);
+    result = vulkan.pipeline_create_gfx (pipelineCreateInfo, &vkPipelineHandle);
     if (VK_SUCCESS != result)
     {
-        gos::logger::err ("GPU::pipeline_createNew => vkCreateGraphicsPipelines() error: %s\n", string_VkResult(result)); 
+        gos::logger::err ("GPU::pipeline_createNew_gfx => vkCreateGraphicsPipelines() error: %s\n", string_VkResult(result)); 
         return false;
     }
 
@@ -2596,23 +2641,181 @@ bool GPU::priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 
 }
 
 //************************************
-bool GPU::descrSetInstance_create (const GPUDescrPoolHandle &poolHandle, const GPUPipelineHandle pipelineHandle, u8 descrSetNum, GPUDescrSetInstanceHandle *out_handle)
+bool GPU::priv_pipeline2_doCreate_compute (const gpu::Pipeline_def &rpd, gpu::Pipeline2 *out)
 {
-    const gpu::Pipeline2 *s = get_info(pipelineHandle);
-    if (NULL == s)
-        return false;
-
-    if (descrSetNum >= s->descrset_num)
+    assert (NULL != out);
+    out->reset();
+    
+    VkResult result;
+    VkComputePipelineCreateInfo pipelineCreateInfo;
+    memset (&pipelineCreateInfo, 0, sizeof(pipelineCreateInfo));
+    pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
+    pipelineCreateInfo.basePipelineIndex = -1; // Optional
+    
+    //Pipeline layout
+    //Serve ad indicare il numero/tipo di "const push" disponibili alla pipe e il numero/tipo di descriptorSets della pipe
+    pipelineCreateInfo.layout = VK_NULL_HANDLE;
     {
-        DBGBREAK;
+        //in pipeline_def ho dichiarato una serie di pushConst indicandone l'offeset e lo shader di appartenenza
+        //In base a questi dati, devo creare una serie di pushConstantRange, uno per ogni tipo diverso di shader
+        struct PCRange
+        {
+            VkShaderStageFlags    stageFlags;
+            u32 start_offset;
+            u32 end_offset;
+        };
+        PCRange pcRangeList[GOSGPU__NUM_MAX_PUSH_CONSTANT_RANGE_PER_PIPELINE];
+        for (u32 i=0; i<GOSGPU__NUM_MAX_PUSH_CONSTANT_RANGE_PER_PIPELINE; i++)
+        {
+            pcRangeList[i].stageFlags = 0;
+            pcRangeList[i].start_offset = u32MAX;
+            pcRangeList[i].end_offset = 0;
+        }
+
+        for (u32 i=0; i< rpd.numPushConst; i++)
+        {
+            const eShaderTypeBitmask shaderTypeBitmask = rpd.pushConstList[i].shaderTypeBitmask;
+
+            //computo gli stageFlags di questa pushConst
+            VkShaderStageFlags stageFlags = 0;
+            {
+                u8 iter;
+                eShaderType shaderType;
+                shaderTypeBitmask.begin_fetch (&iter);
+                while (shaderTypeBitmask.fetch(iter, &shaderType))
+                {
+                    switch (shaderType)
+                    {
+                    default:
+                        gos::logger::err ("GPU::priv_pipeline2_doCreate_compute() => invalid shaderType for pushContant\n");
+                        return false;
+                    
+					case eShaderType::vtxShader: 
+                    case eShaderType::pxlShader:
+                        stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+                        break;
+
+                    case eShaderType::compute:
+						stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+						break;
+                    }                    
+                }
+            }
+
+            //in base agli <stageFlags>, determino a quale range appartiene
+            u32 whichRange = 0xff;
+            for (u32 i2=0; i2<GOSGPU__NUM_MAX_PUSH_CONSTANT_RANGE_PER_PIPELINE; i2++)
+            {
+                if (pcRangeList[i2].stageFlags == stageFlags)
+                {
+                    whichRange = i2;
+                    break;
+                }
+
+                if (0 == pcRangeList[i2].stageFlags)
+                {
+                    pcRangeList[i2].stageFlags = stageFlags;
+                    whichRange = i2;
+                    break;
+                }                
+            }
+            if (0xFF == whichRange)
+            {
+                gos::logger::err ("GPU::pipeline_createNew_gfx() => too many ranges for pushContant\n");
+                return false;
+            }
+
+            //aggiorno le info di questa pushConst
+            const u32 size = rpd.pushConstList[i].sizeInByte;
+            u32 offset = rpd.pushConstList[i].offset;
+
+            out->pcList[i].offset = offset;
+            out->pcList[i].size = size;
+            out->pcList[i].whichRange = (u8)whichRange;
+
+            //aggiorno gli offset min/max del range
+            if (pcRangeList[whichRange].start_offset > offset)
+                pcRangeList[whichRange].start_offset = offset;
+
+            offset += size;
+            if (pcRangeList[whichRange].end_offset < offset)
+                pcRangeList[whichRange].end_offset = offset;
+        }
+
+        //riporto le info sui range in <out>
+        out->pcRange_num = 0;
+        for (u32 i=0; i<GOSGPU__NUM_MAX_PUSH_CONSTANT_RANGE_PER_PIPELINE; i++)
+        {
+            if (u32MAX == pcRangeList[i].start_offset)
+                continue;
+
+            out->pcRange_list[out->pcRange_num].offset = pcRangeList[i].start_offset;
+            out->pcRange_list[out->pcRange_num].size = pcRangeList[i].end_offset - pcRangeList[i].start_offset;
+            out->pcRange_list[out->pcRange_num].stageFlags = pcRangeList[i].stageFlags;
+            out->pcRange_num++;
+        }
+
+
+        VkPipelineLayoutCreateInfo  pipelineLayoutInfo{};
+        VkDescriptorSetLayout       descrSetLayoutHandleList[GOSGPU__NUM_MAX_DESCRIPTOR_SETS*GOSGPU__NUM_MAX_DESCRIPTOR_PER_SET];
+        
+        memset (&pipelineLayoutInfo, 0, sizeof(pipelineLayoutInfo));
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.pushConstantRangeCount = out->pcRange_num;
+        pipelineLayoutInfo.pPushConstantRanges = out->pcRange_list;
+        pipelineLayoutInfo.setLayoutCount = rpd.numDescrSet;
+        pipelineLayoutInfo.pSetLayouts = descrSetLayoutHandleList;
+
+
+        for (u32 i=0; i<rpd.numDescrSet; i++)
+        {
+            out->descrset_num++;
+            if (!priv_descrSetLayout_build_v2 (rpd.descriptorSetList[i], &out->descrset_handle_defList[i], &descrSetLayoutHandleList[i]))
+            {
+                gos::logger::err ("GPU::priv_pipeline2_doCreate_compute() => error creating descriptset\n");
+                return false;
+            }
+        }
+
+        result = vulkan.pipelineLayout_create (pipelineLayoutInfo, &pipelineCreateInfo.layout);
+        if (VK_SUCCESS != result)
+        {
+            gos::logger::err ("GPU::priv_pipeline2_doCreate_compute() => vkCreatePipelineLayout() => %s\n", string_VkResult(result));
+            return false;
+        }
+    }
+
+
+    //shader
+	memset (&pipelineCreateInfo.stage, 0, sizeof(pipelineCreateInfo.stage));
+    {
+		const GPUShaderHandle handle = rpd.shaderHandleList[0];
+		const gpu::Shader *shader = get_info(handle);
+		assert(eShaderType::compute == shader->shaderType);
+		pipelineCreateInfo.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		pipelineCreateInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+		pipelineCreateInfo.stage.module = shader->vkHandle;
+		pipelineCreateInfo.stage.pName = shader->mainFnName;	
+    }
+
+
+
+
+    VkPipeline vkPipelineHandle;
+    result = vulkan.pipeline_create_compute (pipelineCreateInfo, &vkPipelineHandle);
+    if (VK_SUCCESS != result)
+    {
+        gos::logger::err ("GPU::priv_pipeline2_doCreate_compute => vkCreateComputePipelines() error: %s\n", string_VkResult(result)); 
         return false;
     }
 
-    return descrSetInstance_create (poolHandle, s->descrset_handle_defList[descrSetNum], out_handle);
+
+    //riservo un handle
+    out->vkPipelineLayoutHandle = pipelineCreateInfo.layout;
+    out->vkPipelineHandle = vkPipelineHandle;
+    return true;    
 }
-
-
-
 
 
 

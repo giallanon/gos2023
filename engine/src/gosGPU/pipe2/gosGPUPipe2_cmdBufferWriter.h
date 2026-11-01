@@ -13,6 +13,9 @@ namespace gos
 
     namespace gpu
     {
+		class CmdBufferWriter2; //Fwd
+
+
         /*****************************
          * @brief   RenderCtx
          * 
@@ -81,6 +84,7 @@ namespace gos
         private:
             static constexpr u8         FLAG__ANY_ERROR                         = 0;
             static constexpr u8         FLAG__BEGIN_RENDER_HAS_BEEN_CALLED      = 1;
+			static constexpr u8         FLAG__PC_UPDATED						= 2;
 
         private:
             GPU                         *gpu;
@@ -96,7 +100,55 @@ namespace gos
             u32                         cache_idxBuffer_offset;
         };
 
-        /******************************
+
+        /*****************************
+         * @brief   ComputeCtx
+         * 
+         *          interfaccia principale per settare le pipeline 
+         *          e invocare i cmd di compute
+         */
+        class ComputeCtx
+        {
+        public:
+                        ComputeCtx ();
+                        ~ComputeCtx();
+
+            ComputeCtx&  bindPipeline (const GPUPipelineHandle handle);
+            ComputeCtx&  bindDescriptorSet (const GPUDescrSetInstanceHandle handle, u8 set, u32 dynamicOffset = u32MAX);
+            ComputeCtx&  pushConstant (u8 whichOne, const void *data, u32 sizeof_data);
+
+			ComputeCtx&  dispatch (u32 group_count_x, u32 group_count_y, u32 group_count_z);
+
+            CmdBufferWriter2&	compute_end();
+            bool        anyError() const                                                    { return flag.isBitSet (FLAG__ANY_ERROR); }
+
+        private:
+			bool        priv_setup  (CmdBufferWriter2 *owner, GPU *gpuIN, VkCommandBuffer vkCommandBufferIN);
+            void        priv_setError ();
+            void        priv_flushPushConst();
+
+        private:
+            static constexpr u8         FLAG__ANY_ERROR                         = 0;
+			static constexpr u8         FLAG__PC_UPDATED						= 1;
+
+        private:
+        	CmdBufferWriter2    		*owner;
+			GPU                         *gpu;
+            VkCommandBuffer             vkCommandBuffer;
+            Flag32                      flag;
+			
+
+            u8                          pushConstBuffer[128];
+            const gpu::Pipeline2        *cache_curPipeline;
+
+		friend CmdBufferWriter2;
+        };
+
+
+
+
+
+		/******************************
          * @brief   CmdBufferWriter2
          * 
          * 
@@ -160,6 +212,8 @@ namespace gos
 
 
             SetupRenderCtx&     renderCtx_define_begin (RenderCtx *out_renderCtx);
+			ComputeCtx&			compute_begin ();
+
             bool                end();    
 
             bool                anyError() const                            { return flag.isBitSet (FLAG__ANY_ERROR); }
@@ -175,6 +229,7 @@ namespace gos
             Flag32              flag;
             VkCommandBuffer     vkCommandBuffer;
             SetupRenderCtx      setupRenderCtx;
+			ComputeCtx 			computeCtx;
         }; //class CmdBufferWriter
 
 

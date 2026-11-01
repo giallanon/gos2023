@@ -44,7 +44,7 @@ bool VulkanExample1::virtual_onInit ()
         .rt_add (eImageFormat::_SAME_AS_CURRENT_SWAPCHAIN);
 
 
-    if (!gpu->pipeline_createNew (def, &pipelineHandle))
+    if (!gpu->pipeline_createNew_gfx (def, &pipelineHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
         return false;

@@ -179,7 +179,7 @@ bool VulkanExample4::virtual_onInit ()
             .add (1, eGPUDescriptrorType::COMBINED_IMAGE_SAMPLER, 1, eGPUDescriptrorUsage::pxl_shader)
             .endDescriptorSet();
 
-    if (!gpu->pipeline_createNew (def, &pipelineHandle))
+    if (!gpu->pipeline_createNew_gfx (def, &pipelineHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
         return false;

@@ -62,7 +62,7 @@ bool SimpleLineRenderer::setup (gos::GPU *gpuIN, GPUDescrPoolHandle &descrPoolHa
             .add (0, eGPUDescriptrorType::UNIFORM_BUFFER, 1, eGPUDescriptrorUsage::vtx_shader)
             .endDescriptorSet();
 
-    if (!gpu->pipeline_createNew (def, &pipelineHandle))
+    if (!gpu->pipeline_createNew_gfx (def, &pipelineHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
         return false;

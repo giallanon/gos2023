@@ -1041,7 +1041,7 @@ bool Engine::pipeline_create (const gpu::Pipeline_def &rpd, PipelineH *out_handl
 		return false;
 	}
 	
-	if (!gpu->pipeline_createNew (rpd, &res->data.pipe_handle))
+	if (!gpu->pipeline_createNew_gfx (rpd, &res->data.pipe_handle))
 	{
 		logger::err ("Engine::pipeline_create() => can't create shader\n");
 		return false;

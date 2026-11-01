@@ -117,7 +117,8 @@ namespace gos
         VkResult                pipelineLayout_create (const VkPipelineLayoutCreateInfo &creat, VkPipelineLayout *out);
         void                    pipelineLayout_delete (VkPipelineLayout vkHandle);
 
-        VkResult                pipeline_create (const VkGraphicsPipelineCreateInfo &creat, VkPipeline *out);
+        VkResult                pipeline_create_gfx (const VkGraphicsPipelineCreateInfo &creat, VkPipeline *out);
+		VkResult                pipeline_create_compute (const VkComputePipelineCreateInfo &creat, VkPipeline *out);
         void                    pipeline_delete (VkPipeline vkHandle);
 
     private:

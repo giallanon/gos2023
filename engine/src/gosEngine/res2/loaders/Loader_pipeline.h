@@ -193,7 +193,7 @@ namespace gos
 
 				//creo la pipe
 				GPUPipelineHandle pipe_handle;
-				if (!gpu->pipeline_createNew (def, &pipe_handle))
+				if (!gpu->pipeline_createNew_gfx (def, &pipe_handle))
 				{
 					logger::err ("Loader_pipeline::load_continued() => error creating pipe def\n");
 					return eResult::failed;

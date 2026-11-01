@@ -196,7 +196,8 @@ namespace gos
 
 
         //================ Pipeline
-        bool                        pipeline_createNew (const gpu::Pipeline_def &rpd, GPUPipelineHandle *out_handle);
+        bool                        pipeline_createNew_gfx (const gpu::Pipeline_def &rpd, GPUPipelineHandle *out_handle);
+		bool                        pipeline_createNew_compute (const gpu::Pipeline_def &rpd, GPUPipelineHandle *out_handle);
         void                        deleteResource (GPUPipelineHandle &handle);
         const gpu::Pipeline2*       get_info (const GPUPipelineHandle handle) const;
         
@@ -259,6 +260,8 @@ namespace gos
         void                deleteResource (GPUStorageBufferHandle &handle)															{ priv_bufferDestroy (storageBufferList, handle); }
         const gpu::Buffer*  get_info (const GPUStorageBufferHandle handle) const;
 		bool				begin_write (const GPUStorageBufferHandle handle, gpu::MappedBufW *out)									{ return priv_buffer_begin_write (storageBufferList, handle, out); }
+		const void*			readback (const GPUStorageBufferHandle handle, u32 offset_start=0, u32 size=u32MAX);
+
 
         //================ shader
         bool                vtxshader_createFromMemory (const void *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)      { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::vtxShader, mainFnName, out_shaderHandle); }
@@ -267,7 +270,10 @@ namespace gos
         bool                pxlshader_createFromMemory (const void *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)      { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::pxlShader, mainFnName, out_shaderHandle); }
         bool                pxlshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                      { return priv_shader_createFromFile (filename, eShaderType::pxlShader, mainFnName, out_shaderHandle); }
             
-        const gpu::Shader*  get_info (const GPUShaderHandle handle) const;
+        bool                compshader_createFromMemory (const void *buffer, u32 bufferSize, const char *mainFnName, GPUShaderHandle *out_shaderHandle)      { return priv_shader_createFromMemory (buffer, bufferSize, eShaderType::compute, mainFnName, out_shaderHandle); }
+        bool                compshader_createFromFile (const char *filename, const char *mainFnName, GPUShaderHandle *out_shaderHandle)                      { return priv_shader_createFromFile (filename, eShaderType::compute, mainFnName, out_shaderHandle); }
+
+		const gpu::Shader*  get_info (const GPUShaderHandle handle) const;
         void                deleteResource (GPUShaderHandle &shaderHandle);
 
         //================ texture
@@ -535,7 +541,8 @@ namespace gos
 
 
         bool                priv_descrSetLayout_build_v2 (const gpu::Pipeline_def::DescriptorSet &ds, GPUDescrSetLayoutHandle *out_handle, VkDescriptorSetLayout *out_vkHandle);
-        bool                priv_pipeline2_doCreate (const gpu::Pipeline_def &rpd, gpu::Pipeline2 *out);
+        bool                priv_pipeline2_doCreate_gfx (const gpu::Pipeline_def &rpd, gpu::Pipeline2 *out);
+		bool                priv_pipeline2_doCreate_compute (const gpu::Pipeline_def &rpd, gpu::Pipeline2 *out);
 
     private:
         gos::Allocator              *allocator;

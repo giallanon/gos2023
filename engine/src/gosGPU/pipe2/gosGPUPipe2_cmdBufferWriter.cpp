@@ -268,3 +268,9 @@ CmdBufferWriter2::SetupRenderCtx& CmdBufferWriter2::renderCtx_define_begin (Rend
     return setupRenderCtx;
 }
 
+//***********************************************
+ComputeCtx&	CmdBufferWriter2::compute_begin ()
+{
+	computeCtx.priv_setup (this, gpu, vkCommandBuffer);
+	return computeCtx;
+}

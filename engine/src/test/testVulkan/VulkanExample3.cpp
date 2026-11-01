@@ -89,7 +89,7 @@ bool VulkanExample3::virtual_onInit ()
             .endVtxStream();
 
 
-    if (!gpu->pipeline_createNew (def, &pipelineHandle))
+    if (!gpu->pipeline_createNew_gfx (def, &pipelineHandle))
     {
         gos::logger::err ("VulkanApp::init() => can't create pipeline\n");
         return false;

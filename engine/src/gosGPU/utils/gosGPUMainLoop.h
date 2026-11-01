@@ -130,6 +130,36 @@ namespace gos
             eStato      stato;
         };
 
+        /********************************
+         * @brief   ComputeJob
+         *          Si interfaccia con la coda di "compute" di GPU (se GPU non ne supporta, allora usa una coda gfx).
+         *          submit()            => submitta un job alla GPU         * 
+         *          hasFinished()       => ritorna true quando il job submitteed e' stato completato da GPU
+         */        
+        class ComputeJob
+        {
+        public:
+                    ComputeJob()                         { gpu = NULL; stato = eStato::idle; }
+                    ~ComputeJob()                        { unsetup(); }
+
+            void    setup (gos::GPU *gpuIN);
+            void    unsetup();
+
+            void    submit (const GPUCmdBufferHandle &cmdBufferHandle);
+            bool    hasFinished();
+
+        private:
+            enum class eStato : u8
+            {
+                idle = 0,
+                jobInProgress = 1
+            };
+
+        private:
+            GPU         *gpu;
+            VkFence     fence;
+            eStato      stato;
+        };		
 
         /**************************************************
          * MainLoop2

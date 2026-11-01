@@ -124,3 +124,17 @@ engine/bin/testRes2/writable/assets/assets2.sqlite3
 engine/bin/assetMonitor/win__mon_testRes2.bat
 engine/bin/testRes2/writable/debug_imported_glTF.ini
 engine/bin/testRes2/writable/debug_imported_glTF.json
+
+engine/bin/testComputeShader/writable/checker_v1__00__00.buffer
+
+engine/bin/testComputeShader/writable/checker_v1__00__01.buffer
+
+engine/bin/testComputeShader/writable/checker_v1__00__02.buffer
+
+engine/bin/testComputeShader/writable/checker_v1__00__03.buffer
+
+engine/bin/testComputeShader/writable/checker_v1__00__04.buffer
+
+engine/bin/testComputeShader/writable/checker_v1__00__05.buffer
+
+engine/bin/testComputeShader/writable/shader1.comp.shader.spvd
