@@ -23,6 +23,7 @@ bool VkPhyDeviceFeatures::checkPhysicalDeviceFeatures (VkPhysicalDevice &vkDev, 
     {
         CHECK(features13.synchronization2);
         CHECK(features13.dynamicRendering);
+        CHECK(features13.maintenance4);
     }
 
     CHECK(features12.separateDepthStencilLayouts);
