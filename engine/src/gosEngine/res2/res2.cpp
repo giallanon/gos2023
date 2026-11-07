@@ -34,6 +34,7 @@ const char* res2::enumToString (res2::eStatus s)
 	case res2::eStatus::unloading:	return "hot_reload";
 	case res2::eStatus::deleting:	return "deleting";
 	case res2::eStatus::deleted:	return "deleted";
+	case res2::eStatus::hot_reloading:	return "hot_reload";
 	case res2::eStatus::error:      return "error";
 	}
 }
@@ -335,6 +336,7 @@ void res2::remove_child (res2::ResDescr *padre, res2::ResDescr *child)
 			{
 				assert (padre->num_child_not_ready>0);
 				padre->num_child_not_ready--;
+				internal__debug__printInfo (padre, "child removed");
 			}
 
 			//rimuovo padre dalla lista dei padri di child

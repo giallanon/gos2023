@@ -31,6 +31,10 @@ private:
 	void	test3_on_update(u64 timenow_msec);
 	void 	test3_render();
 
+	void	test4();
+	void	test4_on_update(u64 timenow_msec);
+	void 	test4_render();
+
 private:
 	gos::engine::Renderer_PIPE3			*renderer_PIPE3;
 	gos::engine::Renderer_line3d		*renderer_line3d;

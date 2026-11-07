@@ -1,0 +1,28 @@
+@include: common.gosasset_d
+
+@tex2D: texture1
+{
+	src: <common_assets>/images/Tiling_procedural_textures.png
+	srcColorSpace:	sRGB
+
+	dstNumMipMap: max
+	dstFmt:U8_RGBA
+}
+
+@tex2D: texture2
+{
+	src: copia_di_Tiling_procedural_textures.png
+	srcColorSpace:	sRGB
+
+	dstNumMipMap: max
+	dstFmt:U8_RGBA
+}
+
+@tex2D: texture3
+{
+	src: copia_di_Tiling_procedural_textures.png
+	srcColorSpace:	sRGB
+
+	dstNumMipMap: max
+	dstFmt:U8_RGBA
+}

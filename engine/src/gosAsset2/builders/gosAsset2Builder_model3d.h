@@ -82,7 +82,8 @@ namespace gos
 					Builder_model3d ();
 					~Builder_model3d();
 
-			bool 	build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec);
+			void    initOnce (gos::GPU *gpuIN, BuilderList *builderList);
+			bool 	build_begin (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec);
 			bool 	build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out_bCallMeAgain, sBuildResult *out_result);
 			void 	build_end();
 
@@ -98,7 +99,8 @@ namespace gos
 						Syntax1 ();
 						~Syntax1();
 
-				bool 	build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec);
+				void    initOnce (gos::GPU *gpuIN, BuilderList *builderList);
+				bool 	build_begin (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec);
 				bool 	build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out_bCallMeAgain, sBuildResult *out_result);
 				void 	build_end();
 
@@ -107,7 +109,8 @@ namespace gos
 				{
 					shapes = 0,
 					skeleton = 1,
-					materials = 2,
+					texture = 2,
+					materials = 3,
 					end = 0xff
 				};
 
@@ -129,15 +132,20 @@ namespace gos
 				};
 
 			private:
-				bool	priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename);
+				bool	priv_extractParams (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename);
 				bool 	priv_build_shape (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result);
 				bool 	priv_build_skeleton (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result);
+				bool 	priv_build_texture (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result);
 				bool 	priv_build_material (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out_result);
 				void 	priv_print_report(const char *filenameDST) const;
 				bool 	priv_apply_post_op();
 
 			private:
 				gos::Allocator				*localAllocator;
+				BuilderList 				*builderList;
+				const UniqueUIDList 		*in__listof_UID_of_known_ini_file;
+				const char 					*in__absFilename;
+
 				Params 						params;
 				UID 						uid_of_iniFile;
 				const gos::IniFileSection 	*sec;
@@ -149,6 +157,8 @@ namespace gos
 				UID							skeleton_assetUID;
 				FastArray<UID>				listof_shape_assetUID;
 				FastArray<UID>				listof_material_assetUID;
+				FastArray<UID>				listof_texture_assetUID;
+				Array<gos::UTF8String>		listof_texture_rtName;
 
 			}; //class Sintax1
 
@@ -164,7 +174,7 @@ namespace gos
 						Syntax2 ();
 						~Syntax2();
 
-				bool 	build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec);
+				bool 	build_begin (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec);
 				bool 	build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out_bCallMeAgain, sBuildResult *out_result);
 				void 	build_end()		{ }
 
@@ -203,7 +213,7 @@ namespace gos
 
 			private:
 				void 	priv_reset_parsed_params();
-				bool    priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename);
+				bool    priv_extractParams (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename);
 				bool 	priv_do_create_assetFile (DBContext &ctx, UID signatureUID, const char *filenameDST, const FastArray<sFinalMeshInfo> &listof_final_meshes) const;
 
 			private:

@@ -20,6 +20,63 @@ using namespace gos::shape;
  * 
  * 
  *************************************************************************************************************************************/
+void Importer_glb::Result::reset()
+{
+	allocator=NULL; 
+	numShapes=0; shapeList=NULL; 
+	skeleton.reset(); shapeNameList=NULL; bSkeletonIsResolved=false; 
+	num_mesh=0; mesh_list=NULL; 
+	num_material=0; materialNameList=NULL; material_list=NULL; 
+	num_images = 0; image_list = NULL;
+	num_textures = 0; texture_list = NULL;
+}
+
+void Importer_glb::Result::free()
+{ 
+	if (NULL == allocator) return;
+	if (shapeList)
+	{
+		for (u32 i = 0; i < numShapes; i++)
+		{
+			shape::shapeFree(allocator, &shapeList[i]);
+			GOSFREE(allocator, shapeNameList[i]);
+		}
+		for (u32 i = 0; i < num_material; i++)
+		{
+			GOSFREE(allocator, materialNameList[i]);
+		}
+		for (u32 i = 0; i < num_mesh; i++)
+		{
+			GOSFREE(allocator, mesh_list[i].mesh_name);
+		}
+
+		GOSFREE(allocator, shapeList);
+		GOSFREE(allocator, shapeNameList);
+		GOSFREE(allocator, materialNameList);
+		GOSFREE(allocator, material_list);
+		GOSFREE(allocator, mesh_list);
+		numShapes = num_mesh = num_material = 0;
+	}
+	gos::skeleton::free(skeleton);
+
+	if (NULL != image_list)
+	{
+		for (u32 i=0; i<num_images; i++)
+		{
+			GOSFREE(allocator, image_list[i].name);
+		}
+		GOSFREE(allocator, image_list);
+	}
+
+	if (NULL != texture_list)
+	{
+		GOSFREE(allocator, texture_list);
+	}
+
+
+	reset();
+}
+
 const gos::Bone* Importer_glb::Result::priv_skeleton_clone_and_resolve (gos::Skeleton *out) const
 {
 	assert (NULL != out);
@@ -314,11 +371,15 @@ Importer_glb::Importer_glb()
 	shapeNameList.setup (localAllocator, 1024);
 	materialNameList.setup (localAllocator, 256);
 	materialList.setup (localAllocator, 1024);
+	imageList.setup (localAllocator, 1024);
+	textureList.setup (localAllocator, 1024);
 }
 
 //********************************************
 Importer_glb::~Importer_glb()
 {
+	priv_free();
+
 	bufferViewList.unsetup ();
 	accessorsList.unsetup ();
 	nodesList.unsetup ();
@@ -328,7 +389,8 @@ Importer_glb::~Importer_glb()
 	shapeNameList.unsetup();
 	materialNameList.unsetup();
 	materialList.unsetup();
-	priv_free();
+	imageList.unsetup();
+	textureList.unsetup();
 }
 
 //********************************************
@@ -345,13 +407,17 @@ void Importer_glb::priv_free()
 	shapeNameList.reset();
 	materialNameList.reset();
 	materialList.reset();
+	for (u32 i=0; i<imageList.getNElem(); i++)
+		GOSFREE(localAllocator, imageList(i).name);
+	imageList.reset();
+	textureList.reset();
 	
 	rootBone.deleteAllChildren (localAllocator);
 	rootBone.reset();
 }
 
 //********************************************
-bool Importer_glb::priv_parseBufferView (const gos::IniFileSection *sec)
+bool Importer_glb::priv_parseBufferView (const gos::IniFileSection *sec, u32 start_of_bin_in_glb_file)
 {
 	const u32 byteLength = sec->getOrDefaultAsU32("byteLength", u32MAX);
 	const u32 byteOffset = sec->getOrDefaultAsU32("byteOffset", u32MAX);
@@ -362,6 +428,7 @@ bool Importer_glb::priv_parseBufferView (const gos::IniFileSection *sec)
 	const u32 n = bufferViewList.getNElem();
 	bufferViewList[n].p = &bin[byteOffset];
 	bufferViewList[n].len = byteLength;
+	bufferViewList[n].abs_offset_in_glb_file = start_of_bin_in_glb_file + byteOffset;
 	return true;
 }
 
@@ -604,6 +671,50 @@ bool Importer_glb::priv_parseMesh (const gos::IniFileSection *sec, const VtxLayo
 }
 
 //********************************************
+bool Importer_glb::priv_parseImages (const gos::IniFileSection *sec)
+{
+	const u32 imageNum = imageList.getNElem();
+
+	char imgName[256];
+	if (!sec->get("name", imgName, sizeof(imgName)))
+	{
+		sprintf_s (imgName, sizeof(imgName), "noname_%04d", imageNum);
+	}
+	imageList[imageNum].name = gos::string::utf8::allocStr (localAllocator, imgName);
+
+
+	const u32 bufferView_index = sec->getOrDefaultAsU32 ("bufferView", u32MAX);
+	
+	if (u32MAX == bufferView_index)
+	{
+		//si tratta di un file esterno
+		imageList[imageNum].size_in_glb_file = 0;
+		imageList[imageNum].offset_in_glb_file = 0;
+	}
+	else
+	{
+		//L'immagine e' dentro al file glb
+		assert (bufferView_index < bufferViewList.getNElem());
+		imageList[imageNum].size_in_glb_file = bufferViewList(bufferView_index).len;
+		imageList[imageNum].offset_in_glb_file = bufferViewList(bufferView_index).abs_offset_in_glb_file;
+	}
+	return true;
+}
+
+//********************************************
+bool Importer_glb::priv_parseTextures (const gos::IniFileSection *sec)
+{
+	const u32 source_index = sec->getOrDefaultAsU32 ("source", u32MAX);
+	if (u32MAX == source_index)
+		return false;
+
+
+	const u32 texNum = textureList.getNElem();
+	textureList[texNum].image_index = source_index;
+	return true;
+}
+
+//********************************************
 bool Importer_glb::priv_parseNodes (const gos::IniFileSection *sec)
 {
 	const u32 n = nodesList.getNElem();
@@ -757,21 +868,33 @@ bool Importer_glb::priv_parseMaterial (const gos::IniFileSection *sec)
 
 	//material default
 	materialList[material_num].reset();
+	Result::sMaterial *mat = &materialList[material_num];
 
 
 	gos::IniFileSection *pbr = sec->getSubsection("pbrMetallicRoughness");
 	if (NULL != pbr)
 	{
-		MaterialPBR *mat = &materialList[material_num];
-
 		mat->diffuse_col_RGBA_HDR[0] = pbr->getOrDefaultAsF32("baseColorFactor[0]", 1.0f);
 		mat->diffuse_col_RGBA_HDR[1] = pbr->getOrDefaultAsF32("baseColorFactor[1]", 1.0f);
 		mat->diffuse_col_RGBA_HDR[2] = pbr->getOrDefaultAsF32("baseColorFactor[2]", 1.0f);
 		mat->diffuse_col_RGBA_HDR[3] = pbr->getOrDefaultAsF32("baseColorFactor[3]", 1.0f);
 
 		mat->metallic_factor = pbr->getOrDefaultAsF32("metallicFactor", 0.0f);
+
+		//diffuse texture
+		gos::IniFileSection *sub = pbr->getSubsection("baseColorTexture");
+		if (NULL != sub)
+		{
+			mat->diffuse_texture_index = sub->getOrDefaultAsU32("index", u32MAX);
+		}
 	}
 
+	//normal texture
+	gos::IniFileSection *sub = sec->getSubsection("normalTexture");
+	if (NULL != sub)
+	{
+		mat->normal_texture_index = sub->getOrDefaultAsU32("index", u32MAX);
+	}
 
 	return true;
 }
@@ -831,7 +954,6 @@ void Importer_glb::priv_resolveSkeletonChildren (Bone *me, const Bone *father)
 		b = b->nextSibling;
 	}
 }
-
 
 //********************************************
 void Importer_glb::priv_build_mesh_list (Bone *me, const gos::Skeleton *sk, gos::FastArray<Result::sMesh> *out_list, gos::Allocator *result_allocator)
@@ -955,6 +1077,7 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 			return false;
 		}
 
+		start_of_bin_in_file_glb = ct;
 		bin = &buffer[ct];
 		ct+=binChunkLen;		
 	}
@@ -999,7 +1122,7 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 			if (NULL == sec)
 				break;
 			
-			if (!priv_parseBufferView (sec))
+			if (!priv_parseBufferView (sec, start_of_bin_in_file_glb))
 			{
 				gos::logger::err ("Importer_glb::importFromMemory() => error parsing 'bufferView[%d]\n", index);
 				return false;
@@ -1054,6 +1177,44 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 			shape::shapeRightHandedToLeftHanded (myShape);
 		}
 	}
+
+	//recupero l'elenco di immagini
+	index = 0;
+	{
+		while (1)
+		{
+			sprintf_s (s, sizeof(s), "images[%d]", index);
+			const gos::IniFileSection *sec = ini.getSubsection (s);
+			if (NULL == sec)
+				break;
+			
+			if (!priv_parseImages (sec))
+			{
+				gos::logger::err ("Importer_glb::importFromMemory() => error parsing 'image[%d]\n", index);
+				return false;
+			}		
+			++index;
+		}
+	}	
+
+	//recupero l'elenco di texture
+	index = 0;
+	{
+		while (1)
+		{
+			sprintf_s (s, sizeof(s), "textures[%d]", index);
+			const gos::IniFileSection *sec = ini.getSubsection (s);
+			if (NULL == sec)
+				break;
+			
+			if (!priv_parseTextures (sec))
+			{
+				gos::logger::err ("Importer_glb::importFromMemory() => error parsing 'texture[%d]\n", index);
+				return false;
+			}		
+			++index;
+		}
+	}		
 
 	//parsing dei materiali
 	index = 0;
@@ -1115,6 +1276,37 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 	priv_build_gosSkeleton (out_results->allocator, &out_results->skeleton);
 
 
+	//copio le images in out_result
+	{
+		const u32 num_images = imageList.getNElem();
+		if (num_images)
+		{
+			out_results->num_images = num_images;
+			out_results->image_list = GOSALLOCT(Result::sImage*, out_results->allocator, sizeof(Result::sImage) * num_images);
+			for (u32 i=0; i<num_images; i++)
+			{
+				out_results->image_list[i].name = gos::string::utf8::allocStr (out_results->allocator, imageList(i).name);
+				out_results->image_list[i].size_in_glb_file = imageList(i).size_in_glb_file;
+				out_results->image_list[i].offset_in_glb_file = imageList(i).offset_in_glb_file;
+			}
+		}
+	}
+
+	//copio le textures in out_result
+	{
+		const u32 num_textures = textureList.getNElem();
+		if (num_textures)
+		{
+			out_results->num_textures = num_textures;
+			out_results->texture_list = GOSALLOCT(Result::sTexture*, out_results->allocator, sizeof(Result::sTexture) * num_textures);
+			for (u32 i=0; i<num_textures; i++)
+			{
+				out_results->texture_list[i].image_index = textureList(i).image_index;
+			}
+		}
+	}	
+
+
 	//copio le shape in out_result
 	{
 		const u32 num_shape = shapeList.getNElem();
@@ -1138,10 +1330,10 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 			out_results->num_material = num_material;
 			if (num_material)
 			{
-				out_results->material_list = GOSALLOCT(MaterialPBR*, out_results->allocator, sizeof(MaterialPBR) * num_material);
+				out_results->material_list = GOSALLOCT(Result::sMaterial*, out_results->allocator, sizeof(Result::sMaterial) * num_material);
 				out_results->materialNameList = GOSALLOCT(char**, out_results->allocator, sizeof(char*) * num_material);
 
-				memcpy (out_results->material_list, materialList._queryPointer(), sizeof(MaterialPBR) * num_material);
+				memcpy (out_results->material_list, materialList._queryPointer(), sizeof(Result::sMaterial) * num_material);
 				for (u32 i = 0; i < num_material; i++)
 				{
 					const u32 str_len = materialNameList(i).lengthInByte();

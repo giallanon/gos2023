@@ -33,7 +33,7 @@ namespace gos
                 	Builder_shader (eAssetType assTypeIN) : BuilderInterface (assTypeIN)            { }
                     ~Builder_shader()                                                               { }
 
-			bool 	build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec);
+			bool 	build_begin (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec);
 			bool 	build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out_bCallMeAgain, sBuildResult *out_result);
 			void 	build_end()	{ }
             
@@ -48,7 +48,7 @@ namespace gos
             };
 
         private:
-            bool	priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename);
+            bool	priv_extractParams (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename);
 
 		private:
 			Params 	params;

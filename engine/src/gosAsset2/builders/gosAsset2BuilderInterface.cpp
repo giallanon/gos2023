@@ -72,13 +72,13 @@ bool BuilderInterface::prot_needResolvedSubsection (DBContext &ctx, const gos::I
  * In caso di risorse che includo a loro volta altre risorse (al momento solo gli shader_txt), all'uscita di questa
  * fn l'array <list_of_nested_resources> contiene un elenco delle risorse incluse
  */
-bool BuilderInterface::prot_needResource (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, eResType resTypeIN, const char *absFilenameIN, ResourceDep *out)
+bool BuilderInterface::prot_needResource (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, eResType resTypeIN, const char *absFilenameIN, ResourceDep *out)
 {
 	num_nested_resources = 0;
 	return priv_do_needResource (ctx, listof_UID_of_known_ini_file, resTypeIN, absFilenameIN, out);
 }
 
-bool BuilderInterface::priv_do_needResource (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, eResType resTypeIN, const char *absFilenameIN, ResourceDep *out)
+bool BuilderInterface::priv_do_needResource (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, eResType resTypeIN, const char *absFilenameIN, ResourceDep *out)
 {
     assert (NULL != absFilenameIN);
     assert (NULL != out);
@@ -136,7 +136,7 @@ bool BuilderInterface::priv_do_needResource (DBContext &ctx, const UniqueUIDList
 }
 
 //****************************** 
-bool BuilderInterface::priv_extractAllInludePaths (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilenameIN, gos::StringList *out) const
+bool BuilderInterface::priv_extractAllInludePaths (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilenameIN, gos::StringList *out) const
 {
 	bool ret = true;
 	u32 fsize=0;

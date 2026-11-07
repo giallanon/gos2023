@@ -41,6 +41,7 @@ void App::on__setup ()
 	//test1();
 	//test2();
 	test3();
+	//test4();
 }
 
 //***************************************
@@ -49,6 +50,7 @@ void App::on__update (u64 timenow_msec)
 	//test1_on_update (timenow_msec);
 	//test2_on_update (timenow_msec);
 	test3_on_update (timenow_msec);
+	//test4_on_update (timenow_msec);
 
 }
 
@@ -58,6 +60,7 @@ void App::on__render()
 	// test1_render();
 	// test2_render();
 	test3_render();
+	//test4_render();
 }
 
 
@@ -206,14 +209,15 @@ void App::test2_render()
 //***************************************
 void App::test3()
 {
-	static constexpr i32 NUM_PER_LATO = 52;
+	static constexpr i32 NUM_PER_LATO = 10; //52;
 	static constexpr f32 SX = 2.0f;
 	static constexpr f32 SY = 2.0f;
 	static constexpr f32 SZ = 2.0f;
 
 	renderer_PIPE3 = engine->renderPipe.add_renderer<engine::Renderer_PIPE3>();
 	engine->model_createFromAsset ("gix_tree_1", &model1_handle);
-	engine->model_createFromAsset ("model_cubo1x1x1", &model2_handle);
+	//engine->model_createFromAsset ("model_cubo1x1x1", &model2_handle);
+	engine->model_createFromAsset ("model_cubo_nm", &model2_handle);
 	
 	engine->materialPBR_createFromAsset ("material01", &material1_handle, res2::eLoadMode::asap);
 	engine->materialPBR_createFromAsset ("material02", &material2_handle, res2::eLoadMode::asap);
@@ -254,7 +258,6 @@ void App::test3()
 
 	engine->vtxBuffer_create (1024, eMemAccessMode::onGPU, &vtxbuffer_handle);
 }
-
 void App::test3_on_update(u64 timenow_msec)		{ }	
 void App::test3_render()
 {
@@ -270,6 +273,37 @@ void App::test3_render()
 	}
 	renderer_PIPE3->end();
 }
+
+
+//***************************************
+void App::test4()
+{
+	renderer_PIPE3 = engine->renderPipe.add_renderer<engine::Renderer_PIPE3>();
+	engine->model_createFromAsset ("model_cubo_nm", &model1_handle);
+
+	ModelInstH handle;
+	gos::mat4x4f m;
+	m.identity();
+	engine->modelinst_create (model1_handle, &handle);
+	engine->modelinst_applyTransform (handle, m);
+	mi_handle_list.append(handle);
+}
+void App::test4_on_update(u64 timenow_msec)		{ }	
+void App::test4_render()
+{
+	renderer_PIPE3->begin();
+	{
+		//GOS_PROFILE_BEGIN(render_pipe_add);
+		const u32 N = mi_handle_list.getNElem();
+		for (u32 i=0; i<N; i++)
+		{
+			renderer_PIPE3->add (mi_handle_list(i));
+		}
+		//GOS_PROFILE_END(render_pipe_add);
+	}
+	renderer_PIPE3->end();
+}
+
 
 
 

@@ -423,6 +423,8 @@ void Engine::asset_hotreload (asset2::UID assetUID)
 	{
 		//faccio il release della risorsa associata all'asset_handle
 		res2::ResDescr *asset_descr = res2__get_descriptor(asset_handle);
+		res2::change_state (asset_descr, res2::eStatus::hot_reloading, "hot reload");
+
 		assert (NULL != asset_descr->list_figli->descr); //deve avere 1 figlio
 		assert (NULL == asset_descr->list_figli->next); //deve avere 1 e 1 solo figlio in quanto e' un asset
 		res2::ResDescr *child_res_descr = asset_descr->list_figli->descr;
@@ -438,6 +440,7 @@ void Engine::asset_hotreload (asset2::UID assetUID)
 		{
 			//questo asset ha come figlio la risorsa <new_signatureUID>
 			res2__callbak_on_hot_reload (asset_descr, new_signatureUID);
+			res2::change_state (asset_descr, res2::eStatus::ready, "hot reload fin");
 		}
 		else
 		{

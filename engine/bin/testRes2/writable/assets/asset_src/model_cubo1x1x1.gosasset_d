@@ -14,3 +14,12 @@
 
 	post_op: "	skeleton-resolve;"
 }
+
+
+@model3d: model_cubo_nm
+{
+	import: <common_assets>/model3d/cubo-normal.mapped/cubo.glb
+
+	post_op: "	skeleton-resolve;"
+
+}

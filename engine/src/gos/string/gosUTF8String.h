@@ -32,6 +32,7 @@ namespace gos
 							UTF8String ()																{ priv_constructor(); }
 							UTF8String (const UTF8String &b);
 							UTF8String (const char* s);
+							UTF8String (gos::Allocator *allocator, u32 prealloc_size)					{ priv_constructor(); setAllocator(allocator); prealloc(prealloc_size); }
 							~UTF8String();
 
 		void				setAllocator (Allocator *allocIN);
@@ -52,6 +53,7 @@ namespace gos
 		void				append (unsigned char c)													{ char buf[4];  sprintf_s (buf, sizeof(buf), "%u", c); append (buf, (u32)strlen(buf)); }
 		void				append (int c)																{ char buf[32]; sprintf_s (buf, sizeof(buf), "%d", c); append (buf, (u32)strlen(buf)); }
 		void				append (unsigned int c)														{ char buf[32]; sprintf_s (buf, sizeof(buf), "%u", c); append (buf, (u32)strlen(buf)); }
+		void				append (f32 c)																{ char buf[32]; sprintf_s (buf, sizeof(buf), "%f", c); append (buf, (u32)strlen(buf)); }
 #ifdef GOS_PLATFORM__WINDOWS
 		void				append (long c)																{ char buf[32]; sprintf_s (buf, sizeof(buf), "%d", c); append (buf, (u32)strlen(buf)); }
 		void				append (unsigned long c)													{ char buf[32]; sprintf_s (buf, sizeof(buf), "%u", c); append (buf, (u32)strlen(buf)); }
@@ -70,6 +72,7 @@ namespace gos
 		friend	UTF8String&		operator<<  (UTF8String &me, unsigned char b)									{ me.append (b); return me; }
 		friend	UTF8String&		operator<<  (UTF8String &me, int b)												{ me.append (b); return me; }
 		friend	UTF8String&		operator<<  (UTF8String &me, unsigned int b)									{ me.append (b); return me; }
+		friend	UTF8String&		operator<<  (UTF8String &me, f32 b)												{ me.append (b); return me; }
 #ifdef GOS_PLATFORM__WINDOWS
 		friend	UTF8String&		operator<<  (UTF8String &me, long b)											{ me.append (b); return me; }
 		friend	UTF8String&		operator<<  (UTF8String &me, unsigned long b)									{ me.append (b); return me; }

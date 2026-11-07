@@ -15,7 +15,7 @@ Builder_materialPBR::Builder_materialPBR () : BuilderInterface (eAssetType::mate
 }
 
 //************************************
-bool Builder_materialPBR::priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename)
+bool Builder_materialPBR::priv_extractParams (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename)
 {
     assert (NULL != sec);
     
@@ -66,7 +66,7 @@ bool Builder_materialPBR::priv_extractParams (DBContext &ctx, const UniqueUIDLis
 }
 
 //************************************
-bool Builder_materialPBR::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
+bool Builder_materialPBR::build_begin (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
 {
     assert (ctx.isValid());
     assert (NULL != secIN);

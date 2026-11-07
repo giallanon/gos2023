@@ -26,21 +26,11 @@ namespace gos
 
             static void         save_asset_manifest (const char *baseFolder, const char *dbName = NULL);
 
-            static bool         makeABSPathFromFilename (DBContext &ctx, gos::Logger *logger, const UniqueUIDList &listof_UID_of_known_ini_file, const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out);
+            static bool         makeABSPathFromFilename (DBContext &ctx, gos::Logger *logger, const UniqueUIDList *listof_UID_of_known_ini_file, const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out);
 
 		public:
 						Builder (gos::GPU *gpuIN);
 						~Builder();
-
-                        template<class TBUILDER>
-            bool        add_builder ()
-                        {
-                            TBUILDER *builder = GOSNEW(localAllocator, TBUILDER)();
-                            if (priv_addBuilder(builder))
-                                return true;
-                            GOSDELETE(localAllocator, builder);
-                            return false;
-                        }
 
 			bool		rebuild_all (const char *baseFolder, bool bVerbose);
 			bool		build (const char *baseFolder, bool bVerbose);
@@ -77,15 +67,13 @@ namespace gos
                 char *path;
             };
 
-        private:
-            static constexpr u8 NUM_MAX_BUILDERS = 32;
+
         private:
             typedef gos::FastArray<sResListElem>            ResList;
             typedef gos::SlowHashMap<UID, gos::UTF8String>  HashedStringList;
 
         private:
             const char*     enumToString (eBuildStatus s) const;
-            bool            priv_addBuilder (BuilderInterface *builder);
             void            priv_printResList (const ResList &list) const;
             void            priv_printResListElem (const sResListElem &elem) const;
             void            priv_fromDirectiveNameToAssetClassName (const char *directiveName, char *out_asseetClassName, u32 sizeof_out) const;
@@ -109,8 +97,6 @@ namespace gos
                                                      const char *absFilename, UID uid_of_iniFile, gos::IniFileSection *section,
 													 UniqueUIDList *out_listOfBuiltSignature);
 
-            BuilderInterface*   priv_findBuilderByClassName (const char *assetClassName) const;
-            
             bool        debug_sanityCheck__compareDB (DBContext &ctxSanity, const char *baseFolder);
             u32         debug_sanityCheck__count (db::RST &rst) const;
             bool        debug_sanityCheck__compare (db::RST &rst1, db::RST &rst2, u32 rowIndex) const;
@@ -122,9 +108,9 @@ namespace gos
             gos::Logger         	*logger;
             gos::LoggerNull     	loggerNull;
             gos::LoggerStdout   	loggerStdout;
-            BuilderInterface    	*builderList[NUM_MAX_BUILDERS];
 			gos::FastHashMap<UID,UID>	list_of_touched_assets;
 			asset2::UniqueUIDList	build_result_list;
+			asset2::BuilderList		builderList;
 		};
 
 	} //namespace asset2

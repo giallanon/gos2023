@@ -25,6 +25,7 @@ namespace gos
 
                     //ritorna l'index della shape addata  (eventuali shape duplicate vengono gestite evitando la duplicazione)
             u32     shape_add (UID assetUID, const char *shape_name);
+			
 			u32     material_add (UID assetUID, const char *material_name);
 
             bool    mesh_add (u32 shape_index, u32 bone_index, u32 material_index, const char *mesh_name);

@@ -19,7 +19,9 @@ Builder_model3d::Syntax1::Syntax1 () : BuilderInterface (eAssetType::model3d)
 
 	listof_shape_assetUID.setup (localAllocator, 64);
 	listof_material_assetUID.setup (localAllocator, 64);
+	listof_texture_assetUID.setup (localAllocator, 64);
     buildCtx.bAModelWasImported = false;
+	listof_texture_rtName.setup (localAllocator, 256);
 }
 
 //************************************
@@ -28,7 +30,13 @@ Builder_model3d::Syntax1::~Syntax1 ()
 }
 
 //************************************
-bool Builder_model3d::Syntax1::priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename)
+void Builder_model3d::Syntax1::initOnce (gos::GPU *gpuIN, BuilderList *builderListIN)
+{
+	builderList = builderListIN;
+}
+
+//************************************
+bool Builder_model3d::Syntax1::priv_extractParams (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename)
 {
     //setto i default
     memset (&params, 0, sizeof(Params));
@@ -53,13 +61,16 @@ bool Builder_model3d::Syntax1::priv_extractParams (DBContext &ctx, const UniqueU
 }
 
 //************************************
-bool Builder_model3d::Syntax1::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
+bool Builder_model3d::Syntax1::build_begin (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
 {
 	assert (false == buildCtx.bAModelWasImported);
     assert (ctx.isValid());
 	assert (NULL != secIN);
+	
 	uid_of_iniFile = uid_of_iniFileIN;
 	sec = secIN;
+	in__listof_UID_of_known_ini_file = listof_UID_of_known_ini_file;
+	in__absFilename = absFilename;
 
 
 	model3d_signatureUID.setInvalid();
@@ -67,6 +78,8 @@ bool Builder_model3d::Syntax1::build_begin (DBContext &ctx, const UniqueUIDList 
 	skeleton_assetUID.setInvalid();
 	listof_shape_assetUID.reset();
 	listof_material_assetUID.reset();
+	listof_texture_assetUID.reset();
+	listof_texture_rtName.reset();
     
     //parse della sezione
     if (!priv_extractParams(ctx, listof_UID_of_known_ini_file, absFilename))
@@ -191,7 +204,7 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 					return true;
 				}
 
-				//passiamo a buildare lo scheletro (se esiste)
+				//passo alla fase successiva
 				buildCtx.whatToBuild = eWhatToBuild::skeleton;
 				buildCtx.iToBuild = 0;
 				*out_bCallMeAgain = true;
@@ -207,7 +220,30 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 						return false;
 				}
 				
-				//passiamo a buildare i materiali
+				//passo alla fase successiva
+				buildCtx.whatToBuild = eWhatToBuild::texture;
+				buildCtx.iToBuild = 0;
+				*out_bCallMeAgain = true;
+				return true;
+			}
+			break;
+
+		case eWhatToBuild::texture:
+			{
+				if (buildCtx.imported.num_textures > 0)
+				{
+					if (!priv_build_texture(ctx, doCreateAnAssetFile, out_result))
+						return false;
+
+					buildCtx.iToBuild++;
+					if (buildCtx.iToBuild < buildCtx.imported.num_textures)
+					{
+						*out_bCallMeAgain = true;
+						return true;
+					}
+				}
+
+				//passo alla fase successiva
 				buildCtx.whatToBuild = eWhatToBuild::materials;
 				buildCtx.iToBuild = 0;
 				*out_bCallMeAgain = true;
@@ -230,7 +266,7 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 					}
 				}
 
-				//passo alla fase finale
+				//passo alla fase successiva
 				buildCtx.whatToBuild = eWhatToBuild::end;
 				*out_bCallMeAgain = true;
 				return true;
@@ -388,24 +424,148 @@ bool Builder_model3d::Syntax1::priv_build_skeleton (DBContext &ctx, bool doCreat
 }
 
 //************************************
+bool Builder_model3d::Syntax1::priv_build_texture (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out__texture_result)
+{
+	assert (buildCtx.bAModelWasImported);
+	assert (buildCtx.whatToBuild == eWhatToBuild::texture);
+	assert (buildCtx.iToBuild < buildCtx.imported.num_textures);
+
+	const u32 image_index = buildCtx.imported.texture_list[buildCtx.iToBuild].image_index;
+	const Importer_glb::Result::sImage *img = &buildCtx.imported.image_list[image_index];
+
+	char texture_rtName[256];
+	sprintf_s (texture_rtName, sizeof(texture_rtName), "%s.%s", glb_rtname, img->name);
+	listof_texture_rtName.append (texture_rtName);
+
+	//Creo una stringa che simula la ini-file di una texture
+	gos::UTF8String def(gos::getScrapAllocator(), 1024);
+	def << "@tex2D: " << texture_rtName << "\n"
+		<< "{\n";
+
+	if (0 == img->size_in_glb_file)
+	{
+		def << "src: " << img->name << "\n";
+	}
+	else
+	{
+		def << "src: " << params.import_name << ":" << img->offset_in_glb_file <<":" << img->size_in_glb_file << "\n";
+	}
+	
+	def << "dstFmt: U8_RGBA\n"
+		<< "}\n\n";
+
+	//creo e parso l'inifile derivante dalla stringa
+	gos::IniFile temp_iniFile;
+	temp_iniFile.setup (gos::getScrapAllocator());
+	temp_iniFile.parseFromMemory (def.getBuffer(), def.lengthInByte());
+	const gos::IniFileSection *temp_section = temp_iniFile.getSubsectionByIndex(0);
+	assert (NULL != temp_section);
+
+
+	//buildo
+	asset2::BuilderInterface *builder = builderList->findBuilderByClassName ("tex2D");
+	assert (NULL != builder);
+	bool bBuildSuccess = false;
+	builder->setLogger(logger);
+	if (builder->build_begin(ctx, in__listof_UID_of_known_ini_file, in__absFilename, uid_of_iniFile, temp_section))
+	{
+		
+		bool bContinue = true;
+		while(bContinue)
+		{
+			bBuildSuccess = builder->build_exe (ctx, doCreateAnAssetFile, &bContinue, out__texture_result);
+			if (!bBuildSuccess)
+				break;
+		}
+		builder->build_end();			
+	}
+	if (!bBuildSuccess)
+		return false;
+
+
+
+	//aggiungo le dipendenze di questa texture dalla risorsa model_glb
+	//NB: questa cosa l'ha gia' fatta il builder tex2D, non c'e' bisogno di rifarla
+	//if (!dependency_add (ctx, out__texture_result->assetUID, params.resource_file_glb.resourceUID)) return false;
+
+	listof_texture_assetUID.append (out__texture_result->assetUID);
+
+	//il model3d che sto costruendo, dipende da questa texture
+	if (!dependency_add (ctx, model3d_assetUID, out__texture_result->assetUID))						return false;
+	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out__texture_result->signatureUID))	return false;
+
+	return true;
+}
+
+
+//************************************
 bool Builder_model3d::Syntax1::priv_build_material (DBContext &ctx, bool doCreateAnAssetFile, sBuildResult *out__material_result)
 {
 	assert (buildCtx.bAModelWasImported);
 	assert (buildCtx.whatToBuild == eWhatToBuild::materials);
 	assert (buildCtx.iToBuild < buildCtx.imported.num_material);
 
-
-    //All'uscita da questa fn:
-    //  out__material_result->assetUID				contiene l'assetUID di questo asset, gia' inserito nel DB
-    //  out__material_result->signatureUID			contiene la signatureUID a cui questo assetUID punta
-    //  out__material_result->result				vale <eBuildResult::just_built> se e' necessario creare fisicamente l'asset, altrimenti vale <eBuildResult::was_already_built>
-	params.subresource_type = eAssetType::materialPBR;
-	params.subresource_index = buildCtx.iToBuild;
-
 	char material_rtName[256];
 	sprintf_s (material_rtName, sizeof(material_rtName), "%s.%s", glb_rtname, buildCtx.imported.materialNameList[buildCtx.iToBuild]);
-	if (!prot_setupAsset_ex (ctx, params.subresource_type, &params, sizeof(Params), material_rtName, uid_of_iniFile, sec->getLineStarted(), out__material_result))
+
+	//Creo una stringa che simula la ini-file di un normale materialPBR
+	const Importer_glb::Result::sMaterial *mat = &buildCtx.imported.material_list[buildCtx.iToBuild];
+	gos::UTF8String def(gos::getScrapAllocator(), 1024);
+	def << "@materialPBR: " << material_rtName << "\n"
+		<< "{\n"
+			<< "diffuse_col_RGBA_HDR: " << mat->diffuse_col_RGBA_HDR[0] << ", " << mat->diffuse_col_RGBA_HDR[1] << ", " << mat->diffuse_col_RGBA_HDR[2] << ", " << mat->diffuse_col_RGBA_HDR[3] << "\n"
+			<< "metallic_factor: " << mat->metallic_factor << "\n";
+
+	{
+		u32 tex_index = mat->diffuse_texture_index;
+		if (u32MAX != tex_index)
+		{
+			if (!listof_texture_assetUID(tex_index).isInvalid())
+			{
+				def << "diffuse_texture: " <<  listof_texture_rtName(tex_index) << "\n";
+			}
+		}
+
+		tex_index = mat->normal_texture_index;
+		if (u32MAX != tex_index)
+		{
+			if (!listof_texture_assetUID(tex_index).isInvalid())
+			{
+				def << "normal_texture: " <<  listof_texture_rtName(tex_index) << "\n";
+			}
+		}
+	}
+
+	def << "}\n\n";
+
+	//creo e parso l'inifile derivante dalla stringa
+	gos::IniFile temp_iniFile;
+	temp_iniFile.setup (gos::getScrapAllocator());
+	temp_iniFile.parseFromMemory (def.getBuffer(), def.lengthInByte());
+	const gos::IniFileSection *temp_section = temp_iniFile.getSubsectionByIndex(0);
+	assert (NULL != temp_section);
+
+
+	//buildo
+	asset2::BuilderInterface *builder = builderList->findBuilderByClassName ("materialPBR");
+	assert (NULL != builder);
+	bool bBuildSuccess = false;
+	builder->setLogger(logger);
+	if (builder->build_begin(ctx, in__listof_UID_of_known_ini_file, in__absFilename, uid_of_iniFile, temp_section))
+	{
+		bool bContinue = true;
+		while(bContinue)
+		{
+			bBuildSuccess = builder->build_exe (ctx, doCreateAnAssetFile, &bContinue, out__material_result);
+			if (!bBuildSuccess)
+				break;
+		}
+		builder->build_end();			
+	}
+	if (!bBuildSuccess)
 		return false;
+
+
 
 	//aggiungo le dipendenze di questo Material dalla risorsa model_glb
 	if (!dependency_add (ctx, out__material_result->assetUID, params.resource_file_glb.resourceUID)) return false;
@@ -416,19 +576,8 @@ bool Builder_model3d::Syntax1::priv_build_material (DBContext &ctx, bool doCreat
 	if (!dependency_add (ctx, model3d_assetUID, out__material_result->assetUID))						return false;
 	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out__material_result->signatureUID))	return false;
 
-	if (doCreateAnAssetFile && eBuildResult::just_built == out__material_result->result)
-	{
-		char filenameDST[1024];
-		signature_manufacture_fullFilename (ctx, out__material_result->signatureUID, filenameDST, sizeof(filenameDST));
-		
-		const u32 i = buildCtx.iToBuild;
-		buildCtx.imported.material_list[i].save (filenameDST);
-	}
-
 	return true;
 }
-
-
 
 //************************************
 void Builder_model3d::Syntax1::priv_print_report(const char *filenameDST) const
@@ -478,15 +627,28 @@ void Builder_model3d::Syntax1::priv_print_report(const char *filenameDST) const
 
 	out << "\n\n=============================== MATERIALS =====================================\n";
 	{
-		out << "#   | name | diffuse color HDR\n"
+		out << "#   | name | diffuse color HDR | diffuse-tex | normal-tex\n"
 			<< "---------------------------------------------------------------------------\n";
 		for (u32 i=0; i<buildCtx.imported.num_material; i++)
 		{
-			const MaterialPBR *mat = &buildCtx.imported.material_list[i];
+			const Importer_glb::Result::sMaterial *mat = &buildCtx.imported.material_list[i];
 			out << STRFMT("%03d", i)
 				<< " | " << buildCtx.imported.materialNameList[i]
-				<< " | " << STRFMT("%.02f, %.02f, %.02f, %.02f", mat->diffuse_col_RGBA_HDR[0], mat->diffuse_col_RGBA_HDR[1], mat->diffuse_col_RGBA_HDR[2], mat->diffuse_col_RGBA_HDR[3])
-				<< "\n";
+				<< " | " << STRFMT("%.02f, %.02f, %.02f, %.02f", mat->diffuse_col_RGBA_HDR[0], mat->diffuse_col_RGBA_HDR[1], mat->diffuse_col_RGBA_HDR[2], mat->diffuse_col_RGBA_HDR[3]);
+		
+			u32 tex_index = mat->diffuse_texture_index;
+			if (u32MAX == tex_index)
+				out << " | none";
+			else
+				out << " | " << listof_texture_rtName(tex_index);
+				
+			tex_index = mat->normal_texture_index;
+			if (u32MAX == tex_index)
+				out << " | none";
+			else
+				out << " | " << listof_texture_rtName(tex_index);
+				
+			out << "\n";
 		}
 	}	
 

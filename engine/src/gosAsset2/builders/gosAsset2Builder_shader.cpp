@@ -8,7 +8,7 @@ using namespace gos;
 using namespace gos::asset2;
 
 //************************************
-bool Builder_shader::priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename)
+bool Builder_shader::priv_extractParams (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename)
 {
     char s[1024];
     memset (&params, 0, sizeof(Params));
@@ -91,7 +91,7 @@ bool Builder_shader::priv_extractParams (DBContext &ctx, const UniqueUIDList &li
 
 
 //************************************
-bool Builder_shader::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
+bool Builder_shader::build_begin (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
 {
     assert (ctx.isValid());
     assert (NULL != secIN);

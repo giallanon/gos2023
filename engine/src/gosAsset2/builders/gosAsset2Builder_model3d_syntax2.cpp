@@ -63,7 +63,7 @@ void Builder_model3d::Syntax2::priv_reset_parsed_params()
 }
 
 //************************************
-bool Builder_model3d::Syntax2::priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename)
+bool Builder_model3d::Syntax2::priv_extractParams (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename)
 {
     //setto i default
     priv_reset_parsed_params();
@@ -311,7 +311,7 @@ bool Builder_model3d::Syntax2::priv_extractParams (DBContext &ctx, const UniqueU
 }
 
 //************************************
-bool Builder_model3d::Syntax2::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
+bool Builder_model3d::Syntax2::build_begin (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
 {
     assert (ctx.isValid());
 	assert (NULL != secIN);
@@ -342,7 +342,7 @@ bool Builder_model3d::Syntax2::build_begin (DBContext &ctx, const UniqueUIDList 
 
 		//il rtname dell'assetUID utilizzato dalla [shape] esiste nel DB.
 		//Vediamo se e' stato definito in un iniFile che io conosco
-		if (!listof_UID_of_known_ini_file.exists(uid_of_iniFile))
+		if (!listof_UID_of_known_ini_file->exists(uid_of_iniFile))
 		{
 			logger->log (eTextColor::red, "shape %d need '%s' which is not a know asset for this iniFile\n", i, shape_info->src_shape_name);
 			return false;
@@ -367,7 +367,7 @@ bool Builder_model3d::Syntax2::build_begin (DBContext &ctx, const UniqueUIDList 
 
 		//il rtname del asset utilizzato esiste nel DB.
 		//Vediamo se e' stato definito in un iniFile che io conosco
-		if (!listof_UID_of_known_ini_file.exists(uid_of_iniFile))
+		if (!listof_UID_of_known_ini_file->exists(uid_of_iniFile))
 		{
 			logger->log (eTextColor::red, "skeleton '%s' is not a know asset for this iniFile\n", parsed_params.skeleton_name);
 			return false;

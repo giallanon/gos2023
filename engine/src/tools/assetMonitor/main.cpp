@@ -52,7 +52,7 @@ void test (gos::GPU *gpu, const char *baseFolder)
     gos::asset2::Builder b(gpu);
 
     bool ret;
-	//ret = b.rebuild_all(baseFolder, true); b.save_dependencies_report (baseFolder); b.save_asset_manifest (baseFolder); return;
+	ret = b.rebuild_all(baseFolder, true); b.save_dependencies_report (baseFolder); b.save_asset_manifest (baseFolder); return;
     
     ret = b.build(baseFolder, true); 
     if (ret)
@@ -103,12 +103,14 @@ int main (int argc, char *argv[])
 #ifdef _DEBUG
 	//test (&gpu, "@w/test_assets_1");
 	//test (&gpu, "@w/test_assets_2");
+	//test (&gpu, "@w/test_assets_3");
+	test (&gpu, "@w/test_assets_4");
 	//test (&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/land20260814/writable/assets/");
-#ifdef GOS_PLATFORM__WINDOWS
-	test_monitor(&gpu, "C:/rhea/rheaSRC/gos2023/engine/bin/testRes2/writable/assets");
-#else
-	test_monitor(&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/testRes2/writable/assets");
-#endif
+	#ifdef GOS_PLATFORM__WINDOWS
+		test_monitor(&gpu, "C:/rhea/rheaSRC/gos2023/engine/bin/testRes2/writable/assets");
+	#else
+		//test_monitor(&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/testRes2/writable/assets");
+	#endif
 	
 #else
 	//for (u8 i=0; i<argc; i++)	printf ("arg %d: %s\n", i, argv[i]);

@@ -23,7 +23,14 @@ Builder_model3d::~Builder_model3d()
 }
 
 //************************************
-bool Builder_model3d::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
+void Builder_model3d::initOnce (gos::GPU *gpuIN, BuilderList *builderListIN)
+{
+	builder1.initOnce (gpuIN, builderListIN);
+	builder2.initOnce (gpuIN, builderListIN);
+}
+
+//************************************
+bool Builder_model3d::build_begin (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
 {
 	//per capire se siamo nel caso di sintassi 1 o 2, cerco il parametro "import"
 	char s[1024];

@@ -21,47 +21,21 @@ Builder::Builder(gos::GPU *gpuIN)
 	build_result_list.setup (localAllocator, 256);
 	list_of_touched_assets.setup (localAllocator, 256);
 
-	memset(builderList, 0, sizeof(builderList));
-	add_builder<Builder_vtxShader>();
-	add_builder<Builder_pxlShader>();
-	add_builder<Builder_pipe>();
-	add_builder<Builder_tex2D>();
-	add_builder<Builder_materialPBR>();
-	//add_builder<Builder_glb>();
-	add_builder<Builder_model3d>();
+	builderList.setup (localAllocator, gpu);
+	builderList.add_builder<Builder_vtxShader>();
+	builderList.add_builder<Builder_pxlShader>();
+	builderList.add_builder<Builder_pipe>();
+	builderList.add_builder<Builder_tex2D>();
+	builderList.add_builder<Builder_materialPBR>();
+	builderList.add_builder<Builder_model3d>();
 }
 
 //******************************
 Builder::~Builder()
 {
-	for (u32 i = 0; i < NUM_MAX_BUILDERS; i++)
-	{
-		if (NULL != builderList[i])
-		{
-			builderList[i]->deinitOnce();
-			GOSDELETE(localAllocator, builderList[i]);
-		}
-	}
+	builderList.unsetup ();
 }
 
-//***********************************
-bool Builder::priv_addBuilder(BuilderInterface *builder)
-{
-	assert(NULL != builder);
-
-	const u32 index = static_cast<u8>(builder->getSignatureType());
-	assert(index < NUM_MAX_BUILDERS);
-
-	if (NULL == builderList[index])
-	{
-		builderList[index] = builder;
-		builder->initOnce(gpu);
-		return true;
-	}
-
-	logger->err("Builder::priv_addBuilder() => a builder for res %s already exists\n", asset2::enumToString(builder->getSignatureType()));
-	return false;
-}
 
 //***********************************
 const char *Builder::enumToString(eBuildStatus s) const
@@ -584,7 +558,7 @@ bool Builder::priv_build (DBContext &ctx, DBContext *ctx_backup, bool bDoCreateA
 					while (rst.fetchRow())
 					{
 						UID uid; uid._uid = rst.getValAsU64(0);
-						logger->log ("asset [%-12s] uid:%016" PRIX64 ", rtname=%s\n", asset2::enumToString (uid.getAssetType()), uid._uid, rst.getVal(1));
+						logger->log ("asset [%-12s] uid:%016" PRIX64 ", rtname:%s\n", asset2::enumToString (uid.getAssetType()), uid._uid, rst.getVal(1));
 						listof_really_updated_asset.insertIfNotExists (uid);
 					}
 					logger->dec_indent();	
@@ -612,7 +586,7 @@ bool Builder::priv_build (DBContext &ctx, DBContext *ctx_backup, bool bDoCreateA
 				while (rst.fetchRow())
 				{
 					UID uid; uid._uid = rst.getValAsU64(0);
-					logger->log ("asset [%-12s] uid:%016" PRIX64 ", rtname=%s\n", asset2::enumToString (uid.getAssetType()), uid._uid, rst.getVal(1));
+					logger->log ("asset [%-12s] uid:%016" PRIX64 ", rtname:%s\n", asset2::enumToString (uid.getAssetType()), uid._uid, rst.getVal(1));
 					listof_really_updated_asset.insertIfNotExists (uid);
 				}
 				logger->dec_indent();	
@@ -701,7 +675,7 @@ bool Builder::priv_build (DBContext &ctx, DBContext *ctx_backup, bool bDoCreateA
 						UID signatureUID;
 						signatureUID._uid = rst.getValAsU64(1);
 						
-						logger->log ("asset [%-12s] uid:%016" PRIX64 ", sig:%016" PRIX64 ",rtname=%s\n", asset2::enumToString (assetUID.getAssetType()), assetUID._uid, signatureUID._uid, rtname);
+						logger->log ("asset [%-12s] uid:%016" PRIX64 ", sig:%016" PRIX64 ", rtname:%s\n", asset2::enumToString (assetUID.getAssetType()), assetUID._uid, signatureUID._uid, rtname);
 						if (bGenerateListOfUpdatedUID)
 							build_result_list.insertIfNotExists(assetUID);
 					}
@@ -905,20 +879,6 @@ bool Builder::priv_gosassetd_scan_folder_parse(DBContext &ctx, const char *absFi
 }
 
 //******************************
-BuilderInterface *Builder::priv_findBuilderByClassName(const char *assetClassName) const
-{
-	for (u32 i = 0; i < NUM_MAX_BUILDERS; i++)
-	{
-		if (NULL == builderList[i])
-			continue;
-
-		if (0 == strcmp(asset2::enumToString(builderList[i]->getSignatureType()), assetClassName))
-			return builderList[i];
-	}
-	return NULL;
-}
-
-//******************************
 void Builder::priv_fromDirectiveNameToAssetClassName(const char *directiveName, char *out_asseetClassName, u32 sizeof_out) const
 {
 	assert(directiveName[0] == '@');
@@ -1012,7 +972,7 @@ bool Builder::priv_gosassetd_build_parseIncludeSection(DBContext &ctx, bool bDoC
 	}
 
 	char absIncludePath[512];
-	if (!makeABSPathFromFilename(ctx, logger, in_out__listof_UID_of_known_ini_file, absFilename, s, absIncludePath, sizeof(absIncludePath)))
+	if (!makeABSPathFromFilename(ctx, logger, &in_out__listof_UID_of_known_ini_file, absFilename, s, absIncludePath, sizeof(absIncludePath)))
 		return false;
 
 	if (!fs::fileExists(absIncludePath))
@@ -1139,7 +1099,7 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFi
 			continue;
 
 		// altrimenti verifico che ci sia un builder adeguato
-		BuilderInterface *builder = priv_findBuilderByClassName(assetClass);
+		BuilderInterface *builder = builderList.findBuilderByClassName(assetClass);
 		if (NULL == builder)
 		{
 			logger->err("line %d => can't find a builder for asset of type '%s'\n", sub->getLineStarted(), assetClass);
@@ -1193,7 +1153,7 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFi
 			//invoco il builder per creare fisicamente gli asset
 			bool bBuildSuccess = false;
 			builder->setLogger(logger);
-			if (builder->build_begin(ctx, listof_UID_of_known_ini_file, absFilename, uid_of_iniFile, sub))
+			if (builder->build_begin(ctx, &listof_UID_of_known_ini_file, absFilename, uid_of_iniFile, sub))
 			{
 				bool bContinue = true;
 				while(bContinue)
@@ -1207,7 +1167,13 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFi
 					eTextColor color = eTextColor::green;
 					if (eBuildResult::was_already_built == result.result)
 						color = eTextColor::darkBlue;
-					logger->log(color, "[%-17s] uid: %016" PRIX64 " [sig: %016" PRIX64 "]\n", asset2::enumToString(result.result), result.assetUID._uid, result.signatureUID._uid);
+					logger->log(color, "[%-17s] asset [%-12s] uid:%016" PRIX64 ", sig:%016" PRIX64 "\n", 
+						asset2::enumToString(result.result), 
+						asset2::enumToString(result.assetUID.getAssetType()),
+						result.assetUID._uid,
+						result.signatureUID._uid);
+
+
 
 					//mi salvo il fatto che questo asset in qualche modo e' stato "considerato"
 					list_of_touched_assets.insertIfNotExists (result.assetUID, result.signatureUID);
@@ -1250,7 +1216,7 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFi
 }
 
 //******************************************
-bool Builder::makeABSPathFromFilename(DBContext &ctx, gos::Logger *logger, const UniqueUIDList &listof_UID_of_known_ini_file, const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out)
+bool Builder::makeABSPathFromFilename(DBContext &ctx, gos::Logger *logger, const UniqueUIDList *listof_UID_of_known_ini_file, const char *origin_absFilename, const char *rel_or_abs_path, char *out, u32 sizeof_out)
 {
 	assert(NULL != logger);
 	assert(ctx.isValid());
@@ -1287,7 +1253,7 @@ bool Builder::makeABSPathFromFilename(DBContext &ctx, gos::Logger *logger, const
 		}
 
 		// ho trovato l'alias ma l'UID dell'ini file in cui l'alias e' stato definito deve essere uno degli UID che io conosco (ovvero che ho incluso)
-		if (!listof_UID_of_known_ini_file.exists(uid_of_inifile_where_alias_is_defined))
+		if (!listof_UID_of_known_ini_file->exists(uid_of_inifile_where_alias_is_defined))
 		{
 			logger->log(eTextColor::red, "alias [%s] is not defined in this module\n", alias);
 			return false;

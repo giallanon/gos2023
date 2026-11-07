@@ -7,10 +7,10 @@
 
 @materialPBR: runtimeName							=> il runtimeName e' opzionale come sempre
 {
-    (optional)  diffuse_col_RGBA_HDR: r,g,b,a
-	(optional)	diffuse_texture: texture2d_asset_nome
-	(optional)	normal_texture: texture2d_asset_nome
-	(optional)  metallic_factor: value_0_1
+    (optional)  diffuse_col_RGBA_HDR: r,g,b,a			=> default 1,1,1,1
+	(optional)	diffuse_texture: texture2d_asset_nome	=> default texture_bianca
+	(optional)	normal_texture: texture2d_asset_nome	=> default texture_bianca
+	(optional)  metallic_factor: value_0_1				=> default 0
 	
 }
 */
@@ -29,7 +29,7 @@ namespace gos
                     Builder_materialPBR ();
                     ~Builder_materialPBR()                                            { }
 
-			bool 	build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec);
+			bool 	build_begin (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFile, const gos::IniFileSection *sec);
 			bool 	build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *out_bCallMeAgain, sBuildResult *out_result);
 			void 	build_end()		{ }
 
@@ -41,7 +41,7 @@ namespace gos
             };
 
         private:
-            bool    priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename);
+            bool    priv_extractParams (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename);
 			
         private:
 			Params 				params;

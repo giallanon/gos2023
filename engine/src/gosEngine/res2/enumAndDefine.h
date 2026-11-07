@@ -24,6 +24,7 @@ namespace gos
 			unloading		= 4,
 			deleting		= 5,
 			deleted			= 6,
+			hot_reloading	= 7,
 			error 			= 0xff		//errore fatale. Esiste nell'engine ma probabilmente il loader non e' riuscito a caricarla, questo asset e' spacciato per sempre
 		};
 

@@ -15,7 +15,7 @@ Builder_tex2D::Builder_tex2D () : BuilderInterface (eAssetType::tex2D)
 }
 
 //************************************
-void Builder_tex2D::initOnce (gos::GPU *gpuIN)
+void Builder_tex2D::initOnce (gos::GPU *gpuIN, BuilderList *builderList)
 { 
     gpu = gpuIN; 
 	stageHelper.setup (gpu, 8192*8192);
@@ -121,11 +121,15 @@ void Builder_tex2D::deinitOnce()
 }
 
 //************************************
-bool Builder_tex2D::priv_extractParams (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename)
+bool Builder_tex2D::priv_extractParams (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename)
 {
     assert (NULL != sec);
     
     //setto i default
+	memset (imagesrc_filename, 0, sizeof(imagesrc_filename));
+	imagesrc_offset_in_file = 0;
+	imagesrc_size_in_file = 0;
+
     memset (&params, 0, sizeof(Params));
     params.srcIs_sRGB = 1;
     params.dstNumMipMap = u16MAX;
@@ -139,9 +143,29 @@ bool Builder_tex2D::priv_extractParams (DBContext &ctx, const UniqueUIDList &lis
         logger->log(eTextColor::red, "line %d => can't find param <src>\n", sec->getLineStarted());
         return false;
     }
-    if (!asset2::Builder::makeABSPathFromFilename (ctx, logger, listof_UID_of_known_ini_file, absFilename, s, params.src, sizeof(params.src)))
-        return false;
 
+	//se <src> contiene ":", allora e' il formato <filename>:offset:size
+	gos::string::utf8::StringListParser parser;
+	parser.toStart (s, ':');
+	{
+		char s1[1024];
+		char s2[1024];
+		parser.next (s1, sizeof(s1)); //filename
+		if (parser.next (s2, sizeof(s2)))
+		{
+			imagesrc_offset_in_file = string::utf8::toU32(s2);
+			if (parser.next (s2, sizeof(s2)))
+				imagesrc_size_in_file = string::utf8::toU32(s2);
+			else
+			{
+				logger->log(eTextColor::red, "line %d => invalid value for param <src>: expected format filename:offset:size\n");
+				return false;
+			}
+		}
+
+    	if (!asset2::Builder::makeABSPathFromFilename (ctx, logger, listof_UID_of_known_ini_file, absFilename, s1, imagesrc_filename, sizeof(imagesrc_filename)))
+        	return false;
+	}
 
     //param:srcColorSpace      e' opzionale
     if (sec->get("srcColorSpace", s, sizeof(s)))
@@ -200,7 +224,7 @@ bool Builder_tex2D::priv_extractParams (DBContext &ctx, const UniqueUIDList &lis
 }
 
 //************************************
-bool Builder_tex2D::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
+bool Builder_tex2D::build_begin (DBContext &ctx, const UniqueUIDList *listof_UID_of_known_ini_file, const char *absFilename, UID uid_of_iniFileIN, const gos::IniFileSection *secIN)
 {
     assert (ctx.isValid());
     assert (NULL != secIN);
@@ -222,13 +246,39 @@ bool Builder_tex2D::build_begin (DBContext &ctx, const UniqueUIDList &listof_UID
         return false;
     }
 
-    //il parametro src indica una risorsa eResType::image da cui io dipendo
-    //La risorsa deve esistere nel DB
-    if (!prot_needResource (ctx, listof_UID_of_known_ini_file, eResType::image, params.src, &params.resource_image))
-    {
-        logger->log (eTextColor::red, "resource [%s] '%s' not found in DB\n", asset2::enumToString(eResType::image), params.src);
-        return false;
-    }     
+	//il parametro src indica una risorsa eResType::image da cui io dipendo
+	eResType res_type = eResType::image;
+	if (0 != imagesrc_size_in_file)
+	{
+		//altrimenti vuol dire che l'immagine e' all'interno di un file, non sono certo che sia una risorsa di tipo immagine, ma
+		//certamente deve essere una risorsa
+		db::RST rst;
+		char s[1024];
+		
+		sprintf_s (s, sizeof(s), "SELECT type FROM " GOS_ASSET2__TABLE_RES " WHERE abspath='%s'", imagesrc_filename);
+		if (!db::query (ctx.db, s, &rst)) return false;
+		if (!rst.fetchRow())
+		{
+			logger->log (eTextColor::red, "resource '%s' not found in DB\n", imagesrc_filename);
+			return false;
+		}     
+		res_type = static_cast<eResType>(rst.getValAsU8(0));
+	}
+		
+	//La risorsa deve esistere nel DB
+	if (!prot_needResource (ctx, listof_UID_of_known_ini_file, res_type, imagesrc_filename, &resource_image))
+	{
+		logger->log (eTextColor::red, "resource [%s] '%s' not found in DB\n", asset2::enumToString(res_type), imagesrc_filename);
+		return false;
+	}     
+
+
+	//Nel "param", invece che avere il "src filename" della image, ci metto il CRC dell'immagine stessa.
+	//L'idea e' che 2 immagini con filename diverso ma contenuto uguale, generino lo stesso signatureUID in modo
+	//che di fatto creino lo stesso asset
+	if (!priv_load_and_process_src_image())
+		return false;
+	params.calculated_image_crc32 = gos::utils::crc32 (srcImage.getBuffer(), srcImage.getSize());
 
     return true;
 }
@@ -242,7 +292,7 @@ bool Builder_tex2D::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *o
     out_result->reset();
 
 	//questo file gosasset_d dipende dalla risorsa params.uid__resource_image)
-    if (!asset2::dependency_add_if_not_exists (ctx, uid_of_iniFile, params.resource_image.resourceUID))
+    if (!asset2::dependency_add_if_not_exists (ctx, uid_of_iniFile, resource_image.resourceUID))
 		return false;  
     
     
@@ -255,7 +305,7 @@ bool Builder_tex2D::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *o
 
 
     //aggiungo le dipendenze di assetUID dalla risorsa IMMAGINE
-	if (!prot_add_asset_to_resouce_dependency (ctx, out_result, params.resource_image.resourceUID)) return false;
+	if (!prot_add_asset_to_resouce_dependency (ctx, out_result, resource_image.resourceUID)) return false;
 
 
     
@@ -269,6 +319,63 @@ bool Builder_tex2D::build_exe (DBContext &ctx, bool doCreateAnAssetFile, bool *o
 
 	return true;
 }
+
+//************************************
+void Builder_tex2D::build_end()
+{
+	if (NULL != srcImage.getBuffer())
+		srcImage.free (gos::getSysHeapAllocator());
+}
+
+//************************************
+bool Builder_tex2D::priv_load_and_process_src_image()
+{
+	assert (NULL == srcImage.getBuffer());
+
+
+	if (0 == imagesrc_size_in_file)
+	{
+		if (!srcImage.loadFromFile (gos::getSysHeapAllocator(), imagesrc_filename))
+		{
+			logger->log (eTextColor::red, "image type not supported: '%s'\n", imagesrc_filename);
+			return false;
+		}
+	}
+	else
+	{
+		gos::File f;
+		if (!fs::fileOpenForR(&f, imagesrc_filename))
+		{
+			logger->log (eTextColor::red, "can't open file %s\n", imagesrc_filename);
+			return false;
+		}
+
+		fs::fileSeek (f, imagesrc_offset_in_file, eSeek::start);
+		u8 *buffer = GOSALLOC_SCRAPT(u8*, imagesrc_size_in_file);
+		fs::fileRead (f, buffer, imagesrc_size_in_file);
+		fs::fileClose(f);
+
+		const bool result = srcImage.loadFromFileInMemory (gos::getSysHeapAllocator(), buffer, imagesrc_size_in_file);
+		GOSFREE_SCRAP(buffer);
+
+		if (!result)
+		{
+			logger->log (eTextColor::red, "image type not supported: '%s:%d:%d'\n", imagesrc_filename, imagesrc_offset_in_file, imagesrc_size_in_file);
+			return false;
+		}		
+	}
+
+	//se necessario converto sRGB to RGB
+	if (params.srcIs_sRGB)
+		srcImage.convert_sRGB_to_RGB();
+
+
+	//eventuali operazioni di post processing
+	if (!priv_apply_post_op(&srcImage))
+		return false;
+
+	return true;
+}	
 
 //************************************
 bool Builder_tex2D::priv_apply_post_op(image::BufferRGBA *img)
@@ -318,32 +425,13 @@ bool Builder_tex2D::priv_do_create_assetFile (DBContext &ctx, UID signatureUID, 
 
 
 
-    //carico l'immagine e creo la texture in GPU
+    //creo la texture in GPU. L'immagine l'ho gia' caricata e processata in priv_load_and_process_src_image()
+	assert (NULL != srcImage.getBuffer());
     GPUTextureHandle texHandle;
-    u16 srcImg_dimx = 0;
-    u16 srcImg_dimy = 0;
+    u16 srcImg_dimx = srcImage.getW();
+    u16 srcImg_dimy = srcImage.getH();
     {
-        image::BufferRGBA srcImage;
-        if (!srcImage.loadFromFile (gos::getSysHeapAllocator(), params.src))
-        {
-            logger->log (eTextColor::red, "image type not supported: '%s'\n", params.src);
-            return false;
-        }
-        srcImg_dimx = srcImage.getW();
-        srcImg_dimy = srcImage.getH();
-
-        //se necessario converto sRGB to RGB
-        if (params.srcIs_sRGB)
-            srcImage.convert_sRGB_to_RGB();
-
-
-        //eventuali operazioni di post processing
-        if (!priv_apply_post_op(&srcImage))
-            return false;
-
-
         result = gpu->texture_create2D (srcImage.getW(), srcImage.getH(), 1, eImageFormat::U8_RGBA, eMemAccessMode::onGPU, srcImage._bufferRGBA, &texHandle, stageHelper);
-        srcImage.free (gos::getSysHeapAllocator());
 
         if (!result)
         {

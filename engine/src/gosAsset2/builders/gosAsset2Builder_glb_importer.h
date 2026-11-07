@@ -41,39 +41,40 @@ namespace gos
 					char *mesh_name;
 				};
 
+				struct sImage
+				{
+					char	*name;
+					u32		size_in_glb_file;	//se == 0, vuol dire che <name> e' il filename dell'immagine
+												//se != 0, vuol dire che l'immagine e' contenuta all'interno del file glb a partire da <offset_in_glb_file>
+					u32		offset_in_glb_file;	//se <size_in_glb_file> != 0, questo e' l'offset all'interno del file glb a partire dal quale c'e' l'immagine
+				};
+
+				struct sTexture
+				{
+					u32	image_index;
+				};
+
+				struct sMaterial
+				{
+					f32	diffuse_col_RGBA_HDR[4];
+					f32	metallic_factor;
+					u32	diffuse_texture_index;
+					u32	normal_texture_index;
+
+					void reset()
+					{
+						diffuse_col_RGBA_HDR[0] = diffuse_col_RGBA_HDR[1] = diffuse_col_RGBA_HDR[2] = diffuse_col_RGBA_HDR[3] = 1.0f;
+						metallic_factor = 0;
+						diffuse_texture_index = normal_texture_index = u32MAX;
+					}
+				};
+
 
 			public:
 						Result()		{ reset(); }
 						~Result()		{ free(); }
-				void 	reset()			{ allocator=NULL; numShapes=0; shapeList=NULL; skeleton.reset(); shapeNameList=NULL; bSkeletonIsResolved=false; num_mesh=0; mesh_list=NULL; num_material=0; materialNameList=NULL; material_list=NULL; }
-				void 	free()			{ 
-					if (NULL == allocator) return;
-					if (shapeList)
-					{
-						for (u32 i = 0; i < numShapes; i++)
-						{
-							shape::shapeFree(allocator, &shapeList[i]);
-							GOSFREE(allocator, shapeNameList[i]);
-						}
-						for (u32 i = 0; i < num_material; i++)
-						{
-							GOSFREE(allocator, materialNameList[i]);
-						}
-						for (u32 i = 0; i < num_mesh; i++)
-						{
-							GOSFREE(allocator, mesh_list[i].mesh_name);
-						}
-
-						GOSFREE(allocator, shapeList);
-						GOSFREE(allocator, shapeNameList);
-						GOSFREE(allocator, materialNameList);
-						GOSFREE(allocator, material_list);
-						GOSFREE(allocator, mesh_list);
-						numShapes = num_mesh = num_material = 0;
-					}
-					gos::skeleton::free(skeleton);
-					reset();
-				}
+				void 	reset();
+				void 	free();
 
 				//============== utils ============
 				void	calc_AABB (geom::AABB3 *out) const;
@@ -91,13 +92,18 @@ namespace gos
 				gos::Skeleton			skeleton;
 
 				u32						num_material;
-				MaterialPBR				*material_list;
+				sMaterial				*material_list;
 				char					**materialNameList;
 
 				u32						num_mesh;
 				sMesh					*mesh_list;
 
+				u32						num_images;
+				sImage					*image_list;
 				
+				u32						num_textures;
+				sTexture				*texture_list;
+
 			private:
 				bool					priv_is_skeleton_resolved() const { return bSkeletonIsResolved; }
 				const gos::Bone*		priv_skeleton_clone_and_resolve (gos::Skeleton *out) const;
@@ -128,6 +134,7 @@ namespace gos
 			{
 				const u8 	*p;
 				u32			len;
+				u32			abs_offset_in_glb_file;
 			};
 
 			struct sAccessors
@@ -259,12 +266,15 @@ namespace gos
 				u32 					offsettInGlobalBuffer;
 				char					mesh_name[64];
 			};
-		
 
+			struct sTexture
+			{
+				u32	image_index;
+			};
 
 		private:
 			void 	priv_free();
-			bool 	priv_parseBufferView (const gos::IniFileSection *sec);
+			bool 	priv_parseBufferView (const gos::IniFileSection *sec, u32 start_of_bin_in_glb_file);
 			bool 	priv_parseAccessor (const gos::IniFileSection *sec);
 			bool 	priv_parseMesh (const gos::IniFileSection *sec, const VtxLayout &shape_desired_layout, gos::Allocator *shape_allocator);
 			void 	priv_parseMeshAttributes (const gos::IniFileSection *sec, AvailVtxChannel *out) const;
@@ -272,6 +282,8 @@ namespace gos
 			bool 	priv_parseScene (const gos::IniFileSection *sec, Bone *bone);
 			bool 	priv_parseMaterial (const gos::IniFileSection *sec);
 			void 	priv_resolveNodesHierarcy (Bone *me);
+			bool 	priv_parseImages (const gos::IniFileSection *sec);
+			bool 	priv_parseTextures (const gos::IniFileSection *sec);
 
 			void 	priv_resolveSkeleton (Bone *rootBone);
 			void 	priv_resolveSkeletonChildren (Bone *bone, const Bone *father);
@@ -290,17 +302,20 @@ namespace gos
 			const char 						*json;
 			const u8 						*bin;
 			u64 							timeStarted_msec;
+			u32								start_of_bin_in_file_glb;
 			gos::FastArray<sBufferView>		bufferViewList;
 			gos::FastArray<sAccessors>		accessorsList;
 			gos::FastArray<sNode>			nodesList;
 			gos::FastArray<sMeshInfo>		shapesInMesh;	//usato come array di appoggio per memorizzare l'elenco delle shape che stanno in ogni singola mesh
 			gos::FastArray<sMesh>			meshesList;
+			gos::FastArray<Result::sImage>	imageList;
+			gos::FastArray<sTexture>		textureList;
 
 			gos::FastArray<Shape> 			shapeList;
 			gos::Array<gos::UTF8String>		shapeNameList;
 
 			gos::Array<gos::UTF8String>		materialNameList;
-			gos::FastArray<MaterialPBR> 	materialList;
+			gos::FastArray<Result::sMaterial>	materialList;
 			Bone							rootBone;
 			bool							bSkeletonIsResolved;
 		};

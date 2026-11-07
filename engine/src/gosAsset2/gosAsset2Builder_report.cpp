@@ -340,7 +340,7 @@ void Builder::get_dependencies_report (gos::UTF8String &out, const char *dbName,
     //virtual asset list
     {
         out << "\n\n"
-            << "========================== VIRTUAL ASSETS LIST ==========================\n\n"
+            << "========================== ASSETS LIST ==========================\n\n"
             << "Asset UID        | Type         | Declared in                | runtimeName-list\n";
 
         db::query (ctx.db, "SELECT UID FROM " GOS_ASSET2__TABLE_ASSET_LIST " ORDER BY UID", &rstAssetList);
