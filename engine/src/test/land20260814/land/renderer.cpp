@@ -61,13 +61,13 @@ bool Renderer::on__attach (const gos::engine::RenderPipe::Context &ctx, u8 rende
 	}
 
 	//mi serve che la pipe sia loaded
-    const res::Pipeline *res_pipeline;
+    const gos::PipelineData *res_pipeline;
     GOS_DEBUG_ASSERT( eng->get (handle_pipeline, &res_pipeline, 5000) );
     {
 		//creo i descriptor set
 		
 		//descriptor set 2        
-		if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->pipeHandle, 2, &handle_descrSet2))
+		if (!gpu->descrSetInstance_create (handle_descrPool, res_pipeline->pipe_handle, 2, &handle_descrSet2))
 		{
 			gos::logger::err ("Renderer::setup() => can't create an instance of descriptorSet_2\n");
 			return false;
@@ -345,13 +345,13 @@ void Renderer::on__render (const gos::engine::RenderPipe::Context &ctx, gos::gpu
 	if (0 == num_instance_to_render)
 		return;
 
-	const res::Pipeline *res_pipeline;
+	const gos::PipelineData *res_pipeline;
     if (!ctx.engine->get (handle_pipeline, &res_pipeline))
     {
         return;
     }
 
-	const res::Texture2d *res_texture_lod;
+	const gos::TextureData *res_texture_lod;
     if (!ctx.engine->get (handle_texture_lod, &res_texture_lod))
     {
         return;
@@ -359,7 +359,7 @@ void Renderer::on__render (const gos::engine::RenderPipe::Context &ctx, gos::gpu
 
 
 	//command
-    rctx.bindPipeline (res_pipeline->pipeHandle)
+    rctx.bindPipeline (res_pipeline->pipe_handle)
         .bindDescriptorSet (ctx.handle_descrSet0, 0)
         .bindDescriptorSet (ctx.handle_descrSet1, 1)
         .bindDescriptorSet (handle_descrSet2, 2)

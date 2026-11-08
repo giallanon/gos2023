@@ -169,7 +169,7 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/gosEngine)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testKernel)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testVulkan)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/tools/assetMonitor)
-#add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/land20260814)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/land20260814)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testRes2)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/test/testComputeShader)
 

@@ -39,7 +39,7 @@ private:
 
 	gos::geom::Pos3			pos;
 	gos::Ctrl3rdPersMove	ctrl_entity;
-	gos::ENGModel3dInst		handle_mi_cubo1x1x1;
+	gos::ModelInstH			handle_mi_cubo1x1x1;
 	gos::geom::Camera3		*query_cam;
 };
 

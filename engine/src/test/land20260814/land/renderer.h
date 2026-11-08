@@ -66,12 +66,12 @@ namespace land
 		gos::Allocator			*localAllocator;
 		gos::Engine				*eng;
 		gos::GPU				*gpu;
-		gos::ENGPipeline 		handle_pipeline;
+		gos::PipelineH 			handle_pipeline;
 		GPUDescrSetInstanceHandle  handle_descrSet2;
 		GPUDescrPoolHandle    	handle_descrPool;
 		GPUVtxBufferHandle		handle_vb;
 		GPUIdxBufferHandle		handle_ib;
-		gos::ENGTexture2		handle_texture_lod;
+		gos::TextureH			handle_texture_lod;
 		u32						num_tot_idx;
 		u32						num_vtx_per_lato;
 
