@@ -246,7 +246,6 @@ bool BuilderInterface::prot_add_asset_to_asset_dependency (DBContext &ctx, sBuil
 		if (!dependency_add (ctx, padre->assetUID, uid_asset_figlio)) return false;
 
 		if (!asset_get_info (ctx, uid_asset_figlio, NULL, &signature_figlio))   return false;
-		if (!signature_add_dependencyRT (ctx, padre->signatureUID, signature_figlio)) return false;
 	}
 
 	if (NULL != out__uid_signature_figlio)

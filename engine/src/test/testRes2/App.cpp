@@ -40,8 +40,8 @@ void App::on__setup ()
 
 	//test1();
 	//test2();
-	test3();
-	//test4();
+	//test3();
+	test4();
 }
 
 //***************************************
@@ -49,8 +49,8 @@ void App::on__update (u64 timenow_msec)
 {
 	//test1_on_update (timenow_msec);
 	//test2_on_update (timenow_msec);
-	test3_on_update (timenow_msec);
-	//test4_on_update (timenow_msec);
+	//test3_on_update (timenow_msec);
+	test4_on_update (timenow_msec);
 
 }
 
@@ -59,8 +59,8 @@ void App::on__render()
 {
 	// test1_render();
 	// test2_render();
-	test3_render();
-	//test4_render();
+	//test3_render();
+	test4_render();
 }
 
 
@@ -279,8 +279,9 @@ void App::test3_render()
 void App::test4()
 {
 	renderer_PIPE3 = engine->renderPipe.add_renderer<engine::Renderer_PIPE3>();
-	engine->model_createFromAsset ("model_cubo_nm", &model1_handle);
-
+	//engine->model_createFromAsset ("model_cubo_nm", &model1_handle);
+	engine->model_createFromAsset ("model_sponza", &model1_handle);
+	
 	ModelInstH handle;
 	gos::mat4x4f m;
 	m.identity();

@@ -87,7 +87,6 @@ namespace gos
         mspace			ms;
         ThreadPolicy	thread;
         TrackingPolicy	track;
-
     };
 } //namespace gos
 #endif //_gosAllocatorHeap_h_

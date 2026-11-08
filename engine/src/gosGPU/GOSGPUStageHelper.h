@@ -9,8 +9,8 @@ namespace gos
     {
 		/***************************************************
 		 * @brief	StageHelper
-		 * 			Classe di comodo per lo stagin delle risorse.
-		 * 			Mantiene uno stagine-buffer e un cmdBuffer-
+		 * 			Classe di comodo per lo staging delle risorse.
+		 * 			Mantiene uno staging-buffer e un cmdBuffer.
 		 * 			Alla chiamata di submit(), le operazioni vengono accodate immediatamente a GPU e
 		 * 			la fn rimane in blocco fino a che GPU non ha finito
 		 */

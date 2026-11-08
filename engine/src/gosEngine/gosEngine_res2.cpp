@@ -28,6 +28,11 @@ void Engine::res2__flushLoaderThreadMsg()
 			}
 			break;
 
+		case RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO:
+			DBGBREAK
+			break;
+
+
 		case RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK_WANT_CALLBACK:
 			{
 				res2::CallbackData_onLoad *callback_data = reinterpret_cast<res2::CallbackData_onLoad*>( msgList[i].buffer );
@@ -50,11 +55,6 @@ void Engine::res2__flushLoaderThreadMsg()
 				}
 			}
 			break;
-
-		case RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO:
-			DBGBREAK
-			break;
-
 		}
 
 		thread::deleteMsg (msgList[i]);

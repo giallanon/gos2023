@@ -103,15 +103,6 @@ lastTimeBuilt UNSIGNED INT8 NOT NULL\
             if (!db::exec (db, s))
                 break;
 
-            //table: GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME 
-            sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME " (\
-Signature UNSIGNED INT8 NOT NULL,\
-childSIG UNSIGNED INT8 NOT NULL,\
-PRIMARY KEY('Signature','childSIG')\
-)");
-        if (!db::exec (db, s))
-                break;                
-
             //table: GOS_ASSET2__TABLE_ASSET_LIST                
             sprintf_s (s, sizeof(s), "CREATE TABLE " GOS_ASSET2__TABLE_ASSET_LIST " (\
 UID UNSIGNED INT8 NOT NULL,\
@@ -754,9 +745,6 @@ bool asset2::signature_delete (DBContext &ctx, UID signatureUID)
     sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_DEPENDS " WHERE UID=%" PRIu64 " or childUID=%" PRIu64 "", signatureUID._uid, signatureUID._uid);
     db::exec (ctx.db, s);
 
-    sprintf_s (s, sizeof(s), "DELETE FROM " GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME " WHERE Signature=%" PRIu64 " or childSIG=%" PRIu64 "", signatureUID._uid, signatureUID._uid);
-    db::exec (ctx.db, s);
-
     signature_manufacture_fullFilename (ctx, signatureUID, s, sizeof(s));
     fs::fileDelete(s);
 	
@@ -778,26 +766,6 @@ bool asset2::signature_delete (DBContext &ctx, UID signatureUID)
 		fs::fileDelete(s2);
 	}	
     return true;
-}
-
-//*******************************************************
-bool asset2::signature_add_dependencyRT (DBContext &ctx, UID signature_padre, UID signature_figlio)
-{
-	assert (signature_padre.isASignature());
-	assert (signature_figlio.isASignature());
-    if (!ctx.isValid())
-    {
-        logger::err ("signature_add_dependencyRT(%016" PRIX64 ",%016" PRIX64 ") => invalid ctx\n", signature_padre._uid, signature_figlio._uid);
-        return false;
-    }
-
-    char s[128];
-    sprintf_s (s, sizeof(s), "INSERT INTO " GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME " (Signature,childSIG) VALUES(%" PRIu64 ",%" PRIu64 ")", signature_padre._uid, signature_figlio._uid);
-    if (db::exec (ctx.db, s))
-        return true;
-
-    logger::err ("signature_add_dependencyRT(%016" PRIX64 ",%016" PRIX64 ") => error inserting into table\n", signature_padre._uid, signature_figlio._uid);
-    return false;
 }
 
 
@@ -829,42 +797,6 @@ bool asset2::signature_getBy_rtname (DBContext &ctx, const char *rtname, UID *ou
     out__signatureUID->setInvalid();
     return false;
 }
-
-//*******************************************************
-bool asset2::signature_get_runtime_dependecies_list (DBContext &ctx, UID signatureUID, bool bClearListOnStart, FastUIDList *out)
-{
-    assert (NULL != out);
-    assert (signatureUID.isASignature());
-
-    if (bClearListOnStart)
-        out->reset();
-
-    if (!ctx.isValid())
-    {
-        logger::err ("signature_get_runtime_dependecies_list (%" PRIu64 ") => invalid ctx\n",  signatureUID._uid);
-        return false;
-    }
-
-    db::RST rst;
-    char s[256];
-    sprintf_s (s, sizeof(s), "SELECT childSIG FROM " GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME " WHERE Signature=%" PRIu64 " ", signatureUID._uid);
-    if (!db::query (ctx.db, s, &rst))
-    {
-        logger::err ("signature_get_runtime_dependecies_list (%" PRIu64 ") => error querying\n",  signatureUID._uid);
-        return false;
-    }
-
-    while (rst.fetchRow())
-    {
-        UID childUID;
-        childUID._uid = rst.getValAsU64(0);
-        out->append (childUID);
-    }
-
-    return true;
-}
-
-
 
 //********************************************************** 
 bool asset2::dependency_get_requireBy_list (DBContext &ctx, const asset2::UID &uid, bool bClearListOnStart, asset2::UniqueUIDList *out)

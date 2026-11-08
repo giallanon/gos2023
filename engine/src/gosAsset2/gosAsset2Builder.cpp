@@ -201,10 +201,6 @@ bool Builder::debug_sanityCheck__compareDB(DBContext &ctxSanity, const char *bas
 	if (!debug_sanityCheck__cmp_table(ctxSanity, ctx, s, GOS_ASSET2__TABLE_RES))
 		ret = false;
 
-	sprintf_s(s, sizeof(s), "SELECT Signature,childSIG FROM " GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME " ORDER BY Signature");
-	if (!debug_sanityCheck__cmp_table(ctxSanity, ctx, s, GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME))
-		ret = false;
-
 	sprintf_s(s, sizeof(s), "	");
 	if (!debug_sanityCheck__cmp_table(ctxSanity, ctx, s, GOS_ASSET2__TABLE_ASSET_LIST))
 		ret = false;
@@ -1174,7 +1170,6 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFi
 						result.signatureUID._uid);
 
 
-
 					//mi salvo il fatto che questo asset in qualche modo e' stato "considerato"
 					list_of_touched_assets.insertIfNotExists (result.assetUID, result.signatureUID);
 
@@ -1183,15 +1178,6 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFi
 					if (eBuildResult::just_built == result.result)
 					{
 						out_listOfBuiltSignature->insertIfNotExists(result.signatureUID);
-
-						dependency_get_dependecies_list(ctx, result.signatureUID, true, &hashList1);
-						auto list = hashList1._queryList();
-						for (u32 i = 0; i < list->getNElem(); i++)
-						{
-							const UID childUID = list->queryElem(i);
-							if (childUID.isASignature())
-								signature_add_dependencyRT(ctx, result.signatureUID, childUID);
-						}
 					}
 				}
 				builder->build_end();

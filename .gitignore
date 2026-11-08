@@ -144,3 +144,7 @@ engine/common_assets/model3d/cubo-normal.mapped/debug_imported_glTF.ini
 engine/common_assets/model3d/cubo-normal.mapped/debug_imported_glTF.json
 
 engine/bin/assetMonitor/writable/test_assets_4/assets2.sqlite3
+
+engine/bin/assetMonitor/writable/test_assets_4/asset_bin/
+
+engine/bin/testRes2/writable/assets/asset_bin/

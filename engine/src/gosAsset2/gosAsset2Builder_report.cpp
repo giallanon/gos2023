@@ -289,20 +289,7 @@ WHERE T1.UID=%" PRIu64 "", uid._uid);
             out << out2;
         }        
 
-        //lista delle "dipendenze runtime"
-        if (uid.isASignature())
-        {
-            asset2::signature_get_runtime_dependecies_list (ctx, uid, true, &fastUIDList);
-
-            out << "\n" << "  runtime dep list: ";
-            for (u32 i=0; i<fastUIDList.getNElem(); i++)
-            {
-                out << STRFMT("%016" PRIX64 "", fastUIDList(i)._uid) << "  ";
-            }
-            out << "\n";            
-        }
-
-        out << "\n";
+		out << "\n";
     }
 
 
@@ -434,18 +421,6 @@ void Builder::save_asset_manifest (const char *baseFolder, const char *dbName)
                     out << "\"" << name << "\" ";
             }
             out << "\n";
-            
-            sprintf_s (s, sizeof(s), "SELECT childSIG FROM " GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME " WHERE Signature=%" PRIu64 " ORDER BY childSIG", signatureUID._uid);
-            db::query (ctx.db, s, &rst2);
-            if (rst2.fetchRow())
-            {
-                out << "\truntime-dep: " << STRFMT("%016" PRIX64 "", rst2.getValAsU64(0));
-                while (rst2.fetchRow())
-                {
-                    out << " | " << STRFMT("%016" PRIX64 "", rst2.getValAsU64(0));
-                }
-                out << "\n";
-            }
         }
     }
 

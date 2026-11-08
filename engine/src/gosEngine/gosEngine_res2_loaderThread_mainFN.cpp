@@ -12,19 +12,43 @@ using namespace gos::engine;
 
 typedef gos::AllocatorHeap<gos::AllocPolicy_Track_simple, gos::AllocPolicy_Thread_Unsafe>		res2__GOSENGINELoaderMemAllocatorTS;
 
+/***************************************************
+ * 
+ */
+class LoaderThread
+{
+public:
+	void 	run (void *paramsIN);
+
+private:
+    static constexpr u32 NUM_MAX_RES_LOADER = 1 + (u32)res2::eResType::NUM_MAX;
+	static constexpr u32 TOO_MANY_LOAD_PENDING = 16;
+	static constexpr u32 MESSAGES__NUM_MAX_PENDING = 1024;
+    static constexpr u32 MESSAGES__NUM_MAX_PER_WAIT = 64;
+
+private:
+	res2__GOSENGINELoaderMemAllocatorTS *localAllocator;
+	res2::LoaderInfo					loaderInfo;
+    HThreadMsgR 						msgqR;
+    HThreadMsgW 						msgqW;
+    res2::BaseLoader  					*res_loaderList[NUM_MAX_RES_LOADER];
+    thread::sMsg 						msgList[MESSAGES__NUM_MAX_PER_WAIT];
+	gos::FIFOFixedSize<thread::sMsg,MESSAGES__NUM_MAX_PENDING>	pending_msgList;
+	u32 num_load_request_pending;
+};
+
 
 //***************************************
-i16	Engine::res2__LoaderThread_mainFN (void *paramsIN)
+i16	Engine::res2__LoaderThread_mainFN (void *paramsIN)		{ LoaderThread m; m.run(paramsIN); return 0; }
+
+void LoaderThread::run (void *paramsIN)
 {
-    res2__GOSENGINELoaderMemAllocatorTS *localAllocator = GOSNEW(gos::getSysHeapAllocator(), res2__GOSENGINELoaderMemAllocatorTS)("res2__ENGLoader");
+    localAllocator = GOSNEW(gos::getSysHeapAllocator(), res2__GOSENGINELoaderMemAllocatorTS)("res2__ENGLoader");
     localAllocator->setup (1024 * 1024 * 128); //128MB
     
     //copia dei params
-	res2::LoaderInfo	loaderInfo;
-    HThreadMsgR         		msgqR;
-    HThreadMsgW         		msgqW;
     {
-        const sLoaderThreadInitParams *params = reinterpret_cast<const sLoaderThreadInitParams*>(paramsIN);
+        const engine::sLoaderThreadInitParams *params = reinterpret_cast<const engine::sLoaderThreadInitParams*>(paramsIN);
         msgqR = params->msgqR;
         msgqW = params->msgqW;
 		loaderInfo.thread_allocator = localAllocator;
@@ -39,8 +63,6 @@ i16	Engine::res2__LoaderThread_mainFN (void *paramsIN)
     }
 
     //spawn dei loader per le risorse
-    static constexpr u32 NUM_MAX_RES_LOADER = 1 + (u32)res2::eResType::NUM_MAX;
-    res2::BaseLoader  *res_loaderList[NUM_MAX_RES_LOADER];
     {
         memset (res_loaderList, 0, sizeof(res_loaderList));
         res_loaderList[(u32)res2::eResType::texture_2d] = GOSNEW(localAllocator, res2::Loader_tex2D)();
@@ -55,17 +77,29 @@ i16	Engine::res2__LoaderThread_mainFN (void *paramsIN)
 
 
     //loop
-    static constexpr u8 NUM_MAX_MESSAGES = 64;
-    thread::sMsg msgList[NUM_MAX_MESSAGES];
+	num_load_request_pending = 0;
+
     bool bQuit = false;
     while (bQuit == false)
     {
-		if (!thread::waitForAnEvent (msgqR, u32MAX))
-			break;
-
+		//attesa messaggi
+		{
+			if (num_load_request_pending > 0)
+			{
+				thread::waitForAnEvent (msgqR, 10);
+			}
+			else
+			{
+				if (!thread::waitForAnEvent (msgqR, u32MAX))
+				{
+					bQuit = true;
+					continue;
+				}
+			}
+		}
 
         u32 nMsg;
-        while (0 != (nMsg = thread::popMultipleMsg(msgqR, msgList, NUM_MAX_MESSAGES)))
+        while (0 != (nMsg = thread::popMultipleMsg(msgqR, msgList, MESSAGES__NUM_MAX_PER_WAIT)))
         {
             for (u32 i=0; i<nMsg; i++)
             {
@@ -81,6 +115,14 @@ i16	Engine::res2__LoaderThread_mainFN (void *paramsIN)
 
 				case RES2__MSG_FOR_LOADER_THREAD__LOAD:
 					//richiesta di caricare una risorsa
+					if (num_load_request_pending >= TOO_MANY_LOAD_PENDING)
+					{
+						//sto gia' processando un certo numero di load che sono al momento in attesa di callback.
+						//Evito di schedularne ulteriori per evitare di allocare infinita memoria nel loader.
+						//Mi salvo questi messaggi e li processo in seguito
+						pending_msgList.push (msgList[i]);
+					}
+					else
 					{
 						res2::ResDescr *descr = (res2::ResDescr*)msgList[i].buffer;
 						assert (descr->UID.isValid());
@@ -103,13 +145,14 @@ i16	Engine::res2__LoaderThread_mainFN (void *paramsIN)
 							thread::pushMsg (msgqW, RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK, 0, &callback_data, sizeof(res2::CallbackData_onLoad));
 							break;
 
-						case res2::BaseLoader::eResult::callback:
-							thread::pushMsg (msgqW, RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK_WANT_CALLBACK, 0, &callback_data, sizeof(res2::CallbackData_onLoad));
-							break;							
-
 						case res2::BaseLoader::eResult::failed:
 							thread::pushMsg (msgqW, RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO, 0);
 							break;
+
+						case res2::BaseLoader::eResult::callback:
+							num_load_request_pending++;
+							thread::pushMsg (msgqW, RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK_WANT_CALLBACK, 0, &callback_data, sizeof(res2::CallbackData_onLoad));
+							break;							
 						}
 					}
 					break;
@@ -132,15 +175,21 @@ i16	Engine::res2__LoaderThread_mainFN (void *paramsIN)
 
 						case res2::BaseLoader::eResult::success:
 							thread::pushMsg (msgqW, RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK, 0, callback_data, sizeof(res2::CallbackData_onLoad));
+							loader->load_finished (loaderInfo, callback_data);
+							assert (num_load_request_pending > 0);
+							num_load_request_pending--;
+							break;
+
+						case res2::BaseLoader::eResult::failed:
+							thread::pushMsg (msgqW, RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO, 0);
+							loader->load_finished (loaderInfo, callback_data);
+							assert (num_load_request_pending > 0);
+							num_load_request_pending--;
 							break;
 
 						case res2::BaseLoader::eResult::callback:
 							thread::pushMsg (msgqW, RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK_WANT_CALLBACK, 0, callback_data, sizeof(res2::CallbackData_onLoad));
 							break;							
-
-						case res2::BaseLoader::eResult::failed:
-							thread::pushMsg (msgqW, RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO, 0);
-							break;
 						}
 					}
 					break;
@@ -157,6 +206,9 @@ i16	Engine::res2__LoaderThread_mainFN (void *paramsIN)
 						assert (NULL != loader);
 
 						loader->load_finished (loaderInfo, callback_data);
+
+						assert (num_load_request_pending > 0);
+						num_load_request_pending--;
 					}
 					break;
                 }
@@ -167,6 +219,46 @@ i16	Engine::res2__LoaderThread_mainFN (void *paramsIN)
             if (bQuit)
                 break;
         }
+
+
+		//richieste pendenti di load
+		while (pending_msgList.getNElem() && num_load_request_pending < TOO_MANY_LOAD_PENDING)
+		{
+			thread::sMsg msg;
+			pending_msgList.pop(&msg);
+			assert (RES2__MSG_FOR_LOADER_THREAD__LOAD == msg.what);
+
+			res2::ResDescr *descr = (res2::ResDescr*)msg.buffer;
+			assert (descr->UID.isValid());
+			assert (descr->UID.isASignature());
+
+			//cerco il suo loader
+			res2::BaseLoader *loader = res_loaderList[(u32)descr->res_handle.get_res_type()];
+			assert (NULL != loader);
+
+			res2::CallbackData_onLoad callback_data;
+			callback_data.descr = descr;
+
+			switch (loader->load (loaderInfo, descr, &callback_data))
+			{
+			default:
+				DBGBREAK;
+				break;
+
+			case res2::BaseLoader::eResult::success:
+				thread::pushMsg (msgqW, RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK, 0, &callback_data, sizeof(res2::CallbackData_onLoad));
+				break;
+
+			case res2::BaseLoader::eResult::failed:
+				thread::pushMsg (msgqW, RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO, 0);
+				break;
+
+			case res2::BaseLoader::eResult::callback:
+				num_load_request_pending++;
+				thread::pushMsg (msgqW, RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK_WANT_CALLBACK, 0, &callback_data, sizeof(res2::CallbackData_onLoad));
+				break;							
+			}
+		}
     }
 
 
@@ -182,6 +274,5 @@ i16	Engine::res2__LoaderThread_mainFN (void *paramsIN)
 
     //free dell'allocator
     GOSDELETE(gos::getSysHeapAllocator(), localAllocator);
-    return 0;
 }
 

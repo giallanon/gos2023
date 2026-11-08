@@ -133,7 +133,7 @@ bool Engine::setup (u32 mainWin_w, u32 mainWin_h, const char *mainWin_title)
 	//res2 setup
 	//creo 2 code, una che uso per mandare msg da this al thread e una per mandare
 	//msg dal thread a this
-	sLoaderThreadInitParams res2__thread_params;
+	engine::sLoaderThreadInitParams res2__thread_params;
 	{
 		res2::setup (this, allocator, asset_logger);
 		res2MemManager.setup (this->allocator);
@@ -821,8 +821,8 @@ bool Engine::priv_materialPBR_bind_texture (res2::ResDescr *res_materialPRB, ass
 
 eRes2LoadResult Engine::res2__materialPBR_callback_on_load (const res2::CallbackData_onLoad *callback_data)
 {
-	asset_logger->log ("res2__materialPBR_callback_on_load\n");
-	asset_logger->inc_indent();
+	// asset_logger->log ("res2__materialPBR_callback_on_load\n");
+	// asset_logger->inc_indent();
 
 	//questa viene chiamata solo sulle risorse bindate ad una signature
 	assert (callback_data->descr->UID.isASignatureOfType(eAssetType::materialPBR));
@@ -837,25 +837,17 @@ eRes2LoadResult Engine::res2__materialPBR_callback_on_load (const res2::Callback
 		return eRes2LoadResult::fail;
 	}
 
-	asset_logger->inc_indent();
-	{
-		//diffuse col
-		res->data.diffuse_col_HDR_RGBA.set (mat.diffuse_col_RGBA_HDR[0], mat.diffuse_col_RGBA_HDR[1], mat.diffuse_col_RGBA_HDR[2], mat.diffuse_col_RGBA_HDR[3]);
+	//diffuse col
+	res->data.diffuse_col_HDR_RGBA.set (mat.diffuse_col_RGBA_HDR[0], mat.diffuse_col_RGBA_HDR[1], mat.diffuse_col_RGBA_HDR[2], mat.diffuse_col_RGBA_HDR[3]);
 
-		// MaterialPBRDataUpd upd;	
-		// get_for_update(res->base.res_handle);
-		// materialPBR_update_texture_diffuse (&upd, 
-		
-		//diffuse texture
-		priv_materialPBR_bind_texture (&res->base, mat.diffuse_texture_uid, &res->data.diffuse_texture);
+	//diffuse texture
+	priv_materialPBR_bind_texture (&res->base, mat.diffuse_texture_uid, &res->data.diffuse_texture);
 
-		//normal texture
-		priv_materialPBR_bind_texture (&res->base, mat.normal_texture_uid, &res->data.normal_texture);
-	}
-	asset_logger->dec_indent();
+	//normal texture
+	priv_materialPBR_bind_texture (&res->base, mat.normal_texture_uid, &res->data.normal_texture);
 
 	
-	asset_logger->dec_indent();
+	//asset_logger->dec_indent();
 	return eRes2LoadResult::success;
 }
 
