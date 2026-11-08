@@ -495,7 +495,6 @@ bool Builder_model3d::Syntax2::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 	{
 		//skeletro
 		if (!dependency_add (ctx, out_result->assetUID, skeleton_assetUID))		return false;
-		if (!signature_add_dependencyRT (ctx, out_result->signatureUID, skeleton_signatureUID))	return false;
 
 		//shape
 		bool err = false;
@@ -511,17 +510,6 @@ bool Builder_model3d::Syntax2::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 		if (err)
 			return false;
 
-		listof_shape_signatureUID_that_I_need.forEach ( [&ctx, out_result, &err](u32 index, const UID uid)
-		{
-			if (!signature_add_dependencyRT (ctx, out_result->signatureUID, uid))
-			{
-				err = true;
-				return false;
-			}			
-			return true;
-		});
-		if (err)
-			return false;
 	}
 	
 	//E' tempo di creare l'asset

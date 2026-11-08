@@ -798,6 +798,7 @@ u8* fs::fileLoadInMemory (Allocator *allocator, const char* utf8_filePathAndName
 	u32 fLen = (u32)fs::fileLength(hFile);
 
 	u8 *buffer = (u8*)GOSALLOC(allocator, fLen);
+	assert (NULL != buffer);
 	fs::fileRead (hFile, buffer, fLen);
 	fs::fileClose (hFile);
 

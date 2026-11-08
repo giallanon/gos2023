@@ -1,0 +1,9 @@
+@include: common.gosasset_d
+
+@model3d: model_ABeautifulGame
+{
+	import: /home/giallanon/Desktop/info/Blender/modelli/models_from_glTF_repo/Corset/glTF-Binary/Corset.glb
+
+	post_op: "	skeleton-resolve;"
+
+}

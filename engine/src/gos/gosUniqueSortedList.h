@@ -16,8 +16,8 @@ namespace gos
     template<>  inline int UniqueSortedList_compareFn (const u16 &t1, const u16 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
     template<>  inline int UniqueSortedList_compareFn (const i16 &t1, const i16 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
 
-    template<>  inline int UniqueSortedList_compareFn (const u8 &t1, const u8 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
-    template<>  inline int UniqueSortedList_compareFn (const i8 &t1, const i8 &t2)    { if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+    template<>  inline int UniqueSortedList_compareFn (const u8 &t1, const u8 &t2)    	{ if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
+    template<>  inline int UniqueSortedList_compareFn (const i8 &t1, const i8 &t2)    	{ if (t1==t2) return 0; if (t1>t2) return 1; return -1; }
     
     /****************************************************
      * @brief   UniqueSortedList

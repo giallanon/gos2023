@@ -7,7 +7,7 @@
 #define GOS_ASSET2__TABLE_DEPENDS           "dependencies"
 #define GOS_ASSET2__TABLE_ALIAS             "aliases"
 #define GOS_ASSET2__TABLE_SIGNATURE         "signature"
-#define GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME   "sig_dependsRT"
+//#define GOS_ASSET2__TABLE_SIGNATURE_DEPENDS_RUNTIME   "sig_dependsRT"
 #define GOS_ASSET2__TABLE_ASSET_LIST     "asset_list"
 
 
@@ -50,8 +50,6 @@ namespace gos
 		bool        signature_is_still_in_use (DBContext &ctx, UID signatureUID);
 
 		bool        signature_getBy_rtname (DBContext &ctx, const char *rtname, UID *out__signatureUID);
-        bool        signature_get_runtime_dependecies_list (DBContext &ctx, UID signatureUID, bool bClearListOnStart, FastUIDList *out);
-        bool        signature_add_dependencyRT (DBContext &ctx, UID signature_padre, UID signature_figlio);
 
 
 		//================ asset

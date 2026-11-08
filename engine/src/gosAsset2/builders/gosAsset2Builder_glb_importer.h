@@ -43,8 +43,9 @@ namespace gos
 
 				struct sImage
 				{
-					char	*name;
-					u32		size_in_glb_file;	//se == 0, vuol dire che <name> e' il filename dell'immagine
+					char	img_name[128];
+					char	*uri;
+					u32		size_in_glb_file;	//se == 0, vuol dire che <uri> e' il filename dell'immagine
 												//se != 0, vuol dire che l'immagine e' contenuta all'interno del file glb a partire da <offset_in_glb_file>
 					u32		offset_in_glb_file;	//se <size_in_glb_file> != 0, questo e' l'offset all'interno del file glb a partire dal quale c'e' l'immagine
 				};
@@ -269,8 +270,15 @@ namespace gos
 
 			struct sTexture
 			{
-				u32	image_index;
+				u32	image_index;	//questo e' quello che c'e' sul file
+
+				int compare (const sTexture &b) const	{ if (image_index==b.image_index) return 0; if (image_index>b.image_index) return 1; return -1; }
 			};
+
+			struct sProxyTexture
+			{
+				u32	unique_texture_index;
+			};			
 
 		private:
 			void 	priv_free();
@@ -309,7 +317,9 @@ namespace gos
 			gos::FastArray<sMeshInfo>		shapesInMesh;	//usato come array di appoggio per memorizzare l'elenco delle shape che stanno in ogni singola mesh
 			gos::FastArray<sMesh>			meshesList;
 			gos::FastArray<Result::sImage>	imageList;
-			gos::FastArray<sTexture>		textureList;
+			
+			gos::FastArray<sTexture>		uniqueTextureList;
+			gos::FastArray<sProxyTexture>	proxyTextureList;
 
 			gos::FastArray<Shape> 			shapeList;
 			gos::Array<gos::UTF8String>		shapeNameList;

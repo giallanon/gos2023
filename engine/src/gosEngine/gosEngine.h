@@ -8,7 +8,6 @@
 #include "../gos/logger/gosLoggerStdout.h"
 #include "../gos/gosObjectPool.h"
 #include "../gosAsset2/gosAsset2.h"
-#include "../gos/gosThreadMsgQ.h"
 #include "../gos/memory/gosAllocatorHeap.h"
 #include "res2/loaders/Loader.h"
 
@@ -418,30 +417,6 @@ namespace gos
 		FN_res2__on_become_rdy	res2FNList_onBecomeRdy[(u8)res2::eResType::NUM_MAX];
 
 		//================= res2  loader thread stuff ============
-	private:
-		struct sLoaderThreadInitParams
-		{
-			gos::Signal		    hEvent_started;
-			HThreadMsgR		    msgqR;
-			HThreadMsgW		    msgqW;
-			gos::Logger		    *logger;
-			gos::GPU            *gpu;
-			asset2::DBContext   *ctx;
-			gos::Allocator		*engine_allocator;
-			Engine				*engine;
-		};
-		
-	private:
-		static constexpr u32		RES2__MSG_FOR_LOADER_THREAD__DIE		        	= 0xff;
-		static constexpr u32		RES2__MSG_FOR_LOADER_THREAD__LOAD					= 0x10;
-		static constexpr u32		RES2__MSG_FOR_LOADER_THREAD__LOAD_CONTINUED			= 0x11;
-		static constexpr u32		RES2__MSG_FOR_LOADER_THREAD__LOAD_FINISHED			= 0x12;
-
-	public:
-		static constexpr u32		RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK 				= 0x01;
-		static constexpr u32		RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_OK_WANT_CALLBACK = 0x02;
-		static constexpr u32		RES2__MSG_FROM_LOADER_THREAD__ON_LOAD_FINISHED_KO 				= 0x03;
-
 	private:		
 		static i16	        res2__LoaderThread_mainFN (void *params);
 		GOSThreadHandle 	res2__hThreadLoader;

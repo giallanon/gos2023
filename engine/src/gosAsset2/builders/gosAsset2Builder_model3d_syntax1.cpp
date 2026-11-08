@@ -360,7 +360,6 @@ bool Builder_model3d::Syntax1::priv_build_shape (DBContext &ctx, bool doCreateAn
 
 	//il model3d che sto costruendo, dipende da questa shape
 	if (!dependency_add (ctx, model3d_assetUID, out__shape_result->assetUID))		return false;
-	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out__shape_result->signatureUID))	return false;
 
 	if (doCreateAnAssetFile && eBuildResult::just_built == out__shape_result->result)
 	{
@@ -405,7 +404,6 @@ bool Builder_model3d::Syntax1::priv_build_skeleton (DBContext &ctx, bool doCreat
 
 	//il model3d che sto costruendo, dipende da questo skeleton
 	if (!dependency_add (ctx, model3d_assetUID, out__skeleton_result->assetUID))		return false;
-	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out__skeleton_result->signatureUID))	return false;
 
 
 	if (doCreateAnAssetFile && eBuildResult::just_built == out__skeleton_result->result)
@@ -434,7 +432,7 @@ bool Builder_model3d::Syntax1::priv_build_texture (DBContext &ctx, bool doCreate
 	const Importer_glb::Result::sImage *img = &buildCtx.imported.image_list[image_index];
 
 	char texture_rtName[256];
-	sprintf_s (texture_rtName, sizeof(texture_rtName), "%s.%s", glb_rtname, img->name);
+	sprintf_s (texture_rtName, sizeof(texture_rtName), "%s.%s", glb_rtname, img->img_name);
 	listof_texture_rtName.append (texture_rtName);
 
 	//Creo una stringa che simula la ini-file di una texture
@@ -444,7 +442,7 @@ bool Builder_model3d::Syntax1::priv_build_texture (DBContext &ctx, bool doCreate
 
 	if (0 == img->size_in_glb_file)
 	{
-		def << "src: " << img->name << "\n";
+		def << "src: " << img->uri << "\n";
 	}
 	else
 	{
@@ -492,7 +490,6 @@ bool Builder_model3d::Syntax1::priv_build_texture (DBContext &ctx, bool doCreate
 
 	//il model3d che sto costruendo, dipende da questa texture
 	if (!dependency_add (ctx, model3d_assetUID, out__texture_result->assetUID))						return false;
-	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out__texture_result->signatureUID))	return false;
 
 	return true;
 }
@@ -574,7 +571,6 @@ bool Builder_model3d::Syntax1::priv_build_material (DBContext &ctx, bool doCreat
 
 	//il model3d che sto costruendo, dipende da questo material
 	if (!dependency_add (ctx, model3d_assetUID, out__material_result->assetUID))						return false;
-	if (!signature_add_dependencyRT (ctx, model3d_signatureUID, out__material_result->signatureUID))	return false;
 
 	return true;
 }
@@ -697,7 +693,7 @@ void Builder_model3d::Syntax1::priv_print_report(const char *filenameDST) const
 
 
 	char s[1024];
-	sprintf_s (s, sizeof(s), "%s.model_info.txt", filenameDST);
+	sprintf_s (s, sizeof(s), "%s.%s.txt", filenameDST, glb_rtname);
 	fs::fileSaveBuffer (s, out.getBuffer(), out.lengthInByte());
 }	
 

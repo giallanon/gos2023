@@ -63,7 +63,7 @@ void Importer_glb::Result::free()
 	{
 		for (u32 i=0; i<num_images; i++)
 		{
-			GOSFREE(allocator, image_list[i].name);
+			GOSFREE(allocator, image_list[i].uri);
 		}
 		GOSFREE(allocator, image_list);
 	}
@@ -372,7 +372,8 @@ Importer_glb::Importer_glb()
 	materialNameList.setup (localAllocator, 256);
 	materialList.setup (localAllocator, 1024);
 	imageList.setup (localAllocator, 1024);
-	textureList.setup (localAllocator, 1024);
+	uniqueTextureList.setup (localAllocator, 1024);
+	proxyTextureList.setup (localAllocator, 1024);
 }
 
 //********************************************
@@ -390,7 +391,8 @@ Importer_glb::~Importer_glb()
 	materialNameList.unsetup();
 	materialList.unsetup();
 	imageList.unsetup();
-	textureList.unsetup();
+	uniqueTextureList.unsetup();
+	proxyTextureList.unsetup();
 }
 
 //********************************************
@@ -408,9 +410,10 @@ void Importer_glb::priv_free()
 	materialNameList.reset();
 	materialList.reset();
 	for (u32 i=0; i<imageList.getNElem(); i++)
-		GOSFREE(localAllocator, imageList(i).name);
+		GOSFREE(localAllocator, imageList(i).uri);
 	imageList.reset();
-	textureList.reset();
+	uniqueTextureList.reset();
+	proxyTextureList.reset();
 	
 	rootBone.deleteAllChildren (localAllocator);
 	rootBone.reset();
@@ -674,22 +677,28 @@ bool Importer_glb::priv_parseMesh (const gos::IniFileSection *sec, const VtxLayo
 bool Importer_glb::priv_parseImages (const gos::IniFileSection *sec)
 {
 	const u32 imageNum = imageList.getNElem();
+	imageList[imageNum].uri = NULL;
 
-	char imgName[256];
-	if (!sec->get("name", imgName, sizeof(imgName)))
+	if (!sec->get("name", imageList[imageNum].img_name, sizeof(imageList[imageNum].img_name)))
 	{
-		sprintf_s (imgName, sizeof(imgName), "noname_%04d", imageNum);
+		sprintf_s (imageList[imageNum].img_name, sizeof(imageList[imageNum].img_name), "noname_%04d", imageNum);
 	}
-	imageList[imageNum].name = gos::string::utf8::allocStr (localAllocator, imgName);
 
-
-	const u32 bufferView_index = sec->getOrDefaultAsU32 ("bufferView", u32MAX);
 	
+	const u32 bufferView_index = sec->getOrDefaultAsU32 ("bufferView", u32MAX);
 	if (u32MAX == bufferView_index)
 	{
 		//si tratta di un file esterno
 		imageList[imageNum].size_in_glb_file = 0;
 		imageList[imageNum].offset_in_glb_file = 0;
+
+		char uri[512];
+		if (!sec->get("uri", uri, sizeof(uri)))
+		{
+			gos::logger::err ("Importer_glb::priv_parseImages(%d) => missing parameter 'uri'\n", imageNum);
+			return false;
+		}
+		imageList[imageNum].uri = gos::string::utf8::allocStr (localAllocator, uri);
 	}
 	else
 	{
@@ -704,13 +713,27 @@ bool Importer_glb::priv_parseImages (const gos::IniFileSection *sec)
 //********************************************
 bool Importer_glb::priv_parseTextures (const gos::IniFileSection *sec)
 {
-	const u32 source_index = sec->getOrDefaultAsU32 ("source", u32MAX);
-	if (u32MAX == source_index)
+	const u32 image_index = sec->getOrDefaultAsU32 ("source", u32MAX);
+	if (u32MAX == image_index)
 		return false;
 
+	sTexture tex_info;
+	tex_info.image_index = image_index;
 
-	const u32 texNum = textureList.getNElem();
-	textureList[texNum].image_index = source_index;
+	const u32 texture_index = proxyTextureList.getNElem();
+
+	const u32 N = uniqueTextureList.getNElem();
+	for (u32 i=0; i<N; i++)
+	{
+		if (0 == uniqueTextureList(i).compare (tex_info))
+		{
+			proxyTextureList[texture_index].unique_texture_index = i;
+			return true;
+		}
+	}
+
+	uniqueTextureList.append(tex_info);
+	proxyTextureList[texture_index].unique_texture_index = N;
 	return true;
 }
 
@@ -885,7 +908,9 @@ bool Importer_glb::priv_parseMaterial (const gos::IniFileSection *sec)
 		gos::IniFileSection *sub = pbr->getSubsection("baseColorTexture");
 		if (NULL != sub)
 		{
-			mat->diffuse_texture_index = sub->getOrDefaultAsU32("index", u32MAX);
+			const u32 texture_index = sub->getOrDefaultAsU32("index", u32MAX);
+			if (u32MAX != texture_index)
+				mat->diffuse_texture_index = proxyTextureList(texture_index).unique_texture_index;
 		}
 	}
 
@@ -893,7 +918,9 @@ bool Importer_glb::priv_parseMaterial (const gos::IniFileSection *sec)
 	gos::IniFileSection *sub = sec->getSubsection("normalTexture");
 	if (NULL != sub)
 	{
-		mat->normal_texture_index = sub->getOrDefaultAsU32("index", u32MAX);
+		const u32 texture_index = sub->getOrDefaultAsU32("index", u32MAX);
+		if (u32MAX != texture_index)
+			mat->normal_texture_index = proxyTextureList(texture_index).unique_texture_index;
 	}
 
 	return true;
@@ -1285,7 +1312,11 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 			out_results->image_list = GOSALLOCT(Result::sImage*, out_results->allocator, sizeof(Result::sImage) * num_images);
 			for (u32 i=0; i<num_images; i++)
 			{
-				out_results->image_list[i].name = gos::string::utf8::allocStr (out_results->allocator, imageList(i).name);
+				memcpy (out_results->image_list[i].img_name, imageList(i).img_name, sizeof(imageList(i).img_name));
+				if (NULL == imageList(i).uri)
+					out_results->image_list[i].uri = NULL;
+				else
+					out_results->image_list[i].uri = gos::string::utf8::allocStr (out_results->allocator, imageList(i).uri);
 				out_results->image_list[i].size_in_glb_file = imageList(i).size_in_glb_file;
 				out_results->image_list[i].offset_in_glb_file = imageList(i).offset_in_glb_file;
 			}
@@ -1294,14 +1325,14 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 
 	//copio le textures in out_result
 	{
-		const u32 num_textures = textureList.getNElem();
+		const u32 num_textures = uniqueTextureList.getNElem();
 		if (num_textures)
 		{
 			out_results->num_textures = num_textures;
 			out_results->texture_list = GOSALLOCT(Result::sTexture*, out_results->allocator, sizeof(Result::sTexture) * num_textures);
 			for (u32 i=0; i<num_textures; i++)
 			{
-				out_results->texture_list[i].image_index = textureList(i).image_index;
+				out_results->texture_list[i].image_index = uniqueTextureList(i).image_index;
 			}
 		}
 	}	
