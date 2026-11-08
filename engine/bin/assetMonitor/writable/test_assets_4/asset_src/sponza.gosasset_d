@@ -1,0 +1,9 @@
+@include: common.gosasset_d
+
+@model3d: model_sponza
+{
+	import: <common_assets>/model3d/sponza/sponza.glb
+
+	post_op: "	skeleton-resolve;"
+
+}
