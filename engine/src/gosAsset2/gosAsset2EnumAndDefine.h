@@ -40,6 +40,7 @@ namespace gos
         {
             just_built          = 0,
             was_already_built   = 1,
+            nothing_was_built   = 2,
             error               = 0xff
         };        
 

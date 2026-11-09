@@ -242,6 +242,8 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 						return true;
 					}
 				}
+				else
+					out_result->result = eBuildResult::nothing_was_built;
 
 				//passo alla fase successiva
 				buildCtx.whatToBuild = eWhatToBuild::materials;
@@ -265,6 +267,8 @@ bool Builder_model3d::Syntax1::build_exe (DBContext &ctx, bool doCreateAnAssetFi
 						return true;
 					}
 				}
+				else
+					out_result->result = eBuildResult::nothing_was_built;
 
 				//passo alla fase successiva
 				buildCtx.whatToBuild = eWhatToBuild::end;
@@ -428,8 +432,8 @@ bool Builder_model3d::Syntax1::priv_build_texture (DBContext &ctx, bool doCreate
 	assert (buildCtx.whatToBuild == eWhatToBuild::texture);
 	assert (buildCtx.iToBuild < buildCtx.imported.num_textures);
 
-	const u32 image_index = buildCtx.imported.texture_list[buildCtx.iToBuild].image_index;
-	const Importer_glb::Result::sImage *img = &buildCtx.imported.image_list[image_index];
+	const Importer_glb::Result::sTexture *texture = &buildCtx.imported.texture_list[buildCtx.iToBuild];
+	const Importer_glb::Result::sImage *img = &buildCtx.imported.image_list[texture->image_index];
 
 	char texture_rtName[256];
 	sprintf_s (texture_rtName, sizeof(texture_rtName), "%s.%s", glb_rtname, img->img_name);
@@ -449,8 +453,21 @@ bool Builder_model3d::Syntax1::priv_build_texture (DBContext &ctx, bool doCreate
 		def << "src: " << params.import_name << ":" << img->offset_in_glb_file <<":" << img->size_in_glb_file << "\n";
 	}
 	
-	def << "dstFmt: U8_RGBA\n"
-		<< "}\n\n";
+
+	if (0 != (texture->flag & Importer_glb::Result::sTexture::FLAG__IS_A_NORMAL_MAP))
+	{
+		//e' una normal map
+		def << "srcColorSpace: RGB\n"		//non converto da sRGB a RGB
+			<< "dstFmt: U8_RGB\n";			
+	}
+	else
+	{
+		//e' una color map
+		def << "srcColorSpace: sRGB\n"		//converto da sRGB a RGB
+			<< "dstFmt: U8_RGBA\n";
+	};
+		
+	def << "}\n\n";
 
 	//creo e parso l'inifile derivante dalla stringa
 	gos::IniFile temp_iniFile;
@@ -461,6 +478,7 @@ bool Builder_model3d::Syntax1::priv_build_texture (DBContext &ctx, bool doCreate
 
 
 	//buildo
+	logger->log (eTextColor::grey, "  texture =>    ");
 	asset2::BuilderInterface *builder = builderList->findBuilderByClassName ("tex2D");
 	assert (NULL != builder);
 	bool bBuildSuccess = false;
@@ -544,6 +562,7 @@ bool Builder_model3d::Syntax1::priv_build_material (DBContext &ctx, bool doCreat
 
 
 	//buildo
+	logger->log (eTextColor::grey, "  materialPBR =>    ");
 	asset2::BuilderInterface *builder = builderList->findBuilderByClassName ("materialPBR");
 	assert (NULL != builder);
 	bool bBuildSuccess = false;

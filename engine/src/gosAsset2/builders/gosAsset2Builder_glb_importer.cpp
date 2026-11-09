@@ -717,16 +717,19 @@ bool Importer_glb::priv_parseTextures (const gos::IniFileSection *sec)
 	if (u32MAX == image_index)
 		return false;
 
-	sTexture tex_info;
+	Result::sTexture tex_info;
 	tex_info.image_index = image_index;
+	tex_info.flag = 0;
 
 	const u32 texture_index = proxyTextureList.getNElem();
 
 	const u32 N = uniqueTextureList.getNElem();
 	for (u32 i=0; i<N; i++)
 	{
-		if (0 == uniqueTextureList(i).compare (tex_info))
+		if (uniqueTextureList(i).image_index == tex_info.image_index)
 		{
+			//questa texture referenzia una immagine che ho gia' usato per una texture in precedenza
+			//In sostanza le 2 texture sono identiche, quindi rimappo questa in quella precedente
 			proxyTextureList[texture_index].unique_texture_index = i;
 			return true;
 		}
@@ -920,7 +923,12 @@ bool Importer_glb::priv_parseMaterial (const gos::IniFileSection *sec)
 	{
 		const u32 texture_index = sub->getOrDefaultAsU32("index", u32MAX);
 		if (u32MAX != texture_index)
-			mat->normal_texture_index = proxyTextureList(texture_index).unique_texture_index;
+		{
+			const u32 idx = proxyTextureList(texture_index).unique_texture_index;
+			mat->normal_texture_index = idx;
+
+			uniqueTextureList[idx].flag |= Result::sTexture::FLAG__IS_A_NORMAL_MAP;
+		}
 	}
 
 	return true;
@@ -1326,13 +1334,18 @@ bool Importer_glb::importFromMemory (const u8 *buffer, u32 sizeof_buffer, const 
 	//copio le textures in out_result
 	{
 		const u32 num_textures = uniqueTextureList.getNElem();
+		out_results->num_textures = num_textures;
 		if (num_textures)
 		{
-			out_results->num_textures = num_textures;
-			out_results->texture_list = GOSALLOCT(Result::sTexture*, out_results->allocator, sizeof(Result::sTexture) * num_textures);
-			for (u32 i=0; i<num_textures; i++)
+			if (0 == num_textures)
 			{
-				out_results->texture_list[i].image_index = uniqueTextureList(i).image_index;
+				out_results->texture_list = NULL;
+			}
+			else
+			{
+				const u32 size = sizeof(Result::sTexture) * num_textures;
+				out_results->texture_list = GOSALLOCT(Result::sTexture*, out_results->allocator, size);
+				memcpy (out_results->texture_list, uniqueTextureList._queryPointer(), size);
 			}
 		}
 	}	

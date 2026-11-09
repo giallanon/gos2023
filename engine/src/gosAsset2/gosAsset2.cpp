@@ -46,6 +46,7 @@ const char* asset2::enumToString (eBuildResult s)
     default: DBGBREAK;                      return "!!eBuildResult::ERR";
     case eBuildResult::just_built:          return "just_built";
     case eBuildResult::was_already_built:   return "was_already_built";
+    case eBuildResult::nothing_was_built:   return "nothing_was_built";
     case eBuildResult::error:               return "error";
 	}
 }

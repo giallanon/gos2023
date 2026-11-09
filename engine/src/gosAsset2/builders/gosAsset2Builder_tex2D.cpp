@@ -147,10 +147,22 @@ bool Builder_tex2D::priv_extractParams (DBContext &ctx, const UniqueUIDList *lis
 	//se <src> contiene ":", allora e' il formato <filename>:offset:size
 	gos::string::utf8::StringListParser parser;
 	parser.toStart (s, ':');
-	{
-		char s1[1024];
-		char s2[1024];
-		parser.next (s1, sizeof(s1)); //filename
+    {
+        char s1[1024];
+        char s2[1024];
+#ifdef GOS_PLATFORM__WINDOWS
+        //NB:   su windows i path generalmente inziano con c:
+        //      Questo primo ':' non lo devo considerare come separatore, ma fa parte del path vero e proprio
+        parser.next (s1, sizeof(s1)); //filename
+        if (s1[1] == 0x00)
+        {
+            s1[1] = ':';
+            s1[2] = 0x00;
+            parser.next (&s1[2], sizeof(s1) -2); //filename
+        }
+#else
+        parser.next (s1, sizeof(s1)); //filename
+#endif
 		if (parser.next (s2, sizeof(s2)))
 		{
 			imagesrc_offset_in_file = string::utf8::toU32(s2);

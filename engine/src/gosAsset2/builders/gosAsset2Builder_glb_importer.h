@@ -52,7 +52,11 @@ namespace gos
 
 				struct sTexture
 				{
-					u32	image_index;
+				public:
+					static constexpr u8	FLAG__IS_A_NORMAL_MAP	= 0x01;
+
+					u32		image_index;	//questo e' l'indice indicato nel sul file
+					u8		flag;				
 				};
 
 				struct sMaterial
@@ -268,13 +272,6 @@ namespace gos
 				char					mesh_name[64];
 			};
 
-			struct sTexture
-			{
-				u32	image_index;	//questo e' quello che c'e' sul file
-
-				int compare (const sTexture &b) const	{ if (image_index==b.image_index) return 0; if (image_index>b.image_index) return 1; return -1; }
-			};
-
 			struct sProxyTexture
 			{
 				u32	unique_texture_index;
@@ -318,7 +315,7 @@ namespace gos
 			gos::FastArray<sMesh>			meshesList;
 			gos::FastArray<Result::sImage>	imageList;
 			
-			gos::FastArray<sTexture>		uniqueTextureList;
+			gos::FastArray<Result::sTexture> uniqueTextureList;
 			gos::FastArray<sProxyTexture>	proxyTextureList;
 
 			gos::FastArray<Shape> 			shapeList;

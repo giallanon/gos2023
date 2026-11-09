@@ -104,10 +104,11 @@ int main (int argc, char *argv[])
 	//test (&gpu, "@w/test_assets_1");
 	//test (&gpu, "@w/test_assets_2");
 	//test (&gpu, "@w/test_assets_3");
-	test (&gpu, "@w/test_assets_4");
+	//test (&gpu, "@w/test_assets_4");
 	//test (&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/land20260814/writable/assets/");
 	#ifdef GOS_PLATFORM__WINDOWS
-		test_monitor(&gpu, "C:/rhea/rheaSRC/gos2023/engine/bin/testRes2/writable/assets");
+		//test_monitor(&gpu, "C:/rhea/rheaSRC/gos2023/engine/bin/testRes2/writable/assets");
+        test (&gpu, "C:/rhea/rheaSRC/gos2023/engine/bin/testRes2/writable/assets");
 	#else
 		//test_monitor(&gpu, "/home/giallanon/gixprogram/gos2023/engine/bin/testRes2/writable/assets");
 	#endif

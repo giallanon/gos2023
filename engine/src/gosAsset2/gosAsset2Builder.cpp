@@ -1159,25 +1159,30 @@ bool Builder::priv_gosassetd_buildSection (DBContext &ctx, bool bDoCreateAssetFi
 					if (false == bBuildSuccess)
 						break;
 
-					// report a video del risultato della build
-					eTextColor color = eTextColor::green;
-					if (eBuildResult::was_already_built == result.result)
-						color = eTextColor::darkBlue;
-					logger->log(color, "[%-17s] asset [%-12s] uid:%016" PRIX64 ", sig:%016" PRIX64 "\n", 
-						asset2::enumToString(result.result), 
-						asset2::enumToString(result.assetUID.getAssetType()),
-						result.assetUID._uid,
-						result.signatureUID._uid);
-
-
-					//mi salvo il fatto che questo asset in qualche modo e' stato "considerato"
-					list_of_touched_assets.insertIfNotExists (result.assetUID, result.signatureUID);
-
-					// calcolo e scrivo le dipendenze runtime di questo asset
-					// Per "dipendenze runtime" intendo una lista di altri asset (e non risorse) dai quali questo asset dipende
-					if (eBuildResult::just_built == result.result)
+					//non e' detto che il builder abbia effettivamente fatto qualcosa, potrebbe semplicemente
+					// aver fatto del lavoro interno senza produrre una risorsa
+					if (eBuildResult::nothing_was_built !=  result.result)
 					{
-						out_listOfBuiltSignature->insertIfNotExists(result.signatureUID);
+						// report a video del risultato della build
+						eTextColor color = eTextColor::green;
+						if (eBuildResult::was_already_built == result.result)
+							color = eTextColor::darkBlue;
+						logger->log(color, "[%-17s] asset [%-12s] uid:%016" PRIX64 ", sig:%016" PRIX64 "\n",
+							asset2::enumToString(result.result),
+							asset2::enumToString(result.assetUID.getAssetType()),
+							result.assetUID._uid,
+							result.signatureUID._uid);
+
+
+						//mi salvo il fatto che questo asset in qualche modo e' stato "considerato"
+						list_of_touched_assets.insertIfNotExists (result.assetUID, result.signatureUID);
+
+						// calcolo e scrivo le dipendenze runtime di questo asset
+						// Per "dipendenze runtime" intendo una lista di altri asset (e non risorse) dai quali questo asset dipende
+						if (eBuildResult::just_built == result.result)
+						{
+							out_listOfBuiltSignature->insertIfNotExists(result.signatureUID);
+						}
 					}
 				}
 				builder->build_end();
